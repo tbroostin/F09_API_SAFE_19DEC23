@@ -1,0 +1,201 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Ellucian.Web.Mvc.Data</name>
+    </assembly>
+    <members>
+        <member name="T:Ellucian.Web.Mvc.Data.Repositories.CssThemeRepository">
+            <summary>
+            Provide a repository capable of reading and updating a css-based theme.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Data.Repositories.CssThemeRepository.BackgroundColorProperty">
+            <summary>
+            The background color property
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Data.Repositories.CssThemeRepository.BackgroundImageProperty">
+            <summary>
+            The background image property
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Data.Repositories.CssThemeRepository.FilterProperty">
+            <summary>
+            The filter property
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Data.Repositories.CssThemeRepository.ColorProperty">
+            <summary>
+            The color property
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Data.Repositories.CssThemeRepository.BorderColorProperty">
+            <summary>
+            The border color property
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Data.Repositories.CssThemeRepository.BorderLeftColorProperty">
+            <summary>
+            The border left color property
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Data.Repositories.CssThemeRepository.BorderRightColorProperty">
+            <summary>
+            The border right color property
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Data.Repositories.CssThemeRepository.BorderTopColorProperty">
+            <summary>
+            The border top color property
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Data.Repositories.CssThemeRepository.BorderBottomColorProperty">
+            <summary>
+            The border bottom color property
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Data.Repositories.CssThemeRepository.DefaultFilenameExtension">
+            <summary>
+            The default filename extension
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Data.Repositories.CssThemeRepository.#ctor(System.String,slf4net.ILogger)">
+            <summary>
+            Default constructor
+            </summary>
+            <param name="cssFilename"></param>
+            <param name="logger"></param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Data.Repositories.CssThemeRepository.Get">
+            <summary>
+            Gets the theme's properties.
+            </summary>
+            <returns>
+            Theme model
+            </returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Data.Repositories.CssThemeRepository.Update(Ellucian.Web.Mvc.Domain.Entities.Theme)">
+            <summary>
+            Updates the theme's properties.
+            </summary>
+            <param name="theme">Theme model containing values to be applied</param>
+            <returns>
+            True if update was successful
+            </returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Data.Repositories.CssThemeRepository.CreateBackup(System.String)">
+            <summary>
+            Creates a backup of the theme.
+            </summary>
+            <param name="backupFilename"></param>
+            <returns>
+            True if the backup was created
+            </returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Data.Repositories.CssThemeRepository.RestoreBackup">
+            <summary>
+            Restores the backup copy of the theme, if available.
+            </summary>
+            <returns>
+            True if the backup was restored
+            </returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Data.Repositories.CssThemeRepository.BackupCssFile(System.String@)">
+            <summary>
+            Creates a backup of the current CSS file.
+            </summary>
+            <param name="backupFilename">Output parameter indicating the name given to the backup</param>
+            <returns>True if the file was backed up, false if not</returns>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Data.Repositories.MvcSettingsRepository">
+            <summary>
+            Repository for maintaining MVC settings
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Data.Repositories.MvcSettingsRepository.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Mvc.Data.Repositories.MvcSettingsRepository"/> class.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Data.Repositories.MvcSettingsRepository.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Mvc.Data.Repositories.MvcSettingsRepository"/> class.
+            </summary>
+            <param name="filename">The filename.</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Data.Repositories.MvcSettingsRepository.Get">
+            <summary>
+            Gets this instance from an XML file
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Data.Repositories.MvcSettingsRepository.Update(Ellucian.Web.Mvc.Domain.Entities.Settings)">
+            <summary>
+            Updates the specified settings.
+            </summary>
+            <param name="settings">The settings.</param>
+            <exception cref="T:System.Exception">
+            No access to update ' + FileName + '.  +
+                                Verify the application pool is running as an identity with permissions to update the App_Data folder.
+            or
+            No access to update file ' + BackupFilename + '.  +
+                                Verify the application pool is running as an identity with permissions to update the App_Data folder.
+            </exception>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Data.Repositories.XmlSiteRepository">
+            <summary>
+            I/O layer for the site configuration file.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Data.Repositories.XmlSiteRepository.logger">
+            <summary>
+            Logger instance
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Data.Repositories.XmlSiteRepository.site">
+            <summary>
+            Poor man's cache of the metadata. Lazy initialized
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Data.Repositories.XmlSiteRepository.stream">
+            <summary>
+            Stream to write to, may be null
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Data.Repositories.XmlSiteRepository.#ctor(slf4net.ILogger)">
+            <summary>
+            Initializes a new instance of the XmlSiteRepository class.
+            </summary>
+            <param name="logger">logger, must not be null</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Data.Repositories.XmlSiteRepository.#ctor(System.IO.Stream)">
+            <summary>
+            Initializes a new instance of the XmlSiteRepository class.
+            </summary>
+            <param name="stream">the stream to write to, must not be null</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Data.Repositories.XmlSiteRepository.Get">
+            <summary>
+            Retrieves the site map.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Data.Repositories.XmlSiteRepository.Update(Ellucian.Web.Mvc.Domain.Entities.Site)">
+            <summary>
+            Updates the site map.
+            </summary>
+            <param name="site"></param>
+            <exception cref="T:System.ArgumentNullException">site</exception>
+            <exception cref="T:Ellucian.Web.Mvc.Domain.SiteDataException">No access to update sitemap.config file.  + 
+             Verify the application pool is running as an identity with permissions to update the App_Data folder.</exception>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Data.Repositories.XmlSiteRepository.EnableCache">
+            <summary>
+            Gets or sets a value indicating whether [enable cache].
+            </summary>
+            <value>
+              <c>true</c> if [enable cache]; otherwise, <c>false</c>.
+            </value>
+        </member>
+    </members>
+</doc>

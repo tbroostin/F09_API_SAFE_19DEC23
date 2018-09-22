@@ -1,0 +1,195 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>
+    </ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{63052398-1D20-448C-AC97-4A124992DEBF}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Ellucian.Colleague.Api.Client.Tests</RootNamespace>
+    <AssemblyName>Ellucian.Colleague.Api.Client.Tests</AssemblyName>
+    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <ProjectTypeGuids>{3AC096D0-A1C2-E12C-1390-A8335801FDAB};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Ellucian.Logging, Version=1.0.0.1, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Logging.MSEL.1.0.0.240\lib\net451\Ellucian.Logging.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Rest.Client, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Rest.Client.1.0.0.186\lib\net451\Ellucian.Rest.Client.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Web.Utility, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Web.Utility.1.0.0.181\lib\net451\Ellucian.Web.Utility.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Microsoft.Practices.EnterpriseLibrary.Common, Version=5.0.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\EnterpriseLibrary.Common.5.0.505.0\lib\NET35\Microsoft.Practices.EnterpriseLibrary.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.EnterpriseLibrary.Logging, Version=5.0.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\EnterpriseLibrary.Logging.5.0.505.1\lib\NET35\Microsoft.Practices.EnterpriseLibrary.Logging.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.ServiceLocation, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\CommonServiceLocator.1.0\lib\NET35\Microsoft.Practices.ServiceLocation.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.Unity, Version=2.1.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Unity.2.1.505.2\lib\NET35\Microsoft.Practices.Unity.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.Unity.Configuration, Version=2.1.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Unity.2.1.505.2\lib\NET35\Microsoft.Practices.Unity.Configuration.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.Unity.Interception, Version=2.1.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Unity.Interception.2.1.505.2\lib\NET35\Microsoft.Practices.Unity.Interception.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.Unity.Interception.Configuration, Version=2.1.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Unity.Interception.2.1.505.2\lib\NET35\Microsoft.Practices.Unity.Interception.Configuration.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
+    <Reference Include="Moq, Version=4.2.1506.2016, Culture=neutral, PublicKeyToken=69f491c39445e920, processorArchitecture=MSIL">
+      <HintPath>..\packages\Moq.4.2.1506.2016\lib\net40\Moq.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="slf4net">
+      <HintPath>..\packages\slf4net.0.1.32.1\lib\net35\slf4net.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.IdentityModel" />
+    <Reference Include="System.Net" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Net.Http.Formatting, Version=5.2.3.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.Client.5.2.3\lib\net45\System.Net.Http.Formatting.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Net.Http.WebRequest" />
+    <Reference Include="System.Web" />
+  </ItemGroup>
+  <ItemGroup>
+    <CodeAnalysisDependentAssemblyPaths Condition=" '$(VS100COMNTOOLS)' != '' " Include="$(VS100COMNTOOLS)..\IDE\PrivateAssemblies">
+      <Visible>False</Visible>
+    </CodeAnalysisDependentAssemblyPaths>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="ColleagueApiClientBaseTests.cs" />
+    <Compile Include="ColleagueApiClientColleagueFinanceTests.cs" />
+    <Compile Include="ColleagueApiClientFunctionalStudentTests.cs" />
+    <Compile Include="ColleagueApiClientFinancialAidTests.cs" />
+    <Compile Include="ColleagueApiClientHumanResourcesTests.cs" />
+    <Compile Include="ColleagueApiClientStudentTests.cs" />
+    <Compile Include="ColleagueApiClientTests.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ColleagueApiClientFinanceTests.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="packages.config">
+      <SubType>Designer</SubType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Ellucian.Colleague.Api.Client\Ellucian.Colleague.Api.Client.csproj">
+      <Project>{851D8DA4-372F-4483-B6F8-DE08F22817C1}</Project>
+      <Name>Ellucian.Colleague.Api.Client</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Domain.Base\Ellucian.Colleague.Domain.Base.csproj">
+      <Project>{A3B49510-737B-4FFD-8BCA-17BCCE7FBAF7}</Project>
+      <Name>Ellucian.Colleague.Domain.Base</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Domain.FinancialAid.Tests\Ellucian.Colleague.Domain.FinancialAid.Tests.csproj">
+      <Project>{F763B6B9-C7F9-4837-BAAA-37EA0613C13C}</Project>
+      <Name>Ellucian.Colleague.Domain.FinancialAid.Tests</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Domain.FinancialAid\Ellucian.Colleague.Domain.FinancialAid.csproj">
+      <Project>{0ECC52BC-BFAA-4E44-9AAB-7781BAF39F30}</Project>
+      <Name>Ellucian.Colleague.Domain.FinancialAid</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Domain.HumanResources.Tests\Ellucian.Colleague.Domain.HumanResources.Tests.csproj">
+      <Project>{91bb6718-ea82-43e6-96db-a34756cfd3f2}</Project>
+      <Name>Ellucian.Colleague.Domain.HumanResources.Tests</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Domain.HumanResources\Ellucian.Colleague.Domain.HumanResources.csproj">
+      <Project>{0cda322d-5db6-466c-86c4-49a808b02284}</Project>
+      <Name>Ellucian.Colleague.Domain.HumanResources</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos.Base\Ellucian.Colleague.Dtos.Base.csproj">
+      <Project>{A147BD58-ECC6-409B-A633-128946AAA456}</Project>
+      <Name>Ellucian.Colleague.Dtos.Base</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos.ColleagueFinance\Ellucian.Colleague.Dtos.ColleagueFinance.csproj">
+      <Project>{ca034d7a-0963-4463-b974-bef18be515ae}</Project>
+      <Name>Ellucian.Colleague.Dtos.ColleagueFinance</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos.Finance\Ellucian.Colleague.Dtos.Finance.csproj">
+      <Project>{F2409F02-791E-43B3-85E3-B577226FCF55}</Project>
+      <Name>Ellucian.Colleague.Dtos.Finance</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos.FinancialAid\Ellucian.Colleague.Dtos.FinancialAid.csproj">
+      <Project>{52434ED9-FAF3-41CA-BDA7-EC87128EA0D3}</Project>
+      <Name>Ellucian.Colleague.Dtos.FinancialAid</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos.HumanResources\Ellucian.Colleague.Dtos.HumanResources.csproj">
+      <Project>{1a7b9d0e-1665-492c-b287-0d89710408e5}</Project>
+      <Name>Ellucian.Colleague.Dtos.HumanResources</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos.Student\Ellucian.Colleague.Dtos.Student.csproj">
+      <Project>{28EB3CAC-2FA7-401E-8246-0C03C50FDEDA}</Project>
+      <Name>Ellucian.Colleague.Dtos.Student</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos\Ellucian.Colleague.Dtos.csproj">
+      <Project>{0ca929ca-2370-4763-be71-c91c244e0743}</Project>
+      <Name>Ellucian.Colleague.Dtos</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Web.Http.TestUtil\Ellucian.Web.Http.TestUtil.csproj">
+      <Project>{068FAEDD-EB14-465E-9594-1450EC26B042}</Project>
+      <Name>Ellucian.Web.Http.TestUtil</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

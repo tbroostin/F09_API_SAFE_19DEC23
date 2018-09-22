@@ -1,0 +1,188 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Ellucian.Web.Adapters</name>
+    </assembly>
+    <members>
+        <member name="T:Ellucian.Web.Adapters.AdapterRegistry">
+            <summary>
+            Contains a collection of type adapters for type mapping.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Adapters.IAdapterRegistry">
+            <summary>
+            Base interface for adapter registries.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Adapters.IAdapterRegistry.AddAdapter(Ellucian.Web.Adapters.ITypeAdapter)">
+            <summary>
+            Adds the adapter.
+            </summary>
+            <param name="adapter">The adapter.</param>
+        </member>
+        <member name="M:Ellucian.Web.Adapters.IAdapterRegistry.ContainsAdapter``2">
+            <summary>
+            Determines whether this instance contains adapter.
+            </summary>
+            <typeparam name="SourceType">The type of the ource type.</typeparam>
+            <typeparam name="TargetType">The type of the arget type.</typeparam>
+            <returns>
+              <c>true</c> if this instance contains adapter; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Web.Adapters.IAdapterRegistry.GetAdapter``2">
+            <summary>
+            Gets the adapter.
+            </summary>
+            <typeparam name="SourceType">Source type.</typeparam>
+            <typeparam name="TargetType">Target type.</typeparam>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Adapters.AdapterRegistry.#ctor(System.Collections.Generic.ISet{Ellucian.Web.Adapters.ITypeAdapter},slf4net.ILogger)">
+            <summary>
+            Constructor that accepts a list for the adapter collection.
+            </summary>
+            <param name="adapterCollection">The adapter collection.</param>
+            <param name="logger">The logger.</param>
+        </member>
+        <member name="M:Ellucian.Web.Adapters.AdapterRegistry.AddAdapter(Ellucian.Web.Adapters.ITypeAdapter)">
+            <summary>
+            Adds an adapter to the collection.
+            </summary>
+            <param name="adapter">type adapter</param>
+        </member>
+        <member name="M:Ellucian.Web.Adapters.AdapterRegistry.ContainsAdapter``2">
+            <summary>
+            Determines if a type mapper exists for the source and target types.
+            </summary>
+            <typeparam name="SourceType">source type</typeparam>
+            <typeparam name="TargetType">target type</typeparam>
+            <returns>
+              <c>true</c> if this instance contains adapter; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Web.Adapters.AdapterRegistry.GetAdapter``2">
+            <summary>
+            Gets the appropriate adapter for the source and target types.
+            </summary>
+            <typeparam name="SourceType">source type</typeparam>
+            <typeparam name="TargetType">target type</typeparam>
+            <returns></returns>
+        </member>
+        <member name="T:Ellucian.Web.Adapters.AutoMapperAdapter`2">
+            <summary>
+            Represents the most common type mapping adapter and is the base class for a custom adapter.
+            </summary>
+            <typeparam name="SourceType">source type to adapt</typeparam>
+            <typeparam name="TargetType">target type to adapt</typeparam>
+        </member>
+        <member name="T:Ellucian.Web.Adapters.BaseAdapter`2">
+            <summary>
+            Defines base adapters.
+            </summary>
+            <typeparam name="SourceType">Source type.</typeparam>
+            <typeparam name="TargetType">Target type.</typeparam>
+        </member>
+        <member name="T:Ellucian.Web.Adapters.ITypeAdapter`2">
+            <summary>
+            Generic interface for type adapters
+            </summary>
+            <typeparam name="SourceType">Source type</typeparam>
+            <typeparam name="TargetType">Target type</typeparam>
+        </member>
+        <member name="T:Ellucian.Web.Adapters.ITypeAdapter">
+            <summary>
+            Base interface for type adapters.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Adapters.ITypeAdapter.IsSupportedMap(System.Type,System.Type)">
+            <summary>
+            Determines if the source and target types are mapped in this adapter
+            </summary>
+            <param name="sourceType">source type</param>
+            <param name="targetType">target type</param>
+            <returns>
+            true/false
+            </returns>
+        </member>
+        <member name="M:Ellucian.Web.Adapters.ITypeAdapter`2.MapToType(`0)">
+            <summary>
+            Maps the source object to a new target object
+            </summary>
+            <param name="Source">source object</param>
+            <returns>
+            target object
+            </returns>
+        </member>
+        <member name="F:Ellucian.Web.Adapters.BaseAdapter`2.adapterRegistry">
+            <summary>
+            Reference to the adapter registry for other adapters
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Adapters.BaseAdapter`2.logger">
+            <summary>
+            The logger to be shared with child adapters
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Adapters.BaseAdapter`2.#ctor(Ellucian.Web.Adapters.IAdapterRegistry,slf4net.ILogger)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Adapters.BaseAdapter`2"/> class.
+            </summary>
+            <param name="adapterRegistry">The adapter registry.</param>
+            <param name="logger">The logger.</param>
+        </member>
+        <member name="M:Ellucian.Web.Adapters.BaseAdapter`2.IsSupportedMap(System.Type,System.Type)">
+            <summary>
+            Determines if the source and target types are mapped in this adapter.
+            Use local type mapping for comparison purposes.
+            </summary>
+            <param name="sourceType">Source type</param>
+            <param name="targetType">Target type</param>
+            <returns>
+            true/false
+            </returns>
+        </member>
+        <member name="M:Ellucian.Web.Adapters.BaseAdapter`2.MapToType(`0)">
+            <summary>
+            Maps to type.  Adapter subclass should implement MapToType.
+            </summary>
+            <param name="Source">The source.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Adapters.BaseAdapter`2.ToString">
+            <summary>
+            Returns a <see cref="T:System.String"/> that represents this instance.
+            Override that shows the source and target classes for the adapter.
+            </summary>
+            <returns>
+            A <see cref="T:System.String"/> that represents this instance.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Web.Adapters.AutoMapperAdapter`2.#ctor(Ellucian.Web.Adapters.IAdapterRegistry,slf4net.ILogger)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Adapters.AutoMapperAdapter`2"/> class.
+            </summary>
+            <param name="adapterRegistry">The adapter registry.</param>
+            <param name="logger">The logger.</param>
+        </member>
+        <member name="M:Ellucian.Web.Adapters.AutoMapperAdapter`2.#cctor">
+            <summary>
+            Register the source and target types once with the Mapper singleton.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Adapters.AutoMapperAdapter`2.AddMappingDependency``2">
+            <summary>
+            Adds the mapping dependency.
+            </summary>
+            <typeparam name="DependencySourceType">Dependency source type.</typeparam>
+            <typeparam name="DependencyTargetType">Dependency target type.</typeparam>
+        </member>
+        <member name="M:Ellucian.Web.Adapters.AutoMapperAdapter`2.MapToType(`0)">
+            <summary>
+            Maps to type.
+            </summary>
+            <param name="Source">The source.</param>
+            <returns></returns>
+        </member>
+    </members>
+</doc>

@@ -1,0 +1,45 @@
+﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+using System.Runtime.Serialization;
+using Ellucian.Colleague.Dtos.DtoProperties;
+using Ellucian.Colleague.Dtos.EnumProperties;
+using Newtonsoft.Json;
+
+namespace Ellucian.Colleague.Dtos.DtoProperties
+{
+    /// <summary>
+    /// The detailed accounting lines associated with the transaction.
+    /// </summary>
+    [DataContract]
+    public class GeneralLedgerDetailDtoProperty
+    {
+        /// <summary>
+        /// An optional tracking number for the detailed accounting line.
+        /// </summary>
+        [JsonProperty("sequenceNumber", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public int? SequenceNumber { get; set; }
+
+        /// <summary>
+        /// The accounting string associated with the transaction detail line.
+        /// </summary>
+        [JsonProperty("accountingString")]
+        public string AccountingString { get; set; }
+
+        /// <summary>
+        /// The description of the detailed accounting line.
+        /// </summary>
+        [JsonProperty("description")]
+        public string Description { get; set; }
+
+        /// <summary>
+        /// The type of detailed accounting line (credit/debit).
+        /// </summary>
+        [JsonProperty("type")]
+        public CreditOrDebit? Type { get; set; }
+
+        /// <summary>
+        /// The amount of the credit or debit.
+        /// </summary>
+        [JsonProperty("amount")]
+        public AmountDtoProperty Amount { get; set; }
+    }
+}

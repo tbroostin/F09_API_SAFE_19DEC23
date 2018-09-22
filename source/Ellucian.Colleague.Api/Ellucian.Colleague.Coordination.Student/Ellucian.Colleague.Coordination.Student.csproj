@@ -1,0 +1,544 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{9A271A72-5D63-41D3-9E8F-D50255DD51D1}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Ellucian.Colleague.Coordination.Student</RootNamespace>
+    <AssemblyName>Ellucian.Colleague.Coordination.Student</AssemblyName>
+    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="AutoMapper">
+      <HintPath>..\packages\AutoMapper.2.1.267\lib\net40\AutoMapper.dll</HintPath>
+    </Reference>
+    <Reference Include="DDay.iCal">
+      <HintPath>..\packages\DDay.iCal.1.0.1\lib\DDay.iCal.dll</HintPath>
+    </Reference>
+    <Reference Include="Ellucian.Colleague.Configuration, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Colleague.Configuration.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Colleague.Domain, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Colleague.Domain.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Colleague.Legacy, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Colleague.Legacy.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Colleague.Property, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Colleague.Property.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Data.Colleague, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Data.Colleague.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Dmi.Client, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Dmi.Client.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Dmi.Runtime, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Dmi.Runtime.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Logging, Version=1.0.0.1, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Logging.MSEL.1.0.0.240\lib\net451\Ellucian.Logging.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Web.Adapters, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Web.Adapters.1.0.0.177\lib\net451\Ellucian.Web.Adapters.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Web.Cache, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Web.Cache.1.0.0.184\lib\net451\Ellucian.Web.Cache.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Web.Dependency, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Web.Dependency.1.0.0.187\lib\net451\Ellucian.Web.Dependency.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Web.License, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Web.License.1.0.0.178\lib\net451\Ellucian.Web.License.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Web.Security, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Web.Security.1.0.0.206\lib\net451\Ellucian.Web.Security.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Web.Utility, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Web.Utility.1.0.0.181\lib\net451\Ellucian.Web.Utility.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.WebServices.Core.Config, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.WebServices.Core.Config.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="ICSharpCode.SharpZipLib">
+      <HintPath>..\packages\SharpZipLib.0.86.0\lib\20\ICSharpCode.SharpZipLib.dll</HintPath>
+    </Reference>
+    <Reference Include="KellermanSoftware.Compare-NET-Objects, Version=2.1.0.0, Culture=neutral, PublicKeyToken=d970ace04cc85217, processorArchitecture=MSIL">
+      <HintPath>..\packages\CompareNETObjects.2.01.0.0\lib\net451\KellermanSoftware.Compare-NET-Objects.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Lucene.Net">
+      <HintPath>..\packages\Lucene.Net.2.9.4.1\lib\net40\Lucene.Net.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.IdentityModel">
+      <HintPath>..\packages\Microsoft.IdentityModel.6.1.7600.16394\lib\net35\Microsoft.IdentityModel.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.EnterpriseLibrary.Common, Version=5.0.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\EnterpriseLibrary.Common.5.0.505.0\lib\NET35\Microsoft.Practices.EnterpriseLibrary.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.EnterpriseLibrary.Logging, Version=5.0.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\EnterpriseLibrary.Logging.5.0.505.1\lib\NET35\Microsoft.Practices.EnterpriseLibrary.Logging.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.ServiceLocation, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\CommonServiceLocator.1.0\lib\NET35\Microsoft.Practices.ServiceLocation.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.Unity, Version=2.1.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Unity.2.1.505.2\lib\NET35\Microsoft.Practices.Unity.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.Unity.Configuration, Version=2.1.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Unity.2.1.505.2\lib\NET35\Microsoft.Practices.Unity.Configuration.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.Unity.Interception, Version=2.1.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Unity.Interception.2.1.505.2\lib\NET35\Microsoft.Practices.Unity.Interception.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.Unity.Interception.Configuration, Version=2.1.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Unity.Interception.2.1.505.2\lib\NET35\Microsoft.Practices.Unity.Interception.Configuration.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.ReportViewer.Common, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Reporting\Microsoft.ReportViewer.Common.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.ReportViewer.ProcessingObjectModel, Version=11.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Reporting\Microsoft.ReportViewer.ProcessingObjectModel.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.ReportViewer.WebForms, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Reporting\Microsoft.ReportViewer.WebForms.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="PdfSharp">
+      <HintPath>..\Ellucian.Colleague.Coordination.Base\PdfSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="slf4net">
+      <HintPath>..\packages\slf4net.0.1.32.1\lib\net35\slf4net.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.IdentityModel" />
+    <Reference Include="System.IdentityModel.Services" />
+    <Reference Include="System.IdentityModel.Tokens.Jwt">
+      <HintPath>..\packages\System.IdentityModel.Tokens.Jwt.4.0.1\lib\net45\System.IdentityModel.Tokens.Jwt.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Threading.Tasks.Dataflow, Version=4.5.24.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.Tpl.Dataflow.4.5.24\lib\portable-net45+win8+wpa81\System.Threading.Tasks.Dataflow.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+    <Reference Include="Thinktecture.IdentityModel, Version=3.4.6.0, Culture=neutral, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Thinktecture.IdentityModel.3.4.6\lib\net40\Thinktecture.IdentityModel.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Adapters\AcademicCreditEntityAdapter.cs" />
+    <Compile Include="Adapters\AcademicCreditEntityToAcademicCredit3DtoAdapter.cs" />
+    <Compile Include="Adapters\AcademicDiscipline2DtoToAcademicDiscipline3DtoAdapter.cs" />
+    <Compile Include="Adapters\AcademicHistoryEntityToAcademicHistory3DtoAdapter.cs" />
+    <Compile Include="Adapters\AcademicHistoryEntityToAcademicHistory4DtoAdapter.cs" />
+    <Compile Include="Adapters\AcademicHistoryLevelEntityToAcademicHistoryLevel2DtoAdapter.cs" />
+    <Compile Include="Adapters\AddAuthorizationInputDtoToEntityAdapter.cs" />
+    <Compile Include="Adapters\CourseCatalogConfigurationEntityToDtoAdapter.cs" />
+    <Compile Include="Adapters\StudentSectionsAttendancesEntityToDtoAdapter.cs" />
+    <Compile Include="Adapters\SectionAttendanceResponseEntityToDtoAdapter.cs" />
+    <Compile Include="Adapters\SectionMeetingInstanceEntityToDtoAdapter.cs" />
+    <Compile Include="Adapters\GroupResultEntityToGroupResult3DtoAdapter.cs" />
+    <Compile Include="Adapters\PilotAcademicHistoryLevelToPilotStudentTermLevelGpaDtoAdapter.cs" />
+    <Compile Include="Adapters\PilotAcademicCreditToPilotStudentSectionDtoAdapter.cs" />
+    <Compile Include="Adapters\PilotAcademicHistoryLevelDtoAdapter.cs" />
+    <Compile Include="Adapters\AcademicTermEntityAdapter.cs" />
+    <Compile Include="Adapters\AcademicHistoryLevelEntityAdapter.cs" />
+    <Compile Include="Adapters\AcademicTermEntityToAcademicTerm2DtoAdapter.cs" />
+    <Compile Include="Adapters\AcademicTermEntityToAcademicTerm3DtoAdapter.cs" />
+    <Compile Include="Adapters\GraduationConfigurationEntityToDtoAdapter.cs" />
+    <Compile Include="Adapters\GroupResultEntityToGroupResult2DtoAdapter.cs" />
+    <Compile Include="Adapters\PilotGradeAdapter.cs" />
+    <Compile Include="Adapters\RequirementResultEntityToRequirementResult3DtoAdapter.cs" />
+    <Compile Include="Adapters\RequirementResultEntityToRequirementResult2DtoAdapter.cs" />
+    <Compile Include="Adapters\SectionEntityToSection4DtoAdapter.cs" />
+    <Compile Include="Adapters\SectionGrades2Adapter.cs" />
+    <Compile Include="Adapters\SectionPermissionEntityToDtoAdapter.cs" />
+    <Compile Include="Adapters\AddAuthorizationDtoToEntityAdapter.cs" />
+    <Compile Include="Adapters\StudentAttendanceDtoToEntityAdapter.cs" />
+    <Compile Include="Adapters\SectionAttendanceDtoToEntityAdapter.cs" />
+    <Compile Include="Adapters\SectionTextbookDtoToEntityAdapter.cs" />
+    <Compile Include="Adapters\StudentEntityToStudentBatch3DtoAdapter.cs" />
+    <Compile Include="Adapters\StudentEntityToStudentBatch2DtoAdapter.cs" />
+    <Compile Include="Adapters\StudentPetitionEntityToDtoAdapter.cs" />
+    <Compile Include="Adapters\StudentPetitionDtoToEntityAdapter.cs" />
+    <Compile Include="Adapters\StudentRequestEntityToDtoAdapter.cs" />
+    <Compile Include="Adapters\StudentRequestDtoToEntityAdapter.cs" />
+    <Compile Include="Adapters\StudentWaiverDtoToEntityAdapter.cs" />
+    <Compile Include="Adapters\StudentEntityBatchAdapter.cs" />
+    <Compile Include="Adapters\MidTermGradeEntityAdapter.cs" />
+    <Compile Include="Adapters\AcademicCreditEntityToAcademicCredit2DtoAdapter.cs" />
+    <Compile Include="Adapters\AcademicHistoryEntityAdapter.cs" />
+    <Compile Include="Adapters\PreferredSectionsResponseAdapter.cs" />
+    <Compile Include="Adapters\SectionGradeResponseAdapter.cs" />
+    <Compile Include="Adapters\SectionGradesAdapter.cs" />
+    <Compile Include="Adapters\SectionMeetingEntityToSectionMeetingDtoAdapter.cs" />
+    <Compile Include="Adapters\AcademicHistoryEntityToAcademicHistory2DtoAdapter.cs" />
+    <Compile Include="Adapters\SectionEntityToSection3DtoAdapter.cs" />
+    <Compile Include="Adapters\EducationHistoryEntityAdapter.cs" />
+    <Compile Include="Adapters\SubRequirementResultEntityToSubRequirementResult3DtoAdapter.cs" />
+    <Compile Include="Adapters\SubRequirementResultEntityToSubRequirementResult2DtoAdapter.cs" />
+    <Compile Include="Adapters\TermEntityAdapter.cs" />
+    <Compile Include="Adapters\StudentEntityAdapter.cs" />
+    <Compile Include="Adapters\StudentProgramEntityAdapter2.cs" />
+    <Compile Include="Adapters\TestResultEntityToTestResult2DtoAdapter.cs" />
+    <Compile Include="Adapters\ComponentTestEntityToComponentTestDtoAdapter.cs" />
+    <Compile Include="Adapters\SubTestResultEntityToSubTestResultDtoAdapter.cs" />
+    <Compile Include="Adapters\TestResultEntityToTestResultDtoAdapter.cs" />
+    <Compile Include="Adapters\RegistrationEligibilityEntityAdapter.cs" />
+    <Compile Include="Adapters\SectionEntityToSection2DtoAdapter.cs" />
+    <Compile Include="Adapters\CourseEntityToCourse2DtoAdapter.cs" />
+    <Compile Include="Adapters\ApplicationAdapter.cs" />
+    <Compile Include="Adapters\TranscriptCourseAdapter.cs" />
+    <Compile Include="Adapters\FacultyEntityAdapter.cs" />
+    <Compile Include="Adapters\GroupResultDtoAdapter.cs" />
+    <Compile Include="Adapters\ProgramRequirementsDtoAdapter.cs" />
+    <Compile Include="Adapters\RequirementEntityAdapter.cs" />
+    <Compile Include="Adapters\RequirementResultDtoAdapter.cs" />
+    <Compile Include="Adapters\SectionEntityAdapter.cs" />
+    <Compile Include="Adapters\StudentProgramEntityAdapter.cs" />
+    <Compile Include="Adapters\SubRequirementResultDtoAdapter.cs" />
+    <Compile Include="Adapters\TestScoreAdapter.cs" />
+    <Compile Include="Adapters\TranscriptRequestEntityAdapter.cs" />
+    <Compile Include="Adapters\StudentWaiverEntityToDtoAdapter.cs" />
+    <Compile Include="Services\AccountingCodeCategoriesService.cs" />
+    <Compile Include="Services\AdmissionApplicationSupportingItemTypesService.cs" />
+    <Compile Include="Services\AdmissionDecisionsService.cs" />
+    <Compile Include="Services\AttendanceCategoriesService.cs" />
+    <Compile Include="Services\BillingOverrideReasonsService.cs" />
+    <Compile Include="Services\CourseCategoriesService.cs" />
+    <Compile Include="Services\CourseStatusesService.cs" />
+    <Compile Include="Services\CourseTitleTypeService.cs" />
+    <Compile Include="Services\ExternalEducationService.cs" />
+    <Compile Include="Services\FinancialAidAcademicProgressStatusesService.cs" />
+    <Compile Include="Services\FinancialAidAcademicProgressTypesService.cs" />
+    <Compile Include="Services\AdministrativeInstructionalMethodsService.cs" />
+    <Compile Include="Services\FinancialAidApplicationOutcomeService.cs" />
+    <Compile Include="Services\FinancialAidFundsService.cs" />
+    <Compile Include="Services\IFinancialAidApplicationOutcomeService.cs" />
+    <Compile Include="Services\IFinancialAidFundsService.cs" />
+    <Compile Include="Services\IStudentSectionAttendancesService.cs" />
+    <Compile Include="Services\StudentSectionAttendancesService.cs" />
+    <Compile Include="Services\IStudentFinancialAidAwardService.cs" />
+    <Compile Include="Services\IStudentFinancialAidNeedSummaryService.cs" />
+    <Compile Include="Services\StudentFinancialAidApplicationService.cs" />
+    <Compile Include="Services\FinancialAidAwardPeriodService.cs" />
+    <Compile Include="Services\FinancialAidFundCategoryService.cs" />
+    <Compile Include="Services\FinancialAidFundClassificationsService.cs" />
+    <Compile Include="Services\FinancialAidYearService.cs" />
+    <Compile Include="Services\IStudentFinancialAidApplicationService.cs" />
+    <Compile Include="Services\IFinancialAidAwardPeriodService.cs" />
+    <Compile Include="Services\IFinancialAidYearService.cs" />
+    <Compile Include="Services\StudentFinancialAidAwardService.cs" />
+    <Compile Include="Services\StudentFinancialAidNeedSummaryService.cs" />
+    <Compile Include="Services\StudentFinancialAidOfficeService.cs" />
+    <Compile Include="Services\FloorCharacteristicsService.cs" />
+    <Compile Include="Services\HousingAssignmentService.cs" />
+    <Compile Include="Services\IAccountingCodeCategoriesService.cs" />
+    <Compile Include="Services\IAdmissionApplicationSupportingItemTypesService.cs" />
+    <Compile Include="Services\IAdmissionDecisionsService.cs" />
+    <Compile Include="Services\ICourseCategoriesService.cs" />
+    <Compile Include="Services\IAttendanceCategoryService.cs" />
+    <Compile Include="Services\HousingRequestService.cs" />
+    <Compile Include="Services\ICourseStatusesService.cs" />
+    <Compile Include="Services\ICourseTitleTypesService.cs" />
+    <Compile Include="Services\IExternalEducationService.cs" />
+    <Compile Include="Services\IFinancialAidAcademicProgressStatusesService.cs" />
+    <Compile Include="Services\IFinancialAidAcademicProgressTypesService.cs" />
+    <Compile Include="Services\IAdministrativeInstructionalMethodsService.cs" />
+    <Compile Include="Services\IFinancialAidFundCategoryService.cs" />
+    <Compile Include="Services\IFinancialAidFundClassificationsService.cs" />
+    <Compile Include="Services\IStudentFinancialAidOfficeService.cs" />
+    <Compile Include="Services\IHousingAssignmentService.cs" />
+    <Compile Include="Services\IHousingRequestService.cs" />
+    <Compile Include="Services\HousingResidentTypesService.cs" />
+    <Compile Include="Services\IHousingResidentTypesService.cs" />
+    <Compile Include="Services\IMealPlanRequestsService.cs" />
+    <Compile Include="Services\INonAcademicAttendanceService.cs" />
+    <Compile Include="Services\ISectionInstructorsService.cs" />
+    <Compile Include="Services\ISectionDescriptionTypesService.cs" />
+    <Compile Include="Services\ISectionTitleTypesService.cs" />
+    <Compile Include="Services\IStudentCourseTransferService.cs" />
+    <Compile Include="Services\IStudentFinancialAidAcademicProgressStatusesService.cs" />
+    <Compile Include="Services\IStudentMealPlansService.cs" />
+    <Compile Include="Services\IBillingOverrideReasonsService.cs" />
+    <Compile Include="Services\IFloorCharacteristicsService.cs" />
+    <Compile Include="Services\IRoommateCharacteristicsService.cs" />
+    <Compile Include="Services\IMealPlanRatesService.cs" />
+    <Compile Include="Services\IStudentAcademicStandingsService.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Services\AcademicDisciplineService.cs" />
+    <Compile Include="Services\AdmissionApplicationsService.cs" />
+    <Compile Include="Services\AdmissionDecisionTypesService.cs" />
+    <Compile Include="Services\AdmissionApplicationWithdrawalReasonsService.cs" />
+    <Compile Include="Services\AdmissionResidencyTypesService.cs" />
+    <Compile Include="Services\AdvisorTypesService.cs" />
+    <Compile Include="Services\AptitudeAssessmentsService.cs" />
+    <Compile Include="Services\AssessmentPercentileTypesService.cs" />
+    <Compile Include="Services\IAcademicDisciplineService.cs" />
+    <Compile Include="Services\IAdmissionApplicationsService.cs" />
+    <Compile Include="Services\IAdmissionDecisionTypesService.cs" />
+    <Compile Include="Services\IAdmissionApplicationWithdrawalReasonsService.cs" />
+    <Compile Include="Services\AssessmentCalculationMethodsService.cs" />
+    <Compile Include="Services\AptitudeAssessmentTypesService.cs" />
+    <Compile Include="Services\AcademicHistoryService.cs" />
+    <Compile Include="Services\AcademicCatalogService.cs" />
+    <Compile Include="Services\AdmissionApplicationTypeService.cs" />
+    <Compile Include="Services\AdmissionPopulationService.cs" />
+    <Compile Include="Services\AcademicProgramService.cs" />
+    <Compile Include="Services\AcademicStandingsService.cs" />
+    <Compile Include="Services\AccountingCodesService.cs" />
+    <Compile Include="Services\CampusOrganizationService.cs" />
+    <Compile Include="Services\IAdmissionResidencyTypesService.cs" />
+    <Compile Include="Services\IAdvisorTypesService.cs" />
+    <Compile Include="Services\IAptitudeAssessmentsService.cs" />
+    <Compile Include="Services\IAptitudeAssessmentTypesService.cs" />
+    <Compile Include="Services\IAdmissionApplicationTypesService.cs" />
+    <Compile Include="Services\IInstructorCategoriesService.cs" />
+    <Compile Include="Services\IInstructorsService.cs" />
+    <Compile Include="Services\IInstructorStaffTypesService.cs" />
+    <Compile Include="Services\InstructorCategoriesService.cs" />
+    <Compile Include="Services\InstructorsService.cs" />
+    <Compile Include="Services\InstructorStaffTypesService.cs" />
+    <Compile Include="Services\IStudentAdvisorRelationshipsService.cs" />
+    <Compile Include="Services\IStudentAptitudeAssessmentsService.cs" />
+    <Compile Include="Services\IStudentAttendanceService.cs" />
+    <Compile Include="Services\IAddAuthorizationService.cs" />
+    <Compile Include="Services\IStudentRegistrationEligibilitiesService.cs" />
+    <Compile Include="Services\IStudentSectionWaitlistsService.cs" />
+    <Compile Include="Services\IEducationHistoryService.cs" />
+    <Compile Include="Services\MealPlanRequestsService.cs" />
+    <Compile Include="Services\NonAcademicAttendanceService.cs" />
+    <Compile Include="Services\RoommateCharacteristicsService.cs" />
+    <Compile Include="Services\IStudentResidentialCategoriesService.cs" />
+    <Compile Include="Services\SectionInstructorsService.cs" />
+    <Compile Include="Services\SectionDescriptionTypesService.cs" />
+    <Compile Include="Services\SectionTitleTypesService.cs" />
+    <Compile Include="Services\StudentAdvisorRelationshipsService.cs" />
+    <Compile Include="Services\StudentAptitudeAssessmentsService.cs" />
+    <Compile Include="Services\StudentAcademicStandingsService.cs" />
+    <Compile Include="Services\StudentCourseTransferService.cs" />
+    <Compile Include="Services\StudentFinancialAidAcademicProgressStatusesService.cs" />
+    <Compile Include="Services\StudentPaymentService.cs" />
+    <Compile Include="Services\IStudentPaymentService.cs" />
+    <Compile Include="Services\IAdmissionPopulationsService.cs" />
+    <Compile Include="Services\IAssessmentCalculationMethodsService.cs" />
+    <Compile Include="Services\IAssessmentPercentileTypesService.cs" />
+    <Compile Include="Services\StudentChargeService.cs" />
+    <Compile Include="Services\IAcademicStandingsService.cs" />
+    <Compile Include="Services\IAccountingCodesService.cs" />
+    <Compile Include="Services\ICampusOrganizationService.cs" />
+    <Compile Include="Services\IStudentChargeService.cs" />
+    <Compile Include="Services\ISectionCrosslistService.cs" />
+    <Compile Include="Services\ISourceService.cs" />
+    <Compile Include="Services\IStudentAcademicPeriodProfilesService.cs" />
+    <Compile Include="Services\IStudentAcademicProgramService.cs" />
+    <Compile Include="Services\IStudentTaxFormPdfService.cs" />
+    <Compile Include="Services\IStudentTaxFormStatementService.cs" />
+    <Compile Include="Services\SectionCrosslistService.cs" />
+    <Compile Include="Services\SourceService.cs" />
+    <Compile Include="Services\IAcademicProgramService.cs" />
+    <Compile Include="Services\GradeService.cs" />
+    <Compile Include="Services\IAcademicCatalogService.cs" />
+    <Compile Include="Services\AcademicPeriodService.cs" />
+    <Compile Include="Services\IGradeService.cs" />
+    <Compile Include="Services\IStudentPetitionService.cs" />
+    <Compile Include="Services\IStudentStandingService.cs" />
+    <Compile Include="Services\IStudentRequestService.cs" />
+    <Compile Include="Services\StudentAcademicPeriodProfilesService.cs" />
+    <Compile Include="Services\StudentAttendanceService.cs" />
+    <Compile Include="Services\StudentPetitionService.cs" />
+    <Compile Include="Services\StudentAcademicProgramService.cs" />
+    <Compile Include="Services\MealPlanRatesService.cs" />
+    <Compile Include="Services\AddAuthorizationService.cs" />
+    <Compile Include="Services\StudentRegistrationEligibilitiesService.cs" />
+    <Compile Include="Services\StudentResidentialCategoriesService.cs" />
+    <Compile Include="Services\StudentSectionWaitlistService.cs" />
+    <Compile Include="Services\EducationHistoryService.cs" />
+    <Compile Include="Services\StudentStandingService.cs" />
+    <Compile Include="Services\IAcademicPeriodService.cs" />
+    <Compile Include="Services\GraduationApplicationService.cs" />
+    <Compile Include="Services\IGraduationApplicationService.cs" />
+    <Compile Include="Services\ISectionRegistrationService.cs" />
+    <Compile Include="Services\SectionRegistrationService.cs" />
+    <Compile Include="Services\IRegistrationGroupService.cs" />
+    <Compile Include="Services\IRegistrationOptionsService.cs" />
+    <Compile Include="Services\ISectionPermissionService.cs" />
+    <Compile Include="Services\IStudentAffiliationService.cs" />
+    <Compile Include="Services\IStudentWaiverService.cs" />
+    <Compile Include="Services\RegistrationGroupService.cs" />
+    <Compile Include="Services\RegistrationOptionsService.cs" />
+    <Compile Include="Services\SectionPermissionService.cs" />
+    <Compile Include="Services\StudentAffiliationService.cs" />
+    <Compile Include="Services\IStudentTermService.cs" />
+    <Compile Include="Services\StudentTaxFormPdfService.cs" />
+    <Compile Include="Services\StudentTaxFormStatementService.cs" />
+    <Compile Include="Services\StudentMealPlansService.cs" />
+    <Compile Include="Services\StudentTermService.cs" />
+    <Compile Include="Services\ApplicantService.cs" />
+    <Compile Include="Services\CurriculumService.cs" />
+    <Compile Include="Services\GradeSchemeService.cs" />
+    <Compile Include="Services\ICurriculumService.cs" />
+    <Compile Include="Services\IGradeSchemeService.cs" />
+    <Compile Include="Services\StudentRequestService.cs" />
+    <Compile Include="Services\TranscriptGroupingService.cs" />
+    <Compile Include="Services\ITranscriptGroupingService.cs" />
+    <Compile Include="Services\IStudentProgramService.cs" />
+    <Compile Include="Services\StudentProgramService.cs" />
+    <Compile Include="Services\ITestResultService.cs" />
+    <Compile Include="Services\TestResultService.cs" />
+    <Compile Include="Services\CourseService.cs" />
+    <Compile Include="Services\FacultyRestrictionService.cs" />
+    <Compile Include="Services\FacultyService.cs" />
+    <Compile Include="Services\IAcademicHistoryService.cs" />
+    <Compile Include="Services\IApplicantService.cs" />
+    <Compile Include="Services\ICourseService.cs" />
+    <Compile Include="Services\IFacultyRestrictionService.cs" />
+    <Compile Include="Services\IFacultyService.cs" />
+    <Compile Include="Services\IPreferredSectionService.cs" />
+    <Compile Include="Services\ISectionCoordinationService.cs" />
+    <Compile Include="Services\IStudentRestrictionService.cs" />
+    <Compile Include="Services\IStudentService.cs" />
+    <Compile Include="Services\PreferredSectionService.cs" />
+    <Compile Include="Services\SectionCoordinationService.cs" />
+    <Compile Include="Services\StudentRestrictionService.cs" />
+    <Compile Include="Services\StudentService.cs" />
+    <Compile Include="Services\StudentCoordinationService.cs" />
+    <Compile Include="Services\StudentWaiverService.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="packages.config">
+      <SubType>Designer</SubType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Ellucian.Colleague.Coordination.Base\Ellucian.Colleague.Coordination.Base.csproj">
+      <Project>{2D4513B8-2722-4C91-9A64-BDBBC3F03516}</Project>
+      <Name>Ellucian.Colleague.Coordination.Base</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Domain.Base\Ellucian.Colleague.Domain.Base.csproj">
+      <Project>{A3B49510-737B-4FFD-8BCA-17BCCE7FBAF7}</Project>
+      <Name>Ellucian.Colleague.Domain.Base</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Domain.Student\Ellucian.Colleague.Domain.Student.csproj">
+      <Project>{B47DA241-50B7-420A-BB25-C24B20807609}</Project>
+      <Name>Ellucian.Colleague.Domain.Student</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos.Base\Ellucian.Colleague.Dtos.Base.csproj">
+      <Project>{A147BD58-ECC6-409B-A633-128946AAA456}</Project>
+      <Name>Ellucian.Colleague.Dtos.Base</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos.Student\Ellucian.Colleague.Dtos.Student.csproj">
+      <Project>{28EB3CAC-2FA7-401E-8246-0C03C50FDEDA}</Project>
+      <Name>Ellucian.Colleague.Dtos.Student</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos\Ellucian.Colleague.Dtos.csproj">
+      <Project>{0ca929ca-2370-4763-be71-c91c244e0743}</Project>
+      <Name>Ellucian.Colleague.Dtos</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Web.Http\Ellucian.Web.Http.csproj">
+      <Project>{f0560816-dfba-441c-a23e-139566c2f18a}</Project>
+      <Name>Ellucian.Web.Http</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <Content Include="Reports\UnofficialTranscript.rdlc" />
+    <Content Include="Reports\UnofficialTranscriptDeviceInfo.txt" />
+    <Compile Include="Services\IMealTypesService.cs" />
+    <Compile Include="Services\MealTypesService.cs" />
+    <Compile Include="Services\IMealPlansService.cs" />
+    <Compile Include="Services\MealPlansService.cs" />
+    <Compile Include="Services\IRoomRatesService.cs" />
+    <Compile Include="Services\RoomRatesService.cs" />
+    <Compile Include="Services\ISectionStatusesService.cs" />
+    <Compile Include="Services\SectionStatusesService.cs" />
+    <Compile Include="Services\AdmissionApplicationSupportingItemsService.cs" />
+    <Compile Include="Services\IAdmissionApplicationSupportingItemsService.cs" />
+    <Compile Include="Services\ICourseTopicsService.cs" />
+    <Compile Include="Services\CourseTopicsService.cs" />
+    <Compile Include="Services\IChargeAssessmentMethodsService.cs" />
+    <Compile Include="Services\ChargeAssessmentMethodsService.cs" />
+    <Compile Include="Services\ICourseTransferStatusesService.cs" />
+    <Compile Include="Services\CourseTransferStatusesService.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- begin ellucian project settings -->
+  <Import Project="$(ProjectDir)..\..\..\BuildConfig\CodeSigning.targets" Condition="Exists('$(ProjectDir)..\..\..\BuildConfig\CodeSigning.targets ')" />
+  <Import Project="$(MSBuildProgramFiles32)\MSBuild\FxCop Integrator\FxCopIntegrator.targets" Condition="Exists('$(MSBuildProgramFiles32)\MSBuild\FxCop Integrator\FxCopIntegrator.targets')" />
+  <!-- end ellucian project settings -->
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

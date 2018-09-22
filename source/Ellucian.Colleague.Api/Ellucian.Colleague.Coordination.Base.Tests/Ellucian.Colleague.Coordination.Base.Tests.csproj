@@ -1,0 +1,319 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>
+    </ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{67DD30A0-1255-41CF-8FD4-A8503661249D}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Ellucian.Colleague.Coordination.Base.Tests</RootNamespace>
+    <AssemblyName>Ellucian.Colleague.Coordination.Base.Tests</AssemblyName>
+    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <ProjectTypeGuids>{3AC096D0-A1C2-E12C-1390-A8335801FDAB};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="AutoMapper">
+      <HintPath>..\packages\AutoMapper.2.1.267\lib\net40\AutoMapper.dll</HintPath>
+    </Reference>
+    <Reference Include="DDay.iCal">
+      <HintPath>..\packages\DDay.iCal.1.0.1\lib\DDay.iCal.dll</HintPath>
+    </Reference>
+    <Reference Include="Ellucian.Colleague.Configuration, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Colleague.Configuration.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Colleague.Domain, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Colleague.Domain.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Colleague.Legacy, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Colleague.Legacy.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Colleague.Property, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Colleague.Property.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Data.Colleague, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Data.Colleague.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Dmi.Client, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Dmi.Client.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Dmi.Runtime, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Dmi.Runtime.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Logging, Version=1.0.0.1, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Logging.MSEL.1.0.0.240\lib\net451\Ellucian.Logging.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Web.Adapters, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Web.Adapters.1.0.0.177\lib\net451\Ellucian.Web.Adapters.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Web.Cache, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Web.Cache.1.0.0.184\lib\net451\Ellucian.Web.Cache.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Web.License, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Web.License.1.0.0.178\lib\net451\Ellucian.Web.License.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Web.Resource, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Web.Resource.1.0.0.34\lib\net451\Ellucian.Web.Resource.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Web.Security, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Web.Security.1.0.0.206\lib\net451\Ellucian.Web.Security.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Web.Utility, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Web.Utility.1.0.0.181\lib\net451\Ellucian.Web.Utility.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.WebServices.Core.Config, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.WebServices.Core.Config.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="KellermanSoftware.Compare-NET-Objects, Version=2.1.0.0, Culture=neutral, PublicKeyToken=d970ace04cc85217, processorArchitecture=MSIL">
+      <HintPath>..\packages\CompareNETObjects.2.01.0.0\lib\net451\KellermanSoftware.Compare-NET-Objects.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.IdentityModel">
+      <HintPath>..\packages\Microsoft.IdentityModel.6.1.7600.16394\lib\net35\Microsoft.IdentityModel.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.EnterpriseLibrary.Common, Version=5.0.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\EnterpriseLibrary.Common.5.0.505.0\lib\NET35\Microsoft.Practices.EnterpriseLibrary.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.EnterpriseLibrary.Logging, Version=5.0.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\EnterpriseLibrary.Logging.5.0.505.1\lib\NET35\Microsoft.Practices.EnterpriseLibrary.Logging.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.ServiceLocation, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\CommonServiceLocator.1.0\lib\NET35\Microsoft.Practices.ServiceLocation.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.Unity, Version=2.1.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Unity.2.1.505.2\lib\NET35\Microsoft.Practices.Unity.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.Unity.Configuration, Version=2.1.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Unity.2.1.505.2\lib\NET35\Microsoft.Practices.Unity.Configuration.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.Unity.Interception, Version=2.1.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Unity.Interception.2.1.505.2\lib\NET35\Microsoft.Practices.Unity.Interception.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.Unity.Interception.Configuration, Version=2.1.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Unity.Interception.2.1.505.2\lib\NET35\Microsoft.Practices.Unity.Interception.Configuration.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.ReportViewer.WebForms">
+      <HintPath>..\Reporting\Microsoft.ReportViewer.WebForms.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Moq, Version=4.2.1506.2016, Culture=neutral, PublicKeyToken=69f491c39445e920, processorArchitecture=MSIL">
+      <HintPath>..\packages\Moq.4.2.1506.2016\lib\net40\Moq.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="slf4net">
+      <HintPath>..\packages\slf4net.0.1.32.1\lib\net35\slf4net.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.IdentityModel" />
+    <Reference Include="System.IdentityModel.Services" />
+    <Reference Include="System.IdentityModel.Tokens.Jwt">
+      <HintPath>..\packages\System.IdentityModel.Tokens.Jwt.4.0.1\lib\net45\System.IdentityModel.Tokens.Jwt.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Threading.Tasks.Dataflow, Version=4.5.24.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.Tpl.Dataflow.4.5.24\lib\portable-net45+win8+wpa81\System.Threading.Tasks.Dataflow.dll</HintPath>
+    </Reference>
+    <Reference Include="Thinktecture.IdentityModel, Version=3.4.6.0, Culture=neutral, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Thinktecture.IdentityModel.3.4.6\lib\net40\Thinktecture.IdentityModel.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <CodeAnalysisDependentAssemblyPaths Condition=" '$(VS100COMNTOOLS)' != '' " Include="$(VS100COMNTOOLS)..\IDE\PrivateAssemblies">
+      <Visible>False</Visible>
+    </CodeAnalysisDependentAssemblyPaths>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Adapters\AddressDtoAdapterTests.cs" />
+    <Compile Include="Adapters\BuildingEntityAdapterTests.cs" />
+    <Compile Include="Adapters\DateTimeOffsetToDateTimeAdapterTests.cs" />
+    <Compile Include="Adapters\IntegrationConfigurationEntityAdapterTests.cs" />
+    <Compile Include="Adapters\LocationEntityAdapterTests.cs" />
+    <Compile Include="Adapters\OrganizationalRelationshipDtoToEntityAdapterTests.cs" />
+    <Compile Include="Adapters\PayableDepositDirectiveDtoToEntityAdapterTests.cs" />
+    <Compile Include="Adapters\PersonMatchResultDtoAdapterTests.cs" />
+    <Compile Include="Adapters\PersonMatchResultEntityAdapterTests.cs" />
+    <Compile Include="Adapters\PersonNameDtoAdapterTests.cs" />
+    <Compile Include="Adapters\PersonProxyUserDtoAdapterTests.cs" />
+    <Compile Include="Adapters\PersonRestrictionEntityAdapterTests.cs" />
+    <Compile Include="Adapters\ProxyCandidateDtoAdapterTests.cs" />
+    <Compile Include="Adapters\ProxyCandidateEntityAdapterTests.cs" />
+    <Compile Include="Adapters\ProxyPermissionAssignmentDtoAdapterTests.cs" />
+    <Compile Include="Adapters\RestrictionConfigurationAdapterTests.cs" />
+    <Compile Include="Adapters\RoleAdapterTests.cs" />
+    <Compile Include="Adapters\TimestampDtoToEntityAdapterTests.cs" />
+    <Compile Include="Adapters\UserProfileConfiguration2AdapterTests.cs" />
+    <Compile Include="Adapters\WorkTaskEntityAdapterTests.cs" />
+    <Compile Include="Adapters\WorkTaskDtoAdapterTests.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RecurrenceUtilityTests.cs" />
+    <Compile Include="Reports\ReportRenderServiceTests.cs" />
+    <Compile Include="Services\AddressServiceTests.cs" />
+    <Compile Include="Services\BankingInformationConfigurationServiceTests.cs" />
+    <Compile Include="Services\ApprovalServiceTests.cs" />
+    <Compile Include="Services\DocumentServiceTests.cs" />
+    <Compile Include="Services\EmploymentVocationServiceTests.cs" />
+    <Compile Include="Services\EducationalInstitutionalUnitsServiceTests.cs" />
+    <Compile Include="Services\CommentsServiceTests.cs" />
+    <Compile Include="Services\CommentSubjectAreaServiceTests.cs" />
+    <Compile Include="Services\GenderIdentityTypeServiceTests.cs" />
+    <Compile Include="Services\GeographicAreaServiceTests.cs" />
+    <Compile Include="Services\EmailTypeServiceTests.cs" />
+    <Compile Include="Services\AddressTypeServiceTests.cs" />
+    <Compile Include="Services\CommerceTaxCodeServiceTests.cs" />
+    <Compile Include="Services\ExternalEmploymentsServiceTests.cs" />
+    <Compile Include="Services\LocationServiceTests.cs" />
+    <Compile Include="Services\InstructionalPlatformServiceTests.cs" />
+    <Compile Include="Services\InterestsServiceTests.cs" />
+    <Compile Include="Services\NonpersonRelationshipsServiceTests.cs" />
+    <Compile Include="Services\OrganizationalPersonPositionServiceTests.cs" />
+    <Compile Include="Services\OrganizationalPositionServiceTests.cs" />
+    <Compile Include="Services\OrganizationalRelationshipServiceTest.cs" />
+    <Compile Include="Services\PayableDepositDirectiveServiceTests.cs" />
+    <Compile Include="Services\PersonalRelationshipsServiceTests.cs" />
+    <Compile Include="Services\PersonGuardianRelationshipServiceTests.cs" />
+    <Compile Include="Services\PersonRelationshipsServiceTests.cs" />
+    <Compile Include="Services\PersonVisasServiceTests.cs" />
+    <Compile Include="Services\PersonNameTypeServiceTests.cs" />
+    <Compile Include="Services\PhoneTypeServiceTests.cs" />
+    <Compile Include="Services\AcademicCredentialServiceTests.cs" />
+    <Compile Include="Services\GradeChangeReasonServiceTest.cs" />
+    <Compile Include="Services\DemographicServiceTests.cs" />
+    <Compile Include="Services\PersonHoldTypeServiceTests.cs" />
+    <Compile Include="Services\PersonHoldsServiceTests.cs" />
+    <Compile Include="Services\RoomCharacteristicServiceTests.cs" />
+    <Compile Include="Services\RoomTypesServiceTests.cs" />
+    <Compile Include="Services\FacilitiesServiceTests.cs" />
+    <Compile Include="Services\PersonalRelationshipServiceTests.cs" />
+    <Compile Include="Services\AcademicHonorServiceTests.cs" />
+    <Compile Include="Services\EmergencyInformationServiceTests.cs" />
+    <Compile Include="Services\EventServiceTests.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Services\RestrictionServiceTests.cs" />
+    <Compile Include="Services\ProxyServiceTests.cs" />
+    <Compile Include="Services\RelationshipServiceTests.cs" />
+    <Compile Include="Services\SelfservicePreferencesServiceTests.cs" />
+    <Compile Include="Services\StaffServiceTests.cs" />
+    <Compile Include="Services\PersonServiceTests.cs" />
+    <Compile Include="Services\TaxFormConsentServiceTests.cs" />
+    <Compile Include="Services\ConfigurationServiceTests.cs" />
+    <Compile Include="Services\WorkTaskServiceTests.cs" />
+    <Compile Include="TestGenderIdentityTypeRepository.cs" />
+    <Compile Include="UserFactories\GenericUserFactory.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="packages.config">
+      <SubType>Designer</SubType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Ellucian.Colleague.Coordination.Base\Ellucian.Colleague.Coordination.Base.csproj">
+      <Project>{2D4513B8-2722-4C91-9A64-BDBBC3F03516}</Project>
+      <Name>Ellucian.Colleague.Coordination.Base</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Data.Base.Tests\Ellucian.Colleague.Data.Base.Tests.csproj">
+      <Project>{7b851b69-e855-4d5c-a76d-1d2bf1212e20}</Project>
+      <Name>Ellucian.Colleague.Data.Base.Tests</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Data.Base\Ellucian.Colleague.Data.Base.csproj">
+      <Project>{c3b126a1-5ffa-40a5-9826-fc22e1ccb2ec}</Project>
+      <Name>Ellucian.Colleague.Data.Base</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Domain.Base.Tests\Ellucian.Colleague.Domain.Base.Tests.csproj">
+      <Project>{BFA6C5FE-AC69-40ED-AE9E-600D9E65B9F0}</Project>
+      <Name>Ellucian.Colleague.Domain.Base.Tests</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Domain.Base\Ellucian.Colleague.Domain.Base.csproj">
+      <Project>{A3B49510-737B-4FFD-8BCA-17BCCE7FBAF7}</Project>
+      <Name>Ellucian.Colleague.Domain.Base</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos.Base\Ellucian.Colleague.Dtos.Base.csproj">
+      <Project>{A147BD58-ECC6-409B-A633-128946AAA456}</Project>
+      <Name>Ellucian.Colleague.Dtos.Base</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos\Ellucian.Colleague.Dtos.csproj">
+      <Project>{0ca929ca-2370-4763-be71-c91c244e0743}</Project>
+      <Name>Ellucian.Colleague.Dtos</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Web.Http.Configuration\Ellucian.Web.Http.Configuration.csproj">
+      <Project>{7B91D852-251C-4260-913E-FFACABCE5463}</Project>
+      <Name>Ellucian.Web.Http.Configuration</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Web.Http.TestUtil\Ellucian.Web.Http.TestUtil.csproj">
+      <Project>{068FAEDD-EB14-465E-9594-1450EC26B042}</Project>
+      <Name>Ellucian.Web.Http.TestUtil</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Web.Http\Ellucian.Web.Http.csproj">
+      <Project>{f0560816-dfba-441c-a23e-139566c2f18a}</Project>
+      <Name>Ellucian.Web.Http</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Services\RelationshipStatusesServiceTests.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build" >
+  <UsingTask TaskName="Ellucian.MsBuild.WebApi.Tasks.DomainInspectorTask"
+        AssemblyFile="$(SolutionDir)CodeAnalysis\Ellucian.MsBuild.WebApi.dll"/>
+  <UsingTask TaskName="Ellucian.MsBuild.WebApi.Tasks.DataContractInspectorTask"
+        AssemblyFile="$(SolutionDir)CodeAnalysis\Ellucian.MsBuild.WebApi.dll"/>
+  <UsingTask TaskName="Ellucian.MsBuild.WebApi.Tasks.DtoInspectorTask"
+        AssemblyFile="$(SolutionDir)CodeAnalysis\Ellucian.MsBuild.WebApi.dll"/>
+
+  <!-- Used by the InspectDtos target to exclude legacy errors. This list should not be added to from this point forward!-->
+  <ItemGroup>
+    <InspectDtosIgnoreList Include="DTO-Fields_Used">
+      <Ignore>
+        Ellucian.Colleague.Dtos.Student.TranscriptCourse;
+        Ellucian.Colleague.Dtos.Student.CoursePage2;
+        Ellucian.Colleague.Dtos.Student.Transcripts.Attendance;
+        Ellucian.Colleague.Dtos.Student.Transcripts.TranscriptRequest;
+        Ellucian.Colleague.Dtos.Student.CoursePage;
+        Ellucian.Colleague.Dtos.Student.Requirements.BaseResult;
+        Ellucian.Colleague.Dtos.Student.Requirements.GroupResult;
+        Ellucian.Colleague.Dtos.Student.Requirements.ProgramRequirements;
+        Ellucian.Colleague.Dtos.Student.Requirements.RequirementResult;
+        Ellucian.Colleague.Dtos.Student.Requirements.SubrequirementResult;
+        Ellucian.Colleague.Dtos.Student.Transcripts.TranscriptResponse
+      </Ignore>
+    </InspectDtosIgnoreList>
+    <InspectDtosIgnoreList Include="DTO-Property_Enums">
+      <Ignore>
+        Ellucian.Colleague.Dtos.Finance.Configuration.FinanceConfiguration.PartialPlanPaymentsAllowed;
+        Ellucian.Colleague.Dtos.Finance.Configuration.FinanceConfiguration.ActivityDisplay;
+        Ellucian.Colleague.Dtos.Finance.Configuration.FinanceConfiguration.PaymentDisplay;
+        Ellucian.Colleague.Dtos.Planning.DegreePlanWarning.Type;
+        Ellucian.Colleague.Dtos.Planning.PlannedCourseWarning.Type;
+        Ellucian.Colleague.Dtos.Planning.DegreePlanNote.PersonType;
+        Ellucian.Colleague.Dtos.Student.Requirements.AdditionalRequirement.Type;
+        Ellucian.Colleague.Dtos.Student.Transcripts.Recipient.TranscriptType;
+        Ellucian.Colleague.Dtos.Student.Transcripts.Recipient.TranscriptPurpose;
+        Ellucian.Colleague.Dtos.Student.Transcripts.Recipient.DeliveryMethod
+      </Ignore>
+    </InspectDtosIgnoreList>
+  </ItemGroup>
+
+  <Target Name="InspectDataContracts" AfterTargets="Build" Condition="($(TargetExt) == '.dll') and ($(TargetName.Contains('.Colleague.Data.'))) and (!$(TargetName.EndsWith(.Tests)))">
+    <DataContractInspectorTask AssemblyPath="$(TargetPath)" ProjectDir="$(ProjectDir)" />
+  </Target>
+    
+  <Target Name="InspectDomainEntities" AfterTargets="Build" Condition="($(TargetExt) == '.dll') and ($(TargetName.Contains('.Colleague.Domain.'))) and (!$(TargetName.EndsWith(.Tests)))">
+    <DomainInspectorTask AssemblyPath="$(TargetPath)" ProjectDir="$(ProjectDir)" />
+  </Target>
+  
+    <!-- Inspects DTOs for standards adherence.  -->
+  <Target Name="InspectDtos" DependsOnTargets="InspectDtosWillIgnore" AfterTargets="Build" Condition="($(TargetExt) == '.dll') and ($(TargetName.Contains('.Colleague.Dtos.'))) and (!$(TargetName.EndsWith(.Tests)))">
+    <DtoInspectorTask AssemblyPath="$(TargetPath)" ProjectDir="$(ProjectDir)" IgnoreList="@(InspectDtosIgnoreList)" />
+  </Target>
+
+  <!-- Helper used by the InspectDtos target to print what DTO errors will be ignored. -->
+  <Target Name="InspectDtosWillIgnore" Inputs="@(InspectDtosIgnoreList)" Outputs="%(Identity)">
+    <Message Text="Code: @(InspectDtosIgnoreList), Items: %(InspectDtosIgnoreList.Ignore)"/>
+  </Target>
+</Project>

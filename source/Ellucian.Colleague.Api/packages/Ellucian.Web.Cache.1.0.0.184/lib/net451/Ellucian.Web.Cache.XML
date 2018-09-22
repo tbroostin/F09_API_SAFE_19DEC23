@@ -1,0 +1,700 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Ellucian.Web.Cache</name>
+    </assembly>
+    <members>
+        <member name="T:Ellucian.Web.Cache.BaseCachingRepository">
+            <summary>
+            Provides common access to isolated caching.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Cache.BaseCachingRepository._cacheProvider">
+            <summary>
+            Cache provider
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Cache.BaseCachingRepository.#ctor(Ellucian.Web.Cache.ICacheProvider)">
+            <summary>
+            Default constructor
+            </summary>
+            <param name="cacheProvider">cache provider</param>
+        </member>
+        <member name="M:Ellucian.Web.Cache.BaseCachingRepository.AddOrUpdateCache``1(System.String,``0,System.Nullable{System.Double})">
+            <summary>
+            This method allows you to try to update an object in the cache. If the item does not yet exist in the cache, then
+            this method will create it. Attemps to add null objects to cache will be ignored.
+            </summary>
+            <typeparam name="T">requested object type</typeparam>
+            <param name="cacheKey">unique cache key</param>
+            <param name="originalObject">original object</param>
+            <param name="cacheTimeoutOverride">cache timeout override</param>
+            <returns>object of type T or null</returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.BaseCachingRepository.AddOrUpdateCacheAsync``1(System.String,``0,System.Nullable{System.Double})">
+            <summary>
+            This method allows you to try to update an object in the cache. If the cache entry does not yet exist, then
+            this method will create it add the object to this cache. Attempts to add null objects to cache will be ignored.
+            This method support asynchronous wait for a lock on the cache entry.
+            </summary>
+            <typeparam name="T">requested object type</typeparam>
+            <param name="cacheKey">unique cache key</param>
+            <param name="originalObject">original object</param>
+            <param name="cacheTimeoutOverride">cache timeout override</param>
+            <returns>object of type T or null</returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.BaseCachingRepository.GetOrAddToCache``1(System.String,System.Func{``0},System.Nullable{System.Double})">
+            <summary>
+            This method allows you to try to get an object from the cache and failover to a function
+            that will create an object if necessary then add it to that cache. 
+            </summary>
+            <typeparam name="T">requested object type</typeparam>
+            <param name="cacheKey">unique cache key</param>
+            <param name="createObjectFunction">function to create an object of type T</param>
+            <param name="cacheTimeoutOverride">cache timeout override</param>
+            <returns>object of type T or null</returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.BaseCachingRepository.GetOrAddToCacheAsync``1(System.String,System.Func{System.Threading.Tasks.Task{``0}},System.Nullable{System.Double})">
+            <summary>
+            This async method allows you to try to get an object from the cache and failover to an 
+            asynchronous function that will create an object if necessary then add it to that cache. 
+            </summary>
+            <typeparam name="T">requested object type</typeparam>
+            <param name="cacheKey">unique cache key</param>
+            <param name="createObjectFunctionAsync">ASYNC function to create an object of type T</param>
+            <param name="cacheTimeoutOverride">cache timeout override</param>
+            <returns>object of type T or null</returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.BaseCachingRepository.ContainsKey(System.String)">
+            <summary>
+            Helper method to determine if an object exists in the local cache
+            </summary>
+            <param name="key">unique key</param>
+            <returns>true/false</returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.BaseCachingRepository.ClearCache(System.Collections.Generic.List{System.String})">
+            <summary>
+            Clears entries from the cache.
+            </summary>
+            <param name="removalFilter">List of cache key filters; if provided, only those cache keys which contain the strings in this list will be cleared from the cache.</param>
+        </member>
+        <member name="M:Ellucian.Web.Cache.BaseCachingRepository.GetCacheName">
+            <summary>
+            Gets the name of the cache used to store items within this instance.
+            </summary>
+            <returns>unique cache name</returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.BaseCachingRepository.BuildFullCacheKey(System.String)">
+            <summary>
+            Builds the unique key that will be used in the actual cache store.
+            </summary>
+            <param name="userDefinedKey">The user defined key.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.BaseCachingRepository.InitializeCacheProvider(System.String,System.UInt16,System.String,System.Diagnostics.TraceLevel)">
+            <summary>
+            Initializes the cache provider. At this time, this method is only applicable for distributed cache providers. In-proc providers
+            will have placeholder methods that do not have any functional purpose to satisfy the interface
+            </summary>
+            <param name="cacheHost">The host for the cache service.</param>
+            <param name="cachePort">The port the cache service is running on.</param>
+            <param name="cacheName">Name of the cache to be used.</param>
+            <param name="cacheTraceLevel">Trace level (for diagnostics) in the cache provider.</param>
+        </member>
+        <member name="M:Ellucian.Web.Cache.BaseCachingRepository.AddToCacheAndUnlock``1(System.String,``0,System.Double,System.Object)">
+            <summary>
+            Adds an item to the cache then releases its lock.
+            Usage Contract: If a lock was attained on the cache item prior to calling this method, then the corresponding lock handle MUST be
+            passed into this method.  Doing so will correctly allow the cache item to be updated and the corresponding lock to be released
+            so that subsequent attempts to update the cache item can proceed.
+            Attempts to add null objects to cache will be ignored.
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="key">The key to the cache item to add.</param>
+            <param name="cacheObject">The object to be cached. Cannot be null.</param>
+            <param name="timeout">The timeout/duration for the cache item.</param>
+            <param name="lockHandle">The handle to the cached item if a lock was placed prior to this attempt to update; pass in null to 
+            add the item without regard to locking.  This parameter is required if a lock was attained prior to calling this method</param>
+            <exception cref="T:System.ArgumentNullException">cacheObject</exception>
+        </member>
+        <member name="M:Ellucian.Web.Cache.BaseCachingRepository.AddToCacheAndUnlockSemaphore``1(System.String,``0,System.Double,System.Threading.SemaphoreSlim)">
+            <summary>
+            Adds an item to the cache then releases its lock.
+            Usage Contract: If a lock was attained on the cache item prior to calling this method, then the corresponding lock handle MUST be
+            passed into this method.  Doing so will correctly allow the cache item to be updated and the corresponding lock to be released
+            so that subsequent attempts to update the cache item can proceed.
+            Attempts to add null objects to cache will be ignored.
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="key">The key to the cache item to add.</param>
+            <param name="cacheObject">The object to be cached. Cannot be null.</param>
+            <param name="timeout">The timeout/duration for the cache item.</param>
+            <param name="lockHandle">The handle to the cached item if a lock was placed prior to this attempt to update; pass in null to 
+            add the item without regard to locking.  This parameter is required if a lock was attained prior to calling this method</param>
+            <exception cref="T:System.ArgumentNullException">cacheObject</exception>
+        </member>
+        <member name="P:Ellucian.Web.Cache.BaseCachingRepository.CacheTimeout">
+            <summary>
+            Cache timeout in minutes
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Cache.HttpRuntimeCacheProvider">
+            <summary>
+            Provides common access to HTTP runtime caching.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Cache.ICacheProvider">
+            <summary>
+            Base interface for cache maintenance.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Cache.ICacheProvider.Contains(System.String,System.String)">
+            <summary>
+            Determines whether the specified key exists in the cache.
+            </summary>
+            <param name="key">The key.</param>
+            <param name="regionName">Name of the region (null for this method).</param>
+            <returns>
+              <c>true</c> if item exists in the cache; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.ICacheProvider.Get(System.String,System.String)">
+            <summary>
+            Gets the cached item for the specified key.
+            </summary>
+            <param name="key">The key.</param>
+            <param name="regionName">Name of the region (null in this method).</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.ICacheProvider.GetAndLock(System.String,System.Object@,System.String)">
+            <summary>
+            Gets the cached item and generates a lock for updating the cached item.
+            Usage Contract: This method returns a lock handle for the cache item that is locked. This handle
+            must be used in a subsequent call to the AddAndUnlock, RemoveAndUnlock, or Unlock method to ensure
+            the lock on the applicable cache item is released.
+            </summary>
+            <param name="key">The key.</param>
+            <param name="lockHandle">The lock handle generated; the same lock handle must be presented when updating and unlocking the cache.</param>
+            <param name="regionName">Name of the region (null in this method).</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.ICacheProvider.Remove(System.String,System.String)">
+            <summary>
+            Removes a cache entry per the specified key.
+            </summary>
+            <param name="key">The key.</param>
+            <param name="regionName">Name of the region (null in this method).</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.ICacheProvider.RemoveAndUnlock(System.String,System.Object,System.String)">
+            <summary>
+            Removes a cache entry per the specified key and removes the lock. This method will remove the entry from the cache,
+            and will release the lock that had been held on the item.
+            Usage Contract: This method should only be called after a cache item has been previously locked for update
+            by the GetAndLock method. That method returns a lock handle for the cache item that is then received as 
+            input within this method.
+            </summary>
+            <param name="key">The key.</param>
+            <param name="lockHandle">The lock handle; same handle as was returned when the lock was acquired via the GetAndLock method.</param>
+            <param name="regionName">Name of the region (null in this method).</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.ICacheProvider.Add(System.String,System.Object,System.Runtime.Caching.CacheItemPolicy,System.String)">
+            <summary>
+            Adds an item with the specified key into the cache.
+            </summary>
+            <param name="key">The key.</param>
+            <param name="value">The value.</param>
+            <param name="policy">The policy.</param>
+            <param name="regionName">Name of the region (null for this method).</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.ICacheProvider.AddAndUnlock(System.String,System.Object,System.Object,System.Runtime.Caching.CacheItemPolicy,System.String)">
+            <summary>
+            Adds and entry to the cache and removes the lock.
+            Usage Contract: This method should only be called after a cache item has been previously locked for update
+            by the GetAndLock method. That method returns a lock handle for the cache item that is then received as 
+            input within this method.
+            </summary>
+            <param name="key">The key to be updated in the cache.</param>
+            <param name="value">The value/data to be placed into the cache under the specified key value.</param>
+            <param name="lockHandle">The lock handle; same handle as was returned when the lock was acquired via the GetAndLock method.</param>
+            <param name="policy">The cache item policy, which includes the timeout/duration for the cache item.</param>
+            <param name="regionName">Name of the region (null for this method).</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.ICacheProvider.Unlock(System.String,System.Object,System.String)">
+            <summary>
+            Unlocks the specified cache entry.
+            Usage Contract: This method should only be called after a cache item has been previously locked for update
+            by the GetAndLock method. That method returns a lock handle for the cache item that is then received as 
+            input within this method.
+            </summary>
+            <param name="key">The key.</param>
+            <param name="lockHandle">The lock handle; same handle as was returned when the lock was acquired via the GetAndLock method.</param>
+            <param name="regionName">Name of the region (null for this method).</param>
+        </member>
+        <member name="M:Ellucian.Web.Cache.ICacheProvider.GetCount(System.String)">
+            <summary>
+            Returns the count of items in the cache
+            </summary>
+            <param name="regionName">Name of the region (null for this method).</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.ICacheProvider.InitializeCache(System.String,System.Nullable{System.UInt16},System.String,System.Nullable{System.Diagnostics.TraceLevel})">
+            <summary>
+            Initializes the cache provider. At this time, this method is only applicable for distributed cache providers
+            </summary>
+            <param name="cacheHost">The host for the cache service.</param>
+            <param name="cachePort">The port the cache service is running on.</param>
+            <param name="cacheName">Name of the cache to be used.</param>
+            <param name="cacheTraceLevel">Trace level (for diagnostics) in the cache provider.</param>
+        </member>
+        <member name="M:Ellucian.Web.Cache.ICacheProvider.GetAndLockSemaphoreAsync(System.String,System.String)">
+            <summary>
+            Asynchronously gets the cached item and creates a semaphore lock for updating the cached item. Returns a  
+            tuple with item #1 being the object requested, and item #2 being the lock handle (a semaphoreslim).
+            Usage Contract: This method returns a lock handle for the cache item that is locked. This handle
+            must be used in a subsequent call to the AddAndUnlockSemaphore, RemoveAndUnlockSemaphore, 
+            or UnlockSemaphore method to ensure the lock on the applicable cache item is released.
+            </summary>
+            <param name="key">The key.</param>
+            <param name="regionName">Name of the region (null in this method).</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.ICacheProvider.AddAndUnlockSemaphore(System.String,System.Object,System.Threading.SemaphoreSlim,System.Runtime.Caching.CacheItemPolicy,System.String)">
+            <summary>
+            Asynchronously adds and entry to the cache and releases the lock.
+            Usage Contract: This method should only be called after a cache item has been previously locked for update
+            by the GetAndLockSemaphoreAsync method. That method returns a lock handle for the cache item that is then received as 
+            input within this method.
+            </summary>
+            <param name="key">The key to be updated in the cache.</param>
+            <param name="value">The value/data to be placed into the cache under the specified key value.</param>
+            <param name="lockHandle">The lock handle; same handle as was returned when the lock was acquired via the GetAndLock method.</param>
+            <param name="policy">The cache item policy, which includes the timeout/duration for the cache item.</param>
+            <param name="regionName">Name of the region (null for this method).</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.ICacheProvider.RemoveAndUnlockSemaphore(System.String,System.Threading.SemaphoreSlim,System.String)">
+            <summary>
+            Removes a cache entry per the specified key and removes the lock. This method will remove the entry from the cache,
+            and will release the lock that had been held on the item.
+            Usage Contract: This method should only be called after a cache item has been previously locked for update
+            by the GetAndLockSemaphoreAsync method. That method returns a lock handle for the cache item that is then received as 
+            input within this method.
+            </summary>
+            <param name="key">The key.</param>
+            <param name="lockHandle">The lock handle; same handle as was returned when the lock was acquired via the GetAndLock method.</param>
+            <param name="regionName">Name of the region (null in this method).</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.ICacheProvider.UnlockSemaphore(System.String,System.Threading.SemaphoreSlim,System.String)">
+            <summary>
+            Unlocks the specified cache entry.
+            Usage Contract: This method should only be called after a cache item has been previously locked for update
+            by the GetAndLockSemaphoreAsync method. That method returns a lock handle for the cache item that is then received as 
+            input within this method.
+            </summary>
+            <param name="key">The key (not used in this method for this cache provider).</param>
+            <param name="lockHandle">The lock handle; same handle as was returned when the lock was acquired via the GetAndLock method.</param>
+            <param name="regionName">Name of the region (null for this method).</param>
+        </member>
+        <member name="P:Ellucian.Web.Cache.ICacheProvider.Item(System.String)">
+            <summary>
+            Gets the <see cref="T:System.Object"/> with the specified key.
+            </summary>
+            <value>
+            The <see cref="T:System.Object"/>.
+            </value>
+            <param name="key">The key.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.HttpRuntimeCacheProvider.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Cache.HttpRuntimeCacheProvider"/> class.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Cache.HttpRuntimeCacheProvider.Contains(System.String,System.String)">
+            <summary>
+            Determines whether the specified key exists in the HTTP runtime cache.
+            </summary>
+            <param name="key">The key.</param>
+            <param name="regionName">Name of the region (null in this method).</param>
+            <returns>
+              <c>true</c> if item exists in the cache; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.HttpRuntimeCacheProvider.Get(System.String,System.String)">
+            <summary>
+            Gets the cached item for the specified key.
+            </summary>
+            <param name="key">The key.</param>
+            <param name="regionName">Name of the region (null in this method).</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.HttpRuntimeCacheProvider.GetAndLock(System.String,System.Object@,System.String)">
+            <summary>
+            Gets the cached item and generates a lock for updating the cached item.
+            Usage Contract: This method returns a lock handle for the cache item that is locked. This handle
+            must be used in a subsequent call to the AddAndUnlock, RemoveAndUnlock, or Unlock method to ensure
+            the lock on the applicable cache item is released.
+            </summary>
+            <param name="key">The key.</param>
+            <param name="lockHandle">The lock handle generated; the same lock handle must be presented when updating and unlocking the cache.</param>
+            <param name="regionName">Name of the region (null in this method).</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.HttpRuntimeCacheProvider.Remove(System.String,System.String)">
+            <summary>
+            Removes an HTTP cache entry per the specified key.
+            </summary>
+            <param name="key">The key.</param>
+            <param name="regionName">Name of the region (null in this method).</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.HttpRuntimeCacheProvider.RemoveAndUnlock(System.String,System.Object,System.String)">
+            <summary>
+            Removes a cache entry per the specified key and removes the lock. This method will remove the entry from the cache,
+            and will release the lock that had been held on the item.
+            Usage Contract: This method should only be called after a cache item has been previously locked for update
+            by the GetAndLock method. That method returns a lock handle for the cache item that is then received as 
+            input within this method.
+            </summary>
+            <param name="key">The key.</param>
+            <param name="lockHandle">The lock handle; same handle as was returned when the lock was acquired via the GetAndLock method.</param>
+            <param name="regionName">Name of the region (null in this method).</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.HttpRuntimeCacheProvider.Add(System.String,System.Object,System.Runtime.Caching.CacheItemPolicy,System.String)">
+            <summary>
+            Adds an HTTP item with the specified key into the HTTP cache.
+            </summary>
+            <param name="key">The key.</param>
+            <param name="value">The value.</param>
+            <param name="policy">The policy.</param>
+            <param name="regionName">Name of the region (null for this method).</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.HttpRuntimeCacheProvider.AddAndUnlock(System.String,System.Object,System.Object,System.Runtime.Caching.CacheItemPolicy,System.String)">
+            <summary>
+            Adds and entry to the cache and removes the lock.
+            Usage Contract: This method should only be called after a cache item has been previously locked for update
+            by the GetAndLock method. That method returns a lock handle for the cache item that is then received as 
+            input within this method.
+            </summary>
+            <param name="key">The key to be updated in the cache.</param>
+            <param name="value">The value/data to be placed into the cache under the specified key value.</param>
+            <param name="lockHandle">The lock handle; same handle as was returned when the lock was acquired via the GetAndLock method.</param>
+            <param name="policy">The cache item policy, which includes the timeout/duration for the cache item.</param>
+            <param name="regionName">Name of the region (null for this method).</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.HttpRuntimeCacheProvider.Unlock(System.String,System.Object,System.String)">
+            <summary>
+            Unlocks the specified cache entry.
+            Usage Contract: This method should only be called after a cache item has been previously locked for update
+            by the GetAndLock method. That method returns a lock handle for the cache item that is then received as 
+            input within this method.
+            </summary>
+            <param name="key">The key (not used in this method for this cache provider).</param>
+            <param name="lockHandle">The lock handle; same handle as was returned when the lock was acquired via the GetAndLock method.</param>
+            <param name="regionName">Name of the region (null for this method).</param>
+        </member>
+        <member name="M:Ellucian.Web.Cache.HttpRuntimeCacheProvider.GetEnumerator">
+            <summary>
+            Returns an enumerator used to iterate through values contained in the cache.
+            </summary>
+            <returns>
+            A <see cref="T:System.Collections.Generic.IEnumerator`1"></see> that can be used to iterate through the collection.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.HttpRuntimeCacheProvider.System#Collections#IEnumerable#GetEnumerator">
+            <summary>
+            Returns an enumerator used to iterate through values contained in the cache.
+            </summary>
+            <returns>
+            An <see cref="T:System.Collections.IEnumerator" /> object that can be used to iterate through the collection.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.HttpRuntimeCacheProvider.GetCount(System.String)">
+            <summary>
+            Returns the count of items in the cache.
+            </summary>
+            <param name="regionName">Name of the region (always set to null for this implementation).</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.HttpRuntimeCacheProvider.InitializeCache(System.String,System.Nullable{System.UInt16},System.String,System.Nullable{System.Diagnostics.TraceLevel})">
+            <summary>
+            Placeholder method to satisfy the interface; this method only used by distributed cache providers
+            </summary>
+            <param name="cacheHost">The host for the cache service.</param>
+            <param name="cachePort">The port the cache service is running on.</param>
+            <param name="cacheName">Name of the cache to be used.</param>
+            <param name="cacheTraceLevel">Trace level (for diagnostics) in the cache provider.</param>
+        </member>
+        <member name="M:Ellucian.Web.Cache.HttpRuntimeCacheProvider.GetAndLockSemaphoreAsync(System.String,System.String)">
+            <summary>
+            Gets the cached item and generates a lock for updating the cached item asynchronously. Returns a  
+            tuple with item #1 being the object requested, and item #2 being the lock handle (a semaphoreslim).
+            Usage Contract: This method returns a lock handle for the cache item that is locked. This handle
+            must be used in a subsequent call to the AddAndUnlockSemaphore, RemoveAndUnlockSemaphore, 
+            or UnlockSemaphore method to ensure the lock on the applicable cache item is released.
+            </summary>
+            <param name="key">The key.</param>
+            <param name="regionName">Name of the region (null in this method).</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.HttpRuntimeCacheProvider.RemoveAndUnlockSemaphore(System.String,System.Threading.SemaphoreSlim,System.String)">
+            <summary>
+            Removes a cache entry per the specified key and removes the lock. This method will remove the entry from the cache,
+            and will release the lock that had been held on the item.
+            Usage Contract: This method should only be called after a cache item has been previously locked for update
+            by the GetAndLockSemaphoreAsync method. That method returns a lock handle for the cache item that is then received as 
+            input within this method.
+            </summary>
+            <param name="key">The key.</param>
+            <param name="lockHandle">The lock handle; same handle as was returned when the lock was acquired via the GetAndLock method.</param>
+            <param name="regionName">Name of the region (null in this method).</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.HttpRuntimeCacheProvider.AddAndUnlockSemaphore(System.String,System.Object,System.Threading.SemaphoreSlim,System.Runtime.Caching.CacheItemPolicy,System.String)">
+            <summary>
+            Adds and entry to the cache and removes the lock.
+            Usage Contract: This method should only be called after a cache item has been previously locked for update
+            by the GetAndLockSemaphoreAsync method. That method returns a lock handle for the cache item that is then received as 
+            input within this method.
+            </summary>
+            <param name="key">The key to be updated in the cache.</param>
+            <param name="value">The value/data to be placed into the cache under the specified key value.</param>
+            <param name="lockHandle">The lock handle; same handle as was returned when the lock was acquired via the GetAndLock method.</param>
+            <param name="policy">The cache item policy, which includes the timeout/duration for the cache item.</param>
+            <param name="regionName">Name of the region (null for this method).</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.HttpRuntimeCacheProvider.UnlockSemaphore(System.String,System.Threading.SemaphoreSlim,System.String)">
+            <summary>
+            Unlocks the specified cache entry.
+            Usage Contract: This method should only be called after a cache item has been previously locked for update
+            by the GetAndLockSemaphoreAsync method. That method returns a lock handle for the cache item that is then received as 
+            input within this method.
+            </summary>
+            <param name="key">The key (not used in this method for this cache provider).</param>
+            <param name="lockHandle">The lock handle; same handle as was returned when the lock was acquired via the GetAndLock method.</param>
+            <param name="regionName">Name of the region (null for this method).</param>
+        </member>
+        <member name="P:Ellucian.Web.Cache.HttpRuntimeCacheProvider.Item(System.String)">
+            <summary>
+            Gets the <see cref="T:System.Object"/> with the specified key.
+            </summary>
+            <value>
+            The <see cref="T:System.Object"/>.
+            </value>
+            <param name="key">The key.</param>
+            <returns></returns>
+        </member>
+        <member name="T:Ellucian.Web.Cache.MemoryCacheProvider">
+            <summary>
+            Provides basic methods for interacting with memory cache objects. 
+            Warning: may delete objects unexpectedly more aggressively than HttpRuntimeCacheProvider.
+            Use HttpRuntimeCacheProvider instead.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Cache.MemoryCacheProvider.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Cache.MemoryCacheProvider"/> class.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Cache.MemoryCacheProvider.#ctor(System.Runtime.Caching.ObjectCache)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Cache.MemoryCacheProvider"/> class.
+            </summary>
+            <param name="cache">The cache to initialize into the class variable.</param>
+        </member>
+        <member name="M:Ellucian.Web.Cache.MemoryCacheProvider.GetCache(System.String)">
+            <summary>
+            Gets the cache from the class variable.
+            </summary>
+            <param name="cacheName">Name of the cache.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.MemoryCacheProvider.Contains(System.String,System.String)">
+            <summary>
+            Determines whether the specified key exists in the cache.
+            </summary>
+            <param name="key">The key.</param>
+            <param name="regionName">Name of the region (null for this method).</param>
+            <returns>
+              <c>true</c> if item exists in the cache; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.MemoryCacheProvider.Get(System.String,System.String)">
+            <summary>
+            Gets the cached item for the specified key.
+            </summary>
+            <param name="key">The key.</param>
+            <param name="regionName">Name of the region (null in this method).</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.MemoryCacheProvider.GetAndLock(System.String,System.Object@,System.String)">
+            <summary>
+            Gets the cached item and generates a lock for updating the cached item.
+            Usage Contract: This method returns a lock handle for the cache item that is locked. This handle
+            must be used in a subsequent call to the AddAndUnlock, RemoveAndUnlock, or Unlock method to ensure
+            the lock on the applicable cache item is released.
+            </summary>
+            <param name="key">The key.</param>
+            <param name="lockHandle">The lock handle generated; the same lock handle must be presented when updating and unlocking the cache.</param>
+            <param name="regionName">Name of the region (null in this method).</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.MemoryCacheProvider.Remove(System.String,System.String)">
+            <summary>
+            Removes an entry from the cache per the specified key.
+            </summary>
+            <param name="key">The key of the item to remove.</param>
+            <param name="regionName">Name of the region (null in this method).</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.MemoryCacheProvider.RemoveAndUnlock(System.String,System.Object,System.String)">
+            <summary>
+            Removes a cache entry per the specified key and removes the lock. This method will remove the entry from the cache,
+            and will release the lock that had been held on the item.
+            Usage Contract: This method should only be called after a cache item has been previously locked for update
+            by the GetAndLock method. That method returns a lock handle for the cache item that is then received as 
+            input within this method.
+            </summary>
+            <param name="key">The key.</param>
+            <param name="lockHandle">The lock handle; same handle as was returned when the lock was acquired via the GetAndLock method.</param>
+            <param name="regionName">Name of the region (null in this method).</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.MemoryCacheProvider.Add(System.String,System.Object,System.Runtime.Caching.CacheItemPolicy,System.String)">
+            <summary>
+            Adds an item with the specified key into the HTTP cache.
+            </summary>
+            <param name="key">The key of the item to add.</param>
+            <param name="value">The value to add to the cache.</param>
+            <param name="policy">The cache item policy.</param>
+            <param name="regionName">Name of the region (null for this method).</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.MemoryCacheProvider.AddAndUnlock(System.String,System.Object,System.Object,System.Runtime.Caching.CacheItemPolicy,System.String)">
+            <summary>
+            Adds and entry to the cache and removes the lock.
+            Usage Contract: This method should only be called after a cache item has been previously locked for update
+            by the GetAndLock method. That method returns a lock handle for the cache item that is then received as 
+            input within this method.
+            </summary>
+            <param name="key">The key to be updated in the cache.</param>
+            <param name="value">The value/data to be placed into the cache under the specified key value.</param>
+            <param name="lockHandle">The lock handle; same handle as was returned when the lock was acquired via the GetAndLock method.</param>
+            <param name="policy">The cache item policy, which includes the timeout/duration for the cache item.</param>
+            <param name="regionName">Name of the region (null for this method).</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.MemoryCacheProvider.Unlock(System.String,System.Object,System.String)">
+            <summary>
+            Unlocks the specified cache entry.
+            Usage Contract: This method should only be called after a cache item has been previously locked for update
+            by the GetAndLock method. That method returns a lock handle for the cache item that is then received as 
+            input within this method.
+            </summary>
+            <param name="key">The key (not used in this method for this cache provider).</param>
+            <param name="lockHandle">The lock handle; same handle as was returned when the lock was acquired via the GetAndLock method.</param>
+            <param name="regionName">Name of the region (null for this method).</param>
+        </member>
+        <member name="M:Ellucian.Web.Cache.MemoryCacheProvider.GetCount(System.String)">
+            <summary>
+            Returns the count of items in the cache.
+            </summary>
+            <param name="regionName">Name of the region (null for this method).</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.MemoryCacheProvider.GetEnumerator">
+            <summary>
+            Returns an enumerator that iterates through the collection.
+            </summary>
+            <returns>
+            A <see cref="T:System.Collections.Generic.IEnumerator`1"></see> that can be used to iterate through the collection.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.MemoryCacheProvider.System#Collections#IEnumerable#GetEnumerator">
+            <summary>
+            Returns an enumerator that iterates through a collection.
+            </summary>
+            <returns>
+            An <see cref="T:System.Collections.IEnumerator" /> object that can be used to iterate through the collection.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.MemoryCacheProvider.InitializeCache(System.String,System.Nullable{System.UInt16},System.String,System.Nullable{System.Diagnostics.TraceLevel})">
+            <summary>
+            Placeholder method to satisfy the interface; this method only used by distributed cache providers
+            </summary>
+            <param name="cacheHost">The host for the cache service.</param>
+            <param name="cachePort">The port the cache service is running on.</param>
+            <param name="cacheName">Name of the cache to be used.</param>
+            <param name="cacheTraceLevel">Trace level (for diagnostics) in the cache provider.</param>
+        </member>
+        <member name="M:Ellucian.Web.Cache.MemoryCacheProvider.GetAndLockSemaphoreAsync(System.String,System.String)">
+            <summary>
+            Asynchronously gets the cached item and generates a semaphore lock for updating the cached item. Returns a  
+            tuple with item #1 being the object requested, and item #2 being the lock handle (a semaphoreslim).
+            Usage Contract: This method returns a lock handle for the cache item that is locked. This handle
+            must be used in a subsequent call to the AddAndUnlockSemaphore, RemoveAndUnlockSemaphore, 
+            or UnlockSemaphore method to ensure the lock on the applicable cache item is released.
+            </summary>
+            <param name="key">The key.</param>
+            <param name="regionName">Name of the region (null in this method).</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.MemoryCacheProvider.AddAndUnlockSemaphore(System.String,System.Object,System.Threading.SemaphoreSlim,System.Runtime.Caching.CacheItemPolicy,System.String)">
+            <summary>
+            Asynchronously adds and entry to the cache and releases the lock.
+            Usage Contract: This method should only be called after a cache item has been previously locked for update
+            by the GetAndLockSemaphoreAsync method. That method returns a lock handle for the cache item that is then received as 
+            input within this method.
+            </summary>
+            <param name="key">The key to be updated in the cache.</param>
+            <param name="value">The value/data to be placed into the cache under the specified key value.</param>
+            <param name="lockHandle">The lock handle; same handle as was returned when the lock was acquired via the GetAndLock method.</param>
+            <param name="policy">The cache item policy, which includes the timeout/duration for the cache item.</param>
+            <param name="regionName">Name of the region (null for this method).</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.MemoryCacheProvider.RemoveAndUnlockSemaphore(System.String,System.Threading.SemaphoreSlim,System.String)">
+            <summary>
+            Removes a cache entry per the specified key and removes the lock. This method will remove the entry from the cache,
+            and will release the lock that had been held on the item.
+            Usage Contract: This method should only be called after a cache item has been previously locked for update
+            by the GetAndLockSemaphoreAsync method. That method returns a lock handle for the cache item that is then received as 
+            input within this method.
+            </summary>
+            <param name="key">The key.</param>
+            <param name="lockHandle">The lock handle; same handle as was returned when the lock was acquired via the GetAndLock method.</param>
+            <param name="regionName">Name of the region (null in this method).</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Cache.MemoryCacheProvider.UnlockSemaphore(System.String,System.Threading.SemaphoreSlim,System.String)">
+            <summary>
+            Unlocks the specified cache entry.
+            Usage Contract: This method should only be called after a cache item has been previously locked for update
+            by the GetAndLockSemaphoreAsync method. That method returns a lock handle for the cache item that is then received as 
+            input within this method.
+            </summary>
+            <param name="key">The key (not used in this method for this cache provider).</param>
+            <param name="lockHandle">The lock handle; same handle as was returned when the lock was acquired via the GetAndLock method.</param>
+            <param name="regionName">Name of the region (null for this method).</param>
+        </member>
+        <member name="P:Ellucian.Web.Cache.MemoryCacheProvider.Item(System.String)">
+            <summary>
+            Gets the <see cref="T:System.Object"/> with the specified key.
+            </summary>
+            <value>
+            The <see cref="T:System.Object"/>.
+            </value>
+            <param name="key">The key to get.</param>
+            <returns></returns>
+        </member>
+    </members>
+</doc>

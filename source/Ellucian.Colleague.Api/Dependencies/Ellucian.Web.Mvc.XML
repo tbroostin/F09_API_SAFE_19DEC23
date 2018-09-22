@@ -1,0 +1,1539 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Ellucian.Web.Mvc</name>
+    </assembly>
+    <members>
+        <member name="T:Ellucian.Web.Mvc.Adapters.SiteToSiteAdapter">
+            <summary>
+            Utility for mapping a site object to another.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Adapters.SiteToSiteAdapter.#ctor(Ellucian.Web.Adapters.IAdapterRegistry,slf4net.ILogger)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Mvc.Adapters.SiteToSiteAdapter"/> class.
+            </summary>
+            <param name="adapterRegistry">The adapter registry.</param>
+            <param name="logger">The logger.</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Adapters.SiteToSiteAdapter.MapToType(Ellucian.Web.Mvc.Models.Site)">
+            <summary>
+            Maps to specified type.
+            </summary>
+            <param name="Source">The source.</param>
+            <returns></returns>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Adapters.SiteToSiteModelAdapter">
+            <summary>
+            Utility for mapping a site object to another.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Adapters.SiteToSiteModelAdapter.#ctor(Ellucian.Web.Adapters.IAdapterRegistry,slf4net.ILogger)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Mvc.Adapters.SiteToSiteModelAdapter"/> class.
+            </summary>
+            <param name="adapterRegistry">The adapter registry.</param>
+            <param name="logger">The logger.</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Adapters.SiteToSiteModelAdapter.MapToType(Ellucian.Web.Mvc.Domain.Entities.Site)">
+            <summary>
+            Maps to specified type.
+            </summary>
+            <param name="Source">The source.</param>
+            <returns></returns>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Adapters.ThemeToThemeAdapter">
+            <summary>
+            Provides an adapter that is capable of mapping a 
+            Ellucian.Web.Mvc.Models.Theme object to a Ellucian.Web.Mvc.Domain.Entities.Theme object.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Adapters.ThemeToThemeAdapter.#ctor(Ellucian.Web.Adapters.IAdapterRegistry,slf4net.ILogger)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Mvc.Adapters.ThemeToThemeAdapter"/> class.
+            </summary>
+            <param name="adapterRegistry">The adapter registry.</param>
+            <param name="logger">The logger.</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Adapters.ThemeToThemeAdapter.MapToType(Ellucian.Web.Mvc.Models.Theme)">
+            <summary>
+            Maps to specified type.
+            </summary>
+            <param name="Source">The source.</param>
+            <returns></returns>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Cache.CacheOutputCustom">
+            <summary>
+            Custom cache output
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Cache.ICacheOutputCustom">
+            <summary>
+            Interface for custom cache output
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Cache.ICacheOutputCustom.GetUniqueKey">
+            <summary>
+            Gets the unique key.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Cache.ICacheOutputCustom.BuildCustomString(System.Web.HttpContext,System.String)">
+            <summary>
+            Builds the custom string.
+            </summary>
+            <param name="context">The context.</param>
+            <param name="arg">The argument.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Cache.CacheOutputCustom.GetUniqueKey">
+            <summary>
+            Gets the unique key.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Cache.CacheOutputCustom.BuildCustomString(System.Web.HttpContext,System.String)">
+            <summary>
+            Builds the custom string. Returns null if unauthenticated.
+            </summary>
+            <param name="context">The context.</param>
+            <param name="arg">The argument.</param>
+            <returns></returns>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Cache.DefaultCacheOutputCustom">
+            <summary>
+            Default custom cache output
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Cache.DefaultCacheOutputCustom.GetUniqueKey">
+            <summary>
+            Gets the unique key.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Cache.DefaultCacheOutputCustom.BuildCustomString(System.Web.HttpContext,System.String)">
+            <summary>
+            Builds the custom string.
+            </summary>
+            <param name="context">The context.</param>
+            <param name="arg">The argument.</param>
+            <returns></returns>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.ColleagueViewPage`1">
+            <summary>
+            Provides a base for all views that makes the current user available.
+            </summary>
+            <typeparam name="T"></typeparam>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.ColleagueViewPage`1.InitializePage">
+            <summary>
+            Initializes the current page.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.ColleagueViewPage`1.CurrentUser">
+            <summary>
+            A wrapper on the underlying claims principal.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Configuration.ISettingsService">
+            <summary>
+            Interface for Settings services
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Configuration.ISettingsService.Get">
+            <summary>
+            Gets this instance.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Configuration.ISettingsService.Update(Ellucian.Web.Mvc.Models.Settings)">
+            <summary>
+            Updates the specified settings.
+            </summary>
+            <param name="settings">The settings.</param>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Configuration.SettingsService">
+            <summary>
+            Settings service
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Configuration.SettingsService.#ctor(Ellucian.Web.Mvc.Domain.Repositories.ISettingsRepository,Ellucian.Web.Adapters.IAdapterRegistry)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Mvc.Configuration.SettingsService"/> class.
+            </summary>
+            <param name="settingsRepository">The settings repository.</param>
+            <param name="adapterRegistry">The adapter registry.</param>
+            <exception cref="T:System.ArgumentNullException">
+            settingsRepository
+            or
+            adapterRegistry
+            </exception>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Configuration.SettingsService.Get">
+            <summary>
+            Gets this instance.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Configuration.SettingsService.Update(Ellucian.Web.Mvc.Models.Settings)">
+            <summary>
+            Updates the specified settings.
+            </summary>
+            <param name="settings">The settings.</param>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Controller.BaseCompressedController">
+            <summary>
+            The BaseCompressedController class supports browser compression for all web resources
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Controller.BaseCompressedController.Logger">
+            <summary>
+            The logger
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Controller.BaseCompressedController.#ctor(slf4net.ILogger)">
+            <summary>
+            Default Constructor
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Controller.BaseCompressedController.RedirectToLogin(System.String)">
+            <summary>
+            This method provides a convenient way to redirect to the Login form and specify the return URL.
+            </summary>
+            <param name="returnUrl">return url</param>
+            <returns>redirect to login form</returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Controller.BaseCompressedController.OnActionExecuting(System.Web.Mvc.ActionExecutingContext)">
+            <summary>
+            Called before the action method is invoked.
+            </summary>
+            <param name="filterContext">Information about the current request and action.</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Controller.BaseCompressedController.OnActionExecuted(System.Web.Mvc.ActionExecutedContext)">
+            <summary>
+            Called after the action method is invoked.
+            </summary>
+            <param name="filterContext">Information about the current request and action.</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Controller.BaseCompressedController.Initialize">
+            <summary>
+            Initializes internal members
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Extensions.HtmlHelperExtensions">
+            <summary>
+            Provides extension helper methods for properly creating visual content and markup (e.g. action links)
+            throughout the MVC application stack.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Extensions.HtmlHelperExtensions.BuildHelpContentId(System.Web.Mvc.HtmlHelper)">
+            <summary>
+            Creates the Help content ID for the current view context.
+            </summary>
+            <param name="htmlHelper">Base object for use of extension method</param>
+            <returns>The Help content ID for the current view context</returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Extensions.HtmlHelperExtensions.PartialIfExists(System.Web.Mvc.HtmlHelper,System.String,System.String,System.String)">
+            <summary>
+            Builds the markup string for a Partial View, if the requested view exists and is accessible.
+            </summary>
+            <param name="htmlHelper">Base object for use of extension method</param>
+            <param name="partialViewName">The name of the view to attempt to retrieve</param>
+            <param name="controllerName">The controller associated with where the view is located</param>
+            <param name="areaName">The modular area associated with where the view is located</param>
+            <returns>The full markup string, as an MvcHtmlString, for this Partial View, if it exists. Otherwise an
+            empty string is returned.</returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Extensions.HtmlHelperExtensions.MenuListItem(System.Web.Mvc.HtmlHelper,System.String,System.String,System.String,System.String,System.String,System.String)">
+            <summary>
+            Creates a menu link to be used within a list structure.
+            </summary>
+            <param name="htmlHelper">Base object for use of extension method</param>
+            <param name="linkText">The text to display for the link</param>
+            <param name="actionName">The action to call when clicked</param>
+            <param name="controllerName">The controller in which the associated action resides</param>
+            <param name="areaName">The area of Student Planning to which this link is associated</param>
+            <param name="elementId">An ID to attach to the anchor</param>
+            <param name="selectedClassName">The class to apply when the menu item is selected</param>
+            <returns>An MvcHtmlString representing the full link for the menu item</returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Extensions.HtmlHelperExtensions.MenuLink(System.Web.Mvc.HtmlHelper,System.String,System.String,System.String,System.String,System.String,System.Object,System.String)">
+            <summary>
+            Creates a new link for use on a menu in an MVC application.
+            </summary>
+            <param name="htmlHelper">Base object for use of extension method</param>
+            <param name="linkText">The text to display for the link</param>
+            <param name="selectedMenuClass">The class to apply when the menu item is selected</param>
+            <param name="actionName">The action to call when clicked</param>
+            <param name="controllerName">The controller in which the associated action resides</param>
+            <param name="areaName">The area of Student Planning to which this link is associated</param>
+            <param name="routeValues">Any MVC route values for the link</param>
+            <param name="selectedSubMenuOverride">An override action declaration for making certain menu items appear active when
+            they do not match the default check. For example, if you want the link which corresponds to the /Foo/Bar action to be 
+            active when you hit the Foo/Index action, pass Index for this value. Overrides can only be applied within a controller; 
+            there is no way to activate a menu item when in an entirely separate controller.</param>
+            <returns>An MvcHtmlString representing the full link for the menu item</returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Extensions.HtmlHelperExtensions.MenuLinkSpan(System.Web.Mvc.HtmlHelper,System.String,System.String,System.String,System.String,System.String,System.Object,System.String)">
+            <summary>
+            Creates a new link for use on a menu in an MVC application, with the link text surrounded by a &lt;span&gt; tag within the anchor.
+            For example, if the link text is &quot;test&quot;, the resulting link markup would be &lt;a&gt;&lt;span&gt;test&lt;/span&gt;&lt;/a&gt;.
+            </summary>
+            <param name="htmlHelper">Base object for use of extension method</param>
+            <param name="linkText">The text to display for the link</param>
+            <param name="selectedMenuClass">The class to apply when the menu item is selected</param>
+            <param name="actionName">The action to call when clicked</param>
+            <param name="controllerName">The controller in which the associated action resides</param>
+            <param name="areaName">The area of Student Planning to which this link is associated</param>
+            <param name="routeValues">Any MVC route values for the link</param>
+            <param name="selectedSubMenuOverride">An override action declaration for making certain menu items appear active when
+            they do not match the default check. For example, if you want the link which corresponds to the /Foo/Bar action to be 
+            active when you hit the Foo/Index action, pass Index for this value. Overrides can only be applied within a controller; 
+            there is no way to activate a menu item when in an entirely separate controller.</param>
+            <returns>An MvcHtmlString representing the full link for the menu item, with the anchor text surrounded by a SPAN.</returns>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Extensions.HttpRequestBaseExtensions">
+            <summary>
+            Extensions to HttpRequestBase for additional header handling
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Extensions.HttpRequestBaseExtensions.IsSecureOrTerminatedSecureConnection(System.Web.HttpRequestBase)">
+            <summary>
+            Determines whether or not the request is secure or originated as a secure request.
+            </summary>
+            <param name="request"></param>
+            <returns>True if the request is secure or originated as secure.</returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Extensions.HttpRequestBaseExtensions.IsForwardedSecureConnection(System.Web.HttpRequestBase)">
+            <summary>
+            Determines whether or not the request contains an X-Forwarded-Proto beginning with https
+            </summary>
+            <param name="request"></param>
+            <returns>True if the X-Forwarded-Proto header begins with https</returns>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Extensions.UrlHelperExtensions">
+            <summary>
+            Provides extension helper methods for properly creating URLs for help contents.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Extensions.UrlHelperExtensions.HelpUrl(System.Web.Mvc.UrlHelper,System.String,System.String)">
+            <summary>
+            Builds a help url
+            </summary>
+            <param name="urlHelper">The URL helper.</param>
+            <param name="helpContentId">The help content identifier.</param>
+            <param name="helpContentArea">The help content area.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Extensions.UrlHelperExtensions.PartialHelpUrl(System.Web.Mvc.UrlHelper,System.String,System.String)">
+            <summary>
+            Builds a partial help url
+            </summary>
+            <param name="urlHelper">The URL helper.</param>
+            <param name="helpContentId">The help content identifier.</param>
+            <param name="helpContentArea">The help content area.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Extensions.UrlHelperExtensions.BuildHelpUrl(System.Web.Mvc.UrlHelper,System.String,System.String,System.String)">
+            <summary>
+            Builds a help URL.
+            </summary>
+            <param name="urlHelper">The URL helper.</param>
+            <param name="helpContentId">The help content identifier.</param>
+            <param name="helpAction">The help action.</param>
+            <param name="helpContentArea">The help content area.</param>
+            <returns></returns>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Filter.AddHttpResponseHeaderCustomFilterAttribute">
+            <summary>
+            Adds response headers to a controller's actions using HttpResponseBase.AppendHeader().
+            Example usage: [HttpResponseHeaderCustom("headerName1,headerName2", "value1,value2")]
+            Note: if adding a header that is already on a response, the existing header will not 
+            have its value overwritten or appended to by AppendHeader(). Instead, another header 
+            with the same name will be added.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Filter.AddHttpResponseHeaderCustomFilterAttribute.#ctor(System.String,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Mvc.Filter.AddHttpResponseHeaderCustomFilterAttribute"/> class.
+            </summary>
+            <param name="names">The names.</param>
+            <param name="values">The values.</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Filter.AddHttpResponseHeaderCustomFilterAttribute.OnResultExecuted(System.Web.Mvc.ResultExecutedContext)">
+            <summary>
+            Called by the ASP.NET MVC framework after the action result executes.
+            </summary>
+            <param name="filterContext">The filter context.</param>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Filter.AddHttpResponseHeaderCustomFilterAttribute.Names">
+            <summary>
+            Gets or sets the names.
+            </summary>
+            <value>
+            The names.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Filter.AddHttpResponseHeaderCustomFilterAttribute.Values">
+            <summary>
+            Gets or sets the values.
+            </summary>
+            <value>
+            The values.
+            </value>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Filter.LocalRequestAttribute">
+            <summary>
+            Restricts execution of a given action to localhost.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Filter.LocalRequestAttribute.OnActionExecuting(System.Web.Mvc.ActionExecutingContext)">
+            <summary>
+            Called by the ASP.NET MVC framework before the action method executes.
+            </summary>
+            <param name="filterContext">The filter context.</param>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Filter.LinkHelpAttribute">
+            <summary>
+            LinkHelp attribute
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Filter.LinkHelpAttribute.OnActionExecuting(System.Web.Mvc.ActionExecutingContext)">
+            <summary>
+            Called by the ASP.NET MVC framework before the action method executes.
+            </summary>
+            <param name="filterContext">The filter context.</param>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Filter.LinkHelpAttribute.HelpIdOverride">
+            <summary>
+            Gets or sets the help identifier override.
+            </summary>
+            <value>
+            The help identifier override.
+            </value>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Filter.BrowserCompressionFilter">
+            <summary>
+            The BrowserCompressionFilterAttribute class provides compression of the the response data. Compression is only applied if the browser submits a supported compression method.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Filter.BrowserCompressionFilter.AcceptEncodingHeaderName">
+            <summary>
+            Constant for Accept-Encoding
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Filter.BrowserCompressionFilter.ContentEncodingHeaderName">
+            <summary>
+            Constant for Content-encoding
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Filter.BrowserCompressionFilter.GzipCompressionValue">
+            <summary>
+            Constant for gzip
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Filter.BrowserCompressionFilter.DeflateCompressionValue">
+            <summary>
+            Constant for deflate
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Filter.BrowserCompressionFilter.OnActionExecuting(System.Web.Mvc.ActionExecutingContext)">
+            <summary>
+            Called by the ASP.NET MVC framework before the action method executes.
+            </summary>
+            <param name="filterContext">The filter context.</param>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Filter.InitializeCredentialsAttribute">
+            <summary>
+            This class injects credentials into the controller for dependent requests
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Filter.InitializeCredentialsAttribute.OnActionExecuting(System.Web.Mvc.ActionExecutingContext)">
+            <summary>
+            Called by the ASP.NET MVC framework before the action method executes.
+            </summary>
+            <param name="filterContext">The filter context.</param>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Filter.ValidateAntiForgeryTokenCustomFilterAttribute">
+            <summary>
+            Applies the ValidateAntiForgeryTokenCustom filter to all action methods in the controller.
+            It validates the antiforgery token for requests that are:
+            1) AJAX-based - both POST and GET (antiforgery token stored as a request header)
+            2) non-AJAX-based - POST only  (antiforgery token stored in POST body as a parameter)
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Filter.ValidateAntiForgeryTokenCustomFilterAttribute.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Mvc.Filter.ValidateAntiForgeryTokenCustomFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Filter.ValidateAntiForgeryTokenCustomFilterAttribute.OnAuthorization(System.Web.Mvc.AuthorizationContext)">
+            <summary>
+            Called when authorization is required. Validates the antiforgery token.
+            </summary>
+            <param name="filterContext">The filter context.</param>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Licensing.ILicensingService">
+            <summary>
+            Licensing Service interface that is used to get information about licensed modules
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Licensing.ILicensingService.GetClientId">
+            <summary>
+            Gets the client Id for the current active license
+            </summary>
+            <returns>Client Id</returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Licensing.ILicensingService.GetLicensedModules">
+            <summary>
+            Gets all licensed module codes
+            </summary>
+            <returns>Collection of licensed module codes</returns>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Licensing.LicenseAreaRegistration">
+            <summary>
+            Enforces Ellucian Licensing on Self-Service Areas
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Licensing.LicenseAreaRegistration.LocalNamespace">
+            <summary>
+            The local namespace
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Licensing.LicenseAreaRegistration.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Mvc.Licensing.LicenseAreaRegistration"/> class.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Licensing.LicenseAreaRegistration.LicensedRegistration(System.Web.Mvc.AreaRegistrationContext)">
+            <summary>
+            Override this method to register routes and perform area-specific 
+            </summary>
+            <param name="context"></param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Licensing.LicenseAreaRegistration.RegisterArea(System.Web.Mvc.AreaRegistrationContext)">
+            <summary>
+            Registers an area in an ASP.NET MVC application using the specified area's context information.
+            </summary>
+            <param name="context">Encapsulates the information that is required in order to register the area.</param>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Licensing.LicensingService">
+            <summary>
+            Licensing Service that is used to get information about licensed modules
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Licensing.LicensingService.GetClientId">
+            <summary>
+            Gets the client Id for the current active license
+            </summary>
+            <returns>Client Id</returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Licensing.LicensingService.GetLicensedModules">
+            <summary>
+            Gets all licensed module codes
+            </summary>
+            <returns>Collection of licensed module codes</returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Licensing.LicensingService.#ctor(slf4net.ILogger)">
+            <summary>
+            Constructor for the Licensing Service
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Licensing.LicensingService.RefreshLicense(System.String)">
+            <summary>
+            Refresh the licensing information using a specified path. 
+            </summary>
+            <param name="appPath">folder path containing the license files</param>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Logging.ObjectFormatter">
+            <summary>
+            Utility to parse .NET objects in XML format
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Logging.ObjectFormatter.FormatAsXml``1(``0)">
+            <summary>
+            Parsen the input object as XML.
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="ObjectToSerialize">The object to serialize.</param>
+            <returns></returns>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Menu.ISiteService">
+            <summary>
+            Interface for site services
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Menu.ISiteService.Get">
+            <summary>
+            Returns the complete site map including all menus and pages. For admin use only.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Menu.ISiteService.Get(Ellucian.Web.Security.ICurrentUser)">
+            <summary>
+            Returns the site map with only the menus and pages that the specified user has access to.
+            </summary>
+            <param name="currentUser">the user to use when trimming</param>
+            <returns>a trimmed site</returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Menu.ISiteService.Update(Ellucian.Web.Mvc.Models.Site)">
+            <summary>
+            Updates the site configuration. Throws a SiteDataException if an error occurs.
+            </summary>
+            <param name="site"></param>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Menu.SiteService">
+            <summary>
+            Site service
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Menu.SiteService.#ctor(Ellucian.Web.Mvc.Domain.Repositories.ISiteRepository,System.Collections.Generic.IEnumerable{System.String},Ellucian.Web.Adapters.IAdapterRegistry,slf4net.ILogger)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Mvc.Menu.SiteService"/> class.
+            </summary>
+            <param name="siteRepository">The site repository.</param>
+            <param name="licensedAreas">Collection of licensed area names</param>
+            <param name="adapterRegistry">The adapter registry.</param>
+            <param name="logger">The logger.</param>
+            <exception cref="T:System.ArgumentNullException">
+            siteRepository
+            or
+            licensedAreas
+            or
+            adapterRegistry
+            or
+            logger
+            </exception>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Menu.SiteService.Get">
+            <summary>
+            Returns the complete site map including all menus and pages. For admin use only.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Menu.SiteService.Update(Ellucian.Web.Mvc.Models.Site)">
+            <summary>
+            Updates the site configuration. Throws a SiteDataException if an error occurs.
+            </summary>
+            <param name="site"></param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Menu.SiteService.Get(Ellucian.Web.Security.ICurrentUser)">
+            <summary>
+            Returns the site map with only the menus and pages that the specified user has access to.
+            </summary>
+            <param name="currentUser">the user to use when trimming</param>
+            <returns>
+            a trimmed site
+            </returns>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Models.DetailPage">
+            <summary>
+            Detail page model.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Models.DetailPage.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Mvc.Models.DetailPage"/> class.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.DetailPage.Id">
+            <summary>
+            Gets the identifier.
+            </summary>
+            <value>
+            The identifier.
+            </value>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Models.Menu">
+            <summary>
+            Menu base model
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Models.SecurableNavigationItem">
+            <summary>
+            SecurableNavigationItem  base model
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Models.SecurableNavigationItem.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Mvc.Models.SecurableNavigationItem"/> class.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.SecurableNavigationItem.AllowedRoles">
+            <summary>
+            Gets or sets the allowed roles.
+            </summary>
+            <value>
+            The allowed roles.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.SecurableNavigationItem.AllowedUsers">
+            <summary>
+            Gets or sets the allowed users.
+            </summary>
+            <value>
+            The allowed users.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.SecurableNavigationItem.ProxyPermissions">
+            <summary>
+            Gets or sets the proxy permissions.
+            </summary>
+            <value>
+            The proxy permissions.
+            </value>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Models.Menu.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Mvc.Models.MenuItemBase"/> class.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Menu.Id">
+            <summary>
+            Gets or sets the identifier.
+            </summary>
+            <value>
+            The identifier.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Menu.Label">
+            <summary>
+            Gets or sets the label.
+            </summary>
+            <value>
+            The label.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Menu.MessageId">
+            <summary>
+            Gets or sets the message ID.
+            </summary>
+            <value>
+            The message ID</value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Menu.Order">
+            <summary>
+            Gets or sets the order.
+            </summary>
+            <value>The order</value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Menu.Items">
+            <summary>
+            Gets or sets the items - these items could be submenus or pages.
+            </summary>
+            <value>
+            The items.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Menu.Hidden">
+            <summary>
+            Gets or sets a value indicating whether [hidden].
+            </summary>
+            <value>
+              <c>true</c> if [hidden]; otherwise, <c>false</c>.
+            </value>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Models.MenuItemBase">
+            <summary>
+            the base menu item 
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Models.MenuItemBase.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Mvc.Models.MenuItemBase"/> class.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.MenuItemBase.ItemType">
+            <summary>
+            gets or sets the type of menu item (menu/submenu or page)
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Models.MenuItemMenu">
+            <summary>
+            Menu menu item
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Models.MenuItemMenu.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Mvc.Models.MenuItemMenu"/> class.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.MenuItemMenu.Menu">
+            <summary>
+            Gets or sets the menu
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Models.MenuItemLink">
+            <summary>
+            Link menu item
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Models.MenuItemLink.#ctor">
+            <summary>
+            Link menu item constructor
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.MenuItemLink.Link">
+            <summary>
+            Gets or sets the link
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Models.MenuItemPage">
+            <summary>
+            Page menu item
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Models.MenuItemPage.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Mvc.Models.MenuItemPage"/> class.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.MenuItemPage.Page">
+            <summary>
+             gets or sets a page
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Models.Page">
+            <summary>
+            Page  base model
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Models.Page.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Mvc.Models.Page"/> class.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Page.Id">
+            <summary>
+            Gets or sets the identifier.
+            </summary>
+            <value>
+            The identifier.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Page.Label">
+            <summary>
+            Gets or sets the label.
+            </summary>
+            <value>
+            The label.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Page.Area">
+            <summary>
+            Gets or sets the area.
+            </summary>
+            <value>
+            The area.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Page.Controller">
+            <summary>
+            Gets or sets the controller.
+            </summary>
+            <value>
+            The controller.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Page.Action">
+            <summary>
+            Gets or sets the action.
+            </summary>
+            <value>
+            The action.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Page.MessageId">
+            <summary>
+            Get/Set the message ID
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Page.Order">
+            <summary>
+            Get/Set the order
+            </summary>
+            <value>The order</value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Page.Hidden">
+            <summary>
+            Indicates if this page should be hidden from all users
+            </summary>
+            <value>
+            The hidden state
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Page.Subpages">
+            <summary>
+            The set of subpages found on this page
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Page.DetailPages">
+            <summary>
+            The set of detail pages found on this page.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Page.ElevatedSecurity">
+            <summary>
+            Indicates if this page should be subject to elevated security rules
+            If true, this page's security will be controlled by a separate
+            administration page
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Models.Link">
+            <summary>
+            Link base model
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Models.Link.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Mvc.Models.Link"/> class.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Link.Id">
+            <summary>
+            Gets or sets the ID
+            </summary>
+            <value>
+            The ID.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Link.Url">
+            <summary>
+            Gets or sets the url.
+            </summary>
+            <value>
+            The Url.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Link.Text">
+            <summary>
+            Gets or sets the text.
+            </summary>
+            <value>
+            The text.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Link.Order">
+            <summary>
+            Gets or sets the order.
+            </summary>
+            <value>
+            The order.
+            </value>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Models.Settings">
+            <summary>
+            Settings  base model
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.ApiBaseUrl">
+            <summary>
+            Gets or sets the API base URL.
+            </summary>
+            <value>
+            The API base URL.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.ApplicationTitle">
+            <summary>
+            Gets or sets the application title.
+            </summary>
+            <value>
+            The application title.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.UniqueCookieId">
+            <summary>
+            Gets or sets the unique cookie identifier.
+            </summary>
+            <value>
+            The unique cookie identifier.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.HeaderLogoPath">
+            <summary>
+            Gets or sets the header logo path.
+            </summary>
+            <value>
+            The header logo path.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.HeaderLogoAltText">
+            <summary>
+            Gets or sets the header logo alt text.
+            </summary>
+            <value>
+            The header logo alt text.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.FooterLogoPath">
+            <summary>
+            Gets or sets the footer logo path.
+            </summary>
+            <value>
+            The footer logo path.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.FooterLogoAltText">
+            <summary>
+            Gets or sets the footer logo alt text.
+            </summary>
+            <value>
+            The footer logo alt text.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.ReportLogoPath">
+            <summary>
+            Gets or sets the report logo path.
+            </summary>
+            <value>
+            The report logo path.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.SelectedLogLevel">
+            <summary>
+            Gets or sets the selected log level.
+            </summary>
+            <value>
+            The selected log level.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.LogLevels">
+            <summary>
+            Gets or sets the log levels.
+            </summary>
+            <value>
+            The log levels.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.Culture">
+            <summary>
+            Gets or sets the culture.
+            </summary>
+            <value>
+            The culture.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.ShortDateFormat">
+            <summary>
+            Gets or sets the short date format.
+            </summary>
+            <value>
+            The short date format.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.CulturePropertyOverrides">
+            <summary>
+            Gets or sets the culture property overrides.
+            </summary>
+            <value>
+            The culture property overrides.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.ApiConnectionLimit">
+            <summary>
+            Gets or sets the number of connections that can be made concurrently to the API.
+            <remarks>
+            Value must be an even number greater than or equal to 2 as the service client splits
+            this number in half.
+            </remarks>
+            </summary>
+            <value>
+            The API connection limit count.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.GuestUsername">
+            <summary>
+            Gets or sets the username used by the "Guest" user in Self Service.
+            </summary>
+            <value>
+            The Guest Username
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.GuestPassword">
+            <summary>
+            Gets or sets the password used by the "Guest" user in Self Service.
+            </summary>
+            <value>
+            The Guest Password
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.TrackingId">
+            <summary>
+            Gets or Sets the Tracking Id of the Client's Google Analytics Script
+            </summary>
+            <value>
+            Tracking Id
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.ProxyDimensionIndex">
+            <summary>
+            Gets or sets the index for the custom dimension reserved for Proxy user
+            hits in the client's Google Analytics
+            </summary>
+            <value>
+            Index of the proxy dimension
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.EnableGoogleAnalytics">
+            <summary>
+            Gets or Sets the value of Enabling Client's Google Analytics
+            </summary>
+            <value>
+            Enabling Client Google Analytics
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.CustomTrackingAnalytics">
+            <summary>
+            Gets or Sets the value of Enabling Custom Tracking Analytics
+            </summary>
+            <value>
+            Custom Tracking Script
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.EnableCustomTracking">
+            <summary>
+            Gets or Sets the value of Enabling Custom tracking
+            </summary>
+            <value>
+            Enabling Custom Tracking
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.InsertCustomTrackingAfterBody">
+            <summary>
+            Whether or not to insert custom tracking in the body tag
+            </summary>
+            <value>
+            True if custom tracking should be inserted after the body, false if it should be in the head
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.ClientPrivacyPolicy">
+            <summary>
+            Gets or Sets the value of Client Privacy Policy
+            </summary>
+            <value>
+            Client Privacy Policy
+            </value>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Models.Site">
+            <summary>
+            Site  base model
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Models.Site.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Mvc.Models.Site"/> class.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Site.Pages">
+            <summary>
+            Gets or sets the pages.
+            </summary>
+            <value>
+            The pages.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Site.Links">
+            <summary>
+            Gets or sets the links.
+            </summary>
+            <value>
+            The link.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Site.Submenus">
+            <summary>
+            Gets or sets the pages.
+            </summary>
+            <value>
+            The pages.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Site.Menus">
+            <summary>
+            Gets or sets the menus.
+            </summary>
+            <value>
+            The menus.
+            </value>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Models.Subpage">
+            <summary>
+            Subpage model
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Models.Subpage.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Mvc.Models.Subpage"/> class.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Subpage.Id">
+            <summary>
+            Gets the identifier.
+            </summary>
+            <value>
+            The identifier.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Subpage.Label">
+            <summary>
+            Gets or sets the label.
+            </summary>
+            <value>
+            The label.
+            </value>
+            <exception cref="T:System.ArgumentNullException">value</exception>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Subpage.Hidden">
+            <summary>
+            Indicates if this page should be hidden from all users
+            </summary>
+            <value>
+            The hidden state
+            </value>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Models.Theme">
+            <summary>
+            Provides the base model for themes.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Models.Theme.#ctor">
+            <summary>
+            Default Constructor
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Theme.Name">
+            <summary>
+            Gets or sets the theme's name.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Theme.ThemeSections">
+            <summary>
+            Gets the list of ThemeSections.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Models.ThemeRule">
+            <summary>
+            Provides the various properties that make up a theme rule.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.ThemeRule.Name">
+            <summary>
+            Gets or sets the name.
+            </summary>
+            <value>
+            The name.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.ThemeRule.Description">
+            <summary>
+            Gets or sets the description.
+            </summary>
+            <value>
+            The description.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.ThemeRule.Id">
+            <summary>
+            Gets or sets the id.
+            </summary>
+            <value>
+            The id.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.ThemeRule.Color">
+            <summary>
+            Gets or sets the color.
+            </summary>
+            <value>
+            The color.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.ThemeRule.BackgroundColor">
+            <summary>
+            Gets or sets the color of the background.
+            </summary>
+            <value>
+            The color of the background.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.ThemeRule.BackgroundGradientStartColor">
+            <summary>
+            Gets or sets the start color of the background gradient.
+            </summary>
+            <value>
+            The start color of the background gradient.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.ThemeRule.BackgroundGradientEndColor">
+            <summary>
+            Gets or sets the end color of the background gradient.
+            </summary>
+            <value>
+            The end color of the background gradient.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.ThemeRule.BorderColor">
+            <summary>
+            Gets or sets the color of the border.
+            </summary>
+            <value>
+            The color of the border.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.ThemeRule.BorderLeftColor">
+            <summary>
+            Gets or sets the color of the border left.
+            </summary>
+            <value>
+            The color of the border left.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.ThemeRule.BorderRightColor">
+            <summary>
+            Gets or sets the color of the border right.
+            </summary>
+            <value>
+            The color of the border right.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.ThemeRule.BorderTopColor">
+            <summary>
+            Gets or sets the color of the border top.
+            </summary>
+            <value>
+            The color of the border top.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.ThemeRule.BorderBottomColor">
+            <summary>
+            Gets or sets the color of the border bottom.
+            </summary>
+            <value>
+            The color of the border bottom.
+            </value>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Models.ThemeSection">
+            <summary>
+            Provides the properties and rules that make up a theme section. Theme sections
+            allow for grouping related theme rules for organization purposes.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Models.ThemeSection.#ctor">
+            <summary>
+            Default Constructor
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.ThemeSection.Name">
+            <summary>
+            Gets or sets the name of this ThemeSection.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.ThemeSection.Description">
+            <summary>
+            Gets or sets the description of this ThemeSection.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.ThemeSection.ThemeRules">
+            <summary>
+            Gets a list of ThemeRules for this ThemeSection.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Route.DefaultRouteRegistration">
+            <summary>
+            This class is a default implementation of IRouteRegistration.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Route.IRouteRegistration">
+            <summary>
+            This interface defines the methods for registering routes.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Route.IRouteRegistration.Register(System.Web.Routing.RouteCollection)">
+            <summary>
+            Registers additional routes for the application
+            </summary>
+            <param name="routes">global collection of routes</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Route.DefaultRouteRegistration.Register(System.Web.Routing.RouteCollection)">
+            <summary>
+            Registers additional routes for the application
+            </summary>
+            <param name="routes">global collection of routes</param>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Session.SessionCookieManager">
+            <summary>
+            The SessionCookieManager class provides a mechanism for storing the Colleague session information and rebuilding it from a session cookie.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Session.SessionCookieManager.DefaultTimeout">
+            <summary>
+            The default timeout
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Session.SessionCookieManager.UniqueCookieId">
+            <summary>
+            The unique cookie identifier prefix
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Session.SessionCookieManager.FixationCookieId">
+            <summary>
+            The fixation cookie identifier
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Session.SessionCookieManager.PortalCookieId">
+            <summary>
+            The portal cookie identifier
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Session.SessionCookieManager.BuildJwtAuthenticationCookies(Microsoft.IdentityModel.Claims.IClaimsPrincipal,System.String)">
+            <summary>
+            Builds the JWT authentication cookie.
+            </summary>
+            <param name="principal">The principal.</param>
+            <param name="jwt">The JWT.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Session.SessionCookieManager.BuildSessionFixationCookie(Microsoft.IdentityModel.Claims.IClaimsPrincipal)">
+            <summary>
+            Builds the session fixation cookie.
+            </summary>
+            <param name="principal">The principal.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Session.SessionCookieManager.WriteSessionCookie(System.Web.HttpContextBase)">
+            <summary>
+            Writes the session cookie.
+            </summary>
+            <param name="httpContext">The HTTP context.</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Session.SessionCookieManager.BuildPortalBehaviorCookie(System.Boolean)">
+            <summary>
+            Builds the portal behavior cookie.
+            </summary>
+            <param name="enabled">if set to <c>true</c> [enabled].</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Session.SessionCookieManager.HasPortalBehaviorCookie(System.Web.HttpContextBase)">
+            <summary>
+            Determines whether [has portal behavior cookie] [the specified HTTP context].
+            </summary>
+            <param name="httpContext">The HTTP context.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Session.SessionCookieManager.BuildPrincipalFromJwtCookie(System.Web.HttpContext)">
+            <summary>
+            Builds the principal from JWT cookie.
+            </summary>
+            <param name="Context">The context.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Session.SessionCookieManager.InvalidateSessionCookies(System.Web.WebPages.WebPageContext)">
+            <summary>
+            Invalidates the session cookies.
+            </summary>
+            <param name="WebContext">The web context.</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Session.SessionCookieManager.RemoveSessionCookies(System.Web.HttpContextBase)">
+            <summary>
+            Removes the session cookies.
+            </summary>
+            <param name="Context">The context.</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Session.SessionCookieManager.GetAuthCookieKeys(System.Web.HttpRequestBase)">
+            <summary>
+            Gets a list of cookie keys matching the authentication cookie prefix.
+            </summary>
+            <param name="request">Request containing the cookies</param>
+            <returns>List of cookie keys</returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Session.SessionCookieManager.ChunkJwt(System.String)">
+            <summary>
+            Separates the JWT into smaller strings based on the chunk size. The first will be a smaller chunk of 800 suitable
+            for storing in a FormAuthenticationTicket userdata property. The rest will be up to the chunk size.
+            </summary>
+            <param name="jwt">The jwt to separate into chunks</param>
+            <returns>The chunked list of strings</returns>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Theme.IThemeService">
+            <summary>
+            Provides the interface to be implemented by a Theme Service.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Theme.IThemeService.Get">
+            <summary>
+            Gets the theme's properties.
+            </summary>
+            <returns>Theme model</returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Theme.IThemeService.Update(Ellucian.Web.Mvc.Models.Theme)">
+            <summary>
+            Updates the theme's properties.
+            </summary>
+            <param name="theme">Theme model containing values to be applied</param>
+            <returns>True if update was successful</returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Theme.IThemeService.CreateBackup(System.String)">
+            <summary>
+            Creates a backup of the theme.
+            </summary>
+            <param name="backupFilename"></param>
+            <returns>True if the backup was created</returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Theme.IThemeService.RestoreBackup">
+            <summary>
+            Restores the backup copy of the theme, if available.
+            </summary>
+            <returns>True if the backup was restored</returns>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Theme.ThemeAdapter">
+            <summary>
+            Provides an adapter that is capable of mapping a 
+            Ellucian.Web.Mvc.Domain.Entities.Theme object to a Ellucian.Web.Mvc.Models.Theme object.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Theme.ThemeAdapter.#ctor(Ellucian.Web.Adapters.IAdapterRegistry,slf4net.ILogger)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Mvc.Theme.ThemeAdapter"/> class.
+            </summary>
+            <param name="adapterRegistry">The adapter registry.</param>
+            <param name="logger">The logger.</param>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Theme.ThemeService">
+            <summary>
+            Theme maintenance service utility
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Theme.ThemeService.#ctor(Ellucian.Web.Mvc.Domain.Repositories.IThemeRepository,Ellucian.Web.Adapters.IAdapterRegistry,slf4net.ILogger)">
+            <summary>
+            Injection constructor
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Theme.ThemeService.Get">
+            <summary>
+            Gets the theme's properties.
+            </summary>
+            <returns>Theme model</returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Theme.ThemeService.Update(Ellucian.Web.Mvc.Models.Theme)">
+            <summary>
+            Updates the theme's properties.
+            </summary>
+            <param name="theme">Theme model containing values to be applied</param>
+            <returns>True if update was successful</returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Theme.ThemeService.CreateBackup(System.String)">
+            <summary>
+            Creates a backup of the theme.
+            </summary>
+            <param name="backupFilename"></param>
+            <returns>True if the backup was created</returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Theme.ThemeService.RestoreBackup">
+            <summary>
+            Restores the backup copy of the theme, if available.
+            </summary>
+            <returns>True if the backup was restored</returns>
+        </member>
+    </members>
+</doc>

@@ -1,0 +1,676 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{B47DA241-50B7-420A-BB25-C24B20807609}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Ellucian.Colleague.Domain.Student</RootNamespace>
+    <AssemblyName>Ellucian.Colleague.Domain.Student</AssemblyName>
+    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <EnableCodeInspectionOnBuild>true</EnableCodeInspectionOnBuild>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Ellucian.Colleague.Configuration, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Colleague.Configuration.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Colleague.Domain, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Colleague.Domain.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Colleague.Legacy, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Colleague.Legacy.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Colleague.Property, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Colleague.Property.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Data.Colleague, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Data.Colleague.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Dmi.Client, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Dmi.Client.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Dmi.Runtime, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Dmi.Runtime.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Logging, Version=1.0.0.1, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Logging.MSEL.1.0.0.240\lib\net451\Ellucian.Logging.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Web.Cache, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Web.Cache.1.0.0.184\lib\net451\Ellucian.Web.Cache.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Web.License, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Web.License.1.0.0.178\lib\net451\Ellucian.Web.License.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Web.Security, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Web.Security.1.0.0.206\lib\net451\Ellucian.Web.Security.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Web.Utility, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Web.Utility.1.0.0.181\lib\net451\Ellucian.Web.Utility.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.WebServices.Core.Config, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.WebServices.Core.Config.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="KellermanSoftware.Compare-NET-Objects, Version=2.1.0.0, Culture=neutral, PublicKeyToken=d970ace04cc85217, processorArchitecture=MSIL">
+      <HintPath>..\packages\CompareNETObjects.2.01.0.0\lib\net451\KellermanSoftware.Compare-NET-Objects.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.IdentityModel">
+      <HintPath>..\packages\Microsoft.IdentityModel.6.1.7600.16394\lib\net35\Microsoft.IdentityModel.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.EnterpriseLibrary.Common, Version=5.0.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\EnterpriseLibrary.Common.5.0.505.0\lib\NET35\Microsoft.Practices.EnterpriseLibrary.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.EnterpriseLibrary.Logging, Version=5.0.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\EnterpriseLibrary.Logging.5.0.505.1\lib\NET35\Microsoft.Practices.EnterpriseLibrary.Logging.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.ServiceLocation, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\CommonServiceLocator.1.0\lib\NET35\Microsoft.Practices.ServiceLocation.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.Unity, Version=2.1.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Unity.2.1.505.2\lib\NET35\Microsoft.Practices.Unity.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.Unity.Configuration, Version=2.1.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Unity.2.1.505.2\lib\NET35\Microsoft.Practices.Unity.Configuration.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.Unity.Interception, Version=2.1.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Unity.Interception.2.1.505.2\lib\NET35\Microsoft.Practices.Unity.Interception.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.Unity.Interception.Configuration, Version=2.1.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Unity.Interception.2.1.505.2\lib\NET35\Microsoft.Practices.Unity.Interception.Configuration.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="slf4net">
+      <HintPath>..\packages\slf4net.0.1.32.1\lib\net35\slf4net.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.IdentityModel" />
+    <Reference Include="System.IdentityModel.Services" />
+    <Reference Include="System.IdentityModel.Tokens.Jwt">
+      <HintPath>..\packages\System.IdentityModel.Tokens.Jwt.4.0.1\lib\net45\System.IdentityModel.Tokens.Jwt.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Threading.Tasks.Dataflow, Version=4.5.24.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.Tpl.Dataflow.4.5.24\lib\portable-net45+win8+wpa81\System.Threading.Tasks.Dataflow.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+    <Reference Include="Thinktecture.IdentityModel, Version=3.4.6.0, Culture=neutral, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Thinktecture.IdentityModel.3.4.6\lib\net40\Thinktecture.IdentityModel.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Entities\AcademicCreditMinimum.cs" />
+    <Compile Include="Entities\AcademicCredit.cs" />
+    <Compile Include="Entities\AcademicCreditDataSubset.cs" />
+    <Compile Include="Entities\AcademicDepartment.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Entities\AcademicHistory.cs" />
+    <Compile Include="Entities\AccountReceivableDepositType.cs" />
+    <Compile Include="Entities\AdmissionApplicationSupportingItem.cs" />
+    <Compile Include="Entities\AdmissionApplicationStatusType.cs" />
+    <Compile Include="Entities\FacultyPermissions.cs" />
+    <Compile Include="Entities\ApplicationStatus2.cs" />
+    <Compile Include="Entities\ArCategory.cs" />
+    <Compile Include="Entities\ArAdditionalAmount.cs" />
+    <Compile Include="Entities\AttendanceTrackingType.cs" />
+    <Compile Include="Entities\AwardCategoryType.cs" />
+    <Compile Include="Entities\AwardStatus.cs" />
+    <Compile Include="Entities\AwardStatusCategory.cs" />
+    <Compile Include="Entities\BookOption.cs" />
+    <Compile Include="Entities\AttendanceTypes.cs" />
+    <Compile Include="Entities\CampusOrgAdvisorRole.cs" />
+    <Compile Include="Entities\CampusOrgMemberRole.cs" />
+    <Compile Include="Entities\ContactMeasure.cs" />
+    <Compile Include="Entities\ContactPeriod.cs" />
+    <Compile Include="Entities\CourseStatuses.cs" />
+    <Compile Include="Entities\CourseTitleTypes.cs" />
+    <Compile Include="Entities\CourseTitleType.cs" />
+    <Compile Include="Entities\DropReason.cs" />
+    <Compile Include="Entities\Fafsa.cs" />
+    <Compile Include="Entities\FinancialAidApplication.cs" />
+    <Compile Include="Entities\FinancialAidAwardPeriod.cs" />
+    <Compile Include="Entities\FinancialAidFund.cs" />
+    <Compile Include="Entities\FinancialAidFundAidCategoryType.cs" />
+    <Compile Include="Entities\FinancialAidFundCategory.cs" />
+    <Compile Include="Entities\FinancialAidFundClassification.cs" />
+    <Compile Include="Entities\FinancialAidFundsFinancialProperty.cs" />
+    <Compile Include="Entities\FinancialAidOfficeItem.cs" />
+    <Compile Include="Entities\FinancialAidYear.cs" />
+    <Compile Include="Entities\FinancialCurrencyType.cs" />
+    <Compile Include="Entities\HousingCode.cs" />
+    <Compile Include="Entities\RegistrationAction.cs" />
+    <Compile Include="Entities\RegistrationConfiguration.cs" />
+    <Compile Include="Entities\CourseCategory.cs" />
+    <Compile Include="Entities\FormT2202aSessionPeriod.cs" />
+    <Compile Include="Entities\FormT2202aPdfData.cs" />
+    <Compile Include="Entities\HousingAssignment.cs" />
+    <Compile Include="Entities\HousingAssignmentStatus.cs" />
+    <Compile Include="Entities\DegreeAuditParameters.cs" />
+    <Compile Include="Entities\HousingResidentType.cs" />
+    <Compile Include="Entities\InstructorTenureTypes.cs" />
+    <Compile Include="Entities\NonAcademicAttendance.cs" />
+    <Compile Include="Entities\NonAcademicAttendanceEventType.cs" />
+    <Compile Include="Entities\DistributionMethod.cs" />
+    <Compile Include="Entities\NonAcademicAttendanceRequirement.cs" />
+    <Compile Include="Entities\NonAcademicEvent.cs" />
+    <Compile Include="Entities\RoomCharacteristicPreference.cs" />
+    <Compile Include="Entities\RoommatePreference.cs" />
+    <Compile Include="Entities\RoommateCharacteristicPreference.cs" />
+    <Compile Include="Entities\RoomPreference.cs" />
+    <Compile Include="Entities\HousingRequest.cs" />
+    <Compile Include="Entities\MealPlanReqsIntg.cs" />
+    <Compile Include="Entities\MealPlanAssignment.cs" />
+    <Compile Include="Entities\RoommateCharacteristics.cs" />
+    <Compile Include="Entities\FloorCharacteristics.cs" />
+    <Compile Include="Entities\MealPlan.cs" />
+    <Compile Include="Entities\MealType.cs" />
+    <Compile Include="Entities\AdmissionApplication.cs" />
+    <Compile Include="Entities\AdmissionApplicationStatus.cs" />
+    <Compile Include="Entities\AdmissionDecisionType.cs" />
+    <Compile Include="Entities\MealPlanRatePeriods.cs" />
+    <Compile Include="Entities\AdmissionApplicationStatusTypesCategory.cs" />
+    <Compile Include="Entities\AdmissionApplicationType.cs" />
+    <Compile Include="Entities\AdmissionPopulation.cs" />
+    <Compile Include="Entities\AcademicLevel.cs" />
+    <Compile Include="Entities\AcademicProgram.cs" />
+    <Compile Include="Entities\AcademicStanding2.cs" />
+    <Compile Include="Entities\BillingOverrideReasons.cs" />
+    <Compile Include="Entities\FacultyContractTypes.cs" />
+    <Compile Include="Entities\FacultyDeptLoad.cs" />
+    <Compile Include="Entities\FacultySpecialStatuses.cs" />
+    <Compile Include="Entities\Instructor.cs" />
+    <Compile Include="Entities\MealPlanRates.cs" />
+    <Compile Include="Entities\NonCourse.cs" />
+    <Compile Include="Entities\AdmissionResidencyType.cs" />
+    <Compile Include="Entities\AssessmentSpecialCircumstance.cs" />
+    <Compile Include="Entities\MealPlansMealPlanRates.cs" />
+    <Compile Include="Entities\SapResult.cs" />
+    <Compile Include="Entities\SapStatuses.cs" />
+    <Compile Include="Entities\Saptype.cs" />
+    <Compile Include="Entities\AdministrativeInstructionalMethod.cs" />
+    <Compile Include="Entities\SectionAttendanceResponse.cs" />
+    <Compile Include="Entities\SectionBookAction.cs" />
+    <Compile Include="Entities\SectionCharge.cs" />
+    <Compile Include="Entities\SectionMeetingInstance.cs" />
+    <Compile Include="Entities\CourseTransferStatusesCategory.cs" />
+    <Compile Include="Entities\SectionRoster.cs" />
+    <Compile Include="Entities\SectionStatusCodeGuid.cs" />
+    <Compile Include="Entities\SectionDescriptionType.cs" />
+    <Compile Include="Entities\SectionTitleType.cs" />
+    <Compile Include="Entities\StudentAwardHistoryByPeriod.cs" />
+    <Compile Include="Entities\StudentAwardHistoryStatus.cs" />
+    <Compile Include="Entities\StudentAwardYear.cs" />
+    <Compile Include="Entities\StudentCourseSectionStudents.cs" />
+    <Compile Include="Entities\StudentSectionsAttendances.cs" />
+    <Compile Include="Entities\StudentFinancialAidAward.cs" />
+    <Compile Include="Entities\StudentNeedSummary.cs" />
+    <Compile Include="Entities\StudentSectionAttendanceError.cs" />
+    <Compile Include="Entities\StudentSectionAttendance.cs" />
+    <Compile Include="Entities\StudentAttendance.cs" />
+    <Compile Include="Entities\SectionTextbook.cs" />
+    <Compile Include="Entities\StudentAdvisorRelationship.cs" />
+    <Compile Include="Entities\SectionAttendance.cs" />
+    <Compile Include="Entities\StudentResidentialCategories.cs" />
+    <Compile Include="Entities\StudentSectionWaitlist.cs" />
+    <Compile Include="Entities\StudentTestScores.cs" />
+    <Compile Include="Entities\CatalogFilterOption.cs" />
+    <Compile Include="Entities\CatalogFilterType.cs" />
+    <Compile Include="Entities\StudentPayment.cs" />
+    <Compile Include="Entities\CampusOrganization.cs" />
+    <Compile Include="Entities\CourseCatalogConfiguration.cs" />
+    <Compile Include="Entities\NonCourseGradeUses.cs" />
+    <Compile Include="Entities\NonCourseCategories.cs" />
+    <Compile Include="Entities\IntgTestPercentileType.cs" />
+    <Compile Include="Entities\ApplicationSource.cs" />
+    <Compile Include="Entities\AddAuthorization.cs" />
+    <Compile Include="Entities\Transcripts\AcademicAwardsReported.cs" />
+    <Compile Include="Entities\Transcripts\Address.cs" />
+    <Compile Include="Entities\Transcripts\AlternateName.cs" />
+    <Compile Include="Entities\Transcripts\Attendance.cs" />
+    <Compile Include="Entities\Transcripts\Birth.cs" />
+    <Compile Include="Entities\Transcripts\Contacts.cs" />
+    <Compile Include="Entities\Transcripts\DeliveryMethod.cs" />
+    <Compile Include="Entities\Transcripts\Destination.cs" />
+    <Compile Include="Entities\Transcripts\ElectronicDelivery.cs" />
+    <Compile Include="Entities\Transcripts\Email.cs" />
+    <Compile Include="Entities\Transcripts\EnrollmentDetail.cs" />
+    <Compile Include="Entities\Transcripts\Name.cs" />
+    <Compile Include="Entities\Transcripts\Organization.cs" />
+    <Compile Include="Entities\Transcripts\Person.cs" />
+    <Compile Include="Entities\Transcripts\Phone.cs" />
+    <Compile Include="Entities\Transcripts\Receiver.cs" />
+    <Compile Include="Entities\Transcripts\Recipient.cs" />
+    <Compile Include="Entities\Transcripts\Request.cs" />
+    <Compile Include="Entities\Transcripts\RequestedStudent.cs" />
+    <Compile Include="Entities\Transcripts\RequestorReceiverOrganization.cs" />
+    <Compile Include="Entities\Transcripts\School.cs" />
+    <Compile Include="Entities\Transcripts\Source.cs" />
+    <Compile Include="Entities\Transcripts\TranscriptPurpose.cs" />
+    <Compile Include="Entities\Transcripts\TranscriptRequest.cs" />
+    <Compile Include="Entities\Transcripts\TranscriptType.cs" />
+    <Compile Include="Entities\Transcripts\TransmissionData.cs" />
+    <Compile Include="Entities\Transcripts\UserDefinedExtensions.cs" />
+    <Compile Include="Entities\WithdrawReason.cs" />
+    <Compile Include="Entities\StudentResidency.cs" />
+    <Compile Include="Entities\TermRegistrationStatus.cs" />
+    <Compile Include="Entities\SectionSeats.cs" />
+    <Compile Include="Entities\StudentCharge.cs" />
+    <Compile Include="Entities\Form1098PdfData.cs" />
+    <Compile Include="Entities\StudentClassification.cs" />
+    <Compile Include="Entities\ScheduleTerms.cs" />
+    <Compile Include="Entities\StudentCohort.cs" />
+    <Compile Include="Entities\CampusOrganizationType.cs" />
+    <Compile Include="Entities\CampusInvRole.cs" />
+    <Compile Include="Entities\FacultyGradingConfiguration.cs" />
+    <Compile Include="Entities\GradesPutCallerTypes.cs" />
+    <Compile Include="Entities\GradingTerm.cs" />
+    <Compile Include="Entities\CampusInvolvement.cs" />
+    <Compile Include="Entities\StudentAcademicProgram.cs" />
+    <Compile Include="Entities\StudentProgramStatus.cs" />
+    <Compile Include="Entities\StudentAcademicLevelCohort.cs" />
+    <Compile Include="Entities\StudentTypeInfo.cs" />
+    <Compile Include="Entities\StudentTermStatus.cs" />
+    <Compile Include="Entities\StudentProgramStatusProcessingType.cs" />
+    <Compile Include="Entities\AccountReceivableType.cs" />
+    <Compile Include="Entities\SectionStatusIntegration.cs" />
+    <Compile Include="Entities\SectionCrosslist.cs" />
+    <Compile Include="Entities\StudentStatus.cs" />
+    <Compile Include="Entities\TestSource.cs" />
+    <Compile Include="Entities\AcademicTerm.cs" />
+    <Compile Include="Entities\CapSize.cs" />
+    <Compile Include="Entities\ClassLevel.cs" />
+    <Compile Include="Entities\CampusOrgRole.cs" />
+    <Compile Include="Entities\CampusOrgType.cs" />
+    <Compile Include="Entities\CampusOrgMemberStatus.cs" />
+    <Compile Include="Entities\Affiliation.cs" />
+    <Compile Include="Entities\AcademicHistoryLevel.cs" />
+    <Compile Include="Entities\AcademicPeriod.cs" />
+    <Compile Include="Entities\StudentRequestFee.cs" />
+    <Compile Include="Entities\StudentRequest.cs" />
+    <Compile Include="Entities\StudentRequestConfiguration.cs" />
+    <Compile Include="Entities\VerifiedTermGrade.cs" />
+    <Compile Include="Entities\TermGrade.cs" />
+    <Compile Include="Entities\EnrollmentStatus.cs" />
+    <Compile Include="Entities\EnrollmentStatusType.cs" />
+    <Compile Include="Entities\LocationCycleRestriction.cs" />
+    <Compile Include="Entities\PilotAcademicCredit.cs" />
+    <Compile Include="Entities\PilotAcademicHistory.cs" />
+    <Compile Include="Entities\PilotAcademicHistoryLevel.cs" />
+    <Compile Include="Entities\PilotGrade.cs" />
+    <Compile Include="Entities\SectionGradeType.cs" />
+    <Compile Include="Entities\GraduationApplicationFee.cs" />
+    <Compile Include="Entities\AcademicCreditStatus.cs" />
+    <Compile Include="Entities\YearlyCycle.cs" />
+    <Compile Include="Entities\SessionCycle.cs" />
+    <Compile Include="Entities\StudentHomeLocation.cs" />
+    <Compile Include="Entities\SectionRegistrationRequest.cs" />
+    <Compile Include="Entities\SectionRegistrationResponse.cs" />
+    <Compile Include="Entities\GownSize.cs" />
+    <Compile Include="Entities\GraduationApplication.cs" />
+    <Compile Include="Entities\GraduationConfiguration.cs" />
+    <Compile Include="Entities\GraduationQuestionType.cs" />
+    <Compile Include="Entities\GraduationQuestion.cs" />
+    <Compile Include="Entities\RegistrationStatus.cs" />
+    <Compile Include="Entities\RegistrationStatusReason.cs" />
+    <Compile Include="Entities\SectionRegistrationStatus.cs" />
+    <Compile Include="Entities\SectionRegistrationStatusItem.cs" />
+    <Compile Include="Entities\PetitionStatus.cs" />
+    <Compile Include="Entities\RegistrationGroup.cs" />
+    <Compile Include="Entities\RequisiteWaiver.cs" />
+    <Compile Include="Entities\SectionRegistrationDate.cs" />
+    <Compile Include="Entities\SectionPermission.cs" />
+    <Compile Include="Entities\StudentAcademicLevel.cs" />
+    <Compile Include="Entities\StudentAccess.cs" />
+    <Compile Include="Entities\StudentPetition.cs" />
+    <Compile Include="Entities\StudentPetitionReason.cs" />
+    <Compile Include="Entities\StudentPetitionType.cs" />
+    <Compile Include="Entities\StudentWaiverReason.cs" />
+    <Compile Include="Entities\TermRegistrationDate.cs" />
+    <Compile Include="Entities\TranscriptAccess.cs" />
+    <Compile Include="Entities\WaiverStatus.cs" />
+    <Compile Include="Entities\SectionTransferStatus.cs" />
+    <Compile Include="Entities\StudentAffiliation.cs" />
+    <Compile Include="Entities\Requirements\GroupType.cs" />
+    <Compile Include="Entities\Requirements\RequirementType.cs" />
+    <Compile Include="Entities\RegistrationOptions.cs" />
+    <Compile Include="Entities\StudentTerm.cs" />
+    <Compile Include="Entities\StudentMinors.cs" />
+    <Compile Include="Entities\StudentMajors.cs" />
+    <Compile Include="Entities\ComponentTest.cs" />
+    <Compile Include="Entities\AcademicStanding.cs" />
+    <Compile Include="Entities\Advisement.cs" />
+    <Compile Include="Entities\College.cs" />
+    <Compile Include="Entities\OtherSpecialization.cs" />
+    <Compile Include="Entities\OtherMinor.cs" />
+    <Compile Include="Entities\OtherMajor.cs" />
+    <Compile Include="Entities\OtherHonor.cs" />
+    <Compile Include="Entities\OtherDegree.cs" />
+    <Compile Include="Entities\OtherAward.cs" />
+    <Compile Include="Entities\OtherCcd.cs" />
+    <Compile Include="Entities\Credential.cs" />
+    <Compile Include="Entities\HighSchool.cs" />
+    <Compile Include="Entities\EducationHistory.cs" />
+    <Compile Include="Entities\RegistrationDate.cs" />
+    <Compile Include="Entities\StudentStandingType.cs" />
+    <Compile Include="Entities\HighSchoolGpa.cs" />
+    <Compile Include="Entities\Requirements\AwardType.cs" />
+    <Compile Include="Entities\StudentStanding.cs" />
+    <Compile Include="Entities\SubTestResult.cs" />
+    <Compile Include="Entities\TestResult.cs" />
+    <Compile Include="Entities\AdvisorType.cs" />
+    <Compile Include="Entities\AdmittedStatus.cs" />
+    <Compile Include="Entities\Applicant.cs" />
+    <Compile Include="Entities\Application.cs" />
+    <Compile Include="Entities\ApplicationInfluence.cs" />
+    <Compile Include="Entities\ApplicationStatus.cs" />
+    <Compile Include="Entities\ApplicationStatusCategory.cs" />
+    <Compile Include="Entities\Book.cs" />
+    <Compile Include="Entities\CareerGoal.cs" />
+    <Compile Include="Entities\Ccd.cs" />
+    <Compile Include="Entities\CurriculumConfiguration.cs" />
+    <Compile Include="Entities\ConnectionStatus.cs" />
+    <Compile Include="Entities\EvaluationNotice.cs" />
+    <Compile Include="Entities\EvaluationNoticeType.cs" />
+    <Compile Include="Entities\RegistrationEligibilityTerm.cs" />
+    <Compile Include="Entities\RegistrationEligibilityTermStatus.cs" />
+    <Compile Include="Entities\RegistrationPriority.cs" />
+    <Compile Include="Entities\SectionGrades.cs" />
+    <Compile Include="Entities\StudentGrade.cs" />
+    <Compile Include="Entities\SectionGradeResponse.cs" />
+    <Compile Include="Entities\TranscriptGrouping.cs" />
+    <Compile Include="Entities\CustomField.cs" />
+    <Compile Include="Entities\OnlineCategory.cs" />
+    <Compile Include="Entities\PreferredSectionMessage.cs" />
+    <Compile Include="Entities\PreferredSectionsResponse.cs" />
+    <Compile Include="Entities\ReplacedStatus.cs" />
+    <Compile Include="Entities\ReplacementStatus.cs" />
+    <Compile Include="Entities\RequisiteCompletionOrder.cs" />
+    <Compile Include="Entities\PreferredSection.cs" />
+    <Compile Include="Entities\Test.cs" />
+    <Compile Include="Entities\NoncourseStatus.cs" />
+    <Compile Include="Entities\NoncourseStatusType.cs" />
+    <Compile Include="Entities\TestType.cs" />
+    <Compile Include="Entities\TranscriptCategory.cs" />
+    <Compile Include="Entities\TranscriptCourse.cs" />
+    <Compile Include="Entities\TestScore.cs" />
+    <Compile Include="Entities\RegistrationEligibility.cs" />
+    <Compile Include="Entities\Requisite.cs" />
+    <Compile Include="Entities\SectionRequisite.cs" />
+    <Compile Include="Entities\TopicCode.cs" />
+    <Compile Include="Entities\Corequisite.cs" />
+    <Compile Include="Entities\Course.cs" />
+    <Compile Include="Entities\CourseApproval.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Entities\CreditCategory.cs" />
+    <Compile Include="Entities\CourseLevel.cs" />
+    <Compile Include="Entities\CourseStatus.cs" />
+    <Compile Include="Entities\CourseType.cs" />
+    <Compile Include="Entities\CreditFilter.cs" />
+    <Compile Include="Entities\CreditStatus.cs" />
+    <Compile Include="Entities\CreditType.cs" />
+    <Compile Include="Entities\CredType.cs" />
+    <Compile Include="Entities\Degree.cs" />
+    <Compile Include="Entities\ExternalTranscriptStatus.cs" />
+    <Compile Include="Entities\Faculty.cs" />
+    <Compile Include="Entities\FederalCourseClassification.cs" />
+    <Compile Include="Entities\Grade.cs" />
+    <Compile Include="Entities\GradeRestriction.cs" />
+    <Compile Include="Entities\GradingType.cs" />
+    <Compile Include="Entities\GradeScheme.cs" />
+    <Compile Include="Entities\InstructionalMethod.cs" />
+    <Compile Include="Entities\LocalCourseClassification.cs" />
+    <Compile Include="Entities\Major.cs" />
+    <Compile Include="Entities\MidTermGrade.cs" />
+    <Compile Include="Entities\Minor.cs" />
+    <Compile Include="Entities\OfferingDepartment.cs" />
+    <Compile Include="Entities\RegistrationMessage.cs" />
+    <Compile Include="Entities\RegistrationRequest.cs" />
+    <Compile Include="Entities\RegistrationResponse.cs" />
+    <Compile Include="Entities\Requirements\AcadResult.cs" />
+    <Compile Include="Entities\Requirements\AdditionalRequirement.cs" />
+    <Compile Include="Entities\Requirements\BaseResult.cs" />
+    <Compile Include="Entities\Requirements\BlockBase.cs" />
+    <Compile Include="Entities\Requirements\Catalog.cs" />
+    <Compile Include="Entities\Requirements\CourseResult.cs" />
+    <Compile Include="Entities\Requirements\CreditResult.cs" />
+    <Compile Include="Entities\Requirements\CreditUsage.cs" />
+    <Compile Include="Entities\Requirements\Group.cs" />
+    <Compile Include="Entities\Requirements\GroupResult.cs" />
+    <Compile Include="Entities\Requirements\MaxAtLevels.cs" />
+    <Compile Include="Entities\Requirements\MaxCoursesAtLevels.cs" />
+    <Compile Include="Entities\Requirements\MaxCreditAtLevels.cs" />
+    <Compile Include="Entities\Requirements\Modifications\BlockReplacement.cs" />
+    <Compile Include="Entities\Requirements\Modifications\CountModification.cs" />
+    <Compile Include="Entities\Requirements\Modifications\CoursesAddition.cs" />
+    <Compile Include="Entities\Requirements\Modifications\CourseWaiver.cs" />
+    <Compile Include="Entities\Requirements\Modifications\CourseWaiverAndCoursesAddition.cs" />
+    <Compile Include="Entities\Requirements\Modifications\CreditModification.cs" />
+    <Compile Include="Entities\Requirements\Modifications\FromCoursesAddition.cs" />
+    <Compile Include="Entities\Requirements\Modifications\GpaModification.cs" />
+    <Compile Include="Entities\Requirements\Modifications\InstitutionalCreditModification.cs" />
+    <Compile Include="Entities\Requirements\Modifications\InstitutionalGpaModification.cs" />
+    <Compile Include="Entities\Requirements\Modifications\RequirementModification.cs" />
+    <Compile Include="Entities\Requirements\Override.cs" />
+    <Compile Include="Entities\Requirements\PlannedCredit.cs" />
+    <Compile Include="Entities\Requirements\Program.cs" />
+    <Compile Include="Entities\Requirements\ProgramRequirements.cs" />
+    <Compile Include="Entities\Requirements\Requirement.cs" />
+    <Compile Include="Entities\Requirements\RequirementBlock.cs" />
+    <Compile Include="Entities\Requirements\RequirementResult.cs" />
+    <Compile Include="Entities\Requirements\RequirementRule.cs" />
+    <Compile Include="Entities\Requirements\Subrequirement.cs" />
+    <Compile Include="Entities\Requirements\SubrequirementResult.cs" />
+    <Compile Include="Entities\Requirements\RequirementExplanation.cs" />
+    <Compile Include="Entities\Requirements\SubrequirementExplanation.cs" />
+    <Compile Include="Entities\InstructionalContact.cs" />
+    <Compile Include="Entities\ResidencyStatus.cs" />
+    <Compile Include="Entities\SectionFaculty.cs" />
+    <Compile Include="Entities\SectionStatus.cs" />
+    <Compile Include="Entities\SectionStatusCode.cs" />
+    <Compile Include="Entities\SectionStatusItem.cs" />
+    <Compile Include="Entities\RosterStudent.cs" />
+    <Compile Include="Entities\Section.cs" />
+    <Compile Include="Entities\SectionBook.cs" />
+    <Compile Include="Entities\SectionMeeting.cs" />
+    <Compile Include="Entities\SectionRegistration.cs" />
+    <Compile Include="Entities\Session.cs" />
+    <Compile Include="Entities\Specialization.cs" />
+    <Compile Include="Entities\Student.cs" />
+    <Compile Include="Entities\StudentConfiguration.cs" />
+    <Compile Include="Entities\StudentLoad.cs" />
+    <Compile Include="Entities\StudentProgram.cs" />
+    <Compile Include="Entities\StudentType.cs" />
+    <Compile Include="Entities\Subject.cs" />
+    <Compile Include="Entities\Term.cs" />
+    <Compile Include="Entities\TranscriptRestriction.cs" />
+    <Compile Include="Entities\WaitlistStatus.cs" />
+    <Compile Include="Entities\WaitlistStatusCode.cs" />
+    <Compile Include="Entities\StudentWaiver.cs" />
+    <Compile Include="Exceptions\ExistingSectionWaiverException.cs" />
+    <Compile Include="Exceptions\ExistingStudentPetitionException.cs" />
+    <Compile Include="Entities\HoldRequestType.cs" />
+    <Compile Include="ICourseProcessor.cs" />
+    <Compile Include="PlanningPermissionCodes.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Entities\AccountingCodes.cs" />
+    <Compile Include="Repositories\IFinancialAidApplicationOutcomeRepository.cs" />
+    <Compile Include="Repositories\IFinancialAidFundRepository.cs" />
+    <Compile Include="Repositories\IStudentFinancialAidApplicationRepository.cs" />
+    <Compile Include="Repositories\IStudentFinancialAidAwardRepository.cs" />
+    <Compile Include="Repositories\IStudentFinancialAidNeedSummaryRepository.cs" />
+    <Compile Include="Repositories\IStudentFinancialAidOfficeRepository.cs" />
+    <Compile Include="Repositories\IInstitutionsAttendRepository.cs" />
+    <Compile Include="Repositories\IAcademicCredentialsRepository.cs" />
+    <Compile Include="Repositories\IAdmissionApplicationsRepository.cs" />
+    <Compile Include="Repositories\IApplicationStatusRepository.cs" />
+    <Compile Include="Repositories\IAptitudeAssessmentsRepository.cs" />
+    <Compile Include="Repositories\IExternalEducationRepository.cs" />
+    <Compile Include="Repositories\IHousingAssignmentRepository.cs" />
+    <Compile Include="Repositories\IHousingRequestRepository.cs" />
+    <Compile Include="Repositories\IInstructorRepository.cs" />
+    <Compile Include="Repositories\IMealPlanReqsIntgRepository.cs" />
+    <Compile Include="Repositories\IAddAuthorizationRepository.cs" />
+    <Compile Include="Repositories\INonAcademicAttendanceRepository.cs" />
+    <Compile Include="Repositories\INonAcademicEventRepository.cs" />
+    <Compile Include="Repositories\IStudentAttendanceRepository.cs" />
+    <Compile Include="Repositories\IStudentAdvisorRelationshipsRepository.cs" />
+    <Compile Include="Repositories\IStudentFinancialAidAcademicProgressStatusesRepository.cs" />
+    <Compile Include="Repositories\IStudentTestScoresRepository.cs" />
+    <Compile Include="Repositories\IMealPlanAssignmentRepository.cs" />
+    <Compile Include="Repositories\IStudentPaymentRepository.cs" />
+    <Compile Include="Repositories\ICampusOrganizationRepository.cs" />
+    <Compile Include="Repositories\IFALinkRepository.cs" />
+    <Compile Include="Repositories\IStudentChargeRepository.cs" />
+    <Compile Include="Repositories\IGraduationApplicationRepository.cs" />
+    <Compile Include="Repositories\IStudentPetitionRepository.cs" />
+    <Compile Include="Repositories\ISectionRegistrationRepository.cs" />
+    <Compile Include="Repositories\IRegistrationGroupRepository.cs" />
+    <Compile Include="Repositories\IRegistrationOptionsRepository.cs" />
+    <Compile Include="Repositories\IApplicantRepository.cs" />
+    <Compile Include="Repositories\ISectionPermissionRepository.cs" />
+    <Compile Include="Repositories\IStudentAffiliationRepository.cs" />
+    <Compile Include="Repositories\IStudentAcademicProgramRepository.cs" />
+    <Compile Include="Repositories\IStudentTaxFormPdfDataRepository.cs" />
+    <Compile Include="Repositories\IStudentTermRepository.cs" />
+    <Compile Include="Repositories\IEducationHistoryRepository.cs" />
+    <Compile Include="Repositories\IStudentStandingRepository.cs" />
+    <Compile Include="Repositories\IRegistrationPriorityRepository.cs" />
+    <Compile Include="Repositories\IStudentRepositoryHelper.cs" />
+    <Compile Include="Repositories\IStudentRequestRepository.cs" />
+    <Compile Include="Repositories\IStudentTaxFormStatementRepository.cs" />
+    <Compile Include="Repositories\ITranscriptGroupingRepository.cs" />
+    <Compile Include="Repositories\IRecruiterRepository.cs" />
+    <Compile Include="Repositories\ITestResultRepository.cs" />
+    <Compile Include="Repositories\IAcademicCreditRepository.cs" />
+    <Compile Include="Repositories\IBookRepository.cs" />
+    <Compile Include="Repositories\ICatalogRepository.cs" />
+    <Compile Include="Repositories\ICourseRepository.cs" />
+    <Compile Include="Repositories\IFacultyRepository.cs" />
+    <Compile Include="Repositories\IGradeRepository.cs" />
+    <Compile Include="Repositories\IProgramRepository.cs" />
+    <Compile Include="Repositories\IProgramRequirementsRepository.cs" />
+    <Compile Include="Repositories\IRequirementRepository.cs" />
+    <Compile Include="Repositories\ISectionRepository.cs" />
+    <Compile Include="Repositories\IStudentConfigurationRepository.cs" />
+    <Compile Include="Repositories\IPreferredSectionRepository.cs" />
+    <Compile Include="Repositories\IStudentProgramRepository.cs" />
+    <Compile Include="Repositories\IStudentReferenceDataRepository.cs" />
+    <Compile Include="Repositories\IStudentRepository.cs" />
+    <Compile Include="Repositories\ITermRepository.cs" />
+    <Compile Include="Repositories\IStudentWaiverRepository.cs" />
+    <Compile Include="SectionPermissionCodes.cs" />
+    <Compile Include="Services\CourseProcessor.cs" />
+    <Compile Include="Services\SectionProcessor.cs" />
+    <Compile Include="Services\TermPeriodProcessor.cs" />
+    <Compile Include="Entities\StudentEnrollmentRequest.cs" />
+    <Compile Include="Entities\StudentCourseTransfer.cs" />
+    <Compile Include="StudentPermissionCodes.cs" />
+    <Compile Include="Entities\SectionGradeResponseError.cs" />
+    <Compile Include="Entities\StudentTranscriptRequest.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Ellucian.Colleague.Domain.Base\Ellucian.Colleague.Domain.Base.csproj">
+      <Project>{A3B49510-737B-4FFD-8BCA-17BCCE7FBAF7}</Project>
+      <Name>Ellucian.Colleague.Domain.Base</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos.Student\Ellucian.Colleague.Dtos.Student.csproj">
+      <Project>{28EB3CAC-2FA7-401E-8246-0C03C50FDEDA}</Project>
+      <Name>Ellucian.Colleague.Dtos.Student</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos\Ellucian.Colleague.Dtos.csproj">
+      <Project>{0ca929ca-2370-4763-be71-c91c244e0743}</Project>
+      <Name>Ellucian.Colleague.Dtos</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Entities\RoomRate.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Entities\SectionStatuses.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Repositories\IAdmissionApplicationSupportingItemsRepository.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Entities\CourseTopic.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Entities\ChargeAssessmentMethod.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Entities\CourseTransferStatus.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- begin ellucian project settings -->
+  <Import Project="$(SolutionDir)CodeAnalysis\CodeScan.proj" Condition="Exists('$(SolutionDir)CodeAnalysis\CodeScan.proj ')" />
+  <Import Project="$(ProjectDir)..\..\..\BuildConfig\CodeSigning.targets" Condition="Exists('$(ProjectDir)..\..\..\BuildConfig\CodeSigning.targets ')" />
+  <Import Project="$(MSBuildProgramFiles32)\MSBuild\FxCop Integrator\FxCopIntegrator.targets" Condition="Exists('$(MSBuildProgramFiles32)\MSBuild\FxCop Integrator\FxCopIntegrator.targets')" />
+  <!-- end ellucian project settings -->
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

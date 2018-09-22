@@ -1,0 +1,2863 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GroupTestData>
+  <TestData>
+    <TestNumber>1</TestNumber>
+    <Phrase>TAKE ENGL*101</Phrase>
+    <Taken></Taken>
+    <Result>Courses</Result>
+    <TestFile>Test1</TestFile>
+    <ResultDetails></ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>2</TestNumber>
+    <Phrase>TAKE ENGL*101</Phrase>
+    <Taken>ENGL*102</Taken>
+    <Result>Courses</Result>
+    <TestFile>Test1</TestFile>
+    <ResultDetails>ENGL*102=NotInCoursesList</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>3</TestNumber>
+    <Phrase>TAKE ENGL*101</Phrase>
+    <Taken>ENGL*101</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test1</TestFile>
+    <ResultDetails>ENGL*101=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>4</TestNumber>
+    <Phrase>TAKE ENGL*101, ENGL*102</Phrase>
+    <Taken></Taken>
+    <Result>Courses</Result>
+    <TestFile>Test3</TestFile>
+    <ResultDetails></ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>5</TestNumber>
+    <Phrase>TAKE ENGL*101, ENGL*102</Phrase>
+    <Taken>MATH*100</Taken>
+    <Result>Courses</Result>
+    <TestFile>Test3</TestFile>
+    <ResultDetails>MATH*100=NotInCoursesList</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>6</TestNumber>
+    <Phrase>TAKE ENGL*101, ENGL*102</Phrase>
+    <Taken>ENGL*101</Taken>
+    <Result>Courses</Result>
+    <TestFile>Test3</TestFile>
+    <ResultDetails>ENGL*101=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>7</TestNumber>
+    <Phrase>TAKE ENGL*101, ENGL*102</Phrase>
+    <Taken>ENGL*101,ENGL*102</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test3</TestFile>
+    <ResultDetails>ENGL*101=Applied,ENGL*102=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>8</TestNumber>
+    <Phrase>TAKE 1 Course; FROM ENGL*101, ENGL*102</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test2</TestFile>
+    <ResultDetails></ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>9</TestNumber>
+    <Phrase>TAKE ENGL*101 OR ENGL*102</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test2</TestFile>
+    <ResultDetails></ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>10</TestNumber>
+    <Phrase>TAKE 1 Course; FROM ENGL*101, ENGL*102</Phrase>
+    <Taken>ENGL*101</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test2</TestFile>
+    <ResultDetails>ENGL*101=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>11</TestNumber>
+    <Phrase>TAKE ENGL*101 OR ENGL*102</Phrase>
+    <Taken>ENGL*102</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test2</TestFile>
+    <ResultDetails>ENGL*102=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>12</TestNumber>
+    <Phrase>TAKE 2 Courses; FROM ENGL*101, ENGL*102</Phrase>
+    <Taken>ENGL*101</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test4</TestFile>
+    <ResultDetails>ENGL*101=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>13</TestNumber>
+    <Phrase>TAKE 2 Courses; FROM ENGL*101, ENGL*102</Phrase>
+    <Taken>ENGL*102</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test4</TestFile>
+    <ResultDetails>ENGL*102=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>14</TestNumber>
+    <Phrase>TAKE 2 Courses; FROM ENGL*101, ENGL*102</Phrase>
+    <Taken>ENGL*102,MATH*100</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test4</TestFile>
+    <ResultDetails>ENGL*102=Applied,MATH*100=NotInFromCoursesList</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>15</TestNumber>
+    <Phrase>TAKE 2 Courses; FROM ENGL*101, ENGL*102</Phrase>
+    <Taken>PHYS*100,MATH*100</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test4</TestFile>
+    <ResultDetails>PHYS*100=NotInFromCoursesList,MATH*100=NotInFromCoursesList</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>16</TestNumber>
+    <Phrase>TAKE 2 Courses; FROM ENGL*101, ENGL*102</Phrase>
+    <Taken>ENGL*101,ENGL*102</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test4</TestFile>
+    <ResultDetails>ENGL*101=Applied,ENGL*102=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>17</TestNumber>
+    <Phrase>TAKE 2 Courses</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test5</TestFile>
+    <ResultDetails></ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>18</TestNumber>
+    <Phrase>TAKE 2 Courses</Phrase>
+    <Taken>MATH*100,PHYS*100</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test5</TestFile>
+    <ResultDetails>MATH*100=Applied,PHYS*100=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>19</TestNumber>
+    <Phrase>TAKE 4 CREDITS</Phrase>
+    <Taken>ENGL*102</Taken>
+    <Result>MinCredits</Result>
+    <TestFile>Test25</TestFile>
+    <ResultDetails>ENGL*102=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>20</TestNumber>
+    <Phrase>TAKE 4 CREDITS</Phrase>
+    <Taken>PHYS*400</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test25</TestFile>
+    <ResultDetails>PHYS*400=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>21</TestNumber>
+    <Phrase>TAKE 4 CREDITS</Phrase>
+    <Taken>PHYS*100</Taken>
+    <Result>MinCredits</Result>
+    <TestFile>Test25</TestFile>
+    <ResultDetails>PHYS*100=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>22</TestNumber>
+    <Phrase>TAKE 4 CREDITS</Phrase>
+    <Taken>PHYS*400</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test25</TestFile>
+    <ResultDetails>PHYS*400=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>23</TestNumber>
+    <Phrase>TAKE 3 CREDITS</Phrase>
+    <Taken>PHYS*100</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test26</TestFile>
+    <ResultDetails>PHYS*100=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>24</TestNumber>
+    <Phrase>TAKE 4 CREDITS</Phrase>
+    <Taken>ENGL*101,ENGL*102</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test25</TestFile>
+    <ResultDetails>ENGL*101=Applied,ENGL*102=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>25</TestNumber>
+    <Phrase>TAKE 1 Course; MINIMUM 4 CREDITS</Phrase>
+    <Taken>ENGL*101</Taken>
+    <Result>MinCredits</Result>
+    <TestFile>Test27</TestFile>
+    <ResultDetails>ENGL*101=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>26</TestNumber>
+    <Phrase>TAKE 1 Course; MINIMUM 4 CREDITS</Phrase>
+    <Taken>PHYS*400</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test27</TestFile>
+    <ResultDetails>PHYS*400=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>27</TestNumber>
+    <Phrase>TAKE 1 Course; FROM DEPARTMENT MATH</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test6</TestFile>
+    <ResultDetails></ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>28</TestNumber>
+    <Phrase>TAKE 1 Course; FROM DEPARTMENT MATH; MINIMUM 1 DEPARTMENT</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses,MinDepartments</Result>
+    <TestFile>Test7</TestFile>
+    <ResultDetails></ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>29</TestNumber>
+    <Phrase>TAKE 1 Course; FROM DEPARTMENT MATH</Phrase>
+    <Taken>ENGL*101</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test6</TestFile>
+    <ResultDetails>ENGL*101=FromWrongDepartment</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>30</TestNumber>
+    <Phrase>TAKE 1 Course; FROM DEPARTMENT MATH; MINIMUM 1 DEPARTMENT</Phrase>
+    <Taken>ENGL*101</Taken>
+    <Result>MinDepartments,MinCourses</Result>
+    <TestFile>Test7</TestFile>
+    <ResultDetails>ENGL*101=FromWrongDepartment</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>31</TestNumber>
+    <Phrase>TAKE 1 Course; FROM DEPARTMENT MATH</Phrase>
+    <Taken>MATH*100</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test6</TestFile>
+    <ResultDetails>MATH*100=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>32</TestNumber>
+    <Phrase>TAKE 1 Course; FROM DEPARTMENT MATH</Phrase>
+    <Taken>MATH*100,MATH*300</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test6</TestFile>
+    <ResultDetails>MATH*100=Applied,MATH*300=Related</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>33</TestNumber>
+    <Phrase>TAKE 1 Course; FROM DEPARTMENT MATH; MINIMUM 1 DEPARTMENT</Phrase>
+    <Taken>MATH*100</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test6</TestFile>
+    <ResultDetails>MATH*100=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>34</TestNumber>
+    <Phrase>TAKE 1 Course; FROM DEPARTMENTS MATH, ENGL</Phrase>
+    <Taken>ENGL*101</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test8</TestFile>
+    <ResultDetails>ENGL*101=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>35</TestNumber>
+    <Phrase>TAKE 1 Course; FROM DEPARTMENTS MATH, ENGL; MINIMUM 1 DEPARTMENT</Phrase>
+    <Taken>ENGL*101</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test9</TestFile>
+    <ResultDetails>ENGL*101=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>36</TestNumber>
+    <Phrase>TAKE 2 Courses; MINIMUM 2 DEPARTMENTS</Phrase>
+    <Taken>ENGL*101, ENGL*102</Taken>
+    <Result>MinDepartments</Result>
+    <TestFile>Test10</TestFile>
+    <ResultDetails>ENGL*101=Applied,ENGL*102=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>37</TestNumber>
+    <Phrase>TAKE 2 Courses; MINIMUM 2 DEPARTMENTS</Phrase>
+    <Taken>MATH*100,MATH*300,MATH*151</Taken>
+    <Result>MinDepartments</Result>
+    <TestFile>Test10</TestFile>
+    <ResultDetails>MATH*100=Applied,MATH*300=Applied,MATH*151=Related</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>38</TestNumber>
+    <Phrase>TAKE 2 Courses; MINIMUM 2 DEPARTMENTS</Phrase>
+    <Taken>MATH*100,MATH*300,MATH*151,DANC*200</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test10</TestFile>
+    <ResultDetails>MATH*100=Applied,MATH*300=Applied,MATH*151=Related,DANC*200=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>39</TestNumber>
+    <Phrase>TAKE 2 Courses; MINIMUM 2 DEPARTMENTS</Phrase>
+    <Taken>ENGL*101, MATH*100</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test10</TestFile>
+    <ResultDetails>ENGL*101=Applied,MATH*100=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>40</TestNumber>
+    <Phrase>TAKE 1 Course; FROM LEVEL 200</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test11</TestFile>
+    <ResultDetails></ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>41</TestNumber>
+    <Phrase>TAKE 1 Course; FROM LEVEL 200</Phrase>
+    <Taken>MATH*100</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test11</TestFile>
+    <ResultDetails>MATH*100=FromWrongLevel</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>42</TestNumber>
+    <Phrase>TAKE 1 Course; FROM LEVEL 200</Phrase>
+    <Taken>DANC*200</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test11</TestFile>
+    <ResultDetails>DANC*200=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>43</TestNumber>
+    <Phrase>TAKE 2 Courses; FROM LEVELS 100, 200</Phrase>
+    <Taken>MATH*100, ENGL*101</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test12</TestFile>
+    <ResultDetails>MATH*100=Applied,ENGL*101=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>44</TestNumber>
+    <Phrase>TAKE 2 Courses; FROM LEVELS 100, 200</Phrase>
+    <Taken>MATH*100,DANC*200</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test12</TestFile>
+    <ResultDetails>MATH*100=Applied,DANC*200=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>45</TestNumber>
+    <Phrase>TAKE 1 Course; FROM SUBJECT MATH</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test13</TestFile>
+    <ResultDetails></ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>46</TestNumber>
+    <Phrase>TAKE 1 Course; FROM SUBJECT MATH</Phrase>
+    <Taken>DANC*200</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test13</TestFile>
+    <ResultDetails>DANC*200=FromWrongSubject</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>47</TestNumber>
+    <Phrase>TAKE 1 Course; FROM SUBJECT MATH</Phrase>
+    <Taken>MATH*100</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test13</TestFile>
+    <ResultDetails>MATH*100=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>48</TestNumber>
+    <Phrase>TAKE 1 Course; FROM SUBJECT MATH, ENGL</Phrase>
+    <Taken>DANC*200</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test14</TestFile>
+    <ResultDetails>DANC*200=FromWrongSubject</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>49</TestNumber>
+    <Phrase>TAKE 1 Course; FROM SUBJECT MATH, ENGL</Phrase>
+    <Taken>ENGL*101</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test14</TestFile>
+    <ResultDetails>ENGL*101=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>50</TestNumber>
+    <Phrase>TAKE 2 Courses; MINIMUM 2 SUBJECTS</Phrase>
+    <Taken>ENGL*101,ENGL*102</Taken>
+    <Result>MinSubjects</Result>
+    <TestFile>Test15</TestFile>
+    <ResultDetails>ENGL*101=Applied,ENGL*102=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>51</TestNumber>
+    <Phrase>TAKE 2 Courses; MINIMUM 2 SUBJECTS</Phrase>
+    <Taken>MATH*100,MATH*300,MATH*151</Taken>
+    <Result>MinSubjects</Result>
+    <TestFile>Test15</TestFile>
+    <ResultDetails>MATH*100=Applied,MATH*300=Applied,MATH*151=Related</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>52</TestNumber>
+    <Phrase>TAKE 2 Courses; MINIMUM 2 SUBJECTS</Phrase>
+    <Taken>MATH*100,MATH*300,MATH*151,DANC*200</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test15</TestFile>
+    <ResultDetails>MATH*100=Applied,MATH*300=Applied,MATH*151=Related,DANC*200=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>53</TestNumber>
+    <Phrase>TAKE 2 Courses; MINIMUM 2 SUBJECTS</Phrase>
+    <Taken>ENGL*101, MATH*100</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test15</TestFile>
+    <ResultDetails>ENGL*101=Applied,MATH*100=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>54</TestNumber>
+    <Phrase>TAKE 1 Course; FROM SUBJECT MATH; EXCEPT MATH*100</Phrase>
+    <Taken>MATH*100</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test18</TestFile>
+    <ResultDetails>MATH*100=CourseExcluded</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>55</TestNumber>
+    <Phrase>TAKE 2 Courses; EXCEPT MATH*100</Phrase>
+    <Taken>ENGL*101,MATH*100</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test16</TestFile>
+    <ResultDetails>ENGL*101=Applied,MATH*100=CourseExcluded</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>56</TestNumber>
+    <Phrase>TAKE 2 Courses; EXCEPT MATH*100</Phrase>
+    <Taken>ENGL*101,MATH*100,ENGL*102</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test16</TestFile>
+    <ResultDetails>ENGL*101=Applied,MATH*100=CourseExcluded,ENGL*102=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>57</TestNumber>
+    <Phrase>TAKE 2 Courses; EXCEPT MATH*100, DANC*200</Phrase>
+    <Taken>ENGL*101, DANC*200, ENGL*102, MATH*100</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test17</TestFile>
+    <ResultDetails>ENGL*101=Applied,DANC*200=CourseExcluded,ENGL*102=Applied,MATH*100=CourseExcluded</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>58</TestNumber>
+    <Phrase>TAKE 1 Course; EXCEPT DEPARTMENTS MATH</Phrase>
+    <Taken>MATH*100</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test19</TestFile>
+    <ResultDetails>MATH*100=DepartmentExcluded</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>59</TestNumber>
+    <Phrase>TAKE 1 Course; EXCEPT DEPARTMENTS MATH</Phrase>
+    <Taken>ENGL*101</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test19</TestFile>
+    <ResultDetails>ENGL*101=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>60</TestNumber>
+    <Phrase>TAKE 1 Course; EXCEPT DEPARTMENTS MATH</Phrase>
+    <Taken>MATH*100, ENGL*101</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test19</TestFile>
+    <ResultDetails>MATH*100=DepartmentExcluded,ENGL*101=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>61</TestNumber>
+    <Phrase>TAKE 2 Courses; EXCEPT DEPARTMENTS MATH, PERF</Phrase>
+    <Taken>MATH*100, ENGL*101, DANC*200, ENGL*102</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test20</TestFile>
+    <ResultDetails>MATH*100=DepartmentExcluded,ENGL*101=Applied,DANC*200=DepartmentExcluded,ENGL*102=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>62</TestNumber>
+    <Phrase>TAKE 1 Course; EXCEPT SUBJECT MATH</Phrase>
+    <Taken>MATH*100</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test21</TestFile>
+    <ResultDetails>MATH*100=SubjectExcluded</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>63</TestNumber>
+    <Phrase>TAKE 1 Course; EXCEPT SUBJECT MATH</Phrase>
+    <Taken>DANC*200</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test21</TestFile>
+    <ResultDetails>DANC*200=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>64</TestNumber>
+    <Phrase>TAKE 1 Course; EXCEPT SUBJECTS ENGL, DANC</Phrase>
+    <Taken>MATH*100</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test22</TestFile>
+    <ResultDetails>MATH*100=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>65</TestNumber>
+    <Phrase>TAKE 1 Course; EXCEPT LEVEL 100</Phrase>
+    <Taken>MATH*100</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test23</TestFile>
+    <ResultDetails>MATH*100=LevelExcluded</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>66</TestNumber>
+    <Phrase>TAKE 1 Course; EXCEPT LEVEL 100</Phrase>
+    <Taken>DANC*200</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test23</TestFile>
+    <ResultDetails>DANC*200=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>67</TestNumber>
+    <Phrase>TAKE 1 Course; EXCEPT LEVELS 200, 100</Phrase>
+    <Taken>MATH*100, MATH*300</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test24</TestFile>
+    <ResultDetails>MATH*100=LevelExcluded,MATH*300=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>68</TestNumber>
+    <Phrase>TAKE 8 CREDITS; MAXIMUM 2 Courses</Phrase>
+    <Taken>ENGL*101, ENGL*102, MATH*100</Taken>
+    <Result>MinCredits</Result>
+    <TestFile>Test28</TestFile>
+    <ResultDetails>ENGL*101=Applied,ENGL*102=Applied,MATH*100=MaxCourses</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>69</TestNumber>
+    <Phrase>TAKE 8 CREDITS; MAXIMUM 2 Courses</Phrase>
+    <Taken>PHYS*400, MUSC*100</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test28</TestFile>
+    <ResultDetails>PHYS*400=Applied,MUSC*100=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>70</TestNumber>
+    <Phrase>TAKE 8 CREDITS; MAXIMUM 2 Courses</Phrase>
+    <Taken>PHYS*400, MUSC*100, ENGL*101</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test28</TestFile>
+    <ResultDetails>PHYS*400=Applied,MUSC*100=Applied,ENGL*101=MaxCourses</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>71</TestNumber>
+    <Phrase>TAKE 4 CREDITS; MAXIMUM 1 Course</Phrase>
+    <Taken>PHYS*400</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test29</TestFile>
+    <ResultDetails>PHYS*400=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>72</TestNumber>
+    <Phrase>TAKE 4 CREDITS; MAXIMUM 1 Course</Phrase>
+    <Taken>PHYS*400, MUSC*100, ENGL*101</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test29</TestFile>
+    <ResultDetails>PHYS*400=Applied,MUSC*100=MaxCourses,ENGL*101=MaxCourses</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>73</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 DEPARTMENT</Phrase>
+    <Taken>ENGL*101, ENGL*102</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test30</TestFile>
+    <ResultDetails>ENGL*101=Applied,ENGL*102=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>74</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 DEPARTMENT</Phrase>
+    <Taken>ENGL*101, MATH*100</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test30</TestFile>
+    <ResultDetails>ENGL*101=Applied,MATH*100=MaxDepartments</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>75</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 DEPARTMENT</Phrase>
+    <Taken>ENGL*101, ENGL*102, MATH*100</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test30</TestFile>
+    <ResultDetails>ENGL*101=Applied,ENGL*102=Applied,MATH*100=MaxDepartments</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>76</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 SUBJECT</Phrase>
+    <Taken>ENGL*101, ENGL*102</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test31</TestFile>
+    <ResultDetails>ENGL*101=Applied,ENGL*102=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>77</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 SUBJECT</Phrase>
+    <Taken>ENGL*101, MATH*100</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test31</TestFile>
+    <ResultDetails>ENGL*101=Applied,MATH*100=MaxSubjects</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>78</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 SUBJECT</Phrase>
+    <Taken>ENGL*101, ENGL*102, MATH*100</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test31</TestFile>
+    <ResultDetails>ENGL*101=Applied,ENGL*102=Applied,MATH*100=MaxSubjects</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>79</TestNumber>
+    <Phrase>TAKE 1 Course; MAXIMUM 3 CREDITS</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test32</TestFile>
+    <ResultDetails></ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>80</TestNumber>
+    <Phrase>TAKE 1 Course; MAXIMUM 3 CREDITS</Phrase>
+    <Taken>ENGL*101</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test32</TestFile>
+    <ResultDetails>ENGL*101=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>81</TestNumber>
+    <Phrase>TAKE 1 Course; MAXIMUM 3 CREDITS</Phrase>
+    <Taken>ENGL*101,ENGL*102</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test32</TestFile>
+    <ResultDetails>ENGL*101=Applied,ENGL*102=MaxCredits</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>82</TestNumber>
+    <Phrase>TAKE 1 Course; MAXIMUM 3 CREDITS</Phrase>
+    <Taken>PHYS*400</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test32</TestFile>
+    <ResultDetails>PHYS*400=MaxCredits</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>83</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 6 CREDITS</Phrase>
+    <Taken>ENGL*101,ENGL*102</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test33</TestFile>
+    <ResultDetails>ENGL*101=Applied,ENGL*102=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>84</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 6 CREDITS</Phrase>
+    <Taken>ENGL*101, PHYS*400</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test33</TestFile>
+    <ResultDetails>ENGL*101=Applied,PHYS*400=MaxCredits</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>85</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 6 CREDITS</Phrase>
+    <Taken>ENGL*101,ENGL*102,PHYS*400</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test33</TestFile>
+    <ResultDetails>ENGL*101=Applied,ENGL*102=Applied,PHYS*400=MaxCredits</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>86</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 Course PER SUBJECT</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test34</TestFile>
+    <ResultDetails></ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>87</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 Course PER SUBJECT</Phrase>
+    <Taken>ENGL*101</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test34</TestFile>
+    <ResultDetails>ENGL*101=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>88</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 Course PER SUBJECT</Phrase>
+    <Taken>ENGL*101, ENGL*102</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test34</TestFile>
+    <ResultDetails>ENGL*101=Applied,ENGL*102=MaxCoursesPerSubject</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>89</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 Course PER SUBJECT</Phrase>
+    <Taken>ENGL*101, MATH*100</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test34</TestFile>
+    <ResultDetails>ENGL*101=Applied,MATH*100=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>90</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 Course PER SUBJECT</Phrase>
+    <Taken>ENGL*101, MATH*100, ENGL*102</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test34</TestFile>
+    <ResultDetails>ENGL*101=Applied,MATH*100=Applied,ENGL*102=MaxCoursesPerSubject</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>91</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 Course PER SUBJECT</Phrase>
+    <Taken>ENGL*101, ENGL*102, MATH*100</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test34</TestFile>
+    <ResultDetails>ENGL*101=Applied,ENGL*102=MaxCoursesPerSubject,MATH*100=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>92</TestNumber>
+    <Phrase>TAKE 4 Courses; MAXIMUM 2 Courses PER SUBJECT</Phrase>
+    <Taken>ENGL*101,MATH*100,PHYS*400,MUSC*100</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test35</TestFile>
+    <ResultDetails>ENGL*101=Applied,MATH*100=Applied,PHYS*400=Applied,MUSC*100=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>93</TestNumber>
+    <Phrase>TAKE 4 Courses; MAXIMUM 2 Courses PER SUBJECT</Phrase>
+    <Taken>ENGL*101,ENGL*102,MATH*100,MATH*300</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test35</TestFile>
+    <ResultDetails>ENGL*101=Applied,ENGL*102=Applied,MATH*100=Applied,MATH*300=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>94</TestNumber>
+    <Phrase>TAKE 4 Courses; MAXIMUM 1 Course PER SUBJECT</Phrase>
+    <Taken>ENGL*101,ENGL*102,MATH*100,MUSC*100</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test36</TestFile>
+    <ResultDetails>ENGL*101=Applied,ENGL*102=MaxCoursesPerSubject,MATH*100=Applied,MUSC*100=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>95</TestNumber>
+    <Phrase>TAKE 1 Course; MAXIMUM 1 Course PER DEPARTMENT</Phrase>
+    <Taken>SPAN*100</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test37</TestFile>
+    <ResultDetails>SPAN*100=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>96</TestNumber>
+    <Phrase>TAKE 1 Course; MAXIMUM 1 Course PER DEPARTMENT</Phrase>
+    <Taken>HIST*100,POLI*100</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test37</TestFile>
+    <ResultDetails>HIST*100=Applied,POLI*100=MaxCoursesPerDepartment</ResultDetails>
+    <Comments>HIST*100 Has two departments, HIST and POLI, hacked in on the database side</Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>97</TestNumber>
+    <Phrase>TAKE 3 Courses; MAXIMUM 2 Courses PER DEPARTMENT</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test38</TestFile>
+    <ResultDetails></ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>98</TestNumber>
+    <Phrase>TAKE 3 Courses; MAXIMUM 2 Courses PER DEPARTMENT</Phrase>
+    <Taken>ENGL*101,MATH*100</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test38</TestFile>
+    <ResultDetails>ENGL*101=Applied,MATH*100=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>99</TestNumber>
+    <Phrase>TAKE 3 Courses; MAXIMUM 2 Courses PER DEPARTMENT</Phrase>
+    <Taken>ENGL*101, MATH*100, ENGL*102</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test38</TestFile>
+    <ResultDetails>ENGL*101=Applied,MATH*100=Applied,ENGL*102=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>100</TestNumber>
+    <Phrase>TAKE 3 Courses; MAXIMUM 2 Courses PER DEPARTMENT</Phrase>
+    <Taken>MATH*100,MATH*460,MATH*371</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test38</TestFile>
+    <ResultDetails>MATH*100=Applied,MATH*460=Applied,MATH*371=MaxCoursesPerDepartment</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>101</TestNumber>
+    <Phrase>TAKE 3 Courses; MAXIMUM 2 Courses PER DEPARTMENT</Phrase>
+    <Taken>MATH*100,MATH*460,MATH*371,ENGL*101</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test38</TestFile>
+    <ResultDetails>MATH*100=Applied,MATH*460=Applied,MATH*371=MaxCoursesPerDepartment,ENGL*101=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>102</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 100,200 LEVEL Courses</Phrase>
+    <Taken>MATH*100,ENGL*101,ENGL*102</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test39</TestFile>
+    <ResultDetails>MATH*100=Applied,ENGL*101=MaxCoursesAtLevel,ENGL*102=MaxCoursesAtLevel</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>103</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 100,200 LEVEL Courses</Phrase>
+    <Taken>MATH*100,ENGL*101,ENGL*102,MATH*371</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test39</TestFile>
+    <ResultDetails>MATH*100=Applied,ENGL*101=MaxCoursesAtLevel,ENGL*102=MaxCoursesAtLevel,MATH*371=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>104</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 100,200 LEVEL Courses</Phrase>
+    <Taken>MATH*371</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test39</TestFile>
+    <ResultDetails>MATH*371=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>105</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 3 CREDITS PER Course</Phrase>
+    <Taken>MATH*100,ENGL*101</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test40</TestFile>
+    <ResultDetails>MATH*100=Applied,ENGL*101=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>106</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 3 CREDITS PER Course</Phrase>
+    <Taken>MATH*100,PHYS*400</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test40</TestFile>
+    <ResultDetails>MATH*100=Applied,PHYS*400=MaxCreditsPerCourse</ResultDetails>
+    <Comments>PHYS*400 is 4 credits</Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>107</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 3 CREDITS PER Course</Phrase>
+    <Taken>PHYS*400,MATH*100</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test40</TestFile>
+    <ResultDetails>PHYS*400=MaxCreditsPerCourse,MATH*100=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>108</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 3 CREDITS PER Course</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test40</TestFile>
+    <ResultDetails></ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>109</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 3 CREDITS PER Course</Phrase>
+    <Taken>PHYS*400</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test40</TestFile>
+    <ResultDetails>PHYS*400=MaxCreditsPerCourse</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>110</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 3 CREDITS PER Course</Phrase>
+    <Taken>MATH*100,PHYS*400,ENGL*101</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test40</TestFile>
+    <ResultDetails>MATH*100=Applied,PHYS*400=MaxCreditsPerCourse,ENGL*101=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>111</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 3 CREDITS PER SUBJECT</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test41</TestFile>
+    <ResultDetails></ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>112</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 3 CREDITS PER SUBJECT</Phrase>
+    <Taken>MATH*100,ENGL*101,ENGL*102</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test41</TestFile>
+    <ResultDetails>MATH*100=Applied,ENGL*101=Applied,ENGL*102=MaxCreditsPerSubject</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>113</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 3 CREDITS PER SUBJECT</Phrase>
+    <Taken>MATH*100,PHYS*400,ENGL*101</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test41</TestFile>
+    <ResultDetails>MATH*100=Applied,PHYS*400=MaxCreditsPerSubject,ENGL*101=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>114</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 3 CREDITS PER SUBJECT</Phrase>
+    <Taken>ENGL*101,PHYS*400,ENGL*102</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test41</TestFile>
+    <ResultDetails>ENGL*101=Applied,PHYS*400=MaxCreditsPerSubject,ENGL*102=MaxCreditsPerSubject</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>115</TestNumber>
+    <Phrase>TAKE 3 Courses; MAXIMUM 6 CREDITS PER DEPARTMENT</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test42</TestFile>
+    <ResultDetails></ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>116</TestNumber>
+    <Phrase>TAKE 3 Courses; MAXIMUM 6 CREDITS PER DEPARTMENT</Phrase>
+    <Taken>ENGL*101,MATH*100</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test42</TestFile>
+    <ResultDetails>ENGL*101=Applied,MATH*100=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>117</TestNumber>
+    <Phrase>TAKE 3 Courses; MAXIMUM 6 CREDITS PER DEPARTMENT</Phrase>
+    <Taken>ENGL*101, MATH*100, ENGL*102</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test42</TestFile>
+    <ResultDetails>ENGL*101=Applied,MATH*100=Applied,ENGL*102=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>118</TestNumber>
+    <Phrase>TAKE 3 Courses; MAXIMUM 6 CREDITS PER DEPARTMENT</Phrase>
+    <Taken>MATH*100,MATH*150,MATH*371</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test42</TestFile>
+    <ResultDetails>MATH*100=Applied,MATH*150=Applied,MATH*371=MaxCreditsPerDepartment</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>119</TestNumber>
+    <Phrase>TAKE 3 Courses; MAXIMUM 6 CREDITS PER DEPARTMENT</Phrase>
+    <Taken>MATH*100,MATH*150,MATH*371,ENGL*101</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test42</TestFile>
+    <ResultDetails>MATH*100=Applied,MATH*150=Applied,MATH*371=MaxCreditsPerDepartment,ENGL*101=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>120</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 3 100,200 LEVEL CREDITS</Phrase>
+    <Taken>MATH*100,ENGL*101,ENGL*102</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test43</TestFile>
+    <ResultDetails>MATH*100=Applied,ENGL*101=MaxCreditsAtLevel,ENGL*102=MaxCreditsAtLevel</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>121</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 3 100,200 LEVEL CREDITS</Phrase>
+    <Taken>MATH*100,ENGL*101,ENGL*102,MATH*371</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test43</TestFile>
+    <ResultDetails>MATH*100=Applied,ENGL*101=MaxCreditsAtLevel,ENGL*102=MaxCreditsAtLevel,MATH*371=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>122</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 3 100,200 LEVEL CREDITS</Phrase>
+    <Taken>MATH*371</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test43</TestFile>
+    <ResultDetails>MATH*371=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>123</TestNumber>
+    <Phrase>TAKE 6 CREDITS; MINIMUM 3 INST.HOURS</Phrase>
+    <Taken></Taken>
+    <Result>MinCredits,MinInstCredits</Result>
+    <TestFile>Test44</TestFile>
+    <ResultDetails></ResultDetails>
+    <Comments>MUSC*100 and MUSC*207 are now transfer credit</Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>124</TestNumber>
+    <Phrase>TAKE 6 CREDITS; MINIMUM 3 INST.HOURS</Phrase>
+    <Taken>MATH*100</Taken>
+    <Result>MinCredits</Result>
+    <TestFile>Test44</TestFile>
+    <ResultDetails>MATH*100=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>125</TestNumber>
+    <Phrase>TAKE 6 CREDITS; MINIMUM 3 INST.HOURS</Phrase>
+    <Taken>MUSC*100</Taken>
+    <Result>MinCredits,MinInstCredits</Result>
+    <TestFile>Test44</TestFile>
+    <ResultDetails>MUSC*100=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>126</TestNumber>
+    <Phrase>TAKE 6 CREDITS; MINIMUM 3 INST.HOURS</Phrase>
+    <Taken>MATH*100,MUSC*100</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test44</TestFile>
+    <ResultDetails>MATH*100=Applied,MUSC*100=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>127</TestNumber>
+    <Phrase>TAKE 6 CREDITS; MINIMUM 3 INST.HOURS</Phrase>
+    <Taken>MUSC*100,MATH*100</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test44</TestFile>
+    <ResultDetails>MUSC*100=Applied,MATH*100=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>128</TestNumber>
+    <Phrase>TAKE 6 CREDITS; MINIMUM 3 INST.HOURS</Phrase>
+    <Taken>MATH*100,MUSC*100,MATH*150</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test44</TestFile>
+    <ResultDetails>MATH*100=Applied,MUSC*100=Applied,MATH*150=Related</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>129</TestNumber>
+    <Phrase>TAKE 6 CREDITS; MINIMUM 3 INST.HOURS</Phrase>
+    <Taken>MUSC*100,MUSC*207</Taken>
+    <Result>MinInstCredits,MinCredits</Result>
+    <TestFile>Test44</TestFile>
+    <ResultDetails>MUSC*100=Applied,MUSC*207=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>130</TestNumber>
+    <Phrase>TAKE 2 Courses; MINIMUM 2 INST.HOURS</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses,MinInstCredits</Result>
+    <TestFile>Test45</TestFile>
+    <ResultDetails></ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>131</TestNumber>
+    <Phrase>TAKE 2 Courses; MINIMUM 2 INST.HOURS</Phrase>
+    <Taken>MATH*100</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test45</TestFile>
+    <ResultDetails>MATH*100=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>132</TestNumber>
+    <Phrase>TAKE 2 Courses; MINIMUM 2 INST.HOURS</Phrase>
+    <Taken>MUSC*100</Taken>
+    <Result>MinCourses,MinInstCredits</Result>
+    <TestFile>Test45</TestFile>
+    <ResultDetails>MUSC*100=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>133</TestNumber>
+    <Phrase>TAKE 2 Courses; MINIMUM 2 INST.HOURS</Phrase>
+    <Taken>MATH*100,MUSC*100</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test45</TestFile>
+    <ResultDetails>MATH*100=Applied,MUSC*100=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>134</TestNumber>
+    <Phrase>TAKE 2 Courses; MINIMUM 2 INST.HOURS</Phrase>
+    <Taken>MUSC*100,MATH*100</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test45</TestFile>
+    <ResultDetails>MUSC*100=Applied,MATH*100=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>135</TestNumber>
+    <Phrase>TAKE 2 Courses; MINIMUM 2 INST.HOURS</Phrase>
+    <Taken>MATH*100,MUSC*100,MATH*150</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test45</TestFile>
+    <ResultDetails>MATH*100=Applied,MUSC*100=Applied,MATH*150=Related</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>136</TestNumber>
+    <Phrase>TAKE 2 Courses; MINIMUM 2 INST.HOURS</Phrase>
+    <Taken>MUSC*100,MUSC*207</Taken>
+    <Result>MinCourses,MinInstCredits</Result>
+    <TestFile>Test45</TestFile>
+    <ResultDetails>MUSC*100=Applied,MUSC*207=MinInstitutionalCredit</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>137</TestNumber>
+    <Phrase>TAKE 2 Courses; MINIMUM 4 CREDITS PER Course</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test46</TestFile>
+    <ResultDetails></ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>138</TestNumber>
+    <Phrase>TAKE 2 Courses; MINIMUM 4 CREDITS PER Course</Phrase>
+    <Taken>MATH*100</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test46</TestFile>
+    <ResultDetails>MATH*100=MinCreditsPerCourse</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>139</TestNumber>
+    <Phrase>TAKE 2 Courses; MINIMUM 4 CREDITS PER Course</Phrase>
+    <Taken>MATH*100,MATH*499</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test46</TestFile>
+    <ResultDetails>MATH*100=MinCreditsPerCourse,MATH*499=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>140</TestNumber>
+    <Phrase>TAKE 2 Courses; MINIMUM 4 CREDITS PER Course</Phrase>
+    <Taken>MATH*499,PHYS*400</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test46</TestFile>
+    <ResultDetails>MATH*499=Applied,PHYS*400=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>141</TestNumber>
+    <Phrase>TAKE 2 Courses; MINIMUM 4 CREDITS PER Course</Phrase>
+    <Taken>MATH*499,MATH*100,PHYS*400</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test46</TestFile>
+    <ResultDetails>MATH*499=Applied,MATH*100=MinCreditsPerCourse,PHYS*400=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>142</TestNumber>
+    <Phrase>TAKE 2 Courses FROM SUBJECTS MUSC; MINIMUM 4 CREDITS PER SUBJECT</Phrase>
+    <Taken>MUSC*100,MUSC*207</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test47</TestFile>
+    <ResultDetails>MUSC*100=Applied,MUSC*207=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>143</TestNumber>
+    <Phrase>TAKE 2 Courses FROM SUBJECTS MUSC; MINIMUM 4 CREDITS PER SUBJECT</Phrase>
+    <Taken>MATH*100,MUSC*100</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test47</TestFile>
+    <ResultDetails>MATH*100=FromWrongSubject,MUSC*100=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>144</TestNumber>
+    <Phrase>TAKE 2 Courses FROM SUBJECTS MATH,PHYS;MINIMUM 4 CREDITS PER SUBJECT</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses,MinCreditsPerSubject</Result>
+    <TestFile>Test48</TestFile>
+    <ResultDetails></ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>145</TestNumber>
+    <Phrase>TAKE 2 Courses FROM SUBJECTS MATH,PHYS;MINIMUM 4 CREDITS PER SUBJECT</Phrase>
+    <Taken>MATH*499,PHYS*400</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test48</TestFile>
+    <ResultDetails>MATH*499=Applied,PHYS*400=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>146</TestNumber>
+    <Phrase>TAKE 2 Courses FROM SUBJECTS MATH,PHYS;MINIMUM 4 CREDITS PER SUBJECT;MINIMUM 2 SUBJECTS</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses,MinSubjects,MinCreditsPerSubject</Result>
+    <TestFile>Test49</TestFile>
+    <ResultDetails></ResultDetails>
+    <Comments>just a wee integration test here</Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>147</TestNumber>
+    <Phrase>TAKE 2 Courses FROM SUBJECTS MATH,PHYS;MINIMUM 4 CREDITS PER SUBJECT;MINIMUM 2 SUBJECTS</Phrase>
+    <Taken>MATH*499,PHYS*400</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test49</TestFile>
+    <ResultDetails>MATH*499=Applied,PHYS*400=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>148</TestNumber>
+    <Phrase>TAKE 2 Courses FROM SUBJECTS MATH,PHYS;MINIMUM 4 CREDITS PER SUBJECT;MINIMUM 2 SUBJECTS</Phrase>
+    <Taken>PHYS*100,PHYS*400</Taken>
+    <Result>MinSubjects,MinCreditsPerSubject</Result>
+    <TestFile>Test49</TestFile>
+    <ResultDetails>PHYS*100=Applied,PHYS*400=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>149</TestNumber>
+    <Phrase>TAKE 2 Courses FROM SUBJECTS MATH,PHYS;MINIMUM 4 CREDITS PER SUBJECT;MINIMUM 2 SUBJECTS</Phrase>
+    <Taken>PHYS*100,MUSC*207,PHYS*400</Taken>
+    <Result>MinSubjects,MinCreditsPerSubject</Result>
+    <TestFile>Test49</TestFile>
+    <ResultDetails>PHYS*100=Applied,MUSC*207=FromWrongSubject,PHYS*400=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>150</TestNumber>
+    <Phrase>TAKE 2 Courses FROM SUBJECTS MATH,PHYS;MINIMUM 4 CREDITS PER SUBJECT;MINIMUM 2 SUBJECTS</Phrase>
+    <Taken>PHYS*100,MATH*100</Taken>
+    <Result>MinCreditsPerSubject</Result>
+    <TestFile>Test49</TestFile>
+    <ResultDetails>PHYS*100=Applied,MATH*100=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>151</TestNumber>
+    <Phrase>TAKE 3 Courses FROM DEPARTMENTS HIST,MATH; MINIMUM 4 CREDITS PER DEPARTMENT</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses,MinCreditsPerDepartment</Result>
+    <TestFile>Test50</TestFile>
+    <ResultDetails></ResultDetails>
+    <Comments>HIST*100 Has two departments, HIST and POLI, hacked in on the database side</Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>152</TestNumber>
+    <Phrase>TAKE 3 Courses FROM DEPARTMENTS HIST,MATH; MINIMUM 4 CREDITS PER DEPARTMENT</Phrase>
+    <Taken>MATH*100,HIST*200</Taken>
+    <Result>MinCourses,MinCreditsPerDepartment</Result>
+    <TestFile>Test50</TestFile>
+    <ResultDetails>MATH*100=Applied,HIST*200=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>153</TestNumber>
+    <Phrase>TAKE 3 Courses FROM DEPARTMENTS HIST,MATH; MINIMUM 4 CREDITS PER DEPARTMENT</Phrase>
+    <Taken>MATH*100,MATH*200,HIST*200</Taken>
+    <Result>MinCreditsPerDepartment</Result>
+    <TestFile>Test50</TestFile>
+    <ResultDetails>MATH*100=Applied,MATH*200=Applied,HIST*200=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>154</TestNumber>
+    <Phrase>TAKE 3 Courses FROM DEPARTMENTS HIST,MATH; MINIMUM 4 CREDITS PER DEPARTMENT</Phrase>
+    <Taken>MATH*100,MATH*200,HIST*400</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test50</TestFile>
+    <ResultDetails>MATH*100=Applied,MATH*200=Applied,HIST*400=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>155</TestNumber>
+    <Phrase>TAKE 3 Courses FROM DEPARTMENTS HIST,MATH; MINIMUM 4 CREDITS PER DEPARTMENT</Phrase>
+    <Taken>HIST*400,PHYS*100,MATH*499</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test50</TestFile>
+    <ResultDetails>HIST*400=Applied,PHYS*100=FromWrongDepartment,MATH*499=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>156</TestNumber>
+    <Phrase>TAKE 3 Courses FROM DEPARTMENTS HIST,MATH; MINIMUM 4 CREDITS PER DEPARTMENT</Phrase>
+    <Taken>HIST*100,HIST*200,MATH*499</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test50</TestFile>
+    <ResultDetails>HIST*100=Applied,HIST*200=Applied,MATH*499=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>157</TestNumber>
+    <Phrase>TAKE 4 Courses FROM DEPARTMENTS HIST,MATH; MINIMUM 2 Courses PER DEPARTMENT</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses,MinCoursesPerDepartment</Result>
+    <TestFile>Test51</TestFile>
+    <ResultDetails></ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>158</TestNumber>
+    <Phrase>TAKE 4 Courses FROM DEPARTMENTS HIST,MATH; MINIMUM 2 Courses PER DEPARTMENT</Phrase>
+    <Taken>MATH*100,HIST*200</Taken>
+    <Result>MinCourses,MinCoursesPerDepartment</Result>
+    <TestFile>Test51</TestFile>
+    <ResultDetails>MATH*100=Applied,HIST*200=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>159</TestNumber>
+    <Phrase>TAKE 4 Courses FROM DEPARTMENTS HIST,MATH; MINIMUM 2 Courses PER DEPARTMENT</Phrase>
+    <Taken>MATH*100,MATH*200,MATH*499,HIST*200</Taken>
+    <Result>MinCoursesPerDepartment</Result>
+    <TestFile>Test51</TestFile>
+    <ResultDetails>MATH*100=Applied,MATH*200=Applied,MATH*499=Applied,HIST*200=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>160</TestNumber>
+    <Phrase>TAKE 4 Courses FROM DEPARTMENTS HIST,MATH; MINIMUM 2 Courses PER DEPARTMENT</Phrase>
+    <Taken>MATH*100,MATH*200,HIST*400,HIST*100</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test51</TestFile>
+    <ResultDetails>MATH*100=Applied,MATH*200=Applied,HIST*400=Applied,HIST*100=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>161</TestNumber>
+    <Phrase>TAKE 4 Courses FROM SUBJECTS HIST,MATH; MINIMUM 2 Courses PER SUBJECT</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses,MinCoursesPerSubject</Result>
+    <TestFile>Test52</TestFile>
+    <ResultDetails></ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>162</TestNumber>
+    <Phrase>TAKE 4 Courses FROM SUBJECTS HIST,MATH; MINIMUM 2 Courses PER SUBJECT</Phrase>
+    <Taken>MATH*100,HIST*200</Taken>
+    <Result>MinCourses,MinCoursesPerSubject</Result>
+    <TestFile>Test52</TestFile>
+    <ResultDetails>MATH*100=Applied,HIST*200=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>163</TestNumber>
+    <Phrase>TAKE 4 Courses FROM SUBJECTS HIST,MATH; MINIMUM 2 Courses PER SUBJECT</Phrase>
+    <Taken>MATH*100,MATH*200,MATH*499,HIST*200</Taken>
+    <Result>MinCoursesPerSubject</Result>
+    <TestFile>Test52</TestFile>
+    <ResultDetails>MATH*100=Applied,MATH*200=Applied,MATH*499=Applied,HIST*200=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>164</TestNumber>
+    <Phrase>TAKE 4 Courses FROM SUBJECTS HIST,MATH; MINIMUM 2 Courses PER SUBJECT</Phrase>
+    <Taken>MATH*100,MATH*200,HIST*400,HIST*100</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test52</TestFile>
+    <ResultDetails>MATH*100=Applied,MATH*200=Applied,HIST*400=Applied,HIST*100=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>165</TestNumber>
+    <Phrase>TAKE 2 Courses; MIN Gpa 2.5 </Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test53</TestFile>
+    <ResultDetails></ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>166</TestNumber>
+    <Phrase>TAKE 2 Courses; MIN Gpa 2.5 </Phrase>
+    <Taken>ART*200</Taken>
+    <Result>MinCourses,MinGpa</Result>
+    <TestFile>Test53</TestFile>
+    <ResultDetails>ART*200=Applied</ResultDetails>
+    <Comments>POLI 100 and ART 200 are Cs</Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>167</TestNumber>
+    <Phrase>TAKE 2 Courses; MIN Gpa 2.5 </Phrase>
+    <Taken>MATH*200,ART*200</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test53</TestFile>
+    <ResultDetails>MATH*200=Applied,ART*200=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>168</TestNumber>
+    <Phrase>TAKE 2 Courses; MIN Gpa 2.5 </Phrase>
+    <Taken>POLI*100,ART*200</Taken>
+    <Result>MinCourses,MinGpa</Result>
+    <TestFile>Test53</TestFile>
+    <ResultDetails>POLI*100=Applied,ART*200=MinGPA</ResultDetails>
+    <Comments>Optimizer won&apos;t finish group with ART200 because it doesn&apos;t pull gpa up</Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>169</TestNumber>
+    <Phrase>TAKE 2 Courses; MIN Gpa 2.5 </Phrase>
+    <Taken>POLI*100,MATH*372</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test53</TestFile>
+    <ResultDetails>POLI*100=Applied,MATH*372=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>170</TestNumber>
+    <Phrase>TAKE 2 Courses; MIN GRADE A</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test54</TestFile>
+    <ResultDetails></ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>171</TestNumber>
+    <Phrase>TAKE 2 Courses; MIN GRADE A</Phrase>
+    <Taken>MATH*491</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test54</TestFile>
+    <ResultDetails>MATH*491=Applied</ResultDetails>
+    <Comments>changed SPAN 300 to audit</Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>172</TestNumber>
+    <Phrase>TAKE 2 Courses; MIN GRADE A</Phrase>
+    <Taken>MATH*491,MATH*200</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test54</TestFile>
+    <ResultDetails>MATH*491=Applied,MATH*200=MinGrade</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>173</TestNumber>
+    <Phrase>TAKE 2 Courses; MIN GRADE A</Phrase>
+    <Taken>MATH*491,MATH*460</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test54</TestFile>
+    <ResultDetails>MATH*491=Applied,MATH*460=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>174</TestNumber>
+    <Phrase>TAKE 2 Courses; MIN GRADE A,AU,P</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test55</TestFile>
+    <ResultDetails></ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>175</TestNumber>
+    <Phrase>TAKE 2 Courses; MIN GRADE A,AU,P</Phrase>
+    <Taken>MATH*491</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test55</TestFile>
+    <ResultDetails>MATH*491=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>176</TestNumber>
+    <Phrase>TAKE 2 Courses; MIN GRADE A,AU,P</Phrase>
+    <Taken>MATH*491,MATH*200</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test55</TestFile>
+    <ResultDetails>MATH*491=Applied,MATH*200=MinGrade</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>177</TestNumber>
+    <Phrase>TAKE 2 Courses; MIN GRADE A,AU,P</Phrase>
+    <Taken>MATH*491,MATH*460</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test55</TestFile>
+    <ResultDetails>MATH*491=Applied,MATH*460=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>178</TestNumber>
+    <Phrase>TAKE 2 Courses; MIN GRADE A,AU,P</Phrase>
+    <Taken>MATH*491,SPAN*300</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test55</TestFile>
+    <ResultDetails>MATH*491=Applied,SPAN*300=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>179</TestNumber>
+    <Phrase>TAKE 2 Courses; MIN GRADE A,AU,P</Phrase>
+    <Taken>SPAN*300</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test55</TestFile>
+    <ResultDetails>SPAN*300=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>180</TestNumber>
+    <Phrase>TAKE 1 Course FROM RULE MATH100</Phrase>
+    <Taken>MATH*100</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test56</TestFile>
+    <ResultDetails>MATH*100=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>181</TestNumber>
+    <Phrase>TAKE 1 Course FROM RULE MATH100</Phrase>
+    <Taken>SPAN*300</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test56</TestFile>
+    <ResultDetails>SPAN*300=RuleFailed</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>182</TestNumber>
+    <Phrase>TAKE 1 Course FROM RULE MATH100</Phrase>
+    <Taken>SPAN*300,MATH*100</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test56</TestFile>
+    <ResultDetails>SPAN*300=RuleFailed,MATH*100=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>183</TestNumber>
+    <Phrase>TAKE ENGL*101, ENGL*102</Phrase>
+    <Taken>ENGL*101,ENGL*101</Taken>
+    <Result>Courses</Result>
+    <TestFile>Test3</TestFile>
+    <ResultDetails>ENGL*101=Applied,ENGL*101=Applied</ResultDetails>
+    <Comments>Tests that the same course will not be applied twice to a Courses specification</Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>184</TestNumber>
+    <Phrase>TAKE ENGL*101,HIST*200</Phrase>
+    <Taken>POLI*100,HIST*200</Taken>
+    <Result>Courses</Result>
+    <TestFile>Test58</TestFile>
+    <ResultDetails>POLI*100=Applied,HIST*200=InCoursesListButAlreadyApplied</ResultDetails>
+    <Comments>Tests that a course&apos;s equate will not be applied twice to a Courses specification</Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>185</TestNumber>
+    <Phrase>TAKE 1 Course FROM DEPARTMENT HIST</Phrase>
+    <Taken>POLI*100</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test61</TestFile>
+    <ResultDetails>POLI*100=Applied</ResultDetails>
+    <Comments>Tests that a course equated to an applyable course will be applied regardless of department (HIST*200 == POLI*100)</Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>186</TestNumber>
+    <Phrase>TAKE 1 Course FROM SUBJECT POLI</Phrase>
+    <Taken>HIST*200</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test62</TestFile>
+    <ResultDetails>HIST*200=Applied</ResultDetails>
+    <Comments>Tests that a course equated to an applyable course will be applied regardless of subject (HIST*200 == POLI*100)</Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>187</TestNumber>
+    <Phrase>TAKE 1 Course from LEVELS 200</Phrase>
+    <Taken>POLI*100</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test63</TestFile>
+    <ResultDetails>POLI*100=Applied</ResultDetails>
+    <Comments>Tests that a course equated to an applyable course will be applied regardless of level (HIST*200==POLI*100)</Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>188</TestNumber>
+    <Phrase>TAKE 1 Course FROM DEPARTMENT HIST EXCEPT DEPARTMENT POLI</Phrase>
+    <Taken>POLI*100</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test64</TestFile>
+    <ResultDetails>POLI*100=DepartmentExcluded</ResultDetails>
+    <Comments>Tests that a course equated to an applyable course will be applied regardless of department, unless department specifically excluded (HIST*200 == POLI*100)</Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>189</TestNumber>
+    <Phrase>TAKE 1 Course FROM SUBJECT POLI EXCEPT SUBJECT HIST</Phrase>
+    <Taken>HIST*200</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test65</TestFile>
+    <ResultDetails>HIST*200=SubjectExcluded</ResultDetails>
+    <Comments>Tests that a course equated to an applyable course will be applied regardless of subject, unless subject specifically excluded (HIST*200 == POLI*100)</Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>190</TestNumber>
+    <Phrase>TAKE 1 Course from LEVELS 200 EXCEPT LEVEL 100</Phrase>
+    <Taken>POLI*100</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test66</TestFile>
+    <ResultDetails>POLI*100=LevelExcluded</ResultDetails>
+    <Comments>Tests that a course equated to an applyable course will be applied regardless of level unless level specifically excluded(HIST*200==POLI*100)</Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>191</TestNumber>
+    <Phrase>TAKE 2 Courses from SUBJECT HIST (exception: MATH-100)</Phrase>
+    <Taken>HIST*200,MATH*100</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test67</TestFile>
+    <ResultDetails>HIST*200=Applied,MATH*100=Applied</ResultDetails>
+    <Comments>Tests that even though a &quot;from courses&quot; override was added to a group, the original target courses can still be applied as well as the course added as a FromCourse by the exception</Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>192</TestNumber>
+    <Phrase>TAKE 2 Courses from rule (exception: MATH-100)</Phrase>
+    <Taken>HIST*200,MATH*100</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test68</TestFile>
+    <ResultDetails>HIST*200=RuleFailed,MATH*100=Applied</ResultDetails>
+    <Comments>Tests that &quot;from courses&quot; exception will work when a rule is used in the specification, rule will continue to reject invalid course</Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>193</TestNumber>
+    <Phrase>Take 2 credits; FROM ENGL*101 ENGL*102</Phrase>
+    <Taken>MATH*100</Taken>
+    <Result>MinCredits</Result>
+    <TestFile>Test69</TestFile>
+    <ResultDetails>MATH*100=NotInFromCoursesList</ResultDetails>
+    <Comments>Verifies that unrelated courses are not applied when &quot;take x credits from courses a,b,c&quot; syntax is used</Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>194</TestNumber>
+    <Phrase>Take 4 credits from dept HIST; exception from ENGL*101 ENGL*102</Phrase>
+    <Taken>ENGL*101,HIST*200,MATH*100</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test70</TestFile>
+    <ResultDetails>ENGL*101=Applied,HIST*200=Applied,MATH*100=FromWrongDepartment</ResultDetails>
+    <Comments>Verifies that courses can be applied when from courses exception provided with take x credits syntax is used</Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>195</TestNumber>
+    <Phrase>Take 4 credits; FROM ENGL*101 ENGL*102; exception allowing MATH*201</Phrase>
+    <Taken>ENGL*102,MATH*201,MATH*100</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test71</TestFile>
+    <ResultDetails>ENGL*102=Applied,MATH*201=Applied,MATH*100=NotInFromCoursesList</ResultDetails>
+    <Comments>Verifies that courses are applied for courses in the original FromCourses as well as the fromcourses added as an exception</Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>196</TestNumber>
+    <Phrase>TAKE 1 Courses; MIN Gpa 2.5 </Phrase>
+    <Taken>SPAN*300</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test72</TestFile>
+    <ResultDetails>SPAN*300=MinGPA</ResultDetails>
+    <Comments>SPAN-300 was taken audt only and has zero GpaCredit - make sure it is not doing a divide by Zero</Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>197</TestNumber>
+    <Phrase>Take 9 credits; From Subjects ART HIST MUSC DANC ENGL HUMT RELG CERA; Minimum 2 subjects;</Phrase>
+    <Taken>MUSC*208,COMM*2000,RELG*100,DANC*200,MUSC*207,MUSC*209,ENGL*1000,BIOL*100</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test73</TestFile>
+    <ResultDetails>MUSC*208=Applied,COMM*2000=FromWrongSubject,RELG*100=Applied,DANC*200=Applied,MUSC*207=Related,MUSC*209=Applied,ENGL*1000=Related,BIOL*100=FromWrongSubject</ResultDetails>
+    <Comments>Tests that when possible extra credits applied to a requirement are released </Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>198</TestNumber>
+    <Phrase>Take 9 credits; From Subjects ART HIST MUSC DANC ENGL HUMT RELG CERA; Minimum 2 subjects;</Phrase>
+    <Taken>MUSC*208,DANC*200,MUSC*209,MUSC*212</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test73</TestFile>
+    <ResultDetails>MUSC*208=Applied,DANC*200=Applied,MUSC*209=Applied,MUSC*212=Applied</ResultDetails>
+    <Comments>Tests that when extra credit is required for 2 subject minimum, extra credit is not released</Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>199</TestNumber>
+    <Phrase>Take 9 credits; From Subjects ART HIST MUSC DANC ENGL HUMT RELG CERA; Minimum 2 departments;</Phrase>
+    <Taken>MUSC*208,DANC*200,MUSC*209,MUSC*212</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test74</TestFile>
+    <ResultDetails>MUSC*208=Applied,DANC*200=Applied,MUSC*209=Applied,MUSC*212=Applied</ResultDetails>
+    <Comments>Tests that when extra credit is required for 2 department minimum, extra credit is not released</Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>200</TestNumber>
+    <Phrase>Take 9 credits; From Subjects ART HIST MUSC DANC ENGL HUMT RELG CERA; Minimum 5 courses;</Phrase>
+    <Taken>MUSC*208,COMM*2000,RELG*100,DANC*200,MUSC*207,MUSC*209,ENGL*1000,BIOL*100</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test75</TestFile>
+    <ResultDetails>MUSC*208=Applied,COMM*2000=FromWrongSubject,RELG*100=Applied,DANC*200=Applied,MUSC*207=Applied,MUSC*209=Applied,ENGL*1000=Related,BIOL*100=FromWrongSubject</ResultDetails>
+    <Comments>Tests that when possible extra credits applied to a 5 course minimum requirement are not released </Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>201</TestNumber>
+    <Phrase>Take 6 Credits; From Subjects ART MUSC RELG HU</Phrase>
+    <Taken>MUSC*211,RELG*100,RELG*101</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test76</TestFile>
+    <ResultDetails>MUSC*211=Applied,RELG*100=Applied,RELG*101=Applied</ResultDetails>
+    <Comments>Tests that when course is in progress, actual credits are not removed</Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>202</TestNumber>
+    <Phrase>TAKE 8 CREDITS; MAXIMUM 2 Courses</Phrase>
+    <Taken></Taken>
+    <Result>MinCredits</Result>
+    <TestFile>Test28</TestFile>
+    <ResultDetails>P:ENGL*101=PlannedApplied,P:ENGL*102=PlannedApplied,P:MATH*100=MaxCourses</ResultDetails>
+    <Comments>Same test as Test 68 but for planned credits</Comments>
+    <Planned>ENGL*101, ENGL*102, MATH*100</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>203</TestNumber>
+    <Phrase>TAKE 8 CREDITS; MAXIMUM 2 Courses</Phrase>
+    <Taken></Taken>
+    <Result>PlannedSatisfied,MinCredits</Result>
+    <TestFile>Test28</TestFile>
+    <ResultDetails>P:PHYS*400=PlannedApplied,P:MUSC*100=PlannedApplied</ResultDetails>
+    <Comments>Same test as Test 69 but for planned credits</Comments>
+    <Planned>PHYS*400, MUSC*100</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>204</TestNumber>
+    <Phrase>TAKE 8 CREDITS; MAXIMUM 2 Courses</Phrase>
+    <Taken></Taken>
+    <Result>PlannedSatisfied,MinCredits</Result>
+    <TestFile>Test28</TestFile>
+    <ResultDetails>P:PHYS*400=PlannedApplied,P:MUSC*100=PlannedApplied,P:ENGL*101=MaxCourses</ResultDetails>
+    <Comments>Same test as Test 70 but for planned credits</Comments>
+    <Planned>PHYS*400, MUSC*100, ENGL*101</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>205</TestNumber>
+    <Phrase>TAKE 4 CREDITS; MAXIMUM 1 Course</Phrase>
+    <Taken></Taken>
+    <Result>PlannedSatisfied,MinCredits</Result>
+    <TestFile>Test29</TestFile>
+    <ResultDetails>P:PHYS*400=PlannedApplied</ResultDetails>
+    <Comments>Same test as Test 71 but for planned credits</Comments>
+    <Planned>PHYS*400</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>206</TestNumber>
+    <Phrase>TAKE 4 CREDITS; MAXIMUM 1 Course</Phrase>
+    <Taken></Taken>
+    <Result>PlannedSatisfied,MinCredits</Result>
+    <TestFile>Test29</TestFile>
+    <ResultDetails>P:PHYS*400=PlannedApplied,P:MUSC*100=MaxCourses,P:ENGL*101=MaxCourses</ResultDetails>
+    <Comments>Same test as Test 72 but for planned credits</Comments>
+    <Planned>PHYS*400, MUSC*100, ENGL*101</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>207</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 DEPARTMENT</Phrase>
+    <Taken></Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test30</TestFile>
+    <ResultDetails>P:ENGL*101=PlannedApplied,P:ENGL*102=PlannedApplied</ResultDetails>
+    <Comments>Same test as Test 73 but for planned credits</Comments>
+    <Planned>ENGL*101, ENGL*102</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>208</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 DEPARTMENT</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test30</TestFile>
+    <ResultDetails>P:ENGL*101=PlannedApplied,P:MATH*100=MaxDepartments</ResultDetails>
+    <Comments>Same test as Test 74 but for planned credits</Comments>
+    <Planned>ENGL*101, MATH*100</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>209</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 DEPARTMENT</Phrase>
+    <Taken></Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test30</TestFile>
+    <ResultDetails>P:ENGL*101=PlannedApplied,P:ENGL*102=PlannedApplied,P:MATH*100=MaxDepartments</ResultDetails>
+    <Comments>Same test as Test 75 but for planned credits</Comments>
+    <Planned>ENGL*101, ENGL*102, MATH*100</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>210</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 SUBJECT</Phrase>
+    <Taken></Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test31</TestFile>
+    <ResultDetails>P:ENGL*101=PlannedApplied,P:ENGL*102=PlannedApplied</ResultDetails>
+    <Comments>Same test as Test 76 but for planned credits</Comments>
+    <Planned>ENGL*101, ENGL*102</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>211</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 SUBJECT</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test31</TestFile>
+    <ResultDetails>P:ENGL*101=PlannedApplied,P:MATH*100=MaxSubjects</ResultDetails>
+    <Comments>Same test as Test 77 but for planned credits</Comments>
+    <Planned>ENGL*101, MATH*100</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>212</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 SUBJECT</Phrase>
+    <Taken></Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test31</TestFile>
+    <ResultDetails>P:ENGL*101=PlannedApplied,P:ENGL*102=PlannedApplied,P:MATH*100=MaxSubjects</ResultDetails>
+    <Comments>Same test as Test 78 but for planned credits</Comments>
+    <Planned>ENGL*101, ENGL*102, MATH*100</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>213</TestNumber>
+    <Phrase>TAKE 1 Course; MAXIMUM 3 CREDITS</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test32</TestFile>
+    <ResultDetails></ResultDetails>
+    <Comments>Really a duplicate of 79 - could be removed.</Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>214</TestNumber>
+    <Phrase>TAKE 1 Course; MAXIMUM 3 CREDITS</Phrase>
+    <Taken></Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test32</TestFile>
+    <ResultDetails>P:ENGL*101=PlannedApplied</ResultDetails>
+    <Comments>Same test as Test 80 but for planned credits</Comments>
+    <Planned>ENGL*101</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>215</TestNumber>
+    <Phrase>TAKE 1 Course; MAXIMUM 3 CREDITS</Phrase>
+    <Taken></Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test32</TestFile>
+    <ResultDetails>P:ENGL*101=PlannedApplied,P:ENGL*102=MaxCredits</ResultDetails>
+    <Comments>Same test as Test 81 but for planned credits</Comments>
+    <Planned>ENGL*101,ENGL*102</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>216</TestNumber>
+    <Phrase>TAKE 1 Course; MAXIMUM 3 CREDITS</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test32</TestFile>
+    <ResultDetails>P:PHYS*400=MaxCredits</ResultDetails>
+    <Comments>Same test as Test 82 but for planned credits</Comments>
+    <Planned>PHYS*400</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>217</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 6 CREDITS</Phrase>
+    <Taken></Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test33</TestFile>
+    <ResultDetails>P:ENGL*101=PlannedApplied,P:ENGL*102=PlannedApplied</ResultDetails>
+    <Comments>Same test as Test 83 but for planned credits</Comments>
+    <Planned>ENGL*101,ENGL*102</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>218</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 6 CREDITS</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test33</TestFile>
+    <ResultDetails>P:ENGL*101=PlannedApplied,P:PHYS*400=MaxCredits</ResultDetails>
+    <Comments>Same test as Test 84 but for planned credits</Comments>
+    <Planned>ENGL*101, PHYS*400</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>219</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 6 CREDITS</Phrase>
+    <Taken></Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test33</TestFile>
+    <ResultDetails>P:ENGL*101=PlannedApplied,P:ENGL*102=PlannedApplied,P:PHYS*400=MaxCredits</ResultDetails>
+    <Comments>Same test as Test 85 but for planned credits</Comments>
+    <Planned>ENGL*101,ENGL*102,PHYS*400</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>220</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 Course PER SUBJECT</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test34</TestFile>
+    <ResultDetails></ResultDetails>
+    <Comments>Really a duplicate of 86 - could be removed.</Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>221</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 Course PER SUBJECT</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test34</TestFile>
+    <ResultDetails>P:ENGL*101=PlannedApplied</ResultDetails>
+    <Comments>Same test as Test 87 but for planned credits</Comments>
+    <Planned>ENGL*101</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>222</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 Course PER SUBJECT</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test34</TestFile>
+    <ResultDetails>P:ENGL*101=PlannedApplied,P:ENGL*102=MaxCoursesPerSubject</ResultDetails>
+    <Comments>Same test as Test 88 but for planned credits</Comments>
+    <Planned>ENGL*101, ENGL*102</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>223</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 Course PER SUBJECT</Phrase>
+    <Taken></Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test34</TestFile>
+    <ResultDetails>P:ENGL*101=PlannedApplied,P:MATH*100=PlannedApplied</ResultDetails>
+    <Comments>Same test as Test 89 but for planned credits</Comments>
+    <Planned>ENGL*101, MATH*100</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>224</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 Course PER SUBJECT</Phrase>
+    <Taken></Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test34</TestFile>
+    <ResultDetails>P:ENGL*101=PlannedApplied,P:MATH*100=PlannedApplied,P:ENGL*102=MaxCoursesPerSubject</ResultDetails>
+    <Comments>Same test as Test 90 but for planned credits</Comments>
+    <Planned>ENGL*101, MATH*100, ENGL*102</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>225</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 Course PER SUBJECT</Phrase>
+    <Taken></Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test34</TestFile>
+    <ResultDetails>P:ENGL*101=PlannedApplied,P:ENGL*102=MaxCoursesPerSubject,P:MATH*100=PlannedApplied</ResultDetails>
+    <Comments>Same test as Test 91 but for planned credits</Comments>
+    <Planned>ENGL*101, ENGL*102, MATH*100</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>226</TestNumber>
+    <Phrase>TAKE 4 Courses; MAXIMUM 2 Courses PER SUBJECT</Phrase>
+    <Taken></Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test35</TestFile>
+    <ResultDetails>P:ENGL*101=PlannedApplied,P:MATH*100=PlannedApplied,P:PHYS*400=PlannedApplied,P:MUSC*100=PlannedApplied</ResultDetails>
+    <Comments>Same test as Test 92 but for planned credits</Comments>
+    <Planned>ENGL*101,MATH*100,PHYS*400,MUSC*100</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>227</TestNumber>
+    <Phrase>TAKE 4 Courses; MAXIMUM 2 Courses PER SUBJECT</Phrase>
+    <Taken></Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test35</TestFile>
+    <ResultDetails>P:ENGL*101=PlannedApplied,P:ENGL*102=PlannedApplied,P:MATH*100=PlannedApplied,P:MATH*300=PlannedApplied</ResultDetails>
+    <Comments>Same test as Test 93 but for planned credits</Comments>
+    <Planned>ENGL*101,ENGL*102,MATH*100,MATH*300</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>228</TestNumber>
+    <Phrase>TAKE 4 Courses; MAXIMUM 1 Course PER SUBJECT</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test36</TestFile>
+    <ResultDetails>P:ENGL*101=PlannedApplied,P:ENGL*102=MaxCoursesPerSubject,P:MATH*100=PlannedApplied,P:MUSC*100=PlannedApplied</ResultDetails>
+    <Comments>Same test as Test 94 but for planned credits</Comments>
+    <Planned>ENGL*101,ENGL*102,MATH*100,MUSC*100</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>229</TestNumber>
+    <Phrase>TAKE 1 Course; MAXIMUM 1 Course PER DEPARTMENT</Phrase>
+    <Taken></Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test37</TestFile>
+    <ResultDetails>P:SPAN*100=PlannedApplied</ResultDetails>
+    <Comments>Same test as Test 95 but for planned credits</Comments>
+    <Planned>SPAN*100</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>230</TestNumber>
+    <Phrase>TAKE 1 Course; MAXIMUM 1 Course PER DEPARTMENT</Phrase>
+    <Taken></Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test37</TestFile>
+    <ResultDetails>P:HIST*100=PlannedApplied,P:POLI*100=MaxCoursesPerDepartment</ResultDetails>
+    <Comments>HIST*100 Has two departments, HIST and POLI, hacked in on the database side</Comments>
+    <Planned>HIST*100,POLI*100</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>231</TestNumber>
+    <Phrase>TAKE 3 Courses; MAXIMUM 2 Courses PER DEPARTMENT</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test38</TestFile>
+    <ResultDetails>P:ENGL*101=PlannedApplied,P:MATH*100=PlannedApplied</ResultDetails>
+    <Comments>Same test as Test 98 but for planned credits</Comments>
+    <Planned>ENGL*101,MATH*100</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>232</TestNumber>
+    <Phrase>TAKE 3 Courses; MAXIMUM 2 Courses PER DEPARTMENT</Phrase>
+    <Taken></Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test38</TestFile>
+    <ResultDetails>P:ENGL*101=PlannedApplied,P:MATH*100=PlannedApplied,P:ENGL*102=PlannedApplied</ResultDetails>
+    <Comments>Same test as Test 99 but for planned credits</Comments>
+    <Planned>ENGL*101, MATH*100, ENGL*102</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>233</TestNumber>
+    <Phrase>TAKE 3 Courses; MAXIMUM 2 Courses PER DEPARTMENT</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test38</TestFile>
+    <ResultDetails>P:MATH*100=PlannedApplied,P:MATH*460=PlannedApplied,P:MATH*371=MaxCoursesPerDepartment</ResultDetails>
+    <Comments>Same test as Test 100 but for planned credits</Comments>
+    <Planned>MATH*100,MATH*460,MATH*371</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>234</TestNumber>
+    <Phrase>TAKE 3 Courses; MAXIMUM 2 Courses PER DEPARTMENT</Phrase>
+    <Taken></Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test38</TestFile>
+    <ResultDetails>P:MATH*100=PlannedApplied,P:MATH*460=PlannedApplied,P:MATH*371=MaxCoursesPerDepartment,P:ENGL*101=PlannedApplied</ResultDetails>
+    <Comments>Same test as Test 101 but for planned credits</Comments>
+    <Planned>MATH*100,MATH*460,MATH*371,ENGL*101</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>235</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 100,200 LEVEL Courses</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test39</TestFile>
+    <ResultDetails>P:MATH*100=PlannedApplied,P:ENGL*101=MaxCoursesAtLevel,P:ENGL*102=MaxCoursesAtLevel</ResultDetails>
+    <Comments>Same test as Test 102 but for planned credits</Comments>
+    <Planned>MATH*100,ENGL*101,ENGL*102</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>236</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 100,200 LEVEL Courses</Phrase>
+    <Taken></Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test39</TestFile>
+    <ResultDetails>P:MATH*100=PlannedApplied,P:ENGL*101=MaxCoursesAtLevel,P:ENGL*102=MaxCoursesAtLevel,P:MATH*371=PlannedApplied</ResultDetails>
+    <Comments>Same test as Test 103 but for planned credits</Comments>
+    <Planned>MATH*100,ENGL*101,ENGL*102,MATH*371</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>237</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 100,200 LEVEL Courses</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test39</TestFile>
+    <ResultDetails>P:MATH*371=PlannedApplied</ResultDetails>
+    <Comments>Same test as Test 104 but for planned credits</Comments>
+    <Planned>MATH*371</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>238</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 3 CREDITS PER Course</Phrase>
+    <Taken></Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test40</TestFile>
+    <ResultDetails>P:MATH*100=PlannedApplied,P:ENGL*101=PlannedApplied</ResultDetails>
+    <Comments>Same test as Test 105 but for planned credits</Comments>
+    <Planned>MATH*100,ENGL*101</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>239</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 3 CREDITS PER Course</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test40</TestFile>
+    <ResultDetails>P:MATH*100=PlannedApplied,P:PHYS*400=MaxCreditsPerCourse</ResultDetails>
+    <Comments>PHYS*400 is 4 credits</Comments>
+    <Planned>MATH*100,PHYS*400</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>240</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 3 CREDITS PER Course</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test40</TestFile>
+    <ResultDetails>P:PHYS*400=MaxCreditsPerCourse,P:MATH*100=PlannedApplied</ResultDetails>
+    <Comments>Same test as Test 107 but for planned credits</Comments>
+    <Planned>PHYS*400,MATH*100</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>241</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 3 CREDITS PER Course</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test40</TestFile>
+    <ResultDetails>P:PHYS*400=MaxCreditsPerCourse</ResultDetails>
+    <Comments>Same test as Test 109 but for planned credits</Comments>
+    <Planned>PHYS*400</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>242</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 3 CREDITS PER Course</Phrase>
+    <Taken></Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test40</TestFile>
+    <ResultDetails>P:MATH*100=PlannedApplied,P:PHYS*400=MaxCreditsPerCourse,P:ENGL*101=PlannedApplied</ResultDetails>
+    <Comments>Same test as Test 110 but for planned credits</Comments>
+    <Planned>MATH*100,PHYS*400,ENGL*101</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>243</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 3 CREDITS PER SUBJECT</Phrase>
+    <Taken></Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test41</TestFile>
+    <ResultDetails>P:MATH*100=PlannedApplied,P:ENGL*101=PlannedApplied,P:ENGL*102=MaxCreditsPerSubject</ResultDetails>
+    <Comments>Same test as Test 112 but for planned credits</Comments>
+    <Planned>MATH*100,ENGL*101,ENGL*102</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>244</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 3 CREDITS PER SUBJECT</Phrase>
+    <Taken></Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test41</TestFile>
+    <ResultDetails>P:MATH*100=PlannedApplied,P:PHYS*400=MaxCreditsPerSubject,P:ENGL*101=PlannedApplied</ResultDetails>
+    <Comments>Same test as Test 113 but for planned credits</Comments>
+    <Planned>MATH*100,PHYS*400,ENGL*101</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>245</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 3 CREDITS PER SUBJECT</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test41</TestFile>
+    <ResultDetails>P:ENGL*101=PlannedApplied,P:PHYS*400=MaxCreditsPerSubject,P:ENGL*102=MaxCreditsPerSubject</ResultDetails>
+    <Comments>Same test as Test 114 but for planned credits</Comments>
+    <Planned>ENGL*101,PHYS*400,ENGL*102</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>246</TestNumber>
+    <Phrase>TAKE 3 Courses; MAXIMUM 6 CREDITS PER DEPARTMENT</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test42</TestFile>
+    <ResultDetails>P:ENGL*101=PlannedApplied,P:MATH*100=PlannedApplied</ResultDetails>
+    <Comments>Same test as Test 116 but for planned credits</Comments>
+    <Planned>ENGL*101,MATH*100</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>247</TestNumber>
+    <Phrase>TAKE 3 Courses; MAXIMUM 6 CREDITS PER DEPARTMENT</Phrase>
+    <Taken></Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test42</TestFile>
+    <ResultDetails>P:ENGL*101=PlannedApplied,P:MATH*100=PlannedApplied,P:ENGL*102=PlannedApplied</ResultDetails>
+    <Comments>Same test as Test 117 but for planned credits</Comments>
+    <Planned>ENGL*101, MATH*100, ENGL*102</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>248</TestNumber>
+    <Phrase>TAKE 3 Courses; MAXIMUM 6 CREDITS PER DEPARTMENT</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test42</TestFile>
+    <ResultDetails>P:MATH*100=PlannedApplied,P:MATH*150=PlannedApplied,P:MATH*371=MaxCreditsPerDepartment</ResultDetails>
+    <Comments>Same test as Test 118 but for planned credits</Comments>
+    <Planned>MATH*100,MATH*150,MATH*371</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>249</TestNumber>
+    <Phrase>TAKE 3 Courses; MAXIMUM 6 CREDITS PER DEPARTMENT</Phrase>
+    <Taken></Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test42</TestFile>
+    <ResultDetails>P:MATH*100=PlannedApplied,P:MATH*150=PlannedApplied,P:MATH*371=MaxCreditsPerDepartment,P:ENGL*101=PlannedApplied</ResultDetails>
+    <Comments>Same test as Test 119 but for planned credits</Comments>
+    <Planned>MATH*100,MATH*150,MATH*371,ENGL*101</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>250</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 3 100,200 LEVEL CREDITS</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test43</TestFile>
+    <ResultDetails>P:MATH*100=PlannedApplied,P:ENGL*101=MaxCreditsAtLevel,P:ENGL*102=MaxCreditsAtLevel</ResultDetails>
+    <Comments>Same test as Test 120 but for planned credits</Comments>
+    <Planned>MATH*100,ENGL*101,ENGL*102</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>251</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 3 100,200 LEVEL CREDITS</Phrase>
+    <Taken></Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test43</TestFile>
+    <ResultDetails>P:MATH*100=PlannedApplied,P:ENGL*101=MaxCreditsAtLevel,P:ENGL*102=MaxCreditsAtLevel,P:MATH*371=PlannedApplied</ResultDetails>
+    <Comments>Same test as Test 121 but for planned credits</Comments>
+    <Planned>MATH*100,ENGL*101,ENGL*102,MATH*371</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>252</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 3 100,200 LEVEL CREDITS</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test43</TestFile>
+    <ResultDetails>P:MATH*371=PlannedApplied</ResultDetails>
+    <Comments>Same test as Test 122 but for planned credits</Comments>
+    <Planned>MATH*371</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>253</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 DEPARTMENT</Phrase>
+    <Taken>ENGL*101</Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test30</TestFile>
+    <ResultDetails>ENGL*101=Applied,P:ENGL*102=PlannedApplied</ResultDetails>
+    <Comments>Same test as Test 73 but for mixed applied and planned credits</Comments>
+    <Planned>ENGL*102</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>254</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 DEPARTMENT</Phrase>
+    <Taken>ENGL*101</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test30</TestFile>
+    <ResultDetails>ENGL*101=Applied,P:MATH*100=MaxDepartments</ResultDetails>
+    <Comments>Same test as Test 74 but for mixed applied and planned credits</Comments>
+    <Planned>MATH*100</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>255</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 DEPARTMENT</Phrase>
+    <Taken>ENGL*102</Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test30</TestFile>
+    <ResultDetails>ENGL*102=Applied,P:ENGL*101=PlannedApplied,P:MATH*100=MaxDepartments</ResultDetails>
+    <Comments>Same test as Test 75 but for mixed applied and planned credits</Comments>
+    <Planned>ENGL*101, MATH*100</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>256</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 Course PER SUBJECT</Phrase>
+    <Taken>ENGL*101</Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test34</TestFile>
+    <ResultDetails>ENGL*101=Applied,P:MATH*100=PlannedApplied,P:ENGL*102=MaxCoursesPerSubject</ResultDetails>
+    <Comments></Comments>
+    <Planned>MATH*100, ENGL*102</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>257</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 Course PER SUBJECT</Phrase>
+    <Taken>ENGL*101</Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test34</TestFile>
+    <ResultDetails>ENGL*101=Applied,P:ENGL*102=MaxCoursesPerSubject,P:MATH*100=PlannedApplied</ResultDetails>
+    <Comments></Comments>
+    <Planned>ENGL*102, MATH*100</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>258</TestNumber>
+    <Phrase>TAKE 4 Courses; MAXIMUM 2 Courses PER SUBJECT</Phrase>
+    <Taken>ENGL*102</Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test35</TestFile>
+    <ResultDetails>ENGL*102=Applied,P:MATH*100=PlannedApplied,P:PHYS*400=PlannedApplied,P:MUSC*100=PlannedApplied</ResultDetails>
+    <Comments></Comments>
+    <Planned>MATH*100,PHYS*400,MUSC*100</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>259</TestNumber>
+    <Phrase>TAKE 4 Courses; MAXIMUM 2 Courses PER SUBJECT</Phrase>
+    <Taken>ENGL*102</Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test35</TestFile>
+    <ResultDetails>ENGL*102=Applied,P:ENGL*101=PlannedApplied,P:MATH*100=PlannedApplied,P:MATH*300=PlannedApplied</ResultDetails>
+    <Comments></Comments>
+    <Planned>ENGL*101,MATH*100,MATH*300</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>260</TestNumber>
+    <Phrase>TAKE 3 Courses; MAXIMUM 6 CREDITS PER DEPARTMENT</Phrase>
+    <Taken>ENGL*101</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test42</TestFile>
+    <ResultDetails>ENGL*101=Applied,P:MATH*100=PlannedApplied</ResultDetails>
+    <Comments></Comments>
+    <Planned>MATH*100</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>261</TestNumber>
+    <Phrase>TAKE 3 Courses; MAXIMUM 6 CREDITS PER DEPARTMENT</Phrase>
+    <Taken>ENGL*102</Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test42</TestFile>
+    <ResultDetails>ENGL*102=Applied,P:MATH*100=PlannedApplied,P:ENGL*101=PlannedApplied</ResultDetails>
+    <Comments></Comments>
+    <Planned>MATH*100, ENGL*101</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>262</TestNumber>
+    <Phrase>TAKE 3 Courses; MAXIMUM 6 CREDITS PER DEPARTMENT</Phrase>
+    <Taken>MATH*100</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test42</TestFile>
+    <ResultDetails>MATH*100=Applied,P:MATH*150=PlannedApplied,P:MATH*371=MaxCreditsPerDepartment</ResultDetails>
+    <Comments></Comments>
+    <Planned>MATH*150,MATH*371</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>263</TestNumber>
+    <Phrase>TAKE 3 Courses; MAXIMUM 6 CREDITS PER DEPARTMENT</Phrase>
+    <Taken>MATH*100</Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test42</TestFile>
+    <ResultDetails>MATH*100=Applied,P:MATH*150=PlannedApplied,P:MATH*371=MaxCreditsPerDepartment,P:ENGL*101=PlannedApplied</ResultDetails>
+    <Comments></Comments>
+    <Planned>MATH*150,MATH*371,ENGL*101</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>264</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 3 100,200 LEVEL CREDITS</Phrase>
+    <Taken>MATH*100</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test43</TestFile>
+    <ResultDetails>MATH*100=Applied,P:ENGL*101=MaxCreditsAtLevel,P:ENGL*102=MaxCreditsAtLevel</ResultDetails>
+    <Comments></Comments>
+    <Planned>ENGL*101,ENGL*102</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>265</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 3 100,200 LEVEL CREDITS</Phrase>
+    <Taken>MATH*100</Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test43</TestFile>
+    <ResultDetails>MATH*100=Applied,P:ENGL*101=MaxCreditsAtLevel,P:ENGL*102=MaxCreditsAtLevel,P:MATH*371=PlannedApplied</ResultDetails>
+    <Comments></Comments>
+    <Planned>ENGL*101,ENGL*102,MATH*371</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>266</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 SUBJECT</Phrase>
+    <Taken>ENGL*101</Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test31</TestFile>
+    <ResultDetails>ENGL*101=Applied,P:ENGL*102=PlannedApplied</ResultDetails>
+    <Comments></Comments>
+    <Planned>ENGL*102</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>267</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 SUBJECT</Phrase>
+    <Taken>ENGL*101</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test31</TestFile>
+    <ResultDetails>ENGL*101=Applied,P:MATH*100=MaxSubjects</ResultDetails>
+    <Comments></Comments>
+    <Planned>MATH*100</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>268</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 1 SUBJECT</Phrase>
+    <Taken>ENGL*102</Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test31</TestFile>
+    <ResultDetails>ENGL*102=Applied,P:ENGL*101=PlannedApplied,P:MATH*100=MaxSubjects</ResultDetails>
+    <Comments></Comments>
+    <Planned>ENGL*101,MATH*100</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>269</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 6 CREDITS</Phrase>
+    <Taken>ENGL*101</Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test33</TestFile>
+    <ResultDetails>ENGL*101=Applied,P:ENGL*102=PlannedApplied</ResultDetails>
+    <Comments></Comments>
+    <Planned>ENGL*102</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>270</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 6 CREDITS</Phrase>
+    <Taken>ENGL*101</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test33</TestFile>
+    <ResultDetails>ENGL*101=Applied,P:PHYS*400=MaxCredits</ResultDetails>
+    <Comments></Comments>
+    <Planned>PHYS*400</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>271</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 6 CREDITS</Phrase>
+    <Taken>ENGL*101</Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test33</TestFile>
+    <ResultDetails>ENGL*101=Applied,P:ENGL*102=PlannedApplied,P:PHYS*400=MaxCredits</ResultDetails>
+    <Comments></Comments>
+    <Planned>ENGL*102,PHYS*400</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>272</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 3 CREDITS PER Course</Phrase>
+    <Taken>MATH*100</Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test40</TestFile>
+    <ResultDetails>MATH*100=Applied,P:ENGL*101=PlannedApplied</ResultDetails>
+    <Comments></Comments>
+    <Planned>ENGL*101</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>273</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 3 CREDITS PER Course</Phrase>
+    <Taken>MATH*100</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test40</TestFile>
+    <ResultDetails>MATH*100=Applied,P:PHYS*400=MaxCreditsPerCourse</ResultDetails>
+    <Comments>PHYS*400 is 4 credits</Comments>
+    <Planned>PHYS*400</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>274</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 3 CREDITS PER Course</Phrase>
+    <Taken>PHYS*400</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test40</TestFile>
+    <ResultDetails>PHYS*400=MaxCreditsPerCourse,P:MATH*100=PlannedApplied</ResultDetails>
+    <Comments></Comments>
+    <Planned>MATH*100</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>275</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 3 CREDITS PER Course</Phrase>
+    <Taken>MATH*100,PHYS*400</Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test40</TestFile>
+    <ResultDetails>MATH*100=Applied,PHYS*400=MaxCreditsPerCourse,P:ENGL*101=PlannedApplied</ResultDetails>
+    <Comments></Comments>
+    <Planned>ENGL*101</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>276</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 3 CREDITS PER SUBJECT</Phrase>
+    <Taken>MATH*100,ENGL*101</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test41</TestFile>
+    <ResultDetails>MATH*100=Applied,ENGL*101=Applied,P:ENGL*102=MaxCreditsPerSubject</ResultDetails>
+    <Comments></Comments>
+    <Planned>ENGL*102</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>277</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 3 CREDITS PER SUBJECT</Phrase>
+    <Taken>MATH*100,PHYS*400</Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test41</TestFile>
+    <ResultDetails>MATH*100=Applied,PHYS*400=MaxCreditsPerSubject,P:ENGL*101=PlannedApplied</ResultDetails>
+    <Comments></Comments>
+    <Planned>ENGL*101</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>278</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 3 CREDITS PER SUBJECT</Phrase>
+    <Taken>ENGL*101,PHYS*400</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test41</TestFile>
+    <ResultDetails>ENGL*101=Applied,PHYS*400=MaxCreditsPerSubject,P:ENGL*102=MaxCreditsPerSubject</ResultDetails>
+    <Comments></Comments>
+    <Planned>ENGL*102</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>279</TestNumber>
+    <Phrase>TAKE ENGL*101, ENGL*102</Phrase>
+    <Taken>ENGL*101</Taken>
+    <Result>Courses</Result>
+    <TestFile>Test3</TestFile>
+    <ResultDetails>ENGL*101=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>280</TestNumber>
+    <Phrase>TAKE 8 CREDITS; MAXIMUM 2 Courses</Phrase>
+    <Taken>ENGL*101, ACCT*101</Taken>
+    <Result>MinCredits</Result>
+    <TestFile>Test28</TestFile>
+    <ResultDetails>ENGL*101=Applied,ACCT*101=Related</ResultDetails>
+    <Comments>to test 0 credit courses not counted toward min credit requirments</Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>281</TestNumber>
+    <Phrase>TAKE 2 Courses; FROM ENGL*101, ACCT*101</Phrase>
+    <Taken>ENGL*101,ACCT*101</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>ZERO_CREDITS_COUNTED</TestFile>
+    <ResultDetails>ENGL*101=Applied,ACCT*101=Applied</ResultDetails>
+    <Comments>to test 0 credit courses are counted towards non -credit requirments</Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>282</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 6 CREDITS</Phrase>
+    <Taken>ENGL*101,ACCT*101</Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test33</TestFile>
+    <ResultDetails>ENGL*101=Applied,ACCT*101=Related</ResultDetails>
+    <Comments>to test 0 credit courses not counted toward max credit requirments</Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>283</TestNumber>
+    <Phrase>TAKE 2 Courses; MAXIMUM 6 CREDITS</Phrase>
+    <Taken></Taken>
+    <Result>MinCourses</Result>
+    <TestFile>Test33</TestFile>
+    <ResultDetails>P:ENGL*101=PlannedApplied,P:ACCT*101=Related</ResultDetails>
+    <Comments>Same test as Test 282 but for planned credits</Comments>
+    <Planned>ENGL*101,ACCT*101</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>284</TestNumber>
+    <Phrase>TAKE 3 Courses; MAXIMUM 6 CREDITS PER DEPARTMENT</Phrase>
+    <Taken>MATH*100, ACCT*101</Taken>
+    <Result>PlannedSatisfied,MinCourses</Result>
+    <TestFile>Test42</TestFile>
+    <ResultDetails>MATH*100=Applied,ACCT*101=Related,P:MATH*150=PlannedApplied,P:ENGL*101=PlannedApplied</ResultDetails>
+    <Comments></Comments>
+    <Planned>MATH*150,ENGL*101</Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>285</TestNumber>
+    <Phrase>TAKE 4 CREDITS</Phrase>
+    <Taken>MATH*4002</Taken>
+    <Result>MinCredits</Result>
+    <TestFile>Test25</TestFile>
+    <ResultDetails>MATH*4002=Applied</ResultDetails>
+    <Comments>Tests scenario where STC.ALTCUM.CONTRIB.CMPL.CRED != STC.CRED</Comments>
+    <Planned></Planned>
+  </TestData>
+  <TestData>
+    <TestNumber>286</TestNumber>
+    <Phrase>TAKE 2 Courses; MIN GRADE A</Phrase>
+    <Taken>MATH*491,HIST*199</Taken>
+    <Result>Satisfied</Result>
+    <TestFile>Test54</TestFile>
+    <ResultDetails>MATH*491=Applied,HIST*199=Applied</ResultDetails>
+    <Comments></Comments>
+    <Planned></Planned>
+  </TestData>
+</GroupTestData>

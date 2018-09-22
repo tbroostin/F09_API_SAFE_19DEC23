@@ -1,0 +1,599 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Ellucian.Web.Security</name>
+    </assembly>
+    <members>
+        <member name="T:Ellucian.Web.Security.ClaimConstants">
+            <summary>
+            A collection of string constants for security-related properties within claims-based transactions.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Security.ClaimConstants.PersonId">
+            <summary>
+            The person ID.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Security.ClaimConstants.SecurityTokenControlId">
+            <summary>
+            The security token and control ID.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Security.ClaimConstants.UserId">
+            <summary>
+            The user ID.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Security.ClaimConstants.FormattedName">
+            <summary>
+            The formatted name.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Security.ClaimConstants.SessionTimeout">
+            <summary>
+            The session timeout.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Security.ClaimConstants.Role">
+            <summary>
+            The role.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Security.ClaimConstants.FixationId">
+            <summary>
+            The session fixation ID.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Security.ClaimConstants.AntiForgery">
+            <summary>
+            The anti-forgery token.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Security.ClaimConstants.ProxySubjectFormattedName">
+            <summary>
+            Principal formatted name.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Security.ClaimConstants.ProxySubjectPersonId">
+            <summary>
+            Principal person id.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Security.ClaimConstants.ProxySubjectPermissions">
+            <summary>
+            Principal permissions.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Security.Claims">
+            <summary>
+            Property getters/setters for claims data.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Security.Claims.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Security.Claims"/> class.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Security.Claims.SecurityToken">
+            <summary>
+            Gets/sets the security token.
+            </summary>
+            <value>
+            The security token.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Security.Claims.ControlId">
+            <summary>
+            Gets/sets the control id.
+            </summary>
+            <value>
+            The control id.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Security.Claims.UserName">
+            <summary>
+            Gets/sets the name of the user.
+            </summary>
+            <value>
+            The name of the user.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Security.Claims.PersonId">
+            <summary>
+            Gets/sets the person id.
+            </summary>
+            <value>
+            The person id.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Security.Claims.Roles">
+            <summary>
+            Gets/sets the roles.
+            </summary>
+            <value>
+            The roles.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Security.Claims.SessionTimeout">
+            <summary>
+            Gets/sets the session timeout.
+            </summary>
+            <value>
+            The session timeout.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Security.Claims.Name">
+            <summary>
+            Gets/sets the name.
+            </summary>
+            <value>
+            The name.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Security.Claims.SessionFixationId">
+            <summary>
+            Gets/sets the session fixation id.
+            </summary>
+            <value>
+            The session fixation id.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Security.Claims.ProxySubjectClaims">
+            <summary>
+            Gets or sets the claims of the proxy subject.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Security.ColleagueClaimURIs">
+            <summary>
+            URIs of identidy claims produced by Colleague.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Security.ColleagueClaimURIs.PersonId">
+            <summary>
+            The PERSON ID claim
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Security.ColleagueClaimURIs.ProxySubjectPersonId">
+            <summary>
+            The proxy subject's PERSON ID. (In colleague the proxy subject is aka the principal user.)
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Security.ColleagueClaimURIs.ProxySubjectFormattedName">
+            <summary>
+            The proxy subject's formatted name
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Security.ColleagueClaimURIs.ProxySubjectPermission">
+            <summary>
+            The proxy subject's permissions
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Security.CurrentUser">
+            <summary>
+            Current user implementation that wraps an IClaimsPrincipal.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Security.ICurrentUser">
+            <summary>
+            Supplies Colleague specific information about the current principal.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Security.ICurrentUser.IsUser(System.String)">
+            <summary>
+            Answers true if the current user has the specified user ID.
+            </summary>
+            <param name="userId">the user ID</param>
+            <returns>
+              <c>true</c> if the specified user id is user; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Web.Security.ICurrentUser.IsPerson(System.String)">
+            <summary>
+            Answers true if the current user has the specified person ID.
+            </summary>
+            <param name="personId">The person id.</param>
+            <returns>
+              <c>true</c> if the specified person id is person; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Web.Security.ICurrentUser.IsInRole(System.String)">
+            <summary>
+            Answers true if the current user has the specified role.
+            </summary>
+            <param name="roleTitle">the title of the role, e.g. Advisor</param>
+            <returns>
+              <c>true</c> if [is in role] [the specified role title]; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="P:Ellucian.Web.Security.ICurrentUser.PersonId">
+            <summary>
+            Returns the person ID of the current user.
+            </summary>
+            <value>
+            The person id.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Security.ICurrentUser.UserId">
+            <summary>
+            Returns the user ID of the current user.
+            </summary>
+            <value>
+            The user ID.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Security.ICurrentUser.FormattedName">
+            <summary>
+            Returns the formatted name of the current user.
+            </summary>
+            <value>
+            The user's formatted name.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Security.ICurrentUser.Roles">
+            <summary>
+            Gets the roles.
+            </summary>
+            <value>
+            The roles.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Security.ICurrentUser.ProxySubjects">
+            <summary>
+            Gets the proxy subjects - the users for which the current user is proxying. This list
+            is empty if the current user is not a proxy user.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Security.CurrentUser.#ctor(Microsoft.IdentityModel.Claims.IClaimsPrincipal)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Security.CurrentUser"/> class.
+            </summary>
+            <param name="principal">The principal.</param>
+            <exception cref="T:System.ArgumentNullException">principal</exception>
+        </member>
+        <member name="M:Ellucian.Web.Security.CurrentUser.#ctor(Ellucian.Web.Security.Claims)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Security.CurrentUser"/> class.
+            </summary>
+            <param name="claims">The claims.</param>
+            <exception cref="T:System.ArgumentNullException">claims</exception>
+        </member>
+        <member name="M:Ellucian.Web.Security.CurrentUser.IsUser(System.String)">
+            <summary>
+            Answers true if the current user has the specified user ID.
+            </summary>
+            <param name="userId">the user ID</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Security.CurrentUser.IsInRole(System.String)">
+            <summary>
+            Answers true if the current user has the specified role.
+            </summary>
+            <param name="roleTitle">the title of the role, e.g. Advisor</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Security.CurrentUser.ToString">
+            <summary>
+            Returns name-value pair string of claims
+            </summary>
+            <returns>
+            A <see cref="T:System.String"/> that represents this claims.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Web.Security.CurrentUser.IsPerson(System.String)">
+            <summary>
+            Answers true if the current user has the specified person ID.
+            </summary>
+            <param name="personId"></param>
+            <returns></returns>
+        </member>
+        <member name="P:Ellucian.Web.Security.CurrentUser.PersonId">
+            <summary>
+            Returns the person ID of the current user.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Security.CurrentUser.UserId">
+            <summary>
+            Returns the user ID of the current user.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Security.CurrentUser.FormattedName">
+            <summary>
+            Returns the formatted name of the current user.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Security.CurrentUser.Roles">
+            <summary>
+            Gets the roles.
+            </summary>
+            <value>
+            The roles.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Security.CurrentUser.ProxySubjects">
+            <summary>
+            Gets the proxy subjects - the users for which the current user is proxying. This list
+            is empty if the current user is not a proxy user.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Security.ICurrentUserFactory">
+            <summary>
+            Interface for current user factory.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Security.ICurrentUserFactory.CurrentUser">
+            <summary>
+            Gets the current user.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Security.IProxySubject">
+            <summary>
+            Interface representing a proxy subject who can be acted on behalf by the proxy user (current user).
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Security.IProxySubject.FormattedName">
+            <summary>
+            Formatted name of the proxy subject.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Security.IProxySubject.PersonId">
+            <summary>
+            Person ID of the proxy subject.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Security.IProxySubject.Permissions">
+            <summary>
+            Permissions granted to proxy user (current user) who is acting on behalf of the proxy subject.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Security.JwtHelper">
+            <summary>
+            Helper methods to work with JSON Web Tokens.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Security.JwtHelper.MaxTokenAge">
+            <summary>
+            Max allowable age of the JWT generated.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Security.JwtHelper.useHashValidationKey">
+            <summary>
+            Name of web/app config settings key for the hashing validation feature (override)
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Security.JwtHelper.AntiForgetyHashClaims">
+            <summary>
+            Represents the claims used in computing the anti-forgery claim when the hashing technique is used.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Security.JwtHelper.Create(Ellucian.Web.Security.Claims)">
+            <summary>
+            Creates a JSON Web Token that incorporates the specified claims information.
+            </summary>
+            <param name="claims">must not be null, and must be completely filled in</param>
+            <returns>
+            a JSON Web Token string
+            </returns>
+            <exception cref="T:System.ArgumentNullException">claims</exception>
+            <exception cref="T:System.ArgumentException">
+            Control ID is a required claim
+            or
+            Name is a required claim
+            or
+            Person ID is a required claim
+            or
+            Security token is a required claim
+            or
+            User Name is a required claim
+            or
+            Session Fixation ID is a required claim
+            </exception>
+        </member>
+        <member name="M:Ellucian.Web.Security.JwtHelper.ConvertToIdentityClaims(Ellucian.Web.Security.Claims)">
+            <summary>
+            Converts to identity claims.
+            </summary>
+            <param name="claims">The claims.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Security.JwtHelper.Create(System.Security.Principal.IPrincipal)">
+            <summary>
+            Creates a JSON Web Token from the specified principal.
+            </summary>
+            <param name="principal">The principal.</param>
+            <returns>
+            a JWT string or null if not an IClaimsPrincipal
+            </returns>
+            <exception cref="T:System.ArgumentNullException">principal</exception>
+            <remarks>Note: this method signature does not add the anti-forgery claim.</remarks>
+        </member>
+        <member name="M:Ellucian.Web.Security.JwtHelper.CreatePrincipal(System.String)">
+            <summary>
+            Creates a principal object from the specified JSON Web Token.
+            </summary>
+            <param name="jwt">The JWT.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Security.JwtHelper.JoinDuplicateClaims(Microsoft.IdentityModel.Claims.ClaimsIdentityCollection)">
+            <summary>
+            Joins the duplicate claims that may have resulted from the Thinktecture ValidateToken() method.
+            This method splits on commas in the claim values when processing the JWT.  Only the multiple
+            claims in the "role" claim and proxy subject permissions claim should be preserved
+            </summary>
+            <param name="claimsIdentity">The claims identity.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Security.JwtHelper.ValidateAntiForgeryClaim(System.Collections.Generic.IEnumerable{Microsoft.IdentityModel.Claims.Claim})">
+            <summary>
+            Validates that the anti-forgery claim is present and when present that it is valid.
+            In order for the claim to be valid it must have been issued from the same host that
+            is performing this validation and be accompanied by the same claims that were provided
+            when the anti-forgery claim was created.
+            </summary>
+            <param name="claims">The list of all claims for the user.</param>
+            <exception cref="T:Ellucian.Web.Security.TokenValidationException">Thrown for all validation failures.</exception>
+            <remarks>Only the JWT created by the Create(Ellucian.Web.Security.Claims) method contains the anti-forgery claim.</remarks>
+        </member>
+        <member name="M:Ellucian.Web.Security.JwtHelper.ComputeAntiForgeryClaimValue(System.Collections.Generic.IEnumerable{Microsoft.IdentityModel.Claims.Claim})">
+            <summary>
+            Returns the anti-forgery value based on the claims passed in.
+            </summary>
+            <param name="claims"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Security.JwtHelper.ConvertToUnixTime(System.DateTime)">
+            <summary>
+            Converts a DateTime object (assumed to be representing a UTC time) to its corresponding UNIX time.
+            </summary>
+            <param name="date">DateTime (UTC-based)</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Security.JwtHelper.ValidateAntiForgeryHash(System.Collections.Generic.IEnumerable{Microsoft.IdentityModel.Claims.Claim})">
+            <summary>
+            Validates the anti-forgery claim using the hashing technique.
+            </summary>
+            <param name="claims"></param>
+        </member>
+        <member name="M:Ellucian.Web.Security.JwtHelper.ComputeAntiForgeryHash(System.Collections.Generic.IEnumerable{Microsoft.IdentityModel.Claims.Claim})">
+            <summary>
+            Computes the value anti-forgery claim using the hashing technique.
+            </summary>
+            <param name="claims"></param>
+            <returns></returns>
+        </member>
+        <member name="P:Ellucian.Web.Security.JwtHelper.UseHashValidation">
+            <summary>
+            Gets a value indicating which method to use when computing and validating the anti-forgery claim.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Security.JwtHelper.SignatureKey">
+            <summary>
+            Gets a byte array representing the signing key.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Security.PermissionsException">
+            <summary>
+            A generic permissions exception class.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Security.PermissionsException.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Security.PermissionsException"/> class.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Security.PermissionsException.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the PermissionsException class.
+            </summary>
+            <param name="message">do not put a permission code here, that could give an attacker too much info</param>
+        </member>
+        <member name="M:Ellucian.Web.Security.PermissionsException.#ctor(System.String,System.Exception)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Security.PermissionsException"/> class.
+            </summary>
+            <param name="message">The message.</param>
+            <param name="exception">The exception.</param>
+        </member>
+        <member name="M:Ellucian.Web.Security.PermissionsException.#ctor(System.Runtime.Serialization.SerializationInfo,System.Runtime.Serialization.StreamingContext)">
+            <summary>
+            Prevents a default instance of the <see cref="T:Ellucian.Web.Security.PermissionsException"/> class from being created.
+            </summary>
+            <param name="info">The <see cref="T:System.Runtime.Serialization.SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+            <param name="context">The <see cref="T:System.Runtime.Serialization.StreamingContext"/> that contains contextual information about the source or destination.</param>
+        </member>
+        <member name="T:Ellucian.Web.Security.ProxySubjectClaims">
+            <summary>
+            Claim data for the proxy subject.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Security.ProxySubjectClaims.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Security.ProxySubjectClaims"/> class.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Security.ProxySubjectClaims.FormattedName">
+            <summary>
+            Gets or sets the formatted name of the proxy subject.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Security.ProxySubjectClaims.PersonId">
+            <summary>
+            Gets or sets the PERSON ID of the proxy subject.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Security.ProxySubjectClaims.Permissions">
+            <summary>
+            Gets or sets the permissions of the proxy subject.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Security.ProxySubject">
+            <summary>
+            Represents a proxy subject, who can be acted on behalf of by a proxy user.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Security.ProxySubject.#ctor(Microsoft.IdentityModel.Claims.IClaimsPrincipal)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Security.CurrentUser"/> class.
+            </summary>
+            <param name="principal">The principal.</param>
+            <exception cref="T:System.ArgumentNullException">principal</exception>
+        </member>
+        <member name="P:Ellucian.Web.Security.ProxySubject.FormattedName">
+            <summary>
+            Formatted name of the proxy subject.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Security.ProxySubject.PersonId">
+            <summary>
+            Person ID of the proxy subject.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Security.ProxySubject.Permissions">
+            <summary>
+            Permissions granted to proxy users who are action on behalf of the proxy subject.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Security.ThreadCurrentUserFactory">
+            <summary>
+            An implementation of the ICurrentUserFactory interface.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Security.ThreadCurrentUserFactory.CurrentUser">
+            <summary>
+            Gets the current user based upon the current principal.
+            </summary>
+            <value>
+            The current user.
+            </value>
+        </member>
+        <member name="T:Ellucian.Web.Security.TokenValidationException">
+            <summary>
+            Generic exception class to report token validation errors.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Security.TokenValidationException.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Security.TokenValidationException"/> class.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Security.TokenValidationException.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the TokenValidationException class.
+            </summary>
+            <param name="message">The message.</param>
+        </member>
+        <member name="M:Ellucian.Web.Security.TokenValidationException.#ctor(System.String,System.Exception)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Security.TokenValidationException"/> class.
+            </summary>
+            <param name="message">The message.</param>
+            <param name="exception">The exception.</param>
+        </member>
+        <member name="M:Ellucian.Web.Security.TokenValidationException.#ctor(System.Runtime.Serialization.SerializationInfo,System.Runtime.Serialization.StreamingContext)">
+            <summary>
+            Prevents a default instance of the <see cref="T:Ellucian.Web.Security.TokenValidationException"/> class from being created.
+            </summary>
+            <param name="info">The <see cref="T:System.Runtime.Serialization.SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+            <param name="context">The <see cref="T:System.Runtime.Serialization.StreamingContext"/> that contains contextual information about the source or destination.</param>
+        </member>
+    </members>
+</doc>

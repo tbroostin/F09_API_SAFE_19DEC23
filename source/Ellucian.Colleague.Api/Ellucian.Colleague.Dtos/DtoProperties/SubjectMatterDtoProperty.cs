@@ -1,0 +1,38 @@
+﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using Newtonsoft.Json;
+using System.Runtime.Serialization;
+
+namespace Ellucian.Colleague.Dtos.DtoProperties
+{
+    /// <summary>
+    /// Whom the comment is about
+    /// </summary>
+    [DataContract]
+    public class SubjectMatterDtoProperty
+    {
+        /// <summary>
+        /// The person whom the comment is about
+        /// </summary>
+        [DataMember(Name = "person", EmitDefaultValue = false)]
+        public GuidObject2 Person { get; set; }
+
+        /// <summary>
+        /// The comment is made about this organization.
+        /// </summary>
+        [DataMember(Name = "organization", EmitDefaultValue = false)]
+        public GuidObject2 Organization { get; set; }
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        [JsonConstructor]
+        public SubjectMatterDtoProperty()
+        {
+        }
+    }
+}

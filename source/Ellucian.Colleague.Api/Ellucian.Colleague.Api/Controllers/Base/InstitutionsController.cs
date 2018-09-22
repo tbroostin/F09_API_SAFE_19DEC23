@@ -1,0 +1,63 @@
+﻿// Copyright 2012-2013 Ellucian Company L.P. and its affiliates.
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using Ellucian.Web.Http.Controllers;
+using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Dtos.Base;
+using System.Web.Http;
+using System.ComponentModel;
+using Ellucian.Colleague.Api.Licensing;
+using Ellucian.Colleague.Configuration.Licensing;
+using Ellucian.Web.License;
+using Ellucian.Web.Adapters;
+namespace Ellucian.Colleague.Api.Controllers
+{
+    /// <summary>
+    /// Provides access to Institution data.
+    /// </summary>
+    [Authorize]
+    [LicenseProvider(typeof(EllucianLicenseProvider))]
+    [EllucianLicenseModule(ModuleConstants.Base)]
+    public class InstitutionsController : BaseCompressedApiController
+    {
+        private readonly IInstitutionRepository _institutionRepository;
+        private readonly IAdapterRegistry _adapterRegistry;
+
+        /// <summary>
+        /// InstitutionsController constructor
+        /// </summary>
+        /// <param name="adapterRegistry">Adapter registry of type <see cref="IAdapterRegistry">IAdapterRegistry</see></param>
+        /// <param name="institutionRepository">Institution repository of type <see cref="IInstitutionRepository">IInstitutionRepository</see></param>
+        public InstitutionsController(IAdapterRegistry adapterRegistry, IInstitutionRepository institutionRepository)
+        {
+            _adapterRegistry = adapterRegistry;
+            _institutionRepository = institutionRepository;
+        }
+
+        //[CacheControlFilter(MaxAgeHours = 1, Public = true, Revalidate = true)]
+        /// <summary>
+        /// Gets all institutions.
+        /// </summary>
+        /// <returns>List of <see cref="Institution">Institutions</see></returns>
+        public IEnumerable<Institution> Get()
+        {
+            var institutionCollection = _institutionRepository.Get();
+
+            // Get the right adapter for the type mapping
+            var institutionDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Base.Entities.Institution, Institution>();
+
+            // Map the institution entity to the institution DTO
+            var institutionDtoCollection = new List<Institution>();
+            foreach (var bldg in institutionCollection)
+            {
+                institutionDtoCollection.Add(institutionDtoAdapter.MapToType(bldg));
+            }
+
+            return institutionDtoCollection.OrderBy(s => s.InstitutionType);
+        }
+    }
+}

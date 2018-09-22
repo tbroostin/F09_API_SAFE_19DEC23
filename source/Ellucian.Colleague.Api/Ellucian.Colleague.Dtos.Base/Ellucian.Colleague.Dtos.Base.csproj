@@ -1,0 +1,238 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{A147BD58-ECC6-409B-A633-128946AAA456}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Ellucian.Colleague.Dtos.Base</RootNamespace>
+    <AssemblyName>Ellucian.Colleague.Dtos.Base</AssemblyName>
+    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <EnableCodeInspectionOnBuild>true</EnableCodeInspectionOnBuild>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Debug\Ellucian.Colleague.Dtos.Base.XML</DocumentationFile>
+    <WarningsAsErrors>1570,1571,1572,1573,1591</WarningsAsErrors>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Release\Ellucian.Colleague.Dtos.Base.XML</DocumentationFile>
+    <WarningsAsErrors>1570,1571,1572,1573,1591</WarningsAsErrors>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net40\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.IdentityModel" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="BackupConfigurationQueryCriteria.cs" />
+    <Compile Include="BackupConfiguration.cs" />
+    <Compile Include="CampusCalendar.cs" />
+    <Compile Include="EmployeeNameQueryCriteria.cs" />
+    <Compile Include="FacultyContract.cs" />
+    <Compile Include="FacultyContractAssignment.cs" />
+    <Compile Include="FacultyContractAssignmentType.cs" />
+    <Compile Include="FacultyContractPosition.cs" />
+    <Compile Include="GenderIdentityType.cs" />
+    <Compile Include="HumanResourceDemographicsQueryCriteria.cs" />
+    <Compile Include="LoadPeriod.cs" />
+    <Compile Include="LoadPeriodQueryCriteria.cs" />
+    <Compile Include="OrganizationalPersonPositionBase.cs" />
+    <Compile Include="OrganizationalPersonPositionQueryCriteria.cs" />
+    <Compile Include="AddressQueryCriteria.cs" />
+    <Compile Include="AlertStyle.cs" />
+    <Compile Include="BankingAuthenticationToken.cs" />
+    <Compile Include="EmergencyInformationConfiguration.cs" />
+    <Compile Include="EmergencyInformationConfiguration2.cs" />
+    <Compile Include="IntegrationHubConfiguration.cs" />
+    <Compile Include="AmqpServerConfiguration.cs" />
+    <Compile Include="ApiFileStream.cs" />
+    <Compile Include="ApiVersion.cs" />
+    <Compile Include="ApprovalDocument.cs" />
+    <Compile Include="ApprovalResponse.cs" />
+    <Compile Include="Bank.cs" />
+    <Compile Include="BankAccount.cs" />
+    <Compile Include="BankAccountType.cs" />
+    <Compile Include="BankingInformationConfiguration.cs" />
+    <Compile Include="BaseExchangeConfiguration.cs" />
+    <Compile Include="Building.cs" />
+    <Compile Include="BuildingType.cs" />
+    <Compile Include="ChangePassword.cs" />
+    <Compile Include="CommencementSite.cs" />
+    <Compile Include="CommunicationCode2.cs" />
+    <Compile Include="CommunicationCodeHyperlink.cs" />
+    <Compile Include="ConvenienceFee.cs" />
+    <Compile Include="CommunicationCode.cs" />
+    <Compile Include="CommunicationHistory.cs" />
+    <Compile Include="Coordinate.cs" />
+    <Compile Include="Address.cs" />
+    <Compile Include="MiscellaneousText.cs" />
+    <Compile Include="OrganizationalPersonPositionStatus.cs" />
+    <Compile Include="OrganizationalPosition.cs" />
+    <Compile Include="OrganizationalPositionQueryCriteria.cs" />
+    <Compile Include="OrganizationalPositionRelationship.cs" />
+    <Compile Include="OrganizationalRelationshipConfiguration.cs" />
+    <Compile Include="OrganizationalRelationshipType.cs" />
+    <Compile Include="PayrollDepositDirective.cs" />
+    <Compile Include="PersonalPronounType.cs" />
+    <Compile Include="PersonHierarchyName.cs" />
+    <Compile Include="PayableDepositDirective.cs" />
+    <Compile Include="PayableDepositDirectiveAuthenticationChallenge.cs" />
+    <Compile Include="OrganizationalRelationship.cs" />
+    <Compile Include="OrganizationalPersonPosition.cs" />
+    <Compile Include="PersonNameQueryCriteria.cs" />
+    <Compile Include="PilotPhoneNumber.cs" />
+    <Compile Include="DemographicFieldRequirement.cs" />
+    <Compile Include="DemographicFieldType.cs" />
+    <Compile Include="EmailAddress.cs" />
+    <Compile Include="Country.cs" />
+    <Compile Include="EmailType.cs" />
+    <Compile Include="MaritalState.cs" />
+    <Compile Include="PayableDeposit.cs" />
+    <Compile Include="PayableDepositAccount.cs" />
+    <Compile Include="PersonMatchCategoryType.cs" />
+    <Compile Include="PersonMatchCriteria.cs" />
+    <Compile Include="PersonMatchResult.cs" />
+    <Compile Include="PersonName.cs" />
+    <Compile Include="PersonProxyUser.cs" />
+    <Compile Include="PhoneNumber.cs" />
+    <Compile Include="EthnicOrigin.cs" />
+    <Compile Include="Credentials.cs" />
+    <Compile Include="DataPage.cs" />
+    <Compile Include="DegreeType.cs" />
+    <Compile Include="Denomination.cs" />
+    <Compile Include="Department.cs" />
+    <Compile Include="DisabilityType.cs" />
+    <Compile Include="Division.cs" />
+    <Compile Include="Ethnicity.cs" />
+    <Compile Include="EmergencyContact.cs" />
+    <Compile Include="ErpApiConfiguration.cs" />
+    <Compile Include="Event.cs" />
+    <Compile Include="EventsICal.cs" />
+    <Compile Include="ExchangeConfiguration.cs" />
+    <Compile Include="Filter.cs" />
+    <Compile Include="FrequencyCode.cs" />
+    <Compile Include="InstType.cs" />
+    <Compile Include="PersonHighSchool.cs" />
+    <Compile Include="CitizenType.cs" />
+    <Compile Include="HealthConditions.cs" />
+    <Compile Include="ImportantNumber.cs" />
+    <Compile Include="Institution.cs" />
+    <Compile Include="InstitutionType.cs" />
+    <Compile Include="IntegrationConfiguration.cs" />
+    <Compile Include="Interest.cs" />
+    <Compile Include="Language.cs" />
+    <Compile Include="ImportantNumberCategory.cs" />
+    <Compile Include="LegacyColleagueSession.cs" />
+    <Compile Include="Location.cs" />
+    <Compile Include="MaritalStatus.cs" />
+    <Compile Include="OfficeCode.cs" />
+    <Compile Include="OfficeCodeType.cs" />
+    <Compile Include="PeriodType.cs" />
+    <Compile Include="Permission.cs" />
+    <Compile Include="Person.cs" />
+    <Compile Include="PhoneNumberQueryCriteria.cs" />
+    <Compile Include="EmergencyInformation.cs" />
+    <Compile Include="PhoneType.cs" />
+    <Compile Include="DemographicField.cs" />
+    <Compile Include="PrivacyConfiguration.cs" />
+    <Compile Include="ProxyCandidate.cs" />
+    <Compile Include="ProxySubject.cs" />
+    <Compile Include="ProspectSource.cs" />
+    <Compile Include="Phone.cs" />
+    <Compile Include="Prefix.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ProxyAccessPermission.cs" />
+    <Compile Include="ProxyConfiguration.cs" />
+    <Compile Include="ProxyCredentials.cs" />
+    <Compile Include="ProxyPermissionAssignment.cs" />
+    <Compile Include="ProxyUser.cs" />
+    <Compile Include="ProxyWorkflow.cs" />
+    <Compile Include="ProxyWorkflowGroup.cs" />
+    <Compile Include="Race.cs" />
+    <Compile Include="RelatedPerson.cs" />
+    <Compile Include="Relationship.cs" />
+    <Compile Include="RelationshipType.cs" />
+    <Compile Include="ResourceBusinessEventMapping.cs" />
+    <Compile Include="RestrictionConfiguration.cs" />
+    <Compile Include="Role.cs" />
+    <Compile Include="Room.cs" />
+    <Compile Include="School.cs" />
+    <Compile Include="SelfServiceConfiguration.cs" />
+    <Compile Include="SelfservicePreference.cs" />
+    <Compile Include="SeverityStyleMapping.cs" />
+    <Compile Include="SpecialDay.cs" />
+    <Compile Include="SpecialNeed.cs" />
+    <Compile Include="PersonRestriction.cs" />
+    <Compile Include="Staff.cs" />
+    <Compile Include="State.cs" />
+    <Compile Include="Suffix.cs" />
+    <Compile Include="TaxFormConsent.cs" />
+    <Compile Include="TaxFormNotations.cs" />
+    <Compile Include="TaxForms.cs" />
+    <Compile Include="TaxFormConfiguration.cs" />
+    <Compile Include="TaxFormStatement2.cs" />
+    <Compile Include="TextDocument.cs" />
+    <Compile Include="Timestamp.cs" />
+    <Compile Include="UrlFilter.cs" />
+    <Compile Include="User.cs" />
+    <Compile Include="Profile.cs" />
+    <Compile Include="UserProfileConfiguration.cs" />
+    <Compile Include="GraduateMilitaryStatus.cs" />
+    <Compile Include="UserProfileConfiguration2.cs" />
+    <Compile Include="UserProfileViewUpdateOption.cs" />
+    <Compile Include="VisaType.cs" />
+    <Compile Include="RequestExceptionDetails.cs" />
+    <Compile Include="WorkTask.cs" />
+    <Compile Include="WorkTaskProcess.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- begin ellucian project settings -->
+  <Import Project="$(SolutionDir)CodeAnalysis\CodeScan.proj" Condition="Exists('$(SolutionDir)CodeAnalysis\CodeScan.proj ')" />
+  <Import Project="$(ProjectDir)..\..\..\BuildConfig\CodeSigning.targets" Condition="Exists('$(ProjectDir)..\..\..\BuildConfig\CodeSigning.targets ')" />
+  <Import Project="$(MSBuildProgramFiles32)\MSBuild\FxCop Integrator\FxCopIntegrator.targets" Condition="Exists('$(MSBuildProgramFiles32)\MSBuild\FxCop Integrator\FxCopIntegrator.targets')" />
+  <!-- end ellucian project settings -->
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

@@ -1,0 +1,375 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{0CDA322D-5DB6-466C-86C4-49A808B02284}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Ellucian.Colleague.Domain.HumanResources</RootNamespace>
+    <AssemblyName>Ellucian.Colleague.Domain.HumanResources</AssemblyName>
+    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Ellucian.Colleague.Configuration, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Colleague.Configuration.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Colleague.Domain, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Colleague.Domain.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Colleague.Legacy, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Colleague.Legacy.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Colleague.Property, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Colleague.Property.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Data.Colleague, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Data.Colleague.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Dmi.Client, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Dmi.Client.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Dmi.Runtime, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Dmi.Runtime.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Logging, Version=1.0.0.1, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Logging.MSEL.1.0.0.240\lib\net451\Ellucian.Logging.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Web.Cache, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Web.Cache.1.0.0.184\lib\net451\Ellucian.Web.Cache.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Web.Dependency, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Web.Dependency.1.0.0.187\lib\net451\Ellucian.Web.Dependency.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Web.License, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Web.License.1.0.0.178\lib\net451\Ellucian.Web.License.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Web.Security, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Web.Security.1.0.0.206\lib\net451\Ellucian.Web.Security.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Web.Utility, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Web.Utility.1.0.0.181\lib\net451\Ellucian.Web.Utility.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.WebServices.Core.Config, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.WebServices.Core.Config.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="KellermanSoftware.Compare-NET-Objects, Version=2.1.0.0, Culture=neutral, PublicKeyToken=d970ace04cc85217, processorArchitecture=MSIL">
+      <HintPath>..\packages\CompareNETObjects.2.01.0.0\lib\net451\KellermanSoftware.Compare-NET-Objects.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.IdentityModel, Version=3.5.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <Private>True</Private>
+      <HintPath>..\packages\Microsoft.IdentityModel.6.1.7600.16394\lib\net35\Microsoft.IdentityModel.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.EnterpriseLibrary.Common, Version=5.0.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\EnterpriseLibrary.Common.5.0.505.0\lib\NET35\Microsoft.Practices.EnterpriseLibrary.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.EnterpriseLibrary.Logging, Version=5.0.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\EnterpriseLibrary.Logging.5.0.505.1\lib\NET35\Microsoft.Practices.EnterpriseLibrary.Logging.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.ServiceLocation">
+      <HintPath>..\packages\CommonServiceLocator.1.0\lib\NET35\Microsoft.Practices.ServiceLocation.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.Unity, Version=2.1.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Unity.2.1.505.2\lib\NET35\Microsoft.Practices.Unity.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.Unity.Configuration">
+      <HintPath>..\packages\Unity.2.1.505.2\lib\NET35\Microsoft.Practices.Unity.Configuration.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.Unity.Interception">
+      <HintPath>..\packages\Unity.Interception.2.1.505.2\lib\NET35\Microsoft.Practices.Unity.Interception.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.Unity.Interception.Configuration">
+      <HintPath>..\packages\Unity.Interception.2.1.505.2\lib\NET35\Microsoft.Practices.Unity.Interception.Configuration.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="slf4net">
+      <HintPath>..\packages\slf4net.0.1.32.1\lib\net35\slf4net.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.IdentityModel" />
+    <Reference Include="System.IdentityModel.Services" />
+    <Reference Include="System.IdentityModel.Tokens.Jwt">
+      <HintPath>..\packages\System.IdentityModel.Tokens.Jwt.4.0.1\lib\net45\System.IdentityModel.Tokens.Jwt.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Threading.Tasks.Dataflow, Version=4.5.24.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.Tpl.Dataflow.4.5.24\lib\portable-net45+win8+wpa81\System.Threading.Tasks.Dataflow.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+    <Reference Include="Thinktecture.IdentityModel">
+      <HintPath>..\packages\Thinktecture.IdentityModel.3.4.6\lib\net45\Thinktecture.IdentityModel.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Entities\EarningsTypeGroupItem.cs" />
+    <Compile Include="Entities\AsgmtContractTypes.cs" />
+    <Compile Include="Entities\BargainingUnit.cs" />
+    <Compile Include="Entities\BenefitDeductionType.cs" />
+    <Compile Include="Entities\BenefitsStatus.cs" />
+    <Compile Include="Entities\ContractType.cs" />
+    <Compile Include="Entities\EarningsTypeGroup.cs" />
+    <Compile Include="Entities\EmployeeLeavePlan.cs" />
+    <Compile Include="Entities\EmployeeLeaveTransaction.cs" />
+    <Compile Include="Entities\EmploymentFrequenciesType.cs" />
+    <Compile Include="Entities\EarningsDifferential.cs" />
+    <Compile Include="Entities\EmploymentProficiency.cs" />
+    <Compile Include="Entities\FormT4PdfData.cs" />
+    <Compile Include="Entities\FacultyContract.cs" />
+    <Compile Include="Entities\FacultyContractAssignment.cs" />
+    <Compile Include="Entities\FacultyContractAssignmentType.cs" />
+    <Compile Include="Entities\FacultyContractPosition.cs" />
+    <Compile Include="Entities\HourlySalaryIndicator.cs" />
+    <Compile Include="Entities\InstitutionEmployers.cs" />
+    <Compile Include="Entities\LeaveBalanceConfiguration.cs" />
+    <Compile Include="Entities\LeaveTransactionType.cs" />
+    <Compile Include="Entities\PayClassification.cs" />
+    <Compile Include="Entities\PayClass.cs" />
+    <Compile Include="Entities\PayScale.cs" />
+    <Compile Include="Entities\PerleaveDetails.cs" />
+    <Compile Include="Entities\Perleave.cs" />
+    <Compile Include="Entities\LeavePlan.cs" />
+    <Compile Include="Entities\InstitutionJobSupervisors.cs" />
+    <Compile Include="Entities\HumanResourcesInstitutionEmployer.cs" />
+    <Compile Include="Entities\InstructorTenureTypes.cs" />
+    <Compile Include="Entities\BenefitDeductionTypeCategory.cs" />
+    <Compile Include="Entities\LeaveTypeCategory.cs" />
+    <Compile Include="Entities\LoadPeriod.cs" />
+    <Compile Include="Entities\PayrollDeductionArrangements.cs" />
+    <Compile Include="Entities\DeductionType.cs" />
+    <Compile Include="Entities\EmploymentClassification.cs" />
+    <Compile Include="Entities\EmploymentClassificationType.cs" />
+    <Compile Include="Entities\InstitutionJobs.cs" />
+    <Compile Include="Entities\PayrollDeduction.cs" />
+    <Compile Include="Entities\PayrollDepositDirective.cs" />
+    <Compile Include="Entities\PayrollDepositDirectiveCollection.cs" />
+    <Compile Include="Entities\PayrollRegisterBenefitDeductionEntry.cs" />
+    <Compile Include="Entities\PayrollRegisterEarningsEntry.cs" />
+    <Compile Include="Entities\PayrollRegisterEntry.cs" />
+    <Compile Include="Entities\PayrollRegisterLeaveEntry.cs" />
+    <Compile Include="Entities\PayrollRegisterTaxableBenefitEntry.cs" />
+    <Compile Include="Entities\PayrollRegisterTaxEntry.cs" />
+    <Compile Include="Entities\PayScalesScales.cs" />
+    <Compile Include="Entities\PayrollTaxProcessingCode.cs" />
+    <Compile Include="Entities\PayStatementAddress.cs" />
+    <Compile Include="Entities\PayStatementBankDeposit.cs" />
+    <Compile Include="Entities\PayStatementConfiguration.cs" />
+    <Compile Include="Entities\PayStatementDeduction.cs" />
+    <Compile Include="Entities\PayStatementDeductionType.cs" />
+    <Compile Include="Entities\PayStatementEarnings.cs" />
+    <Compile Include="Entities\PayStatementLeave.cs" />
+    <Compile Include="Entities\PayStatementReferenceDataUtility.cs" />
+    <Compile Include="Entities\PayStatementReport.cs" />
+    <Compile Include="Entities\PayStatementReportDataContext.cs" />
+    <Compile Include="Entities\PayStatementSourceBankDeposit.cs" />
+    <Compile Include="Entities\PayStatementSourceBenefitDeduction.cs" />
+    <Compile Include="Entities\PayStatementSourceData.cs" />
+    <Compile Include="Entities\PayStatementSourceEarnings.cs" />
+    <Compile Include="Entities\PayStatementSourceTax.cs" />
+    <Compile Include="Entities\PayStatementSummary.cs" />
+    <Compile Include="Entities\PayStatementTaxableBenefit.cs" />
+    <Compile Include="Entities\PersonBenefitDeduction.cs" />
+    <Compile Include="Entities\PersonEmploymentProficiency.cs" />
+    <Compile Include="Entities\EmploymentPerformanceReviewResponse.cs" />
+    <Compile Include="Entities\PersonPositionWageItem.cs" />
+    <Compile Include="Entities\PositionPay.cs" />
+    <Compile Include="Entities\JobChangeReason.cs" />
+    <Compile Include="Entities\PersonStatuses.cs" />
+    <Compile Include="Entities\PayStatus.cs" />
+    <Compile Include="Entities\EmployeeStatus.cs" />
+    <Compile Include="Entities\Employee.cs" />
+    <Compile Include="Entities\EarningsCategory.cs" />
+    <Compile Include="Entities\EarningsMethod.cs" />
+    <Compile Include="Entities\EarningsType.cs" />
+    <Compile Include="Entities\HumanResourceDemographics.cs" />
+    <Compile Include="Entities\PayrollDeductionArrangementChangeReason.cs" />
+    <Compile Include="Entities\PayCycle.cs" />
+    <Compile Include="Entities\PayCycleFrequency.cs" />
+    <Compile Include="Entities\PayPeriod.cs" />
+    <Compile Include="Entities\PayPeriodStatus.cs" />
+    <Compile Include="Entities\Form1095cCoveredIndividualsPdfData.cs" />
+    <Compile Include="Entities\Form1095cPdfData.cs" />
+    <Compile Include="Entities\FormW2PdfData.cs" />
+    <Compile Include="Entities\EmploymentStatusEndingReason.cs" />
+    <Compile Include="Entities\PersonPosition.cs" />
+    <Compile Include="Entities\PersonPositionWage.cs" />
+    <Compile Include="Entities\PersonEmploymentStatus.cs" />
+    <Compile Include="Entities\Position.cs" />
+    <Compile Include="Entities\PositionFundingSource.cs" />
+    <Compile Include="Entities\HrStatuses.cs" />
+    <Compile Include="Entities\RehireType.cs" />
+    <Compile Include="Entities\RehireTypeCategory.cs" />
+    <Compile Include="Entities\SSNDisplay.cs" />
+    <Compile Include="Entities\TaxCode.cs" />
+    <Compile Include="Entities\TaxCodeType.cs" />
+    <Compile Include="Entities\TaxCodeFilingStatus.cs" />
+    <Compile Include="Entities\TaxFormStatement.cs" />
+    <Compile Include="Entities\TimecardType.cs" />
+    <Compile Include="HumanResourcesConstants.cs" />
+    <Compile Include="HumanResourcesPermissionCodes.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Repositories\IContributionPayrollDeductionsRepository.cs" />
+    <Compile Include="Repositories\IEmployeeLeaveTransactionsRepository.cs" />
+    <Compile Include="Repositories\IEmployeeLeavePlansRepository.cs" />
+    <Compile Include="Repositories\ILeaveBalanceConfigurationRepository.cs" />
+    <Compile Include="Repositories\IPayPeriodsRepository.cs" />
+    <Compile Include="Repositories\IPersonBeneficiariesRepository.cs" />
+    <Compile Include="Repositories\IPersonBenefitDependentsRepository.cs" />
+    <Compile Include="Repositories\IJobApplicationsRepository.cs" />
+    <Compile Include="Repositories\IPayClassificationsRepository.cs" />
+    <Compile Include="Repositories\IPayScalesRepository.cs" />
+    <Compile Include="Repositories\ILeavePlansRepository.cs" />
+    <Compile Include="Repositories\IEmploymentPerformanceReviewsRepository.cs" />
+    <Compile Include="Repositories\IFacultyContractRepository.cs" />
+    <Compile Include="Repositories\IInstitutionEmployersRepository.cs" />
+    <Compile Include="Repositories\ILoadPeriodRepository.cs" />
+    <Compile Include="Repositories\IPayrollDeductionArrangementRepository.cs" />
+    <Compile Include="Repositories\IEmployeeRepository.cs" />
+    <Compile Include="Repositories\IEarningsTypeRepository.cs" />
+    <Compile Include="Repositories\IPayCycleRepository.cs" />
+    <Compile Include="Repositories\IHumanResourcesReferenceDataRepository.cs" />
+    <Compile Include="Repositories\IInstitutionJobsRepository.cs" />
+    <Compile Include="Repositories\IPayStatementRepository.cs" />
+    <Compile Include="Repositories\IPersonBenefitDeductionRepository.cs" />
+    <Compile Include="Repositories\IPersonPositionRepository.cs" />
+    <Compile Include="Repositories\IPersonPositionWageRepository.cs" />
+    <Compile Include="Repositories\IPersonEmploymentStatusRepository.cs" />
+    <Compile Include="Repositories\IPositionRepository.cs" />
+    <Compile Include="Repositories\ISupervisorsRepository.cs" />
+    <Compile Include="Repositories\IHumanResourcesTaxFormPdfDataRepository.cs" />
+    <Compile Include="Repositories\ITaxFormStatementRepository.cs" />
+    <Compile Include="Repositories\IHumanResourcesTaxFormStatementRepository.cs" />
+    <Compile Include="Repositories\IPayrollDepositDirectivesRepository.cs" />
+    <Compile Include="Repositories\IPersonEmploymentProficienciesRepository.cs" />
+    <Compile Include="Repositories\IPayrollRegisterRepository.cs" />
+    <Compile Include="Services\FacultyContractDomainService.cs" />
+    <Compile Include="Services\IFacultyContractDomainService.cs" />
+    <Compile Include="Services\IPayStatementDomainService.cs" />
+    <Compile Include="Services\PayStatementDomainService.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="packages.config">
+      <SubType>Designer</SubType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Ellucian.Colleague.Coordination.Base\Ellucian.Colleague.Coordination.Base.csproj">
+      <Project>{2D4513B8-2722-4C91-9A64-BDBBC3F03516}</Project>
+      <Name>Ellucian.Colleague.Coordination.Base</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Domain.Base\Ellucian.Colleague.Domain.Base.csproj">
+      <Project>{a3b49510-737b-4ffd-8bca-17bcce7fbaf7}</Project>
+      <Name>Ellucian.Colleague.Domain.Base</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Domain.Student\Ellucian.Colleague.Domain.Student.csproj">
+      <Project>{B47DA241-50B7-420A-BB25-C24B20807609}</Project>
+      <Name>Ellucian.Colleague.Domain.Student</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <Compile Include="Entities\EmploymentPerformanceReviewType.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Entities\EmploymentPerformanceReviewRating.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Entities\EmploymentPerformanceReview.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Entities\LeaveType.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Entities\DeductionCategory.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Entities\CostCalculationMethod.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Entities\EmploymentFrequency.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Entities\JobApplication.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Entities\BeneficiaryPreferenceTypes.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Entities\PersonBenefitDependent.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Entities\EmploymentDepartment.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Entities\PayCycle2.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Entities\EarningType2.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Entities\PersonBeneficiary.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- begin ellucian project settings -->
+  <Import Project="$(SolutionDir)CodeAnalysis\CodeScan.proj" Condition="Exists('$(SolutionDir)CodeAnalysis\CodeScan.proj ')" />
+  <Import Project="$(ProjectDir)..\..\..\BuildConfig\CodeSigning.targets" Condition="Exists('$(ProjectDir)..\..\..\BuildConfig\CodeSigning.targets ')" />
+  <Import Project="$(MSBuildProgramFiles32)\MSBuild\FxCop Integrator\FxCopIntegrator.targets" Condition="Exists('$(MSBuildProgramFiles32)\MSBuild\FxCop Integrator\FxCopIntegrator.targets')" />
+  <!-- end ellucian project settings -->
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

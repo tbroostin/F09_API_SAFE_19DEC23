@@ -1,0 +1,3383 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Ellucian.Dmi.Runtime</name>
+    </assembly>
+    <members>
+        <member name="T:Ellucian.Dmi.Runtime.ErrorResponse">
+            <summary>
+            This data contract represents the generic error response for DMI errors.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ErrorResponse.#ctor">
+            <summary>
+            Default Constructor
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.ErrorResponse.ErrorCategory">
+            <summary>
+            This string represents a category for the DMI error
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.ErrorResponse.ErrorCode">
+            <summary>
+            This string represents a code for the DMI error
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.ErrorResponse.ErrorMessageText">
+            <summary>
+            This string represents a plaintext message for the DMI error
+            </summary>
+        </member>
+        <member name="T:Ellucian.Dmi.Runtime.SimpleServiceResponse">
+            <summary>
+            This data contract represents the generic service response for a service that returns a boolean.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.SimpleServiceResponse.#ctor">
+            <summary>
+            Default Constructor
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.SimpleServiceResponse.ServiceSuccessful">
+            <summary>
+            This boolean flag indicates the success of authentication.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.SimpleServiceResponse.Errors">
+            <summary>
+            This list represents the errors that occur during the service.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Dmi.Runtime.ColleagueResponse">
+            <summary>
+            This data contract represents the generic service response for a service that returns a boolean.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ColleagueResponse.#ctor">
+            <summary>
+            Default Constructor
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.ColleagueResponse.Success">
+            <summary>
+            This string represents whether the transaction was successful.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.ColleagueResponse.Transaction">
+            <summary>
+            This string represents the URL returned.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Dmi.Runtime.ColleagueTxTypeEnum">
+            <summary>
+            Represents the different Colleague Transaction types.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Dmi.Runtime.ColleagueDataContractAttribute">
+            <summary>
+            Data contract attribute that stores Colleague-specific information.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ColleagueDataContractAttribute.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Dmi.Runtime.ColleagueDataContractAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.ColleagueDataContractAttribute.ColleagueId">
+            <summary>
+            Represents the name of the Colleague Transaction from which the data contract
+            was generated.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.ColleagueDataContractAttribute.ColleagueTxType">
+            <summary>
+            Represents the type of the Colleague Transaction.
+            </summary>
+            <value>
+            The type of the Colleague Transaction.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.ColleagueDataContractAttribute.GeneratedDateTime">
+            <summary>
+            The date and time at which the data contract was generated.
+            </summary>
+            <value>
+            The generated date time.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.ColleagueDataContractAttribute.GeneratorVersion">
+            <summary>
+            The version of the generator used to generate the data contract.
+            </summary>
+            <value>
+            The generator version.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.ColleagueDataContractAttribute.ImportUrl">
+            <summary>
+            The service url used to generate, or "import", the data contract
+            from a Colleague transaction.
+            </summary>
+            <value>
+            The import URL.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.ColleagueDataContractAttribute.User">
+            <summary>
+            The user who generated the data contract.
+            </summary>
+            <value>
+            The user.
+            </value>
+        </member>
+        <member name="T:Ellucian.Dmi.Runtime.EntityDataContractAttribute">
+            <summary>
+            Data contract attribute that stores information about a Colleague Entity.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.EntityDataContractAttribute.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Dmi.Runtime.EntityDataContractAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.EntityDataContractAttribute.EntityName">
+            <summary>
+            Gets or sets the name of the entity.
+            </summary>
+            <value>
+            The name of the entity.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.EntityDataContractAttribute.EntityType">
+            <summary>
+            Gets or sets the type of the entity (physical, logical, permanent key, or blob).
+            </summary>
+            <value>
+            The type of the entity.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.EntityDataContractAttribute.EntityApplication">
+            <summary>
+            Gets or sets the entity's application.
+            </summary>
+            <value>
+            The entity application.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.EntityDataContractAttribute.DataContractVersion">
+            <summary>
+            Gets or sets the data contract version.
+            </summary>
+            <value>
+            The data contract version.
+            </value>
+        </member>
+        <member name="T:Ellucian.Dmi.Runtime.SctrqDataContractAttribute">
+            <summary>
+            Data contract attribute that stores information about a Colleague Transaction.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.SctrqDataContractAttribute.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Dmi.Runtime.SctrqDataContractAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.SctrqDataContractAttribute.Application">
+            <summary>
+            Gets or sets the application this transaction belongs to.
+            </summary>
+            <value>
+            The application.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.SctrqDataContractAttribute.DataContractVersion">
+            <summary>
+            Gets or sets the data contract version.
+            </summary>
+            <value>
+            The data contract version.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.SctrqDataContractAttribute.PublicTransaction">
+            <summary>
+            Gets or sets a value indicating whether the transaction is public/anonymous.
+            </summary>
+            <value>
+              <c>true</c> if public/anonymous; otherwise, <c>false</c> or not present.
+            </value>
+        </member>
+        <member name="T:Ellucian.Dmi.Runtime.Exceptions.ColleagueDataException">
+            <summary>
+            Exception for cases when we have issues converting Colleauge data from a DMI response string
+            to a .NET object.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Exceptions.ColleagueDataException.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Dmi.Runtime.Exceptions.ColleagueDataException"/> class.
+            </summary>
+            <param name="message">The error message from the conversion method that may be exposed to the client</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Exceptions.ColleagueDataException.#ctor(System.String,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Dmi.Runtime.Exceptions.ColleagueDataException"/> class.
+            </summary>
+            <param name="message">The error message from the conversion method that may be exposed to the client</param>
+            <param name="value">The value that produced the error</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Exceptions.ColleagueDataException.#ctor(System.String,System.String,System.Exception)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Dmi.Runtime.Exceptions.ColleagueDataException"/> class.
+            </summary>
+            <param name="message">The error message from the conversion method</param>
+            <param name="value">The value that produced the error</param>
+            <param name="innerException">The exception from the conversion method</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Exceptions.ColleagueDataException.#ctor(System.Runtime.Serialization.SerializationInfo,System.Runtime.Serialization.StreamingContext)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Dmi.Runtime.Exceptions.ColleagueDataException"/> class.
+            </summary>
+            <param name="info">The <see cref="T:System.Runtime.Serialization.SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+            <param name="context">The <see cref="T:System.Runtime.Serialization.StreamingContext"/> that contains contextual information about the source or destination.</param>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.Exceptions.ColleagueDataException.DataContractName">
+            <summary>
+            Gets or sets the name of the data contract.
+            </summary>
+            <value>
+            The name of the data contract.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.Exceptions.ColleagueDataException.DataMemberName">
+            <summary>
+            Gets or sets the name of the data member.
+            </summary>
+            <value>
+            The name of the data member.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.Exceptions.ColleagueDataException.AppServerName">
+            <summary>
+            Gets or sets the name of the app server.
+            </summary>
+            <value>
+            The name of the app server.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.Exceptions.ColleagueDataException.InternalMessage">
+            <summary>
+            Gets or sets the internal message.
+            </summary>
+            <value>
+            The internal message.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.Exceptions.ColleagueDataException.Value">
+            <summary>
+            Gets the value.
+            </summary>
+            <value>
+            The value.
+            </value>
+        </member>
+        <member name="T:Ellucian.Dmi.Runtime.ColleagueDataMemberAttribute">
+            <summary>
+            Superclass for data contract member attributes to hold metadata about properties which are
+            common to most Envision-based data elements.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.ColleagueDataMemberAttribute.AppServerName">
+            <summary>
+            This is the name of this data member as used in Colleague AppServer/Envision-based Processes.
+            Typically, this name uses periods as a delimiter in variable names and are all upper case.
+            .Net programs typically use mixed case and cannot use periods as delimiters.
+            Use this attribute to declare the variable name of this value when used in an Envision Process.
+            Use the generic "Name" attribute to reference the name using non-envision constraints such as
+            in XML or .Net when the name on the wire is different from the property's actual name.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.ColleagueDataMemberAttribute.UseEnvisionBooleanConventions">
+            <summary>
+            Indicate the boolean conversion method using one of these enumerators: 
+            <list type="bullet">
+            <item>
+            YesNo - Indicates whether boolean data should be represented as "Y" for true
+            and "N" (or "") for false (actually any non "Y" is false), or
+            </item><item>
+            OneZero - boolean is represented as 1 for true and 0 (or null) for false, or
+            </item><item>
+            TrueFalse - boolean is respresented by the strings "True" and "False".
+            </item>
+            </list>
+            This attribute is only meaningful for boolean properties; other datatypes ignore this attribute.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.ColleagueDataMemberAttribute.UseEnvisionInternalFormat">
+            <summary>
+            <para>
+            When set to true, this UseEnvisionInternalFormat means that this property is sent/received via Dmi
+            in Pick/Unidata/Envision "internal" format.
+            For dates, this is an integer where Dec. 31, 1967 is zero and dates prior are negative integers 
+            and dates after are positive integers counting from that date.
+            For real numbers, this is an integer where the real number is taken to that power which creates an
+            integer based upon its declared scale and precision.
+            This attribute is only meaningful for single, double, decimal and DateTime .Net types; other types ignore this attribute.
+            </para>
+            <para>
+            When UseEnvisionInternalFormat is true, add the System.ComponentModel.DataAnnotations.DisplayFormat attribute's
+            DataFormatString property to express the nature of the internal format using standard .Net format directives
+            like {0:d} and {0:MM/dd/yyyy} for a date or {0:t} and {0:hh:mm:ss} for time or {0:#####.##} and {0:C} for indicating numeric
+            scale or precision. 
+            </para>
+            </summary>
+        </member>
+        <member name="T:Ellucian.Dmi.Runtime.DmiDataMemberAttribute">
+            <summary>
+            Represent data contract member attributes to hold metadata about properties which are
+            specific to DMI.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Dmi.Runtime.IRuntimeAttribute`1">
+            <summary>
+            Interface to describe the minimum attributes of an Envision runtime variable
+            </summary>
+        </member>
+        <member name="T:Ellucian.Dmi.Runtime.RuntimeAttribute`1">
+            <summary>
+            Represents a runtime data contract attribute.
+            </summary>
+            <typeparam name="T"></typeparam>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.RuntimeAttribute`1.Equals(System.Object)">
+            <summary>
+            Determines whether the specified <see cref="T:System.Object"/> is equal to this instance.
+            </summary>
+            <param name="val">The <see cref="T:System.Object"/> to compare with this instance.</param>
+            <returns>
+              <c>true</c> if the specified <see cref="T:System.Object"/> is equal to this instance; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.RuntimeAttribute`1.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Dmi.Runtime.RuntimeAttribute`1"/> class.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.RuntimeAttribute`1.#ctor(`0)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Dmi.Runtime.RuntimeAttribute`1"/> class.
+            </summary>
+            <param name="val">The val.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.RuntimeAttribute`1.#ctor(`0,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Dmi.Runtime.RuntimeAttribute`1"/> class.
+            </summary>
+            <param name="val">The val.</param>
+            <param name="url">The URL.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.RuntimeAttribute`1.ToString">
+            <summary>
+            Returns a <see cref="T:System.String"/> that represents this instance.
+            </summary>
+            <returns>
+            A <see cref="T:System.String"/> that represents this instance.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.RuntimeAttribute`1.GetHashCode">
+            <summary>
+            Returns a hash code for this instance.
+            </summary>
+            <returns>
+            A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+            </returns>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.RuntimeAttribute`1.Value">
+            <summary>
+            Gets or sets the value.
+            </summary>
+            <value>
+            The value.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.RuntimeAttribute`1.Url">
+            <summary>
+            Gets or sets the URL.
+            </summary>
+            <value>
+            The URL.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.RuntimeAttribute`1.HasValue">
+            <summary>
+            Gets a value indicating whether this instance has value.
+            </summary>
+            <value>
+              <c>true</c> if this instance has value; otherwise, <c>false</c>.
+            </value>
+        </member>
+        <member name="T:Ellucian.Dmi.Runtime.SctrqDataMemberAttribute">
+            <summary>
+            Represents a data contract member attribute for a Colleague Transaction
+            data contract.   
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.SctrqDataMemberAttribute.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Dmi.Runtime.SctrqDataMemberAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.SctrqDataMemberAttribute.InBoundData">
+            <summary>
+            This is an optional attribute that controls whether or not a DataMember will be
+            deserialized from the DataContract class into the SCTRQ transaction subset.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.SctrqDataMemberAttribute.OutBoundData">
+            <summary>
+            This is an optional attribute that controls whether or not a DataMember will be
+            serialized into the DataContract class from the SCTRQ transaction subset.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Dmi.Runtime.Association">
+            <summary>
+            Represents a list of objects as an association suitable for transformation to and
+            from Envision/Pick/Dmi style delimited lists.
+            The association is managed internally as a list of strongly typed objects having properties.
+            Each object is a "row", and each object property is a "column".
+            Multivalued lists can be added or extracted to properties via methods which manage
+            these via reflection.
+            Each association supports only one type.
+            Association implements IList(T), so it can be used wherever a generic IList can be used
+            </summary>
+        </member>
+        <member name="T:Ellucian.Dmi.Runtime.ReflectableString">
+            <summary>
+            Represents the common part of an association or a multivalued list.
+            Contains static methods for converting strings to primative types and vice versa.
+            There are also static methods which consider lists and nested lists of primative types
+            which, when represented as a single pick string become delimited dynamic arrays according to pick conventions.
+            A Reflectable string can only be created with a declared .Net type for what it represents.
+            Associations use this to declare the complex object it represents. A list would represent the primative type
+            it contains.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.#ctor(System.Type,System.Char)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Dmi.Runtime.ReflectableString"/> class.
+            </summary>
+            <param name="contentType">Type of the content.</param>
+            <param name="highestListDelimiter">The highest list delimiter.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.ConvertStringToPropertyType(System.Reflection.PropertyInfo,System.String)">
+            <summary>
+            Converts a pick string into a provided .Net type on behalf of a property whose reflected info is provided.
+            The Property is represented by its reflection PropertyInfo object.
+            This signature is meant for single-valued fields and as multivalued lists of primative types and
+            nested lists of primative types when the property indicates that lists or nested lists are used.
+            <para>
+            When lists are used, the generic should be a List(T) for multivalues, a List(List(T)) for multivalued
+            lists where subvalues are implied present or a List(List(List(T))) where text mark delimiters are expected/>
+            when the property is a List.
+            Only primative types and lists of primative types are acceptable in for this routine.
+            Regular classes other than IList's will fail.
+            Use the Association class for representing lists of complex objects (non-primative types: associations, in Pick terminology)
+            </para>
+            </summary>
+            <param name="pi">The property info for the property (List or primative type) being converted</param>
+            <param name="value">The internal or external representation of the type to be converted</param>
+            <returns>The converted object</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.ConvertStringToPropertyType(System.Reflection.PropertyInfo,System.String,System.String)">
+            <summary>
+            Converts a pick string into a provided .Net type on behalf of a property whose reflected info is provided.
+            </summary>
+            <param name="pi">The pi.</param>
+            <param name="value">The value.</param>
+            <param name="url">The URL.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.ConvertStringToPropertyType(System.Reflection.PropertyInfo,Ellucian.Dmi.Runtime.DataContractMemberCharacteristics,System.String,System.Type[],Ellucian.Dmi.Runtime.ReflectableString.ObjectActivator,System.Boolean)">
+            <summary>
+            Converts a pick string into a provided .Net type using cached property attributes.
+            </summary>
+            <param name="pi">The pi.</param>
+            <param name="propertyCharacteristics">The property characteristics.</param>
+            <param name="value">The value.</param>
+            <param name="cachedGenericArgs">The cached generic args.</param>
+            <param name="oa">The oa.</param>
+            <param name="replaceTextVMs">if set to true, text/comment fields will replace double value marks with a new line characters, and will replace single value marks with a space.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.ConvertStringToPropertyType(System.Reflection.PropertyInfo,Ellucian.Dmi.Runtime.DataContractMemberCharacteristics,System.String,System.String,System.Type[],Ellucian.Dmi.Runtime.ReflectableString.ObjectActivator)">
+            <summary>
+            Converts a pick string into a provided .Net type using cached property attributes.
+            </summary>
+            <param name="pi">The pi.</param>
+            <param name="propertyCharacteristics">The property characteristics.</param>
+            <param name="value">The value.</param>
+            <param name="url">The URL.</param>
+            <param name="cachedGenericArgs">The cached generic args.</param>
+            <param name="oa">The oa.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.GetStringValueToConvert(System.Reflection.PropertyInfo,System.String)">
+            <summary>
+            This method will check the property info for the data member and if it is annotated to use the
+            PICK internal representation, the real world value will be converted to its PICK internal string value; 
+            otherwise the string of the real world value will be returned
+            </summary>
+            <param name="pi">The property info for the data member value being converted</param>
+            <param name="value">The internal or external representation of the data to be converted</param>
+            <returns>The string value to be converted to the specified property type</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.ConvertPickInternalString(System.Reflection.PropertyInfo,System.String)">
+            <summary>
+            This method will return the real world value of a PICK internal value
+            converted using the format string found in the property info of the
+            data member property
+            </summary>
+            <param name="pi">The property info for the data member value being converted</param>
+            <param name="value">The PICK internal value to be converted</param>
+            <returns>The real world value of the PICK internal data</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.ConvertStringToObject(Ellucian.Dmi.Runtime.DataContractMemberCharacteristics,System.String,System.Type,System.Boolean)">
+            <summary>
+            Convert a string into a target type using cached properties.
+            If it is a Pick internal string, it will be converted to external first.
+            </summary>
+            <param name="propCharacteristics">cached information of this property</param>
+            <param name="value">value to be converted</param>
+            <param name="targetType">type of the object to be returned</param>
+            <param name="replaceTextVMs">if set to true, text/comment fields will replace double value marks with a new line characters, and will replace single value marks with a space.</param>
+            <returns>
+            object converted to target type
+            </returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.ConvertPickInternalDate(System.String)">
+            <summary>
+            This method will return the real world string value of a PICK internal date
+            </summary>
+            <param name="value">The PICK internal value of the date to be converted</param>
+            <returns>The real world value of the PICK internal date, as a string</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.ConvertPickInternalDateToObject(System.String)">
+            <summary>
+            This method will return the real world DateTime object of a PICK internal date
+            </summary>
+            <param name="value"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.ConvertPickInternalTime(System.String)">
+            <summary>
+            This method will return the real world string value of a PICK internal time
+            </summary>
+            <param name="value">The PICK internal value of the time to be converted</param>
+            <returns>The real world string value of the PICK internal time, as a string</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.ConvertPickInternalTimeToObject(System.String)">
+            <summary>
+            This method will return the real world DateTime object of a PICK internal time
+            </summary>
+            <param name="value"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.ConvertPickInternalNumberToObject(System.String,System.String,System.Type)">
+            <summary>
+            This method will return the real world number object of a PICK internal number
+            as indicated by its format string
+            </summary>
+            <param name="value">The value.</param>
+            <param name="fmt">The format string.</param>
+            <param name="targetType">Type of the target.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.ConvertPickInternalNumber(System.String,System.String)">
+            <summary>
+            This method will return the real world string value of a PICK internal number
+            as indicated by its format string
+            </summary>
+            <param name="value">The PICK internal value of the number to be converted</param>
+            <param name="fmt">The format of the number being converted</param>
+            <returns>The real world string value of the PICK internal number</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.getNumericPrecision(System.String)">
+            <summary>
+            Returns the decimal precision of the PICK number format string
+            </summary>
+            <param name="fmt">The format of the number being converted</param>
+            <returns>The number of digits to the right of the decimal point</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.ConvertStringToType(System.Type,System.String,System.Char,System.Boolean,System.Reflection.PropertyInfo)">
+            <summary>
+            Converts a single or multivalued valued (or nested lists with SVM or TM) string
+            into an object of of the provided type.
+            If the provided type is a generic List typed to a primative type (like a list
+            of strings or integers) then a list of that type will be returned.
+            If the provided generic type is itself a generic list, this method
+            will recurse to the text level to provided dimensions up to the Pick text mark (3 dimensions).
+            It recurses until a non-List is found.  The data in the non-list must be a primative type.
+            </summary>
+            <param name="dataType">Type of the data.</param>
+            <param name="value">The external representation of the type to be converted</param>
+            <param name="delimiter">one of DmiString.VM,SM or TM</param>
+            <param name="doConvertPickFormat">if set to <c>true</c> [do convert pick format].</param>
+            <param name="pi">The property info for the property being converted</param>
+            <returns>
+            the converted object
+            </returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.ConvertStringToType(System.Type,System.String,System.Char,System.Reflection.PropertyInfo,Ellucian.Dmi.Runtime.DataContractMemberCharacteristics,System.Type[],Ellucian.Dmi.Runtime.ReflectableString.ObjectActivator,System.Boolean)">
+            <summary>
+            Converts a single or multivalued valued (or nested lists with SVM or TM) string
+            into an object of of the provided type.
+            If the provided type is a generic List typed to a primative type (like a list
+            of strings or integers) then a list of that type will be returned.
+            If the provided generic type is itself a generic list, this method
+            will recurse to the text level to provided dimensions up to the Pick text mark (3 dimensions).
+            It recurses until a non-List is found.  The data in the non-list must be a primative type.
+            This version requires a cache of the property's information for performance.
+            </summary>
+            <param name="propertyType">Type of the property.</param>
+            <param name="value">The value.</param>
+            <param name="delimiter">The delimiter.</param>
+            <param name="pi">The pi.</param>
+            <param name="propertyCharacteristics">The cache</param>
+            <param name="cachedGenericArgs">The cached generic args.</param>
+            <param name="oa">The oa.</param>
+            <param name="replaceTextVMs">if set to true, text/comment fields will replace double value marks with a new line characters, and will replace single value marks with a space.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.IsGenericList(System.Type)">
+            <summary>
+            Indicates whether the supplied .Net type is a generic list or not.
+            </summary>
+            <param name="type">the type to be tested</param>
+            <returns>true if the type is an implementation of a generic list; false if it is anything else</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.IsGenericList(Ellucian.Dmi.Runtime.DataContractMemberCharacteristics)">
+            <summary>
+            Indicates whether the supplied .Net type is a generic list or not,
+            using the cached property characterisitcs
+            </summary>
+            <param name="propertyCharacteristics">cached info on this property</param>
+            <returns>true if the type is an implementation of a generic list; false if it is anything else</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.IsGenericNullable(System.Type)">
+            <summary>
+            Indicates whether the supplied .Net type is nullable or not.
+            </summary>
+            <param name="type">the type to be tested</param>
+            <returns>true if the type is nullable, false otherwise</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.ResolvePrimativeType(System.Type,System.String)">
+            <summary>
+            Converts a single valued string (no Pick delimiters) into an object of the provided data type.
+            The provided data type must be a primative type or a nullable primitive type, or no conversion is attempted.
+            The string must contain a valid external representation of the provided type
+            or null will be returned (the exception from System.Convert is caught).
+            The standard .NET System.Convert library is used. Additionally, the Envision
+            convention for booleans also are honored.
+            All unsigned types (UInts and Byte (ubyte)) are presumed to be in hex.
+            All other numerics are base 10.
+            </summary>
+            <param name="dataType">Any primative type supported by System.Convert</param>
+            <param name="value">A string containing a valid external representation of the dataType</param>
+            <returns>a converted object</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.ResolveRuntimeAttributeType(System.Type,System.String,System.String)">
+            <summary>
+            Converts a single valued string (no Pick delimiters) into an object of the provided data type.
+            </summary>
+            <param name="dataType">Type of the data.</param>
+            <param name="value">The value.</param>
+            <param name="url">The URL.</param>
+            <returns></returns>
+            <exception cref="T:Ellucian.Dmi.Runtime.Exceptions.ColleagueDataException"></exception>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.ConvertPropertyToString(System.Reflection.PropertyInfo,System.Object,System.Boolean)">
+            <summary>
+            Extracts a property from the provided object and turns its .NET data type into an external string
+            representation of that type.
+            If useFormatting is true, then that property's formatting rules will be applied to the output of the
+            primative types in the property's current value.
+            Formatting rules are taken from attributes applied to the provided property such as System.ComponentModel.DataAnnotations,
+            IFormattable objects and other datatel/dmi formatting attributes.
+            Generic lists (included nested generic lists) are allowed and will be properly delimited starting with
+            the provided highest level delimiter.
+            This convenience method defaults the highest level delimiter for lists to a VM (253).
+            </summary>
+            <param name="pi">The property spec describing the property to use from the provided object</param>
+            <param name="o">the object containing the property to be externalized</param>
+            <param name="useFormatting">true to use formatting via a format string if present; false to output in raw ToString form</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.ConvertPropertyToString(System.Reflection.PropertyInfo,System.Object,System.Boolean,System.Char)">
+            <summary>
+            Extracts a property from the provided object and turns its .NET data type into an external string
+            representation of that type.
+            If useFormatting is true, then that property's formatting rules will be applied to the output of the
+            primative types in the property's current value.
+            Formatting rules are taken from attributes applied to the provided property such as System.ComponentModel.DataAnnotations,
+            IFormattable objects and other datatel/dmi formatting attributes.
+            Generic lists (included nested generic lists) are allowed and will be properly delimited starting with
+            the provided highest level delimiter.
+            </summary>
+            <param name="pi">The property spec describing the property to use from the provided object</param>
+            <param name="o">the object containing the property to be externalized</param>
+            <param name="useFormatting">true to use formatting via a format string if present; false to output in raw ToString form</param>
+            <param name="delimiter">the delimiter to use at the highest level string; the next lower level will be one less than this delimiter, etc</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.ConvertTypeToString(System.Object,System.String,System.Boolean,Ellucian.Dmi.Runtime.EnvisionBooleanTypesEnum,System.Char)">
+            <summary>
+            Returns a string with all primatives formatted according to provided parameters and, if the object
+            is a generic list (possibly nested) then multiple primatives are placed within delimited strings
+            according to pick/unidata/envision conventions.
+            This method calls itself recursively to resolve descending nesting delimiters when it encounters a
+            generic list or nested generic lists.
+            </summary>
+            <param name="o">the object (primative type or generic list) to convert into a string</param>
+            <param name="formatString">the format string to use during formatting, if applicable. Null means not to format it</param>
+            <param name="useInternalFormat">true means data type must be returned as an integer for date, time and real numbers; false means normal external format</param>
+            <param name="booleanFormat">Only used for boolean types: the Y/N, 1/0, true/false format</param>
+            <param name="delimiter">the delimiter to use in constructing nested strings</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.FormatPrimativeType(System.Object,System.String,System.Boolean,Ellucian.Dmi.Runtime.EnvisionBooleanTypesEnum)">
+            <summary>
+            Provides the external format of the provided object as a string.
+            Various formatting rules are applied base upon the presence of a format string, whether to use internal format
+            or various boolean external formats.
+            </summary>
+            <param name="o">the primative type object to be expressed in external format</param>
+            <param name="formatString">When non-null/empty, is used by the string.Format method to product the external format</param>
+            <param name="useInternalFormat">When true, dates and real numbers will be output as Pick integers (overrides formatString); ignored for other types</param>
+            <param name="envisionBooleanStyle">For booleans, determines the external format; ignored for non-boolean types</param>
+            <returns>the formatted external format of the provided object</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.FormatDatatelBoolean(System.Object,Ellucian.Dmi.Runtime.EnvisionBooleanTypesEnum,System.String)">
+            <summary>
+            Converts a boolean or Nullable boolean into either Y/N, 1/0 or empty string (if 3 state)
+            </summary>
+            <param name="data">an boolean or nullable boolean object</param>
+            <param name="booleanStyle">a member of the EnvisionBooleanTypesEnum enumeration</param>
+            <returns>a string honoring the convention implied in booleanStyle; if data isn't boolean, null is returned</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.GetEnvisionBooleanFormat(System.Reflection.PropertyInfo)">
+            <summary>
+            Indicates whether the "UseEnvisionBooleanConventions" property for this data member
+            has been set (in ColleagueDataMemberAttribute or any subclass derived from it) to true.
+            </summary>
+            <param name="pi">the property info for the property in question</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.GetFormatString(System.Reflection.PropertyInfo,System.Object)">
+            <summary>
+            Extracts the format string from either an IFormatable implementation or from
+            System.ComponentModel.DataAnnotations.DisplayFormat attributes.
+            </summary>
+            <param name="pi">The PropertyInfo object which describes the provided object (for .Net formats)</param>
+            <param name="o">the object to be formatted (for IFormattable)</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.GetFormatString(Ellucian.Dmi.Runtime.DataContractMemberCharacteristics)">
+            <summary>
+            Extracts the format string from either an IFormatable implementation or from
+            System.ComponentModel.DataAnnotations.DisplayFormat attributes. This version requires
+            the cached info of the property.
+            </summary>
+            <param name="propCharacteristics">cached info on the property</param>
+            <returns>The property's format string</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.PrepareFormatString(System.String)">
+            <summary>
+            Prepare the format string which might lack the {"0: convention needed by the string.Format method we use.
+            Example: in - "N2" ; out - "{0:N2}"
+            </summary>
+            <param name="fmt">.net format string</param>
+            <returns>extracted format string</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.UsesInternalFormat(System.Reflection.PropertyInfo)">
+            <summary>
+            Indicates whether a property/type has an attribute indicating that its data will
+            arrive and should leave using Pick/Unidata/Envision internal format.
+            This attribute is only meaningful for real numbers, dates and times.
+            </summary>
+            <param name="pi"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.IsNullPrimative(System.Object)">
+            <summary>
+            Determines whether a runtime attribute is null.
+            </summary>
+            <param name="primative">The primative.</param>
+            <returns>
+              <c>true</c> if runtime attribute is null; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.ScaleRealNumber(System.Object,System.String)">
+            <summary>
+            Analyzes a format string and multiplies number (which must be real or decimal) to make
+            it an internal form Pick/Unidata/Envision equivalent.
+            </summary>
+            <param name="number"></param>
+            <param name="formatString"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.IsTimeFormat(System.String)">
+            <summary>
+            Indicates whether a format string represents a time value exclusively.
+            .Net time formats like "t" or "mm:ss" or "HH:mm:ss tt" are expected.
+            </summary>
+            <param name="formatString"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.IsDateFormat(System.String)">
+            <summary>
+            Indicates whether a format string represents a date value exclusively.
+            .Net date formats like "d" or "MM/dd/yy" or "yyyy-MM-dd" are expected.
+            </summary>
+            <param name="formatString"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.IsNumberFormat(System.String)">
+            <summary>
+            Indicates whether a format string represents a numeric value exclusively.
+            .Net numeric formats like "0" or "#" or "N0" or "N1" or ... "N9" or "C" or "P" are expected.
+            </summary>
+            <param name="formatString"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.FindFormatType(System.String)">
+            <summary>
+            Extracts the actual format string from the string.Format-ready string.
+            </summary>
+            <param name="formatString">the real format string</param>
+            <returns>the same string stripped of any "{0:" or "}"</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.CreateNewObjectWithProperty(System.Reflection.PropertyInfo,System.String,System.String)">
+            <summary>
+            Creates an instance of a given type and then populates a designated property in that object with a provided value.
+            Often used by an Association object to add a new row to its list of objects.
+            </summary>
+            <param name="pi">the name of the parameter to initialize</param>
+            <param name="value">the value to place in the provided property if it exists</param>
+            <param name="url">The URL.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.CreateNewObjectWithProperty(System.Reflection.PropertyInfo,System.String)">
+            <summary>
+            Creates an instance of a given type and then populates a designated property in that object with a provided value.
+            Often used by an Association object to add a new row to its list of objects.
+            </summary>
+            <param name="pi">the name of the parameter to initialize</param>
+            <param name="value">the value to place in the provided property if it exists</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.IsProperType(System.Object)">
+            <summary>
+            Indicates whether an object is the same type as this ReflectableString's type.
+            ReflectableString subclasses only accept types of the same type as it was initialized with when created.
+            </summary>
+            <param name="o">the object to test for type compatability</param>
+            <returns>true if the object's type is the same as this ReflectableString's type</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.ReflectableString.GetActivator(System.Reflection.ConstructorInfo)">
+            <summary>
+            Returns a compiled lambda expression for the invoke() method of the 
+            specified ConstructorInfo object. This improves performance if cached.
+            </summary>
+            <param name="ctor"></param>
+            <returns></returns>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.ReflectableString.ContentType">
+            <summary>
+            Gets the type of the content.
+            </summary>
+            <value>
+            The type of the content.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.ReflectableString.Delimiter">
+            <summary>
+            The topmost delimiter in use by to separate rows in this Association.
+            Usually this is a value mark (253), but it could be lower to product nested associations.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Association.#ctor(System.Type)">
+            <summary>
+            Creates a new Association with the default conversion delimiter of VM.
+            </summary>
+            <param name="contentType">the complex object type to be stored in this Association</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Association.#ctor(System.Type,System.Char)">
+            <summary>
+            Creates a new Association with the provided delimiter as the separator between objects.
+            </summary>
+            <param name="contentType">the complex object type to be stored in this Association</param>
+            <param name="arrayDelimiter">Usually VM, but could be FM, SVM, or ',' if circumstances require</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Association.#ctor(System.Type,System.Collections.ICollection)">
+            <summary>
+            Builds an association out of the objects in the provided set.
+            Only objects which are also of the same type as the provided content type are added.
+            This constructor is typically used during serialization of objects into VM delimited strings.
+            </summary>
+            <param name="contentType">the complex object type to be stored in this Association</param>
+            <param name="set">a collection of objects of the same type as provided in the contentType argument</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Association.#ctor(System.Type,System.String[],System.String[])">
+            <summary>
+            Builds an association out of a paired array of property types and value marked strings of initial values.
+            Only property names which are valid property names are honored; unmappable property names are ignored.
+            This constructor is typically used in deserialization 
+            </summary>
+            <param name="contentType"></param>
+            <param name="propertyNames"></param>
+            <param name="mvProperties"></param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Association.Add(System.Object)">
+            <summary>
+            Adds a new row of the type associated with this association at creation to the end of any
+            previously existing rows.
+            If the provided object is not of the type associated with this association, an argument exception is thrown.
+            </summary>
+            <param name="o"></param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Association.AddRange(System.Collections.ICollection)">
+            <summary>
+            Appends all of the objects in the provided set to the end of the contents of this association.
+            If any member of the provided set is not of the type associated with this association,
+            an argument exception is thrown and no more rows are added.
+            
+            </summary>
+            <param name="set"></param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Association.Clear">
+            <summary>
+            Removes all objects from the Association making this an empty Association object.
+            Column information remains since that metadata is held by the declared content type.
+            Supports the IList interface.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Association.Contains(System.Object)">
+            <summary>
+            Indicates whether this Association contains the provided object in one of its rows.
+            Object must have the same type as the declared content type or the results are meaningless (always false).
+            Supports the IList interface.
+            </summary>
+            <param name="o">the object being sought in the Association</param>
+            <returns>true if the object exists as a row in the association; false if not</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Association.CopyTo(System.Object[],System.Int32)">
+            <summary>
+            Copies the array to the association at the array Index, unless the association 
+            content is null.
+            </summary>
+            <param name="array">The array.</param>
+            <param name="arrayIndex">Index of the array.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Association.GetEnumerator">
+            <summary>
+            Provides a generic Enumerator which iterates over the rows of this Association.
+            All objects returned are of the type declared when the Association was created.
+            Supports the IList interface.
+            </summary>
+            <returns>An enumerator</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Association.System#Collections#IEnumerable#GetEnumerator">
+            <summary>
+            Provides a standard Enumerator which iterates over the rows of this Association.
+            All objects returned are of the type declared when the Association was created.
+            Supports the IList interface.
+            </summary>
+            <returns>An enumerator</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Association.GetPropertyAsArray(System.String,System.Boolean)">
+            <summary>
+            Gets the property as array.
+            </summary>
+            <param name="propertyName">the property name of the column to return</param>
+            <param name="useFormatting">If true, the external form will use formatting rules from the property; if false, these are ignored</param>
+            <returns>
+            a string array containing all of the rows for the column described by the provided property
+            </returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Association.GetMultivaluedColumn(System.String,System.Boolean)">
+            <summary>
+            Gets the multivalued column.
+            </summary>
+            <param name="propertyName">the property name of the column to return</param>
+            <param name="useFormatting">if true, the external form will use formatting rules from the property; if false, these are ignored</param>
+            <returns>
+            a value mark delimited string containing values form each row for a given column
+            </returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Association.GetPropertiesAsMultivaluedFields(System.String[],System.Collections.Generic.IList{System.String})">
+            <summary>
+            Builds a single string containing the values from all of the rows for all of the columns
+            decribed via the provided properties which correspond to this Association column set.
+            The properties are separated by field marks and the column rows are separated by value marks.
+            Any columns which are lists themselves begin delimiting themselves with subvalue marks on down for any nested lists.
+            The fields are returned in the order of the provided names.
+            Only those formatPropertyNames which are also in the provided propertyNames argument receive external formatting.
+            Any fields not in that sublist are realized via the object's ToString() method.
+            </summary>
+            <param name="propertyNames">the property names of the column to return</param>
+            <param name="formatPropertyNames">the names of those properties within propertyNames to which formatting rules should be applied</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Association.IndexOf(System.Object)">
+            <summary>
+            Indicates the row (0-based) in which the provided object is located.
+            The object must be of the same type as the content type provided when this Association was created
+            or else -1 is returned.
+            Supporting the IList interface.
+            </summary>
+            <param name="o">the object to locate</param>
+            <returns>the position in the association where this object found or -1 if the object is not in the association</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Association.Insert(System.Int32,System.Object)">
+            <summary>
+            Inserts the object into the specified position.
+            </summary>
+            <param name="pos">The position.</param>
+            <param name="o">The object.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Association.SetPropertyFromMultivalues(System.String,System.String)">
+            <summary>
+            Populates the provided property (column) in the association with the parsed delimited contents of the provided string
+            Parses the provided mvString into cell entries for the column identified by the provided propertyName.
+            </summary>
+            <param name="propertyName"></param>
+            <param name="mvString"></param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Association.SetPropertyFromMultivalues(System.String,System.String,System.String)">
+            <summary>
+            Populates the provided property (column) in the association with the parsed delimited contents of the provided string
+            Parses the provided mvString into cell entries for the column identified by the provided propertyName.
+            </summary>
+            <param name="propertyName"></param>
+            <param name="mvString"></param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Association.SetPropertyFromMultivalues(System.String,System.String[])">
+            <summary>
+            Transfers the provided array of values into the specified property (column)
+            of the associated objects. If there are more values than objects, 
+            new objects will be created with their property populated with the values.
+            </summary>
+            <param name="propertyName"></param>
+            <param name="values"></param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Association.SetPropertyFromMultivalues(System.String,System.String[],System.String[])">
+            <summary>
+            Transfers the provided array of values into the specified property (column)
+            of the associated objects. If there are more values than objects,
+            new objects will be created with their property populated with the values.
+            </summary>
+            <param name="propertyName">Name of the property.</param>
+            <param name="values">The values.</param>
+            <param name="urls">The URLs.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Association.ToString">
+            <summary>
+            Returns all properties with string formatting turned on presented as a single dynamic array.
+            </summary>
+            <returns>a string containting this Association as a delimited record</returns>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.Association.Content">
+            <summary>
+            Returns the content of this association as a list of objects of the type provided when this
+            association was created.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.Association.Count">
+            <summary>
+            Indicates how many rows are in this association.
+            Supports the IList interface.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.Association.IsReadOnly">
+            <summary>
+            Gets a value indicating whether the <see cref="T:System.Collections.Generic.ICollection`1"></see> is read-only.
+            </summary>
+            <returns>true if the <see cref="T:System.Collections.Generic.ICollection`1"></see> is read-only; otherwise, false.</returns>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.Association.PropertyNames">
+            <summary>
+            Provides the names of all properties (columns) defined to this association as an array of string values.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.Association.Item(System.Int32)">
+            <summary>
+            Gets or sets the element at the specified index.
+            </summary>
+            <param name="index">The index.</param>
+            <returns></returns>
+        </member>
+        <member name="T:Ellucian.Dmi.Runtime.DmiException">
+            <summary>
+            Provides the ability to transform error messages provided via DMI
+            to be encapsulated in a .NET exception.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiException._MergeMessageComponents(System.String,System.String,System.String)">
+            <summary>
+            Formats the three fields given in DMI messages into a single string.
+            </summary>
+            <param name="category">The DMI Category of the message (like (USER, SET, TRANSACT)</param>
+            <param name="code">A five digit number (usually) but could contain letters</param>
+            <param name="message">A description of the condition causing the error condition</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiException.#ctor">
+            <summary>
+            Default constructor. Create a DmiException with message "Unspecified DMI Exception".
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiException.#ctor(System.String)">
+            <summary>
+            Creates a simple exception from the provided message.
+            </summary>
+            <param name="message">a description of the cause of this exception</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiException.#ctor(System.String,System.Exception)">
+            <summary>
+            Wraps a previously thrown exception into a new DmiException along with the
+            provided message.
+            </summary>
+            <param name="message">a description of the cause of this exception</param>
+            <param name="e">the underlying exception to wrap in this exception</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiException.#ctor(System.String,System.String,System.String)">
+            <summary>
+            Creates an exception from a DMI error message (SERRS) including the three fields provided by that subset:
+            the category, code and message.
+            This transforms a Dmi error message into a .Net Exception.
+            </summary>
+            <param name="category">a DMI error code category as defined in DMI transaction specs</param>
+            <param name="code">an alpha-numeric DMI code as defined in DMI transaction specs</param>
+            <param name="message">a description of the cause of this exception</param>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DmiException.Category">
+            <summary>
+            The error message category of a DMI line error as defined in the DMI specs.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DmiException.Code">
+            <summary>
+            The alpha-numeric error code as defined in the DMI specs.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Dmi.Runtime.DmiMessage">
+            <summary>
+            Represents the generic "non-fatal" (error/warning) message response.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Runtime.DmiMessage.DMI_SPERRS_SUBSET_TYPE">
+            <summary>
+            The SPERRS subset name.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Runtime.DmiMessage.DMI_SWRNS_SUBSET_TYPE">
+            <summary>
+            The SWRNS subset name.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Runtime.DmiMessage.DMI_SSECMS_SUBSET_TYPE">
+            <summary>
+            The SSECMS subset name.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiMessage.#ctor">
+            <summary>
+            Default Constructor
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiMessage.#ctor(System.String)">
+            <summary>
+            Default Constructor when the message subset type is known.
+            </summary>
+            <param name="subsetType">The message subset type.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiMessage.#ctor(Ellucian.Dmi.Runtime.IDmiSubset)">
+            <summary>
+            Default Constructor when the message subset is known.
+            </summary>
+            <param name="subset">The subset which contains the Message category, code, and text</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiMessage.isDmiMessageSubset(Ellucian.Dmi.Runtime.IDmiSubset)">
+            <summary>
+            Returns true for valid DMI message subsets.
+            </summary>
+            <param name="subset">The subset to be validated</param>
+            <returns>True for SPERRS, SWRNS, SSECMS subset; otherwise false</returns>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DmiMessage.MessageCategory">
+            <summary>
+            Represents the category of the message.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DmiMessage.MessageCode">
+            <summary>
+            Represents the code of the message.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DmiMessage.MessageText">
+            <summary>
+            Represents the text of the message.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DmiMessage.MessageType">
+            <summary>
+            Represents the type of message.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Dmi.Runtime.ProcessErrorResponse">
+            <summary>
+            This data contract represents SPERRS - the process / field error response subset.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Dmi.Runtime.WarningResponse">
+            <summary>
+            This data contract represents SWRNS - the process warning response subset.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Dmi.Runtime.SecurityResponse">
+            <summary>
+            This data contract represents SSECMS - the process security error response subset.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Dmi.Runtime.DmiString">
+            <summary>
+            Provides common routines for mananging DMI strings (which are actually Pick Dynamic Arrays).
+            Among these services are routines which convert from Pick internal/external forms in/out
+            of the .NET environment.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Dmi.Runtime.DynamicArray">
+            <summary>
+            Maps between Delimited strings (Dynamic Arrays), which are ideomatic to environments
+            based upon the Pick operating system, and C# Strings and String arrays.
+            <para>
+            DMI relies heavily upon the delimited string or dynamic array data structure common
+            to environments derived from the Pick operating system.  This structure, while a very
+            powerful tool for some computing problems, is not ideomatic to the C# language.
+            The DynamicArray class provides static methods to assist in mapping DMI data, which
+            is received as dynamic arrays, into/from data structures which are more usable for use in
+            methods written in C#.  
+            </para><para>
+            DynamicArray is NOT thread safe.  Only use in a single thread.
+            </para>
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Runtime.DynamicArray.FM">
+            <summary>
+            @FM's ACII value
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Runtime.DynamicArray.VM">
+            <summary>
+            @VM's ACII value
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Runtime.DynamicArray.SM">
+            <summary>
+            @SM's ACII value
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Runtime.DynamicArray.TM">
+            <summary>
+            @TM's ACII value
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Runtime.DynamicArray._basePickDate">
+            <summary>
+            The external format of the base pick date, which is internally 0.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.#ctor">
+            <summary>
+            Creates a DynamicArray object with a default encoding of 1252.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.#ctor(System.Int32)">
+            <summary>
+            Creates an empty Dynamic Array with the provided capacity.
+            If the likely final string size is knowable beforehand, supplying that value to this constructor offers
+            the most efficient processing because it will prevent resizing the internal data structures.
+            Use AppendBytes or SetBytes functions to then populate the array with raw socket content or regular
+            Envision Basic Insert, Replace, Delete to manage content at a field level.
+            </summary>
+            <param name="size"></param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.#ctor(System.ArraySegment{System.Byte})">
+            <summary>
+            Creates a DynamicArray using the provided content; the internal buffer size will exactly match the size of the provided content.
+            Use this constructor when raw socket content is fully complete.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.#ctor(System.Byte[])">
+            <summary>
+            Creates a DynamicArray using the provided content; the internal buffer size will exactly match the size of the provided content.
+            Use this constructor when raw socket content is fully complete.
+            </summary>
+            <param name="s"></param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.#ctor(System.String)">
+            <summary>
+            Creates a DynamicArray using the provided content; the internal buffer size will exactly match the size of the provided content.
+            Use this constructor when raw socket content is fully complete.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.#ctor(System.String[])">
+            <summary>
+            Creates a DynamicArray using the provided content; the internal buffer size will exactly match the size of the provided content.
+            Use this constructor when raw socket content is fully complete.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.#ctor(System.Collections.Generic.IList{System.String})">
+            <summary>
+            Creates a DynamicArray using the provided content; the internal buffer size will exactly match the size of the provided content.
+            Use this constructor when raw socket content is fully complete.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.#ctor(System.IO.Stream)">
+            <summary>
+            Reads the provided stream into this DynamicArray as its initial content.
+            The whole stream is read.
+            </summary>
+            <param name="content"></param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.Append(System.String[])">
+            <summary>
+            Adds the provided array of fields to the end of whatever is currently in the DynamicArray.
+            The provided array of strings is made into a string with FM delimiters.
+            If the DynamicArray is empty, the new "joined" string is simply placed in the DynamicArray directly.
+            Then, if the DynamicArray is not empty, a FM is added to the end of the existing array before adding new content.
+            </summary>
+            <param name="fields">an array of strings to be appended as a set of separate fields to the end of this DynamicArray</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.Append(System.String)">
+            <summary>
+            Adds the provided string as a field to the end of whatever is currently in the DynamicArray.
+            That is, if the array is empty, just the string is placed in the array.
+            If it is not empty, a field mark is added to the end of the existing array before the string is appended.
+            </summary>
+            <param name="value">the string to append as a field at the end of this DynamicArray</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.AppendBytes(System.String)">
+            <summary>
+            Adds the provided string as raw data, not as a field, to the end of the current DynamicArray.
+            No field marks are prepended as would have happended with the Append() methods.
+            This method just calls AppendBytes using this dynamic array's encoder.
+            </summary>
+            <param name="s">the content to append provided as a string</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.AppendBytes(System.Byte[])">
+            <summary>
+            Simple appending of the provided bytes to the internal byte array without adding field marks.
+            </summary>
+            <param name="b">the bytes to append to this DynamicArray</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.AppendBytes(System.IO.Stream,System.Boolean)">
+            <summary>
+            Simple appending of bytes in the provided stream to the internal byte array without adding field marks.
+            </summary>
+            <param name="s">the Stream from which we get the bytes to append to this DynamicArray</param>
+            <param name="addFm">false=never include an FM before adding to DynamicArray; true=add FM if there is already content before appending provided bytes</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.AppendBytes(System.Byte[],System.Boolean)">
+            <summary>
+            Adds the provided bytes optionally placing a field mark between them and the DynamicArray's current content
+            (if there is any).
+            </summary>
+            <param name="b">the bytes to append to this DynamicArray</param>
+            <param name="addFM">false=never include an FM before adding to DynamicArray; true=add FM if there is already content before appending provided bytes</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.AppendBytes(System.Byte[],System.Int32,System.Boolean)">
+            <summary>
+            Appends the provided bytes to this dynamic array.
+            Legacy signature presumes an offset of 0 in the provided array
+            </summary>
+            <param name="b"></param>
+            <param name="length"></param>
+            <param name="addFM"></param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.AppendBytes(System.ArraySegment{System.Byte},System.Boolean)">
+            <summary>
+            Appends the provided bytes to this dynamic array
+            </summary>
+            <param name="b">The b.</param>
+            <param name="addFM">if set to <c>true</c> [add FM].</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.AppendBytes(System.Byte[],System.Int32,System.Int32,System.Boolean)">
+            <summary>
+            Appends the provided bytes to this dynamic array.
+            This is the workhorse for all of AppendBytes methods.
+            </summary>
+            <param name="b"></param>
+            <param name="offset"></param>
+            <param name="length"></param>
+            <param name="addFM"></param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.Clear">
+            <summary>
+            Renders the holding array effectively empty by destroying index cache and setting the length to 0.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.Delete(System.Int32)">
+            <summary>
+            Removes the field ath the requested position.
+            </summary>
+            <param name="pos">one-based index of field to remove</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.RemoveFieldsFrom(System.Int32,System.Int32)">
+            <summary>
+            Removes a number of fields from the starting position.
+            </summary>
+            <param name="pos">The starting position.</param>
+            <param name="fldCount">The number of fields to remove.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.Extract(System.Int32)">
+            <summary>
+            Provides the string found in the requested field.
+            If pos is beyond the number of fields currently in the array, an empty string is returned (as in Pick conventions).
+            </summary>
+            <param name="pos">Zero-based index</param>
+            <returns>current contents of the field indicated by pos</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.Extract(System.Int32,System.Int32)">
+            <summary>
+            Provides the string found at the provided valuePosition in the list found in the provided fieldPosition.
+            If either the field position or the value position is beyond the number of fields or values
+            currently in the array, an empty string is returned (as in Pick conventions).
+            </summary>
+            <param name="fieldPos">zero-based field position holding the list used for values</param>
+            <param name="valuePos">zero-based value position holding the entry in the list</param>
+            <returns>the string present in the provided field and value positions</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.ExtractAsList(System.Int32)">
+            <summary>
+            Returns the provided field position as an IList of strings.
+            A list is always returned even if no values are present in the field (the field itself is empty)
+            </summary>
+            <param name="pos"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.GetBuffer">
+            <summary>
+            Returns the byte array being used to house characters for this dynamic array
+            The length of the array can be more than the number of meaningful characters in the array (matches the Capacity property).
+            Use the Length property to isolate the meaningful characters such as when supplying the array to a socket.
+            Meaningful characters always begin at index 0 in the array returned.
+            </summary>
+            <returns>a reference to the internal array used to house characters; use with Length property to get only meaningful characters</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.AsBytes">
+            <summary>
+            Returns the dynamic array as a byte ArraySegment.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.GetByteRange(System.Int32,System.Int32)">
+            <summary>
+            Returns an array of bytes corresponding to the starting position and end position as specified in the inputs.
+            If either input is incorrect, then an empty array will be returned.
+            </summary>
+            <param name="startPos"></param>
+            <param name="endPos"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.GetEnumerator">
+            <summary>
+            Returns an enumerator that iterates through a collection.
+            </summary>
+            <returns>
+            An <see cref="T:System.Collections.IEnumerator" /> object that can be used to iterate through the collection.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.GetRangeEnumerator(System.Int32,System.Int32)">
+            <summary>
+            Gets the range enumerator.
+            </summary>
+            <param name="startField">The start field.</param>
+            <param name="count">The count.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.GetFieldSubsetAsString(System.Int32,System.Int32)">
+            <summary>
+            Returns a substring from this DynamicArray containing the requested number of fields (cnt)
+            starting a the provided position.
+            </summary>
+            <param name="pos"></param>
+            <param name="cnt"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.GetFieldSubsetAsStream(System.Int32,System.Int32)">
+            <summary>
+            Returns a Stream (a MemoryStream) containing the substring (as encoded bytes) from this DynamicArray containing
+            the requested number of fields (cnt) starting a the provided position.
+            This is a very efficient way to retieve partial fields since the stream is simply referencing
+            a subset of the bytes backing this object.
+            </summary>
+            <param name="pos"></param>
+            <param name="cnt"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.GetFieldSubsetAsBytes(System.Int32,System.Int32)">
+            <summary>
+            Gets the field subset as bytes.
+            </summary>
+            <param name="pos">The position.</param>
+            <param name="cnt">The count.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.Insert(System.Int32,System.String[])">
+            <summary>
+            Inserts the provided fields at the specified position.
+            </summary>
+            <param name="pos">The pos.</param>
+            <param name="fields">The fields.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.Insert(System.Int32,System.String)">
+            <summary>
+            Inserts the string at the specified position.
+            </summary>
+            <param name="pos">The pos.</param>
+            <param name="value">The value.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.InsertBytes(System.Int32,System.Byte[])">
+            <summary>
+            Inserts the bytes at the specified position.
+            </summary>
+            <param name="pos">The pos.</param>
+            <param name="newBytes">The new bytes.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.RemoveByteRange(System.Int32,System.Int32)">
+            <summary>
+            Allows you to remove a certain byte range from a dynamic array.
+            </summary>
+            <param name="startPos"></param>
+            <param name="endPos"></param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.Replace(System.Int32,System.String)">
+            <summary>
+            Replaces the current contents in the field referenced by pos with the provided value.
+            If the location is higher than the number of fields currently present (or is "-1" as per Pick conventions),
+            position defines the new highest position in the array (field marks are added to expand the array size)
+            </summary>
+            <param name="pos">the field in which to place the new value</param>
+            <param name="value">the value to place in the field</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.Replace(System.Int32,System.Int32,System.String)">
+            <summary>
+            Overwrites the string found at the provided valuePosition in the list found in the provided fieldPosition.
+            If either the field position or the value position is beyond the number of fields or values
+            (or is "-1" as per Pick conventions), a position defines the new highest position in the array
+            (field marks and/or value marks are added to expand the array size).
+            </summary>
+            <param name="fieldPos"></param>
+            <param name="valuePos"></param>
+            <param name="value"></param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.ReplaceList(System.Int32,System.Collections.Generic.IList{System.String})">
+            <summary>
+            Replaces the entire contents of the field referenced by pos with a value mark delimited
+            </summary>
+            <param name="pos"></param>
+            <param name="values"></param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.SetBytes(System.String)">
+            <summary>
+            Converts the provided string into encoded bytes and then sets the DynamicArray to contain only those bytes.
+            </summary>
+            <param name="s"></param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.SetBytes(System.String[])">
+            <summary>
+            Converts the provided array of strings into a single DynamicArray of encoded bytes where each string
+            is separated by a field mark.
+            Similar to string.Join, but with byte encoding on the way to becoming the DynamicArray's contents.
+            </summary>
+            <param name="ss"></param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.SetBytes(System.Collections.Generic.IList{System.String})">
+            <summary>
+            Converts the provided IList of strings into a single DynamicArray of encoded bytes where each string
+            is separated by a field mark.
+            Similar to string.Join, but with byte encoding on the way to becoming the DynamicArray's contents.
+            </summary>
+            <param name="ss"></param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.SetBytes(System.ArraySegment{System.Byte})">
+            <summary>
+            Sets the dynamic array with the provided byte array segment.
+            </summary>
+            <param name="bsa">The byte array segment.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.SetBytes(System.Byte[])">
+            <summary>
+            Sets this DynamicArray's contents to be that of the provided byte array.
+            This replaces any previous contents that this object might have contained before.
+            If Capacity is greater than the size of the provided byte array, the array is copied
+            into the current byte array (from the front) thus preserving the DynamicArray's capacity.
+            This method is the workhorse of all of the SetBytes signatures.
+            </summary>
+            <param name="ba"></param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.SetBytes(System.IO.Stream)">
+            <summary>
+            Reads the provided stream into this DynamicArray.
+            This signature is particularly efficient for accepting raw dmi data off of a socket
+            especially if it is done via the DynamicArray's DmiTransaction subclass.
+            </summary>
+            <param name="content"></param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.ToArray">
+            <summary>
+            Provides the fields of this DynamicArray as a string array where
+            each field of the DynamicArray is a string in the returned array.
+            The array will have the same Length as this DynamicArray's Count property.
+            (this is different from the DynamicArray's Length property which refers to the
+            number of bytes in the DynamicArray rather than the number of fields.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.AsStream">
+            <summary>
+            Returns a Stream (a MemoryStream) containing the complete contents of this DynamicArray.
+            The stream contains the byte array being used to house characters for this dynamic array.
+            The length of the array can be more than the number of meaningful characters in the array (matches the Capacity property).
+            Use the Stream's Length property to count the meaningful characters such as when supplying the array to a socket.
+            Meaningful characters always begin at index 0 in the array returned (Position is 0).
+            </summary>
+            <returns>a reference to the internal array used to house characters; use with Length property to get only meaningful characters</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.ToStream(System.IO.Stream)">
+            <summary>
+            Writes the content of this DynamicArray into the provided stream.
+            </summary>
+            <param name="s"></param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.ToString">
+            <summary>
+            Shows the content of this DynamicArray as a string.
+            Used by the Debugger when showing "Locals".
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.TrimToSize">
+            <summary>
+            Removes any trailing null fields from the end of this DynamicArray.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.fieldCount(System.Byte[],System.Byte,System.Int32,System.Int32)">
+            <summary>
+            Determines the number of fields in the provided array by scanning the array's contents and counting fields
+            based upon separation by the provided delimiter.
+            Works like DCOUNT in Envision Basic.
+            </summary>
+            <param name="ba">the byte array to count fields in</param>
+            <param name="dlm">the delimiter to use (FM or VM)</param>
+            <param name="start">The start.</param>
+            <param name="length">the length of meaninful data in the provided array - the limit of the scan</param>
+            <returns>
+            how many fields were found using U2/Pick/Envision rules (like DCOUNT)
+            </returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.indexFields(System.Byte[],System.Byte,System.Int32,System.Int32)">
+            <summary>
+            Builds a fresh index of fields based upon a revised count of delimiters in the provided array.
+            Use this signature whenever new delimiters might have been added to the array such that the size
+            of the index array is unknown such as an insert or delete operation.
+            </summary>
+            <param name="ba">The byte array.</param>
+            <param name="dlm">The delimiter.</param>
+            <param name="startAtByte">The start at byte.</param>
+            <param name="length">The length.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.indexFields(System.Byte[],System.Byte,System.Int32,System.Int32[])">
+            <summary>
+            Revises the current contents of an index of fields.
+            Use this signature when revising the location of all of the indexes in the provided array
+            and size of the provided index array already reflects the number of delimiters in that array.
+            </summary>
+            <param name="ba"></param>
+            <param name="dlm"></param>
+            <param name="length"></param>
+            <param name="indexes"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.indexFieldsFrom(System.Byte[],System.Byte,System.Int32,System.Int32,System.Int32[],System.Int32)">
+            <summary>
+            Revises the latter contents of an index of fields starting at a provided position.
+            Use this signature when a replace has occurred and the number of fields is unchanged even
+            if the starting locations of those fields has changed.
+            </summary>
+            <param name="ba">the array to index</param>
+            <param name="dlm">the delimiter character to base indexes upon (FM or VM)</param>
+            <param name="startAtByte">the byte int ba to start the index search from when indexes are totally invalid</param>
+            <param name="length">last valid byte in range to be scanned</param>
+            <param name="indexes">the index array to fill (correct size must already have been calculated</param>
+            <param name="startPos">the position in the index array to begin placing indexes</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.getFieldLength(System.Byte[],System.Int32,System.Int32[],System.Int32)">
+            <summary>
+            Return the number of bytes that are represented by the provided position until the next delimiter.
+            Indexes must be valid at the time of the call since length is determined by math on the indexes rather
+            than a re-scan of the string.
+            Returning a length of zero (or less) means that the string represents an empth/null string and that the data value
+            should not be pulled from the array proper.
+            </summary>
+            <param name="ba"></param>
+            <param name="pos"></param>
+            <param name="indexes"></param>
+            <param name="lastArrayByte"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.removeByteRange(System.Byte[],System.Int32,System.Int32,System.Int32)">
+            <summary>
+            Collapse the contents of the provided array by copying the latter surviving portion of the provided
+            array over the portion to be eliminated.
+            Used in delete operations.
+            </summary>
+            <param name="ba"></param>
+            <param name="destPos"></param>
+            <param name="sourcePos"></param>
+            <param name="length"></param>
+            <returns></returns>        
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.overlayArraySegment(System.Byte[]@,System.Int32,System.Int32,System.String,System.Int32,System.Text.Encoding)">
+            <summary>
+            Expand or contract the area between the provided startByte and startNextFieldByte to exactly the length of the provided value.
+            Then copy the value into the newly created gap.
+            If the whole array must expand beyond its current capacity (veryLastByte and m_data.Length), grow the array capacity first.
+            </summary>
+            <param name="ba"></param>
+            <param name="startByte"></param>
+            <param name="startNextFieldByte"></param>
+            <param name="value"></param>
+            <param name="veryLastByte"></param>
+            <param name="enc"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.truncateBytes(System.Byte[],System.Int32,System.Int32[]@)">
+            <summary>
+            Truncate the provided array's range by revising the index array and byte array's last byte indicator.
+            This has the effect of invalidating all bytes in the provided array starting from the delimiter
+            preceeding the byte at the provided position.
+            </summary>
+            <param name="ba">the array to revise</param>
+            <param name="pos">the position in the indexes to truncate from</param>
+            <param name="indexes">the indexes to be revised based upon the truncation</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.expandByteRange(System.Byte[]@,System.Int32,System.Int32,System.Int32)">
+            <summary>
+            Separates an array into two halves separated by the provided gap size.
+            Used in insert operations.
+            Moves the bytes between startPos and length to a location that is gapSize bytes higher.
+            If the provided array is not large enough to include bytes to move, it is replaced by an array
+            that will have sufficient room.
+            </summary>
+            <param name="ba">the array into which the gap is to be created</param>
+            <param name="startPos">the first byte to move further back in the array when creating the gap</param>
+            <param name="gapSize">the number of bytes to inject at the start position</param>
+            <param name="length">the current length of meaninful bytes in the provided array</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.InsureSufficientSize(System.Byte[],System.Int32)">
+            <summary>
+            Guarantees that the returned array is at least as large as the provided desired size.
+            If the provided array is null or smaller than the desired size, an new array (with old contents preserved) is returned.
+            If the provided array is already large enough to accomodate the desired size, the provided array is returned unchanged.
+            </summary>
+            <param name="ba"></param>
+            <param name="desiredSize"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.bytesToFields(System.Byte[],System.Int32,System.Int32,System.Byte,System.Text.Encoding)">
+            <summary>
+            
+            </summary>
+            <param name="ba"></param>
+            <param name="startByte"></param>
+            <param name="length"></param>
+            <param name="dlm"></param>
+            <param name="enc"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.FindFieldSetInternalLength(System.Int32,System.Int32)">
+            <summary>
+            Determine how many bytes are taken up by the number of fields from the provided count ranged from the provided position.
+            </summary>
+            <param name="pos">the number of the first field from where to start counting bytes</param>
+            <param name="cnt">the number of fields to include in the count of bytes</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.fieldsToBytes(System.String[],System.Byte,System.Text.Encoding)">
+            <summary>
+            Maps the contents of a string array into an encoded byte array of fields separated by fieldmarks.
+            This method is used to support adding groups of fields to the DynamicArray managed by this object.
+            </summary>
+            <param name="fields">an array of strings to be put into the returned array of bytes</param>
+            <param name="dlm">The delimiter.</param>
+            <param name="enc">the encoder to use for converting strings to bytes: must be strictly an 8-byte encoding</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.truncateBytes(System.Byte[],System.Int32)">
+            <summary>
+            Removes all bytes beyond the specified position and returns the byte array
+            </summary>
+            <param name="ba"></param>
+            <param name="pos"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.ReadToFieldMark(System.Byte[],System.Int32,System.IO.Stream)">
+            <summary>
+            Reads the stream from the offset position and fill up the buffer until the next field mark is found.
+            </summary>
+            <param name="buf">The buf.</param>
+            <param name="offset">The offset.</param>
+            <param name="s">The s.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DynamicArray.StringQuoteDelimit(System.Collections.Generic.List{System.String})">
+            <summary>
+            Converts a List of string values to a single quote delimited string
+            If input list contains only empty string or null values - a null value is returned
+            If input list contains null or empty strings, those values are excluded from the output string
+            </summary>
+            <param name="stringList">The input list of strings.</param>
+            <returns></returns>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DynamicArray.Capacity">
+            <summary>
+            Provides the size of the array holding the character data reqardless of how many meaningful characters are in it.
+            Setter allows that value to be modified as long as the requested size is not less than the current number of meaningful characters.
+            This value is the amount of bytes currently supported by this DynamicArray (although this can grow dynamically or be set here).
+            To find the number of meaningful bytes in the DynamicArray, use the Length property.  The difference between two is the 
+            headroom available for adding more fields to this array.
+            To find how many fields are present in this DynamicArray, use the Count property.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DynamicArray.Count">
+            <summary>
+            Provides the number of fields (strings delimited by field marks) currently found in this object.
+            This is similar to the Envision Basic DCOUNT function.
+            To find how many bytes are occupied by these fields, use the Length property.
+            To find how many bytes are supported by this array (although this can grow dynamically or by design), use the Capacity property.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DynamicArray.Length">
+            <summary>
+            Returns the current number of bytes present in this DynamicArray.
+            Refers to the number of meaningful bytes currently present.
+            To find the number of fields, use the Count property.
+            To know the full size of the buffer, use the Capacity property.
+            Setting the length will force a rebuild of indexes; usually setting
+            is only done internally.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DynamicArray.Item(System.Int32)">
+            <summary>
+            Retrieves the field (zero based) referenced by the given integer index.
+            This is functionally equivalent to the Extract(int index) and Replace(int index, object value) methods.
+            </summary>
+            <param name="index"></param>
+            <returns></returns>
+        </member>
+        <member name="T:Ellucian.Dmi.Runtime.DynamicArray.DynamicArrayEnumerator">
+            <summary>
+            Inner class to implement the IEnumerator interface so that a Dynamic Array can be enumerated in a foreach loop
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Runtime.DmiString._FM">
+            <summary>
+            @FM character
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Runtime.DmiString._VM">
+            <summary>
+            @VM character
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Runtime.DmiString._SM">
+            <summary>
+            @SM character
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Runtime.DmiString._TM">
+            <summary>
+            @TM character
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Runtime.DmiString.sFM">
+            <summary>
+            @FM string
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Runtime.DmiString.sVM">
+            <summary>
+            @VM string
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Runtime.DmiString.sSM">
+            <summary>
+            @SM string
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Runtime.DmiString.sTM">
+            <summary>
+            @TM string
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiString.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Dmi.Runtime.DmiString"/> class.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiString.#ctor(System.Int32)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Dmi.Runtime.DmiString"/> class with a pre-determined size.
+            </summary>
+            <param name="size"></param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiString.#ctor(System.ArraySegment{System.Byte})">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Dmi.Runtime.DmiString"/> class with a byte ArraySegment.
+            </summary>
+            <param name="s">The s.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiString.#ctor(System.Byte[])">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Dmi.Runtime.DmiString"/> class with a byte array.
+            </summary>
+            <param name="s"></param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiString.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Dmi.Runtime.DmiString"/> class with an initial string value.
+            </summary>
+            <param name="initialValue">The initial value.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiString.#ctor(System.String[])">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Dmi.Runtime.DmiString"/> class with a string array.
+            </summary>
+            <param name="values">The values.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiString.#ctor(System.IO.Stream)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Dmi.Runtime.DmiString"/> class with a stream.
+            </summary>
+            <param name="s">The stream.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiString.ClearFieldAt(System.Int32)">
+            <summary>
+            Clears the field at the specified field number.
+            </summary>
+            <param name="fieldNbr">The field number to clear.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiString.GetBooleanValueAt(System.Int32)">
+            <summary>
+            Returns the contents of the requested field as a bool value.
+            The field's actual contents are expected to follow Envision conventions for boolean values.
+            </summary>
+            <param name="fieldNbr">The one-based field from which to provide the bool value</param>
+            <returns>true (if data is "1" or "Y" or "true") according to Envision convention) otherwise false</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiString.GetDateTimeValueAt(System.Int32,System.Int32)">
+            <summary>
+            Returns the requested fields as a DateTime object.
+            The date and time fields are presumed to be in Envision/Pick internal format.
+            The differentials between Envision  and .Net are resolved.
+            If the time field is less or equal to zero, then the time is presumed to be noon.
+            </summary>
+            <param name="dateFieldNbr">The date field number.</param>
+            <param name="timeFieldNbr">The time field number.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiString.GetFieldSubsetList(System.Int32,System.Int32)">
+            <summary>
+            Returns a contiguous set of fields as an <c>IList</c> object.
+            It will contain the same number of fields as the provided fieldCount value.
+            </summary>
+            <param name="startField">The number of the first field (1-based) to include in the returned string</param>
+            <param name="fieldCount">The number of fields to include in the returned string</param>
+            <returns>an IList<string> containing the requested fields</string></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiString.GetIntegerValueAt(System.Int32)">
+            <summary>
+            Returns the contents of the requested field as an integer value.
+            The field's actual contents are expected to follow Envision conventions for integer values.
+            If the field contains non-numeric content, zero is returned.
+            </summary>
+            <param name="fieldNbr">The one-based field from which to provide the bool value</param>
+            <returns>The value found in the requested field as an int.</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiString.GetIntegerValueAt(System.Int32,System.Int32)">
+            <summary>
+            Returns the contents of the requested field as an integer value, or a default value
+            if the value at the requested field is not numeric/invalid.
+            The field's actual contents are expected to follow Envision conventions for integer values.
+            If the field contains non-numeric content, zero is returned.
+            </summary>
+            <param name="fieldNbr">The one-based field from which to provide the bool value</param>
+            <param name="defaultValue">The default value.</param>
+            <returns>
+            The value found in the requested field as an int, or a default value.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiString.GetListFieldAt(System.Int32)">
+            <summary>
+            Gets the list of fields starting at the specified field number.
+            </summary>
+            <param name="fieldNbr">The field NBR.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiString.GetStringArrayFieldAt(System.Int32)">
+            <summary>
+            Gets the string array of fields at the specified field number.
+            </summary>
+            <param name="fieldNbr">The field NBR.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiString.GetStringValueAt(System.Int32)">
+            <summary>
+            Gets the string value at the specified field number.
+            </summary>
+            <param name="fieldNbr">The field NBR.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiString.IsNonNull(System.Int32)">
+            <summary>
+            Determines whether is non null at the specified field number.
+            </summary>
+            <param name="fieldNbr">The field number.</param>
+            <returns>
+              <c>true</c> if [is non null] [the specified field number]; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiString.IsNonNull(System.String)">
+            <summary>
+            Determines whether [is non null] [the specified value].
+            </summary>
+            <param name="value">The value.</param>
+            <returns>
+              <c>true</c> if [is non null] [the specified value]; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiString.IsNull(System.Int32)">
+            <summary>
+            Determines whether the specified field is null.
+            </summary>
+            <param name="fieldNbr">The field number.</param>
+            <returns>
+              <c>true</c> if the specified field NBR is null; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiString.IsNull(System.String)">
+            <summary>
+            Determines whether the specified string value is null.
+            </summary>
+            <param name="value">The value.</param>
+            <returns>
+              <c>true</c> if the specified value is null; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiString.SetBooleanValueAt(System.Int32,System.Boolean,System.Boolean)">
+            <summary>
+            Sets the boolean value at field number.
+            </summary>
+            <param name="fieldNbr">The field number.</param>
+            <param name="value">if set to <c>true</c> [value].</param>
+            <param name="useEnvisionConventions">if set to <c>true</c> [use envision conventions].</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiString.SetDateTimeValueAt(System.Int32,System.Int32,System.DateTime)">
+            <summary>
+            Sets the date time value at the specified field.
+            </summary>
+            <param name="dateFieldNbr">The date field number.</param>
+            <param name="timeFieldNbr">The time field number.</param>
+            <param name="date">The date.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiString.SetFieldSubsetList(System.Int32,System.Collections.Generic.IList{System.String})">
+            <summary>
+            Sets the field subset list.
+            </summary>
+            <param name="startField">The start field.</param>
+            <param name="value">The value.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiString.SetIntegerValueAt(System.Int32,System.Int32)">
+            <summary>
+            Sets the integer value at the specified field.
+            </summary>
+            <param name="fieldNbr">The field number.</param>
+            <param name="value">The value.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiString.SetListFieldAt(System.Int32,System.Collections.Generic.IList{System.String})">
+            <summary>
+            Sets a list fields starting at the specified field.
+            </summary>
+            <param name="fieldNbr">The starting field number.</param>
+            <param name="values">The values.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiString.setStringArrayFieldAt(System.Int32,System.String[])">
+            <summary>
+            Sets a list fields starting at the specified field.
+            </summary>
+            <param name="fieldNbr">The starting field number.</param>
+            <param name="values">The values.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiString.SetStringValueAt(System.Int32,System.String)">
+            <summary>
+            Sets the string value at the specified field.
+            </summary>
+            <param name="fieldNbr">The field number.</param>
+            <param name="value">The value.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiString.SetUpperCaseValueAt(System.Int32,System.String)">
+            <summary>
+            Sets the upper case value at the specified field.
+            </summary>
+            <param name="fieldNumber">The field number.</param>
+            <param name="value">The value.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiString.PickDateToDateTime(System.Int32)">
+            <summary>
+            Convert a Pick/U2/Envision internal signed date integer into a .NET DateTime object.
+            The value of 0 implies Dec 31, 1967. Since there is no time component, the DateTimeKind is unspecified.
+            </summary>
+            <param name="internalDate"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiString.PickTimeToDateTime(System.Int32)">
+            <summary>
+            Convert a Pick/U2/Envision internal time (positive integer less than or equal to 86400)
+            into a .NET TimeSpan object.
+            </summary>
+            <param name="internalTime">The internal time.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiString.DateTimeToPickDate(System.DateTime)">
+            <summary>
+            Converts the year/month/day portion of a .Net DateTime object into a pick internal date.
+            If the the DateTime object has DateTimeKind = Utc, will be localized before it is converted to Pick internal.
+            If the date DateTime object has DateTimeKind = Local or Unspecified, it will not be modified before it is converted.
+            </summary>
+            <param name="date">a DateTime object with its year/month/date set to valid values</param>
+            <returns>an integer representing the corresponding value as a pick date</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiString.DateTimeToPickTime(System.DateTime)">
+            <summary>
+            Converts the hours/minutes/seconds portion of a .Net DateTime
+            into a Pick internal time.
+            </summary>
+            <param name="time">a DateTime with its hour/minute/seccond portion containing meaningfull data</param>
+            <returns>a integer between 0 and 86400 (the number of seconds in a day).</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiString.TimeSpanToPickTime(System.TimeSpan)">
+            <summary>
+            Converts a .Net TimeSpan object into its equivalent in Pick internal time.
+            TimeSpan should be for 24 hours or less since those are the only valid values
+            in a Pick internal time.
+            </summary>
+            <param name="time">a TimeSpan in seconds between midnight and 11:59PM</param>
+            <returns>an integer representing the number of seconds in the time interval.  Only 0-86400 are valid in a Pick system</returns>
+        </member>
+        <member name="T:Ellucian.Dmi.Runtime.DmiTransaction">
+            <summary>
+            Holds the fields used in a DMI transaction either as a request built by a client program
+            or as a response from a host environment via DMI_DISPATCH.
+            Objects of this class interact (via the send() method) with an attached
+            host environment to process a transaction.
+            This is done by calling the DMI_Dispatch subroutine using the object's current contents
+            for the DMI.REQUEST argument and returning a new instance of this class built from
+            the resulting DMI.RESPONSE argument.
+            <para>
+            By using DmiString (and DynamicArray) as the superclasses of a DmiTransaction, it is possible
+            to read a socket (without line protocol #cnt# and #END#) directly into this object
+            and immediately read out the header's content and all subsets.
+            The subsets are templates over the actual bytes of the stream so no actually assignment of strings
+            occurs unless extracted from the subset itself.
+            </para>
+            <para>
+            Once built, the AsStream method can be sent directly to a socket (assuming it gets surrounded
+            with the #cnt" and "END" line protocol values).  The value for count is found using
+            the transaction's Length property.
+            </para>
+            <para>
+            If a transaction's ReadOnly property is true, then the byte array is presumed to be fully formed
+            and is never reconstructed from the subsets.
+            If it is false, some methods fully reconstruct the transaction's byte array with the current contents
+            of the header and each of the subsets.
+            This is ok if the subsets have been constructed by the owner of this object such as in building
+            an outbound transaction.    
+            </para>
+            <para>
+            When the transaction is being built for writing, many of the DynamicArray's visible superclass methods for manipulating
+            fields are not meaningful since some of the transaction is stored in subsets and only the header is in the transaction proper.
+            Operate on the subsets directly when building a writable transaction and then use the overriden ToStream,
+            AsArray, AsStream, GetBytes, ToString, GetEnumerator methods which merge header and subsets.
+            ToStream is particularly efficient and the one likely to be of most use in sending Dmi responses or requests.
+            </para>
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiTransaction.#ctor">
+            <summary>
+            Creates a dmi transaction with a minimally initiallized header.
+            Other properties of this object need to be filled in as needed and subsets added.
+            ReadOnly is defaulted to false;
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiTransaction.#ctor(System.String)">
+            <summary>
+            Creates a dmi transaction with a header initiallized to the provided type.
+            Other properties of this object need to be filled in as needed and subsets added.
+            Use this constructor to build a transmittable dmi transaction from scratch as would
+            be done for a dmi client's send process.
+            ReadOnly is defaulted to false.
+            </summary>
+            <param name="_transactionType"></param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiTransaction.#ctor(System.ArraySegment{System.Byte})">
+            <summary>
+            Creates a complete DMI transaction based on the byte array provided.
+            ReadOnly is defaulted to true because the transaction is presumably fully formed when this constructor is used;
+            </summary>
+            <param name="wholeTransaction"></param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiTransaction.#ctor(System.Byte[])">
+            <summary>
+            Creates a DMI header and subset collection from a whole DMI transaction string.
+            This is usually only used by a DmiTransaction object to create subsets from
+            a read-only response string as it is received from a host.
+            Bytes are presumed to have been encoded using cp1252 according to DMI conventions.
+            It is not usually used to formulate client request transactions.
+            ReadOnly is defaulted to true because the transaction is presumably fully formed when this constructor is used;
+            </summary>
+            <param name="wholeTransaction">The whole transaction.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiTransaction.#ctor(System.IO.Stream)">
+            <summary>
+            Creates a header DMI subset collection from a whole DMI transaction string.
+            This is usually only used by a DmiTransaction object to create subsets from
+            a read-only response string as it is received from a host.
+            Bytes are presumed to have been encoded using cp1252 according to DMI conventions.
+            It is not usually used to formulate client request transactions.
+            ReadOnly is defaulted to true because the transaction is presumably fully formed when this constructor is used;
+            </summary>
+            <param name="s"></param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiTransaction.AddSubset(System.IO.Stream)">
+            <summary>
+            Adds a subset based on the input stream to the transaction.
+            </summary>
+            <param name="subsetStream">The subset stream.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiTransaction.AddSubset(System.String)">
+            <summary>
+            Adds an empty subset of the specified type to the transaction.
+            </summary>
+            <param name="subsetType">Type of the subset.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiTransaction.AddSubset(System.String,System.Collections.Generic.IList{System.String})">
+            <summary>
+            Creates a Dmi subset based on the subset type and arguments, and add the subset to the transaction.
+            </summary>
+            <param name="subsetType">Type of the subset.</param>
+            <param name="arguments">The arguments.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiTransaction.AddSubset(Ellucian.Dmi.Runtime.IDmiSubset)">
+            <summary>
+            Adds a subset to the transaction.
+            </summary>
+            <param name="subset">The subset.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiTransaction.AsBytes">
+            <summary>
+            Return the DMI transaction as a byte ArraySegment.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiTransaction.GetEnumerator">
+            <summary>
+            Gets the enumerator.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiTransaction.HasErrors">
+            <summary>
+            Determines whether this instance has any error subsets.
+            </summary>
+            <returns>
+              <c>true</c> if this instance has error subsets; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiTransaction.AsStream">
+            <summary>
+            Returns the current transaction as a Stream.
+            If ReadOnly is false, the byte array is completely rebuilt prior to creating the stream.
+            If filling an existing stream, like in building and sending an outbound transaction,
+            ToStream is more efficient and gentler on memory use.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiTransaction.ToStream(System.IO.Stream)">
+            <summary>
+            Writes the header and the current contents of all subsets into the provided stream.
+            The transaction byte buffer uses no more memory than is currently allocated to the
+            header and its subsets, so it entails no extra byte array overhead.
+            </summary>
+            <param name="s">The stream into which to write this transaction's subsets</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiTransaction.GetHeaderAndSubsetLength">
+            <summary>
+            Sum the byte count for the header + the byte count for each subset+1 to produce a 
+            total byte count for the whole transaction.
+            Often, this is the same value as the Length property, but when subsets have been
+            built dynamically, this can be used to get the likely count without having
+            to call ReconstructTransaction which could be wasteful of memory when only a count is wanted.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiTransaction.ToString">
+            <summary>
+            Returns a string built from the header fields and then each of the subsets.
+            This is mildly inefficient for a transaction byte array which has all subsets already in them
+            since the subsets are read indirectly rather than as a single large buffer.
+            However, the generalness of the algorithm makes this work for read in as well as
+            partially formed transactions without forcing a reconstruction of the main byte array.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiTransaction.ToArray">
+            <summary>
+            Provides a string array containing all of the fields from the header and subsets
+            as a single string array where each field is a member of the array in field order.
+            If ReadOnly is false, the transaction's byte array will be fully rebuilt from
+            the current contents of the header and each subset.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiTransaction.AddClaim(System.Collections.Generic.KeyValuePair{System.String,System.String})">
+            <summary>
+            Adds a claim to the DMI header's claims collection.
+            </summary>
+            <param name="claim"><see cref="T:System.Collections.Generic.KeyValuePair`2"/> claim to add.</param>
+            <remarks>
+            The claim's name and value cannot be null or empty.
+            </remarks>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiTransaction.RemoveClaim(System.Collections.Generic.KeyValuePair{System.String,System.String})">
+            <summary>
+            Removes the specified claim from the DMI header's claims collection.
+            </summary>
+            <param name="claim"><see cref="T:System.Collections.Generic.KeyValuePair`2"/> claim to remove.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiTransaction.ReconstructTransaction">
+            <summary>
+            Replaces whatever is currently in the byte array of this transaction with a rebuilt byte array
+            with the same header and the current contents of all subsets.
+            the revised DynamicArray backing this object is now synchronized with all subsets.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DmiTransaction.Account">
+            <summary>
+            Gets or sets the account.
+            </summary>
+            <value>
+            The account.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DmiTransaction.Item(System.String)">
+            <summary>
+            Indexer for pulling the first of the provided subset type out of a transaction.
+            Example: <c>IDimSubset subset = transaction["SLGRS"];</c> to retrieve the first (likely only) SLGRS subset from a LGRS transaction.
+            There is only a string indexer defined for DmiTransaction because one cannot do an integer indexer
+            without obscuring the integer indexer in superclass which is used to extract fields.
+            </summary>
+            <param name="subsetType">The subset type to return</param>
+            <returns>The first instance of the provided type or null if no such subset type is present in this transaction</returns>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DmiTransaction.Application">
+            <summary>
+            Gets or sets the application.
+            </summary>
+            <value>
+            The application.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DmiTransaction.ControlID">
+            <summary>
+            Gets or sets the control ID.
+            </summary>
+            <value>
+            The control ID.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DmiTransaction.CreatedBy">
+            <summary>
+            Gets or sets CreatedBy.
+            </summary>
+            <value>
+            The created by.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DmiTransaction.CreatedDateTime">
+            <summary>
+            Gets or sets the created DateTime.
+            </summary>
+            <value>
+            The created date time.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DmiTransaction.DasConnectString">
+            <summary>
+            Gets or sets the das connect string.
+            </summary>
+            <value>
+            The das connect string.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DmiTransaction.DebugLevel">
+            <summary>
+            Gets or sets the debug level.
+            </summary>
+            <value>
+            The debug level.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DmiTransaction.InResponseTo">
+            <summary>
+            Gets or sets InResponseTo.
+            </summary>
+            <value>
+            The in response to.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DmiTransaction.IsDebug">
+            <summary>
+            Gets or sets a value indicating whether this instance is in debug mode.
+            </summary>
+            <value>
+              <c>true</c> if this instance is debug; otherwise, <c>false</c>.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DmiTransaction.LastProcessedDateTime">
+            <summary>
+            Gets or sets LastProcessedDateTime.
+            </summary>
+            <value>
+            The last processed date time.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DmiTransaction.LastProcessedBy">
+            <summary>
+            Gets or sets LastProcessedBy.
+            </summary>
+            <value>
+            The last processed by.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DmiTransaction.ListenerID">
+            <summary>
+            Gets or sets the listener ID.
+            </summary>
+            <value>
+            The listener ID.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DmiTransaction.ReadOnly">
+            <summary>
+            Gets or sets the ReadOnly flag.
+            </summary>
+            <value>
+            The ReadOnly flag.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DmiTransaction.SecurityToken">
+            <summary>
+            Gets or sets the security token.
+            </summary>
+            <value>
+            The security token.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DmiTransaction.SubsetCount">
+            <summary>
+            Gets the subset count.
+            </summary>
+            <value>
+            The subset count.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DmiTransaction.Subsets">
+            <summary>
+            Gets or sets the list of subsets.
+            </summary>
+            <value>
+            The subsets.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DmiTransaction.TransactionType">
+            <summary>
+            Gets or sets TransactionType.
+            </summary>
+            <value>
+            The type of the transaction.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DmiTransaction.UniqueControlID">
+            <summary>
+            Gets or sets UniqueControlID.
+            </summary>
+            <value>
+            The unique control ID.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DmiTransaction.Verbose">
+            <summary>
+            Gets or sets a value indicating whether this <see cref="T:Ellucian.Dmi.Runtime.DmiTransaction"/> is verbose.
+            </summary>
+            <value>
+              <c>true</c> if verbose; otherwise, <c>false</c>.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DmiTransaction.Version">
+            <summary>
+            Gets or sets the version.
+            </summary>
+            <value>
+            The version.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DmiTransaction.Claims">
+            <summary>
+            Gets a read-only collection of all DMI header claims.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Dmi.Runtime.DmiTransactionSubset">
+            <summary>
+            Represents a DMI subset string for building and consuming responses with arguments which
+            expect DMI formatted strings for arguments.
+            A subset object is ultimately a sequence of encoded bytes in a DynamicArray.
+            It can be a stand-alone object or it can be a field sequence in a DynamicArray containing
+            a header with multiple subsets.
+            As such, it can be a template over a raw DMI response stream or the building of a larger
+            whole transaction.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Dmi.Runtime.IDmiSubset">
+            <summary>
+            Describes the minimum behavior needed to use a dmi subset.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.IDmiSubset.AsStream">
+            <summary>
+            Provides the contents of the complete subset (header, arguments and trailer) as a complete dmi
+            subset string using encoding 1252 to marshall any internal strings.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.IDmiSubset.GetBytes">
+            <summary>
+            Provides the contents of a complete subset (header, arguments and trailer) as a complete dmi
+            subset using 1252 encoding as an ArraySegment or bytes.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.IDmiSubset.Arguments">
+            <summary>
+            The arguments portion of a dmi subset: all fields from the 4th to the penultimate field - that is,
+            all but the three field header and the single trailer field - presented as a list of strings.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.IDmiSubset.Count">
+            <summary>
+            The number of fields (including header and trailer) present in the subset.
+            This is the content of the second field in the header of a subset.
+            Any value less than 4 is an error.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.IDmiSubset.MioLevel">
+            <summary>
+            The Mio level implied in the transaction (usually 0).
+            This is the content of the third field in the header of a subset.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.IDmiSubset.SubsetType">
+            <summary>
+            The name of the subset - must not be null.
+            This is the content of the first field in the header and also the
+            start of the trailer field which is the subset type with ".END" appended.
+            The trailer is automatically updated whenever this property is changed.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiTransactionSubset.#ctor">
+            <summary>
+            Creates an empty subset.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiTransactionSubset.#ctor(System.String)">
+            <summary>
+            Creates a DMI subset string of the provided type.
+            If this subset has data fields, they would still need to be added later either all at once
+            via Arguments, or individually in position using the "this[int]" indexer.
+            </summary>
+            <param name="_subsetType">The name of DMI subset type being modeled</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiTransactionSubset.#ctor(System.String,System.Collections.Generic.IList{System.String})">
+            <summary>
+            Creates a DMI subset string of the provided type using the provided arguments.
+            This constructor should be sufficient for defining a complete subset.
+            </summary>
+            <param name="subsetType">The name of DMI subset type being modeled</param>
+            <param name="args">An IList of the arguments (in spec order) for subset to model</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiTransactionSubset.#ctor(System.String,System.String[])">
+            <summary>
+            Creates a DMI subset string of the provided type using the provided arguments.
+            This is a convenience method which converts the arguments into a List (as used internally)
+            before calling the real constructor for a complete subset definition.
+            </summary>
+            <param name="subsetType">The name of DMI subset type being modeled</param>
+            <param name="args">A string array of the arguments (in spec order) for subset to model</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiTransactionSubset.#ctor(Ellucian.Dmi.Runtime.DmiString,System.Int32)">
+            <summary>
+            Creates a DMI subset from a whole DMI transaction string.
+            This is usually only used by a DmiTransaction object to create subsets from
+            a response string from a host or a client request string received by a host.
+            It is not usually used to formulate client request transactions and it should be considered
+            read-only when created in this way: it is not safe currently to modify/write into the contents
+            of an already fully formed subset unless it is the last subset in a transaction.
+            </summary>
+            <param name="wholeTransaction">a reference to the whole dmi transaction from which this subset is being referenced</param>
+            <param name="startField">the 0-based field (not byte position) where the subset begins</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiTransactionSubset.#ctor(System.String,System.Collections.Generic.IList{System.String},Ellucian.Dmi.Runtime.DmiTransaction,System.Int32)">
+            <summary>
+            Creates a DMI subset to be appended to a provided developing DMI transaction object.
+            This is usually only used by a DmiTransaction object to append subsets to itself.
+            This can be useful in serialization scenarios where a new outbound transaction is having
+            objects serialized into subsets which are, in turn, appended to the end of that transaction.
+            </summary>
+            <param name="subsetType">The name of DMI subset type being modeled</param>
+            <param name="args">A string array of the arguments (in spec order) for subset to model</param>
+            <param name="wholeTransaction">a reference to the whole dmi transaction from which this subset is being referenced</param>
+            <param name="startField">the 0-based field (not byte position) where the subset begins</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiTransactionSubset.#ctor(System.IO.Stream)">
+            <summary>
+            Reads as many bytes as needed from a stream to create a single DMI subset.
+            This would only be called when building an independent subset with a stream known
+            to begin at as subset starting byte.
+            It might also be used in the case where a series of large subsets are arriving
+            as a stream and are being processed one at a time rather than as part of a complete
+            memory image.
+            This would not be used in the case where a whole transaction with possibly multiple
+            subsets is being processed.
+            When a whole transactin is being processed, use the signatures using a DmiTransaction
+            object; Subsets will automatically be created by these methods.
+            </summary>
+            <param name="s">source stream</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiTransactionSubset.InsertSubSubset(Ellucian.Dmi.Runtime.DmiString)">
+            <summary>
+            Not yet imlemented.
+            </summary>
+            <param name="subSubset"></param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiTransactionSubset.IsErrorSubset">
+            <summary>
+            Indicates whether this subset is an error subset.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiTransactionSubset.AsStream">
+            <summary>
+            Returns the serialized form of this subset as a stream of encoded bytes.
+            </summary>
+            <returns>A Stream containing the contents of this subset fully serialized and encoded</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiTransactionSubset.GetBytes">
+            <summary>
+            Returns the serialized form of this subset as an encoded array of bytes
+            wrapped in an ArraySegment object.
+            This is like ToString() except already encoded for transmission on a Dmi socket.
+            </summary>
+            <returns>an ArraySegment containing this complete serialized and encoded subset</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiTransactionSubset.ToString">
+            <summary>
+            Updates the field count just prior to the super class's normal ToString method.
+            </summary>
+            <returns>This transaction subset as a string</returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DmiTransactionSubset.nextField(System.ArraySegment{System.Byte},System.IO.Stream,System.Boolean)">
+            <summary>
+            Supports reading one field at a time from an FM delimited stream.
+            It has two modes: 1) appends a field at the location in the provided ArraySegment and advances the pointer; and
+            2) where it reads a field and delineates that field with via its offset and count.
+            The FM, when present is included in the array segment count.
+            If the array is two small to hold the field being read, a new array of sufficient size is returned.
+            Thus, the array provided in the segment is not necessarily the physical array in the returning segment.
+            Since ArraySegments are immutable, obviously the returned one cannot reference the provided one.
+            </summary>
+            <param name="buf">an ArraySegment over an array which is receiving a stream's contents where ArraySegment.Offset points to
+            first free byte into which a field can be read and ArraySegment.Count indicates free area remaining for new data.</param>
+            <param name="s">The stream to read into the arraysegment</param>
+            <param name="advanceOffset">if true, ArraySegment.Offset points to next free location with ArraySegment.Count adjusted to new free area;
+            if false, it points to start of newly read data and the count is how many bytes were read including FM if present</param>
+            <returns></returns>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DmiTransactionSubset.Arguments">
+            <summary>
+            Holds all of the fields as a list of string fields where any sub-delimiters are left in tact.
+            The subset header and trailer are not included.
+            All of the subset's arguments can be provided at once via this property.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DmiTransactionSubset.ArgCount">
+            <summary>
+            The number of fields (or arguments) currently present in this subset.
+            The header and trailer fields are not included in this number.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DmiTransactionSubset.Count">
+            <summary>
+            The total number of fields in this subset including the header and trailer.
+            This is the value that is included in the second header field.
+            Normally, this value is not set externally; however,
+            if it is set, then that value would be included in a serialized version of this
+            and it would be the setter's responsibility to make sure that the correct number of
+            fields were really present in the subset.
+            This value is revised whenever new arguments are added or removed from this subset.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DmiTransactionSubset.Item(System.Int32)">
+            <summary>
+            This class indexer allows for the changing or reading of subset arguments.
+            It alters the argument fields within an evolving subset.
+            Indexes can only be integers and are zero-based (unlike for the UniDynArray parent class methods)
+            in order to be consistent with typical .NET indexers.
+            Gets which exceed the current size of the transaction return an empty string like Pick
+            systems would.
+            Sets which exceed the current size of the transaction expand the field count to accomodate
+            the new higher index.
+            The index refers to the argument number (not the subset field number);
+            specifically, an index of zero refers to the fourth (index 3) actual field in the subset.
+            The subset subset overhead headers can be considered invisible for this indexer.
+            </summary>
+            <param name="index">The integer index from/to which a value is to be read/written</param>
+            <returns>Get returns the value at the requested index</returns>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DmiTransactionSubset.MioLevel">
+            <summary>
+            Indicates the contents of the third field in a dmi subset header.
+            Usually, this is reserved for to indicate the MIO level of a transaction,
+            but its use really depends upon the semantics of the actual subset and the
+            routines which produce or consume it.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DmiTransactionSubset.SubsetBaseFieldPosition">
+            <summary>
+            Gets or sets the subset base field position.
+            </summary>
+            <value>
+            The subset base field position.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DmiTransactionSubset.SubsetType">
+            <summary>
+            Indicates the Dmi subset type that represents this subset.
+            This value is the first field in a subset header and forms the start of the
+            string in a subset trailer.
+            Setting this value updates both the subset header and trailer.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DmiTransactionSubset.Trailer">
+            <summary>
+            Gets the subset trailer.
+            </summary>
+            <value>
+            The trailer.
+            </value>
+        </member>
+        <member name="T:Ellucian.Dmi.Runtime.IFormattable">
+            <summary>
+            Promises that an object contains a property which can hold, when appropriate,
+            a format string.
+            The format string is expected to be a valid .Net Date/Number format string
+            or one of the values in IFormatableConstants.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Dmi.Runtime.IFormattableConstants">
+            <summary>
+            A class containing constants which are meaningful values to consumers of objects
+            which implement the IFormatable interface.
+            Values in this class are in addition to valid .Net format strings.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Dmi.Runtime.DataContractMemberCharacteristics">
+            <summary>
+            A structure to support caching of information about each property of the type being serialized.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DataContractMemberCharacteristics.CreateUndefinedSet">
+            <summary>
+            Creates an undefined set of characteristics.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.DataContractMemberCharacteristics.#ctor(System.Boolean,System.Type,System.Int32,System.String,System.Boolean,Ellucian.Dmi.Runtime.EnvisionStringConversionTypeEnum)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Dmi.Runtime.DataContractMemberCharacteristics"/> struct.
+            </summary>
+            <param name="defined">if set to <c>true</c> [defined].</param>
+            <param name="type">The type.</param>
+            <param name="orderNum">The order num.</param>
+            <param name="fmtString">The FMT string.</param>
+            <param name="useInternal">if set to <c>true</c> [use internal].</param>
+            <param name="convtype">The convtype.</param>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.DataContractMemberCharacteristics.CharacteristicDefined">
+            <summary>
+            Gets a value indicating whether a property has its characteristics cached.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Dmi.Runtime.SecurityHeader">
+            <summary>
+            This class represents a request header that contains Colleague session credentials.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.SecurityHeader.ReadHeader(System.Xml.XmlDictionaryReader)">
+            <summary>
+            Reads the header.
+            </summary>
+            <param name="reader">The reader.</param>
+            <returns></returns>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.SecurityHeader.Token">
+            <summary>
+            Gets or sets the session security token.
+            </summary>
+            <value>
+            The token.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.SecurityHeader.ControlId">
+            <summary>
+            Gets or sets the session control ID.
+            </summary>
+            <value>
+            The control ID.
+            </value>
+        </member>
+        <member name="T:Ellucian.Dmi.Runtime.Serializers.BaseEnvisionProcessSubsetSerializer">
+            <summary>
+            Provides base functionality for translating DMI subsets.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Dmi.Runtime.Serializers.ICustomDmiSubsetSerializer">
+            <summary>
+            Defines interface needed for an implementation to serialize/deserialize a custom indirect object
+            into/from its proper dmi string according to rules incorporated into it.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.ICustomDmiSubsetSerializer.CreateObjectFromSubset(Ellucian.Dmi.Runtime.IDmiSubset,System.Type,System.Object)">
+            <summary>
+            Translates the provided subset into a object of a type it understands.
+            If the subset is an SERRS, it can throw an exception or process its state internally returning null.
+            If the type of a class is provided, the subset to create a new object from will be one described in its data contract.
+            If an object is provided, that objects properties will be populated from the 
+            If the subset is unrecognized by this deserializer, it should just return the subset as its return value.
+            </summary>
+            <param name="subset">the subset to turn into an object</param>
+            <param name="t">the type to return or null if it is to be derived from the subset somehow</param>
+            <param name="o">an already created instance of the object (or null)</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.ICustomDmiSubsetSerializer.WriteObjectToDmiStream(System.IO.Stream,System.String,System.Object)">
+            <summary>
+            Translates a single object into a dmi content which is written to the provided stream.
+            </summary>
+            <param name="s">The sream.</param>
+            <param name="dataContractName">Name of the data contract.</param>
+            <param name="o">The source object.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.BaseEnvisionProcessSubsetSerializer.extractDMIFieldDataFromProperties(System.Object,System.Reflection.PropertyInfo[])">
+            <summary>
+            Extracts the DMI field data from object properties.
+            </summary>
+            <param name="tx">The tx.</param>
+            <param name="props">The props.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.BaseEnvisionProcessSubsetSerializer.buildWindowController(System.Reflection.PropertyInfo,System.Collections.ICollection,System.Type)">
+            <summary>
+            Builds a window controller phantom field as required in many process transactions to represent a window.
+            </summary>
+            <param name="pi">property info of list field holding objects for list or window</param>
+            <param name="members">The members.</param>
+            <param name="wndwContentType">Type of the window content.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.BaseEnvisionProcessSubsetSerializer.addValidatedField(System.Collections.Generic.SortedDictionary{System.String,Ellucian.Dmi.Runtime.Serializers.ProcessFieldData},Ellucian.Dmi.Runtime.Serializers.ProcessFieldData,System.Single)">
+            <summary>
+            Adds the validated field.
+            </summary>
+            <param name="validFields">The valid fields.</param>
+            <param name="candidateField">The candidate field.</param>
+            <param name="newTopPos">The new top pos.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.BaseEnvisionProcessSubsetSerializer.buildAssociationFields(System.Type,System.Collections.ICollection,System.Single,System.String)">
+            <summary>
+            Builds the association fields.
+            </summary>
+            <param name="contentType">Type of the content.</param>
+            <param name="data">The data.</param>
+            <param name="ctlrPos">The CTLR pos.</param>
+            <param name="vmDelim">The vm delim.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.BaseEnvisionProcessSubsetSerializer.buildListField(System.Reflection.PropertyInfo,System.Object,System.Collections.IList,System.Single)">
+            <summary>
+            Builds the list field.
+            </summary>
+            <param name="pi">The property info.</param>
+            <param name="o">The object.</param>
+            <param name="data">The data.</param>
+            <param name="ctlrPos">The CTLR pos.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.BaseEnvisionProcessSubsetSerializer.buildFieldData(System.Reflection.PropertyInfo,System.Object)">
+            <summary>
+            Builds the field data.
+            </summary>
+            <param name="pi">The propertyinfo.</param>
+            <param name="data">The data.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.BaseEnvisionProcessSubsetSerializer.CreateObjectFromSubset(Ellucian.Dmi.Runtime.IDmiSubset,System.Type,System.Object)">
+            <summary>
+            Translates the provided DMI subset into a .NET object.
+            If the subset is an SERRS, it can throw an exception or process its state internally returning null.
+            If the type of a class is provided, the subset to create a new object from will be one described in its data contract.
+            If an object is provided, that object's properties will be populated from the subset fields.
+            </summary>
+            <param name="subset">the subset to turn into an object</param>
+            <param name="t">the type to return or null if it is to be derived from the subset somehow</param>
+            <param name="o">an already created instance of the object (or null)</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.BaseEnvisionProcessSubsetSerializer.WriteObjectToDmiStream(System.IO.Stream,System.String,System.Object)">
+            <summary>
+            Translates a single object into a DMI transaction which is written to the provided stream.
+            </summary>
+            <param name="s"></param>
+            <param name="dataContractName"></param>
+            <param name="o"></param>
+        </member>
+        <member name="T:Ellucian.Dmi.Runtime.Serializers.DataContractDmiSerializer">
+            <summary>
+            Utility class that translates DMI transaction subsets into .NET objects, or vice versa.
+            Serialization is the translation of .NET objects into DMI transaction subsets.
+            Deserialization is the translation of DMI transaction subsets into .NET objects.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Runtime.Serializers.DataContractDmiSerializer.DMI_ERROR_SUBSET_TYPE">
+            <summary>
+            The name of the SERRS subset.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.DataContractDmiSerializer.#ctor">
+            <summary>
+            Creates a direct object DMI serializer which expects to serialize a direct subset object (subset name in DataContract)
+            and deserialize into a generic IDmiSubset implementation. 
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.DataContractDmiSerializer.#ctor(System.Type[])">
+            <summary>
+            Creates a direct object DMI serializer which expects to serialize a direct subset object (subset name in DataContract)
+            and deserialize into one of the provided direct object types or a generic IDmiSubset implementation
+            whenever a subset fails to match on of the provided objects.
+            </summary>
+            <param name="possibleResponseTypes">The possible response types.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.DataContractDmiSerializer.#ctor(Ellucian.Dmi.Runtime.Serializers.ICustomDmiSubsetSerializer,System.Type[])">
+            <summary>
+            Creates an indirect DMI serializer which expects to serialize an indirect object into
+            the provided custom serializer type.
+            Responses are deserialized into any of the provided types (data contracts).
+            </summary>
+            <param name="customSerializer">The custom serializer.</param>
+            <param name="possibleResponseTypes">The possible response types.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.DataContractDmiSerializer.ReadObject(System.IO.Stream)">
+            <summary>
+             Reads the DMI stream and returns an array of deserialized subset objects.
+             Should a SERRS packet be encountered, an DmiException is thrown.
+             <para>
+             For default types, a stream is deserialized into any of provided
+             objects having a DataContractAttribute "Name=" matching the subsets type.
+             When streams deserialize into direct objects, properties are filled base upon their
+             DataMemberAttribute's "Order=" value.
+             </para><para>
+             For well-known transaction types, the well-known processing logic will create
+             well-known subsets from the incoming stream.
+             Properties in indirect objects fill according to their own unique rules.
+             For example, SCTRQ transactions place name value pairs of data into lists
+             within known locations.
+             </para><para>
+             Whenever a subset type fails to match an expected object, it is returned
+             as a generic IDmiSubset implementation.
+             Generic subsets present their arguments as a string array (as <c>IList</c>)
+             which must be assigned by the caller.
+             </para>
+            </summary>
+            <param name="stream">A <see cref="T:System.IO.Stream" /> used to read the XML stream or document.</param>
+            <returns>
+            The deserialized object.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.DataContractDmiSerializer.ReadObject(Ellucian.Dmi.Runtime.DmiTransaction,System.Boolean)">
+            <summary>
+            Takes in a DmiTransaction object and returns an array of deserialized objects.
+            </summary>
+            <param name="tx">DmiTransaction object</param>
+            <param name="replaceTextVMs">if set to true, text/comment fields will replace double value marks with a new line characters, and will replace single value marks with a space.</param>
+            <returns>
+            The deserialized object.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.DataContractDmiSerializer.ReadSubsetObject(Ellucian.Dmi.Runtime.IDmiSubset,System.Boolean)">
+            <summary>
+            Takes in one IDmiSubset object and returns a deserialized object.
+            </summary>
+            <param name="subset">IDmiSubset object</param>
+            <param name="replaceTextVMs">if set to true, text/comment fields will replace double value marks with a new line characters, and will replace single value marks with a space.</param>
+            <returns>
+            The deserialized object.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.DataContractDmiSerializer.ExtractObject``1(Ellucian.Dmi.Runtime.DmiTransaction)">
+            <summary>
+            Gets specific objects out of a DmiTransaction as determined by the target object type.
+            </summary>
+            <typeparam name="TObject">The type of the target object.</typeparam>
+            <param name="tx">The transaction object.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.DataContractDmiSerializer.ExtractPropertiesForObject(System.Type,Ellucian.Dmi.Runtime.DmiTransaction)">
+            <summary>
+            Extracts the properties for object.
+            </summary>
+            <param name="type">The type.</param>
+            <param name="tx">The transaction object.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.DataContractDmiSerializer.createObjectForSubset(Ellucian.Dmi.Runtime.IDmiSubset,System.Boolean)">
+            <summary>
+            Return an object for the subset type provided:
+            </summary>
+            <param name="subset">The subset.</param>
+            <param name="replaceTextVMs">if set to true, text/comment fields will replace double value marks with a new line characters, and will replace single value marks with a space.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.DataContractDmiSerializer.createObjectForSubset(Ellucian.Dmi.Runtime.IDmiSubset,System.Type,System.Object,System.Boolean)">
+            <summary>
+            Creates the object for subset.
+            </summary>
+            <param name="subset">The subset.</param>
+            <param name="t">The type.</param>
+            <param name="o">The oject.</param>
+            <param name="replaceTextVMs">if set to true, text/comment fields will replace double value marks with a new line characters, and will replace single value marks with a space.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.DataContractDmiSerializer.WriteObject(System.IO.Stream,System.Object)">
+            <summary>
+            Writes the complete object as a DMI transaction string as a stream using the provided System.IO.Stream.
+            </summary>
+            <param name="s">The stream.</param>
+            <param name="graph">The object that contains the data to write to the stream.</param>
+            <exception cref="T:System.Runtime.Serialization.InvalidDataContractException">
+                The type being serialized does not conform to data contract rules. For example,
+                the System.Runtime.Serialization.DataContractAttribute attribute has not
+                been applied to the type.
+            </exception>
+            <exception cref="T:System.Runtime.Serialization.SerializationException">
+                There is a problem with the instance being serialized.
+            </exception>
+            <exception cref="T:System.ServiceModel.QuotaExceededException">
+                The maximum number of objects to serialize has been exceeded. 
+                Check the System.Runtime.Serialization.DataContractSerializer.MaxItemsInObjectGraph property.
+            </exception>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.DataContractDmiSerializer.SerializeObjectToDmiSubset(System.Object)">
+            <summary>
+            Serializes the object to a DMI subset.
+            </summary>
+            <param name="graph">The graph.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.DataContractDmiSerializer.buildFromDirectObject(System.String,System.Object)">
+            <summary>
+            <para>
+            Creates an IDmiSubset object by serializing the provided object.
+            The object is presumed to have a DataContract attribute and each property
+            to be serialized is presumed to have DataMember attributes which include
+            an "Order=" attribute property.
+             </para><para>
+            The method attempts to place DataMember attributed properties without an Order=
+            attribute property after the previously stored property, but use of the Order=
+            attribute property is highly encouraged.
+            No properties without a DataMember attribute is stored.  No fields are stored.
+             </para>
+            </summary>
+            <param name="subsetType">the subset type name; its DMI subset type (usually taken from "Name=" data contract attribute property</param>
+            <param name="subsetData">the object to be serialized</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.DataContractDmiSerializer.GetOrderedPropertyNames(Ellucian.Dmi.Runtime.Association)">
+            <summary>
+            <para>
+            Return only those properties which have a DataMember attribute containing an Order= value
+            in the data contract. Return these as a sorted dictionary so that they can be processed in order.
+             </para><para>
+            If data members are declared without an "order=" property, an attempt is made to include them
+            at one more than the most recently expressed order.
+             </para><para>
+            If the order is not mentioned, it will work if all data members have no order specified
+            and if they are declared in subset order in code.
+            However, mixing members having "Order=" properties with those which do not is not recommended.
+            Any property without a data member attribute is ignored.
+             </para>
+            </summary>
+            <param name="a">The association from which to extract the location/propertyName pairs</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.DataContractDmiSerializer.parseValueMarkDelimitedString(System.String)">
+            <summary>
+            This method parses a value-mark delimited string into a list of strings.
+            </summary>
+            <param name="delimitedString"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.DataContractDmiSerializer.parseSubValueMarkDelimitedString(System.String)">
+            <summary>
+            This method parses a subvalue-mark delimited string into a nested list structure.
+            </summary>
+            <param name="delimitedString"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.DataContractDmiSerializer.parseTextMarkDelimitedString(System.String)">
+            <summary>
+            This method parses a text-mark delimited string into a nested list structure.
+            </summary>
+            <param name="delimitedString"></param>
+            <returns></returns>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.Serializers.DataContractDmiSerializer.ResponseTypes">
+            <summary>
+            An array of object types which can be used as targets of Deserialization.
+            Presumably, these have DataContractAttributes with names matching potential
+            subsets expected during a deserialization.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Dmi.Runtime.Serializers.PropertyInfoExtensions">
+            <summary>
+            Extends the PropertyInfo class to get a delegate for the SetValue() method.
+            This delegate is a compiled lambda expression which helps improve performance.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.PropertyInfoExtensions.GetValueSetter(System.Reflection.PropertyInfo)">
+            <summary>
+            Gets the value setter.
+            </summary>
+            <param name="propertyInfo">The property info.</param>
+            <returns></returns>
+        </member>
+        <member name="T:Ellucian.Dmi.Runtime.Serializers.ProcessFieldData">
+            <summary>
+            Holds data and metadata captured from object DataMemberAttributes and other
+            Attributes as well as an object instance itself.
+            These values are used to provide data for fields used in indirect object serialization
+            of processes.
+            This class implements IFormatable as used in ReflectableString and its utilities.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.ProcessFieldData.#ctor">
+            <summary>
+            Creates a new ProcessFieldData object with FieldType set to Undefined, 
+            Position set to -1 and Valid set to false.
+            These need to be revised as it gets populated with actual metadata.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.ProcessFieldData.GetOrderedKey">
+            <summary>
+            Gets the ordered key.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.Serializers.ProcessFieldData.Event">
+            <summary>
+            Gets or sets the event.
+            </summary>
+            <value>
+            The event.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.Serializers.ProcessFieldData.FormatString">
+            <summary>
+            Gets or sets the format string.
+            </summary>
+            <value>
+            The format string.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.Serializers.ProcessFieldData.FieldType">
+            <summary>
+            Gets or sets the type of the field.
+            </summary>
+            <value>
+            The type of the field.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.Serializers.ProcessFieldData.FieldTypeSymbol">
+            <summary>
+            Gets the field type symbol.
+            </summary>
+            <value>
+            The field type symbol.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.Serializers.ProcessFieldData.IsValid">
+            <summary>
+            Gets or sets a value indicating whether this instance is valid.
+            </summary>
+            <value>
+              <c>true</c> if this instance is valid; otherwise, <c>false</c>.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.Serializers.ProcessFieldData.Name">
+            <summary>
+            Gets or sets the name.
+            </summary>
+            <value>
+            The name.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.Serializers.ProcessFieldData.Position">
+            <summary>
+            Gets or sets the position.
+            </summary>
+            <value>
+            The position.
+            </value>
+        </member>
+        <member name="P:Ellucian.Dmi.Runtime.Serializers.ProcessFieldData.Value">
+            <summary>
+            Gets or sets the value.
+            </summary>
+            <value>
+            The value.
+            </value>
+        </member>
+        <member name="T:Ellucian.Dmi.Runtime.Serializers.SctrqDmiSubsetSerializer">
+            <summary>
+            Serializer for the Colleague Transaction (CTRQ) DMI requests and responses.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Runtime.Serializers.SctrqDmiSubsetSerializer.DMI_SCTVAL_SUBSET_TYPE">
+            <summary>
+            The name of the SCTVAL subset.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Runtime.Serializers.SctrqDmiSubsetSerializer.DMI_SCTRQ_SUBSET_TYPE">
+            <summary>
+            The name of the SCTRQ subset.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Runtime.Serializers.SctrqDmiSubsetSerializer.DMI_SCTRS_SUBSET_TYPE">
+            <summary>
+            The name of the SCTRS subset.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Runtime.Serializers.SctrqDmiSubsetSerializer.DMI_SACTRQ_SUBSET_TYPE">
+            <summary>
+            The name of the SACTRQ subset.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Dmi.Runtime.Serializers.SctrqDmiSubsetSerializer.DMI_SACTRS_SUBSET_TYPE">
+            <summary>
+            The name of the SACTRS subset.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.SctrqDmiSubsetSerializer.CreateObjectFromSubset(Ellucian.Dmi.Runtime.IDmiSubset,System.Type,System.Object)">
+            <summary>
+            Translates the provided subset into a object of a known type.
+            If the subset is unrecognized by this deserializer, it is returned as is.
+            </summary>
+            <param name="subset">the subset to turn into an object</param>
+            <param name="t">the type to return or null if it is to be derived from the subset somehow</param>
+            <param name="o">an already created instance of the object (or null)</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.SctrqDmiSubsetSerializer.isInBound(System.Reflection.PropertyInfo)">
+            <summary>
+            Returns the boolean value for the InBoundData attribute which is defined in the SctrqDataMemberAttribute
+            </summary>
+            <param name="pi"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.SctrqDmiSubsetSerializer.isOutBound(System.Reflection.PropertyInfo)">
+            <summary>
+            Returns the boolean value for the OutBoundData attribute which is defined in the SctrqDataMemberAttribute
+            </summary>
+            <param name="pi"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.SctrqDmiSubsetSerializer.WriteObjectToDmiStream(System.IO.Stream,System.String,System.Object)">
+            <summary>
+            Translates a single object into a dmi content which is written to the provided stream.
+            </summary>
+            <param name="s">The stream.</param>
+            <param name="dataContractName">Data contract defining the source type.</param>
+            <param name="o">The source object.</param>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.SctrqDmiSubsetSerializer.extractDMIFieldDataFromProperties(System.Object,System.Reflection.PropertyInfo[])">
+            <summary>
+            Extracts the DMI field data from object properties.
+            </summary>
+            <param name="tx">The transaction.</param>
+            <param name="props">The array of property info objects.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.SetrqDmiSubsetSerializer.isIncludeInSetrq(System.Reflection.PropertyInfo)">
+            <summary>
+            Returns the boolean value for the IncludeInSetrq attribute which is defined in SetDataMemberAttribute
+            </summary>
+            <param name="pi"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Dmi.Runtime.Serializers.SetrqDmiSubsetSerializer.WriteObjectToDmiStream(System.IO.Stream,System.String,System.Object)">
+            <summary>
+            Translates a single object into a dmi content which is written to the provided stream.
+            </summary>
+            <param name="s"></param>
+            <param name="o"></param>
+        </member>
+    </members>
+</doc>

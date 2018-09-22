@@ -1,0 +1,370 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{28EB3CAC-2FA7-401E-8246-0C03C50FDEDA}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Ellucian.Colleague.Dtos.Student</RootNamespace>
+    <AssemblyName>Ellucian.Colleague.Dtos.Student</AssemblyName>
+    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <EnableCodeInspectionOnBuild>true</EnableCodeInspectionOnBuild>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Debug\Ellucian.Colleague.Dtos.Student.XML</DocumentationFile>
+    <WarningsAsErrors>1570,1571,1572,1573,1591</WarningsAsErrors>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Release\Ellucian.Colleague.Dtos.Student.XML</DocumentationFile>
+    <WarningsAsErrors>1570,1571,1572,1573,1591</WarningsAsErrors>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net40\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.IdentityModel" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="AcademicCredit.cs" />
+    <Compile Include="AcademicCredit2.cs" />
+    <Compile Include="AcademicCredit3.cs" />
+    <Compile Include="AcademicHistory4.cs" />
+    <Compile Include="AcademicHistoryBatch3.cs" />
+    <Compile Include="AcademicHistoryLevel3.cs" />
+    <Compile Include="AddAuthorizationInput.cs" />
+    <Compile Include="AddAuthorization.cs" />
+    <Compile Include="AcademicTerm4.cs" />
+    <Compile Include="AdministrativePeriod.cs" />
+    <Compile Include="FacultyPermissions.cs" />
+    <Compile Include="Award2.cs" />
+    <Compile Include="AwardCategoryType.cs" />
+    <Compile Include="AwardLetterHistoryItem.cs" />
+    <Compile Include="DropReason.cs" />
+    <Compile Include="RegistrationConfiguration.cs" />
+    <Compile Include="LoanType.cs" />
+    <Compile Include="NonAcademicAttendance.cs" />
+    <Compile Include="NonAcademicAttendanceEventType.cs" />
+    <Compile Include="NonAcademicAttendanceRequirement.cs" />
+    <Compile Include="NonAcademicEvent.cs" />
+    <Compile Include="NonAcademicEventQueryCriteria.cs" />
+    <Compile Include="SectionAttendanceResponse.cs" />
+    <Compile Include="SectionAttendance.cs" />
+    <Compile Include="SectionCharge.cs" />
+    <Compile Include="ShoppingSheetAwardGroup.cs" />
+    <Compile Include="StudentSectionsAttendances.cs" />
+    <Compile Include="StudentSectionAttendancesQueryCriteria.cs" />
+    <Compile Include="StudentAwardYear2.cs" />
+    <Compile Include="SectionRoster.cs" />
+    <Compile Include="StudentSectionAttendanceError.cs" />
+    <Compile Include="StudentSectionAttendance.cs" />
+    <Compile Include="StudentAttendanceQueryCriteria.cs" />
+    <Compile Include="AcademicCreditQueryCriteria.cs" />
+    <Compile Include="AcademicHistory.cs" />
+    <Compile Include="AcademicHistory3.cs" />
+    <Compile Include="AcademicHistory2.cs" />
+    <Compile Include="AcademicHistoryBatch2.cs" />
+    <Compile Include="AcademicHistoryLevel2.cs" />
+    <Compile Include="AcademicLevel.cs" />
+    <Compile Include="AcademicProgram.cs" />
+    <Compile Include="AcademicTerm.cs" />
+    <Compile Include="AcademicTerm2.cs" />
+    <Compile Include="AcademicTerm3.cs" />
+    <Compile Include="Advisement.cs" />
+    <Compile Include="BookOption.cs" />
+    <Compile Include="ComponentTest2.cs" />
+    <Compile Include="CreditStatus.cs" />
+    <Compile Include="FacultyGradingConfiguration.cs" />
+    <Compile Include="CatalogFilterType.cs" />
+    <Compile Include="CatalogFilterOption.cs" />
+    <Compile Include="FALinkDocument.cs" />
+    <Compile Include="InstructionalDeliveryMethod.cs" />
+    <Compile Include="Requirements\CreditResult.cs" />
+    <Compile Include="Requirements\CourseResult.cs" />
+    <Compile Include="Requirements\GroupExplanation.cs" />
+    <Compile Include="Requirements\AcadResult.cs" />
+    <Compile Include="Requirements\GroupResult3.cs" />
+    <Compile Include="Requirements\RequirementResult3.cs" />
+    <Compile Include="Requirements\SubRequirementResult3.cs" />
+    <Compile Include="SectionBookAction.cs" />
+    <Compile Include="SectionMeetingInstance.cs" />
+    <Compile Include="SectionGrades3.cs" />
+    <Compile Include="BookQueryCriteria.cs" />
+    <Compile Include="SectionTextbook.cs" />
+    <Compile Include="StudentAttendance.cs" />
+    <Compile Include="StudentBatch3.cs" />
+    <Compile Include="StudentProgramStatusProcessingType.cs" />
+    <Compile Include="CourseCatalogConfiguration.cs" />
+    <Compile Include="StudentRequestFee.cs" />
+    <Compile Include="HoldRequestType.cs" />
+    <Compile Include="StudentEnrollmentRequest.cs" />
+    <Compile Include="StudentRequest.cs" />
+    <Compile Include="StudentSearchCriteria.cs" />
+    <Compile Include="StudentTag.cs" />
+    <Compile Include="StudentTranscriptRequest.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="StudentRequestConfiguration.cs" />
+    <Compile Include="SubTestResult2.cs" />
+    <Compile Include="TestResult2.cs" />
+    <Compile Include="YearlyCycle.cs" />
+    <Compile Include="SessionCycle.cs" />
+    <Compile Include="CapSize.cs" />
+    <Compile Include="College.cs" />
+    <Compile Include="ComponentTest.cs" />
+    <Compile Include="AcademicStanding.cs" />
+    <Compile Include="ClassLevel.cs" />
+    <Compile Include="AcademicHistoryQueryCriteria.cs" />
+    <Compile Include="AcademicHistoryBatch.cs" />
+    <Compile Include="Affiliation.cs" />
+    <Compile Include="AcademicHistoryLevel.cs" />
+    <Compile Include="PilotStudentTermLevelGpa.cs" />
+    <Compile Include="GradeQueryCriteria.cs" />
+    <Compile Include="GraduationApplicationFee.cs" />
+    <Compile Include="PilotAcademicHistoryLevel.cs" />
+    <Compile Include="PilotGrade.cs" />
+    <Compile Include="PilotStudentSection.cs" />
+    <Compile Include="Requirements\BaseResult2.cs" />
+    <Compile Include="Requirements\CompletionStatus.cs" />
+    <Compile Include="Requirements\GroupResult2.cs" />
+    <Compile Include="Requirements\PlanningStatus.cs" />
+    <Compile Include="Requirements\RequirementResult2.cs" />
+    <Compile Include="Requirements\SubRequirementResult2.cs" />
+    <Compile Include="LocationCycleRestriction.cs" />
+    <Compile Include="SectionGrades2.cs" />
+    <Compile Include="StudentGrade2.cs" />
+    <Compile Include="StudentHomeLocation.cs" />
+    <Compile Include="GownSize.cs" />
+    <Compile Include="GraduationApplication.cs" />
+    <Compile Include="GraduationConfiguration.cs" />
+    <Compile Include="GraduationQuestion.cs" />
+    <Compile Include="PetitionStatus.cs" />
+    <Compile Include="GraduationQuestionType.cs" />
+    <Compile Include="RequisiteWaiver.cs" />
+    <Compile Include="SectionDateQueryCriteria.cs" />
+    <Compile Include="SectionRegistrationDate.cs" />
+    <Compile Include="SectionPermission.cs" />
+    <Compile Include="SectionTransferStatus.cs" />
+    <Compile Include="StudentAcademicLevel.cs" />
+    <Compile Include="StudentBatch2.cs" />
+    <Compile Include="StudentEnrollment.cs" />
+    <Compile Include="RegistrationOptions.cs" />
+    <Compile Include="StudentAffiliation.cs" />
+    <Compile Include="StudentAffiliationQueryCriteria.cs" />
+    <Compile Include="StudentBatch.cs" />
+    <Compile Include="Requirements\RequirementQueryCriteria.cs" />
+    <Compile Include="StudentPetition.cs" />
+    <Compile Include="StudentPetitionReason.cs" />
+    <Compile Include="StudentPetitionType.cs" />
+    <Compile Include="StudentTermsQueryCriteria.cs" />
+    <Compile Include="StudentTerm.cs" />
+    <Compile Include="StudentRestrictionsQueryCriteria.cs" />
+    <Compile Include="StudentQueryCriteria.cs" />
+    <Compile Include="EducationHistoryQueryCriteria.cs" />
+    <Compile Include="SectionsQueryCriteria.cs" />
+    <Compile Include="StudentStandingsQueryCriteria.cs" />
+    <Compile Include="StudentMinors.cs" />
+    <Compile Include="Credential.cs" />
+    <Compile Include="EducationHistory.cs" />
+    <Compile Include="HighSchool.cs" />
+    <Compile Include="HighSchoolGpa.cs" />
+    <Compile Include="StudentMajors.cs" />
+    <Compile Include="RegistrationDate.cs" />
+    <Compile Include="StudentProgram2.cs" />
+    <Compile Include="Requirements\AdditionalRequirement2.cs" />
+    <Compile Include="StudentProgramsQueryCriteria.cs" />
+    <Compile Include="StudentStanding.cs" />
+    <Compile Include="StudentStandingType.cs" />
+    <Compile Include="TestResult.cs" />
+    <Compile Include="AdvisorType.cs" />
+    <Compile Include="AdmittedStatus.cs" />
+    <Compile Include="Applicant.cs" />
+    <Compile Include="ApplicationInfluence.cs" />
+    <Compile Include="ApplicationStatus.cs" />
+    <Compile Include="Book.cs" />
+    <Compile Include="CareerGoal.cs" />
+    <Compile Include="Ccd.cs" />
+    <Compile Include="Application.cs" />
+    <Compile Include="ApplicationStatusCategory.cs" />
+    <Compile Include="CourseQueryCriteria.cs" />
+    <Compile Include="FacultyQueryCriteria.cs" />
+    <Compile Include="MidTermGrade2.cs" />
+    <Compile Include="RegistrationEligibilityTerm.cs" />
+    <Compile Include="StudentGrade.cs" />
+    <Compile Include="SectionGrades.cs" />
+    <Compile Include="SectionMeeting2.cs" />
+    <Compile Include="Section3.cs" />
+    <Compile Include="AttendanceTrackingType.cs" />
+    <Compile Include="CustomField.cs" />
+    <Compile Include="ConnectionStatus.cs" />
+    <Compile Include="PreferredSectionMessage.cs" />
+    <Compile Include="PreferredSectionsResponse.cs" />
+    <Compile Include="RegistrationAction.cs" />
+    <Compile Include="ReplacedStatus.cs" />
+    <Compile Include="ReplacementStatus.cs" />
+    <Compile Include="Requirements\AwardType.cs" />
+    <Compile Include="RequisiteCompletionOrder.cs" />
+    <Compile Include="PreferredSection.cs" />
+    <Compile Include="RegistrationEligibilityTermStatus.cs" />
+    <Compile Include="SectionGradeResponse.cs" />
+    <Compile Include="SectionGradeResponseError.cs" />
+    <Compile Include="SubTestResult.cs" />
+    <Compile Include="Test.cs" />
+    <Compile Include="NoncourseStatus.cs" />
+    <Compile Include="NoncourseStatusType.cs" />
+    <Compile Include="TestResultsQueryCriteria.cs" />
+    <Compile Include="TestType.cs" />
+    <Compile Include="TranscriptAccess.cs" />
+    <Compile Include="TranscriptCourse.cs" />
+    <Compile Include="TestScore.cs" />
+    <Compile Include="ExternalTranscriptStatus.cs" />
+    <Compile Include="RegistrationEligibility.cs" />
+    <Compile Include="SectionRequisite.cs" />
+    <Compile Include="Course2.cs" />
+    <Compile Include="CoursePage2.cs" />
+    <Compile Include="CourseSearch2.cs" />
+    <Compile Include="Requisite.cs" />
+    <Compile Include="Section2.cs" />
+    <Compile Include="TopicCode.cs" />
+    <Compile Include="CredType.cs" />
+    <Compile Include="Faculty.cs" />
+    <Compile Include="FederalCourseClassification.cs" />
+    <Compile Include="LocalCourseClassification.cs" />
+    <Compile Include="PersonType.cs" />
+    <Compile Include="TranscriptGrouping.cs" />
+    <Compile Include="TranscriptRestriction.cs" />
+    <Compile Include="Transcripts\AcademicAwardsReported.cs" />
+    <Compile Include="Transcripts\Address.cs" />
+    <Compile Include="Transcripts\AlternateName.cs" />
+    <Compile Include="Transcripts\Attendance.cs" />
+    <Compile Include="Transcripts\Birth.cs" />
+    <Compile Include="Transcripts\Contacts.cs" />
+    <Compile Include="Transcripts\DeliveryMethod.cs" />
+    <Compile Include="Transcripts\Destination.cs" />
+    <Compile Include="Transcripts\ElectronicDelivery.cs" />
+    <Compile Include="Transcripts\Email.cs" />
+    <Compile Include="Transcripts\EnrollmentDetail.cs" />
+    <Compile Include="Transcripts\Name.cs" />
+    <Compile Include="Transcripts\Organization.cs" />
+    <Compile Include="Transcripts\Person.cs" />
+    <Compile Include="Transcripts\Phone.cs" />
+    <Compile Include="Transcripts\Receiver.cs" />
+    <Compile Include="Transcripts\Recipient.cs" />
+    <Compile Include="Transcripts\Request.cs" />
+    <Compile Include="Transcripts\RequestedStudent.cs" />
+    <Compile Include="Transcripts\RequestorReceiverOrganization.cs" />
+    <Compile Include="Transcripts\School.cs" />
+    <Compile Include="Transcripts\Source.cs" />
+    <Compile Include="Transcripts\TranscriptPurpose.cs" />
+    <Compile Include="Transcripts\TranscriptRequest.cs" />
+    <Compile Include="RegistrationResponse.cs" />
+    <Compile Include="RequirementGroup.cs" />
+    <Compile Include="Requirements\PlannedCredit.cs" />
+    <Compile Include="RestrictionType.cs" />
+    <Compile Include="RosterStudent.cs" />
+    <Compile Include="Specialization.cs" />
+    <Compile Include="Minor.cs" />
+    <Compile Include="Corequisite.cs" />
+    <Compile Include="Course.cs" />
+    <Compile Include="CourseLevel.cs" />
+    <Compile Include="CoursePage.cs" />
+    <Compile Include="CourseSearch.cs" />
+    <Compile Include="CourseSearchCriteria.cs" />
+    <Compile Include="CourseType.cs" />
+    <Compile Include="Degree.cs" />
+    <Compile Include="Grade.cs" />
+    <Compile Include="GradeRestriction.cs" />
+    <Compile Include="GradingType.cs" />
+    <Compile Include="InstructionalMethod.cs" />
+    <Compile Include="Major.cs" />
+    <Compile Include="MidTermGrade.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RegistrationMessage.cs" />
+    <Compile Include="Requirements\AdditionalRequirement.cs" />
+    <Compile Include="Requirements\BaseResult.cs" />
+    <Compile Include="Requirements\Group.cs" />
+    <Compile Include="Requirements\GroupResult.cs" />
+    <Compile Include="Requirements\MaxCoursesAtLevels.cs" />
+    <Compile Include="Requirements\MaxCreditAtLevels.cs" />
+    <Compile Include="Requirements\Program.cs" />
+    <Compile Include="Requirements\ProgramRequirements.cs" />
+    <Compile Include="Requirements\Requirement.cs" />
+    <Compile Include="Requirements\RequirementResult.cs" />
+    <Compile Include="Requirements\SubRequirement.cs" />
+    <Compile Include="Requirements\SubRequirementResult.cs" />
+    <Compile Include="Section.cs" />
+    <Compile Include="SectionBook.cs" />
+    <Compile Include="SectionMeeting.cs" />
+    <Compile Include="SectionRegistration.cs" />
+    <Compile Include="Student.cs" />
+    <Compile Include="StudentLoad.cs" />
+    <Compile Include="StudentProgram.cs" />
+    <Compile Include="StudentQuery.cs" />
+    <Compile Include="StudentType.cs" />
+    <Compile Include="Subject.cs" />
+    <Compile Include="Term.cs" />
+    <Compile Include="TranscriptCategory.cs" />
+    <Compile Include="Transcripts\TranscriptResponse.cs" />
+    <Compile Include="Transcripts\TranscriptType.cs" />
+    <Compile Include="Transcripts\TransmissionData.cs" />
+    <Compile Include="Transcripts\UserDefinedExtensions.cs" />
+    <Compile Include="StudentWaiver.cs" />
+    <Compile Include="StudentWaiverReason.cs" />
+    <Compile Include="WaiverStatus.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos.Base\Ellucian.Colleague.Dtos.Base.csproj">
+      <Project>{A147BD58-ECC6-409B-A633-128946AAA456}</Project>
+      <Name>Ellucian.Colleague.Dtos.Base</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- begin ellucian project settings -->
+  <Import Project="$(SolutionDir)CodeAnalysis\CodeScan.proj" Condition="Exists('$(SolutionDir)CodeAnalysis\CodeScan.proj ')" />
+  <Import Project="$(ProjectDir)..\..\..\BuildConfig\CodeSigning.targets" Condition="Exists('$(ProjectDir)..\..\..\BuildConfig\CodeSigning.targets ')" />
+  <Import Project="$(MSBuildProgramFiles32)\MSBuild\FxCop Integrator\FxCopIntegrator.targets" Condition="Exists('$(MSBuildProgramFiles32)\MSBuild\FxCop Integrator\FxCopIntegrator.targets')" />
+  <!-- end ellucian project settings -->
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

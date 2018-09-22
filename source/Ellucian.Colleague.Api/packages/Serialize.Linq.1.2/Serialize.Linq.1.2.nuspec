@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+  <metadata>
+    <id>Serialize.Linq</id>
+    <version>1.2</version>
+    <title>Serialize.Linq</title>
+    <authors>esskar</authors>
+    <owners>esskar</owners>
+    <projectUrl>https://github.com/esskar/Serialize.Linq</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>C# library to serialize LINQ expressions</description>
+    <releaseNotes>* added WP 7.1 and WP 8 assemblies
+* bugfixes and improvments</releaseNotes>
+    <copyright />
+  </metadata>
+</package>

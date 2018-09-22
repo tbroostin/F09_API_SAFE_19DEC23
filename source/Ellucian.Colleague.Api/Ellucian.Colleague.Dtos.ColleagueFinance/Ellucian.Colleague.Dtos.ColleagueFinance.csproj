@@ -1,0 +1,132 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{CA034D7A-0963-4463-B974-BEF18BE515AE}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Ellucian.Colleague.Dtos.ColleagueFinance</RootNamespace>
+    <AssemblyName>Ellucian.Colleague.Dtos.ColleagueFinance</AssemblyName>
+    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Debug\Ellucian.Colleague.Dtos.ColleagueFinance.XML</DocumentationFile>
+    <WarningsAsErrors>1570,1571,1572,1573,1591</WarningsAsErrors>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Release\Ellucian.Colleague.Dtos.ColleagueFinance.XML</DocumentationFile>
+    <WarningsAsErrors>1570,1571,1572,1573,1591</WarningsAsErrors>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net40\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.IdentityModel" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="BudgetAdjustmentPendingApprovalSummary.cs" />
+    <Compile Include="NextApprover.cs" />
+    <Compile Include="Approver.cs" />
+    <Compile Include="AccountsPayableType.cs" />
+    <Compile Include="BlanketPurchaseOrder.cs" />
+    <Compile Include="BlanketPurchaseOrderStatus.cs" />
+    <Compile Include="BlanketPurchaseOrderGlDistribution.cs" />
+    <Compile Include="NextApproverValidationResponse.cs" />
+    <Compile Include="BudgetAdjustmentSummary.cs" />
+    <Compile Include="BudgetAdjustment.cs" />
+    <Compile Include="AdjustmentLine.cs" />
+    <Compile Include="BudgetAdjustmentsEnabled.cs" />
+    <Compile Include="CostCenterComponentRangeQueryCriteria.cs" />
+    <Compile Include="CostCenterComponentQueryCriteria.cs" />
+    <Compile Include="DraftAdjustmentLine.cs" />
+    <Compile Include="DraftBudgetAdjustment.cs" />
+    <Compile Include="FinancialThreshold.cs" />
+    <Compile Include="BudgetAdjustmentConfiguration.cs" />
+    <Compile Include="GlAccountValidationResponse.cs" />
+    <Compile Include="GeneralLedgerClassConfiguration.cs" />
+    <Compile Include="GlObjectCodeBudgetPool.cs" />
+    <Compile Include="GlObjectCodeGlAccount.cs" />
+    <Compile Include="GlObjectCode.cs" />
+    <Compile Include="GeneralLedgerAccount.cs" />
+    <Compile Include="GeneralLedgerConfiguration.cs" />
+    <Compile Include="GeneralLedgerComponent.cs" />
+    <Compile Include="GlAccountActivityDetail.cs" />
+    <Compile Include="CostCenterSubtotal.cs" />
+    <Compile Include="CostCenter.cs" />
+    <Compile Include="CostCenterGlAccount.cs" />
+    <Compile Include="CostCenterQueryCriteria.cs" />
+    <Compile Include="GlActivityDetailQueryCriteria.cs" />
+    <Compile Include="GlBudgetPool.cs" />
+    <Compile Include="GlBudgetPoolType.cs" />
+    <Compile Include="GlClass.cs" />
+    <Compile Include="RecurringVoucher.cs" />
+    <Compile Include="JournalEntry.cs" />
+    <Compile Include="JournalEntryItem.cs" />
+    <Compile Include="JournalEntryStatus.cs" />
+    <Compile Include="JournalEntryType.cs" />
+    <Compile Include="LineItem.cs" />
+    <Compile Include="LineItemGlDistribution.cs" />
+    <Compile Include="LineItemTax.cs" />
+    <Compile Include="GlTransaction.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="AccountsPayableTax.cs" />
+    <Compile Include="RecurringVoucherSchedule.cs" />
+    <Compile Include="RecurringVoucherStatus.cs" />
+    <Compile Include="Requisition.cs" />
+    <Compile Include="RequisitionStatus.cs" />
+    <Compile Include="TodaysFiscalYear.cs" />
+    <Compile Include="Voucher.cs" />
+    <Compile Include="Voucher2.cs" />
+    <Compile Include="BudgetEntryStatus.cs" />
+    <Compile Include="VoucherStatus.cs" />
+    <Compile Include="PurchaseOrder.cs" />
+    <Compile Include="PurchaseOrderStatus.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- begin ellucian project settings -->
+  <Import Project="$(SolutionDir)CodeAnalysis\CodeScan.proj" Condition="Exists('$(SolutionDir)CodeAnalysis\CodeScan.proj ')" />
+  <Import Project="$(ProjectDir)..\..\..\BuildConfig\CodeSigning.targets" Condition="Exists('$(ProjectDir)..\..\..\BuildConfig\CodeSigning.targets ')" />
+  <Import Project="$(MSBuildProgramFiles32)\MSBuild\FxCop Integrator\FxCopIntegrator.targets" Condition="Exists('$(MSBuildProgramFiles32)\MSBuild\FxCop Integrator\FxCopIntegrator.targets')" />
+  <!-- end ellucian project settings -->
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

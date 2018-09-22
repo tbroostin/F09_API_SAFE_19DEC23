@@ -1,0 +1,278 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Ellucian.Web.Mvc.Install</name>
+    </assembly>
+    <members>
+        <member name="T:Ellucian.Web.Mvc.Install.Backup.BackupUtility">
+            <summary>
+            Utility for backing up settings
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Install.Backup.BackupUtility.SamlBackupFilename">
+            <summary>
+            The SAML settings backup file name
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Install.Backup.BackupUtility.ApiBackupFilename">
+            <summary>
+            The API appSettings backup file name
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Install.Backup.BackupUtility.SettingsConfigFilename">
+            <summary>
+            The settings.config file name
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Install.Backup.BackupUtility.SitemapConfigFilename">
+            <summary>
+            The sitemap.config file name
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Install.Backup.BackupUtility.WebConfigFilename">
+            <summary>
+            The web.config file name
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Install.Backup.BackupUtility.CustomCssFilename">
+            <summary>
+            The Custom.css file name
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Install.Backup.BackupUtility.THEME_CSS">
+            <summary>
+            The css theme file name
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Install.Backup.BackupUtility.THEME_CSS_BACKUP">
+            <summary>
+            The css theme backup file name
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Install.Backup.BackupUtility.#ctor(System.String,System.String,Ellucian.Web.Mvc.Install.InstallLogger)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Mvc.Install.Backup.BackupUtility"/> class.
+            </summary>
+            <param name="installPath">The install path.</param>
+            <param name="baseBackupDirectoryName">Name of the base backup directory.</param>
+            <param name="logger">The logger.</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Install.Backup.BackupUtility.PrepareAppGlobalResourceMerging(System.String)">
+            <summary>
+            Prepares the application global resource merging.
+            During PreInstall, make backup copies of all resx files before installshield overwrites the files
+            Files are merged with client customizations during post install
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Install.Backup.BackupUtility.MergeAppGlobalResources">
+            <summary>
+            During PostInstall, the newly delivered values are compared against the user customizations from the json log file
+            The merged version will be saved to file *.resx", overwriting the file created by the InstallShield.
+            
+            Example merging of *.resx.backup and the Ellucian-delivered *.resx:
+            
+            v1.0 delivered   Client's v1.0     v1.1 delivered      	Merged v1.1     Effect:
+            KeyA = 1		 KeyA = 1			KeyA = 1			KeyA = 1        Delivered version saved
+            KeyB = 2		 KeyB = 2b			KeyB = 2			KeyB = 2b       Client’s version saved
+            KeyC = 3		 KeyC = 3c			KeyC = 3e			KeyC = 3e       Delivered version saved
+            KeyD = 4     	 KeyD = null 		KeyD = 4			KeyD = 4        Delivered version saved (note: should not normally happen, as client has no way to explicitly null the value)
+            KeyE = 4     	 KeyE = ""   		KeyE = 4			KeyE = ""       Client's version saved  (note: this is different in API/SS versions before 1.19/2.19. Client empty strings would be treated like nulls and overwritten with the Ellucian value)
+            KeyF = 5         KeyF = 5e                                              Key deleted
+            
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Install.Backup.BackupUtility.PrepareThemeMerging">
+            <summary>
+            DURING PREINSTALL: Make copies of Theme.css for merging later during postinstall. Have to do this because
+            the installshield will always overwrite Theme.css with the same content as Theme.css.default.<br/>
+            Result:  
+            1. Theme.css.backup created in Content folder as a copy of Theme.css.
+            2. Theme.css copied to the backup folder.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Install.Backup.BackupUtility.MergeThemes">
+            <summary>
+            DURING POSTINSTALL: Merge client's Theme.css.orig with delivered Theme.css.default. <br/>
+            The merged version will be saved to file "Theme.css", overwriting the file
+            created by the InstallShield.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Install.Backup.BackupUtility.LogThemeValues">
+            <summary>
+            Logs the theme values.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Install.Backup.BackupUtility.GetBackupDirectoryName">
+            <summary>
+            Returns the name for the backup directory based on current time.
+            </summary>
+            <returns>Backup directory name</returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Install.Backup.BackupUtility.FindLastBackupDirectoryName(System.String)">
+            <summary>
+            Returns the name of the most recent backup directory within the specified search directory.
+            </summary>
+            <param name="searchDirectory">Path to search for backup directories</param>
+            <returns>Backup directory name</returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Install.Backup.BackupUtility.BackupSamlConfigurationSettings">
+            <summary>
+            Makes a backup of the SAML settings in the application's web.config file.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Install.Backup.BackupUtility.RestoreSamlConfigurationSettings">
+            <summary>
+            Restores the SAML settings into the application's web.config file.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Install.Backup.BackupUtility.BackupApiAppSettings">
+            <summary>
+            Makes a backup of some of the API's appSettings from web.config.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Install.Backup.BackupUtility.RestoreApiAppSettings">
+            <summary>
+            Restore the backed up API's appSettings from web.config.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Install.Backup.BackupUtility.BackupSettingsConfig">
+            <summary>
+            Backs up the entire settings.config file
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Install.Backup.BackupUtility.BackupSitemapConfig">
+            <summary>
+            Backs up the entire sitemap.config file
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Install.Backup.BackupUtility.BackupWebConfig">
+            <summary>
+            Backs up the entire web.config file
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Install.Backup.BackupUtility.RestoreRequireSSLSetting">
+            <summary>
+            Restores the setting for Requiring SSL on HTTP cookies by default from web.config
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Install.Backup.BackupUtility.GetHttpCookiesSection(System.String)">
+            <summary>
+            Retrieves the httpCookies section in web.config
+            </summary>
+            <param name="path">Path to web.config</param>
+            <returns>HttpCookiesSection for the application-level web.config</returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Install.Backup.BackupUtility.SaveRequireSSLForCookies(System.String,System.Boolean)">
+            <summary>
+            Persists the given setting to the RequireSSL flag in the httpCookies section of web.config
+            </summary>
+            <param name="path">Path to web.config</param>
+            <param name="requireSSLForCookies">Boolean indicating whether or not to require secure protocol for cookies</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Install.Backup.BackupUtility.BackupCustomCss">
+            <summary>
+            Backs up the Custom.css file
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Install.Backup.BackupUtility.RestoreCustomCss">
+            <summary>
+            Restores the Custom.css file from backup
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Install.InstallLogger">
+            <summary>
+            Logger for the installation process
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Install.InstallLogger.#ctor(System.String,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Mvc.Install.InstallLogger"/> class.
+            </summary>
+            <param name="logDirectory">The log directory.</param>
+            <param name="logPrefix">The log prefix.</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Install.InstallLogger.Write(System.String)">
+            <summary>
+            Writes the specified text.
+            </summary>
+            <param name="text">The text.</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Install.InstallLogger.Dispose">
+            <summary>
+            Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Install.Menu.SiteMapUtility">
+            <summary>
+            Utility for maintaining site mappings
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Install.Menu.SiteMapUtility.Merge(System.String,Ellucian.Web.Mvc.Install.InstallLogger)">
+            <summary>
+            Merges the ~/App_Data/Ellucian.sitemap.config file with the ~/App_Data/sitemap.config file, if any.
+            </summary>
+            <param name="installPath">path to the root of the Self-Service web application</param>
+            <param name="logger">The logger.</param>
+            <exception cref="T:System.Exception">
+            Error reading Ellucian.sitemap.config:  + ex.Message
+            or
+            Error reading sitemap.config:  + ex.Message
+            or
+            Error merging sitemap.config:  + ex.Message
+            or
+            Error writing merged sitemap.config:  + ex.Message
+            </exception>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Install.PostInstall">
+            <summary>
+            Post-installation utility
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Install.PostInstall.Execute(System.String)">
+            <summary>
+            Executes the specified install path.
+            </summary>
+            <param name="installPath">The install path.</param>
+            <exception cref="T:System.ArgumentNullException">installPath</exception>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Install.PreInstall">
+            <summary>
+            Pre-installation utility
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Install.PreInstall.Execute(System.String)">
+            <summary>
+            Executes the specified install path.
+            </summary>
+            <param name="installPath">The install path.</param>
+            <exception cref="T:System.ArgumentNullException">installPath</exception>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Install.Settings.ApiSettingsUtility">
+            <summary>
+            Utiltiy for maintaining API settings
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Install.Settings.ApiSettingsUtility.Update(System.String,Ellucian.Web.Mvc.Install.InstallLogger)">
+            <summary>
+            Updates the specified install path.
+            </summary>
+            <param name="installPath">The install path.</param>
+            <param name="logger">The logger.</param>
+            <exception cref="T:System.Exception">Ellucian.settings.config does not exist! Cannot continue.</exception>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Install.Settings.MvcSettingsUtility">
+            <summary>
+            Utility for maintaining MVC settings
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Install.Settings.MvcSettingsUtility.Update(System.String,Ellucian.Web.Mvc.Install.InstallLogger)">
+            <summary>
+            Updates the specified install path.
+            </summary>
+            <param name="installPath">The install path.</param>
+            <param name="logger">The logger.</param>
+            <exception cref="T:System.Exception">Ellucian.settings.config does not exist! Cannot continue.</exception>
+        </member>
+    </members>
+</doc>

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Dictionary>
+  <Words>
+    <Recognized>
+	    <!-- 
+	    - Please, try to keep these in alphabetical order.
+      - There is no need to put in different casings of a word, i.e. 'API' and 'api' can just be added as 'api'.
+	    - Pluralized words have to be added as a separate word from their non-pluralized counterpart.
+	    - Before you add an abbreviation or acronym, ask yourself if it would be better to spell it out.
+      - If the word/abbreviation/acronym is really a class name (or part of a class name), use the 
+        <see cref="TheClassName"/> xml comment element instead.
+	    -->
+      <Word>acyr</Word>		
+      <Word>api</Word>
+	    <Word>appl</Word>	  
+      <Word>bootstrapper</Word>	  
+      <Word>ccd</Word>
+      <Word>ccds</Word>
+      <Word>corequisite</Word>
+      <Word>corequisites</Word>
+      <Word>coreweb</Word>
+	    <Word>crosslist</Word>	  
+      <Word>datetime</Word>	  
+      <Word>dto</Word>
+      <Word>dtos</Word>
+      <Word>efc</Word>	  
+      <Word>ellucian</Word>
+      <Word>erp</Word>
+      <Word>fafsa</Word>
+      <Word>fafsas</Word>	  
+      <Word>gl</Word>
+      <Word>gov</Word>	  
+      <Word>gpa</Word>
+      <Word>guid</Word>
+      <Word>guids</Word>
+      <Word>inst</Word>	  
+      <Word>ipeds</Word>
+      <Word>isir</Word>	  
+      <Word>iso</Word>	  	  
+      <Word>json</Word>
+      <Word>lucene</Word>
+      <Word>mpn</Word>
+	    <Word>newtonsoft</Word>	  
+      <Word>noncourse</Word>
+      <Word>nullable</Word>	  
+      <Word>ope</Word>
+      <Word>params</Word>	  
+      <Word>subrequirement</Word>
+      <Word>subrequirements</Word>
+      <Word>unidata</Word>	  	  
+	    <Word>valcode</Word> 
+	    <Word>valcodes</Word>
+      <Word>versionless</Word>	  
+      <Word>vnd</Word>	  
+	    <Word>yyyy-mm-dd</Word>
+    </Recognized>  
+  </Words>
+</Dictionary>
+

@@ -1,0 +1,220 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Ellucian.Web.Utility</name>
+    </assembly>
+    <members>
+        <member name="T:Ellucian.Web.Utility.ObjectFormatter">
+            <summary>
+            Contains methods for formatting objects.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Utility.ObjectFormatter.FormatAsXml``1(``0)">
+            <summary>
+            Formats an object using XML.
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="ObjectToSerialize">The object to serialize.</param>
+            <returns></returns>
+        </member>
+        <member name="T:Ellucian.Web.Utility.Properties.Resources">
+            <summary>
+              A strongly-typed resource class, for looking up localized strings, etc.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Utility.Properties.Resources.ResourceManager">
+            <summary>
+              Returns the cached ResourceManager instance used by this class.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Utility.Properties.Resources.Culture">
+            <summary>
+              Overrides the current thread's CurrentUICulture property for all
+              resource lookups using this strongly typed resource class.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Utility.Properties.Resources.ErrorUrlArgumentsNotNull">
+            <summary>
+              Looks up a localized string similar to URL arguments cannot be null.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Utility.UrlParameterUtility">
+            <summary>
+            Provides utilities for use when adding parameters to a RESTful URL.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Utility.UrlParameterUtility.PercentCharacter">
+            <summary>
+            String representing the percent character.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Utility.UrlParameterUtility.PercentSubstitution">
+            <summary>
+            String representing the text used when substituting a percent character.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Utility.UrlParameterUtility.AmpersandCharacter">
+            <summary>
+            String representing the ampersand character.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Utility.UrlParameterUtility.AmpersandSubstitution">
+            <summary>
+            String representing the text used when substituting a ampersand character.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Utility.UrlParameterUtility.AsteriskCharacter">
+            <summary>
+            String representing the asterisk character.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Utility.UrlParameterUtility.AsteriskSubstitution">
+            <summary>
+            String representing the text used when substituting a asterisk character.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Utility.UrlParameterUtility.PlusCharacter">
+            <summary>
+            String representing the plus character.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Utility.UrlParameterUtility.PlusSubstitution">
+            <summary>
+            String representing the text used when substituting a plus character.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Utility.UrlParameterUtility.ForwardSlashCharacter">
+            <summary>
+            String representing the forwardslash character.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Utility.UrlParameterUtility.ForwardSlashSubstitution">
+            <summary>
+            String representing the text used when substituting a forwardslash character.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Utility.UrlParameterUtility.ColonCharacter">
+            <summary>
+            String representing the colon character.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Utility.UrlParameterUtility.ColonSubstitution">
+            <summary>
+            String representing the text used when substituting a colon character.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Utility.UrlParameterUtility.BackslashCharacter">
+            <summary>
+            String representing the backslash character.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Utility.UrlParameterUtility.BackslashSubstitution">
+            <summary>
+            String representing the text used when substituting a backslash character.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Utility.UrlParameterUtility.PeriodCharacter">
+            <summary>
+            String representing the period character.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Utility.UrlParameterUtility.PeriodSubstitution">
+            <summary>
+            String representing the text used when substituting a period character.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Utility.UrlParameterUtility.EncodeWithSubstitution(System.String)">
+            <summary>
+            Performs standard URL percent encoding on the provided input and in addition, performs character substitution
+            of characters used in Colleague resource ids that are not allowed in URL path segments. Must be decoded with
+            <see cref="M:Ellucian.Web.Utility.UrlParameterUtility.DecodeWithSubstitution(System.String)"/> to take advantage of the character substitution.
+            Supported characters and their substitutions: (%, -percent_char-), (&amp;, -ampersand_char-), (*, -asterisk_char-),
+            (+, -plus_char-), (/, -forwardslash_char-), (:, -colon_char-), (\, -backslash_char-), (., -period_char-)
+            </summary>
+            <param name="input">String to be encoded</param>
+            <returns>Encoded string with character substitutions where appropriate.</returns>
+        </member>
+        <member name="M:Ellucian.Web.Utility.UrlParameterUtility.DecodeWithSubstitution(System.String)">
+            <summary>
+            Performs standard URL percent decoding on the provided input and in addition, performs character substitution
+            of characters used in Colleague resource ids that are not allowed in URL path segments. Must have been encoded with
+            <see cref="M:Ellucian.Web.Utility.UrlParameterUtility.EncodeWithSubstitution(System.String)"/> to take advantage of the character substitution.
+            Supported substitutions and their resulting characters: (-percent_char-, %), (-ampersand_char-, &amp;), ( -asterisk_char-, *),
+            (-plus_char-, +), (-forwardslash_char-, /), (-colon_char-, :), (-backslash_char-, \)
+            </summary>
+            <param name="input">string to be decoded</param>
+            <returns>Decoded string with character substitutions where appropriate.</returns>
+        </member>
+        <member name="T:Ellucian.Web.Utility.UrlUtility">
+            <summary>
+            This utility class provides methods to consistently build URL paths and arguments
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Utility.UrlUtility.CombineUrlPath(System.String[])">
+            <summary>
+            Combines URL path arguments. URL delimiters will be stripped from path arguments
+            since this method is intended as a clean concatenation of path parameters, not URL arguments.
+            </summary>
+            <param name="urlPathArguments">url path arguments</param>
+            <returns>
+            url path or null
+            </returns>
+        </member>
+        <member name="M:Ellucian.Web.Utility.UrlUtility.CombineUrlPathAndArguments(System.String,System.String)">
+            <summary>
+            Combines URL path arguments and URL query string arguments
+            </summary>
+            <param name="urlPath">url path - must be clean and url-path-encoded</param>
+            <param name="urlArgumentString">single url query string - must be clean and url-encoded</param>
+            <returns>
+            url path or null
+            </returns>
+        </member>
+        <member name="M:Ellucian.Web.Utility.UrlUtility.CombineEncodedUrlPathAndArguments(System.String,System.Collections.Generic.IDictionary{System.String,System.String})">
+            <summary>
+            Encodes the URL path and parameter values then combines them.
+            </summary>
+            <param name="urlPath">The URL path.</param>
+            <param name="urlArgumentCollection">The URL argument collection.</param>
+            <returns></returns>
+            <exception cref="T:System.ArgumentNullException"></exception>
+        </member>
+        <member name="M:Ellucian.Web.Utility.UrlUtility.CombineUrlPathAndArguments(System.String,System.Collections.Generic.IDictionary{System.String,System.String})">
+            <summary>
+            Combines URL path arguments and URL query string arguments from a dictionary
+            </summary>
+            <param name="urlPath">url path</param>
+            <param name="urlArgumentCollection">key/value pairs of query string arguments</param>
+            <returns>
+            url path or null
+            </returns>
+            <exception cref="T:System.ArgumentNullException"></exception>
+        </member>
+        <member name="M:Ellucian.Web.Utility.UrlUtility.BuildEncodedQueryString(System.String[])">
+            <summary>
+            URL-encodes the parameter values (the 2nd, 4th, 6th, et. strings), 
+            then builds a query string with these name-value pairs. 
+            If the parameter values are already encoded, they will be encoded again.
+            </summary>
+            <param name="KeyValuePairs">The key value pairs.</param>
+            <returns></returns>
+            <exception cref="T:System.Exception">Even number of parameters required for key/value pairs</exception>
+        </member>
+        <member name="M:Ellucian.Web.Utility.UrlUtility.BuildQueryString(System.String[])">
+            <summary>
+            Builds the query string. This method does not url-encode the input strings.
+            </summary>
+            <param name="KeyValuePairs">The key value pairs.</param>
+            <returns></returns>
+            <exception cref="T:System.Exception">Even number of parameters required for key/value pairs</exception>
+        </member>
+        <member name="M:Ellucian.Web.Utility.UrlUtility.BuildPagingQueryString(System.Int32,System.Int32)">
+            <summary>
+            Builds the paging query string.
+            </summary>
+            <param name="quantityPerPage">The quantity per page.</param>
+            <param name="pageNumber">The page number.</param>
+            <returns></returns>
+        </member>
+    </members>
+</doc>

@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<RuleSet Name="Ellucian Rule Set" Description=" " ToolsVersion="11.0">
+  <Rules AnalyzerId="Microsoft.Analyzers.ManagedCodeAnalysis" RuleNamespace="Microsoft.Rules.Managed">
+    <Rule Id="CA1012" Action="Warning" />
+    <Rule Id="CA1032" Action="Warning" />
+    <Rule Id="CA1044" Action="Warning" />
+    <Rule Id="CA1707" Action="Warning" />
+    <Rule Id="CA1709" Action="Warning" />
+    <Rule Id="CA1710" Action="Warning" />
+    <Rule Id="CA1711" Action="Warning" />
+    <Rule Id="CA1712" Action="Warning" />
+    <Rule Id="CA1720" Action="Warning" />
+    <Rule Id="CA1722" Action="Warning" />
+    <Rule Id="CA2208" Action="Warning" />
+  </Rules>
+</RuleSet>

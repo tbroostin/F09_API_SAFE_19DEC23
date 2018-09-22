@@ -1,0 +1,139 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Ellucian.Web.License</name>
+    </assembly>
+    <members>
+        <member name="T:Ellucian.Web.License.EllucianLicense">
+            <summary>
+            Ellucian license information.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.License.EllucianLicense.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.License.EllucianLicense"/> class.
+            </summary>
+            <param name="licenseKey">The license key.</param>
+        </member>
+        <member name="M:Ellucian.Web.License.EllucianLicense.Dispose">
+            <summary>
+            When overridden in a derived class, disposes of the resources used by the license.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.License.EllucianLicense.LicenseKey">
+            <summary>
+            When overridden in a derived class, gets the license key granted to this component.
+            </summary>
+            <returns>A license key granted to this component.</returns>
+        </member>
+        <member name="T:Ellucian.Web.License.EllucianLicenseException">
+            <summary>
+            Exception thrown by Ellucian license handler.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.License.EllucianLicenseException.#ctor(System.Type,System.String,Ellucian.Web.License.EllucianLicense)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.License.EllucianLicenseException"/> class.
+            </summary>
+            <param name="unlicensedType">Unlicensed type.</param>
+            <param name="message">The message.</param>
+            <param name="associatedLicense">The associated license information.</param>
+        </member>
+        <member name="P:Ellucian.Web.License.EllucianLicenseException.UnlicensedType">
+            <summary>
+            Unlicensed type.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.License.EllucianLicenseException.AssociatedLicense">
+            <summary>
+            Gets the associated license information.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.License.EllucianLicenseException.Message">
+            <summary>
+            Gets a message that describes the current exception.
+            </summary>
+            <returns>The error message that explains the reason for the exception, or an empty string("").</returns>
+        </member>
+        <member name="T:Ellucian.Web.License.EllucianLicenseModule">
+            <summary>
+            Provides model for the Ellucian license module.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.License.EllucianLicenseModule.Equals(System.Object)">
+            <summary>
+            Determines whether the specified <see cref="T:System.Object"/> is equal to this instance.
+            </summary>
+            <param name="obj">The <see cref="T:System.Object"/> to compare with this instance.</param>
+            <returns>
+              <c>true</c> if the specified <see cref="T:System.Object"/> is equal to this instance; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="P:Ellucian.Web.License.EllucianLicenseModule.Id">
+            <summary>
+            Gets/sets the id.
+            </summary>
+            <value>
+            The id.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.License.EllucianLicenseModule.Title">
+            <summary>
+            Gets/sets the title.
+            </summary>
+            <value>
+            The title.
+            </value>
+        </member>
+        <member name="T:Ellucian.Web.License.EllucianLicenseModuleAttribute">
+            <summary>
+            Contains Ellucian module license information.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.License.EllucianLicenseModuleAttribute.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.License.EllucianLicenseModuleAttribute"/> class.
+            </summary>
+            <param name="moduleCode">The module code.</param>
+        </member>
+        <member name="P:Ellucian.Web.License.EllucianLicenseModuleAttribute.ModuleCode">
+            <summary>
+            Gets the module code.
+            </summary>
+            <value>
+            The module code.
+            </value>
+        </member>
+        <member name="T:Ellucian.Web.License.LicenseConfigurationDefinition">
+            <summary>
+            License configuration definition.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.License.LicenseConfigurationDefinition.LicenseDefinitionName">
+            <summary>
+            The license definition name constant
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.License.LicenseConfigurationDefinition.#ctor">
+            <summary>
+            Default Constructor
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.License.LicenseConfigurationDefinition.LicenseKeys">
+            <summary>
+            This string represents the list of license keys that the client has purchased.
+            </summary>
+            <value>
+            The license keys.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.License.LicenseConfigurationDefinition.LicenseKeyFilePath">
+            <summary>
+            This string represents the list of resources and the associated license keys.
+            </summary>
+            <value>
+            The license key file path.
+            </value>
+        </member>
+    </members>
+</doc>

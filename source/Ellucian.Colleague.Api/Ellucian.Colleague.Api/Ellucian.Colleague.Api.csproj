@@ -1,0 +1,1256 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>
+    </ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{8CCF6CCA-EAEE-4B8F-959B-488C40F180E8}</ProjectGuid>
+    <ProjectTypeGuids>{349c5851-65df-11da-9384-00065b846f21};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Ellucian.Colleague.Api</RootNamespace>
+    <AssemblyName>Ellucian.Colleague.Api</AssemblyName>
+    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <MvcBuildViews>false</MvcBuildViews>
+    <UseIISExpress>false</UseIISExpress>
+    <!--Disable fxcop codeInspection at build time for this project
+    due to MS WebApiClient referencing strong named Newtonsoft.Json assembly (v4.5)-->
+    <EnableCodeInspectionOnBuild>false</EnableCodeInspectionOnBuild>
+    <EnableCodeAnalysisOnBuild>false</EnableCodeAnalysisOnBuild>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <OldToolsVersion>4.0</OldToolsVersion>
+    <UpgradeBackupLocation />
+    <IISExpressSSLPort />
+    <IISExpressAnonymousAuthentication />
+    <IISExpressWindowsAuthentication />
+    <IISExpressUseClassicPipelineMode />
+    <TargetFrameworkProfile />
+    <WebGreaseLibPath>..\packages\WebGrease.1.5.2\lib</WebGreaseLibPath>
+    <UseGlobalApplicationHostFile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <DeployIisAppPath>ColleagueApi_Dev/ColleagueApi</DeployIisAppPath>
+    <DocumentationFile>bin\Ellucian.Colleague.Api.xml</DocumentationFile>
+    <WarningsAsErrors>1570,1571,1572,1573,1591</WarningsAsErrors>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Ellucian.Colleague.Api.xml</DocumentationFile>
+    <WarningsAsErrors>1570,1571,1572,1573,1591</WarningsAsErrors>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Antlr3.Runtime, Version=3.4.1.9004, Culture=neutral, PublicKeyToken=eb42632606e9261f, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Antlr.3.4.1.9004\lib\Antlr3.Runtime.dll</HintPath>
+    </Reference>
+    <Reference Include="AutoMapper">
+      <HintPath>..\packages\AutoMapper.2.1.267\lib\net40\AutoMapper.dll</HintPath>
+    </Reference>
+    <Reference Include="Ellucian.Colleague.Configuration, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Colleague.Configuration.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Colleague.Domain, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Colleague.Domain.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Colleague.Legacy, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Colleague.Legacy.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Colleague.Property, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Colleague.Property.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Data.Colleague, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Data.Colleague.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Dmi.Client, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Dmi.Client.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Dmi.Runtime, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Dmi.Runtime.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Logging, Version=1.0.0.1, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Logging.MSEL.1.0.0.240\lib\net451\Ellucian.Logging.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Web.Adapters, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Web.Adapters.1.0.0.177\lib\net451\Ellucian.Web.Adapters.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Web.Cache, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Web.Cache.1.0.0.184\lib\net451\Ellucian.Web.Cache.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Web.Dependency, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Web.Dependency.1.0.0.187\lib\net451\Ellucian.Web.Dependency.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Web.License, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Web.License.1.0.0.178\lib\net451\Ellucian.Web.License.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Web.Mvc, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Dependencies\Ellucian.Web.Mvc.dll</HintPath>
+    </Reference>
+    <Reference Include="Ellucian.Web.Mvc.Data, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Dependencies\Ellucian.Web.Mvc.Data.dll</HintPath>
+    </Reference>
+    <Reference Include="Ellucian.Web.Mvc.Domain, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Dependencies\Ellucian.Web.Mvc.Domain.dll</HintPath>
+    </Reference>
+    <Reference Include="Ellucian.Web.Mvc.Install">
+      <HintPath>..\Dependencies\Ellucian.Web.Mvc.Install.dll</HintPath>
+    </Reference>
+    <Reference Include="Ellucian.Web.Resource, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Web.Resource.1.0.0.34\lib\net451\Ellucian.Web.Resource.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Web.Security, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Web.Security.1.0.0.206\lib\net451\Ellucian.Web.Security.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Web.Utility, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Web.Utility.1.0.0.181\lib\net451\Ellucian.Web.Utility.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.WebServices.Core.Config, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.WebServices.Core.Config.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="ICSharpCode.SharpZipLib">
+      <HintPath>..\packages\SharpZipLib.0.86.0\lib\20\ICSharpCode.SharpZipLib.dll</HintPath>
+    </Reference>
+    <Reference Include="KellermanSoftware.Compare-NET-Objects, Version=2.1.0.0, Culture=neutral, PublicKeyToken=d970ace04cc85217, processorArchitecture=MSIL">
+      <HintPath>..\packages\CompareNETObjects.2.01.0.0\lib\net451\KellermanSoftware.Compare-NET-Objects.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Lucene.Net">
+      <HintPath>..\packages\Lucene.Net.2.9.4.1\lib\net40\Lucene.Net.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Microsoft.IdentityModel, Version=3.5.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.IdentityModel.6.1.7600.16394\lib\net35\Microsoft.IdentityModel.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.Practices.EnterpriseLibrary.Common, Version=5.0.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\EnterpriseLibrary.Common.5.0.505.0\lib\NET35\Microsoft.Practices.EnterpriseLibrary.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.EnterpriseLibrary.Logging, Version=5.0.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\EnterpriseLibrary.Logging.5.0.505.1\lib\NET35\Microsoft.Practices.EnterpriseLibrary.Logging.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.ServiceLocation, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\CommonServiceLocator.1.0\lib\NET35\Microsoft.Practices.ServiceLocation.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.Unity, Version=2.1.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Unity.2.1.505.2\lib\NET35\Microsoft.Practices.Unity.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.Unity.Configuration, Version=2.1.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Unity.2.1.505.2\lib\NET35\Microsoft.Practices.Unity.Configuration.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.Unity.Interception, Version=2.1.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Unity.Interception.2.1.505.2\lib\NET35\Microsoft.Practices.Unity.Interception.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.Unity.Interception.Configuration, Version=2.1.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Unity.Interception.2.1.505.2\lib\NET35\Microsoft.Practices.Unity.Interception.Configuration.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.ReportViewer.Common, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Reporting\Microsoft.ReportViewer.Common.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.ReportViewer.ProcessingObjectModel, Version=11.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Reporting\Microsoft.ReportViewer.ProcessingObjectModel.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.ReportViewer.WebForms, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Reporting\Microsoft.ReportViewer.WebForms.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.Web.Infrastructure, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <Private>True</Private>
+      <HintPath>..\packages\Microsoft.Web.Infrastructure.1.0.0.0\lib\net40\Microsoft.Web.Infrastructure.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="slf4net">
+      <HintPath>..\packages\slf4net.0.1.32.1\lib\net35\slf4net.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="System.Data.Entity" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.IdentityModel" />
+    <Reference Include="System.IdentityModel.Services" />
+    <Reference Include="System.IdentityModel.Tokens.Jwt">
+      <HintPath>..\packages\System.IdentityModel.Tokens.Jwt.4.0.1\lib\net45\System.IdentityModel.Tokens.Jwt.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Net.Http.Formatting, Version=5.2.3.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.Client.5.2.3\lib\net45\System.Net.Http.Formatting.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Net.Http.WebRequest" />
+    <Reference Include="System.Runtime.Caching" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Threading.Tasks.Dataflow, Version=4.5.24.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.Tpl.Dataflow.4.5.24\lib\portable-net45+win8+wpa81\System.Threading.Tasks.Dataflow.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.DynamicData" />
+    <Reference Include="System.Web.Entity" />
+    <Reference Include="System.Web.ApplicationServices" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.Web.Extensions" />
+    <Reference Include="System.Web" />
+    <Reference Include="System.Web.Abstractions" />
+    <Reference Include="System.Web.Helpers, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.AspNet.WebPages.3.2.3\lib\net45\System.Web.Helpers.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.Http, Version=5.2.3.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.Core.5.2.3\lib\net45\System.Web.Http.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.Http.WebHost, Version=5.2.3.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.WebHost.5.2.3\lib\net45\System.Web.Http.WebHost.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.Mvc, Version=5.2.3.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.AspNet.Mvc.5.2.3\lib\net45\System.Web.Mvc.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.Optimization">
+      <HintPath>..\packages\Microsoft.AspNet.Web.Optimization.1.1.3\lib\net40\System.Web.Optimization.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.Razor, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.AspNet.Razor.3.2.3\lib\net45\System.Web.Razor.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.Routing" />
+    <Reference Include="System.Web.WebPages, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.AspNet.WebPages.3.2.3\lib\net45\System.Web.WebPages.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.WebPages.Deployment, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.AspNet.WebPages.3.2.3\lib\net45\System.Web.WebPages.Deployment.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.WebPages.Razor, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.AspNet.WebPages.3.2.3\lib\net45\System.Web.WebPages.Razor.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="Thinktecture.IdentityModel, Version=3.4.6.0, Culture=neutral, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Thinktecture.IdentityModel.3.4.6\lib\net40\Thinktecture.IdentityModel.dll</HintPath>
+    </Reference>
+    <Reference Include="Unity.Mvc3, Version=1.2.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Unity.Mvc3.1.2\lib\net40\Unity.Mvc3.dll</HintPath>
+    </Reference>
+    <Reference Include="Unity.WebApi, Version=0.10.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Unity.WebAPI.0.10\lib\net40\Unity.WebApi.dll</HintPath>
+    </Reference>
+    <Reference Include="WebGrease, Version=1.5.2.14234, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\WebGrease.1.5.2\lib\WebGrease.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="App_Start\BundleConfig.cs" />
+    <Compile Include="App_Start\FilterConfig.cs" />
+    <Compile Include="App_Start\RouteConfig.cs" />
+    <Compile Include="Areas\Student\Controllers\TestController.cs" />
+    <Compile Include="Areas\Student\Models\Tests\TestCourses.cs" />
+    <Compile Include="Areas\Student\Models\Tests\TestCourseSearch.cs" />
+    <Compile Include="Areas\Student\Models\Tests\TestFaculty.cs" />
+    <Compile Include="Areas\Student\Models\Tests\TestSections.cs" />
+    <Compile Include="Areas\Student\Models\Tests\TestSectionsForCourses.cs" />
+    <Compile Include="Areas\Student\StudentAreaRegistration.cs" />
+    <Compile Include="Controllers\Base\AdmissionApplicationSupportingItemStatusesController.cs" />
+    <Compile Include="Controllers\Base\GenderIdentityTypesController.cs" />
+    <Compile Include="Controllers\Base\OrganizationalPositionController.cs" />
+    <Compile Include="Controllers\Base\OrganizationalPositionRelationshipsController.cs" />
+    <Compile Include="Controllers\Base\NonPersonRelationshipsController.cs" />
+    <Compile Include="Controllers\Base\PersonRelationshipsController.cs" />
+    <Compile Include="Controllers\Base\RelationshipTypesController.cs" />
+    <Compile Include="Controllers\Base\ResourcesController.cs" />
+    <Compile Include="Controllers\Base\ExternalEmploymentsController.cs" />
+    <Compile Include="Controllers\Base\OrganizationalPersonPositionsController.cs" />
+    <Compile Include="Controllers\Base\OrganizationalRelationshipsController.cs" />
+    <Compile Include="Controllers\Base\EmploymentVocationsController.cs" />
+    <Compile Include="Controllers\Base\ExternalEmploymentPositionsController.cs" />
+    <Compile Include="Controllers\Base\ExternalEmploymentStatusesController.cs" />
+    <Compile Include="Controllers\Base\PersonalPronounTypesController.cs" />
+    <Compile Include="Controllers\Base\VeteranStatusesController.cs" />
+    <Compile Include="Controllers\Base\CommerceTaxCodesController.cs" />
+    <Compile Include="Controllers\Base\HealthCheckController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\AccountingStringSubcomponentsController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\AccountingStringSubcomponentValuesController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\DraftBudgetAdjustmentController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\FixedAssetsController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\ApproversController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\ProcurementReceiptsController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\BudgetPhaseLineItemsController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\BudgetCodesController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\BudgetPhasesController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\FixedAssetCategoriesController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\FixedAssetTypesController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\GrantsController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\PaymentTransactionsController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\ColleagueFinanceTaxFormStatementsController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\ColleagueFinanceTaxFormPdfsController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\PurchasingArrangementsController.cs" />
+    <Compile Include="Controllers\HumanResources\LeaveBalanceConfigurationController.cs" />
+    <Compile Include="Controllers\Student\FinancialAidAcademicProgressStatusesController.cs" />
+    <Compile Include="Controllers\Student\FinancialAidAcademicProgressTypesController.cs" />
+    <Compile Include="Controllers\Student\StudentSectionAttendancesController.cs" />
+    <Compile Include="Controllers\Student\StudentFinancialAidApplicationsController.cs" />
+    <Compile Include="Controllers\Student\StudentFinancialAidOfficesController.cs" />
+    <Compile Include="Controllers\Student\StudentFinancialAidAcademicProgressStatusesController.cs" />
+    <Compile Include="Controllers\FinancialAid\FinancialAidExplanationsController.cs" />
+    <Compile Include="Controllers\HumanResources\BargainingUnitsController.cs" />
+    <Compile Include="Controllers\Base\PayableDepositAccountsController.cs" />
+    <Compile Include="Controllers\Base\PayableDepositDirectivesController.cs" />
+    <Compile Include="Controllers\Base\PersonGuardiansController.cs" />
+    <Compile Include="Controllers\Base\AboutController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\AccountsPayableInvoicesController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\AccountFundsAvailableController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\FinancialDocumentTypesController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\FiscalPeriodsController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\LedgerActivitiesController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\BudgetAdjustmentsController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\ShippingMethodsController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\GeneralLedgerObjectCodesController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\FreeOnBoardTypesController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\BuyersController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\GeneralLedgerAccountsController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\PurchaseClassificationsController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\VendorHoldReasonsController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\AccountsPayableSourcesController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\CommodityUnitTypesController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\VendorPaymentTermsController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\CommodityCodesController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\VendorsController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\VendorClassificationsController.cs" />
+    <Compile Include="Controllers\Base\TextDocumentsController.cs" />
+    <Compile Include="Controllers\Student\StudentFinancialAidNeedSummariesController.cs" />
+    <Compile Include="Controllers\Student\FinancialAidApplicationOutcomesController.cs" />
+    <Compile Include="Controllers\Student\FinancialAidAwardPeriodsController.cs" />
+    <Compile Include="Controllers\Student\FinancialAidFundCategoriesController.cs" />
+    <Compile Include="Controllers\Student\FinancialAidFundClassificationsController.cs" />
+    <Compile Include="Controllers\Student\FinancialAidFundsController.cs" />
+    <Compile Include="Controllers\Student\StudentFinancialAidAwardsController.cs" />
+    <Compile Include="Controllers\HumanResources\ContractTypesController.cs" />
+    <Compile Include="Controllers\HumanResources\DirectDepositsController.cs" />
+    <Compile Include="Controllers\HumanResources\EarningsTypeGroupsController.cs" />
+    <Compile Include="Controllers\HumanResources\EmployeeLeavePlansController.cs" />
+    <Compile Include="Controllers\HumanResources\EmployeeLeaveTransactionsController.cs" />
+    <Compile Include="Controllers\HumanResources\EmploymentOrganizationsController.cs" />
+    <Compile Include="Controllers\HumanResources\EmploymentProficiencyLevelsController.cs" />
+    <Compile Include="Controllers\HumanResources\EmploymentProficienciesController.cs" />
+    <Compile Include="Controllers\HumanResources\FacultyContractsController.cs" />
+    <Compile Include="Controllers\HumanResources\InstitutionEmployersController.cs" />
+    <Compile Include="Controllers\HumanResources\InstitutionJobSupervisorsController.cs" />
+    <Compile Include="Controllers\HumanResources\InstructorTenureTypesController.cs" />
+    <Compile Include="Controllers\HumanResources\JobApplicationSourcesController.cs" />
+    <Compile Include="Controllers\HumanResources\JobApplicationStatusesController.cs" />
+    <Compile Include="Controllers\HumanResources\LeavePlansController.cs" />
+    <Compile Include="Controllers\HumanResources\PayClassesController.cs" />
+    <Compile Include="Controllers\HumanResources\LoadPeriodsController.cs" />
+    <Compile Include="Controllers\HumanResources\PayrollDeductionArrangementsController.cs" />
+    <Compile Include="Controllers\HumanResources\ContributionPayrollDeductionsController.cs" />
+    <Compile Include="Controllers\HumanResources\InstitutionJobsController.cs" />
+    <Compile Include="Controllers\HumanResources\JobChangeReasonsController.cs" />
+    <Compile Include="Controllers\HumanResources\EmploymentClassificationsController.cs" />
+    <Compile Include="Controllers\HumanResources\EmploymentTerminationReasonsController.cs" />
+    <Compile Include="Controllers\HumanResources\PayrollDepositDirectivesController.cs" />
+    <Compile Include="Controllers\HumanResources\PayClassificationsController.cs" />
+    <Compile Include="Controllers\HumanResources\PayStatementConfigurationController.cs" />
+    <Compile Include="Controllers\HumanResources\PersonAchievementsController.cs" />
+    <Compile Include="Controllers\HumanResources\PersonEmploymentProficienciesController.cs" />
+    <Compile Include="Controllers\HumanResources\PersonEmploymentReferencesController.cs" />
+    <Compile Include="Controllers\HumanResources\PersonPublicationsController.cs" />
+    <Compile Include="Controllers\HumanResources\PositionClassificationsController.cs" />
+    <Compile Include="Controllers\HumanResources\ProficiencyLicensingAuthoritiesController.cs" />
+    <Compile Include="Controllers\HumanResources\PublicationTypesController.cs" />
+    <Compile Include="Controllers\HumanResources\PayStatementsController.cs" />
+    <Compile Include="Controllers\HumanResources\RehireTypesController.cs" />
+    <Compile Include="Controllers\Base\GradeModesController.cs" />
+    <Compile Include="Controllers\Base\RoomCharacteristicsController.cs" />
+    <Compile Include="Controllers\Base\PersonFiltersController.cs" />
+    <Compile Include="Controllers\Base\PersonalRelationshipStatusesController.cs" />
+    <Compile Include="Controllers\Base\EducationalInstitutionsController.cs" />
+    <Compile Include="Controllers\Base\EducationalInstitutionUnitsController.cs" />
+    <Compile Include="Controllers\Base\IdentityDocumentTypesController.cs" />
+    <Compile Include="Controllers\Base\CommentsController.cs" />
+    <Compile Include="Controllers\Base\CommentSubjectAreaController.cs" />
+    <Compile Include="Controllers\Base\AddressTypesController.cs" />
+    <Compile Include="Controllers\Base\MiscellaneousTextController.cs" />
+    <Compile Include="Controllers\Base\PersonalRelationshipsController.cs" />
+    <Compile Include="Controllers\Base\PersonHoldsController.cs" />
+    <Compile Include="Controllers\Base\PersonHoldTypesController.cs" />
+    <Compile Include="Controllers\Base\PersonNameTypesController.cs" />
+    <Compile Include="Controllers\Base\PersonContactsController.cs" />
+    <Compile Include="Controllers\Base\ReligionsController.cs" />
+    <Compile Include="Controllers\Base\SourceContextController.cs" />
+    <Compile Include="Controllers\Base\SocialMediaTypesController.cs" />
+    <Compile Include="Controllers\Base\AddressesController.cs" />
+    <Compile Include="Controllers\Base\AcademicCredentialsController.cs" />
+    <Compile Include="Controllers\Base\BankingInformationConfigurationsController.cs" />
+    <Compile Include="Controllers\Base\GeographicAreasController.cs" />
+    <Compile Include="Controllers\Base\PrivacyStatusesController.cs" />
+    <Compile Include="Controllers\Base\GeographicAreaTypesController.cs" />
+    <Compile Include="Controllers\Base\CitizenshipStatusesController.cs" />
+    <Compile Include="Controllers\Base\BanksController.cs" />
+    <Compile Include="Controllers\Base\RoomTypesController.cs" />
+    <Compile Include="Controllers\Base\PersonalRelationshipTypesController.cs" />
+    <Compile Include="Controllers\Base\InstructionalPlatformsController.cs" />
+    <Compile Include="Controllers\Base\OtherHonorsController.cs" />
+    <Compile Include="Controllers\Student\AccountingCodeCategoriesController.cs" />
+    <Compile Include="Controllers\Student\AdmissionApplicationStatusTypesController.cs" />
+    <Compile Include="Controllers\Student\AdmissionApplicationSupportingItemTypesController.cs" />
+    <Compile Include="Controllers\Student\AdmissionDecisionsController.cs" />
+    <Compile Include="Controllers\Student\AttendanceCategoriesController.cs" />
+    <Compile Include="Controllers\Student\BookOptionsController.cs" />
+    <Compile Include="Controllers\Student\CourseTitleTypesController.cs" />
+    <Compile Include="Controllers\Student\DropReasonsController.cs" />
+    <Compile Include="Controllers\Student\ExternalEducationController.cs" />
+    <Compile Include="Controllers\Student\AdministrativeInstructionalMethodsController.cs" />
+    <Compile Include="Controllers\Student\HousingAssignmentController.cs" />
+    <Compile Include="Controllers\Student\HousingResidentTypesController.cs" />
+    <Compile Include="Controllers\Student\HousingRequestsController.cs" />
+    <Compile Include="Controllers\Student\InstructionalDeliveryMethodsController.cs" />
+    <Compile Include="Controllers\Student\MealPlanRequestsController.cs" />
+    <Compile Include="Controllers\Student\NonAcademicAttendanceEventTypesController.cs" />
+    <Compile Include="Controllers\Student\NonAcademicAttendanceRequirementsController.cs" />
+    <Compile Include="Controllers\Student\NonAcademicAttendancesController.cs" />
+    <Compile Include="Controllers\Student\NonAcademicEventsController.cs" />
+    <Compile Include="Controllers\Student\AdministrativePeriodsController.cs" />
+    <Compile Include="Controllers\Student\SectionTextbooksController.cs" />
+    <Compile Include="Controllers\Student\SectionDescriptionTypesController.cs" />
+    <Compile Include="Controllers\Student\SectionTitleTypesController.cs" />
+    <Compile Include="Controllers\Student\StudentAdmissionDecisionsController.cs" />
+    <Compile Include="Controllers\Student\AdmissionDecisionTypesController.cs" />
+    <Compile Include="Controllers\Student\RoomRatesController.cs" />
+    <Compile Include="Controllers\Student\SectionInstructorsController.cs" />
+    <Compile Include="Controllers\Student\SectionAttendancesController.cs" />
+    <Compile Include="Controllers\Student\StudentCourseTransferController.cs" />
+    <Compile Include="Controllers\Student\StudentMealPlansController.cs" />
+    <Compile Include="Controllers\Student\MealPlanRatesController.cs" />
+    <Compile Include="Controllers\Student\AcademicDisciplinesController.cs" />
+    <Compile Include="Controllers\Base\CommencementSitesController.cs" />
+    <Compile Include="Controllers\Base\CountriesController.cs" />
+    <Compile Include="Controllers\Base\EmailTypesController.cs" />
+    <Compile Include="Controllers\Base\LocationTypesController.cs" />
+    <Compile Include="Controllers\Base\PhoneNumbersController.cs" />
+    <Compile Include="Controllers\Base\InstitutionsController.cs" />
+    <Compile Include="Controllers\Base\ApprovalsController.cs" />
+    <Compile Include="Controllers\Base\BuildingsController.cs" />
+    <Compile Include="Controllers\Base\CitizenTypesController.cs" />
+    <Compile Include="Controllers\Base\CommunicationCodesController.cs" />
+    <Compile Include="Controllers\Base\DisabilityTypesController.cs" />
+    <Compile Include="Controllers\Base\DivisionsController.cs" />
+    <Compile Include="Controllers\Base\PhoneTypesController.cs" />
+    <Compile Include="Controllers\Base\StatesController.cs" />
+    <Compile Include="Controllers\Base\TaxFormConsentsController.cs" />
+    <Compile Include="Controllers\Base\RelationshipsController.cs" />
+    <Compile Include="Controllers\Base\WorkTasksController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\AccountingStringsController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\GeneralLedgerConfigurationController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\GeneralLedgerActivityDetailsController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\GeneralLedgerTransactionsController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\FiscalYearsController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\CostCentersController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\RecurringVouchersController.cs" />
+    <Compile Include="Controllers\Finance\StudentStatementsController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\AccountsPayableTaxesController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\AccountsPayableTypesController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\JournalEntriesController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\PurchaseOrdersController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\BlanketPurchaseOrdersController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\RequisitionsController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\VouchersController.cs" />
+    <Compile Include="Controllers\FinancialAid\AcademicProgressAppealCodesController.cs" />
+    <Compile Include="Controllers\FinancialAid\AcademicProgressEvaluationsController.cs" />
+    <Compile Include="Controllers\FinancialAid\AcademicProgressStatusesController.cs" />
+    <Compile Include="Controllers\FinancialAid\AwardLetterConfigurationsController.cs" />
+    <Compile Include="Controllers\FinancialAid\AwardPackageChangeRequestsController.cs" />
+    <Compile Include="Controllers\FinancialAid\AwardsController.cs" />
+    <Compile Include="Controllers\FinancialAid\AwardStatusesController.cs" />
+    <Compile Include="Controllers\FinancialAid\AwardCategoriesController.cs" />
+    <Compile Include="Controllers\FinancialAid\AwardTypesController.cs" />
+    <Compile Include="Controllers\FinancialAid\AwardYearsController.cs" />
+    <Compile Include="Controllers\FinancialAid\FinancialAidBudgetComponentsController.cs" />
+    <Compile Include="Controllers\FinancialAid\FafsaController.cs" />
+    <Compile Include="Controllers\FinancialAid\FinancialAidChecklistItemsController.cs" />
+    <Compile Include="Controllers\FinancialAid\FinancialAidPersonController.cs" />
+    <Compile Include="Controllers\FinancialAid\OutsideAwardsController.cs" />
+    <Compile Include="Controllers\FinancialAid\ProfileApplicationsController.cs" />
+    <Compile Include="Controllers\FinancialAid\ShoppingSheetsController.cs" />
+    <Compile Include="Controllers\FinancialAid\StudentAwardsController.cs" />
+    <Compile Include="Controllers\FinancialAid\StudentDefaultAwardPeriodController.cs" />
+    <Compile Include="Controllers\FinancialAid\StudentFinancialAidBudgetComponentsController.cs" />
+    <Compile Include="Controllers\FinancialAid\StudentFinancialAidChecklistsController.cs" />
+    <Compile Include="Controllers\FinancialAid\StudentNsldsInformationController.cs" />
+    <Compile Include="Controllers\HumanResources\EmployeesController.cs" />
+    <Compile Include="Controllers\HumanResources\EarningTypesController.cs" />
+    <Compile Include="Controllers\HumanResources\HumanResourcesController.cs" />
+    <Compile Include="Controllers\HumanResources\DeductionTypesController.cs" />
+    <Compile Include="Controllers\HumanResources\PayrollDeductionArrangementChangeReasonsController.cs" />
+    <Compile Include="Controllers\HumanResources\PayCyclesController.cs" />
+    <Compile Include="Controllers\HumanResources\EmploymentLeaveOfAbsenceReasonsController.cs" />
+    <Compile Include="Controllers\HumanResources\PersonPositionsController.cs" />
+    <Compile Include="Controllers\HumanResources\PersonPositionWagesController.cs" />
+    <Compile Include="Controllers\HumanResources\PersonEmploymentStatusesController.cs" />
+    <Compile Include="Controllers\HumanResources\InstitutionPositionsController.cs" />
+    <Compile Include="Controllers\HumanResources\PositionsController.cs" />
+    <Compile Include="Controllers\HumanResources\HumanResourcesTaxFormPdfsController.cs" />
+    <Compile Include="Controllers\HumanResources\HumanResourcesTaxFormStatementsController.cs" />
+    <Compile Include="Controllers\HumanResources\TaxFormStatementsController.cs" />
+    <Compile Include="Controllers\ResourceFileEditorController.cs" />
+    <Compile Include="Controllers\Student\AdmissionApplicationsController.cs" />
+    <Compile Include="Controllers\Student\AdmissionApplicationTypesController.cs" />
+    <Compile Include="Controllers\Student\AdmissionApplicationWithdrawalReasonsController.cs" />
+    <Compile Include="Controllers\Student\AdmissionResidencyTypesController.cs" />
+    <Compile Include="Controllers\Student\AptitudeAssessmentsController.cs" />
+    <Compile Include="Controllers\Student\AssessmentCalculationMethodsController.cs" />
+    <Compile Include="Controllers\Student\AptitudeAssessmentTypesController.cs" />
+    <Compile Include="Controllers\Student\AdmissionPopulationsController.cs" />
+    <Compile Include="Controllers\Student\AcademicPeriodsController.cs" />
+    <Compile Include="Controllers\Student\AcademicCatalogController.cs" />
+    <Compile Include="Controllers\Student\FALinkController.cs" />
+    <Compile Include="Controllers\Student\AssessmentPercentileTypesController.cs" />
+    <Compile Include="Controllers\Student\AssessmentSpecialCircumstancesController.cs" />
+    <Compile Include="Controllers\Student\BillingOverrideReasonsController.cs" />
+    <Compile Include="Controllers\Student\FloorCharacteristicsController.cs" />
+    <Compile Include="Controllers\Student\InstructorCategoriesController.cs" />
+    <Compile Include="Controllers\Student\InstructorsController.cs" />
+    <Compile Include="Controllers\Student\InstructorStaffTypesController.cs" />
+    <Compile Include="Controllers\Student\RoommateCharacteristicsController.cs" />
+    <Compile Include="Controllers\Student\StudentAdvisorRelationshipsController.cs" />
+    <Compile Include="Controllers\Student\StudentAptitudeAssessmentsController.cs" />
+    <Compile Include="Controllers\Student\StudentAcademicStandingsController.cs" />
+    <Compile Include="Controllers\Student\StudentPaymentsController.cs" />
+    <Compile Include="Controllers\Student\FinancialAidYearsController.cs" />
+    <Compile Include="Controllers\Student\ResidencyTypesController.cs" />
+    <Compile Include="Controllers\Student\StudentChargesController.cs" />
+    <Compile Include="Controllers\Student\StudentAcademicPeriodProfilesController.cs" />
+    <Compile Include="Controllers\Student\StudentAcademicProgramsController.cs" />
+    <Compile Include="Controllers\Student\AcademicStandingsController.cs" />
+    <Compile Include="Controllers\Student\CampusInvolvementsController.cs" />
+    <Compile Include="Controllers\Student\CampusOrganizationsController.cs" />
+    <Compile Include="Controllers\Student\CampusOrganizationTypesController.cs" />
+    <Compile Include="Controllers\Student\CampusInvolvementRolesController.cs" />
+    <Compile Include="Controllers\Student\AccountReceivableTypesController.cs" />
+    <Compile Include="Controllers\Base\PersonVisasController.cs" />
+    <Compile Include="Controllers\Student\AccountingCodesController.cs" />
+    <Compile Include="Controllers\Student\AcademicPeriodEnrollmentStatusesController.cs" />
+    <Compile Include="Controllers\Student\SectionCrosslistsController.cs" />
+    <Compile Include="Controllers\Student\SourcesController.cs" />
+    <Compile Include="Controllers\Student\SectionsMaximumController.cs" />
+    <Compile Include="Controllers\Student\StudentClassificationsController.cs" />
+    <Compile Include="Controllers\Student\StudentAttendanceController.cs" />
+    <Compile Include="Controllers\Student\StudentRegistrationEligibilitiesController.cs" />
+    <Compile Include="Controllers\Student\StudentRequestsController.cs" />
+    <Compile Include="Controllers\Student\HoldRequestTypesController.cs" />
+    <Compile Include="Controllers\Student\StudentCohortsController.cs" />
+    <Compile Include="Controllers\Student\ResidentTypesController.cs" />
+    <Compile Include="Controllers\Student\StudentResidentialCategoriesController.cs" />
+    <Compile Include="Controllers\Student\StudentSectionWaitlistsController.cs" />
+    <Compile Include="Controllers\Student\StudentStatusesController.cs" />
+    <Compile Include="Controllers\Student\StudentTagsController.cs" />
+    <Compile Include="Controllers\Student\StudentTaxFormPdfsController.cs" />
+    <Compile Include="Controllers\Student\StudentTaxFormStatementsController.cs" />
+    <Compile Include="Controllers\Student\AddAuthorizationsController.cs" />
+    <Compile Include="Controllers\Student\YearlyCyclesController.cs" />
+    <Compile Include="Controllers\Student\SessionCyclesController.cs" />
+    <Compile Include="Controllers\Student\CapSizesController.cs" />
+    <Compile Include="Controllers\Student\ClassLevelsController.cs" />
+    <Compile Include="Controllers\Student\AffiliationsController.cs" />
+    <Compile Include="Controllers\Student\GradesController.cs" />
+    <Compile Include="Controllers\Student\SectionGradeTypesController.cs" />
+    <Compile Include="Controllers\Base\GradeChangeReasonsController.cs" />
+    <Compile Include="Controllers\Student\SectionRegistrationsController.cs" />
+    <Compile Include="Controllers\Student\GownSizesController.cs" />
+    <Compile Include="Controllers\Student\GraduationApplicationsController.cs" />
+    <Compile Include="Controllers\Student\EnrollmentStatusesController.cs" />
+    <Compile Include="Controllers\Student\SectionRegistrationStatusesController.cs" />
+    <Compile Include="Controllers\Student\PetitionStatusesController.cs" />
+    <Compile Include="Controllers\Student\RegistrationOptionsController.cs" />
+    <Compile Include="Controllers\Student\SectionPermissionsController.cs" />
+    <Compile Include="Controllers\Student\SectionTransferStatusesController.cs" />
+    <Compile Include="Controllers\Student\StudentAffiliationsController.cs" />
+    <Compile Include="Controllers\Student\StudentConfigurationController.cs" />
+    <Compile Include="Controllers\Student\StudentPetitionReasonsController.cs" />
+    <Compile Include="Controllers\Student\StudentPetitionsController.cs" />
+    <Compile Include="Controllers\Student\StudentTermsController.cs" />
+    <Compile Include="Controllers\Student\EducationHistoryController.cs" />
+    <Compile Include="Controllers\Student\StudentStandingsController.cs" />
+    <Compile Include="Controllers\Student\AcademicHistoryController.cs" />
+    <Compile Include="Controllers\Student\AcademicProgramsController.cs" />
+    <Compile Include="Controllers\Student\StudentProgramsController.cs" />
+    <Compile Include="Controllers\Student\CreditTypesController.cs" />
+    <Compile Include="Controllers\Student\FederalCourseClassificationsController.cs" />
+    <Compile Include="Controllers\Base\FrequencyCodesController.cs" />
+    <Compile Include="Controllers\Base\DegreeTypesController.cs" />
+    <Compile Include="Controllers\Base\DenominationsController.cs" />
+    <Compile Include="Controllers\Base\HealthConditionsController.cs" />
+    <Compile Include="Controllers\Base\DepartmentsController.cs" />
+    <Compile Include="Controllers\Base\ECommerceController.cs" />
+    <Compile Include="Controllers\Base\EthnicitiesController.cs" />
+    <Compile Include="Controllers\Base\EventsController.cs" />
+    <Compile Include="Controllers\Base\ImportantNumbersController.cs" />
+    <Compile Include="Controllers\Base\InstitutionTypesController.cs" />
+    <Compile Include="Controllers\Base\ConfigurationController.cs" />
+    <Compile Include="Controllers\Base\InterestsController.cs" />
+    <Compile Include="Controllers\Base\LanguagesController.cs" />
+    <Compile Include="Controllers\Base\LocationsController.cs" />
+    <Compile Include="Controllers\Base\MaritalStatusesController.cs" />
+    <Compile Include="Controllers\Base\OfficeCodesController.cs" />
+    <Compile Include="Controllers\Base\ProspectSourcesController.cs" />
+    <Compile Include="Controllers\Base\PersonsController.cs" />
+    <Compile Include="Controllers\Base\OrganizationsController.cs" />
+    <Compile Include="Controllers\Base\PhotosController.cs" />
+    <Compile Include="Controllers\FinancialAid\AverageAwardPackagesController.cs" />
+    <Compile Include="Controllers\FinancialAid\AwardLettersController.cs" />
+    <Compile Include="Controllers\FinancialAid\AwardPeriodsController.cs" />
+    <Compile Include="Controllers\FinancialAid\FinancialAidApplicationsController.cs" />
+    <Compile Include="Controllers\FinancialAid\FinancialAidCounselorsController.cs" />
+    <Compile Include="Controllers\FinancialAid\FinancialAidLinksController.cs" />
+    <Compile Include="Controllers\FinancialAid\FinancialAidOfficesController.cs" />
+    <Compile Include="Controllers\FinancialAid\IpedsInstitutionsController.cs" />
+    <Compile Include="Controllers\FinancialAid\LoanRequestsController.cs" />
+    <Compile Include="Controllers\FinancialAid\StudentAwardYearsController.cs" />
+    <Compile Include="Controllers\FinancialAid\StudentDocumentsController.cs" />
+    <Compile Include="Controllers\FinancialAid\StudentLoanLimitationsController.cs" />
+    <Compile Include="Controllers\FinancialAid\StudentLoanSummaryController.cs" />
+    <Compile Include="Controllers\Base\PrefixesController.cs" />
+    <Compile Include="Controllers\Base\RacesController.cs" />
+    <Compile Include="Controllers\Base\RolesController.cs" />
+    <Compile Include="Controllers\Base\RoomsController.cs" />
+    <Compile Include="Controllers\Base\PersonRestrictionTypesController.cs" />
+    <Compile Include="Controllers\Base\SitesController.cs" />
+    <Compile Include="Controllers\Base\StaffController.cs" />
+    <Compile Include="Controllers\Base\SuffixesController.cs" />
+    <Compile Include="Controllers\Base\VersionController.cs" />
+    <Compile Include="Controllers\Base\VisaTypesController.cs" />
+    <Compile Include="Controllers\Student\StudentWaiverReasonsController.cs" />
+    <Compile Include="Controllers\Student\StudentWaiversController.cs" />
+    <Compile Include="Models\ApiStatusModel.cs" />
+    <Compile Include="Models\ResourceFileModel.cs" />
+    <Compile Include="Models\ResourceFileEntryModel.cs" />
+    <Compile Include="Utility\IntegrationApiUtility.cs" />
+    <Compile Include="Controllers\Finance\AccountActivityController.cs" />
+    <Compile Include="Controllers\Finance\AccountDueController.cs" />
+    <Compile Include="Controllers\Finance\FinanceConfigurationController.cs" />
+    <Compile Include="Controllers\Finance\DepositsController.cs" />
+    <Compile Include="Controllers\Finance\PaymentControlsController.cs" />
+    <Compile Include="Controllers\Finance\PaymentPlansController.cs" />
+    <Compile Include="Controllers\Base\SchoolsController.cs" />
+    <Compile Include="Controllers\Base\SpecialNeedsController.cs" />
+    <Compile Include="Controllers\Finance\ReceivablesController.cs" />
+    <Compile Include="Controllers\Student\AcademicLevelsController.cs" />
+    <Compile Include="Controllers\Student\AdmittedStatusesController.cs" />
+    <Compile Include="Controllers\Student\ApplicantsController.cs" />
+    <Compile Include="Controllers\Student\ApplicationInfluencesController.cs" />
+    <Compile Include="Controllers\Student\ApplicationStatusesController.cs" />
+    <Compile Include="Controllers\Student\ApplicationStatusCategoriesController.cs" />
+    <Compile Include="Controllers\Student\TranscriptGroupingsController.cs" />
+    <Compile Include="Controllers\Student\NoncourseStatusesController.cs" />
+    <Compile Include="Controllers\Student\RecruiterController.cs" />
+    <Compile Include="Controllers\Student\ExternalTranscriptStatusesController.cs" />
+    <Compile Include="Controllers\Student\PreferredSectionsController.cs" />
+    <Compile Include="Controllers\Student\TestResultsController.cs" />
+    <Compile Include="Controllers\Student\TopicCodesController.cs" />
+    <Compile Include="Controllers\Student\AdvisorTypesController.cs" />
+    <Compile Include="Controllers\Student\FacultyController.cs" />
+    <Compile Include="Controllers\Student\BooksController.cs" />
+    <Compile Include="Controllers\Student\CareerGoalsController.cs" />
+    <Compile Include="Controllers\Student\CcdsController.cs" />
+    <Compile Include="Controllers\Student\InstructionalMethodsController.cs" />
+    <Compile Include="Controllers\Student\LocalCourseClassificationsController.cs" />
+    <Compile Include="Controllers\Student\ProgramsController.cs" />
+    <Compile Include="Controllers\Student\RequirementsController.cs" />
+    <Compile Include="Controllers\Student\RestrictionTypesController.cs" />
+    <Compile Include="Controllers\Student\SpecializationsController.cs" />
+    <Compile Include="Controllers\Student\MinorsController.cs" />
+    <Compile Include="Controllers\Student\InstructionalEventsController.cs" />
+    <Compile Include="Controllers\Student\CourseLevelsController.cs" />
+    <Compile Include="Controllers\Student\CoursesController.cs" />
+    <Compile Include="Controllers\Student\CourseStatusesController.cs" />
+    <Compile Include="Controllers\Student\CourseTypesController.cs" />
+    <Compile Include="Controllers\Student\CreditCategoriesController.cs" />
+    <Compile Include="Controllers\Student\DegreesController.cs" />
+    <Compile Include="Controllers\Student\GradeSchemesController.cs" />
+    <Compile Include="Controllers\Student\MajorsController.cs" />
+    <Compile Include="Controllers\Student\SectionsController.cs" />
+    <Compile Include="Controllers\SessionController.cs" />
+    <Compile Include="Controllers\Finance\PaymentController.cs" />
+    <Compile Include="Controllers\Student\StudentTypesController.cs" />
+    <Compile Include="Controllers\Student\StudentLoadsController.cs" />
+    <Compile Include="Controllers\Student\StudentsController.cs" />
+    <Compile Include="Controllers\Student\SubjectsController.cs" />
+    <Compile Include="Controllers\Student\TermsController.cs" />
+    <Compile Include="Controllers\Student\TestsController.cs" />
+    <Compile Include="Controllers\Student\TranscriptCategoriesController.cs" />
+    <Compile Include="Controllers\AdminController.cs" />
+    <Compile Include="Controllers\HomeController.cs" />
+    <Compile Include="Controllers\UsersController.cs" />
+    <Compile Include="Controllers\UtilitiesController.cs" />
+    <Compile Include="Converters\ColleagueDateTimeConverter.cs" />
+    <Compile Include="Bootstrapper.cs" />
+    <Compile Include="Global.asax.cs">
+      <DependentUpon>Global.asax</DependentUpon>
+    </Compile>
+    <Compile Include="Models\ApiSettingsModel.cs" />
+    <Compile Include="Models\ApiSettingsProfileModel.cs" />
+    <Compile Include="Models\ApiTests.cs" />
+    <Compile Include="Models\CacheSettingsModel.cs" />
+    <Compile Include="Models\IntegrationApiErrorMessage.cs" />
+    <Compile Include="Models\ReportSettingsModel.cs" />
+    <Compile Include="Models\PhotoSettingsModel.cs" />
+    <Compile Include="Models\TestConnection.cs" />
+    <Compile Include="Models\TestLogin.cs" />
+    <Compile Include="Models\WebApiSettings.cs" />
+    <Compile Include="Modules\ColleagueBasicAuthenticationModule.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Licensing\ModuleConstants.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Content\icons\ellucian-icon-sprite.svg" />
+    <Content Include="Content\Images\ellucian-logo.png" />
+    <Content Include="Content\themes\base\ellucianStyle.css" />
+    <Content Include="Content\themes\base\Site.css" />
+    <Compile Include="Controllers\Student\MealTypesController.cs" />
+    <Compile Include="Controllers\Student\MealPlansController.cs" />
+    <Compile Include="Controllers\ColleagueFinance\ShipToDestinationsController.cs" />
+    <Compile Include="Controllers\HumanResources\EmploymentPerformanceReviewTypesController.cs" />
+    <Compile Include="Controllers\HumanResources\EmploymentPerformanceReviewRatingsController.cs" />
+    <Compile Include="Controllers\HumanResources\EmploymentPerformanceReviewsController.cs" />
+    <Compile Include="Controllers\HumanResources\LeaveTypesController.cs" />
+    <Compile Include="Controllers\Student\SectionStatusesController.cs" />
+    <Compile Include="Controllers\HumanResources\LeaveCategoriesController.cs" />
+    <Compile Include="Controllers\HumanResources\DeductionCategoriesController.cs" />
+    <Compile Include="Controllers\HumanResources\CostCalculationMethodsController.cs" />
+    <Compile Include="Controllers\HumanResources\EmploymentFrequenciesController.cs" />
+    <Compile Include="Controllers\HumanResources\PayScalesController.cs" />
+    <Compile Include="Controllers\HumanResources\JobApplicationsController.cs" />
+    <Compile Include="Controllers\HumanResources\BeneficiaryPreferenceTypesController.cs" />
+    <Compile Include="Controllers\HumanResources\PersonBenefitDependentsController.cs" />
+    <Compile Include="Controllers\HumanResources\EmploymentDepartmentsController.cs" />
+    <Compile Include="Controllers\Student\AdmissionApplicationSupportingItemsController.cs" />
+    <Compile Include="Controllers\HumanResources\PersonBeneficiariesController.cs" />
+    <Compile Include="Controllers\HumanResources\PayPeriodsController.cs" />
+    <Compile Include="Controllers\Student\CourseTopicsController.cs" />
+    <Compile Include="Controllers\Base\RelationshipStatusesController.cs" />
+    <Compile Include="Controllers\Student\ChargeAssessmentMethodsController.cs" />
+    <Compile Include="Controllers\Student\CourseTransferStatusesController.cs" />
+    <Content Include="Images\unofficial-watermark.png" />
+    <Content Include="Images\report-logo.png" />
+    <Content Include="Content\themes\base\images\ui-bg_flat_0_aaaaaa_40x100.png" />
+    <Content Include="Content\themes\base\images\ui-bg_flat_75_ffffff_40x100.png" />
+    <Content Include="Content\themes\base\images\ui-bg_glass_55_fbf9ee_1x400.png" />
+    <Content Include="Content\themes\base\images\ui-bg_glass_65_ffffff_1x400.png" />
+    <Content Include="Content\themes\base\images\ui-bg_glass_75_dadada_1x400.png" />
+    <Content Include="Content\themes\base\images\ui-bg_glass_75_e6e6e6_1x400.png" />
+    <Content Include="Content\themes\base\images\ui-bg_glass_95_fef1ec_1x400.png" />
+    <Content Include="Content\themes\base\images\ui-bg_highlight-soft_75_cccccc_1x100.png" />
+    <Content Include="Content\themes\base\images\ui-icons_222222_256x240.png" />
+    <Content Include="Content\themes\base\images\ui-icons_2e83ff_256x240.png" />
+    <Content Include="Content\themes\base\images\ui-icons_454545_256x240.png" />
+    <Content Include="Content\themes\base\images\ui-icons_888888_256x240.png" />
+    <Content Include="Content\themes\base\images\ui-icons_cd0a0a_256x240.png" />
+    <Content Include="Content\themes\base\jquery.ui.accordion.css" />
+    <Content Include="Content\themes\base\jquery.ui.all.css" />
+    <Content Include="Content\themes\base\jquery.ui.autocomplete.css" />
+    <Content Include="Content\themes\base\jquery.ui.base.css" />
+    <Content Include="Content\themes\base\jquery.ui.button.css" />
+    <Content Include="Content\themes\base\jquery.ui.core.css" />
+    <Content Include="Content\themes\base\jquery.ui.datepicker.css" />
+    <Content Include="Content\themes\base\jquery.ui.dialog.css" />
+    <Content Include="Content\themes\base\jquery.ui.progressbar.css" />
+    <Content Include="Content\themes\base\jquery.ui.resizable.css" />
+    <Content Include="Content\themes\base\jquery.ui.selectable.css" />
+    <Content Include="Content\themes\base\jquery.ui.slider.css" />
+    <Content Include="Content\themes\base\jquery.ui.tabs.css" />
+    <Content Include="Content\themes\base\jquery.ui.theme.css" />
+    <Content Include="Global.asax" />
+    <Content Include="Parameters.xml">
+      <SubType>Designer</SubType>
+    </Content>
+    <Content Include="Reports\Student\UnofficialTranscriptDeviceInfo.txt" />
+    <Content Include="Scripts\Admin.js" />
+    <Content Include="Scripts\Components\Icon\_Icon.html" />
+    <Content Include="Scripts\Components\Icon\_Icon.js" />
+    <Content Include="Scripts\Components\ModalSpinner\_ModalSpinner.html" />
+    <Content Include="Scripts\Components\ModalSpinner\_ModalSpinner.js" />
+    <Content Include="Scripts\global.js" />
+    <Content Include="Scripts\jquery-1.7.1-vsdoc.js" />
+    <Content Include="Scripts\jquery-1.7.1.js" />
+    <Content Include="Scripts\jquery-1.7.1.min.js" />
+    <Content Include="Scripts\jquery-ui-1.8.18.js" />
+    <Content Include="Scripts\jquery-ui-1.8.18.min.js" />
+    <Content Include="Scripts\jquery.ui.plugin_responsive-table.js" />
+    <Content Include="Scripts\jquery.validate-vsdoc.js" />
+    <Content Include="Scripts\jquery.validate.js" />
+    <Content Include="Scripts\jquery.validate.min.js" />
+    <Content Include="Scripts\jquery.validate.unobtrusive.min.js" />
+    <Content Include="Scripts\knockout-3.4.0.debug.js" />
+    <Content Include="Scripts\knockout-3.4.0.js" />
+    <Content Include="Scripts\knockout.validation.debug.js" />
+    <Content Include="Scripts\knockout.validation.js" />
+    <Content Include="Scripts\modernizr-2.5.3.js" />
+    <Content Include="Scripts\require.js" />
+    <Content Include="Scripts\ResourceFileEditor.js" />
+    <Content Include="Scripts\text.js" />
+    <Content Include="Web.config">
+      <SubType>Designer</SubType>
+    </Content>
+    <Content Include="Web.Debug.config">
+      <DependentUpon>Web.config</DependentUpon>
+    </Content>
+    <Content Include="Web.Release.config">
+      <DependentUpon>Web.config</DependentUpon>
+    </Content>
+    <Content Include="Content\Site.css" />
+    <Content Include="Images\accent.png" />
+    <Content Include="Images\bullet.png" />
+    <Content Include="Images\heroAccent.png" />
+    <Content Include="Images\orderedListOne.png" />
+    <Content Include="Images\orderedListTwo.png" />
+    <Content Include="Images\orderedListThree.png" />
+    <Content Include="Scripts\_references.js" />
+    <Content Include="Views\Web.config" />
+    <Content Include="Views\_ViewStart.cshtml" />
+    <Content Include="Views\Home\Index.cshtml" />
+    <Content Include="Views\Shared\Error.cshtml" />
+    <Content Include="Views\Shared\_Layout.cshtml" />
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <Content Include="App_Data\settings.config">
+      <SubType>Designer</SubType>
+    </Content>
+    <Content Include="App_Data\settings.Debug.config">
+      <DependentUpon>settings.config</DependentUpon>
+    </Content>
+    <Content Include="App_Data\settings.Release.config">
+      <DependentUpon>settings.config</DependentUpon>
+    </Content>
+    <Content Include="Areas\Student\Views\Web.config" />
+    <Content Include="Areas\Student\Views\Test\Courses.cshtml" />
+    <Content Include="Areas\Student\Views\Test\CourseSearch.cshtml" />
+    <Content Include="Areas\Student\Views\Test\Credits.cshtml" />
+    <Content Include="Areas\Student\Views\Test\Faculty.cshtml" />
+    <Content Include="Areas\Student\Views\Test\Done.cshtml" />
+    <Content Include="Areas\Student\Views\Test\Index.cshtml" />
+    <Content Include="Areas\Student\Views\Test\Sections.cshtml" />
+    <Content Include="Areas\Student\Views\Test\SectionsForCourses.cshtml" />
+    <Content Include="Areas\Student\Views\Test\Subjects.cshtml" />
+    <Content Include="Areas\Student\Views\_ViewStart.cshtml" />
+    <Content Include="Areas\Student\Views\Test\CourseSearchParallel.cshtml" />
+    <Content Include="packages.config">
+      <SubType>Designer</SubType>
+    </Content>
+    <Content Include="Views\Admin\Index.cshtml" />
+    <Content Include="Views\Admin\SettingsConfirmation.cshtml" />
+    <Content Include="Views\Utilities\ClearCache.cshtml" />
+    <Content Include="Views\Utilities\Index.cshtml" />
+    <Content Include="Views\Admin\ApiSettingsProfile.cshtml" />
+    <Content Include="Views\Admin\ApiSettings.cshtml" />
+    <Content Include="Views\Admin\_PhotoSettings.cshtml" />
+    <Content Include="Views\Admin\ConnectionSettings.cshtml" />
+    <Content Include="Views\Admin\Logging.cshtml" />
+    <Content Include="Views\Admin\Login.cshtml" />
+    <Content Include="Views\Shared\_LoginControl.cshtml" />
+    <Content Include="Ellucian.Colleague.Api.wpp.targets" />
+    <Content Include="Views\Admin\_ReportSettings.cshtml" />
+    <Content Include="Views\Admin\_CacheSettings.cshtml" />
+    <Content Include="Reports\HumanResources\2012-W2-W2ST.pdf" />
+    <Content Include="Reports\HumanResources\2010-W2.pdf" />
+    <Content Include="Reports\HumanResources\2011-W2-W2ST.pdf" />
+    <Content Include="Reports\HumanResources\2013-W2-W2ST.pdf" />
+    <Content Include="Reports\HumanResources\2014-W2-W2ST.pdf" />
+    <Content Include="Reports\HumanResources\2015-W2-W2ST.pdf" />
+    <Content Include="Reports\Student\2015-1098T.pdf" />
+    <Content Include="Reports\Student\2008-1098T.pdf" />
+    <Content Include="Reports\Student\2009-1098T.pdf" />
+    <Content Include="Reports\Student\2010-1098T.pdf" />
+    <Content Include="Reports\Student\2011-1098T.pdf" />
+    <Content Include="Reports\Student\2012-1098T.pdf" />
+    <Content Include="Reports\Student\2013-1098T.pdf" />
+    <Content Include="Reports\Student\2014-1098T.pdf" />
+    <Content Include="Reports\HumanResources\2016-W2-W2ST.pdf" />
+    <Content Include="Reports\Student\2016-1098T.pdf" />
+    <Content Include="Views\ResourceFileEditor\ResourceFileEditor.cshtml" />
+    <Content Include="Views\Shared\_EllucianDesignSystem.cshtml" />
+    <Content Include="Views\Shared\_RequireConfig.cshtml" />
+    <Content Include="Views\Shared\_RequireConfigObjectOnly.cshtml" />
+    <Content Include="Properties\DataSources\Ellucian.Colleague.Dtos.HumanResources.PayStatementDeduction.datasource" />
+    <Content Include="Views\Utilities\BackupConfig.cshtml" />
+    <Content Include="Views\Utilities\RestoreConfigAsync.cshtml" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Ellucian.Colleague.Api.Client\Ellucian.Colleague.Api.Client.csproj">
+      <Project>{851D8DA4-372F-4483-B6F8-DE08F22817C1}</Project>
+      <Name>Ellucian.Colleague.Api.Client</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Coordination.Base\Ellucian.Colleague.Coordination.Base.csproj">
+      <Project>{2D4513B8-2722-4C91-9A64-BDBBC3F03516}</Project>
+      <Name>Ellucian.Colleague.Coordination.Base</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Coordination.ColleagueFinance\Ellucian.Colleague.Coordination.ColleagueFinance.csproj">
+      <Project>{7461afa8-f600-4df5-9b43-6fed35402279}</Project>
+      <Name>Ellucian.Colleague.Coordination.ColleagueFinance</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Coordination.Finance\Ellucian.Colleague.Coordination.Finance.csproj">
+      <Project>{E58B8C16-5BF9-45E5-934B-1C4804B157E4}</Project>
+      <Name>Ellucian.Colleague.Coordination.Finance</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Coordination.FinancialAid\Ellucian.Colleague.Coordination.FinancialAid.csproj">
+      <Project>{7b88c66c-ad9e-4419-8936-90f60deb32b9}</Project>
+      <Name>Ellucian.Colleague.Coordination.FinancialAid</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Coordination.HumanResources\Ellucian.Colleague.Coordination.HumanResources.csproj">
+      <Project>{edbdc538-579d-473f-87f3-fc18af3c8e97}</Project>
+      <Name>Ellucian.Colleague.Coordination.HumanResources</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Coordination.Student\Ellucian.Colleague.Coordination.Student.csproj">
+      <Project>{9A271A72-5D63-41D3-9E8F-D50255DD51D1}</Project>
+      <Name>Ellucian.Colleague.Coordination.Student</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Data.Base\Ellucian.Colleague.Data.Base.csproj">
+      <Project>{C3B126A1-5FFA-40A5-9826-FC22E1CCB2EC}</Project>
+      <Name>Ellucian.Colleague.Data.Base</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Data.ColleagueFinance\Ellucian.Colleague.Data.ColleagueFinance.csproj">
+      <Project>{8dd19909-a3b4-486f-959f-ac0a9cfd963c}</Project>
+      <Name>Ellucian.Colleague.Data.ColleagueFinance</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Data.Finance\Ellucian.Colleague.Data.Finance.csproj">
+      <Project>{51453AB3-7CD4-4319-863E-24C08E205C9E}</Project>
+      <Name>Ellucian.Colleague.Data.Finance</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Data.FinancialAid\Ellucian.Colleague.Data.FinancialAid.csproj">
+      <Project>{a82741bc-a38c-46cf-b903-c14d5188c7aa}</Project>
+      <Name>Ellucian.Colleague.Data.FinancialAid</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Data.HumanResources\Ellucian.Colleague.Data.HumanResources.csproj">
+      <Project>{97609563-e836-4796-a26a-424fdd733ba7}</Project>
+      <Name>Ellucian.Colleague.Data.HumanResources</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Data.Student\Ellucian.Colleague.Data.Student.csproj">
+      <Project>{3B07EA69-83F6-4AB5-BC87-223E411A6ACC}</Project>
+      <Name>Ellucian.Colleague.Data.Student</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Domain.Base\Ellucian.Colleague.Domain.Base.csproj">
+      <Project>{A3B49510-737B-4FFD-8BCA-17BCCE7FBAF7}</Project>
+      <Name>Ellucian.Colleague.Domain.Base</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Domain.ColleagueFinance\Ellucian.Colleague.Domain.ColleagueFinance.csproj">
+      <Project>{520a4b81-cfa0-4baa-88ff-5c3d8b4a225c}</Project>
+      <Name>Ellucian.Colleague.Domain.ColleagueFinance</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Domain.Finance\Ellucian.Colleague.Domain.Finance.csproj">
+      <Project>{CFB4F61C-87B9-46DB-9F9A-70ED022C40B0}</Project>
+      <Name>Ellucian.Colleague.Domain.Finance</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Domain.FinancialAid\Ellucian.Colleague.Domain.FinancialAid.csproj">
+      <Project>{0ecc52bc-bfaa-4e44-9aab-7781baf39f30}</Project>
+      <Name>Ellucian.Colleague.Domain.FinancialAid</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Domain.HumanResources\Ellucian.Colleague.Domain.HumanResources.csproj">
+      <Project>{0cda322d-5db6-466c-86c4-49a808b02284}</Project>
+      <Name>Ellucian.Colleague.Domain.HumanResources</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Domain.Student\Ellucian.Colleague.Domain.Student.csproj">
+      <Project>{B47DA241-50B7-420A-BB25-C24B20807609}</Project>
+      <Name>Ellucian.Colleague.Domain.Student</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos.Base\Ellucian.Colleague.Dtos.Base.csproj">
+      <Project>{A147BD58-ECC6-409B-A633-128946AAA456}</Project>
+      <Name>Ellucian.Colleague.Dtos.Base</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos.ColleagueFinance\Ellucian.Colleague.Dtos.ColleagueFinance.csproj">
+      <Project>{ca034d7a-0963-4463-b974-bef18be515ae}</Project>
+      <Name>Ellucian.Colleague.Dtos.ColleagueFinance</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos.Finance\Ellucian.Colleague.Dtos.Finance.csproj">
+      <Project>{F2409F02-791E-43B3-85E3-B577226FCF55}</Project>
+      <Name>Ellucian.Colleague.Dtos.Finance</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos.FinancialAid\Ellucian.Colleague.Dtos.FinancialAid.csproj">
+      <Project>{52434ed9-faf3-41ca-bda7-ec87128ea0d3}</Project>
+      <Name>Ellucian.Colleague.Dtos.FinancialAid</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos.HumanResources\Ellucian.Colleague.Dtos.HumanResources.csproj">
+      <Project>{1a7b9d0e-1665-492c-b287-0d89710408e5}</Project>
+      <Name>Ellucian.Colleague.Dtos.HumanResources</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos.Student\Ellucian.Colleague.Dtos.Student.csproj">
+      <Project>{28EB3CAC-2FA7-401E-8246-0C03C50FDEDA}</Project>
+      <Name>Ellucian.Colleague.Dtos.Student</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos\Ellucian.Colleague.Dtos.csproj">
+      <Project>{0ca929ca-2370-4763-be71-c91c244e0743}</Project>
+      <Name>Ellucian.Colleague.Dtos</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Web.Http.Configuration\Ellucian.Web.Http.Configuration.csproj">
+      <Project>{7B91D852-251C-4260-913E-FFACABCE5463}</Project>
+      <Name>Ellucian.Web.Http.Configuration</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Web.Http\Ellucian.Web.Http.csproj">
+      <Project>{F0560816-DFBA-441C-A23E-139566C2F18A}</Project>
+      <Name>Ellucian.Web.Http</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\Student\UnofficialTranscript.rdlc" />
+    <Content Include="App_GlobalResources\Finance\StatementResources.resx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Reports\Finance\StudentStatement.rdlc">
+      <SubType>Designer</SubType>
+    </Content>
+    <Content Include="Reports\FinancialAid\AwardLetter.rdlc">
+      <SubType>Designer</SubType>
+    </Content>
+    <Content Include="Reports\FinancialAid\AwardLetter2.rdlc">
+      <SubType>Designer</SubType>
+    </Content>
+    <Content Include="Reports\Student\2008-1098T.rdlc">
+      <SubType>Designer</SubType>
+    </Content>
+    <Content Include="Reports\Student\2009-1098T.rdlc" />
+    <Content Include="Reports\Student\2014-1098T.rdlc" />
+    <Content Include="Reports\Student\2013-1098T.rdlc" />
+    <Content Include="Reports\Student\2012-1098T.rdlc" />
+    <Content Include="Reports\Student\2011-1098T.rdlc" />
+    <Content Include="Reports\Student\2010-1098T.rdlc" />
+    <Content Include="Reports\Student\2015-1098T.rdlc" />
+    <Content Include="Reports\HumanResources\PayStatement.rdlc">
+      <SubType>Designer</SubType>
+    </Content>
+    <Content Include="Reports\Student\2016-1098T.rdlc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\Student\2017-1098T.rdlc">
+      <SubType>Designer</SubType>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\HumanResources\2010-W2.rdlc" />
+    <Content Include="Reports\HumanResources\2011-W2-W2ST.rdlc" />
+    <Content Include="Reports\HumanResources\2012-W2-W2ST.rdlc" />
+    <Content Include="Reports\HumanResources\2013-W2-W2ST.rdlc" />
+    <Content Include="Reports\HumanResources\2014-W2-W2ST.rdlc" />
+    <Content Include="Reports\HumanResources\2015-W2-W2ST.rdlc" />
+    <Content Include="Reports\HumanResources\2016-W2-W2ST.rdlc">
+      <SubType>Designer</SubType>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\HumanResources\2016-1095C.rdlc">
+      <SubType>Designer</SubType>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\HumanResources\2017-W2-W2ST.rdlc">
+      <SubType>Designer</SubType>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\HumanResources\2015-1095C.rdlc">
+      <SubType>Designer</SubType>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\HumanResources\2017-1095C.rdlc">
+      <SubType>Designer</SubType>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\HumanResources\2017-T4.rdlc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\Student\20XX-T2202a.rdlc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\ColleagueFinance\2017-T4A.rdlc">
+      <SubType>Designer</SubType>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\ColleagueFinance\2016-T4A.rdlc">
+      <SubType>Designer</SubType>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\ColleagueFinance\2015-T4A.rdlc">
+      <SubType>Designer</SubType>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\ColleagueFinance\2014-T4A.rdlc">
+      <SubType>Designer</SubType>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\ColleagueFinance\2013-T4A.rdlc">
+      <SubType>Designer</SubType>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\ColleagueFinance\2012-T4A.rdlc">
+      <SubType>Designer</SubType>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\ColleagueFinance\2011-T4A.rdlc">
+      <SubType>Designer</SubType>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\ColleagueFinance\2010-T4A.rdlc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\HumanResources\2016-T4.rdlc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\HumanResources\2010-T4.rdlc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\HumanResources\2011-T4.rdlc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\HumanResources\2012-T4.rdlc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\HumanResources\2013-T4.rdlc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\HumanResources\2014-T4.rdlc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\HumanResources\2015-T4.rdlc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\Student\2017-1098E.rdlc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\Student\2016-1098E.rdlc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\Student\2015-1098E.rdlc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\Student\2014-1098E.rdlc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\Student\2012-1098E.rdlc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\Student\2013-1098E.rdlc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\Student\2011-1098E.rdlc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\Student\2009-1098E.rdlc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\Student\2010-1098E.rdlc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\Student\2008-1098E.rdlc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\ColleagueFinance\20XX-1099MI.rdlc" />
+  </ItemGroup>
+  <PropertyGroup>
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
+    <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
+  </PropertyGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <Import Project="$(VSToolsPath)\WebApplications\Microsoft.WebApplication.targets" Condition="'$(VSToolsPath)' != ''" />
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v10.0\WebApplications\Microsoft.WebApplication.targets" Condition="false" />
+  <!-- begin ellucian project settings -->
+  <Import Project="$(ProjectDir)..\..\..\BuildConfig\CodeSigning.targets" Condition="Exists('$(ProjectDir)..\..\..\BuildConfig\CodeSigning.targets ')" />
+  <!--<Import Project="$(MSBuildProgramFiles32)\MSBuild\FxCop Integrator\FxCopIntegrator.targets" Condition="Exists('$(MSBuildProgramFiles32)\MSBuild\FxCop Integrator\FxCopIntegrator.targets')" />-->
+  <!-- The SlowCheetahTargets is only used in the web projects... -->
+  <PropertyGroup>
+    <SlowCheetahTargets Condition=" '$(SlowCheetahTargets)'=='' ">$(MSBuildProjectDirectory)\..\Dependencies\SlowCheetah.Transforms.targets</SlowCheetahTargets>
+  </PropertyGroup>
+  <Import Project="$(SlowCheetahTargets)" Condition="Exists('$(SlowCheetahTargets)')" />
+  <!-- end ellucian project settings -->
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target> -->
+  <Target Name="MvcBuildViews" AfterTargets="AfterBuild" Condition="'$(MvcBuildViews)'=='true'">
+    <AspNetCompiler VirtualPath="temp" PhysicalPath="$(WebProjectOutputDir)" />
+  </Target>
+  <ProjectExtensions>
+    <VisualStudio>
+      <FlavorProperties GUID="{349c5851-65df-11da-9384-00065b846f21}">
+        <WebProjectProperties>
+          <UseIIS>True</UseIIS>
+          <AutoAssignPort>True</AutoAssignPort>
+          <DevelopmentServerPort>57276</DevelopmentServerPort>
+          <DevelopmentServerVPath>/</DevelopmentServerVPath>
+          <IISUrl>http://localhost/Ellucian.Colleague.Api</IISUrl>
+          <NTLMAuthentication>False</NTLMAuthentication>
+          <UseCustomServer>False</UseCustomServer>
+          <CustomServerUrl>
+          </CustomServerUrl>
+          <SaveServerSettingsInUserFile>False</SaveServerSettingsInUserFile>
+        </WebProjectProperties>
+      </FlavorProperties>
+    </VisualStudio>
+  </ProjectExtensions>
+  <PropertyGroup>
+    <PostBuildEvent>
+    </PostBuildEvent>
+  </PropertyGroup>
+</Project>

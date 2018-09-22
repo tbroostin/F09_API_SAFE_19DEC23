@@ -1,0 +1,1172 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Ellucian.Web.Mvc.Domain</name>
+    </assembly>
+    <members>
+        <member name="T:Ellucian.Web.Mvc.Domain.Entities.DetailPage">
+            <summary>
+            Detail page entity.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.DetailPage.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Mvc.Domain.Entities.Page"/> class.
+            </summary>
+            <param name="id">The identifier.</param>
+            <exception cref="T:System.ArgumentNullException">
+            id
+            or
+            label
+            </exception>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.DetailPage.ToString">
+            <summary>
+            Returns a <see cref="T:System.String"/> that represents this instance.
+            </summary>
+            <returns>
+            A <see cref="T:System.String"/> that represents this instance.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.DetailPage.Equals(System.Object)">
+            <summary>
+            Determines whether the specified <see cref="T:System.Object"/>, is equal to this instance.
+            </summary>
+            <param name="obj">The <see cref="T:System.Object"/> to compare with this instance.</param>
+            <returns>
+              <c>true</c> if the specified <see cref="T:System.Object"/> is equal to this instance; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.DetailPage.GetHashCode">
+            <summary>
+            Returns a hash code for this instance.
+            </summary>
+            <returns>
+            A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+            </returns>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.DetailPage.Id">
+            <summary>
+            Gets the identifier.
+            </summary>
+            <value>
+            The identifier.
+            </value>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Domain.Entities.Menu">
+            <summary>
+            A menu is a collection of menu items that are grouped together.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Domain.Entities.SecurableNavigationItem">
+            <summary>
+            Securable navigation item model
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.SecurableNavigationItem.AddAllowedRole(System.String)">
+            <summary>
+            Adds the allowed role.
+            </summary>
+            <param name="roleTitle">The role title.</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.SecurableNavigationItem.RemoveAllowedRole(System.String)">
+            <summary>
+            Removes the allowed role.
+            </summary>
+            <param name="roleTitle">The role title.</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.SecurableNavigationItem.AddAllowedUser(System.String)">
+            <summary>
+            Adds the allowed user.
+            </summary>
+            <param name="userId">The user identifier.</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.SecurableNavigationItem.RemoveAllowedUser(System.String)">
+            <summary>
+            Removes the allowed user.
+            </summary>
+            <param name="userId">The user identifier.</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.SecurableNavigationItem.AddProxyPermission(System.String)">
+            <summary>
+            Adds the allowed permission.
+            </summary>
+            <param name="permissionId">The permission identifier.</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.SecurableNavigationItem.RemoveProxyPermission(System.String)">
+            <summary>
+            Removes the allowed permission.
+            </summary>
+            <param name="permissionId">The permission identifier.</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.SecurableNavigationItem.IsVisible(Ellucian.Web.Security.ICurrentUser)">
+            <summary>
+            Answers true if the specified user is allowed to see this menu item.
+            </summary>
+            <param name="user">the user, must not be null</param>
+            <returns></returns>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.SecurableNavigationItem.AllowedRoles">
+            <summary>
+            When populated, the current navigation item is only shown to the specified roles.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.SecurableNavigationItem.AllowedUsers">
+            <summary>
+            When populated, the current navigation item is only shown to the specified users.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.SecurableNavigationItem.ProxyPermissions">
+            <summary>
+            When populated, the current navigation item is only shown to proxy users who have the specified proxy permissions.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Menu.#ctor(Ellucian.Web.Mvc.Domain.Entities.Site,System.String,System.String)">
+            <summary>
+            Initializes a new instance of the Menu class.
+            </summary>
+            <param name="site">the site, must not be null or empty</param>
+            <param name="id">a unique identifier, must not be null or empty</param>
+            <param name="label">a label to be shown in the user interface, must not be null or empty</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Menu.AddMenuItem(Ellucian.Web.Mvc.Domain.Entities.MenuItemBase)">
+            <summary>
+            Adds the menu item.
+            </summary>
+            <param name="item">The item.</param>
+            <exception cref="T:System.ArgumentException">Page with ID ' + page.Id + ' is not part of the site</exception>
+            <exception cref="T:System.ArgumentException">Submenu with ID ' + submenu.Id + ' is not part of the site</exception>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Menu.RemoveMenuItem(Ellucian.Web.Mvc.Domain.Entities.MenuItemBase)">
+            <summary>
+            Removes the menu item.
+            </summary>
+            <param name="item">The item.</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Menu.ToString">
+            <summary>
+            Returns a <see cref="T:System.String"/> that represents this instance.
+            </summary>
+            <returns>
+            A <see cref="T:System.String"/> that represents this instance.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Menu.Equals(System.Object)">
+            <summary>
+            Determines whether the specified <see cref="T:System.Object"/>, is equal to this instance.
+            </summary>
+            <param name="obj">The <see cref="T:System.Object"/> to compare with this instance.</param>
+            <returns>
+              <c>true</c> if the specified <see cref="T:System.Object"/> is equal to this instance; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Menu.GetHashCode">
+            <summary>
+            Returns a hash code for this instance.
+            </summary>
+            <returns>
+            A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+            </returns>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Menu.Id">
+            <summary>
+            A unique identifier for this menu.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Menu.Hidden">
+            <summary>
+            Indicates if this menu should be hidden from all users
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Menu.Label">
+            <summary>
+            The menu label as shown in the user interface. Must not be null or empty.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Menu.MessageId">
+            <summary>
+            The message ID to be used for this menu and all pages that don't specify their own message ID.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Menu.Order">
+            <summary>
+            The position of the current Menu entity.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Menu.Items">
+            <summary>
+            The items that appear on this menu.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Domain.Entities.MenuItemBase">
+            <summary>
+            either a menu or a page that must appear on a menu
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.MenuItemBase.#ctor(Ellucian.Web.Mvc.Domain.Entities.MenuItemType)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Mvc.Domain.Entities.MenuItemBase"/> class.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.MenuItemBase.MenuItemType">
+            <summary>
+            gets or sets the type of menu item (menu aka submenu or page)
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Domain.Entities.MenuItemMenu">
+            <summary>
+            a menu item is a menu/submenu that must appear on a menu
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.MenuItemMenu.#ctor(Ellucian.Web.Mvc.Domain.Entities.Menu)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Mvc.Domain.Entities.MenuItemMenu"/> class.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.MenuItemMenu.ToString">
+            <summary>
+            Returns a <see cref="T:System.String"/> that represents an instance of a Menu.
+            </summary>
+            <returns>A <see cref="T:System.String"/> that represents an instance of a Menu.</returns>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.MenuItemMenu.Menu">
+            <summary>
+            the menu/submenu to which the menu item links
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Domain.Entities.MenuItemPage">
+            <summary>
+            a menu item is a page that must appear on a menu
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.MenuItemPage.#ctor(Ellucian.Web.Mvc.Domain.Entities.Page)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Mvc.Domain.Entities.MenuItemPage"/> class.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.MenuItemPage.ToString">
+            <summary>
+            Returns a <see cref="T:System.String"/> that represents an instance of a Page.
+            </summary>
+            <returns>A <see cref="T:System.String"/> that represents an instance of a Page.</returns>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.MenuItemPage.Page">
+            <summary>
+            the page to which the menu item links
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Domain.Entities.MenuItemLink">
+            <summary>
+            a menu item is a page that must appear on a menu
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.MenuItemLink.#ctor(Ellucian.Web.Mvc.Domain.Entities.Link)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Mvc.Domain.Entities.MenuItemLink"/> class.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.MenuItemLink.ToString">
+            <summary>
+            Returns a <see cref="T:System.String"/> that represents an instance of a Link.
+            </summary>
+            <returns>A <see cref="T:System.String"/> that represents an instance of a Link.</returns>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.MenuItemLink.Link">
+            <summary>
+            the page to which the menu item links
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Domain.Entities.MenuItemType">
+            <summary>
+            The different types of menu items
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Domain.Entities.MenuItemType.Menu">
+            <summary>
+            a menu item type of menu (or submenu)
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Domain.Entities.MenuItemType.Page">
+            <summary>
+            a menu item type of page
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Domain.Entities.MenuItemType.Link">
+            <summary>
+            A menu item type of link (to an external site, not a page within this site)
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Domain.Entities.Page">
+            <summary>
+            Page model
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Page.#ctor(System.String,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Mvc.Domain.Entities.Page"/> class.
+            </summary>
+            <param name="id">The identifier.</param>
+            <param name="label">The label.</param>
+            <exception cref="T:System.ArgumentNullException">
+            id
+            or
+            label
+            </exception>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Page.AddSubpage(Ellucian.Web.Mvc.Domain.Entities.Subpage)">
+            <summary>
+            Adds the subpage.
+            </summary>
+            <param name="subpage">The subpage.</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Page.RemoveSubpage(Ellucian.Web.Mvc.Domain.Entities.Subpage)">
+            <summary>
+            Removes the subpage item.
+            </summary>
+            <param name="subpage">The item.</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Page.AddDetailPage(Ellucian.Web.Mvc.Domain.Entities.DetailPage)">
+            <summary>
+            Adds the detail page item.
+            </summary>
+            <param name="detailPage"></param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Page.RemoveDetailPage(Ellucian.Web.Mvc.Domain.Entities.DetailPage)">
+            <summary>
+            Removes the detail page item.
+            </summary>
+            <param name="detailPage"></param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Page.ToString">
+            <summary>
+            Returns a <see cref="T:System.String"/> that represents this instance.
+            </summary>
+            <returns>
+            A <see cref="T:System.String"/> that represents this instance.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Page.Equals(System.Object)">
+            <summary>
+            Determines whether the specified <see cref="T:System.Object"/>, is equal to this instance.
+            </summary>
+            <param name="obj">The <see cref="T:System.Object"/> to compare with this instance.</param>
+            <returns>
+              <c>true</c> if the specified <see cref="T:System.Object"/> is equal to this instance; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Page.GetHashCode">
+            <summary>
+            Returns a hash code for this instance.
+            </summary>
+            <returns>
+            A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+            </returns>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Page.Id">
+            <summary>
+            Gets the identifier.
+            </summary>
+            <value>
+            The identifier.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Page.Label">
+            <summary>
+            Gets or sets the label.
+            </summary>
+            <value>
+            The label.
+            </value>
+            <exception cref="T:System.ArgumentNullException">value</exception>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Page.MessageId">
+            <summary>
+            Get/Set the message ID
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Page.Order">
+            <summary>
+            The position of the current Page entity.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Page.Area">
+            <summary>
+            Gets or sets the area.
+            </summary>
+            <value>
+            The area.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Page.Controller">
+            <summary>
+            Gets or sets the controller.
+            </summary>
+            <value>
+            The controller.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Page.Action">
+            <summary>
+            Gets or sets the action.
+            </summary>
+            <value>
+            The action.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Page.Hidden">
+            <summary>
+            Indicates if this page should be hidden from all users
+            </summary>
+            <value>
+            The hidden state
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Page.Subpages">
+            <summary>
+            The subpages that appear on this page.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Page.DetailPages">
+            <summary>
+            The detail pages that appear on this page.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Page.ElevatedSecurity">
+            <summary>
+            Indicates if this page should be subject to elevated security rules
+            If true, this page's security will be controlled by a separate
+            administration page
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Domain.Entities.Link">
+            <summary>
+            Link model
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Link.#ctor(System.String,System.String,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Mvc.Domain.Entities.Link"/> class.
+            </summary>
+            <param name="id">The identifier.</param>
+            <param name="url">The link.</param>
+            <param name="text">The text.</param>
+            <exception cref="T:System.ArgumentNullException">
+            link
+            or
+            text
+            </exception>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Link.ToString">
+            <summary>
+            Returns a <see cref="T:System.String"/> that represents this instance.
+            </summary>
+            <returns>
+            A <see cref="T:System.String"/> that represents this instance.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Link.Equals(System.Object)">
+            <summary>
+            Determines whether the specified <see cref="T:System.Object"/>, is equal to this instance.
+            </summary>
+            <param name="obj">The <see cref="T:System.Object"/> to compare with this instance.</param>
+            <returns>
+              <c>true</c> if the specified <see cref="T:System.Object"/> is equal to this instance; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Link.GetHashCode">
+            <summary>
+            Returns a hash code for this instance.
+            </summary>
+            <returns>
+            A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+            </returns>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Link.Url">
+            <summary>
+            Gets and sets the link.
+            </summary>
+            <value>
+            The link.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Link.Text">
+            <summary>
+            Gets and sets the text.
+            </summary>
+            <value>
+            The text.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Link.Id">
+            <summary>
+            Gets the identifier.
+            </summary>
+            <value>
+            The identifier.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Link.Order">
+            <summary>
+            Gets the order.
+            </summary>
+            <value>
+            The order.
+            </value>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Domain.Entities.Settings">
+            <summary>
+            Settings model
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Settings.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Mvc.Domain.Entities.Settings"/> class.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Settings.Merge(Ellucian.Web.Mvc.Domain.Entities.Settings)">
+            <summary>
+            Merges the provided Settings into the current Settings instance and return as a new instance.
+            The current instance is considered the target of the merge.
+            </summary>
+            <param name="mergeSource"></param>
+            <returns>New Settings instance representing the merge result.</returns>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.LogLevel">
+            <summary>
+            Gets or sets the log level.
+            </summary>
+            <value>
+            The log level.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.ApiBaseUrl">
+            <summary>
+            Gets or sets the API base URL.
+            </summary>
+            <value>
+            The API base URL.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.ClientPrivacyPolicy">
+            <summary>
+            Gets or sets the client's privacy policy
+            </summary>
+            <value>
+            The client's privacy policy
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.TrackingId">
+            <summary>
+            Gets or Sets the Tracking Id of the Client's Google Analytics Script
+            </summary>
+            <value>
+            Tracking Id
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.ProxyDimensionIndex">
+            <summary>
+            Gets or sets the index for the custom dimension reserved for Proxy user
+            hits in the client's Google Analytics
+            </summary>
+            <value>
+            Index of the proxy dimension
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.EnableGoogleAnalytics">
+            <summary>
+            Gets or Sets the value of Enabling Client's Google Analytics
+            </summary>
+            <value>
+            Enabling Client Google Analytics
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.CustomTrackingAnalytics">
+            <summary>
+            Gets or Sets the value of Enabling Custom Tracking Analytics
+            </summary>
+            <value>
+            Custom Tracking Script
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.EnableCustomTracking">
+            <summary>
+            Gets or Sets the value of Enabling Custom tracking
+            </summary>
+            <value>
+            Enabling Custom Tracking
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.InsertCustomTrackingAfterBody">
+            <summary>
+            Whether or not to insert custom tracking in the body tag
+            </summary>
+            <value>
+            True if custom tracking should be inserted after the body, false if it should be in the head
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.ApplicationTitle">
+            <summary>
+            Gets or sets the application title.
+            </summary>
+            <value>
+            The application title.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.UniqueCookieId">
+            <summary>
+            Gets or sets the unique cookie identifier.
+            </summary>
+            <value>
+            The unique cookie identifier.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.HeaderLogoPath">
+            <summary>
+            Gets or sets the header logo path.
+            </summary>
+            <value>
+            The header logo path.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.HeaderLogoAltText">
+            <summary>
+            Gets or sets the header logo alt text.
+            </summary>
+            <value>
+            The header logo alt text.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.FooterLogoPath">
+            <summary>
+            Gets or sets the footer logo path.
+            </summary>
+            <value>
+            The footer logo path.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.FooterLogoAltText">
+            <summary>
+            Gets or sets the footer logo alt text.
+            </summary>
+            <value>
+            The footer logo alt text.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.ReportLogoPath">
+            <summary>
+            Gets or sets the report logo path.
+            </summary>
+            <value>
+            The report logo path.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.Culture">
+            <summary>
+            Gets or sets the culture.
+            </summary>
+            <value>
+            The culture.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.ShortDateFormat">
+            <summary>
+            Gets or sets the short date format.
+            </summary>
+            <value>
+            The short date format.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.CulturePropertyOverrides">
+            <summary>
+            Gets or sets the culture property overrides.
+            </summary>
+            <value>
+            The culture property overrides.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.ApiConnectionLimit">
+            <summary>
+            Gets or sets the number of connections that can be made concurrently to the API.
+            <remarks>
+            Value must be an even number greater than or equal to 2.
+            </remarks>
+            </summary>
+            <value>
+            The API connection limit count.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.GuestUsername">
+            <summary>
+            Gets or sets the username used by the "Guest" user in Self Service.
+            </summary>
+            <value>
+            The Guest Username
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Settings.GuestPassword">
+            <summary>
+            Gets or sets the password used by the "Guest" user in Self Service.
+            </summary>
+            <value>
+            The Guest Password
+            </value>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Domain.Entities.Site">
+            <summary>
+            Site model
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Site.AddPage(Ellucian.Web.Mvc.Domain.Entities.Page)">
+            <summary>
+            Adds the page.
+            </summary>
+            <param name="page">The page.</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Site.RemovePage(Ellucian.Web.Mvc.Domain.Entities.Page)">
+            <summary>
+            Removes the page.
+            </summary>
+            <param name="page">The page.</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Site.AddLink(Ellucian.Web.Mvc.Domain.Entities.Link)">
+            <summary>
+            Adds the link.
+            </summary>
+            <param name="link">The link.</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Site.RemoveLink(Ellucian.Web.Mvc.Domain.Entities.Link)">
+            <summary>
+            Removes the link.
+            </summary>
+            <param name="link">The link.</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Site.AddSubmenu(Ellucian.Web.Mvc.Domain.Entities.Menu)">
+            <summary>
+            Adds the submenu.
+            </summary>
+            <param name="submenu">The submenu.</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Site.RemoveSubmenu(Ellucian.Web.Mvc.Domain.Entities.Menu)">
+            <summary>
+            Removes the submenu.
+            </summary>
+            <param name="submenu">The submenu.</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Site.AddMenu(Ellucian.Web.Mvc.Domain.Entities.Menu)">
+            <summary>
+            Adds the menu.
+            </summary>
+            <param name="menu">The menu.</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Site.RemoveMenu(Ellucian.Web.Mvc.Domain.Entities.Menu)">
+            <summary>
+            Removes the menu.
+            </summary>
+            <param name="menu">The menu.</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Site.TrimTo(Ellucian.Web.Security.ICurrentUser,System.Collections.Generic.IEnumerable{System.String})">
+            <summary>
+            Returns a copy of this site with any menus, submenus, links, subpages, or pages removed
+            to which the specified user does not have access.
+            Pages with unlicensed areas will be marked hidden.
+            </summary>
+            <param name="user">the user, must not be null</param>
+            <param name="licensedAreas">Collection of licensed area names</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Site.GetLicensedPage(Ellucian.Web.Mvc.Domain.Entities.Page,System.Collections.Generic.IEnumerable{System.String})">
+            <summary>
+            Returns the page, hidden if not in a licensed area
+            </summary>
+            <param name="page">Page to trim</param>
+            <param name="licensedAreas">Collection of licensed area names</param>
+            <returns>A new page, with the hidden flag set if the area is not licensed</returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Site.GetTrimmedMenu(Ellucian.Web.Mvc.Domain.Entities.Site,Ellucian.Web.Mvc.Domain.Entities.Menu,Ellucian.Web.Security.ICurrentUser)">
+            <summary>
+            
+            </summary>
+            <param name="site"></param>
+            <param name="menu"></param>
+            <param name="user"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Site.Merge(Ellucian.Web.Mvc.Domain.Entities.Site)">
+            <summary>
+            Merges this site (target) with the provided site (source)
+            This method should be invoked on the Ellucian copy,
+            passing in the client copy.
+            </summary>
+            <param name="sourceSite"></param>
+            <returns></returns>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Site.Pages">
+            <summary>
+            Gets the pages.
+            </summary>
+            <value>
+            The pages.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Site.Links">
+            <summary>
+            Gets the links.
+            </summary>
+            <value>
+            The links.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Site.Menus">
+            <summary>
+            Gets the menus.
+            </summary>
+            <value>
+            The menus.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Site.Submenus">
+            <summary>
+            Gets the submenus.
+            </summary>
+            <value>
+            The submenus.
+            </value>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Domain.Entities.Subpage">
+            <summary>
+            Subpage model
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Subpage.#ctor(System.String,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Mvc.Domain.Entities.Page"/> class.
+            </summary>
+            <param name="id">The identifier.</param>
+            <param name="label">The label.</param>
+            <exception cref="T:System.ArgumentNullException">
+            id
+            or
+            label
+            </exception>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Subpage.ToString">
+            <summary>
+            Returns a <see cref="T:System.String"/> that represents this instance.
+            </summary>
+            <returns>
+            A <see cref="T:System.String"/> that represents this instance.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Subpage.Equals(System.Object)">
+            <summary>
+            Determines whether the specified <see cref="T:System.Object"/>, is equal to this instance.
+            </summary>
+            <param name="obj">The <see cref="T:System.Object"/> to compare with this instance.</param>
+            <returns>
+              <c>true</c> if the specified <see cref="T:System.Object"/> is equal to this instance; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Subpage.GetHashCode">
+            <summary>
+            Returns a hash code for this instance.
+            </summary>
+            <returns>
+            A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+            </returns>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Subpage.Id">
+            <summary>
+            Gets the identifier.
+            </summary>
+            <value>
+            The identifier.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Subpage.Label">
+            <summary>
+            Gets or sets the label.
+            </summary>
+            <value>
+            The label.
+            </value>
+            <exception cref="T:System.ArgumentNullException">value</exception>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Subpage.Hidden">
+            <summary>
+            Indicates if this page should be hidden from all users
+            </summary>
+            <value>
+            The hidden state
+            </value>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Domain.Entities.Theme">
+            <summary>
+            Provides the base entity for themes.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Theme.AddThemeSection(Ellucian.Web.Mvc.Domain.Entities.ThemeSection)">
+            <summary>
+            Adds a ThemeSection to the ThemeSections list.
+            </summary>
+            <param name="section">ThemeSection to add.</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Theme.RemoveThemeSection(Ellucian.Web.Mvc.Domain.Entities.ThemeSection)">
+            <summary>
+            Removes a ThemeSection from the ThemeSections list.
+            </summary>
+            <param name="section">ThemeSection to remove.</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Theme.#ctor">
+            <summary>
+            Default Constructor
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.Theme.Merge(Ellucian.Web.Mvc.Domain.Entities.Theme)">
+            <summary>
+            Merge the theme rule values of the specified source theme to this theme (the target theme). <br/>
+            If a rule exists in both themes, source version is saved.<br/>
+            If a rule exists only in source theme, it is removed.<br/>
+            If a rule exists only in target theme, it is added.<br/>
+            If a rule exists in both themes, but source's value is null, target value is applied.
+            </summary>
+            <param name="sourceTheme"></param>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Theme.Name">
+            <summary>
+            Gets or sets the theme's name.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Theme.ThemeSections">
+            <summary>
+            Gets the list of ThemeSections.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Domain.Entities.ThemeRule">
+            <summary>
+            Provides the various properties that make up a theme rule.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.ThemeRule.Name">
+            <summary>
+            Gets or sets the name.
+            </summary>
+            <value>
+            The name.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.ThemeRule.Description">
+            <summary>
+            Gets or sets the description.
+            </summary>
+            <value>
+            The description.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.ThemeRule.Id">
+            <summary>
+            Gets or sets the id.
+            </summary>
+            <value>
+            The id.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.ThemeRule.Color">
+            <summary>
+            Gets or sets the color.
+            </summary>
+            <value>
+            The color.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.ThemeRule.BackgroundColor">
+            <summary>
+            Gets or sets the color of the background.
+            </summary>
+            <value>
+            The color of the background.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.ThemeRule.BackgroundGradientStartColor">
+            <summary>
+            Gets or sets the start color of the background gradient.
+            </summary>
+            <value>
+            The start color of the background gradient.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.ThemeRule.BackgroundGradientEndColor">
+            <summary>
+            Gets or sets the end color of the background gradient.
+            </summary>
+            <value>
+            The end color of the background gradient.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.ThemeRule.BorderColor">
+            <summary>
+            Gets or sets the color of the border.
+            </summary>
+            <value>
+            The color of the border.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.ThemeRule.BorderLeftColor">
+            <summary>
+            Gets or sets the color of the border left.
+            </summary>
+            <value>
+            The color of the border left.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.ThemeRule.BorderRightColor">
+            <summary>
+            Gets or sets the color of the right border.
+            </summary>
+            <value>
+            The color of the right border.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.ThemeRule.BorderTopColor">
+            <summary>
+            Gets or sets the color of the top border.
+            </summary>
+            <value>
+            The color of the top border.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.ThemeRule.BorderBottomColor">
+            <summary>
+            Gets or sets the color of the bottom border.
+            </summary>
+            <value>
+            The color of the bottom border.
+            </value>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Domain.Entities.ThemeSection">
+            <summary>
+            Provides the properties and rules that make up a theme section. Theme sections
+            allow for grouping related theme rules for organization purposes.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.ThemeSection.AddThemeRule(Ellucian.Web.Mvc.Domain.Entities.ThemeRule)">
+            <summary>
+            Adds a ThemeRule to the ThemeRules list.
+            </summary>
+            <param name="rule">ThemeRule to add.</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.ThemeSection.RemoveThemeRule(Ellucian.Web.Mvc.Domain.Entities.ThemeRule)">
+            <summary>
+            Removes a ThemeRule from the ThemeRules list.
+            </summary>
+            <param name="rule">ThemeRule to remove.</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Entities.ThemeSection.#ctor">
+            <summary>
+            Default Constructor
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.ThemeSection.Name">
+            <summary>
+            Gets or sets the name of this section.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.ThemeSection.Description">
+            <summary>
+            Gets or sets the description of this section.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.ThemeSection.ThemeRules">
+            <summary>
+            Gets the list of ThemeRules for this section.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Domain.Repositories.ISettingsRepository">
+            <summary>
+            Interface for Settings repository
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Repositories.ISettingsRepository.Get">
+            <summary>
+            Gets this instance.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Repositories.ISettingsRepository.Update(Ellucian.Web.Mvc.Domain.Entities.Settings)">
+            <summary>
+            Updates the specified settings.
+            </summary>
+            <param name="settings">The settings.</param>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Domain.Repositories.ISiteRepository">
+            <summary>
+            Persistence abstraction over top of the underlying storage of site/menu metadata.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Repositories.ISiteRepository.Get">
+            <summary>
+            Retrieves the site map.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Repositories.ISiteRepository.Update(Ellucian.Web.Mvc.Domain.Entities.Site)">
+            <summary>
+            Updates the site map.
+            </summary>
+            <param name="site"></param>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Domain.Repositories.IThemeRepository">
+            <summary>
+            Provides the interface to be implemented by a Theme Repository.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Repositories.IThemeRepository.Get">
+            <summary>
+            Gets the theme's properties.
+            </summary>
+            <returns>Theme model</returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Repositories.IThemeRepository.Update(Ellucian.Web.Mvc.Domain.Entities.Theme)">
+            <summary>
+            Updates the theme's properties.
+            </summary>
+            <param name="theme">Theme model containing values to be applied</param>
+            <returns>True if update was successful</returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Repositories.IThemeRepository.CreateBackup(System.String)">
+            <summary>
+            Creates a backup of the theme.
+            </summary>
+            <param name="backupFilename"></param>
+            <returns>True if the backup was created</returns>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.Repositories.IThemeRepository.RestoreBackup">
+            <summary>
+            Restores the backup copy of the theme, if available.
+            </summary>
+            <returns>True if the backup was restored</returns>
+        </member>
+        <member name="T:Ellucian.Web.Mvc.Domain.SiteDataException">
+            <summary>
+            Thrown when an exception occurs in retrieving or updating site configuration.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.SiteDataException.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Mvc.Domain.SiteDataException"/> class.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.SiteDataException.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Mvc.Domain.SiteDataException"/> class.
+            </summary>
+            <param name="message">The message that describes the error.</param>
+        </member>
+        <member name="M:Ellucian.Web.Mvc.Domain.SiteDataException.#ctor(System.String,System.Exception)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Mvc.Domain.SiteDataException"/> class.
+            </summary>
+            <param name="message">The message.</param>
+            <param name="exception">The exception.</param>
+        </member>
+    </members>
+</doc>

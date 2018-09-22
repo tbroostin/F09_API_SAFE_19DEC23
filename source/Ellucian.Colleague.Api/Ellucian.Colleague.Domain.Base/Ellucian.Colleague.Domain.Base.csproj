@@ -1,0 +1,513 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{A3B49510-737B-4FFD-8BCA-17BCCE7FBAF7}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Ellucian.Colleague.Domain.Base</RootNamespace>
+    <AssemblyName>Ellucian.Colleague.Domain.Base</AssemblyName>
+    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <EnableCodeInspectionOnBuild>true</EnableCodeInspectionOnBuild>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Ellucian.Colleague.Configuration, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Colleague.Configuration.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Colleague.Domain, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Colleague.Domain.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Colleague.Legacy, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Colleague.Legacy.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Colleague.Property, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Colleague.Property.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Data.Colleague, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Data.Colleague.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Dmi.Client, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Dmi.Client.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Dmi.Runtime, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Dmi.Runtime.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Logging, Version=1.0.0.1, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Logging.MSEL.1.0.0.240\lib\net451\Ellucian.Logging.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Web.Cache, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Web.Cache.1.0.0.184\lib\net451\Ellucian.Web.Cache.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Web.Dependency, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Web.Dependency.1.0.0.187\lib\net451\Ellucian.Web.Dependency.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Web.License, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Web.License.1.0.0.178\lib\net451\Ellucian.Web.License.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Web.Security, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Web.Security.1.0.0.206\lib\net451\Ellucian.Web.Security.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Web.Utility, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ellucian.Web.Utility.1.0.0.181\lib\net451\Ellucian.Web.Utility.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.WebServices.Core.Config, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.WebServices.Core.Config.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="KellermanSoftware.Compare-NET-Objects, Version=2.1.0.0, Culture=neutral, PublicKeyToken=d970ace04cc85217, processorArchitecture=MSIL">
+      <HintPath>..\packages\CompareNETObjects.2.01.0.0\lib\net451\KellermanSoftware.Compare-NET-Objects.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.IdentityModel">
+      <HintPath>..\packages\Microsoft.IdentityModel.6.1.7600.16394\lib\net35\Microsoft.IdentityModel.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.EnterpriseLibrary.Common, Version=5.0.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\EnterpriseLibrary.Common.5.0.505.0\lib\NET35\Microsoft.Practices.EnterpriseLibrary.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.EnterpriseLibrary.Logging, Version=5.0.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\EnterpriseLibrary.Logging.5.0.505.1\lib\NET35\Microsoft.Practices.EnterpriseLibrary.Logging.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.ServiceLocation, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\CommonServiceLocator.1.0\lib\NET35\Microsoft.Practices.ServiceLocation.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.Unity, Version=2.1.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Unity.2.1.505.2\lib\NET35\Microsoft.Practices.Unity.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.Unity.Configuration, Version=2.1.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Unity.2.1.505.2\lib\NET35\Microsoft.Practices.Unity.Configuration.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.Unity.Interception, Version=2.1.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Unity.Interception.2.1.505.2\lib\NET35\Microsoft.Practices.Unity.Interception.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Practices.Unity.Interception.Configuration, Version=2.1.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Unity.Interception.2.1.505.2\lib\NET35\Microsoft.Practices.Unity.Interception.Configuration.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="PdfSharp">
+      <HintPath>..\Ellucian.Colleague.Coordination.Base\PdfSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="Serialize.Linq, Version=1.2.0.0, Culture=neutral, PublicKeyToken=25bcc11ba213b377, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Serialize.Linq.1.2\lib\net45\Serialize.Linq.dll</HintPath>
+    </Reference>
+    <Reference Include="slf4net">
+      <HintPath>..\packages\slf4net.0.1.32.1\lib\net35\slf4net.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.IdentityModel" />
+    <Reference Include="System.IdentityModel.Services" />
+    <Reference Include="System.IdentityModel.Tokens.Jwt">
+      <HintPath>..\packages\System.IdentityModel.Tokens.Jwt.4.0.1\lib\net45\System.IdentityModel.Tokens.Jwt.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Threading.Tasks.Dataflow, Version=4.5.24.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.Tpl.Dataflow.4.5.24\lib\portable-net45+win8+wpa81\System.Threading.Tasks.Dataflow.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+    <Reference Include="Thinktecture.IdentityModel, Version=3.4.6.0, Culture=neutral, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Thinktecture.IdentityModel.3.4.6\lib\net40\Thinktecture.IdentityModel.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Entities\BackupConfiguration.cs" />
+    <Compile Include="Entities\CorrStatus.cs" />
+    <Compile Include="Entities\CcdType.cs" />
+    <Compile Include="Entities\Distribution2.cs" />
+    <Compile Include="Entities\GenderIdentityType.cs" />
+    <Compile Include="Entities\GeographicArea.cs" />
+    <Compile Include="Entities\EthosExtensibleData.cs" />
+    <Compile Include="Entities\EthosExtensibleDataRow.cs" />
+    <Compile Include="Entities\InstitutionsAttend.cs" />
+    <Compile Include="Entities\ExternalEmploymentSupervisors.cs" />
+    <Compile Include="Entities\ExternalEmployments.cs" />
+    <Compile Include="Entities\EthosSecurity.cs" />
+    <Compile Include="Entities\EthosSecurityDefinitions.cs" />
+    <Compile Include="Entities\AcquisitionMethod.cs" />
+    <Compile Include="Entities\ItemCondition.cs" />
+    <Compile Include="Entities\OrganizationalPersonPosition.cs" />
+    <Compile Include="Entities\ExternalEmploymentStatus.cs" />
+    <Compile Include="Entities\OrganizationalPersonPositionStatus.cs" />
+    <Compile Include="Entities\OrganizationalPosition.cs" />
+    <Compile Include="Entities\OrganizationalPositionRelationship.cs" />
+    <Compile Include="Entities\OrganizationalRelationship.cs" />
+    <Compile Include="Entities\OrganizationalRelationshipConfiguration.cs" />
+    <Compile Include="Entities\OrganizationalRelationshipType.cs" />
+    <Compile Include="Entities\PersonalPronounType.cs" />
+    <Compile Include="Entities\PersonFilterCriteria.cs" />
+    <Compile Include="Entities\PersonNamesCriteria.cs" />
+    <Compile Include="Entities\Position.cs" />
+    <Compile Include="Entities\ProjectType.cs" />
+    <Compile Include="Entities\SelfServiceConfiguration.cs" />
+    <Compile Include="Entities\SpecialDay.cs" />
+    <Compile Include="Entities\UserProfileConfiguration2.cs" />
+    <Compile Include="Entities\NameAddressHierarchy.cs" />
+    <Compile Include="Entities\PersonFormattedName.cs" />
+    <Compile Include="Entities\PersonHierarchyName.cs" />
+    <Compile Include="Entities\UserProfileViewUpdateOption.cs" />
+    <Compile Include="Entities\VeteranStatusCategory.cs" />
+    <Compile Include="Entities\MilStatuses.cs" />
+    <Compile Include="Entities\AcadCredential.cs" />
+    <Compile Include="Entities\AcademicCredentialTypes.cs" />
+    <Compile Include="Entities\AcademicDisciplineTypes.cs" />
+    <Compile Include="Entities\BankingAuthenticationToken.cs" />
+    <Compile Include="Entities\CommerceTaxCode.cs" />
+    <Compile Include="Entities\BargainingUnit.cs" />
+    <Compile Include="Entities\EmploymentTerminationReason.cs" />
+    <Compile Include="Entities\PayableDepositDirective.cs" />
+    <Compile Include="Entities\PayableDepositDirectiveCollection.cs" />
+    <Compile Include="Entities\PersonIdentityDocuments.cs" />
+    <Compile Include="Entities\ExternalEducation.cs" />
+    <Compile Include="Entities\AddressSeasonalDates.cs" />
+    <Compile Include="Entities\AcademicDiscipline.cs" />
+    <Compile Include="Entities\PersonContact.cs" />
+    <Compile Include="Entities\PersonFilter.cs" />
+    <Compile Include="Entities\PersonalRelationshipStatus.cs" />
+    <Compile Include="Entities\PersonRelationType.cs" />
+    <Compile Include="Entities\AcademicCredential.cs" />
+    <Compile Include="Entities\PersonPin.cs" />
+    <Compile Include="Entities\PrivacyConfiguration.cs" />
+    <Compile Include="Entities\SelfservicePreference.cs" />
+    <Compile Include="Entities\RoomCharacteristic.cs" />
+    <Compile Include="Entities\RoomWing.cs" />
+    <Compile Include="Entities\SocialMedia.cs" />
+    <Compile Include="Entities\EmergencyInformationConfiguration.cs" />
+    <Compile Include="Entities\OrganizationAddressType.cs" />
+    <Compile Include="Entities\OrganizationEmailType.cs" />
+    <Compile Include="Entities\PersonAddressType.cs" />
+    <Compile Include="Entities\PersonEmailType.cs" />
+    <Compile Include="Entities\PersonRoleType.cs" />
+    <Compile Include="Entities\PersonRole.cs" />
+    <Compile Include="Entities\PersonDriverLicense.cs" />
+    <Compile Include="Entities\LanguagePreference.cs" />
+    <Compile Include="Entities\PersonLanguage.cs" />
+    <Compile Include="Entities\PersonPassport.cs" />
+    <Compile Include="Entities\PersonIntegration.cs" />
+    <Compile Include="Entities\Place.cs" />
+    <Compile Include="Entities\AddressType.cs" />
+    <Compile Include="Entities\AddressType2.cs" />
+    <Compile Include="Entities\IdentityDocumentType.cs" />
+    <Compile Include="Entities\IdentityDocumentTypeCategory.cs" />
+    <Compile Include="Entities\ConfidentialityType.cs" />
+    <Compile Include="Entities\AddressTypeCategory.cs" />
+    <Compile Include="Entities\EmailTypeCategory.cs" />
+    <Compile Include="Entities\PhoneTypeCategory.cs" />
+    <Compile Include="Entities\Remark.cs" />
+    <Compile Include="Entities\PersonVisa.cs" />
+    <Compile Include="Entities\PersonVisaRequest.cs" />
+    <Compile Include="Entities\PersonVisaResponse.cs" />
+    <Compile Include="Entities\TaxFormNotations.cs" />
+    <Compile Include="Entities\TaxFormStatement2.cs" />
+    <Compile Include="Entities\Vocation.cs" />
+    <Compile Include="Entities\WorkTask.cs" />
+    <Compile Include="Entities\ValidReciprocalRelationship.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Entities\VisaStatus.cs" />
+    <Compile Include="Entities\MiscellaneousText.cs" />
+    <Compile Include="Exceptions\BankingAuthenticationException.cs" />
+    <Compile Include="Entities\OrganizationalPersonPositionBase.cs" />
+    <Compile Include="PersonHoldsPermissionCodes.cs" />
+    <Compile Include="BasePermissionCodes.cs" />
+    <Compile Include="Entities\AdapterDebugLevel.cs" />
+    <Compile Include="Entities\Address.cs" />
+    <Compile Include="Entities\AlertStyle.cs" />
+    <Compile Include="Entities\ApprovalDocument.cs" />
+    <Compile Include="Entities\ApprovalResponse.cs" />
+    <Compile Include="Entities\Bank.cs" />
+    <Compile Include="Entities\BankAccountType.cs" />
+    <Compile Include="Entities\BankingInformationConfiguration.cs" />
+    <Compile Include="Entities\Building.cs" />
+    <Compile Include="Entities\BuildingType.cs" />
+    <Compile Include="Entities\Chapter.cs" />
+    <Compile Include="Entities\PersonHoldRequest.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Entities\PersonNameType.cs" />
+    <Compile Include="Entities\InterestType.cs" />
+    <Compile Include="Entities\PersonNameTypeItem.cs" />
+    <Compile Include="Entities\PersonProxyUser.cs" />
+    <Compile Include="Entities\PrivacyStatus.cs" />
+    <Compile Include="Entities\PrivacyStatusType.cs" />
+    <Compile Include="Entities\AddressChangeSource.cs" />
+    <Compile Include="Entities\RemarkCode.cs" />
+    <Compile Include="Entities\RestrictionConfiguration.cs" />
+    <Compile Include="Entities\SeverityStyleMapping.cs" />
+    <Compile Include="Entities\RemarkType.cs" />
+    <Compile Include="Entities\RestrictionCategoryType.cs" />
+    <Compile Include="Entities\SourceContext.cs" />
+    <Compile Include="Entities\PersonHoldResponse.cs" />
+    <Compile Include="Entities\Timestamp.cs" />
+    <Compile Include="Entities\VisaTypeCategory.cs" />
+    <Compile Include="Entities\VisaTypeGuidItem.cs" />
+    <Compile Include="Entities\ZipcodeXlat.cs" />
+    <Compile Include="Entities\PilotPhoneNumber.cs" />
+    <Compile Include="Entities\PilotConfiguration.cs" />
+    <Compile Include="Entities\DemographicFieldRequirement.cs" />
+    <Compile Include="Entities\DemographicFieldType.cs" />
+    <Compile Include="Entities\GeographicAreaType.cs" />
+    <Compile Include="Entities\SocialMediaTypeCategory.cs" />
+    <Compile Include="Entities\GeographicAreaTypeCategory.cs" />
+    <Compile Include="Entities\CommencementSite.cs" />
+    <Compile Include="Entities\Communication.cs" />
+    <Compile Include="Entities\GeneralLedgerAccounts.cs" />
+    <Compile Include="Entities\GradeChangeReason.cs" />
+    <Compile Include="Entities\InstructionalPlatform.cs" />
+    <Compile Include="Entities\CitizenshipStatus.cs" />
+    <Compile Include="Entities\CitizenshipStatusType.cs" />
+    <Compile Include="Entities\DemographicField.cs" />
+    <Compile Include="Entities\PersonMatchCategoryType.cs" />
+    <Compile Include="Entities\PersonMatchCriteria.cs" />
+    <Compile Include="Entities\PersonMatchResult.cs" />
+    <Compile Include="Entities\PersonName.cs" />
+    <Compile Include="Entities\ProxyCandidate.cs" />
+    <Compile Include="Entities\SocialMediaType.cs" />
+    <Compile Include="Entities\RoomType.cs" />
+    <Compile Include="Entities\RoomTypes.cs" />
+    <Compile Include="Entities\PersonalRelationshipType.cs" />
+    <Compile Include="Entities\ProxySubject.cs" />
+    <Compile Include="Entities\RelationType.cs" />
+    <Compile Include="Entities\Project.cs" />
+    <Compile Include="Entities\ProjectLineItem.cs" />
+    <Compile Include="Entities\OtherCcd.cs" />
+    <Compile Include="Entities\OtherDegree.cs" />
+    <Compile Include="Entities\OtherSpecial.cs" />
+    <Compile Include="Entities\OtherMinor.cs" />
+    <Compile Include="Entities\OtherMajor.cs" />
+    <Compile Include="Entities\OtherHonor.cs" />
+    <Compile Include="Entities\EntityType.cs" />
+    <Compile Include="Entities\EmailType.cs" />
+    <Compile Include="Entities\LocationType.cs" />
+    <Compile Include="Entities\OrganizationPhoneType.cs" />
+    <Compile Include="Entities\PersonBase.cs" />
+    <Compile Include="Entities\PersonPhoneType.cs" />
+    <Compile Include="Entities\PhoneType.cs" />
+    <Compile Include="Entities\LocationTypeItem.cs" />
+    <Compile Include="Entities\OrganizationLocationType.cs" />
+    <Compile Include="Entities\CommunicationCodeHyperlink.cs" />
+    <Compile Include="Entities\Distribution.cs" />
+    <Compile Include="Entities\PaymentMethod.cs" />
+    <Compile Include="Entities\PaymentMethodCategory.cs" />
+    <Compile Include="Entities\PersonAlt.cs" />
+    <Compile Include="Entities\PersonLocationType.cs" />
+    <Compile Include="Entities\ProxyConfiguration.cs" />
+    <Compile Include="Entities\ProxyAccessPermission.cs" />
+    <Compile Include="Entities\ProxyPermissionAssignment.cs" />
+    <Compile Include="Entities\ProxyUser.cs" />
+    <Compile Include="Entities\ProxyWorkflow.cs" />
+    <Compile Include="Entities\ProxyWorkflowGroup.cs" />
+    <Compile Include="Entities\Relationship.cs" />
+    <Compile Include="Entities\RelationshipType.cs" />
+    <Compile Include="Entities\Profile.cs" />
+    <Compile Include="Entities\ResourceBusinessEventMapping.cs" />
+    <Compile Include="Entities\CampusCalendar.cs" />
+    <Compile Include="Entities\ConvenienceFee.cs" />
+    <Compile Include="Entities\CommunicationCodes.cs" />
+    <Compile Include="Entities\CommunicationHistory.cs" />
+    <Compile Include="Entities\Coordinate.cs" />
+    <Compile Include="Entities\AddressRelationType.cs" />
+    <Compile Include="Entities\MaritalState.cs" />
+    <Compile Include="Entities\PhoneNumber.cs" />
+    <Compile Include="Entities\EthnicOrigin.cs" />
+    <Compile Include="Entities\County.cs" />
+    <Compile Include="Entities\DefaultsConfiguration.cs" />
+    <Compile Include="Entities\DisabilityType.cs" />
+    <Compile Include="Entities\Country.cs" />
+    <Compile Include="Entities\DegreeType.cs" />
+    <Compile Include="Entities\Denomination.cs" />
+    <Compile Include="Entities\Department.cs" />
+    <Compile Include="Entities\EmergencyContact.cs" />
+    <Compile Include="Entities\EmergencyInformation.cs" />
+    <Compile Include="Entities\HealthConditions.cs" />
+    <Compile Include="Entities\OfficeCodeType.cs" />
+    <Compile Include="Entities\Ethnicity.cs" />
+    <Compile Include="Entities\EthnicityType.cs" />
+    <Compile Include="Entities\IntegrationConfiguration.cs" />
+    <Compile Include="Entities\ExternalMapping.cs" />
+    <Compile Include="Entities\ExternalMappingItem.cs" />
+    <Compile Include="Entities\FrequencyType.cs" />
+    <Compile Include="Entities\MaritalStatusType.cs" />
+    <Compile Include="Entities\PersonRestriction.cs" />
+    <Compile Include="Entities\Division.cs" />
+    <Compile Include="Entities\Race.cs" />
+    <Compile Include="Entities\RaceType.cs" />
+    <Compile Include="Entities\StaffAssignment.cs" />
+    <Compile Include="Entities\State.cs" />
+    <Compile Include="Entities\ScheduleRepeat.cs" />
+    <Compile Include="Entities\TaxFormAvailability.cs" />
+    <Compile Include="Entities\TaxFormConsentParagraph.cs" />
+    <Compile Include="Entities\TaxFormConsent.cs" />
+    <Compile Include="Entities\TaxForms.cs" />
+    <Compile Include="Entities\TaxFormConfiguration.cs" />
+    <Compile Include="Entities\TextDocument.cs" />
+    <Compile Include="Entities\EmailAddress.cs" />
+    <Compile Include="Entities\Event.cs" />
+    <Compile Include="Entities\EventsICal.cs" />
+    <Compile Include="Entities\FrequencyCode.cs" />
+    <Compile Include="Entities\PersonHighSchool.cs" />
+    <Compile Include="Entities\Institution.cs" />
+    <Compile Include="Entities\CitizenType.cs" />
+    <Compile Include="Entities\InstitutionType.cs" />
+    <Compile Include="Entities\Interest.cs" />
+    <Compile Include="Entities\Language.cs" />
+    <Compile Include="Entities\MaritalStatus.cs" />
+    <Compile Include="Entities\ProspectSource.cs" />
+    <Compile Include="Entities\ImportantNumberCategory.cs" />
+    <Compile Include="Entities\InstType.cs" />
+    <Compile Include="Entities\Photograph.cs" />
+    <Compile Include="Entities\ImportantNumber.cs" />
+    <Compile Include="Entities\Location.cs" />
+    <Compile Include="Entities\OfficeCode.cs" />
+    <Compile Include="Entities\PeriodType.cs" />
+    <Compile Include="Entities\Person.cs" />
+    <Compile Include="Entities\Phone.cs" />
+    <Compile Include="Entities\Prefix.cs" />
+    <Compile Include="Entities\Restriction.cs" />
+    <Compile Include="Entities\Room.cs" />
+    <Compile Include="Entities\Rule.cs" />
+    <Compile Include="Entities\RuleConfiguration.cs" />
+    <Compile Include="Entities\RuleRequest.cs" />
+    <Compile Include="Entities\RuleResult.cs" />
+    <Compile Include="Entities\School.cs" />
+    <Compile Include="Entities\SearchPerson.cs" />
+    <Compile Include="Entities\Suffix.cs" />
+    <Compile Include="Entities\Staff.cs" />
+    <Compile Include="Entities\SpecialNeed.cs" />
+    <Compile Include="Entities\UnknownRuleContext.cs" />
+    <Compile Include="Entities\UserProfileConfiguration.cs" />
+    <Compile Include="Entities\GraduateMilitaryStatus.cs" />
+    <Compile Include="Entities\VisaType.cs" />
+    <Compile Include="Exceptions\ConfigurationException.cs" />
+    <Compile Include="Exceptions\ExistingResourceException.cs" />
+    <Compile Include="Exceptions\RecordLockException.cs" />
+    <Compile Include="IRoomAvailabilityService.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Repositories\IBankingAuthenticationClaimRepository.cs" />
+    <Compile Include="Repositories\IBankingInformationConfigurationRepository.cs" />
+    <Compile Include="Repositories\IBankRepository.cs" />
+    <Compile Include="Repositories\IEthosExtended.cs" />
+    <Compile Include="Repositories\IGeographicAreasRepository.cs" />
+    <Compile Include="Repositories\IExternalEmploymentsRepository.cs" />
+    <Compile Include="Repositories\IMiscellaneousTextRepository.cs" />
+    <Compile Include="Repositories\IOrganizationalPositionRelationshipRepository.cs" />
+    <Compile Include="Repositories\IOrganizationalPositionRepository.cs" />
+    <Compile Include="Repositories\IOrganizationalRelationshipRepository.cs" />
+    <Compile Include="Repositories\IPayableDepositDirectiveRepository.cs" />
+    <Compile Include="Repositories\IPdfSharpRepository.cs" />
+    <Compile Include="Repositories\IOrganizationalPersonPositionRepository.cs" />
+    <Compile Include="Repositories\IWorkTaskRepository.cs" />
+    <Compile Include="Repositories\IRemarkRepository.cs" />
+    <Compile Include="Repositories\ICommunicationRepository.cs" />
+    <Compile Include="Repositories\IInstitutionRepository.cs" />
+    <Compile Include="Repositories\IPersonBaseRepository.cs" />
+    <Compile Include="Repositories\IPersonHoldsRepository.cs" />
+    <Compile Include="Repositories\IPersonProxyUserRepository.cs" />
+    <Compile Include="Repositories\IPersonVisaRepository.cs" />
+    <Compile Include="Repositories\IProfileRepository.cs" />
+    <Compile Include="Repositories\IPhoneNumberRepository.cs" />
+    <Compile Include="Repositories\IApprovalRepository.cs" />
+    <Compile Include="Repositories\IConfigurationRepository.cs" />
+    <Compile Include="Repositories\IDocumentRepository.cs" />
+    <Compile Include="Repositories\IECommerceRepository.cs" />
+    <Compile Include="Repositories\IAddressRepository.cs" />
+    <Compile Include="Repositories\IEventRepository.cs" />
+    <Compile Include="Repositories\IImportantNumberRepository.cs" />
+    <Compile Include="Repositories\IEmergencyInformationRepository.cs" />
+    <Compile Include="Repositories\IPersonRepository.cs" />
+    <Compile Include="Repositories\IPhotoRepository.cs" />
+    <Compile Include="Repositories\IProxyRepository.cs" />
+    <Compile Include="Repositories\IReferenceDataRepository.cs" />
+    <Compile Include="Repositories\IRelationshipRepository.cs" />
+    <Compile Include="Repositories\IRoomRepository.cs" />
+    <Compile Include="Repositories\IRuleRepository.cs" />
+    <Compile Include="Repositories\ISelfServicePreferencesRepository.cs" />
+    <Compile Include="Repositories\IStaffRepository.cs" />
+    <Compile Include="Repositories\IPersonRestrictionRepository.cs" />
+    <Compile Include="Repositories\ITaxFormConsentRepository.cs" />
+    <Compile Include="Services\AddressProcessor.cs" />
+    <Compile Include="Services\CommunicationDomainService.cs" />
+    <Compile Include="Services\OrganizationalStructureService.cs" />
+    <Compile Include="Services\PersonNameService.cs" />
+    <Compile Include="Services\ProfileProcessor.cs" />
+    <Compile Include="Services\RelationshipService.cs" />
+    <Compile Include="Services\RoomAvailabilityService.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="packages.config">
+      <SubType>Designer</SubType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Entities\RelationshipStatus.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- begin ellucian project settings -->
+  <Import Project="$(SolutionDir)CodeAnalysis\CodeScan.proj" Condition="Exists('$(SolutionDir)CodeAnalysis\CodeScan.proj ')" />
+  <Import Project="$(ProjectDir)..\..\..\BuildConfig\CodeSigning.targets" Condition="Exists('$(ProjectDir)..\..\..\BuildConfig\CodeSigning.targets ')" />
+  <Import Project="$(MSBuildProgramFiles32)\MSBuild\FxCop Integrator\FxCopIntegrator.targets" Condition="Exists('$(MSBuildProgramFiles32)\MSBuild\FxCop Integrator\FxCopIntegrator.targets')" />
+  <!-- end ellucian project settings -->
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

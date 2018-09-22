@@ -1,0 +1,128 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{1A7B9D0E-1665-492C-B287-0D89710408E5}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Ellucian.Colleague.Dtos.HumanResources</RootNamespace>
+    <AssemblyName>Ellucian.Colleague.Dtos.HumanResources</AssemblyName>
+    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Debug\Ellucian.Colleague.Dtos.HumanResources.XML</DocumentationFile>
+    <WarningsAsErrors>1570,1571,1572,1573,1591</WarningsAsErrors>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Release\Ellucian.Colleague.Dtos.HumanResources.XML</DocumentationFile>
+    <WarningsAsErrors>1570,1571,1572,1573,1591</WarningsAsErrors>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.IdentityModel.Tokens.Jwt">
+      <HintPath>..\packages\System.IdentityModel.Tokens.Jwt.4.0.1\lib\net45\System.IdentityModel.Tokens.Jwt.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="DirectDeposits.cs" />
+    <Compile Include="EarningsCategory.cs" />
+    <Compile Include="EarningsMethod.cs" />
+    <Compile Include="EarningsType.cs" />
+    <Compile Include="EarningsTypeGroup.cs" />
+    <Compile Include="EarningsTypeGroupItem.cs" />
+    <Compile Include="EmployeeLeavePlan.cs" />
+    <Compile Include="EmploymentProficiencyLevel.cs" />
+    <Compile Include="HourlySalaryIndicator.cs" />
+    <Compile Include="HumanResourceDemographics.cs" />
+    <Compile Include="LeaveBalanceConfiguration.cs" />
+    <Compile Include="LeaveTypeCategory.cs" />
+    <Compile Include="PayCycle.cs" />
+    <Compile Include="PayPeriod.cs" />
+    <Compile Include="PayPeriodStatus.cs" />
+    <Compile Include="PayrollDeposit.cs" />
+    <Compile Include="PayrollDepositAccount.cs" />
+    <Compile Include="PayStatementAddress.cs" />
+    <Compile Include="PayStatementBankDeposit.cs" />
+    <Compile Include="PayStatementConfiguration.cs" />
+    <Compile Include="PayStatementDeduction.cs" />
+    <Compile Include="PayStatementDeductionType.cs" />
+    <Compile Include="PayStatementEarnings.cs" />
+    <Compile Include="PayStatementLeave.cs" />
+    <Compile Include="PayStatementReport.cs" />
+    <Compile Include="PayStatementTaxableBenefit.cs" />
+    <Compile Include="PersonAchievement.cs" />
+    <Compile Include="PersonEmploymentReference.cs" />
+    <Compile Include="PayStatementSummary.cs" />
+    <Compile Include="PersonPosition.cs" />
+    <Compile Include="PersonPositionWage.cs" />
+    <Compile Include="PersonEmploymentStatus.cs" />
+    <Compile Include="Position.cs" />
+    <Compile Include="PositionFundingSource.cs" />
+    <Compile Include="ProficiencyLicensingAuthority.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TaxFormNotations.cs" />
+    <Compile Include="TaxFormStatement.cs" />
+    <Compile Include="TimecardType.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Ellucian.Colleague.Domain.HumanResources\Ellucian.Colleague.Domain.HumanResources.csproj">
+      <Project>{0CDA322D-5DB6-466C-86C4-49A808B02284}</Project>
+      <Name>Ellucian.Colleague.Domain.HumanResources</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos.Base\Ellucian.Colleague.Dtos.Base.csproj">
+      <Project>{a147bd58-ecc6-409b-a633-128946aaa456}</Project>
+      <Name>Ellucian.Colleague.Dtos.Base</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- begin ellucian project settings -->
+  <Import Project="$(SolutionDir)CodeAnalysis\CodeScan.proj" Condition="Exists('$(SolutionDir)CodeAnalysis\CodeScan.proj ')" />
+  <Import Project="$(ProjectDir)..\..\..\BuildConfig\CodeSigning.targets" Condition="Exists('$(ProjectDir)..\..\..\BuildConfig\CodeSigning.targets ')" />
+  <Import Project="$(MSBuildProgramFiles32)\MSBuild\FxCop Integrator\FxCopIntegrator.targets" Condition="Exists('$(MSBuildProgramFiles32)\MSBuild\FxCop Integrator\FxCopIntegrator.targets')" />
+  <!-- end ellucian project settings -->
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

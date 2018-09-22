@@ -1,0 +1,1218 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{0CA929CA-2370-4763-BE71-C91C244E0743}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Ellucian.Colleague.Dtos</RootNamespace>
+    <AssemblyName>Ellucian.Colleague.Dtos</AssemblyName>
+    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Debug\Ellucian.Colleague.Dtos.XML</DocumentationFile>
+    <WarningsAsErrors>1570,1571,1572,1573,1591</WarningsAsErrors>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Release\Ellucian.Colleague.Dtos.XML</DocumentationFile>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.IdentityModel" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="AcademicDiscipline3.cs" />
+    <Compile Include="AcademicPeriod4.cs" />
+    <Compile Include="AcademicPeriodCategory3.cs" />
+    <Compile Include="AcademicPeriodCategoryParent.cs" />
+    <Compile Include="AcademicProgram4.cs" />
+    <Compile Include="AccountingStringComponentValues3.cs" />
+    <Compile Include="AccountingStringSubcomponents.cs" />
+    <Compile Include="AccountingStringSubcomponentValues.cs" />
+    <Compile Include="Attributes\FilterPropertyAttribute.cs" />
+    <Compile Include="Converters\IntegerConverter.cs" />
+    <Compile Include="Converters\VendorDetailFilterConverter.cs" />
+    <Compile Include="Converters\RoomTypeTypeEnumConverter.cs" />
+    <Compile Include="Converters\CodeTitleDetailFilterConverter.cs" />
+    <Compile Include="Converters\ArrayOwningInstitutionFilterConverter.cs" />
+    <Compile Include="Converters\ArrayGuidObject2FilterConverter.cs" />
+    <Compile Include="Converters\StatusCategoryFilterConverter.cs" />
+    <Compile Include="Converters\GuidObject2FilterConverter.cs" />
+    <Compile Include="Converters\AddressTypeEnumConverter.cs" />
+    <Compile Include="Converters\EmailTypeEnumConverter.cs" />
+    <Compile Include="Converters\FilterConverter.cs" />
+    <Compile Include="Converters\IsoCountryCodeEnumConverter.cs" />
+    <Compile Include="Converters\OrganizationRoleTypeEnumConverter.cs" />
+    <Compile Include="Converters\PersonPhoneTypeCategoryEnumConverter.cs" />
+    <Compile Include="Converters\SocialMediaTypeCategoryEnumConverter.cs" />
+    <Compile Include="Converters\StudentChargeTypesEnumConverter.cs" />
+    <Compile Include="CourseStatuses.cs" />
+    <Compile Include="DtoProperties\CourseReportingDtoProperty.cs" />
+    <Compile Include="DtoProperties\CoursesHoursDtoProperty.cs" />
+    <Compile Include="DtoProperties\SectionDescriptionDtoProperty.cs" />
+    <Compile Include="DtoProperties\CourseTitlesDtoProperty.cs" />
+    <Compile Include="DtoProperties\GradeSchemesDtoProperty.cs" />
+    <Compile Include="CourseTitleType.cs" />
+    <Compile Include="DtoProperties\PersonEmail2DtoProperty.cs" />
+    <Compile Include="DtoProperties\QuantityAmount2DtoProperty.cs" />
+    <Compile Include="DtoProperties\ProcurementReceiptsLineitems.cs" />
+    <Compile Include="DtoProperties\SectionsAlternateIdsDtoProperty.cs" />
+    <Compile Include="EnumProperties\AcademicDisciplineType2.cs" />
+    <Compile Include="EnumProperties\AccountingStringSubcomponentsType.cs" />
+    <Compile Include="EnumProperties\AccountsPayableInvoicesEncumbranceStatus.cs" />
+    <Compile Include="EnumProperties\CourseReportingType.cs" />
+    <Compile Include="EnumProperties\CourseStatusesCategory.cs" />
+    <Compile Include="EnumProperties\CoursesUsage.cs" />
+    <Compile Include="EnumProperties\AcademicLevelCategory.cs" />
+    <Compile Include="EnumProperties\FixedAssetsAcquisitionMethod.cs" />
+    <Compile Include="EnumProperties\FixedAssetsCapitalizationStatus.cs" />
+    <Compile Include="EnumProperties\FixedAssetsStatus.cs" />
+    <Compile Include="EnumProperties\MajorStatus.cs" />
+    <Compile Include="EnumProperties\RestrictedVisibility.cs" />
+    <Compile Include="EnumProperties\SectionWaitlistEligible.cs" />
+    <Compile Include="Filters\AcademicPeriodFilter.cs" />
+    <Compile Include="Filters\AcademicCatalogFilter.cs" />
+    <Compile Include="Filters\AccountingStringsFilter.cs" />
+    <Compile Include="Filters\DocumentFilter.cs" />
+    <Compile Include="Filters\MajorStatusFilter.cs" />
+    <Compile Include="Filters\InstructionalEventInstances.cs" />
+    <Compile Include="Filters\AccountingStringComponentValuesFilter.cs" />
+    <Compile Include="Filters\AcademicPeriodNamedQueryFilter.cs" />
+    <Compile Include="Filters\AccountFundsAvailableFilter.cs" />
+    <Compile Include="Filters\InstructionalEventFilter3.cs" />
+    <Compile Include="Filters\InstructionalEventFilter2.cs" />
+    <Compile Include="Filters\BudgetPhaseFilter.cs" />
+    <Compile Include="Filters\InstructorFilter2.cs" />
+    <Compile Include="Filters\PersonFilterFilter.cs" />
+    <Compile Include="Filters\PersonFilter.cs" />
+    <Compile Include="Filters\PreferredNameFilter.cs" />
+    <Compile Include="Filters\RestrictedVisibilityFilter.cs" />
+    <Compile Include="Filters\MapVisibilityFilter.cs" />
+    <Compile Include="Filters\SectionFilter2.cs" />
+    <Compile Include="Filters\SectionMaximumFilter.cs" />
+    <Compile Include="Filters\SectionFilter.cs" />
+    <Compile Include="Filters\InstructorFilter.cs" />
+    <Compile Include="Filters\StudentAcademicProgramsFilter.cs" />
+    <Compile Include="Filters\StudentAdvisorRelationshipFilter.cs" />
+    <Compile Include="Filters\FiscalYearFilter.cs" />
+    <Compile Include="Filters\DepartmentFilter.cs" />
+    <Compile Include="Filters\StudentAptitudeAssessmentsFilter.cs" />
+    <Compile Include="Filters\StudentCharges1Filter.cs" />
+    <Compile Include="Filters\RecurrenceFilter.cs" />
+    <Compile Include="Filters\PayrollDeductionArrangementsFilter.cs" />
+    <Compile Include="Filters\ActiveOnFilter.cs" />
+    <Compile Include="Filters\SubjectFilter.cs" />
+    <Compile Include="Filters\SearchableFilter.cs" />
+    <Compile Include="Filters\KeywordSearchFilter.cs" />
+    <Compile Include="Filters\LedgerActivityFilter.cs" />
+    <Compile Include="FinancialAidAcademicProgressStatuses.cs" />
+    <Compile Include="AdministrativeIntructionalMethods.cs" />
+    <Compile Include="FinancialAidAcademicProgressTypes.cs" />
+    <Compile Include="FixedAssets.cs" />
+    <Compile Include="ProcurementReceipts.cs" />
+    <Compile Include="BudgetPhaseLineItems.cs" />
+    <Compile Include="BudgetCodes.cs" />
+    <Compile Include="BudgetPhases.cs" />
+    <Compile Include="Converters\CreditMeasure2Converter.cs" />
+    <Compile Include="DtoProperties\Credential3DtoProperty.cs" />
+    <Compile Include="DtoProperties\QuantityIntervalDtoProperty.cs" />
+    <Compile Include="DtoProperties\GrantSponsorProperty.cs" />
+    <Compile Include="DtoProperties\GrantsReportingPeriodProperty.cs" />
+    <Compile Include="DtoProperties\InstructionalMethodDetailsDtoProperty.cs" />
+    <Compile Include="DtoProperties\NonpersonRelationshipsRelated.cs" />
+    <Compile Include="DtoProperties\NonpersonRelationshipsSubject.cs" />
+    <Compile Include="DtoProperties\PersonVeteranStatusDtoProperty.cs" />
+    <Compile Include="DtoProperties\PersonName2DtoProperty.cs" />
+    <Compile Include="EmploymentOrganizations.cs" />
+    <Compile Include="AccountFundsAvailable_Transactions2.cs" />
+    <Compile Include="AdmissionDecisionType.cs" />
+    <Compile Include="DtoProperties\AccountsPayableInvoicesLineItemDtoPropety2.cs" />
+    <Compile Include="DtoProperties\InvoiceDtoProperty.cs" />
+    <Compile Include="DtoProperties\LineItemReferenceDocumentDtoProperty2.cs" />
+    <Compile Include="DtoProperties\PayeeDetailsDtoProperty.cs" />
+    <Compile Include="DtoProperties\PaymentVoidDtoProperty.cs" />
+    <Compile Include="DtoProperties\PaymentForDtoProperty.cs" />
+    <Compile Include="EnumProperties\IntervalTypes.cs" />
+    <Compile Include="EnumProperties\CredentialType3.cs" />
+    <Compile Include="EnumProperties\InvoiceTypes.cs" />
+    <Compile Include="EnumProperties\PaymentTransactionsType.cs" />
+    <Compile Include="EnumProperties\PaymentTransactionStatus.cs" />
+    <Compile Include="EnumProperties\PaymentMethods.cs" />
+    <Compile Include="EnumProperties\OpenStatus.cs" />
+    <Compile Include="EnumProperties\PersonLanguageCode.cs" />
+    <Compile Include="EnumProperties\CrossListed.cs" />
+    <Compile Include="FixedAssetCategory.cs" />
+    <Compile Include="FixedAssetType.cs" />
+    <Compile Include="Grant.cs" />
+    <Compile Include="GrantsStatus.cs" />
+    <Compile Include="Person4.cs" />
+    <Compile Include="PurchasingArrangement.cs" />
+    <Compile Include="InstitutionPosition2.cs" />
+    <Compile Include="NonPersonRelationships.cs" />
+    <Compile Include="PaymentTransactions.cs" />
+    <Compile Include="AccountingCode2.cs" />
+    <Compile Include="AccountingCodeCategory.cs" />
+    <Compile Include="AccountingStringComponentValues2.cs" />
+    <Compile Include="AdmissionDecisions.cs" />
+    <Compile Include="Course5.cs" />
+    <Compile Include="DtoProperties\PersonBeneficiariesDesignation.cs" />
+    <Compile Include="DtoProperties\PersonBeneficiariesBeneficiary.cs" />
+    <Compile Include="DtoProperties\BudgetPool.cs" />
+    <Compile Include="DtoProperties\ContactHoursDtoProperty.cs" />
+    <Compile Include="DtoProperties\DatePeriodDtoProperty.cs" />
+    <Compile Include="DtoProperties\Encumbrance.cs" />
+    <Compile Include="DtoProperties\GeneralLedgerDetailDtoProperty3.cs" />
+    <Compile Include="DtoProperties\GeneralLedgerTransactionDtoProperty3.cs" />
+    <Compile Include="DtoProperties\SocialMediaTypeDtoProperty.cs" />
+    <Compile Include="DtoProperties\SupplementalCredentialsDtoProperty.cs" />
+    <Compile Include="DtoProperties\AccountingCodeCategoryDtoProperty.cs" />
+    <Compile Include="DtoProperties\ExternalEducationAttendancePeriods.cs" />
+    <Compile Include="DtoProperties\PersonBenefitDependentsDependentDtoProperty.cs" />
+    <Compile Include="DtoProperties\PurchaseOrdersExistingVendorDtoProperty.cs" />
+    <Compile Include="DtoProperties\DesiredCompensationProperty.cs" />
+    <Compile Include="DtoProperties\PayClassHoursPerPeriodDtoProperty.cs" />
+    <Compile Include="DtoProperties\LedgerActivityAmount.cs" />
+    <Compile Include="DtoProperties\LedgerActivitiesCurrency.cs" />
+    <Compile Include="DtoProperties\LedgerActivityReference.cs" />
+    <Compile Include="DtoProperties\PayScalesScalesDtoProperty.cs" />
+    <Compile Include="Building3.cs" />
+    <Compile Include="DtoProperties\BuildingAddress.cs" />
+    <Compile Include="DtoProperties\ExternalEducationGraduationDetails.cs" />
+    <Compile Include="DtoProperties\PurchaseOrdersVendorDtoProperty2.cs" />
+    <Compile Include="DtoProperties\JobApplicationsRateDtoProperty.cs" />
+    <Compile Include="DtoProperties\SectionRegistrationIntervalDtoProperty.cs" />
+    <Compile Include="DtoProperties\SectionStatusDtoProperty.cs" />
+    <Compile Include="DtoProperties\SectionWaitlistDtoProperty.cs" />
+    <Compile Include="EducationalInstitutionUnits3.cs" />
+    <Compile Include="EmployeeLeaveTransactions.cs" />
+    <Compile Include="EnumProperties\AccountingCodeCategoryType.cs" />
+    <Compile Include="EnumProperties\CommitmentType.cs" />
+    <Compile Include="EnumProperties\AdjustmentType.cs" />
+    <Compile Include="EnumProperties\BuildingMapVisibility.cs" />
+    <Compile Include="EnumProperties\ContactHoursPeriod.cs" />
+    <Compile Include="EnumProperties\ExternalEducationGraduationDetailsSource.cs" />
+    <Compile Include="EnumProperties\GlPosting.cs" />
+    <Compile Include="EnumProperties\FiscalYearsYearEndAdjustment.cs" />
+    <Compile Include="EnumProperties\JobPreference2.cs" />
+    <Compile Include="EnumProperties\PayClassesClassType.cs" />
+    <Compile Include="EnumProperties\PayClassesCompensationType.cs" />
+    <Compile Include="EnumProperties\PayClassesStatus.cs" />
+    <Compile Include="EnumProperties\LedgerActivityAdjustmentType.cs" />
+    <Compile Include="EnumProperties\LedgerActivityBillingStatus.cs" />
+    <Compile Include="EnumProperties\LedgerActivityLedgerCategory.cs" />
+    <Compile Include="EnumProperties\LedgerActivityStatus.cs" />
+    <Compile Include="EnumProperties\LedgerActivityType.cs" />
+    <Compile Include="EnumProperties\Status.cs" />
+    <Compile Include="EnumProperties\Preference.cs" />
+    <Compile Include="EnumProperties\ProcessMode2.cs" />
+    <Compile Include="EnumProperties\SectionWaitlistRegistrationIntervalUnit.cs" />
+    <Compile Include="EnumProperties\SectionWaitlistStatus.cs" />
+    <Compile Include="EnumProperties\WaitlistMultiSectionFlag.cs" />
+    <Compile Include="FiscalYears.cs" />
+    <Compile Include="EmployeeLeavePlans.cs" />
+    <Compile Include="DeductionType2.cs" />
+    <Compile Include="DtoProperties\DeductionTypeWithholdingFrequencyDtoProperty.cs" />
+    <Compile Include="EnumProperties\DeductionTypeTaxApplicationType.cs" />
+    <Compile Include="GeneralLedgerTransaction3.cs" />
+    <Compile Include="InstructionalMethodDetail.cs" />
+    <Compile Include="InstitutionJobs3.cs" />
+    <Compile Include="LeaveCategories.cs" />
+    <Compile Include="EnumProperties\FiscalPeriodStatus.cs" />
+    <Compile Include="FiscalPeriods.cs" />
+    <Compile Include="AdmissionApplication2.cs" />
+    <Compile Include="AdmissionApplicationSupportingItemStatus.cs" />
+    <Compile Include="AdmissionApplicationSupportingItemTypes.cs" />
+    <Compile Include="CourseCategories.cs" />
+    <Compile Include="AcademicProgram3.cs" />
+    <Compile Include="AccountsPayableInvoices2.cs" />
+    <Compile Include="AdmissionDecisionType2.cs" />
+    <Compile Include="AttendanceCategories.cs" />
+    <Compile Include="DtoProperties\AccountsPayableInvoicesManualVendorDetailsDtoProperty.cs" />
+    <Compile Include="DtoProperties\AccountsPayableInvoicesExistingVendorDtoProperty.cs" />
+    <Compile Include="DtoProperties\AccountsPayableInvoicesVendorContactDtoProperty.cs" />
+    <Compile Include="DtoProperties\AccountsPayableInvoicesVendorDtoProperty.cs" />
+    <Compile Include="DtoProperties\AdmissionApplicationInstitutionAttendedDtoProperty.cs" />
+    <Compile Include="DtoProperties\AdmissionApplicationsStatus2.cs" />
+    <Compile Include="DtoProperties\AdmissionApplicationsWithdrawal2.cs" />
+    <Compile Include="DtoProperties\ContractTypeDtoProperty.cs" />
+    <Compile Include="DtoProperties\InstitutionEmployersAddress.cs" />
+    <Compile Include="DtoProperties\InstructorsInstitutionalUnit.cs" />
+    <Compile Include="DtoProperties\InstructorsTenure.cs" />
+    <Compile Include="DtoProperties\RequisitionsAllocationDtoProperty.cs" />
+    <Compile Include="DtoProperties\RequisitionsAllocatedDtoProperty.cs" />
+    <Compile Include="Employee2.cs" />
+    <Compile Include="EnumProperties\InstructorsAdministrativeUnit.cs" />
+    <Compile Include="DtoProperties\InstructorsInstitutionalUnit2.cs" />
+    <Compile Include="DtoProperties\LineItemReferenceDocumentDtoProperty.cs" />
+    <Compile Include="DtoProperties\HousingFloorPreferenceRequiredProperty.cs" />
+    <Compile Include="DtoProperties\ExistingVendorDetailsDtoProperty.cs" />
+    <Compile Include="DtoProperties\NamePersonDtoProperty.cs" />
+    <Compile Include="DtoProperties\CommentsDtoProperty.cs" />
+    <Compile Include="DtoProperties\InitiatorDtoProperty.cs" />
+    <Compile Include="DtoProperties\AccountingStringAllocationsDtoProperty.cs" />
+    <Compile Include="DtoProperties\FrequencyDtoProperty.cs" />
+    <Compile Include="DtoProperties\ResidencyTypeDtoProperty.cs" />
+    <Compile Include="DtoProperties\StudentAwardAmount2DtoProperty.cs" />
+    <Compile Include="DtoProperties\StudentAwardsByPeriod2DtoProperty.cs" />
+    <Compile Include="DtoProperties\AdmissionApplicationStudentDtoProperty.cs" />
+    <Compile Include="DtoProperties\StudentCourseTransferCreditCategoryDtoProperty.cs" />
+    <Compile Include="DtoProperties\StudentCourseTransferCreditDtoProperty.cs" />
+    <Compile Include="EnumProperties\LeavePlansAccrualMethod.cs" />
+    <Compile Include="EnumProperties\LeavePlansUsage.cs" />
+    <Compile Include="EnumProperties\StudentCourseTransferCreditType.cs" />
+    <Compile Include="DtoProperties\VendorDtoProperty.cs" />
+    <Compile Include="DtoProperties\ShippingDtoProperty.cs" />
+    <Compile Include="DtoProperties\RequisitionsAccountDetailDtoProperty.cs" />
+    <Compile Include="DtoProperties\RequisitionsLineItemsDtoProperty.cs" />
+    <Compile Include="DtoProperties\ReferenceDocumentDtoProperty.cs" />
+    <Compile Include="DtoProperties\HousingAssignmentAdditionalChargeProperty.cs" />
+    <Compile Include="DtoProperties\HousingAssignmentPreferenceProperty.cs" />
+    <Compile Include="DtoProperties\HousingAssignmentRateOverrideProperty.cs" />
+    <Compile Include="DtoProperties\HousingAssignmentRateProperty.cs" />
+    <Compile Include="DtoProperties\EmploymentProficiencyLicensingAuthorityDtoProperty.cs" />
+    <Compile Include="DtoProperties\ManualVendorDetailsDtoProperty.cs" />
+    <Compile Include="DtoProperties\OverrideShippingDestinationDtoProperty.cs" />
+    <Compile Include="DtoProperties\PurchaseOrdersDocumentDtoProperty.cs" />
+    <Compile Include="DtoProperties\PurchaseOrdersShippingDtoProperty.cs" />
+    <Compile Include="DtoProperties\PurchaseOrdersInitiatorDtoProperty.cs" />
+    <Compile Include="DtoProperties\PurchaseOrdersAllocatedDtoProperty.cs" />
+    <Compile Include="DtoProperties\PurchaseOrdersAllocationDtoProperty.cs" />
+    <Compile Include="DtoProperties\PurchaseOrdersReferenceDtoProperty.cs" />
+    <Compile Include="DtoProperties\StudentSectionWaitlistsPersonDtoProperty.cs" />
+    <Compile Include="DtoProperties\StudentSectionWaitlistsSectionDtoProperty.cs" />
+    <Compile Include="DtoProperties\TradeDiscountDtoProperty.cs" />
+    <Compile Include="DtoProperties\PurchaseOrdersAccountDetailDtoProperty.cs" />
+    <Compile Include="DtoProperties\PurchaseOrdersLineItemsDtoProperty.cs" />
+    <Compile Include="DtoProperties\PurchaseOrdersCommentsDtoProperty.cs" />
+    <Compile Include="DtoProperties\PurchaseOrdersVendorDtoProperty.cs" />
+    <Compile Include="EmploymentProficiency.cs" />
+    <Compile Include="EnumProperties\AccountsPayableInvoicesInvoiceVendorType.cs" />
+    <Compile Include="EnumProperties\AdmissionApplicationsStatusType2.cs" />
+    <Compile Include="EnumProperties\AdmissionApplicationStatusTypesCategory2.cs" />
+    <Compile Include="EnumProperties\AdmissionApplicationsAcademicLoadType.cs" />
+    <Compile Include="EnumProperties\AdmissionApplicationSupportingItemStatusType.cs" />
+    <Compile Include="EnumProperties\EmploymentProficiencyLicensing.cs" />
+    <Compile Include="EnumProperties\EmploymentProficiencyType.cs" />
+    <Compile Include="EnumProperties\ExternalEmploymentsPriority.cs" />
+    <Compile Include="EnumProperties\FrequencyUnitType.cs" />
+    <Compile Include="EnumProperties\HousingAssignmentRequiredPreference.cs" />
+    <Compile Include="EnumProperties\HousingAssignmentsStatus.cs" />
+    <Compile Include="EnumProperties\Proficiencylevelclassification.cs" />
+    <Compile Include="EnumProperties\PurchaseOrdersAccountBudgetCheck.cs" />
+    <Compile Include="EnumProperties\CommentTypes.cs" />
+    <Compile Include="EnumProperties\ManualVendorType.cs" />
+    <Compile Include="EnumProperties\RequisitionsStatus.cs" />
+    <Compile Include="EnumProperties\PurchaseOrderTypes.cs" />
+    <Compile Include="EnumProperties\PurchaseOrderStatus.cs" />
+    <Compile Include="EnumProperties\RatePeriod.cs" />
+    <Compile Include="EnumProperties\VendorTypes.cs" />
+    <Compile Include="EnumProperties\StudentAcademicProgramsCurriculumObjective.cs" />
+    <Compile Include="EnumProperties\StudentAcademicProgramsPreference.cs" />
+    <Compile Include="EnumProperties\StudentCourseTransferMeasure.cs" />
+    <Compile Include="ExternalEmploymentsCompensation.cs" />
+    <Compile Include="ExternalEmployments.cs" />
+    <Compile Include="ExternalEmploymentsOrganization.cs" />
+    <Compile Include="ExternalEmploymentsSupervisors.cs" />
+    <Compile Include="Filters\VendorFilter.cs" />
+    <Compile Include="FinancialDocumentTypes.cs" />
+    <Compile Include="InstitutionEmployers.cs" />
+    <Compile Include="InstitutionJobs2.cs" />
+    <Compile Include="InstitutionJobSupervisors.cs" />
+    <Compile Include="InstructionalEvent4.cs" />
+    <Compile Include="Instructor.cs" />
+    <Compile Include="Instructor2.cs" />
+    <Compile Include="InstructorTenureTypes.cs" />
+    <Compile Include="LeavePlans.cs" />
+    <Compile Include="PayClasses2.cs" />
+    <Compile Include="PayClasses.cs" />
+    <Compile Include="LedgerActivity.cs" />
+    <Compile Include="PayClassifications2.cs" />
+    <Compile Include="PersonEmploymentProficiencies.cs" />
+    <Compile Include="PersonRelationships.cs" />
+    <Compile Include="PersonRelationshipsRelatedPerson.cs" />
+    <Compile Include="PositionClassification.cs" />
+    <Compile Include="PurchaseOrders2.cs" />
+    <Compile Include="Requisitions.cs" />
+    <Compile Include="ContractTypes.cs" />
+    <Compile Include="ApiResources.cs" />
+    <Compile Include="RoomsAvailabilityRequest3.cs" />
+    <Compile Include="Section6.cs" />
+    <Compile Include="Section5.cs" />
+    <Compile Include="SectionMaximum4.cs" />
+    <Compile Include="SectionDescriptionTypes.cs" />
+    <Compile Include="SectionTitleType.cs" />
+    <Compile Include="ShippingMethods.cs" />
+    <Compile Include="HousingAssignment.cs" />
+    <Compile Include="PublicationTypes.cs" />
+    <Compile Include="PersonPublications.cs" />
+    <Compile Include="EnumProperties\SectionInstructorsInstructorRole.cs" />
+    <Compile Include="PurchaseOrders.cs" />
+    <Compile Include="Buyers.cs" />
+    <Compile Include="DtoProperties\PlaceDtoProperty.cs" />
+    <Compile Include="DtoProperties\PhoneDtoProperty.cs" />
+    <Compile Include="DtoProperties\HousingRequestRoommatePreferenceProperty.cs" />
+    <Compile Include="DtoProperties\HousingPreferenceRequiredProperty.cs" />
+    <Compile Include="DtoProperties\HousingRequestPreferenceProperty.cs" />
+    <Compile Include="DtoProperties\PreferedRoommateProperty.cs" />
+    <Compile Include="DtoProperties\StudentRegistrationEligibilitiesPriorityRegistrationTimeSlots.cs" />
+    <Compile Include="DtoProperties\RoomRatesRateDtoProperty.cs" />
+    <Compile Include="DtoProperties\StudentMealPlansConsumptionDtoProperty.cs" />
+    <Compile Include="DtoProperties\StudentMealPlansOverrideRateDtoProperty.cs" />
+    <Compile Include="EmploymentVocation.cs" />
+    <Compile Include="EnumProperties\HousingRequestsStatus.cs" />
+    <Compile Include="EnumProperties\RequiredPreference.cs" />
+    <Compile Include="EnumProperties\BuyerStatus.cs" />
+    <Compile Include="EnumProperties\StudentRegistrationEligibilitiesAlternatePin.cs" />
+    <Compile Include="EnumProperties\StudentRegistrationEligibilitiesEligibilityStatus.cs" />
+    <Compile Include="ExternalEmploymentPositions.cs" />
+    <Compile Include="HousingRequest.cs" />
+    <Compile Include="ExternalEmploymentStatuses.cs" />
+    <Compile Include="FreeOnBoardTypes.cs" />
+    <Compile Include="HousingResidentType.cs" />
+    <Compile Include="JobApplicationSources.cs" />
+    <Compile Include="DtoProperties\NumberDtoProperty.cs" />
+    <Compile Include="EnumProperties\MealPlanRequestsStatus.cs" />
+    <Compile Include="JobApplicationStatuses.cs" />
+    <Compile Include="MealPlanRequests.cs" />
+    <Compile Include="PurchaseClassifications.cs" />
+    <Compile Include="StudentAcademicPrograms2.cs" />
+    <Compile Include="StudentAcademicProgramsAcademicPeriods.cs" />
+    <Compile Include="StudentAdmissionDecision.cs" />
+    <Compile Include="Converters\AssignedRateConverter.cs" />
+    <Compile Include="DtoProperties\StudentMealPlansAssignedRateOverrideDtoProperty.cs" />
+    <Compile Include="DtoProperties\StudentMealPlansAssignedRatesDefaultDtoProperty.cs" />
+    <Compile Include="DtoProperties\StudentFinancialAidNeedsByMethodologyDtoProperty.cs" />
+    <Compile Include="EnumProperties\FinancialAidApplicationOutcomesStudentAidReportResolution.cs" />
+    <Compile Include="EnumProperties\FinancialAidApplicationOutcomesDependency.cs" />
+    <Compile Include="EnumProperties\FinancialAidApplicationOutcomesDependencyOverride.cs" />
+    <Compile Include="EnumProperties\FinancialAidApplicationOutcomesPellEligibility.cs" />
+    <Compile Include="EnumProperties\FinancialAidApplicationOutcomesAutomaticZeroContribution.cs" />
+    <Compile Include="EnumProperties\FinancialAidApplicationOutcomesSimplifiedNeedsTest.cs" />
+    <Compile Include="EnumProperties\FinancialAidApplicationOutcomesProfessionalJudgement.cs" />
+    <Compile Include="EnumProperties\FinancialAidApplicationOutcomesVerificationStatus.cs" />
+    <Compile Include="EnumProperties\FinancialAidApplicationOutcomesRejectionStatus.cs" />
+    <Compile Include="EnumProperties\StudentMealPlansStatus.cs" />
+    <Compile Include="EnumProperties\StudentFinancialAidNeedMethodology.cs" />
+    <Compile Include="EnumProperties\VeteranStatusesCategory.cs" />
+    <Compile Include="SectionInstructors.cs" />
+    <Compile Include="StudentCharge1.cs" />
+    <Compile Include="StudentCourseTransfers.cs" />
+    <Compile Include="StudentFinancialAidAcademicProgressStatuses.cs" />
+    <Compile Include="StudentFinancialAidAward2.cs" />
+    <Compile Include="StudentFinancialAidNeedSummary.cs" />
+    <Compile Include="FinancialAidApplicationOutcome.cs" />
+    <Compile Include="Interfaces\IAssignedRatesDtoProperty.cs" />
+    <Compile Include="StudentMealPlans.cs" />
+    <Compile Include="StudentPayment2.cs" />
+    <Compile Include="StudentPayment.cs" />
+    <Compile Include="StudentRegistrationEligibilities.cs" />
+    <Compile Include="StudentSectionWaitlist.cs" />
+    <Compile Include="Vendors2.cs" />
+    <Compile Include="VeteranStatuses.cs" />
+    <Compile Include="DtoProperties\Amount2DtoProperty.cs" />
+    <Compile Include="DtoProperties\FinancialAidApplicationApplicant.cs" />
+    <Compile Include="DtoProperties\FinancialAidApplicationApplicantIncomeDtoProperty.cs" />
+    <Compile Include="DtoProperties\FinancialAidApplicationCustodialParentsIncomeDtoProperty.cs" />
+    <Compile Include="DtoProperties\FinancialAidApplicationNoncustodialParentsIncomeDtoProperty.cs" />
+    <Compile Include="EnumProperties\FinancialAidApplicationsEducationLevel.cs" />
+    <Compile Include="EnumProperties\FinancialAidApplicationsHousingPreference.cs" />
+    <Compile Include="EnumProperties\FinancialAidApplicationsIndependenceCriteria.cs" />
+    <Compile Include="EnumProperties\FinancialAidApplicationsInterest.cs" />
+    <Compile Include="EnumProperties\FinancialAidApplicationsMethodology.cs" />
+    <Compile Include="EnumProperties\FinancialAidApplicationsSource.cs" />
+    <Compile Include="EnumProperties\FinancialAidApplicationsTaxReturnStatus.cs" />
+    <Compile Include="EnumProperties\MealPlanRatesRatePeriod.cs" />
+    <Compile Include="FinancialAidApplication.cs" />
+    <Compile Include="MealPlanRates.cs" />
+    <Compile Include="AccountFundsAvailable_Transactions.cs" />
+    <Compile Include="AccountingStringComponentValues.cs" />
+    <Compile Include="AccountingStringFormats.cs" />
+    <Compile Include="AdmissionApplication.cs" />
+    <Compile Include="AdmissionApplicationStatusType.cs" />
+    <Compile Include="AdmissionApplicationType.cs" />
+    <Compile Include="AdmissionApplicationWithdrawalReasons.cs" />
+    <Compile Include="AdvisorTypes.cs" />
+    <Compile Include="AptitudeAssessment.cs" />
+    <Compile Include="AdmissionResidencyTypes.cs" />
+    <Compile Include="AssessmentCalculationMethods.cs" />
+    <Compile Include="AssessmentPercentileTypes.cs" />
+    <Compile Include="AtitudeAssessmentTypes.cs" />
+    <Compile Include="AdmissionPopulation.cs" />
+    <Compile Include="BillingOverrideReasons.cs" />
+    <Compile Include="ContributionPayrollDeductions .cs" />
+    <Compile Include="AccountFundsAvailable.cs" />
+    <Compile Include="Course4.cs" />
+    <Compile Include="DtoProperties\BillingCreditDtoProperty.cs" />
+    <Compile Include="DtoProperties\GeneralLedgerReferenceDtoProperty.cs" />
+    <Compile Include="EnumProperties\AccountFundsAvailable_TransactionsType.cs" />
+    <Compile Include="EnumProperties\AccountingTransactionStatus.cs" />
+    <Compile Include="EnumProperties\AccountingTypeAccount.cs" />
+    <Compile Include="DtoProperties\FinancialDtoProperty.cs" />
+    <Compile Include="EnumProperties\DaysOfWeek.cs" />
+    <Compile Include="EnumProperties\MealPlansTimePeriod.cs" />
+    <Compile Include="EnumProperties\MealPlansUnitType.cs" />
+    <Compile Include="EnumProperties\SectionsSearchable.cs" />
+    <Compile Include="EnumProperties\InstructorRoleType.cs" />
+    <Compile Include="FloorCharacteristics.cs" />
+    <Compile Include="EnumProperties\StudentAdvisorRelationshipsAssignedPriority.cs" />
+    <Compile Include="InstructionalEvent3.cs" />
+    <Compile Include="InstructionalEventInstructor3.cs" />
+    <Compile Include="DtoProperties\AcademicPeriodDtoProperty2.cs" />
+    <Compile Include="DtoProperties\AccountsPayableInvoicesPaymentDtoProperty.cs" />
+    <Compile Include="DtoProperties\AccountsPayableInvoicesTaxesDtoProperty.cs" />
+    <Compile Include="DtoProperties\StudentAwardDisbursedAmountDtoProperty.cs" />
+    <Compile Include="DtoProperties\StudentAwardDisbursmentDtoProperty.cs" />
+    <Compile Include="DtoProperties\StudentAwardAmountDtoProperty.cs" />
+    <Compile Include="DtoProperties\StudentAwardStatusDtoProperty.cs" />
+    <Compile Include="DtoProperties\StudentAwardsByPeriodDtoProperty.cs" />
+    <Compile Include="DtoProperties\GradeSchemeDtoProperty2.cs" />
+    <Compile Include="DtoProperties\InstructionalEventDtoProperty2.cs" />
+    <Compile Include="DtoProperties\InstructorDtoProperty2.cs" />
+    <Compile Include="DtoProperties\InstructorNameTypeDtoProperty.cs" />
+    <Compile Include="DtoProperties\InstructorNameDtoProperty2.cs" />
+    <Compile Include="DtoProperties\InstructorRosterDtoProperty2.cs" />
+    <Compile Include="DtoProperties\FinancialAidFundsFinancialProperty.cs" />
+    <Compile Include="DtoProperties\FinancialAidFundsCategoryProperty.cs" />
+    <Compile Include="DtoProperties\AdmissionApplicationsStatus.cs" />
+    <Compile Include="DtoProperties\AdmissionApplicationsWithdrawal.cs" />
+    <Compile Include="DtoProperties\ValidScoreRangeProperty.cs" />
+    <Compile Include="DtoProperties\ValidScoreProperty.cs" />
+    <Compile Include="DtoProperties\AssessmentCalculationProperty.cs" />
+    <Compile Include="EnumProperties\AdmissionApplicationsStatusType.cs" />
+    <Compile Include="EnumProperties\CalculationType.cs" />
+    <Compile Include="EnumProperties\StudentAwardStatus.cs" />
+    <Compile Include="EnumProperties\InstructorNameType2.cs" />
+    <Compile Include="EnumProperties\FinancialAidFundAidCategoryType.cs" />
+    <Compile Include="EnumProperties\FinancialCurrencyType.cs" />
+    <Compile Include="DtoProperties\AdmissionApplicationDiscipline.cs" />
+    <Compile Include="EnumProperties\StudentAcademicStandingsType.cs" />
+    <Compile Include="EnumProperties\AdmissionApplicationStatusTypesCategory.cs" />
+    <Compile Include="InstructorCategories.cs" />
+    <Compile Include="InstructorStaffTypes.cs" />
+    <Compile Include="MealPlansRestrictions.cs" />
+    <Compile Include="StudentAdvisorRelationships.cs" />
+    <Compile Include="RoommateCharacteristics.cs" />
+    <Compile Include="StudentAptitudeAssessmentsForm.cs" />
+    <Compile Include="StudentAptitudeAssessmentsPercentile.cs" />
+    <Compile Include="EnumProperties\StudentAptitudeAssessmentsPreference.cs" />
+    <Compile Include="EnumProperties\StudentAptitudeAssessmentsStatus.cs" />
+    <Compile Include="EnumProperties\StudentAptitudeAssessmentsReported.cs" />
+    <Compile Include="EnumProperties\StudentAptitudeAssessmentsUpdateStatus.cs" />
+    <Compile Include="EnumProperties\StudentAptitudeAssessmentsScoreType.cs" />
+    <Compile Include="StudentAptitudeAssessmentsScore.cs" />
+    <Compile Include="EnumProperties\StudentPaymentTypes.cs" />
+    <Compile Include="FinancialAidFundClassification.cs" />
+    <Compile Include="FinancialAidFunds.cs" />
+    <Compile Include="FinancialAidFundsAidType.cs" />
+    <Compile Include="FinancialAidFundsPrivacy.cs" />
+    <Compile Include="FinancialAidFundsSource.cs" />
+    <Compile Include="FinancialAidOffice.cs" />
+    <Compile Include="SectionMaximum3.cs" />
+    <Compile Include="StudentAptitudeAssessments.cs" />
+    <Compile Include="Section4.cs" />
+    <Compile Include="StudentAcademicStandings.cs" />
+    <Compile Include="StudentFinancialAidAward.cs" />
+    <Compile Include="DtoProperties\AccountsPayableInvoicesAllocatedDtoProperty.cs" />
+    <Compile Include="DtoProperties\AccountsPayableInvoicesAllocationDtoProperty.cs" />
+    <Compile Include="DtoProperties\AccountsPayableInvoicesLineItemDtoPropety.cs" />
+    <Compile Include="DtoProperties\AccountsPayableInvoicesDiscountDtoProperty.cs" />
+    <Compile Include="DtoProperties\GeneralLedgerDetailDtoProperty2.cs" />
+    <Compile Include="DtoProperties\AccountsPayableInvoicesAccountDetailDtoProperty.cs" />
+    <Compile Include="DtoProperties\GeneralLedgerTransactionDtoProperty2.cs" />
+    <Compile Include="DtoProperties\GovernmentReportingDtoProperty.cs" />
+    <Compile Include="DtoProperties\PayPeriodOccurance.cs" />
+    <Compile Include="DtoProperties\PaymentTargetDtoProperty.cs" />
+    <Compile Include="DtoProperties\PersonGuardianAddressDtoProperty.cs" />
+    <Compile Include="DtoProperties\PersonGuardianNameDtoProperty.cs" />
+    <Compile Include="DtoProperties\PersonGuardianPhoneDtoProperty.cs" />
+    <Compile Include="EnumProperties\AccountsPayableInvoicesDirectDepositOverride.cs" />
+    <Compile Include="EnumProperties\AccountsPayableInvoicesInvoiceType.cs" />
+    <Compile Include="EnumProperties\AccountsPayableInvoicesPaymentStatus.cs" />
+    <Compile Include="EnumProperties\AccountsPayableInvoicesProcessState.cs" />
+    <Compile Include="EnumProperties\AccountsPayableInvoicesTransactionType.cs" />
+    <Compile Include="EnumProperties\FinancialAidYearStatus.cs" />
+    <Compile Include="EnumProperties\AccountsPayableInvoicesAccountBudgetCheck.cs" />
+    <Compile Include="EnumProperties\AccountsPayableInvoicesStatus.cs" />
+    <Compile Include="EnumProperties\CommitmentTypes.cs" />
+    <Compile Include="EnumProperties\PayrollDeductionArrangementStatuses.cs" />
+    <Compile Include="FinancialAidYear.cs" />
+    <Compile Include="FinancialAidFundCategory.cs" />
+    <Compile Include="GeneralLedgerTransaction2.cs" />
+    <Compile Include="PayrollDeductionArrangements.cs" />
+    <Compile Include="AssessmentSpecialCircumstance.cs" />
+    <Compile Include="FinancialAidAwardPeriod.cs" />
+    <Compile Include="DtoProperties\CredentialDtoProperty2.cs" />
+    <Compile Include="DtoProperties\ReportingCountryDtoProperty.cs" />
+    <Compile Include="EducationalInstitutionUnits2.cs" />
+    <Compile Include="AcademicDiscipline2.cs" />
+    <Compile Include="DtoProperties\SalaryAmountDtoProperty.cs" />
+    <Compile Include="EnumProperties\CredentialType2.cs" />
+    <Compile Include="EnumProperties\FundsAvailable.cs" />
+    <Compile Include="EnumProperties\HeadCountStatus.cs" />
+    <Compile Include="EnumProperties\SalaryPeriod.cs" />
+    <Compile Include="Person3.cs" />
+    <Compile Include="PersonCredential2.cs" />
+    <Compile Include="SectionRegistrationStatusItem3.cs" />
+    <Compile Include="DtoProperties\SalaryDtoProperty.cs" />
+    <Compile Include="DtoProperties\SupervisorsDtoProperty.cs" />
+    <Compile Include="EnumProperties\InstitutionJobsStatus.cs" />
+    <Compile Include="EnumProperties\JobPreference.cs" />
+    <Compile Include="InstitutionJobs.cs" />
+    <Compile Include="StudentResidentialCategories.cs" />
+    <Compile Include="VendorPaymentTerms.cs" />
+    <Compile Include="DtoProperties\RelatedVendorDtoProperty.cs" />
+    <Compile Include="DtoProperties\VendorDetailsDtoProperty.cs" />
+    <Compile Include="EnumProperties\VendorType.cs" />
+    <Compile Include="EnumProperties\VendorStatuses.cs" />
+    <Compile Include="Vendors.cs" />
+    <Compile Include="AbbreviationItem.cs" />
+    <Compile Include="AcademicPeriod3.cs" />
+    <Compile Include="AcademicStanding.cs" />
+    <Compile Include="VendorHoldReasons.cs" />
+    <Compile Include="AccountsPayableSources.cs" />
+    <Compile Include="CommodityUnitType.cs" />
+    <Compile Include="CommodityCode.cs" />
+    <Compile Include="DtoProperties\ReportingDtoProperty.cs" />
+    <Compile Include="EnumProperties\DirectDeposit.cs" />
+    <Compile Include="EnumProperties\TermRegistrationStatus.cs" />
+    <Compile Include="DtoProperties\Credit3DtoProperty.cs" />
+    <Compile Include="EnumProperties\RepeatedSection.cs" />
+    <Compile Include="HealthCheck.cs" />
+    <Compile Include="About.cs" />
+    <Compile Include="BargainingUnit.cs" />
+    <Compile Include="DtoProperties\PersonContactAddressDtoProperty.cs" />
+    <Compile Include="DtoProperties\PersonGuardianDtoProperty.cs" />
+    <Compile Include="DtoProperties\ChargedAmountDtoProperty.cs" />
+    <Compile Include="DtoProperties\ChargedAmountUnitCostDtoProperty.cs" />
+    <Compile Include="EnumProperties\StudentChargeTypes.cs" />
+    <Compile Include="SectionRegistration3.cs" />
+    <Compile Include="StudentCharge.cs" />
+    <Compile Include="DtoProperties\CompensationRangeDtoProperty.cs" />
+    <Compile Include="DtoProperties\CompensationDtoProperty.cs" />
+    <Compile Include="DtoProperties\ReportsToDtoProperty.cs" />
+    <Compile Include="DtoProperties\NameDetailDtoProperty.cs" />
+    <Compile Include="DtoProperties\RehireableStatusDtoProperty.cs" />
+    <Compile Include="DtoProperties\HoursPerPeriodDtoProperty.cs" />
+    <Compile Include="Employee.cs" />
+    <Compile Include="Course3.cs" />
+    <Compile Include="Credit3.cs" />
+    <Compile Include="CreditCategory3.cs" />
+    <Compile Include="DtoProperties\CreditCategory2DtoProperty.cs" />
+    <Compile Include="DtoProperties\Credit2DtoProperty.cs" />
+    <Compile Include="DtoProperties\CreditIdAndTypeProperty2.cs" />
+    <Compile Include="DtoProperties\PerformanceMeasureDtoProperty.cs" />
+    <Compile Include="DtoProperties\SectionCreditDtoProperty.cs" />
+    <Compile Include="EnumProperties\HealthCheckType.cs" />
+    <Compile Include="EnumProperties\ContractType.cs" />
+    <Compile Include="EnumProperties\BenefitsStatus.cs" />
+    <Compile Include="EnumProperties\ExemptionType.cs" />
+    <Compile Include="EnumProperties\CurrencyIsoCode.cs" />
+    <Compile Include="EnumProperties\CompensationType.cs" />
+    <Compile Include="EnumProperties\PositionReportsToType.cs" />
+    <Compile Include="EnumProperties\PositionStatus.cs" />
+    <Compile Include="EnumProperties\RehireEligibility.cs" />
+    <Compile Include="EnumProperties\EmployeeStatus.cs" />
+    <Compile Include="EnumProperties\PayPeriods.cs" />
+    <Compile Include="EnumProperties\PayStatus.cs" />
+    <Compile Include="EmploymentStatusEndingReason.cs" />
+    <Compile Include="EnumProperties\AcademicLoad.cs" />
+    <Compile Include="JobChangeReason.cs" />
+    <Compile Include="EmploymentTerminationReason.cs" />
+    <Compile Include="PayrollDeductionArrangementChangeReasons.cs" />
+    <Compile Include="PersonGuardianRelationship.cs" />
+    <Compile Include="DeductionType.cs" />
+    <Compile Include="RehireType.cs" />
+    <Compile Include="EmploymentClassification.cs" />
+    <Compile Include="EmploymentClassificationType.cs" />
+    <Compile Include="EnumProperties\CreditCategoryType3.cs" />
+    <Compile Include="DtoProperties\DateDtoProperty.cs" />
+    <Compile Include="ExternalEducation.cs" />
+    <Compile Include="DtoProperties\PersonContactPhoneDtoProperty.cs" />
+    <Compile Include="EnumProperties\BestContactTimeType.cs" />
+    <Compile Include="OwningInstitutionUnit.cs" />
+    <Compile Include="Room3.cs" />
+    <Compile Include="RoomCharacteristic.cs" />
+    <Compile Include="PersonContactRelationship.cs" />
+    <Compile Include="PersonContactAddress.cs" />
+    <Compile Include="PersonContact.cs" />
+    <Compile Include="PersonContactName.cs" />
+    <Compile Include="EnumProperties\PersonContactType.cs" />
+    <Compile Include="PersonContactSubject.cs" />
+    <Compile Include="BuildingWing.cs" />
+    <Compile Include="Section3.cs" />
+    <Compile Include="SectionMaximum2.cs" />
+    <Compile Include="InstitutionPosition.cs" />
+    <Compile Include="Students.cs" />
+    <Compile Include="StudentAcademicPeriodProfiles.cs" />
+    <Compile Include="StudentClassification.cs" />
+    <Compile Include="ResidentType.cs" />
+    <Compile Include="StudentStatus.cs" />
+    <Compile Include="AccountingString.cs" />
+    <Compile Include="StudentType.cs" />
+    <Compile Include="AcademicProgram2.cs" />
+    <Compile Include="AcademicProgramAuthorizing.cs" />
+    <Compile Include="AcademicProgramDiscipline2.cs" />
+    <Compile Include="StudentAcademicProgramDisciplines.cs" />
+    <Compile Include="CampusInvolvement.cs" />
+    <Compile Include="CampusOrganization.cs" />
+    <Compile Include="StudentsCohort.cs" />
+    <Compile Include="CampusOrganizationType.cs" />
+    <Compile Include="CampusInvolvementRole.cs" />
+    <Compile Include="DtoProperties\OrganizationRoleDtoProperty.cs" />
+    <Compile Include="AcademicPeriodEnrollmentStatus.cs" />
+    <Compile Include="DtoProperties\PersonIdentityDocumentCountryDtoProperty.cs" />
+    <Compile Include="EnumProperties\OrganizationRoleType.cs" />
+    <Compile Include="GradeMode.cs" />
+    <Compile Include="Organization2.cs" />
+    <Compile Include="PersonFilter.cs" />
+    <Compile Include="PersonalRelationshipStatus.cs" />
+    <Compile Include="AcademicCatalog2.cs" />
+    <Compile Include="DtoProperties\PersonAddressRecurrenceDtoProperty.cs" />
+    <Compile Include="DtoProperties\StandardizedCeebCodesDtoProperty.cs" />
+    <Compile Include="PersonAddress.cs" />
+    <Compile Include="DtoProperties\PersonAddressTypeDtoProperty.cs" />
+    <Compile Include="DtoProperties\EducationalInstitutionUnitParentDtoProperty.cs" />
+    <Compile Include="EducationalInstitutionUnits.cs" />
+    <Compile Include="AddressCountry.cs" />
+    <Compile Include="AddressSubRegion.cs" />
+    <Compile Include="AddressRegion.cs" />
+    <Compile Include="AddressPlace.cs" />
+    <Compile Include="Addresses.cs" />
+    <Compile Include="AddressType2.cs" />
+    <Compile Include="Comments.cs" />
+    <Compile Include="AcademicCatalog.cs" />
+    <Compile Include="AcademicLevelProperty.cs" />
+    <Compile Include="AcademicPeriodCategory2.cs" />
+    <Compile Include="StudentAcademicPrograms.cs" />
+    <Compile Include="AcademicTimePeriod2.cs" />
+    <Compile Include="AccountReceivableType.cs" />
+    <Compile Include="Approval2.cs" />
+    <Compile Include="ApprovalType2.cs" />
+    <Compile Include="AccountingCode.cs" />
+    <Compile Include="DtoProperties\PersonAddressDtoProperty.cs" />
+    <Compile Include="DtoProperties\AmountDtoProperty.cs" />
+    <Compile Include="DtoProperties\GeneralLedgerDetailDtoProperty.cs" />
+    <Compile Include="DtoProperties\GeneralLedgerTransactionDtoProperty.cs" />
+    <Compile Include="EnumProperties\AddressType.cs" />
+    <Compile Include="EducationalInstitution.cs" />
+    <Compile Include="EnumProperties\CurrencyCodes.cs" />
+    <Compile Include="EnumProperties\CreditOrDebit.cs" />
+    <Compile Include="EnumProperties\EducationalInstitutionType.cs" />
+    <Compile Include="EnumProperties\GeneralLedgerTransactionType.cs" />
+    <Compile Include="EnumProperties\HomeInstitutionType.cs" />
+    <Compile Include="EnumProperties\EducationalInstitutionUnitType.cs" />
+    <Compile Include="EnumProperties\ProcessMode.cs" />
+    <Compile Include="GeneralLedgerTransaction.cs" />
+    <Compile Include="DtoProperties\PersonSocialMediaType.cs" />
+    <Compile Include="DtoProperties\PersonSocialMediaDtoProperty.cs" />
+    <Compile Include="DtoProperties\PersonEmailTypeDtoProperty.cs" />
+    <Compile Include="DtoProperties\PersonEmailDtoProperty.cs" />
+    <Compile Include="DtoProperties\PersonPhoneTypeDtoProperty.cs" />
+    <Compile Include="DtoProperties\PersonPhoneDtoProperty.cs" />
+    <Compile Include="DtoProperties\SectionsForCrosslistDtoProperty.cs" />
+    <Compile Include="EnumProperties\IsoCode.cs" />
+    <Compile Include="EnumProperties\PostalTitle.cs" />
+    <Compile Include="DtoProperties\PersonIdentityDocumentType.cs" />
+    <Compile Include="DtoProperties\PersonIdentityDocument.cs" />
+    <Compile Include="DtoProperties\PersonVisaDtoProperty.cs" />
+    <Compile Include="DtoProperties\PersonCitizenshipDtoProperty.cs" />
+    <Compile Include="DtoProperties\PersonMaritalStatusDtoProperty.cs" />
+    <Compile Include="DtoProperties\PersonPrivacyDtoProperty.cs" />
+    <Compile Include="DtoProperties\PersonLanguageDtoProperty.cs" />
+    <Compile Include="DtoProperties\PersonRaceDtoProperty.cs" />
+    <Compile Include="DtoProperties\PersonRaceReporting.cs" />
+    <Compile Include="DtoProperties\PersonEthnicityReporting.cs" />
+    <Compile Include="DtoProperties\PersonEthnicityDtoProperty.cs" />
+    <Compile Include="DtoProperties\PersonNameTypeDtoProperty.cs" />
+    <Compile Include="DtoProperties\PersonNameDtoProperty.cs" />
+    <Compile Include="DtoProperties\PersonRoleDtoProperty.cs" />
+    <Compile Include="EnumProperties\PersonEmailPreference.cs" />
+    <Compile Include="EnumProperties\PersonPreference.cs" />
+    <Compile Include="EnumProperties\PersonActiveInactiveStatus.cs" />
+    <Compile Include="EnumProperties\PersonIdentityDocumentCategory.cs" />
+    <Compile Include="EnumProperties\PersonPhoneTypeCategory.cs" />
+    <Compile Include="EnumProperties\PersonMaritalStatusCategory.cs" />
+    <Compile Include="EnumProperties\PersonLanguagePreference.cs" />
+    <Compile Include="EnumProperties\PersonRaceCategory.cs" />
+    <Compile Include="EnumProperties\PersonEthnicityCategory.cs" />
+    <Compile Include="EnumProperties\GenderType2.cs" />
+    <Compile Include="EnumProperties\PersonNamePreference.cs" />
+    <Compile Include="EnumProperties\PersonRoleType.cs" />
+    <Compile Include="EnumProperties\HedmDayOfWeek.cs" />
+    <Compile Include="EnumProperties\ReportingRacialCategory.cs" />
+    <Compile Include="EnumProperties\SectionTypeForCrosslist.cs" />
+    <Compile Include="EnumProperties\WaitlistForCrosslist.cs" />
+    <Compile Include="EthnicityReporting.cs" />
+    <Compile Include="EthnicityReportingCountry.cs" />
+    <Compile Include="FrequencyType.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FrequencyType2.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="IdentityDocumentType.cs" />
+    <Compile Include="IdentityDocumentTypeCategory.cs" />
+    <Compile Include="Converters\InstructionalLocationDtoPropertyConverter.cs" />
+    <Compile Include="AddressTypeList.cs" />
+    <Compile Include="EmailTypeList.cs" />
+    <Compile Include="PersonalRelationship.cs" />
+    <Compile Include="PhoneTypeList.cs" />
+    <Compile Include="RaceReporting.cs" />
+    <Compile Include="RaceReportingCountry.cs" />
+    <Compile Include="Relationship.cs" />
+    <Compile Include="CommerceTaxCode.cs" />
+    <Compile Include="ValidReciprocalRelationship.cs" />
+    <Compile Include="Religion.cs" />
+    <Compile Include="DtoProperties\EnteredByDtoProperty.cs" />
+    <Compile Include="DtoProperties\SubjectMatterDtoProperty.cs" />
+    <Compile Include="PersonVisaEntry.cs" />
+    <Compile Include="Resources\HedmErrorMessages.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>HedmErrorMessages.resx</DependentUpon>
+    </Compile>
+    <Compile Include="PersonVisa.cs" />
+    <Compile Include="SectionCrosslist.cs" />
+    <Compile Include="Source.cs" />
+    <Compile Include="SourceContext.cs" />
+    <Compile Include="DtoProperties\AcademicLevelDtoProperty.cs" />
+    <Compile Include="DtoProperties\AcademicPeriodDtoProperty.cs" />
+    <Compile Include="DtoProperties\AdministrativePeriodDtoProperty.cs" />
+    <Compile Include="DtoProperties\BuildingDtoProperty.cs" />
+    <Compile Include="DtoProperties\CredentialDtoProperty.cs" />
+    <Compile Include="DtoProperties\GradeSchemeDtoProperty.cs" />
+    <Compile Include="DtoProperties\BaseCodeTitleDetailDtoProperty.cs" />
+    <Compile Include="DtoProperties\CourseDtoProperty.cs" />
+    <Compile Include="DtoProperties\CourseLevelDtoProperty.cs" />
+    <Compile Include="DtoProperties\CreditCategoryDtoProperty.cs" />
+    <Compile Include="DtoProperties\CreditDtoProperty.cs" />
+    <Compile Include="DtoProperties\InstructionalEventDtoProperty.cs" />
+    <Compile Include="DtoProperties\InstructionalMethodDtoProperty.cs" />
+    <Compile Include="DtoProperties\InstructionalPlatformDtoProperty.cs" />
+    <Compile Include="DtoProperties\InstructorDtoProperty.cs" />
+    <Compile Include="DtoProperties\InstructorNameDtoProperty.cs" />
+    <Compile Include="DtoProperties\InstructorRosterDtoProperty.cs" />
+    <Compile Include="DtoProperties\LocationDtoProperty.cs" />
+    <Compile Include="DtoProperties\LocationOnlineDtoProperty.cs" />
+    <Compile Include="DtoProperties\LocationOtherDtoProperty.cs" />
+    <Compile Include="DtoProperties\LocationRoomDtoProperty.cs" />
+    <Compile Include="DtoProperties\LocationSiteDtoProperty.cs" />
+    <Compile Include="DtoProperties\MetaDataDtoProperty.cs" />
+    <Compile Include="DtoProperties\OwningOrganizationDtoProperty.cs" />
+    <Compile Include="DtoProperties\SiteDtoProperty.cs" />
+    <Compile Include="DtoProperties\SubjectDtoProperty.cs" />
+    <Compile Include="EnrollmentStatusDetail.cs" />
+    <Compile Include="EnumProperties\CredentialType.cs" />
+    <Compile Include="EnumProperties\InstructorNameType.cs" />
+    <Compile Include="GeographicArea.cs" />
+    <Compile Include="EnrollmentStatus.cs" />
+    <Compile Include="GradeDefinitionsMaximumEquivalentTo.cs" />
+    <Compile Include="GradeDefinitionsMaximum.cs" />
+    <Compile Include="GradeSchemeProperty.cs" />
+    <Compile Include="CommentSubjectArea.cs" />
+    <Compile Include="Interest.cs" />
+    <Compile Include="ContactType.cs" />
+    <Compile Include="NotificationIndicatorType.cs" />
+    <Compile Include="PersonHold.cs" />
+    <Compile Include="PersonCredential.cs" />
+    <Compile Include="PersonHoldCategoryTypes.cs" />
+    <Compile Include="PersonHoldType.cs" />
+    <Compile Include="Interfaces\InstructionalLocationDtoProperty.cs" />
+    <Compile Include="PersonHoldTypeType.cs" />
+    <Compile Include="EnumProperties\PersonNameType2.cs" />
+    <Compile Include="InterestArea.cs" />
+    <Compile Include="PersonNameTypeItem.cs" />
+    <Compile Include="PrivacyStatus.cs" />
+    <Compile Include="EnrollmentStatusType.cs" />
+    <Compile Include="PrivacyStatusType.cs" />
+    <Compile Include="GeographicAreaTypeProperty.cs" />
+    <Compile Include="CountryCodeType.cs" />
+    <Compile Include="GeographicAreaType.cs" />
+    <Compile Include="SectionMaximum.cs" />
+    <Compile Include="SocialMediaTypeCategory.cs" />
+    <Compile Include="GeographicAreaTypeCategory.cs" />
+    <Compile Include="AcademicProgram.cs" />
+    <Compile Include="AcademicProgramStatus.cs" />
+    <Compile Include="AcademicProgramDiscipline.cs" />
+    <Compile Include="CreditIdAndTypeProperty.cs" />
+    <Compile Include="EthnicityType2.cs" />
+    <Compile Include="SocialMediaType.cs" />
+    <Compile Include="GradeChangeReason.cs" />
+    <Compile Include="CreditCategoryType2.cs" />
+    <Compile Include="GradeCmplCreditType.cs" />
+    <Compile Include="GradeExtension.cs" />
+    <Compile Include="GradeItemType.cs" />
+    <Compile Include="AcademicLevel2.cs" />
+    <Compile Include="AcademicPeriod2.cs" />
+    <Compile Include="AccountingStringComponent.cs" />
+    <Compile Include="AcademicCredential.cs" />
+    <Compile Include="AcademicCredentialType.cs" />
+    <Compile Include="Building2.cs" />
+    <Compile Include="Converters\InstructionalLocation2Converter.cs" />
+    <Compile Include="InstructionalOnline2.cs" />
+    <Compile Include="InstructionalOtherLocation2.cs" />
+    <Compile Include="InstructionalSite2.cs" />
+    <Compile Include="InvolvementStatusType.cs" />
+    <Compile Include="LastDayOfAttendance.cs" />
+    <Compile Include="Location.cs" />
+    <Compile Include="CitizenshipStatusType.cs" />
+    <Compile Include="RaceType2.cs" />
+    <Compile Include="MaritalStatusType2.cs" />
+    <Compile Include="RegistrationStatusReason2.cs" />
+    <Compile Include="RegistrationStatus2.cs" />
+    <Compile Include="CitizenshipStatus.cs" />
+    <Compile Include="RoomsMinimumResponse.cs" />
+    <Compile Include="SectionGradeType.cs" />
+    <Compile Include="SectionRegistrationGrade.cs" />
+    <Compile Include="SectionRegistrationInvolvement.cs" />
+    <Compile Include="SectionRegistrationProcess.cs" />
+    <Compile Include="SectionRegistrationReporting.cs" />
+    <Compile Include="Submission.cs" />
+    <Compile Include="SubmissionMethodType.cs" />
+    <Compile Include="Transcript.cs" />
+    <Compile Include="TranscriptMode.cs" />
+    <Compile Include="SectionRegistrationTranscript.cs" />
+    <Compile Include="Grade.cs" />
+    <Compile Include="GradeItem.cs" />
+    <Compile Include="RepeatDay.cs" />
+    <Compile Include="RepeatRuleEnd.cs" />
+    <Compile Include="RepeatRuleBy.cs" />
+    <Compile Include="Converters\RepeatRuleConverter.cs" />
+    <Compile Include="Recurrence3.cs" />
+    <Compile Include="RepeatRule.cs" />
+    <Compile Include="RoomTypeTypes.cs" />
+    <Compile Include="RepeatTimePeriod2.cs" />
+    <Compile Include="RepeatTimePeriod.cs" />
+    <Compile Include="Recurrence2.cs" />
+    <Compile Include="InstructionalRoom2.cs" />
+    <Compile Include="InstructionalEventApprovalType2.cs" />
+    <Compile Include="InstructionalEventApprovalEntity2.cs" />
+    <Compile Include="InstructionalEventApproval2.cs" />
+    <Compile Include="InstructionalEventInstructor2.cs" />
+    <Compile Include="InstructionalLocation2.cs" />
+    <Compile Include="InstructionalEvent2.cs" />
+    <Compile Include="Course2.cs" />
+    <Compile Include="DurationUnit2.cs" />
+    <Compile Include="SectionDuration2.cs" />
+    <Compile Include="OfferingOrganization2.cs" />
+    <Compile Include="SectionStatus2.cs" />
+    <Compile Include="CreditMeasure2.cs" />
+    <Compile Include="Credit2.cs" />
+    <Compile Include="GradeScheme2.cs" />
+    <Compile Include="Section2.cs" />
+    <Compile Include="Occupancy2.cs" />
+    <Compile Include="OrganizationLocationTypeList.cs" />
+    <Compile Include="PersonLocationTypeList.cs" />
+    <Compile Include="Converters\UTCDateConverter.cs" />
+    <Compile Include="CourseLevel2.cs" />
+    <Compile Include="SectionRegistrationStatusItemStatus.cs" />
+    <Compile Include="IRepeatRule.cs" />
+    <Compile Include="RepeatRuleDaily.cs" />
+    <Compile Include="RepeatRuleEnds.cs" />
+    <Compile Include="RepeatRuleMonthly.cs" />
+    <Compile Include="RepeatRuleDayOfWeek.cs" />
+    <Compile Include="RepeatRuleRepeatBy.cs" />
+    <Compile Include="RepeatRuleWeekly.cs" />
+    <Compile Include="RepeatRuleYearly.cs" />
+    <Compile Include="Room2.cs" />
+    <Compile Include="RoomLayoutType2.cs" />
+    <Compile Include="RoomsAvailabilityRequest2.cs" />
+    <Compile Include="RoomType.cs" />
+    <Compile Include="SectionRegistrationStatus2.cs" />
+    <Compile Include="SectionRegistration2.cs" />
+    <Compile Include="CreditCategory2.cs" />
+    <Compile Include="Ethnicity2.cs" />
+    <Compile Include="GuidObject2.cs" />
+    <Compile Include="InstructionalMethod2.cs" />
+    <Compile Include="InstructionalPlatform.cs" />
+    <Compile Include="MaritalStatus2.cs" />
+    <Compile Include="PersonalRelationshipType.cs" />
+    <Compile Include="Race2.cs" />
+    <Compile Include="RelationType.cs" />
+    <Compile Include="OtherHonor.cs" />
+    <Compile Include="AcademicHonorType.cs" />
+    <Compile Include="BaseModel.cs" />
+    <Compile Include="AcademicPeriodCategory.cs" />
+    <Compile Include="AcademicTimePeriod.cs" />
+    <Compile Include="Converters\DataOriginConverter.cs" />
+    <Compile Include="Converters\DateOnlyConverter.cs" />
+    <Compile Include="Converters\InstructionalLocationConverter.cs" />
+    <Compile Include="Converters\TimeOnlyConverter.cs" />
+    <Compile Include="AcademicDiscipline.cs" />
+    <Compile Include="AcademicDisciplineType.cs" />
+    <Compile Include="ContactPreference.cs" />
+    <Compile Include="CodeItem2.cs" />
+    <Compile Include="BaseModel2.cs" />
+    <Compile Include="EmailType.cs" />
+    <Compile Include="LocationTypeItem.cs" />
+    <Compile Include="LocationType.cs" />
+    <Compile Include="OrganizationLocationType.cs" />
+    <Compile Include="Person2.cs" />
+    <Compile Include="LifeCycleStatus.cs" />
+    <Compile Include="EmailAddress2.cs" />
+    <Compile Include="PersonLocationType.cs" />
+    <Compile Include="PhoneType2.cs" />
+    <Compile Include="RestrictionType2.cs" />
+    <Compile Include="SectionRegistrationStatusItem2.cs" />
+    <Compile Include="RegistrationStatusReason.cs" />
+    <Compile Include="SectionRegistrationStatus.cs" />
+    <Compile Include="InstructionalOnline.cs" />
+    <Compile Include="InstructionalLocationType.cs" />
+    <Compile Include="InstructionalOtherLocation.cs" />
+    <Compile Include="InstructionalRoom.cs" />
+    <Compile Include="InstructionalSite.cs" />
+    <Compile Include="DurationUnit.cs" />
+    <Compile Include="InstructionalContact.cs" />
+    <Compile Include="InstructionalLocation.cs" />
+    <Compile Include="Section.cs" />
+    <Compile Include="SectionDuration.cs" />
+    <Compile Include="SectionStatus.cs" />
+    <Compile Include="ParentCategory.cs" />
+    <Compile Include="Recurrence.cs" />
+    <Compile Include="InstructionalEventInstructor.cs" />
+    <Compile Include="CodeItem.cs" />
+    <Compile Include="EthnicityType.cs" />
+    <Compile Include="GuidObject.cs" />
+    <Compile Include="RestrictionType.cs" />
+    <Compile Include="MaritalStatus.cs" />
+    <Compile Include="MaritalStatusType.cs" />
+    <Compile Include="CreditMeasure.cs" />
+    <Compile Include="MetadataObject.cs" />
+    <Compile Include="Occupancy.cs" />
+    <Compile Include="OfferingOrganization.cs" />
+    <Compile Include="OrganizationType.cs" />
+    <Compile Include="Race.cs" />
+    <Compile Include="RaceType.cs" />
+    <Compile Include="Role.cs" />
+    <Compile Include="Room.cs" />
+    <Compile Include="RoomLayoutType.cs" />
+    <Compile Include="RoomsAvailabilityRequest.cs" />
+    <Compile Include="RoomsAvailabilityResponse.cs" />
+    <Compile Include="RoomTypes.cs" />
+    <Compile Include="Site2.cs" />
+    <Compile Include="Credit.cs" />
+    <Compile Include="CreditCategoryType.cs" />
+    <Compile Include="GradeScheme.cs" />
+    <Compile Include="InstructionalMethod.cs" />
+    <Compile Include="InstructionalEventApprovalEntity.cs" />
+    <Compile Include="Subject2.cs" />
+    <Compile Include="Address.cs" />
+    <Compile Include="AddressTypeDtoProperty.cs" />
+    <Compile Include="Country.cs" />
+    <Compile Include="Credential.cs" />
+    <Compile Include="CredentialType.cs" />
+    <Compile Include="EmailAddress.cs" />
+    <Compile Include="EmailAddressType.cs" />
+    <Compile Include="GenderType.cs" />
+    <Compile Include="PersonName.cs" />
+    <Compile Include="PersonNameType.cs" />
+    <Compile Include="Phone.cs" />
+    <Compile Include="PhoneType.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RoleType.cs" />
+    <Compile Include="InstructionalEventApproval.cs" />
+    <Compile Include="InstructionalEventApprovalType.cs" />
+    <Compile Include="ApprovalEntity.cs" />
+    <Compile Include="ApprovalType.cs" />
+    <Compile Include="Approval.cs" />
+    <Compile Include="RegistrationStatus.cs" />
+    <Compile Include="SectionRegistration.cs" />
+    <Compile Include="EnumProperties\VisaStatus.cs" />
+    <Compile Include="ValidReciprocalRelationshipCategory.cs" />
+    <Compile Include="VendorType.cs" />
+    <Compile Include="VisaType2.cs" />
+    <Compile Include="VisaType.cs" />
+    <Compile Include="EnumProperties\ConfidentialityCategory.cs" />
+    <Compile Include="VisaTypeCategory.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\HedmErrorMessages.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>HedmErrorMessages.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="MealTypes.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="MealPlans.cs" />
+    <Compile Include="MealPlansComponents.cs" />
+    <Compile Include="MealPlansStudentResidentialCategories.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="ShipToDestinations.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="ShipToDestinationsCode.cs" />
+    <Compile Include="ShipToDestinationsContact.cs" />
+    <Compile Include="ShipToDestinationsPostalCountry.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="RoomRates.cs" />
+    <Compile Include="RoomRatesCurrency.cs" />
+    <Compile Include="RoomRatesPeriod.cs" />
+    <Compile Include="RoomRatesRate.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="EmploymentPerformanceReviewTypes.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="EmploymentPerformanceReviewRatings.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="EmploymentPerformanceReviews.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="DtoProperties\EmploymentPerformanceReviewsRatingDtoProperty.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="LeaveTypes.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="SectionStatuses.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="DeductionCategories.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="CostCalculationMethods.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="EmploymentFrequencies.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="EnumProperties\EmploymentFrequenciesType.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="PayScales.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="PayClassifications.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="EnumProperties\PayClassificationsCompensationType.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="EnumProperties\PayClassificationsClassificationType.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="EnumProperties\PayClassificationsStatus.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="EnumProperties\PayClassesPeriod.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="JobApplications.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="BeneficiaryPreferenceTypes.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="PersonBenefitDependents.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="EnumProperties\PersonBenefitDependentsStudentStatus.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="EmploymentDepartments.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="PayCycles.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="AdmissionApplicationSupportingItems.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="EnumProperties\AdmissionApplicationSupportingItemsRequired.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="DtoProperties\AdmissionApplicationSupportingItemsStatus.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="EnumProperties\AdmissionApplicationSupportingItemsType.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="EarningTypes.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="PersonBeneficiaries.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="PayPeriods.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="CourseTopics.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="RelationshipStatuses.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="RelationshipTypes.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="DtoProperties\RelationshipTypesValidReciprocalRelationships.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="EnumProperties\RelationshipTypesRestrictedUsage.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="ChargeAssessmentMethods.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="EnumProperties\CourseTransferStatusesCategory.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="CourseTransferStatuses.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- begin ellucian project settings -->
+  <Import Project="$(SolutionDir)CodeAnalysis\CodeScan.proj" Condition="Exists('$(SolutionDir)CodeAnalysis\CodeScan.proj ')" />
+  <Import Project="$(ProjectDir)..\..\..\BuildConfig\CodeSigning.targets" Condition="Exists('$(ProjectDir)..\..\..\BuildConfig\CodeSigning.targets ')" />
+  <Import Project="$(MSBuildProgramFiles32)\MSBuild\FxCop Integrator\FxCopIntegrator.targets" Condition="Exists('$(MSBuildProgramFiles32)\MSBuild\FxCop Integrator\FxCopIntegrator.targets')" />
+  <!-- end ellucian project settings -->
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

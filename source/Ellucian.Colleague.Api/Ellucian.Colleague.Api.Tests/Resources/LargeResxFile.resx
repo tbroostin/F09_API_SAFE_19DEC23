@@ -1,0 +1,1228 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Name1" xml:space="preserve">
+    <value>Value1</value>
+  </data>
+  <data name="Name2" xml:space="preserve">
+    <value>Value2</value>
+  </data>
+  <data name="Name3" xml:space="preserve">
+    <value>Value3</value>
+  </data>
+    <data name="Name4" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+    <data name="Name5" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+    <data name="Name6" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+   <data name="Name7" xml:space="preserve">
+    <value>Value1</value>
+  </data>
+  <data name="Name8" xml:space="preserve">
+    <value>Value2</value>
+  </data>
+  <data name="Name9" xml:space="preserve">
+    <value>Value3</value>
+  </data>
+    <data name="Name10" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+    <data name="Name11" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+    <data name="Name12" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+   <data name="Name13" xml:space="preserve">
+    <value>Value1</value>
+  </data>
+  <data name="Name14" xml:space="preserve">
+    <value>Value2</value>
+  </data>
+  <data name="Name15" xml:space="preserve">
+    <value>Value3</value>
+  </data>
+    <data name="Name16" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+    <data name="Name17" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+    <data name="Name18" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+   <data name="Name19" xml:space="preserve">
+    <value>Value1</value>
+  </data>
+  <data name="Name20" xml:space="preserve">
+    <value>Value2</value>
+  </data>
+  <data name="Name21" xml:space="preserve">
+    <value>Value3</value>
+  </data>
+    <data name="Name22" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+    <data name="Nam23" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+    <data name="Name24" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+   <data name="Name25" xml:space="preserve">
+    <value>Value1</value>
+  </data>
+  <data name="Name26" xml:space="preserve">
+    <value>Value2</value>
+  </data>
+  <data name="Name27" xml:space="preserve">
+    <value>Value3</value>
+  </data>
+    <data name="Name28" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+    <data name="Name29" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+    <data name="Name30" xml:space="preserve">
+    <value>SomeValue</value>
+  </data> <data name="Name1" xml:space="preserve">
+    <value>Value1</value>
+  </data>
+  <data name="Name31" xml:space="preserve">
+    <value>Value2</value>
+  </data>
+  <data name="Name32" xml:space="preserve">
+    <value>Value3</value>
+  </data>
+    <data name="Name33" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+    <data name="Name34" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+    <data name="Name35" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+   <data name="Name36" xml:space="preserve">
+    <value>Value1</value>
+  </data>
+  <data name="Name37" xml:space="preserve">
+    <value>Value2</value>
+  </data>
+  <data name="Name38" xml:space="preserve">
+    <value>Value3</value>
+  </data>
+    <data name="Name39" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+    <data name="Name40" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+    <data name="Name41" xml:space="preserve">
+    <value>SomeValue</value>
+  </data> 
+  <data name="Name42" xml:space="preserve">
+    <value>Value1</value>
+  </data>
+  <data name="Name43" xml:space="preserve">
+    <value>Value2</value>
+  </data>
+  <data name="Name44" xml:space="preserve">
+    <value>Value3</value>
+  </data>
+    <data name="Name45" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+    <data name="Name46" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+    <data name="Name47" xml:space="preserve">
+    <value>SomeValue</value>
+  </data> 
+  <data name="Name48" xml:space="preserve">
+    <value>Value1</value>
+  </data>
+  <data name="Name49" xml:space="preserve">
+    <value>Value2</value>
+  </data>
+  <data name="Name50" xml:space="preserve">
+    <value>Value3</value>
+  </data>
+    <data name="Name51" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+    <data name="Name52" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+    <data name="Name53" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+   <data name="Name54" xml:space="preserve">
+    <value>Value1</value>
+  </data>
+  <data name="Name55" xml:space="preserve">
+    <value>Value2</value>
+  </data>
+  <data name="Name56" xml:space="preserve">
+    <value>Value3</value>
+  </data>
+    <data name="Name57" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+    <data name="Name58" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+    <data name="Name59" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+   <data name="Name60" xml:space="preserve">
+    <value>Value1</value>
+  </data>
+  <data name="Name61" xml:space="preserve">
+    <value>Value2</value>
+  </data>
+  <data name="Name62" xml:space="preserve">
+    <value>Value3</value>
+  </data>
+    <data name="Name63" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+    <data name="Name64" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+    <data name="Name65" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+   <data name="Name66" xml:space="preserve">
+    <value>Value1</value>
+  </data>
+  <data name="Name67" xml:space="preserve">
+    <value>Value2</value>
+  </data>
+  <data name="Name68" xml:space="preserve">
+    <value>Value3</value>
+  </data>
+    <data name="Name69" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+    <data name="Name70" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+    <data name="Name71" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+   <data name="Name72" xml:space="preserve">
+    <value>Value1</value>
+  </data>
+  <data name="Name73" xml:space="preserve">
+    <value>Value2</value>
+  </data>
+  <data name="Name74" xml:space="preserve">
+    <value>Value3</value>
+  </data>
+    <data name="Name75" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+    <data name="Name76" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+    <data name="Name77" xml:space="preserve">
+    <value>SomeValue</value>
+  </data> <data name="Name78" xml:space="preserve">
+    <value>Value1</value>
+  </data>
+  <data name="Name79" xml:space="preserve">
+    <value>Value2</value>
+  </data>
+  <data name="Name80" xml:space="preserve">
+    <value>Value3</value>
+  </data>
+    <data name="Name81" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+    <data name="Name82" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+    <data name="Name83" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+   <data name="Name84" xml:space="preserve">
+    <value>Value1</value>
+  </data>
+  <data name="Name85" xml:space="preserve">
+    <value>Value2</value>
+  </data>
+  <data name="Name86" xml:space="preserve">
+    <value>Value3</value>
+  </data>
+    <data name="Name87" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+    <data name="Name88" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+    <data name="Name89" xml:space="preserve">
+    <value>SomeValue</value>
+  </data> <data name="Name1" xml:space="preserve">
+    <value>Value1</value>
+  </data>
+  <data name="Name90" xml:space="preserve">
+    <value>Value2</value>
+  </data>
+  <data name="Name91" xml:space="preserve">
+    <value>Value3</value>
+  </data>
+    <data name="Name92" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+    <data name="Name93" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+    <data name="Name94" xml:space="preserve">
+    <value>SomeValue</value>
+  </data> <data name="Name95" xml:space="preserve">
+    <value>Value1</value>
+  </data>
+  <data name="Name96" xml:space="preserve">
+    <value>Value2</value>
+  </data>
+  <data name="Name97" xml:space="preserve">
+    <value>Value3</value>
+  </data>
+    <data name="Name98" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+    <data name="Name99" xml:space="preserve">
+    <value>SomeValue</value>
+  </data>
+    <data name="Name100" xml:space="preserve">
+    <value>SomeValue</value>
+  </data> 
+  <data name="ActiveStudentError" xml:space="preserve">
+    <value>Could not retrieve the active student. idq</value>
+  </data>
+  <data name="AddCourseDuplicate" xml:space="preserve">
+    <value>{0} has now been added multiple times to the same term. dfsdfsdf</value>
+  </data>
+  <data name="AddCourseFailedGeneric" xml:space="preserve">
+    <value>Unable to add course to plan. Please contact your system administrator.</value>
+  </data>
+  <data name="AddingCourseNoCourseInfo" xml:space="preserve">
+    <value>The requested course cannot be found</value>
+  </data>
+  <data name="AddTermDialogSelectTermLabel" xml:space="preserve">
+    <value>Select a term to add to your plan</value>
+  </data>
+  <data name="AddTermDialogTitle" xml:space="preserve">
+    <value>Add a Term to Your Plan</value>
+  </data>
+  <data name="AddTermFailedGeneric" xml:space="preserve">
+    <value>Unable to add term to plan. Please contact your system administrator.</value>
+  </data>
+  <data name="AddTermLinkText" xml:space="preserve">
+    <value>Add a Term</value>
+  </data>
+  <data name="AllTermsOptionsCaption" xml:space="preserve">
+    <value>All</value>
+  </data>
+  <data name="CeusLabel" xml:space="preserve">
+    <value>CEUssdfasdfsadfsdf</value>
+  </data>
+  <data name="CompletedCourseNoGradeMarker" xml:space="preserve">
+    <value>✓</value>
+  </data>
+  <data name="CourseBubbleCreditsLabel" xml:space="preserve">
+    <value>Credits:dsdfsadfasdf</value>
+  </data>
+  <data name="CourseSectionAlreadyExistsGeneric" xml:space="preserve">
+    <value>This section has already been planned on the schedule.</value>
+  </data>
+  <data name="CourseSectionAlreadyExistsSpecific" xml:space="preserve">
+    <value>This section of {0} has already been planned on the schedule.</value>
+  </data>
+  <data name="CreditsLabel" xml:space="preserve">
+    <value> Credits</value>
+  </data>
+  <data name="DegreePlanPageHeader" xml:space="preserve">
+    <value>View and modify your course plan below.</value>
+  </data>
+  <data name="DegreePlanTitle" xml:space="preserve">
+    <value>View and Modify Course Plan</value>
+  </data>
+  <data name="ErrorCouldNotLoadStudentData" xml:space="preserve">
+    <value>Unable to load student or student data. Please try again later.</value>
+  </data>
+  <data name="ErrorNoDegreePlan" xml:space="preserve">
+    <value>The active person does not yet have a degree plan record.</value>
+  </data>
+  <data name="InvalidPlannedCredits" xml:space="preserve">
+    <value>Planned credit hours are invalid</value>
+  </data>
+  <data name="NonTermSectionHeaderComplete" xml:space="preserve">
+    <value>Completed Non-term Courses</value>
+  </data>
+  <data name="RequisiteUnsatisfiedUnknown" xml:space="preserve">
+    <value>Contains one or more unsatisfied requisites.</value>
+  </data>
+  <data name="ProcessingAddingTerm" xml:space="preserve">
+    <value>Adding term to plan...</value>
+  </data>
+  <data name="ProcessingRegistration" xml:space="preserve">
+    <value>Processing Registration</value>
+  </data>
+  <data name="ProcessingRemovingCourse" xml:space="preserve">
+    <value>Removing item from plan...</value>
+  </data>
+  <data name="ProcessingRemovingTerm" xml:space="preserve">
+    <value>Removing term from plan...</value>
+  </data>
+  <data name="ProcessingSendingToAdvisor" xml:space="preserve">
+    <value>Processing...</value>
+  </data>
+  <data name="ProcessingThrobberMessage" xml:space="preserve">
+    <value>Processing...</value>
+  </data>
+  <data name="ProcessingUpdate" xml:space="preserve">
+    <value>Updating Schedule</value>
+  </data>
+  <data name="ProcessingUpdatingCourse" xml:space="preserve">
+    <value>Updating course data...</value>
+  </data>
+  <data name="RemoveCourseDialogTitle" xml:space="preserve">
+    <value>Confirm Remove Course</value>
+  </data>
+  <data name="RemoveCourseTitleLabel" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="RemoveTermDialogTitle" xml:space="preserve">
+    <value>Confirm Remove Term</value>
+  </data>
+  <data name="RemoveTermFailedGeneric" xml:space="preserve">
+    <value>Unable to remove term from plan. Please contact your system administrator.</value>
+  </data>
+  <data name="ScheduleAreaDescription" xml:space="preserve">
+    <value>Schedule</value>
+  </data>
+  <data name="ScheduleDetailsButton" xml:space="preserve">
+    <value>Details</value>
+  </data>
+  <data name="ScheduleDropButton" xml:space="preserve">
+    <value>Drop</value>
+  </data>
+  <data name="ScheduleMainLinkTitle" xml:space="preserve">
+    <value>Go to the full Plan &amp; Schedule page</value>
+  </data>
+  <data name="SchedulePageDescription" xml:space="preserve">
+    <value>Create a Schedule</value>
+  </data>
+  <data name="TermCompleteIconTitle" xml:space="preserve">
+    <value>Term is Complete</value>
+  </data>
+  <data name="TermGPALabel" xml:space="preserve">
+    <value>GPA:</value>
+  </data>
+  <data name="TermInProgressIconTitle" xml:space="preserve">
+    <value>Term is In Progress</value>
+  </data>
+  <data name="TimeConflict" xml:space="preserve">
+    <value>A time conflict was found with this section</value>
+  </data>
+  <data name="UiAddTermAlt" xml:space="preserve">
+    <value>Add a Term to Your Plan</value>
+  </data>
+  <data name="UiAddTermAltProxyLabel" xml:space="preserve">
+    <value>Add a Term to This Plan</value>
+  </data>
+  <data name="UiAddTermMessage" xml:space="preserve">
+    <value>Please select a term to be added to your plan:</value>
+  </data>
+  <data name="UiAddTermPopupButtonText" xml:space="preserve">
+    <value>Add Term</value>
+  </data>
+  <data name="UiCourseCeus" xml:space="preserve">
+    <value>{0} CEUs</value>
+  </data>
+  <data name="UiCourseCeusAndCredits" xml:space="preserve">
+    <value>{0} ({1} CEUs)</value>
+  </data>
+  <data name="UiCourseCeusAndCreditsNonTerm" xml:space="preserve">
+    <value>{0} ({1} CEUs) (Non-term)</value>
+  </data>
+  <data name="UiCourseCeusNonTerm" xml:space="preserve">
+    <value>{0} CEUs (Non-term)</value>
+  </data>
+  <data name="UiCourseCreditsAudited" xml:space="preserve">
+    <value>0 (Audited)</value>
+  </data>
+  <data name="UiCourseCreditsNonTerm" xml:space="preserve">
+    <value>{0} (Non-term)</value>
+  </data>
+  <data name="UiCourseCreditsPassFail" xml:space="preserve">
+    <value>{0} (Pass/Fail only)</value>
+  </data>
+  <data name="UiCourseDelimiter" xml:space="preserve">
+    <value>-</value>
+  </data>
+  <data name="UiDegreePlanEmpty" xml:space="preserve">
+    <value>Your Course Plan is Currently Empty</value>
+  </data>
+  <data name="UiDegreePlanEmptyProxyLabel" xml:space="preserve">
+    <value>This Course Plan is Currently Empty</value>
+  </data>
+  <data name="UiDropTitle" xml:space="preserve">
+    <value>Register and Drop Sections</value>
+  </data>
+  <data name="UiEnrolled" xml:space="preserve">
+    <value>Enrolled:</value>
+  </data>
+  <data name="UiFacultyLabel" xml:space="preserve">
+    <value>Faculty</value>
+  </data>
+  <data name="UiGenericError" xml:space="preserve">
+    <value>There was an error retrieving your degree plan. Please contact your system administrator.</value>
+  </data>
+  <data name="UiIndividualDropWaitlistButtonLabel" xml:space="preserve">
+    <value>Drop Waitlist</value>
+  </data>
+  <data name="UiIndividualRegisterButtonLabel" xml:space="preserve">
+    <value>Register</value>
+  </data>
+  <data name="UiIndividualWaitlistButtonLabel" xml:space="preserve">
+    <value>Waitlist</value>
+  </data>
+  <data name="UiNoCourses" xml:space="preserve">
+    <value>No Courses Selected For This Term</value>
+  </data>
+  <data name="UiNoCoursesSearchForPlanLabel" xml:space="preserve">
+    <value>It looks like you don't have any courses planned.</value>
+  </data>
+  <data name="UiNoOtherSectionsLabel" xml:space="preserve">
+    <value>No other sections available.</value>
+  </data>
+  <data name="UiPlanned" xml:space="preserve">
+    <value>Planned:</value>
+  </data>
+  <data name="UiRegisterButtonLabel" xml:space="preserve">
+    <value>Register Now</value>
+  </data>
+  <data name="UiRemoveCourseMessage" xml:space="preserve">
+    <value>Are you sure you want to remove the following item from</value>
+  </data>
+  <data name="UiRemoveTermButtonText" xml:space="preserve">
+    <value>x</value>
+  </data>
+  <data name="UiRemoveTermMessage" xml:space="preserve">
+    <value>Are you sure you want to remove the following term?</value>
+  </data>
+  <data name="UiSectionLabel" xml:space="preserve">
+    <value>Section </value>
+  </data>
+  <data name="UiSectionTimeConflictMessage" xml:space="preserve">
+    <value>Conflicting section</value>
+  </data>
+  <data name="UiSendToAdvisorButtonAria" xml:space="preserve">
+    <value>Mark your plan as ready for review</value>
+  </data>
+  <data name="UiSendToAdvisorButtonLabel" xml:space="preserve">
+    <value>Request Review</value>
+  </data>
+  <data name="UiPlannedCeusString" xml:space="preserve">
+    <value>{0} Planned CEUs</value>
+  </data>
+  <data name="UiTotalCeusParentheticalString" xml:space="preserve">
+    <value>CEUs</value>
+  </data>
+  <data name="UiEnrolledCeusString" xml:space="preserve">
+    <value>{0} Enrolled CEUs</value>
+  </data>
+  <data name="UiPlannedCreditsString" xml:space="preserve">
+    <value>{0} Planned Credits</value>
+  </data>
+  <data name="UiEnrolledCreditsString" xml:space="preserve">
+    <value>{0} Enrolled Credits</value>
+  </data>
+  <data name="UiUnknownError" xml:space="preserve">
+    <value>Unknown Error</value>
+  </data>
+  <data name="UiUnscheduledSections" xml:space="preserve">
+    <value>Sections with no meeting time</value>
+  </data>
+  <data name="UiViewOtherSectionsLabel" xml:space="preserve">
+    <value>View other sections</value>
+  </data>
+  <data name="UiWaitlisted" xml:space="preserve">
+    <value>Waitlisted:</value>
+  </data>
+  <data name="UnableToProcessRegistrationError" xml:space="preserve">
+    <value>Unable to process registration at this time.  Please try again later.</value>
+  </data>
+  <data name="CourseAddedToPlan" xml:space="preserve">
+    <value>{0} has been added to plan.</value>
+  </data>
+  <data name="SectionAddedToPlan" xml:space="preserve">
+    <value>{0} has been planned on the schedule.</value>
+  </data>
+  <data name="SamplePlanNotFoundError" xml:space="preserve">
+    <value>No sample plan is available for this program.</value>
+  </data>
+  <data name="RemoveTermLinkAlt" xml:space="preserve">
+    <value>Remove term</value>
+  </data>
+  <data name="SaveIcal" xml:space="preserve">
+    <value>Save to iCal</value>
+  </data>
+  <data name="ScheduleSectionHasWaitlist" xml:space="preserve">
+    <value>This section has a waitlist</value>
+  </data>
+  <data name="ScheduleSectionIsFull" xml:space="preserve">
+    <value>This section is full</value>
+  </data>
+  <data name="Planned" xml:space="preserve">
+    <value>Planned</value>
+  </data>
+  <data name="Registered" xml:space="preserve">
+    <value>Registered</value>
+  </data>
+  <data name="UiNoSectionsAvailableLabel" xml:space="preserve">
+    <value>No sections available.</value>
+  </data>
+  <data name="CourseOrSectionDetailsTitle" xml:space="preserve">
+    <value>Course or section details for</value>
+  </data>
+  <data name="DegreesLinkTitle" xml:space="preserve">
+    <value>View degree requirements for {0}</value>
+  </data>
+  <data name="SkipTermLinkText" xml:space="preserve">
+    <value>Skip to term</value>
+  </data>
+  <data name="NoSectionSelected" xml:space="preserve">
+    <value>No Section Selected</value>
+  </data>
+  <data name="CorequisiteOptionalGeneric" xml:space="preserve">
+    <value>Also recommended:</value>
+  </data>
+  <data name="CorequisiteRequiredGeneric" xml:space="preserve">
+    <value>You must also take</value>
+  </data>
+  <data name="CourseCodeTitleSeparator" xml:space="preserve">
+    <value>:</value>
+  </data>
+  <data name="ScheduleApprovedStatus" xml:space="preserve">
+    <value>Approved</value>
+  </data>
+  <data name="ScheduleDeniedStatus" xml:space="preserve">
+    <value>Denied</value>
+  </data>
+  <data name="ScheduleDetailCreditsPrefix" xml:space="preserve">
+    <value>Credits: </value>
+  </data>
+  <data name="ScheduleDetailGradingPrefix" xml:space="preserve">
+    <value>Grading: </value>
+  </data>
+  <data name="ScheduleDetailInstructorPrefix" xml:space="preserve">
+    <value>Instructor: </value>
+  </data>
+  <data name="ScheduleDetailLocationPrefix" xml:space="preserve">
+    <value>Location: </value>
+  </data>
+  <data name="ScheduleDetailNonTermDatesDivider" xml:space="preserve">
+    <value> to </value>
+  </data>
+  <data name="ScheduleDetailTBDText" xml:space="preserve">
+    <value>TBD</value>
+  </data>
+  <data name="ScheduleDetailTimePrefix" xml:space="preserve">
+    <value>Time: </value>
+  </data>
+  <data name="ScheduleDropSectionAriaPrefix" xml:space="preserve">
+    <value>Drop section</value>
+  </data>
+  <data name="ScheduleExportButtonAriaPrefix" xml:space="preserve">
+    <value>Export schedule for </value>
+  </data>
+  <data name="ScheduleListViewHeader" xml:space="preserve">
+    <value>Schedule List View</value>
+  </data>
+  <data name="SchedulePrintButton" xml:space="preserve">
+    <value>Print</value>
+  </data>
+  <data name="SchedulePrintButtonAriaPrefix" xml:space="preserve">
+    <value>Print schedule for </value>
+  </data>
+  <data name="ScheduleRequestedStatus" xml:space="preserve">
+    <value>Requested</value>
+  </data>
+  <data name="ScheduleWaitlistStatusActive" xml:space="preserve">
+    <value>Active</value>
+  </data>
+  <data name="ScheduleWaitlistStatusNotWaitlisted" xml:space="preserve">
+    <value>NotWaitlisted</value>
+  </data>
+  <data name="ScheduleWaitlistStatusPermissionToRegister" xml:space="preserve">
+    <value>PermissionToRegister</value>
+  </data>
+  <data name="Waitlisted" xml:space="preserve">
+    <value>Waitlisted</value>
+  </data>
+  <data name="ScheduleMeetingLocationAriaLabel" xml:space="preserve">
+    <value>Meeting Location</value>
+  </data>
+  <data name="ScheduleMeetingTimeAriaLabel" xml:space="preserve">
+    <value>Meeting Time</value>
+  </data>
+  <data name="AddCourseDuplicateAnotherTerm" xml:space="preserve">
+    <value>{0} is planned in another term.</value>
+  </data>
+  <data name="AddCourseDuplicateTakenAnotherTerm" xml:space="preserve">
+    <value>{0} is already enrolled in another term.</value>
+  </data>
+  <data name="AddCourseDuplicateTakenThisTerm" xml:space="preserve">
+    <value>{0} is already enrolled in this term.</value>
+  </data>
+  <data name="AddSectionFailedGeneric" xml:space="preserve">
+    <value>Unable to add section to plan. Please contact your system administrator.</value>
+  </data>
+  <data name="RemoveCourseFailedGeneric" xml:space="preserve">
+    <value>Unable to remove course from plan. Please contact your system administrator.</value>
+  </data>
+  <data name="RemoveSectionFailedGeneric" xml:space="preserve">
+    <value>Unable to remove section from plan. Please contact your system administrator.</value>
+  </data>
+  <data name="RemoveCompleteCoursePrefix" xml:space="preserve">
+    <value>Remove entire course</value>
+  </data>
+  <data name="RemoveSpecificSectionPrefix" xml:space="preserve">
+    <value>Remove this planned section</value>
+  </data>
+  <data name="AddOtherSectionAriaPrefix" xml:space="preserve">
+    <value>Add other section</value>
+  </data>
+  <data name="WaitlistedWithPermissionToRegister" xml:space="preserve">
+    <value>Waitlisted with permission to register</value>
+  </data>
+  <data name="UpdateCourseFailedGeneric" xml:space="preserve">
+    <value>Unable to update this course. Please try again later.</value>
+  </data>
+  <data name="UiAddTermCancelButtonText" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="PrintScheduleCourseTitleHeader" xml:space="preserve">
+    <value>Course Title</value>
+  </data>
+  <data name="PrintScheduleHeader" xml:space="preserve">
+    <value>Schedule Details</value>
+  </data>
+  <data name="PrintScheduleInstructorHeader" xml:space="preserve">
+    <value>Instructor</value>
+  </data>
+  <data name="PrintScheduleLocationHeader" xml:space="preserve">
+    <value>Location</value>
+  </data>
+  <data name="PrintScheduleStatusHeader" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="PrintScheduleTimeHeader" xml:space="preserve">
+    <value>Time</value>
+  </data>
+  <data name="CourseMovedOnPlan" xml:space="preserve">
+    <value>{0} has been moved to {1}.</value>
+  </data>
+  <data name="CreditsFormattingString" xml:space="preserve">
+    <value>0.00</value>
+  </data>
+  <data name="GpaFormattingString" xml:space="preserve">
+    <value>0.000</value>
+  </data>
+  <data name="SamplePlanLoaded" xml:space="preserve">
+    <value>You have successfully added courses to the plan.</value>
+  </data>
+  <data name="RemoveItemButtonText" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="RemoveItemCancelButtonText" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="DropDialogCancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="DropDialogDrop" xml:space="preserve">
+    <value>Update</value>
+  </data>
+  <data name="AdvisingNotesTitle" xml:space="preserve">
+    <value>Advisor Notes</value>
+  </data>
+  <data name="AdvisingNotesCloseButton" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="AdvisingNotesSaveButton" xml:space="preserve">
+    <value>Save Note</value>
+  </data>
+  <data name="UiSectionTimeConflictMessageNonTermSection" xml:space="preserve">
+    <value>non-term section</value>
+  </data>
+  <data name="UiSectionTimeConflictMessageSpecific" xml:space="preserve">
+    <value>Conflicting section with {0}</value>
+  </data>
+  <data name="UiSectionTimeConflictMessageSpecificOtherTerm" xml:space="preserve">
+    <value>Conflicting section with {0} ({1})</value>
+  </data>
+  <data name="PlanSubmitted" xml:space="preserve">
+    <value>Your plan is ready for review</value>
+  </data>
+  <data name="UiSendToAdvisorButtonDisabledAria" xml:space="preserve">
+    <value>You must plan at least one course first</value>
+  </data>
+  <data name="AddTermAria" xml:space="preserve">
+    <value>Add a term...</value>
+  </data>
+  <data name="AdvisorNotesAria" xml:space="preserve">
+    <value>Read and enter notes</value>
+  </data>
+  <data name="AdvisorNotesText" xml:space="preserve">
+    <value>Advisor Notes</value>
+  </data>
+  <data name="AreaDescription" xml:space="preserve">
+    <value>Plan &amp; Schedule Courses</value>
+  </data>
+  <data name="FilterHeaderLocation" xml:space="preserve">
+    <value>Location</value>
+  </data>
+  <data name="FilterLocationAria" xml:space="preserve">
+    <value>Toggle Location Filter List</value>
+  </data>
+  <data name="FilterSectionsButton" xml:space="preserve">
+    <value>Filter Sections</value>
+  </data>
+  <data name="NextTermAria" xml:space="preserve">
+    <value>Show the next term</value>
+  </data>
+  <data name="PlanPageHeader" xml:space="preserve">
+    <value>Plan your Degree and Schedule your courses</value>
+  </data>
+  <data name="PreviousTermAria" xml:space="preserve">
+    <value>Show the previous term</value>
+  </data>
+  <data name="ScheduleTab" xml:space="preserve">
+    <value>Schedule</value>
+  </data>
+  <data name="TimelineTab" xml:space="preserve">
+    <value>Timeline</value>
+  </data>
+  <data name="UiLastReviewedOn" xml:space="preserve">
+    <value>Course Plan last reviewed on </value>
+  </data>
+  <data name="UiLastReviewedBy" xml:space="preserve">
+    <value> by </value>
+  </data>
+  <data name="SectionFilterNoValueSelected" xml:space="preserve">
+    <value>Any</value>
+  </data>
+  <data name="FilterLocationItemAria" xml:space="preserve">
+    <value>Toggle section filtering for location </value>
+  </data>
+  <data name="UiNoFilteredSectionsAvailable" xml:space="preserve">
+    <value>No sections match filter criteria</value>
+  </data>
+  <data name="FilterDayOfWeekAria" xml:space="preserve">
+    <value>Toggle Day of Week Filter List</value>
+  </data>
+  <data name="FilterDayOfWeekItemAria" xml:space="preserve">
+    <value>Toggle section filtering for day of week </value>
+  </data>
+  <data name="FilterHeaderDayOfWeek" xml:space="preserve">
+    <value>Day of Week</value>
+  </data>
+  <data name="FilterHeaderInstructor" xml:space="preserve">
+    <value>Instructor</value>
+  </data>
+  <data name="FilterInstructorAria" xml:space="preserve">
+    <value>Toggle Instructor Filter List</value>
+  </data>
+  <data name="FilterInstructorItemAria" xml:space="preserve">
+    <value>Toggle section filtering for instructor </value>
+  </data>
+  <data name="FilterAvailabilityAria" xml:space="preserve">
+    <value>Toggle Availability Filter List</value>
+  </data>
+  <data name="FilterAvailabilityItemAria" xml:space="preserve">
+    <value>Toggle section filtering for status </value>
+  </data>
+  <data name="FilterAvailabilityOpenSections" xml:space="preserve">
+    <value>Open Sections Only</value>
+  </data>
+  <data name="FilterHeaderAvailability" xml:space="preserve">
+    <value>Availability</value>
+  </data>
+  <data name="FilterHeaderTimeOfDay" xml:space="preserve">
+    <value>Time of Day</value>
+  </data>
+  <data name="FilterTimeOfDayAria" xml:space="preserve">
+    <value>Toggle Time of Day Filter List</value>
+  </data>
+  <data name="FilterTimeOfDayItemAria" xml:space="preserve">
+    <value>Toggle section filtering for time of day </value>
+  </data>
+  <data name="FirstAvailableSectionsPageAria" xml:space="preserve">
+    <value>First Page</value>
+  </data>
+  <data name="LastAvailableSectionsPageAria" xml:space="preserve">
+    <value>Last Page</value>
+  </data>
+  <data name="NextAvailableSectionsPageAria" xml:space="preserve">
+    <value>Next Page</value>
+  </data>
+  <data name="PrevAvailableSectionsPageAria" xml:space="preserve">
+    <value>Previous Page</value>
+  </data>
+  <data name="AvailableSectionPageAria" xml:space="preserve">
+    <value>Page {0} of {1} for {2}</value>
+  </data>
+  <data name="AvailableSectionsPageOfText" xml:space="preserve">
+    <value>of </value>
+  </data>
+  <data name="FilterAvailabilityAriaDisabled" xml:space="preserve">
+    <value>No Availability filter options are available</value>
+  </data>
+  <data name="FilterDayOfWeekAriaDisabled" xml:space="preserve">
+    <value>No Day of Week filter options are available</value>
+  </data>
+  <data name="FilterInstructorAriaDisabled" xml:space="preserve">
+    <value>No Faculty filter options are available</value>
+  </data>
+  <data name="FilterLocationAriaDisabled" xml:space="preserve">
+    <value>No Location filter options are available</value>
+  </data>
+  <data name="FilterTimeOfDayAriaDisabled" xml:space="preserve">
+    <value>No Time of Day filter options are available</value>
+  </data>
+  <data name="TimelineLeftAria" xml:space="preserve">
+    <value>Scroll timeline left</value>
+  </data>
+  <data name="TimelineRightAria" xml:space="preserve">
+    <value>Scroll timeline right</value>
+  </data>
+  <data name="UnableToUpdatePlan" xml:space="preserve">
+    <value>Unable to update the course plan. Please try again</value>
+  </data>
+  <data name="UiNoCoursesSearchForPlanProxyLabel" xml:space="preserve">
+    <value>It looks like this advisee doesn't have any courses planned.</value>
+  </data>
+  <data name="RemoveTermAria" xml:space="preserve">
+    <value>Remove this term</value>
+  </data>
+  <data name="ScheduleDetailMeetingDatePrefix" xml:space="preserve">
+    <value>Dates:</value>
+  </data>
+  <data name="ScheduleMeetingDateAriaLabel" xml:space="preserve">
+    <value>Meeting Dates</value>
+  </data>
+  <data name="CorequisiteMultipleSections" xml:space="preserve">
+    <value>Take {0} of the following: </value>
+  </data>
+  <data name="UnableToCheckEligibilityError" xml:space="preserve">
+    <value>Unable to check student eligibility at this time. Please try again later.</value>
+  </data>
+  <data name="NoArchivesMessage" xml:space="preserve">
+    <value>This plan has not been archived. Select the Review Complete button to archive a plan.</value>
+  </data>
+  <data name="PlanArchiveTableHeader1" xml:space="preserve">
+    <value>Archived PDF</value>
+  </data>
+  <data name="PlanArchiveTableHeader2" xml:space="preserve">
+    <value>Archive Date</value>
+  </data>
+  <data name="PlanArchiveTableHeader3" xml:space="preserve">
+    <value>Archived By</value>
+  </data>
+  <data name="NoReviewDate" xml:space="preserve">
+    <value>No Review Date Listed</value>
+  </data>
+  <data name="NoReviewer" xml:space="preserve">
+    <value>No Reviewer Listed</value>
+  </data>
+  <data name="RegistrationNotificationType" xml:space="preserve">
+    <value>Warning</value>
+  </data>
+  <data name="MobileTabLabelCalendar" xml:space="preserve">
+    <value>Calendar</value>
+  </data>
+  <data name="MobileTabLabelList" xml:space="preserve">
+    <value>List</value>
+  </data>
+  <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
+  <data name="AdvisingOfficeEmail" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
+  <data name="AdvisingOffice" xml:space="preserve">
+    <value>Advising Office</value>
+  </data>
+  <data name="MyAdvisors" xml:space="preserve">
+    <value>My Advisors</value>
+  </data>
+  <data name="ArchivePDFDownloadLink" xml:space="preserve">
+    <value>Download</value>
+    <comment>Name for Archive PDF download link. </comment>
+  </data>
+  <data name="StudentAdvisingTab" xml:space="preserve">
+    <value>Advising</value>
+  </data>
+  <data name="Completed" xml:space="preserve">
+    <value>Completed</value>
+  </data>
+  <data name="Withdrawn" xml:space="preserve">
+    <value>Withdrawn</value>
+  </data>
+  <data name="DropDialogAddOtherSections" xml:space="preserve">
+    <value>Select sections to add:</value>
+  </data>
+  <data name="DropDialogDropRegisteredSections" xml:space="preserve">
+    <value>Select sections to drop:</value>
+  </data>
+  <data name="NoTermsAvailable" xml:space="preserve">
+    <value>There are no terms available to add to your plan.</value>
+  </data>
+  <data name="MeetingInformation" xml:space="preserve">
+    <value>Meeting Information</value>
+  </data>
+  <data name="ClearPlannedCoursesFailedGeneric" xml:space="preserve">
+    <value>No planned courses were able to be removed.  </value>
+  </data>
+  <data name="ProcessingClearingPlannedCourses" xml:space="preserve">
+    <value>Removing planned courses...</value>
+  </data>
+  <data name="ClearTermAria" xml:space="preserve">
+    <value>Clear all planned courses from the term</value>
+  </data>
+  <data name="ClearTermDialogTitle" xml:space="preserve">
+    <value>Remove Planned Courses</value>
+  </data>
+  <data name="UiClearTermMessage" xml:space="preserve">
+    <value>Are you sure you want to remove all planned courses from the following term?</value>
+  </data>
+  <data name="ClearAllPlannedCoursesAria" xml:space="preserve">
+    <value>Clear all planned courses from current and future terms</value>
+  </data>
+  <data name="UiClearTermsMessage" xml:space="preserve">
+    <value>Remove all planned courses from the following terms:</value>
+  </data>
+  <data name="UIRemovePlannedCoursesButton" xml:space="preserve">
+    <value>Remove Planned Courses</value>
+  </data>
+  <data name="ProtectedText" xml:space="preserve">
+    <value>Protected</value>
+  </data>
+  <data name="RegistrationEligibilityTermAddMessage" xml:space="preserve">
+    <value>{0} registration period for {1} begins on {2} at {3}</value>
+  </data>
+  <data name="RegistrationEligibilityTermAddMessageAdvisor" xml:space="preserve">
+    <value>Student's</value>
+  </data>
+  <data name="RegistrationEligibilityTermAddMessageStudent" xml:space="preserve">
+    <value>Your</value>
+  </data>
+  <data name="RegistrationComplete" xml:space="preserve">
+    <value>Processing complete. Refreshing...</value>
+  </data>
+  <data name="SectionNotAvailable" xml:space="preserve">
+    <value>This section is no longer available</value>
+  </data>
+  <data name="RefreshRegistrationEligibility" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="RefreshingRegistrationEligibility" xml:space="preserve">
+    <value>Refreshing registration eligibility...</value>
+  </data>
+  <data name="RefreshRegistrationEligibilityMessage" xml:space="preserve">
+    <value>Update your registration eligibility</value>
+  </data>
+  <data name="Preregistered" xml:space="preserve">
+    <value>Registered, but not started</value>
+  </data>
+  <data name="PetitionsWaiversTab" xml:space="preserve">
+    <value>Petitions &amp; Waivers</value>
+  </data>
+  <data name="PetitionColumn1" xml:space="preserve">
+    <value>Course</value>
+  </data>
+  <data name="PetitionColumn2" xml:space="preserve">
+    <value>Section</value>
+  </data>
+  <data name="PetitionColumn3" xml:space="preserve">
+    <value>Term/Period</value>
+  </data>
+  <data name="PetitionColumn4" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="PetitionColumn5" xml:space="preserve">
+    <value>Updated On</value>
+  </data>
+  <data name="PetitionColumn6" xml:space="preserve">
+    <value>Reason</value>
+  </data>
+  <data name="StudentConsentsHeader" xml:space="preserve">
+    <value>Faculty Consent(s)</value>
+  </data>
+  <data name="StudentPetitionsHeader" xml:space="preserve">
+    <value>Student Petition(s)</value>
+  </data>
+  <data name="NoConsentsMessage" xml:space="preserve">
+    <value>No existing faculty consents</value>
+  </data>
+  <data name="NoPetitionsMessage" xml:space="preserve">
+    <value>No existing petitions</value>
+  </data>
+  <data name="TermOfferingConflict" xml:space="preserve">
+    <value>Course is not typically offered this term.</value>
+  </data>
+  <data name="StudentWaiverHeader" xml:space="preserve">
+    <value>Requisite Waiver(s)</value>
+  </data>
+  <data name="WaiverColumn1" xml:space="preserve">
+    <value>Course</value>
+  </data>
+  <data name="WaiverColumn2" xml:space="preserve">
+    <value>Section</value>
+  </data>
+  <data name="WaiverColumn3" xml:space="preserve">
+    <value>Term/Period</value>
+  </data>
+  <data name="WaiverColumn4" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="WaiverColumn5" xml:space="preserve">
+    <value>Requisites</value>
+  </data>
+  <data name="DroppingSection" xml:space="preserve">
+    <value>You have elected to drop: </value>
+  </data>
+  <data name="NoWaiversMessage" xml:space="preserve">
+    <value>No existing waivers</value>
+  </data>
+  <data name="FilterHeaderTopic" xml:space="preserve">
+    <value>Topic Here And There</value>
+  </data>
+  <data name="FilterTopicAriaDisabled" xml:space="preserve">
+    <value>No topic filters available</value>
+  </data>
+</root>

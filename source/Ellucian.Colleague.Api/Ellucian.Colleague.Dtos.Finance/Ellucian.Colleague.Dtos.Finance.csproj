@@ -1,0 +1,199 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{F2409F02-791E-43B3-85E3-B577226FCF55}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Ellucian.Colleague.Dtos.Finance</RootNamespace>
+    <AssemblyName>Ellucian.Colleague.Dtos.Finance</AssemblyName>
+    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <EnableCodeInspectionOnBuild>true</EnableCodeInspectionOnBuild>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Debug\Ellucian.Colleague.Dtos.Finance.XML</DocumentationFile>
+    <WarningsAsErrors>1570,1571,1572,1573,1591</WarningsAsErrors>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Release\Ellucian.Colleague.Dtos.Finance.XML</DocumentationFile>
+    <WarningsAsErrors>1570,1571,1572,1573,1591</WarningsAsErrors>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net40\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.IdentityModel" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="AccountActivity\AccountActivityPeriodArguments.cs" />
+    <Compile Include="AccountActivity\AccountActivityPeriods.cs" />
+    <Compile Include="AccountActivity\AccountPeriod.cs" />
+    <Compile Include="AccountActivity\ActivityDateTermItem.cs" />
+    <Compile Include="AccountActivity\ActivityDepositItem.cs" />
+    <Compile Include="AccountActivity\ActivityFinancialAidItem.cs" />
+    <Compile Include="AccountActivity\ActivityFinancialAidTerm.cs" />
+    <Compile Include="AccountActivity\ActivityPaymentMethodItem.cs" />
+    <Compile Include="AccountActivity\ActivityPaymentPaidItem.cs" />
+    <Compile Include="AccountActivity\ActivityPaymentPlanDetailsItem.cs" />
+    <Compile Include="AccountActivity\ActivityPaymentPlanScheduleItem.cs" />
+    <Compile Include="AccountActivity\ActivityRemainingAmountItem.cs" />
+    <Compile Include="AccountActivity\ActivityRoomAndBoardItem.cs" />
+    <Compile Include="AccountActivity\ActivitySponsorPaymentItem.cs" />
+    <Compile Include="AccountActivity\ActivityTermItem.cs" />
+    <Compile Include="AccountActivity\ActivityTuitionItem.cs" />
+    <Compile Include="AccountActivity\ChargesCategory.cs" />
+    <Compile Include="AccountActivity\DepositCategory.cs" />
+    <Compile Include="AccountActivity\DetailedAccountPeriod.cs" />
+    <Compile Include="AccountActivity\FeeType.cs" />
+    <Compile Include="AccountActivity\FinancialAidCategory.cs" />
+    <Compile Include="AccountActivity\NamedType.cs" />
+    <Compile Include="AccountActivity\OtherType.cs" />
+    <Compile Include="AccountActivity\PaymentPlanCategory.cs" />
+    <Compile Include="AccountActivity\RefundCategory.cs" />
+    <Compile Include="AccountActivity\RoomAndBoardType.cs" />
+    <Compile Include="AccountActivity\SponsorshipCategory.cs" />
+    <Compile Include="AccountActivity\StudentPaymentCategory.cs" />
+    <Compile Include="AccountActivity\TuitionBySectionType.cs" />
+    <Compile Include="AccountActivity\TuitionByTotalType.cs" />
+    <Compile Include="AccountDue\AccountDue.cs" />
+    <Compile Include="AccountDue\AccountDuePeriod.cs" />
+    <Compile Include="AccountDue\AccountsReceivableDueItem.cs" />
+    <Compile Include="AccountDue\AccountTerm.cs" />
+    <Compile Include="AccountDue\InvoiceDueItem.cs" />
+    <Compile Include="AccountDue\PaymentPlanDueItem.cs" />
+    <Compile Include="AccountHolder.cs" />
+    <Compile Include="AccountHolderQueryCriteria.cs" />
+    <Compile Include="BillingTermPaymentPlanInformation.cs" />
+    <Compile Include="InvoicePayment.cs" />
+    <Compile Include="InvoiceQueryCriteria.cs" />
+    <Compile Include="NonCashPayment.cs" />
+    <Compile Include="PayableReceivableType.cs" />
+    <Compile Include="PaymentPlanEligibility.cs" />
+    <Compile Include="PaymentPlanIneligibilityReason.cs" />
+    <Compile Include="PaymentPlanQueryCriteria.cs" />
+    <Compile Include="PaymentTermsAcceptance2.cs" />
+    <Compile Include="Receipt.cs" />
+    <Compile Include="ReceivableCharge.cs" />
+    <Compile Include="ReceivableInvoice.cs" />
+    <Compile Include="RefundVoucherStatus.cs" />
+    <Compile Include="RegistrationTermsApproval2.cs" />
+    <Compile Include="PaymentAllocation.cs" />
+    <Compile Include="PaymentAllocationSource.cs" />
+    <Compile Include="PaymentPlan.cs" />
+    <Compile Include="PaymentPlanTemplate.cs" />
+    <Compile Include="PaymentPlanTermsAcceptance.cs" />
+    <Compile Include="PaymentPlanApproval.cs" />
+    <Compile Include="PlanCharge.cs" />
+    <Compile Include="PlanFrequency.cs" />
+    <Compile Include="PlanSchedule.cs" />
+    <Compile Include="PlanStatus.cs" />
+    <Compile Include="PlanStatusType.cs" />
+    <Compile Include="ReceiptPayment.cs" />
+    <Compile Include="ReceivablePayment.cs" />
+    <Compile Include="ReceivableTransaction.cs" />
+    <Compile Include="ReceivableType.cs" />
+    <Compile Include="Charge.cs" />
+    <Compile Include="ChargeCode.cs" />
+    <Compile Include="Configuration\ActivityDisplay.cs" />
+    <Compile Include="Configuration\AvailablePaymentMethod.cs" />
+    <Compile Include="Configuration\FinanceConfiguration.cs" />
+    <Compile Include="Configuration\PartialPlanPayments.cs" />
+    <Compile Include="Configuration\PaymentDisplay.cs" />
+    <Compile Include="Deposit.cs" />
+    <Compile Include="DepositDue.cs" />
+    <Compile Include="DepositType.cs" />
+    <Compile Include="FinancialPeriod.cs" />
+    <Compile Include="ImmediatePaymentControl.cs" />
+    <Compile Include="ImmediatePaymentOptions.cs" />
+    <Compile Include="Invoice.cs" />
+    <Compile Include="PaymentDeferralOption.cs" />
+    <Compile Include="PaymentPlanOption.cs" />
+    <Compile Include="PaymentRequirement.cs" />
+    <Compile Include="Payments\AccountsReceivableDeposit.cs" />
+    <Compile Include="Payments\AccountsReceivablePayment.cs" />
+    <Compile Include="Payments\CheckPayment.cs" />
+    <Compile Include="Payments\ConvenienceFee.cs" />
+    <Compile Include="Payments\ElectronicCheckPayer.cs" />
+    <Compile Include="Payments\ElectronicCheckProcessingResult.cs" />
+    <Compile Include="Payments\GeneralPayment.cs" />
+    <Compile Include="Payments\Payment.cs" />
+    <Compile Include="Payments\PaymentConfirmation.cs" />
+    <Compile Include="Payments\PaymentItem.cs" />
+    <Compile Include="Payments\PaymentMethod.cs" />
+    <Compile Include="Payments\PaymentProvider.cs" />
+    <Compile Include="Payments\PaymentReceipt.cs" />
+    <Compile Include="PaymentTermsAcceptance.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RegistrationTermsApproval.cs" />
+    <Compile Include="RegistrationBilling.cs" />
+    <Compile Include="RegistrationBillingItem.cs" />
+    <Compile Include="RegistrationPaymentControl.cs" />
+    <Compile Include="RegistrationPaymentStatus.cs" />
+    <Compile Include="ScheduledPayment.cs" />
+    <Compile Include="AccountActivity\StudentAwardDisbursement.cs" />
+    <Compile Include="AccountActivity\StudentAwardDisbursementInfo.cs" />
+    <Compile Include="StudentFinanceLink.cs" />
+    <Compile Include="StudentStatement.cs" />
+    <Compile Include="StudentStatementDepositDue.cs" />
+    <Compile Include="StudentStatementScheduleItem.cs" />
+    <Compile Include="StudentStatementSummary.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos.Base\Ellucian.Colleague.Dtos.Base.csproj">
+      <Project>{A147BD58-ECC6-409B-A633-128946AAA456}</Project>
+      <Name>Ellucian.Colleague.Dtos.Base</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos.Student\Ellucian.Colleague.Dtos.Student.csproj">
+      <Project>{28EB3CAC-2FA7-401E-8246-0C03C50FDEDA}</Project>
+      <Name>Ellucian.Colleague.Dtos.Student</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- begin ellucian project settings -->
+  <Import Project="$(SolutionDir)CodeAnalysis\CodeScan.proj" Condition="Exists('$(SolutionDir)CodeAnalysis\CodeScan.proj ')" />
+  <Import Project="$(ProjectDir)..\..\..\BuildConfig\CodeSigning.targets" Condition="Exists('$(ProjectDir)..\..\..\BuildConfig\CodeSigning.targets ')" />
+  <Import Project="$(MSBuildProgramFiles32)\MSBuild\FxCop Integrator\FxCopIntegrator.targets" Condition="Exists('$(MSBuildProgramFiles32)\MSBuild\FxCop Integrator\FxCopIntegrator.targets')" />
+  <!-- end ellucian project settings -->
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

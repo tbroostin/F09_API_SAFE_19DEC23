@@ -296,6 +296,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App_Start\BundleConfig.cs" />
+    <Compile Include="App_Start\F09RouteConfig.cs" />
     <Compile Include="App_Start\FilterConfig.cs" />
     <Compile Include="App_Start\RouteConfig.cs" />
     <Compile Include="Areas\Student\Controllers\TestController.cs" />
@@ -339,6 +340,7 @@
     <Compile Include="Controllers\ColleagueFinance\ColleagueFinanceTaxFormStatementsController.cs" />
     <Compile Include="Controllers\ColleagueFinance\ColleagueFinanceTaxFormPdfsController.cs" />
     <Compile Include="Controllers\ColleagueFinance\PurchasingArrangementsController.cs" />
+    <Compile Include="Controllers\F09\StudentRestrictionController.cs" />
     <Compile Include="Controllers\HumanResources\LeaveBalanceConfigurationController.cs" />
     <Compile Include="Controllers\Student\FinancialAidAcademicProgressStatusesController.cs" />
     <Compile Include="Controllers\Student\FinancialAidAcademicProgressTypesController.cs" />
@@ -865,7 +867,9 @@
     <Content Include="Views\Shared\Error.cshtml" />
     <Content Include="Views\Shared\_Layout.cshtml" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Content Include="App_Data\ellucian.license" />
+  </ItemGroup>
   <ItemGroup>
     <Content Include="App_Data\settings.config">
       <SubType>Designer</SubType>
@@ -942,6 +946,10 @@
       <Project>{7461afa8-f600-4df5-9b43-6fed35402279}</Project>
       <Name>Ellucian.Colleague.Coordination.ColleagueFinance</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Coordination.F09\Ellucian.Colleague.Coordination.F09.csproj">
+      <Project>{f08b4ce9-ee30-4192-a527-a330e6e66f15}</Project>
+      <Name>Ellucian.Colleague.Coordination.F09</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Ellucian.Colleague.Coordination.Finance\Ellucian.Colleague.Coordination.Finance.csproj">
       <Project>{E58B8C16-5BF9-45E5-934B-1C4804B157E4}</Project>
       <Name>Ellucian.Colleague.Coordination.Finance</Name>
@@ -965,6 +973,10 @@
     <ProjectReference Include="..\Ellucian.Colleague.Data.ColleagueFinance\Ellucian.Colleague.Data.ColleagueFinance.csproj">
       <Project>{8dd19909-a3b4-486f-959f-ac0a9cfd963c}</Project>
       <Name>Ellucian.Colleague.Data.ColleagueFinance</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Data.F09\Ellucian.Colleague.Data.F09.csproj">
+      <Project>{bcd020c1-d32f-482c-9d89-8849bfedcceb}</Project>
+      <Name>Ellucian.Colleague.Data.F09</Name>
     </ProjectReference>
     <ProjectReference Include="..\Ellucian.Colleague.Data.Finance\Ellucian.Colleague.Data.Finance.csproj">
       <Project>{51453AB3-7CD4-4319-863E-24C08E205C9E}</Project>
@@ -1013,6 +1025,10 @@
     <ProjectReference Include="..\Ellucian.Colleague.Dtos.ColleagueFinance\Ellucian.Colleague.Dtos.ColleagueFinance.csproj">
       <Project>{ca034d7a-0963-4463-b974-bef18be515ae}</Project>
       <Name>Ellucian.Colleague.Dtos.ColleagueFinance</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos.F09\Ellucian.Colleague.Dtos.F09.csproj">
+      <Project>{a6cd3ada-1605-48b1-a41c-9989b42c3eda}</Project>
+      <Name>Ellucian.Colleague.Dtos.F09</Name>
     </ProjectReference>
     <ProjectReference Include="..\Ellucian.Colleague.Dtos.Finance\Ellucian.Colleague.Dtos.Finance.csproj">
       <Project>{F2409F02-791E-43B3-85E3-B577226FCF55}</Project>
@@ -1206,6 +1222,7 @@
   <ItemGroup>
     <Content Include="Reports\ColleagueFinance\20XX-1099MI.rdlc" />
   </ItemGroup>
+  <ItemGroup />
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
@@ -1239,7 +1256,9 @@
           <AutoAssignPort>True</AutoAssignPort>
           <DevelopmentServerPort>57276</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
-          <IISUrl>http://localhost/Ellucian.Colleague.Api</IISUrl>
+          <IISUrl>http://localhost/Ellucian.Colleague.Api.F09</IISUrl>
+          <OverrideIISAppRootUrl>True</OverrideIISAppRootUrl>
+          <IISAppRootUrl>http://localhost/Ellucian.Colleague.Api.F09</IISAppRootUrl>
           <NTLMAuthentication>False</NTLMAuthentication>
           <UseCustomServer>False</UseCustomServer>
           <CustomServerUrl>

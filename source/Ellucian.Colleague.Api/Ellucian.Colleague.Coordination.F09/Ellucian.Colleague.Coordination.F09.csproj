@@ -1,0 +1,90 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{F08B4CE9-EE30-4192-A527-A330E6E66F15}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Ellucian.Colleague.Coordination.F09</RootNamespace>
+    <AssemblyName>Ellucian.Colleague.Coordination.F09</AssemblyName>
+    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Ellucian.Colleague.Coordination.Base">
+      <HintPath>..\Ellucian.Colleague.Coordination.Base\bin\Debug\Ellucian.Colleague.Coordination.Base.dll</HintPath>
+    </Reference>
+    <Reference Include="Ellucian.Colleague.Domain">
+      <HintPath>..\Ellucian.Colleague.Coordination.Base\bin\Debug\Ellucian.Colleague.Domain.dll</HintPath>
+    </Reference>
+    <Reference Include="Ellucian.Colleague.Domain.Base">
+      <HintPath>..\Ellucian.Colleague.Coordination.Base\bin\Debug\Ellucian.Colleague.Domain.Base.dll</HintPath>
+    </Reference>
+    <Reference Include="Ellucian.Web.Adapters">
+      <HintPath>..\Ellucian.Colleague.Coordination.Base\bin\Debug\Ellucian.Web.Adapters.dll</HintPath>
+    </Reference>
+    <Reference Include="Ellucian.Web.Dependency">
+      <HintPath>..\Ellucian.Colleague.Coordination.Base\bin\Debug\Ellucian.Web.Dependency.dll</HintPath>
+    </Reference>
+    <Reference Include="Ellucian.Web.Security">
+      <HintPath>..\Ellucian.Colleague.Coordination.Base\bin\Debug\Ellucian.Web.Security.dll</HintPath>
+    </Reference>
+    <Reference Include="slf4net">
+      <HintPath>..\Ellucian.Colleague.Coordination.Base\bin\Debug\slf4net.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Services\IUpdateStudentRestrictionService.cs" />
+    <Compile Include="Services\UpdateStudentRestrictionService.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Adapters\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Ellucian.Colleague.Domain.F09\Ellucian.Colleague.Domain.F09.csproj">
+      <Project>{76621078-875f-4191-8498-7826b98cfed1}</Project>
+      <Name>Ellucian.Colleague.Domain.F09</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos.F09\Ellucian.Colleague.Dtos.F09.csproj">
+      <Project>{a6cd3ada-1605-48b1-a41c-9989b42c3eda}</Project>
+      <Name>Ellucian.Colleague.Dtos.F09</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

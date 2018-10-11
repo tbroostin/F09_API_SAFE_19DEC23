@@ -340,6 +340,7 @@
     <Compile Include="Controllers\ColleagueFinance\ColleagueFinanceTaxFormStatementsController.cs" />
     <Compile Include="Controllers\ColleagueFinance\ColleagueFinanceTaxFormPdfsController.cs" />
     <Compile Include="Controllers\ColleagueFinance\PurchasingArrangementsController.cs" />
+    <Compile Include="Controllers\F09\ActiveRestrictionsController.cs" />
     <Compile Include="Controllers\F09\StudentRestrictionController.cs" />
     <Compile Include="Controllers\HumanResources\LeaveBalanceConfigurationController.cs" />
     <Compile Include="Controllers\Student\FinancialAidAcademicProgressStatusesController.cs" />
@@ -1222,7 +1223,12 @@
   <ItemGroup>
     <Content Include="Reports\ColleagueFinance\20XX-1099MI.rdlc" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Views\ActiveRestrictions\" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Properties\PublishProfiles\F09ColleagueApi.pubxml" />
+  </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>

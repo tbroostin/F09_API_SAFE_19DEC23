@@ -20,6 +20,17 @@ namespace Ellucian.Colleague.Api
         public static void RegisterRoutes(RouteCollection routes)
         {
             routes.MapHttpRoute(
+                name: "GetF09ActiveRestrictionsById",
+                routeTemplate: "F09/active-restrictions/{personId}",
+                defaults: new { controller = "ActiveRestrictions", action = "GetActiveRestrictionsAsync" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint(1, true)
+                }
+            );
+
+            routes.MapHttpRoute(
                 name: "GetF09StudentRestrictionById",
                 routeTemplate: "F09/student-restriction/{personId}",
                 defaults: new { controller = "StudentRestriction", action = "GetStudentRestrictionAsync" },

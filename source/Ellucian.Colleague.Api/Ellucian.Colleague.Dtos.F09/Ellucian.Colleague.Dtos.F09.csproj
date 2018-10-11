@@ -45,6 +45,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="GetActiveRestrictionsResponseDto.cs" />
     <Compile Include="UpdateStudentRestrictionResponseDto.cs" />
     <Compile Include="UpdateStudentRestrictionRequestDto.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

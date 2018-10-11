@@ -62,6 +62,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Services\GetActiveRestrictionsService.cs" />
+    <Compile Include="Services\IGetActiveRestrictionsService.cs" />
     <Compile Include="Services\IUpdateStudentRestrictionService.cs" />
     <Compile Include="Services\UpdateStudentRestrictionService.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

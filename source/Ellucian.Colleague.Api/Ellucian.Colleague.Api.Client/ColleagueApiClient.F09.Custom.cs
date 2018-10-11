@@ -13,6 +13,30 @@ namespace Ellucian.Colleague.Api.Client
 {
     public partial class ColleagueApiClient
     {
+        public async Task<GetActiveRestrictionsResponseDto> GetF09ActiveRestrictionsAsync(string personId)
+        {
+            if (string.IsNullOrEmpty(personId))
+            {
+                throw new ArgumentNullException("personId", "ID cannot be empty/null for User Profile retrieval.");
+            }
+            try
+            {
+                var baseUrl = UrlUtility.CombineUrlPath(F09ActiveRestrictions, personId);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(baseUrl, headers: headers);
+                var myProfile = JsonConvert.DeserializeObject<GetActiveRestrictionsResponseDto>(await response.Content.ReadAsStringAsync());
+
+                return myProfile;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to GetF09ActiveRestrictionsAsync");
+                throw;
+            }
+        }
+
         public async Task<UpdateStudentRestrictionResponseDto> GetF09StudentRestrictionAsync(string personId)
         {
             if (string.IsNullOrEmpty(personId))
@@ -36,7 +60,6 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
-
 
         public async Task<HttpResponseMessage> PutF09StudentRestrictionAsync(UpdateStudentRestrictionRequestDto request)
         {

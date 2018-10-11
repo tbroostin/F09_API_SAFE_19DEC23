@@ -1,0 +1,52 @@
+﻿@{
+    ViewBag.Title = "Colleague Web API Utilities";
+}
+
+@* Header/Title *@
+<div class="esg-page-header">
+    <h2 class="esg-page-header__title header-margin">@ViewBag.Title</h2>
+</div>
+@* FieldSet *@
+<div id="Utilitiesbody">
+    <section class="content-wrapper main-content clear-fix">
+        <br />
+        <h3 class="base">Module Utilities</h3>
+        <table class="APISettingstable">
+            @if (System.IO.File.Exists(Server.MapPath(@"~\Areas\Student\Views\Test\Index.cshtml")))
+            {
+                <tr>
+                    <td>@Html.ActionLink("Student Utility Tests", "", "Student/Test", null, null)</td>
+                </tr>
+            }
+            @if (System.IO.File.Exists(Server.MapPath(@"~\Areas\Planning\Views\Test\Index.cshtml")))
+            {
+                <tr>
+                    <td>@Html.ActionLink("Planning Utility Tests", "", "Planning/Test", null, null)</td>
+                </tr>
+            }
+        </table>
+
+        <h3 class="base">Global Utilities</h3>
+        <table class="APISettingstable">
+            <tr>
+                <td>@Html.ActionLink("Clear Data Caches", "ClearCache", "Utilities", null, null) without recycling the application pool.</td>
+            </tr>
+            <!--
+            <tr>
+                <td>@Html.ActionLink("Backup API configuration", "BackupConfigAsync", "Utilities", null, null). This will NOT recycle the application pool.
+                </td>
+            </tr>
+             -->
+            @if (System.Web.Configuration.WebConfigurationManager.AppSettings["EnableConfigBackup"] == "True")
+            {
+            <tr>
+                <td>
+                    @Html.ActionLink("Restore API configuration", "RestoreConfigAsync", "Utilities", null, null) using the latest backup data. This WILL recycle the application pool.
+                    <br />Note: The resource files will be restored/merged ONLY for new API instances that do not have modified Resource files.
+                    <br /> The restore action requires the role permission "RESTORE.API.CONFIGURATION".
+                </td>
+            </tr>
+            }
+        </table>
+    </section>
+</div>

@@ -16,9 +16,9 @@ using slf4net;
 namespace Ellucian.Colleague.Data.F09.Repositories
 {
     [RegisterType]
-    class UpdateVerifyMyProfileRepository : BaseColleagueRepository, IUpdateStudentRestrictionRepository
+    class UpdateStudentRestrictionRepository : BaseColleagueRepository, IUpdateStudentRestrictionRepository
     {
-        public UpdateVerifyMyProfileRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger) : base(cacheProvider, transactionFactory, logger)
+        public UpdateStudentRestrictionRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger) : base(cacheProvider, transactionFactory, logger)
         {
         }
 

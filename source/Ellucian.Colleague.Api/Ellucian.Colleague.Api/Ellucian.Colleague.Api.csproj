@@ -877,15 +877,16 @@
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>
-    <Content Include="App_Data\settings.config">
+    <Content Include="App_Data\settings.config" />
+    <None Include="App_Data\settings.config.old">
       <SubType>Designer</SubType>
-    </Content>
-    <Content Include="App_Data\settings.Debug.config">
-      <DependentUpon>settings.config</DependentUpon>
-    </Content>
-    <Content Include="App_Data\settings.Release.config">
-      <DependentUpon>settings.config</DependentUpon>
-    </Content>
+    </None>
+    <None Include="App_Data\settings.config.Debug.old">
+      <DependentUpon>settings.config.old</DependentUpon>
+    </None>
+    <None Include="App_Data\settings.config.Release.old">
+      <DependentUpon>settings.config.old</DependentUpon>
+    </None>
     <Content Include="Areas\Student\Views\Web.config" />
     <Content Include="Areas\Student\Views\Test\Courses.cshtml" />
     <Content Include="Areas\Student\Views\Test\CourseSearch.cshtml" />

@@ -106,7 +106,6 @@ namespace Ellucian.Colleague.Dtos.Filters
         /// </summary>
         [DataMember(Name = "status", EmitDefaultValue = false)]
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-        [FilterProperty("criteria")]
         public SectionStatusDtoProperty Status { get; set; }
 
         /// <summary>

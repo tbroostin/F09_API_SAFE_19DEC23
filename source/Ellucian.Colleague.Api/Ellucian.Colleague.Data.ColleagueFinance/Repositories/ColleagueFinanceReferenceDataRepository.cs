@@ -1297,7 +1297,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         private async Task<IEnumerable<Domain.ColleagueFinance.Entities.FiscalPeriodsIntg>> BuildAllFiscalPeriodsIntgs()
         {
             var fiscalPeriodIntgEntities = new List<Domain.ColleagueFinance.Entities.FiscalPeriodsIntg>();
-            var fiscalPeriodIntgRecords = await DataReader.BulkReadRecordAsync<DataContracts.FiscalPeriodsIntg>("FISCAL.PERIODS.INTG", "");
+            var fiscalPeriodIntgRecords = await DataReader.BulkReadRecordAsync<DataContracts.FiscalPeriodsIntg>("FISCAL.PERIODS.INTG", "BY FPI.FISCAL.YEAR BY FPI.FISCAL.PERIOD");
 
             var dataContract = await DataReader.ReadRecordAsync<Fiscalyr>("ACCOUNT.PARAMETERS", "FISCAL.YEAR", true);
             if (dataContract == null)

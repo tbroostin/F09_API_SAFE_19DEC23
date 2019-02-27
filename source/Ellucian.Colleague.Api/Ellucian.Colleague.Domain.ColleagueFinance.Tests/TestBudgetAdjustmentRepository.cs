@@ -185,7 +185,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
                 var nextApproverEntity = new NextApprover(nextApprover);
 
                 foreach (var budgetAdjustment in budgetAdjustmentEntities)
-                { 
+                {
                     if (budgetAdjustment.Id == nextApproverBudgetAdjustmentId)
                     {
                         budgetAdjustment.NextApprovers.Add(nextApproverEntity);
@@ -460,6 +460,16 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
                 BudgetEntriesAddopr = "0010475",
                 BgteTrDate = DateTime.Now,
                 BgteNextApprovalIds = new List<string>() { "TGL", "GTT" },
+                BgteAuthorizations = new List<string>(),
+                BgteAuthEntityAssociation = new List<BudgetEntriesBgteAuth>()
+                {
+                    new BudgetEntriesBgteAuth
+                    {
+                        BgteAuthorizationsAssocMember = null,
+                        BgteAuthorizationDatesAssocMember = null,
+                        BgteAuthorizationLevelsAssocMember = null
+                    }
+                },
                 BgteStatus = new List<string>() { "N" },
                 BgteStatEntityAssociation = new List<BudgetEntriesBgteStat>()
                 {
@@ -494,7 +504,17 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
                 BudgetEntriesAddopr = "0013272",
                 BgteTrDate = DateTime.Now.AddDays(2),
                 BgteNextApprovalIds = new List<string>() { "TGL" },
-                BgteStatus = new List<string>() { "N" },
+                BgteAuthorizations = new List<string>() { "ABC" },
+                BgteAuthEntityAssociation = new List<BudgetEntriesBgteAuth>()
+                {
+                    new BudgetEntriesBgteAuth
+                    {
+                        BgteAuthorizationsAssocMember = "ABC",
+                        BgteAuthorizationDatesAssocMember = DateTime.Now.AddDays(-5),
+                        BgteAuthorizationLevelsAssocMember = null
+                    }
+                },
+                BgteStatus = new List<string>() { "N", "U" },
                 BgteStatEntityAssociation = new List<BudgetEntriesBgteStat>()
                 {
                     new BudgetEntriesBgteStat
@@ -547,6 +567,22 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
                 BudgetEntriesAddopr = "0010475",
                 BgteTrDate = DateTime.Now.AddDays(3),
                 BgteNextApprovalIds = new List<string>() { "AJK", "TGL" },
+                BgteAuthorizations = new List<string>() { "ABC", "XYZ" },
+                BgteAuthEntityAssociation = new List<BudgetEntriesBgteAuth>()
+                {
+                    new BudgetEntriesBgteAuth
+                    {
+                        BgteAuthorizationsAssocMember = "ABC",
+                        BgteAuthorizationDatesAssocMember = DateTime.Now.AddDays(-5),
+                        BgteAuthorizationLevelsAssocMember = null
+                    },
+                    new BudgetEntriesBgteAuth
+                    {
+                        BgteAuthorizationsAssocMember = "XYZ",
+                        BgteAuthorizationDatesAssocMember = DateTime.Now.AddDays(-1),
+                        BgteAuthorizationLevelsAssocMember = null
+                    }
+                },
                 BgteStatus = new List<string>() { "N", "U" },
                 BgteStatEntityAssociation = new List<BudgetEntriesBgteStat>()
                 {
@@ -579,6 +615,22 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
                 BudgetEntriesAddopr = "0013272",
                 BgteTrDate = DateTime.Now.AddDays(4),
                 BgteNextApprovalIds = new List<string>() { "TGL" },
+                BgteAuthorizations = new List<string>() { "ABC", "TGL" },
+                BgteAuthEntityAssociation = new List<BudgetEntriesBgteAuth>()
+                {
+                    new BudgetEntriesBgteAuth
+                    {
+                        BgteAuthorizationsAssocMember = "ABC",
+                        BgteAuthorizationDatesAssocMember = DateTime.Now.AddDays(-5),
+                        BgteAuthorizationLevelsAssocMember = null
+                    },
+                    new BudgetEntriesBgteAuth
+                    {
+                        BgteAuthorizationsAssocMember = "TGL",
+                        BgteAuthorizationDatesAssocMember = DateTime.Now.AddDays(-1),
+                        BgteAuthorizationLevelsAssocMember = null
+                    }
+                },
                 BgteStatus = new List<string> { "N" },
                 BgteStatEntityAssociation = new List<BudgetEntriesBgteStat>()
                 {
@@ -606,6 +658,22 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
                 BudgetEntriesAddopr = "0010475",
                 BgteTrDate = DateTime.Now.AddDays(5),
                 BgteNextApprovalIds = new List<string>() { "AJK", "TGL", "GTT" },
+                BgteAuthorizations = new List<string>() { "ABC", "XYZ" },
+                BgteAuthEntityAssociation = new List<BudgetEntriesBgteAuth>()
+                {
+                    new BudgetEntriesBgteAuth
+                    {
+                        BgteAuthorizationsAssocMember = "ABC",
+                        BgteAuthorizationDatesAssocMember = DateTime.Now.AddDays(-5),
+                        BgteAuthorizationLevelsAssocMember = null
+                    },
+                    new BudgetEntriesBgteAuth
+                    {
+                        BgteAuthorizationsAssocMember = "XYZ",
+                        BgteAuthorizationDatesAssocMember = DateTime.Now.AddDays(-1),
+                        BgteAuthorizationLevelsAssocMember = null
+                    }
+                },
                 BgteStatus = new List<string> { "N" },
                 BgteStatEntityAssociation = new List<BudgetEntriesBgteStat>()
                 {
@@ -696,6 +764,23 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             return await Task.FromResult(pendingApprovalSummaries.ToList());
         }
 
+        //public async Task<BudgetAdjustment> ApproveBudgetAdjustmentAsync(string id)
+        //{
+        //    var budgetAdjustment = await Task.Run(() => budgetEntriesPendingApprovalRecords.FirstOrDefault(x => x.Recordkey == id));
+        //    return budgetAdjustment;
+        //}
+
         #endregion
+
+
+        public async Task<string> GetStaffLoginIdForPersonAsync(string personId)
+        {
+            return "AJK";
+        }
+
+        public async Task<List<string>> ValidateBudgetAdjustmentAsync(BudgetAdjustment budgetAdjustmentEntity)
+        {
+            return new List<string>() { "Test Message" };
+        }
     }
 }

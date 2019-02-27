@@ -37,6 +37,7 @@ using System.Net.Http;
 using Newtonsoft.Json.Linq;
 using Ellucian.Colleague.Dtos.Converters;
 using Ellucian.Colleague.Dtos;
+using Ellucian.Colleague.Dtos.Base;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -186,7 +187,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         ///  <accessComments>
         /// Any authenticated user can retrieve course section information; however,
         /// only an assigned faculty user may retrieve list of active students Ids in a course section.
-        /// For all other users that are not assigned faculty to a course section cannot retrieve list of active students Ids  and 
+        /// For all other users that are not assigned faculty to a course section a list of active students Ids is not retrieved and 
         /// response object is returned with a X-Content-Restricted header with a value of "partial".
         /// </accessComments>
         [ParameterSubstitutionFilter]
@@ -2485,6 +2486,33 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 throw CreateNotFoundException("section events", sectionId);
             }
-        }      
+        }
+        /// <summary>
+        /// Query by post method to retrieve section events or section calendar schedules in ICal format.
+        /// For unscheduled cross-listed sections, it will retrieve calendar schedules for associated primary section if parameter on CPWP/SXRF allows to do so.
+        /// </summary>
+        /// <param name="criteria">DTO Object that contains list of sectionIds and date range to query section calendar schedules</param>
+        /// <returns><see cref="EventsICal"> EventsICal</see> DTO</returns>
+        /// <accessComments>Any authenticated user can retrieve sections calendar schedules in iCal format.</accessComments>
+        public async Task<EventsICal> QuerySectionEventsICalAsync([FromBody] SectionEventsICalQueryCriteria criteria)
+        {
+            if (criteria==null || criteria.SectionIds==null || !criteria.SectionIds.Any())
+            {
+                string errorText = "Criteria must be provided and at least one item in list of SectionIds must be provided.";
+                _logger.Error(errorText);
+                throw CreateHttpResponseException(errorText, HttpStatusCode.BadRequest);
+            }
+            try
+            {
+                var result= await _sectionCoordinationService.GetSectionEventsICalAsync(criteria.SectionIds, criteria.StartDate, criteria.EndDate);
+                return result;
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e,"Failure to retrieve section events Ical");
+                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+            }
+        }
+       
     }
 }

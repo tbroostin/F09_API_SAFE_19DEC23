@@ -14,6 +14,7 @@ using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
 using slf4net;
 using Ellucian.Colleague.Domain.Base.Exceptions;
+using Ellucian.Colleague.Data.ColleagueFinance.Utilities;
 
 namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 {
@@ -125,14 +126,22 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             var glAccountStructure = await generalLedgerConfigurationRepository.GetAccountStructureAsync();
             if (glAccountStructure == null)
             {
-                throw new ApplicationException("Account structure must be defined.");
+                throw new ConfigurationException("Account structure must be defined.");
             }
+
+            // Get the excluded GL components (from BUWP).
+            var budgetAdjustmentAccountExclusions = await generalLedgerConfigurationRepository.GetBudgetAdjustmentAccountExclusionsAsync();
+            if (budgetAdjustmentAccountExclusions == null)
+            {
+                budgetAdjustmentAccountExclusions = new Domain.ColleagueFinance.Entities.BudgetAdjustmentAccountExclusions();
+            }
+            var excludedAccountMessages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(new List<string>() { generalLedgerAccountId }, budgetAdjustmentAccountExclusions);
 
             // Get the GL class configuration.
             var glClassConfiguration = await generalLedgerConfigurationRepository.GetClassConfigurationAsync();
             if (glClassConfiguration == null)
             {
-                throw new ApplicationException("GL class configuration must be defined.");
+                throw new ConfigurationException("GL class configuration must be defined.");
             }
 
             // Get the ID for the person who is logged in, and use the ID to get his list of assigned expense and revenue GL accounts.
@@ -160,6 +169,15 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 // The user does not have access; return an error
                 glAccountValidationResponseDto.Status = "failure";
                 glAccountValidationResponseDto.ErrorMessage = "You do not have access to this GL Account.";
+                return glAccountValidationResponseDto;
+            }
+
+            // Check that the GL Account is not an excluded account (as defined on BUWP).
+            if (excludedAccountMessages != null && excludedAccountMessages.Any())
+            {
+                // The account is excluded; return an error.
+                glAccountValidationResponseDto.Status = "failure";
+                glAccountValidationResponseDto.ErrorMessage = "The account is excluded from online budget adjustments.";
                 return glAccountValidationResponseDto;
             }
 

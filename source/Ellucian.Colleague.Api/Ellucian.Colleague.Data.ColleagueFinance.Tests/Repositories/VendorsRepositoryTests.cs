@@ -109,7 +109,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(KeyNotFoundException))]
         public async Task VendorsRepository_GetVendorsAsync_ClassificationsFilter()
         {
             List<string> classificationsID = new List<string>() { "TestCriteria" } ;

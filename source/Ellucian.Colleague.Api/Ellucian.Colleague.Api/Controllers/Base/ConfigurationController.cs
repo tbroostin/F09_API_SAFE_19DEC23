@@ -422,5 +422,23 @@ namespace Ellucian.Colleague.Api.Controllers
                 throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
             }
         }
+
+        /// <summary>
+        /// Gets the Required Document Configuration
+        /// </summary>
+        /// <accessComments>Any authenticated user can get the Required Document Configuration</accessComments>
+        /// <returns><see cref="RequiredDocumentConfiguration">Required Document Configuration</see></returns>
+        public async Task<RequiredDocumentConfiguration> GetRequiredDocumentConfigurationAsync()
+        {
+            try
+            {
+                return await configurationService.GetRequiredDocumentConfigurationAsync();
+            }
+            catch (Exception ex)
+            {
+                logger.Error("Error occurred while retrieving Required Document Configuration: " + ex.Message);
+                throw CreateHttpResponseException("Could not retrieve Required Document Configuration", HttpStatusCode.BadRequest);
+            }
+        }
     }
 }

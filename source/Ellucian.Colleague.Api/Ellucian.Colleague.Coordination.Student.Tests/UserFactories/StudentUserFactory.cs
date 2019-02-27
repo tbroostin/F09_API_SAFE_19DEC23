@@ -115,6 +115,27 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.UserFactories
             }
         }
 
+        public class StudentTranscriptGradesUser : ICurrentUserFactory
+        {
+            public ICurrentUser CurrentUser
+            {
+                get
+                {
+                    return new CurrentUser(new Claims()
+                    {
+                        PersonId = "0000004",
+                        ControlId = "123",
+                        Name = "Johnny",
+                        SecurityToken = "321",
+                        SessionTimeout = 30,
+                        UserName = "StudentPO",
+                        Roles = new List<string>() { "VIEW.STUDENT.TRANSCRIPT.GRADES" },
+                        SessionFixationId = "abc123"
+                    });
+                }
+            }
+        }
+
         public class FacultyUser : ICurrentUserFactory
         {
             public ICurrentUser CurrentUser

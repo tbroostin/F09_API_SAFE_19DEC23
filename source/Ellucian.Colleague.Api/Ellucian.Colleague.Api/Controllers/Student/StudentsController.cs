@@ -87,104 +87,38 @@ namespace Ellucian.Colleague.Api.Controllers
         }
 
         /// <summary>
-        /// Action to get Students from a list of Ids
-        /// </summary>
-        /// <param name="criteria">Criteria contains List of Student IDs.</param>
-        /// <returns>Student DTO Objects</returns>
-        [HttpPost]
-        public async Task<IEnumerable<Ellucian.Colleague.Dtos.Student.Student>> QueryStudentsAsync([FromBody] StudentQueryCriteria criteria)
-        {
-            try
-            {
-                return await _studentService.GetStudentsByIdAsync(criteria.StudentIds, criteria.InheritFromPerson, criteria.GetDegreePlan);
-            }
-            catch (PermissionsException pex)
-            {
-                throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
-            }
-            catch (Exception e)
-            {
-                throw CreateHttpResponseException(e.Message);
-            }
-        }
-
-        /// <summary>
-        /// Action to get Students from a list of Ids
-        /// </summary>
-        /// <param name="criteria">Criteria contains List of Student IDs.</param>
-        /// <returns>Student DTO Objects</returns>
-        [HttpPost]
-        public async Task<IEnumerable<Ellucian.Colleague.Dtos.Student.StudentBatch>> QueryStudentsByIdAsync([FromBody] StudentQueryCriteria criteria)
-        {
-            try
-            {
-                return await _studentService.QueryStudentsByIdAsync(criteria.StudentIds, false, false);
-            }
-            catch (PermissionsException pex)
-            {
-                throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
-            }
-            catch (Exception e)
-            {
-                throw CreateHttpResponseException(e.Message);
-            }
-        }
-
-        /// <summary>
-        /// Action to get Students from a list of Ids
-        /// </summary>
-        /// <param name="criteria">Criteria contains List of Student IDs.</param>
-        /// <returns>StudentBatch2 DTO Objects</returns>
-        public async Task<IEnumerable<Ellucian.Colleague.Dtos.Student.StudentBatch2>> QueryStudentsByIdAsync2([FromBody] StudentQueryCriteria criteria)
-        {
-            try
-            {
-                return await _studentService.QueryStudentsByIdAsync2(criteria.StudentIds, false, false, criteria.Term);
-            }
-            catch (PermissionsException pex)
-            {
-                throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
-            }
-            catch (Exception e)
-            {
-                throw CreateHttpResponseException(e.Message);
-            }
-        }
-
-        /// <summary>
-        /// Action to get Students from a list of Ids.
-        /// Marital status can be null.
-        /// </summary>
-        /// <param name="criteria">Criteria contains List of Student IDs.</param>
-        /// <returns>StudentBatch3 DTO Objects</returns>
-        public async Task<IEnumerable<Ellucian.Colleague.Dtos.Student.StudentBatch3>> QueryStudentsByIdAsync3([FromBody] StudentQueryCriteria criteria)
-        {
-            try
-            {
-                return await _studentService.QueryStudentsByIdAsync3(criteria.StudentIds, false, false, criteria.Term);
-            }
-            catch (PermissionsException pex)
-            {
-                throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
-            }
-            catch (Exception e)
-            {
-                throw CreateHttpResponseException(e.Message);
-            }
-        }
-
-        /// <summary>
         /// Action to get Students from a list of Ids.
         /// Marital status can be null.
         /// Filter out student advisements which ended today or earlier.
         /// </summary>
-        /// <param name="criteria">Criteria contains List of Student IDs.</param>
+        /// <param name="criteria">Query criteria for retrieving students.</param>
         /// <returns>StudentBatch3 DTO Objects</returns>
+        /// <accessComments>
+        /// Authenticated users with the VIEW.STUDENT.INFORMATION permission can query students.
+        /// 
+        /// Student privacy is enforced by this response. If any student has an assigned privacy code that the requestor is not authorized to access, 
+        /// the response object is returned with an X-Content-Restricted header with a value of "partial" to indicate only partial information is returned for some subset of students. 
+        /// In this situation, all details except the student name are cleared from the specific student object.
+        /// </accessComments>
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.Student.StudentBatch3>> QueryStudentsById4Async([FromBody] StudentQueryCriteria criteria)
         {
+            _logger.Info("Entering QueryStudentsById4Async");
+            var watch = new Stopwatch();
+            watch.Start();
+
             try
             {
-                return await _studentService.QueryStudentsById4Async(criteria.StudentIds, false, false, criteria.Term);
+                // The service to execute this search is in StudentService.
+                var privacyWrapper = await _studentService.QueryStudentsById4Async(criteria.StudentIds, false, false, criteria.Term);
+                var students = privacyWrapper.Dto as List<Dtos.Student.StudentBatch3>;
+                if (privacyWrapper.HasPrivacyRestrictions)
+                {
+                    HttpContext.Current.Response.AppendHeader("X-Content-Restricted", "partial");
+                }
+                watch.Stop();
+                _logger.Info("QueryStudentsById4Async... completed in " + watch.ElapsedMilliseconds.ToString());
+
+                return (IEnumerable<Dtos.Student.StudentBatch3>)students;
             }
             catch (PermissionsException pex)
             {
@@ -992,10 +926,17 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <summary>
         /// Retrieves information for the searched student.
         /// </summary>
-        /// <param name="criteria"></param>
-        /// <param name="pageSize"></param>
-        /// <param name="pageIndex"></param>
-        /// <returns>Information about this <see cref="Student">Student</see></returns>
+        /// <param name="criteria">Query criteria for retrieving students.</param>
+        /// <param name="pageSize">Number of records to retrieve per page</param>
+        /// <param name="pageIndex">Page number</param>
+        /// <returns>Information about the queried student(s)</returns>
+        /// <accessComments>
+        /// Authenticated users with the VIEW.STUDENT.INFORMATION permission can query students.
+        /// 
+        /// Student privacy is enforced by this response. If any student has an assigned privacy code that the requestor is not authorized to access, 
+        /// the response object is returned with an X-Content-Restricted header with a value of "partial" to indicate only partial information is returned for some subset of students. 
+        /// In this situation, all details except the student name are cleared from the specific student object.
+        /// </accessComments>
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.Student.Student>> QueryStudentByPost2Async([FromBody]StudentSearchCriteria criteria, int pageSize = int.MaxValue, int pageIndex = 1)
         {
             _logger.Info("Entering QueryStudentByPost2Async");
@@ -1161,6 +1102,80 @@ namespace Ellucian.Colleague.Api.Controllers
             }
         }
 
+        /// <summary>
+        /// Return a list of Students objects based on page.
+        /// </summary>
+        ///  <param name="page">page</param>
+        /// <param name="criteria">Person search criteria in JSON format</param>
+        /// <param name="personFilter">Selection from SaveListParms definition or person-filters</param>
+        /// <returns>List of Students <see cref="Dtos.Students"/> objects representing matching Students</returns>
+        [HttpGet, FilteringFilter(IgnoreFiltering = true)]        
+        [QueryStringFilterFilter("criteria", typeof(Dtos.Students2))]
+        [QueryStringFilterFilter("personFilter", typeof(Dtos.Filters.PersonFilterFilter))]
+        [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
+        public async Task<IHttpActionResult> GetStudents2Async(Paging page, QueryStringFilter criteria, QueryStringFilter personFilter)        
+        {
+            string personFilterValue = string.Empty;
+            var personFilterObj = GetFilterObject<Dtos.Filters.PersonFilterFilter>(_logger, "personFilter");
+            if (personFilterObj != null)
+            {
+                personFilterValue = personFilterObj.personFilterId != null ? personFilterObj.personFilterId : null;
+            }
+
+            var criteriaFilter = GetFilterObject<Dtos.Students2>(_logger, "criteria");
+
+            if (CheckForEmptyFilterParameters())
+                return new PagedHttpActionResult<IEnumerable<Dtos.Students2>>(new List<Dtos.Students2>(), page, 0, this.Request);
+            
+            var bypassCache = false;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
+            try
+            {
+                if (page == null)
+                {
+                    page = new Paging(100, 0);
+                }
+              
+                var pageOfItems = await _studentService.GetStudents2Async(page.Offset, page.Limit, criteriaFilter, personFilterValue, bypassCache);
+
+                AddEthosContextProperties(await _studentService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                              await _studentService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              pageOfItems.Item1.Select(a => a.Id).ToList()));
+
+                return new PagedHttpActionResult<IEnumerable<Students2>>(pageOfItems.Item1, page, pageOfItems.Item2, this.Request);               
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+            }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
 
         /// <summary>
         /// Retrieves a Student by Guid.
@@ -1231,6 +1246,77 @@ namespace Ellucian.Colleague.Api.Controllers
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
         }
+
+        /// <summary>
+        /// Retrieves a Student by Guid.
+        /// </summary>
+        /// <returns>An <see cref="Dtos.Students">Students</see>object.</returns>
+        [HttpGet, EedmResponseFilter]
+        public async Task<Students2> GetStudentsByGuid2Async(string guid)
+        {
+            if (string.IsNullOrEmpty(guid))
+            {
+                throw CreateHttpResponseException(new IntegrationApiException("Null id argument",
+                    IntegrationApiUtility.GetDefaultApiError("The GUID must be specified in the request URL.")));
+            }
+
+            var bypassCache = false;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
+
+            try
+            {
+                var student = await _studentService.GetStudentsByGuid2Async(guid);
+
+                if (student != null)
+                {
+
+                    AddEthosContextProperties(await _studentService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                              await _studentService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              new List<string>() { student.Id }));
+                }
+
+
+                return student;
+
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (ArgumentNullException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
+
         /// <summary>        
         /// Creates a Student
         /// </summary>

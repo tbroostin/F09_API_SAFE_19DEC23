@@ -93,6 +93,60 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     }
                 }
             }
+
+            public class ProxyNoPermissionUserFactory : ICurrentUserFactory
+            {
+                public ICurrentUser CurrentUser
+                {
+                    get
+                    {
+                        return new CurrentUser(new Claims()
+                        {
+                            ControlId = "123",
+                            Name = "Harry",
+                            PersonId = "0000222",
+                            SecurityToken = "321",
+                            SessionTimeout = 30,
+                            UserName = "ProxyNoPermission",
+                            Roles = new List<string>(),
+                            SessionFixationId = "abc123",
+                            ProxySubjectClaims = new ProxySubjectClaims()
+                            {
+                                FormattedName = "Sally",
+                                Permissions = new List<string>(),
+                                PersonId = "S002"
+                            }
+                        });
+                    }
+                }
+            }
+
+            public class ProxyWithPermissionUserFactory : ICurrentUserFactory
+            {
+                public ICurrentUser CurrentUser
+                {
+                    get
+                    {
+                        return new CurrentUser(new Claims()
+                        {
+                            ControlId = "123",
+                            Name = "Isabelle",
+                            PersonId = "0000333",
+                            SecurityToken = "321",
+                            SessionTimeout = 30,
+                            UserName = "ProxyWithPermission",
+                            Roles = new List<string>(),
+                            SessionFixationId = "abc123",
+                            ProxySubjectClaims = new ProxySubjectClaims()
+                            {
+                                FormattedName = "Sally",
+                                Permissions = new List<string>() { "CONO" },
+                                PersonId = "S002"
+                            }
+                        });
+                    }
+                }
+            }
         }
 
         [TestClass]
@@ -144,7 +198,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 // mock the first student
                 student1 = new Domain.Student.Entities.Student("S001", "Klemperer", null, new List<string>(), new List<string>());
                 stuRepoMock.Setup(r => r.Get("S001")).Returns(student1);
-                
+
                 // mock the second student
                 student2 = new Domain.Student.Entities.Student("S002", "Banner", null, new List<string>(), new List<string>());
                 student2.AddStudentRestriction("SR001");
@@ -159,7 +213,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 refDataRepoMock.Setup(r => r.RestrictionsAsync()).ReturnsAsync(restList);
                 // mock the student restrictions for the second student - first student should have none.
                 studentRestriction1 = new Domain.Base.Entities.PersonRestriction("SR001", "S002", "R001", new DateTime(2012, 12, 20), null, (int?)4, "Y");
-                studentRestriction2 = new Domain.Base.Entities.PersonRestriction("SR002", "S002", "R002", new DateTime(2012, 12, 22), null, null,    "Y");
+                studentRestriction2 = new Domain.Base.Entities.PersonRestriction("SR002", "S002", "R002", new DateTime(2012, 12, 22), null, null, "Y");
                 IEnumerable<Domain.Base.Entities.PersonRestriction> stu2RestList = new List<Domain.Base.Entities.PersonRestriction>() { studentRestriction1, studentRestriction2 };
 
                 // setup a current user
@@ -197,7 +251,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(PermissionsException))]
             public async Task StudentNotSelf_ThrowsPermissionError()
             {
-                var results =await studentRestrictionService.GetStudentRestrictionsAsync("S002");
+                var results = await studentRestrictionService.GetStudentRestrictionsAsync("S002");
             }
 
             [TestMethod]
@@ -295,7 +349,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 currentUserFactory = new CurrentUserSetup.AdvisorUserFactory();
 
                 IEnumerable<string> stu2RestrIds = new List<string>() { "SR001", "SR002" };
-                perRestrRepoMock.Setup(r => r.GetAsync("S002",true)).ReturnsAsync(stu2RestList);
+                perRestrRepoMock.Setup(r => r.GetAsync("S002", true)).ReturnsAsync(stu2RestList);
 
                 // mock the response for a student with no restrictions
                 perRestrRepoMock.Setup(repo => repo.GetAsync("S001", true)).ReturnsAsync(new List<Domain.Base.Entities.PersonRestriction>());
@@ -321,7 +375,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task AdvisorWithoutPermission_ThrowsPermissionError()
             {
 
-                var results =await studentRestrictionService.GetStudentRestrictionsAsync("S001");
+                var results = await studentRestrictionService.GetStudentRestrictionsAsync("S001");
             }
 
             [TestMethod]
@@ -330,7 +384,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 // Set up needed permission
                 advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.ViewAnyAdvisee));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
- 
+
                 var results = await studentRestrictionService.GetStudentRestrictionsAsync("S002");
                 Assert.AreEqual(2, results.Count());
 
@@ -353,7 +407,39 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 // Set up needed permission
                 advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Domain.Base.BasePermissionCodes.ViewPersonRestrictions));
                 roleRepoMock.SetupGet(rpm => rpm.Roles).Returns(new List<Role>() { advisorRole });
- 
+
+                var results = await studentRestrictionService.GetStudentRestrictions2Async("S002");
+                Assert.AreEqual(2, results.Count());
+
+                Assert.AreEqual(restriction1.Title, results.Where(r => r.Id == "SR001").First().Title);
+                Assert.AreEqual(studentRestriction1.StartDate, results.Where(r => r.Id == "SR001").First().StartDate);
+                Assert.AreEqual(restriction1.Details, results.Where(r => r.Id == "SR001").First().Details);
+                Assert.AreEqual(restriction1.Hyperlink, results.Where(r => r.Id == "SR001").First().Hyperlink);
+                Assert.AreEqual(restriction1.FollowUpLabel, results.Where(r => r.Id == "SR001").First().HyperlinkText);
+
+                Assert.AreEqual(restriction2.Title, results.Where(r => r.Id == "SR002").First().Title);
+                Assert.AreEqual(studentRestriction2.StartDate, results.Where(r => r.Id == "SR002").First().StartDate);
+                Assert.AreEqual(restriction2.Details, results.Where(r => r.Id == "SR002").First().Details);
+                Assert.AreEqual(restriction2.Hyperlink, results.Where(r => r.Id == "SR002").First().Hyperlink);
+                Assert.AreEqual(restriction2.FollowUpLabel, results.Where(r => r.Id == "SR002").First().HyperlinkText);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task GetStudentRestrictions2Async_ProxyUserWithoutNotificationProxyPermission_ThrowsException()
+            {
+
+                currentUserFactory = new CurrentUserSetup.ProxyNoPermissionUserFactory();
+                studentRestrictionService = new StudentRestrictionService(adapterRegistry, refDataRepo, stuRepo, perRepo, perRestrRepo, currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+                var results = await studentRestrictionService.GetStudentRestrictions2Async("S002");
+            }
+
+            [TestMethod]
+            public async Task GetStudentRestrictions2Async_ProxyUserWithNotificationProxyPermission_ThrowsException()
+            {
+
+                currentUserFactory = new CurrentUserSetup.ProxyWithPermissionUserFactory();
+                studentRestrictionService = new StudentRestrictionService(adapterRegistry, refDataRepo, stuRepo, perRepo, perRestrRepo, currentUserFactory, roleRepo, logger, baseConfigurationRepository);
                 var results = await studentRestrictionService.GetStudentRestrictions2Async("S002");
                 Assert.AreEqual(2, results.Count());
 
@@ -376,7 +462,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 // User does not have any permissions
                 roleRepoMock.SetupGet(rpm => rpm.Roles).Returns(new List<Role>() { advisorRole });
- 
+
                 var results = await studentRestrictionService.GetStudentRestrictions2Async("S002");
             }
 
@@ -387,7 +473,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewStudentInformation));
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { advisorRole });
 
-                var results = await studentRestrictionService.GetStudentRestrictionsByStudentIdsAsync(new List<string> { "S001", "S002"} );
+                var results = await studentRestrictionService.GetStudentRestrictionsByStudentIdsAsync(new List<string> { "S001", "S002" });
                 Assert.AreEqual(2, results.Count());
 
                 Assert.AreEqual(restriction1.Title, results.Where(r => r.Id == "SR001").First().Title);

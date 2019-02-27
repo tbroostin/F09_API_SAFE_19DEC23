@@ -74,7 +74,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         public async Task GradeSchemeService_GetGradeSchemesAsync_Count()
         {
             var results = await _gradeSchemeService.GetGradeSchemesAsync();
-            Assert.AreEqual(3, results.Count());
+            Assert.AreEqual(4, results.Count());
         }
 
         [TestMethod]
@@ -211,7 +211,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         public async Task GradeSchemeService_GetGradeSchemes2Async_Count()
         {
             var results = await _gradeSchemeService.GetGradeSchemes2Async(true);
-            Assert.AreEqual(3, results.Count());
+            Assert.AreEqual(4, results.Count());
         }
 
         [TestMethod]

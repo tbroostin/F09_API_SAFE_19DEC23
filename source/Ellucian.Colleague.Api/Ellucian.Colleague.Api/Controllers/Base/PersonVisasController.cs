@@ -98,6 +98,11 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
                 return new PagedHttpActionResult<IEnumerable<Dtos.PersonVisa>>(pageOfItems.Item1, page, pageOfItems.Item2, this.Request);
             }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
             catch (ArgumentNullException e)
             {
                 _logger.Error(e.ToString());
@@ -168,6 +173,11 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 return new PagedHttpActionResult<IEnumerable<Dtos.PersonVisa>>(pageOfItems.Item1, page, pageOfItems.Item2, this.Request);
 
             }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
             catch (ArgumentNullException e)
             {
                 _logger.Error(e.ToString());
@@ -230,7 +240,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -294,6 +304,11 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
                 return personVisaReturn;
 
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentNullException ex)
             {
@@ -366,6 +381,11 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                     await _personVisasService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(), new List<string>() { id }));
 
                 return personVisaReturn;
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentNullException ex)
             {

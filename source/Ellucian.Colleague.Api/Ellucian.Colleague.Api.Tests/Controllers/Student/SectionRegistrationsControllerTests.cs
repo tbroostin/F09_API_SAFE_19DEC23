@@ -21,6 +21,9 @@ using Ellucian.Colleague.Api.Controllers.Student;
 using Ellucian.Web.Http.Models;
 using System.Web.Http.Hosting;
 using Newtonsoft.Json.Linq;
+using Ellucian.Colleague.Dtos.Filters;
+using System.Net;
+using Newtonsoft.Json;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 {
@@ -64,6 +67,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             private IEnumerable<Ellucian.Colleague.Dtos.SectionRegistration3> allSectionRegistrations3Dtos;
 
+            private IEnumerable<Ellucian.Colleague.Dtos.SectionRegistration4> allSectionRegistrations4Dtos;
+
             ILogger logger = new Mock<ILogger>().Object;
 
             [TestInitialize]
@@ -77,8 +82,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
                 sectionRegistrationServiceMock.Setup(s => s.GetDataPrivacyListByApi(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(new List<string>());
 
-                allSectionRegistrationsDtos = SectionRegistrationControllerTests.BuildSectionRegistrations();
-                allSectionRegistrations3Dtos = SectionRegistrationControllerTests.BuildSectionRegistrations3();
+                allSectionRegistrationsDtos = BuildSectionRegistrations();
+                allSectionRegistrations3Dtos = BuildSectionRegistrations3();
+                allSectionRegistrations4Dtos = BuildSectionRegistrations4();
                 string guid = allSectionRegistrationsDtos.ElementAt(0).Id;
 
                 sectionRegistrationsController = new SectionRegistrationsController(AdapterRegistry, studentReferenceDataRepository, sectionRegistrationService, logger)
@@ -94,8 +100,10 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 sectionRegistrationsController = null;
                 sectionRegistrationService = null;
                 studentReferenceDataRepository = null;
+                allSectionRegistrationsDtos = null;
+                allSectionRegistrations3Dtos = null;
+                allSectionRegistrations4Dtos = null;
             }
-
 
             [TestMethod]
             public async Task SectionRegistrationsController_GetSectionRegistrationsAsync()
@@ -159,7 +167,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 }
             }
 
-
             [TestMethod]
             public async Task SectionRegistrationsController_GetSectionRegistrationAsync()
             {
@@ -171,7 +178,258 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 Assert.AreEqual(sectionRegistration.Section.Id, allSectionRegistrationsDtos.ElementAt(0).Section.Id);
             }
 
+            //V16.0.0
+            [TestMethod]
+            public async Task SectionRegistrationsController_GetSectionRegistrations4Async()
+            {
+                sectionRegistrationsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+                sectionRegistrationsController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+
+                var filterGroupName = "criteria";
+                var academicPeriodFilter = "academicPeriod";
+                var sectionInstructorFilter = "sectionInstructor";
+                sectionRegistrationsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
+                      new Dtos.SectionRegistration4() {  Registrant = new GuidObject2("f0deb5c6-7e3e-450b-a861-ea07e7340a97"), Section = new GuidObject2("b6e6edae-df08-4081-aa24-c8442fa5fb2d") });
+
+                sectionRegistrationsController.Request.Properties.Add(string.Format("FilterObject{0}", academicPeriodFilter),
+                    new AcademicPeriodNamedQueryFilter() { AcademicPeriod = new GuidObject2("f0deb5c6-7e3e-450b-a861-ea07e7340a97") });
+
+                sectionRegistrationsController.Request.Properties.Add(string.Format("FilterObject{0}", sectionInstructorFilter),
+                    new SectionInstructorQueryFilter() { SectionInstructorId = new GuidObject2("f0deb5c6-7e3e-450b-a861-ea07e7340a97") });
+
+                var tuple = new Tuple<IEnumerable<Dtos.SectionRegistration4>, int>(allSectionRegistrations4Dtos, 2);
+
+                sectionRegistrationServiceMock.Setup(s => s.GetSectionRegistrations3Async(It.IsAny<int>(), It.IsAny<int>(), It
+                    .IsAny<SectionRegistration4>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+
+                var sectionRegistrations = await sectionRegistrationsController.GetSectionRegistrations3Async(It.IsAny<Paging>(), It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>());
+
+                var cancelToken = new System.Threading.CancellationToken(false);
+
+                System.Net.Http.HttpResponseMessage httpResponseMessage = await sectionRegistrations.ExecuteAsync(cancelToken);
+
+                IEnumerable<Dtos.SectionRegistration4> results = 
+                    ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.SectionRegistration4>>)httpResponseMessage.Content).Value as IEnumerable<Dtos.SectionRegistration4>;
+
+                Assert.IsTrue(sectionRegistrations is IHttpActionResult);
+                Assert.AreEqual(allSectionRegistrations4Dtos.Count(), results.Count());
+
+                foreach (var sectionRegistrationsDto in allSectionRegistrations4Dtos)
+                {
+                    var sectReg = results.FirstOrDefault(i => i.Id == sectionRegistrationsDto.Id);
+
+                    Assert.AreEqual(sectionRegistrationsDto.Id, sectReg.Id);
+                    Assert.AreEqual(sectionRegistrationsDto.Section.Id, sectReg.Section.Id);
+                    Assert.AreEqual(sectionRegistrationsDto.AcademicLevel.Id, sectReg.AcademicLevel.Id);
+                    Assert.AreEqual(sectionRegistrationsDto.Approval.Count(), sectReg.Approval.Count());
+                    Assert.AreEqual(sectionRegistrationsDto.Credit.Measure.Value, sectReg.Credit.Measure.Value);
+                    Assert.AreEqual(sectionRegistrationsDto.Credit.RegistrationCredit.Value, sectReg.Credit.RegistrationCredit.Value);
+                    Assert.AreEqual(sectionRegistrationsDto.GradingOption.GradeScheme.Id, sectReg.GradingOption.GradeScheme.Id);
+                    Assert.AreEqual(sectionRegistrationsDto.GradingOption.Mode, sectReg.GradingOption.Mode);
+                    Assert.AreEqual(sectionRegistrationsDto.Involvement.EndOn, sectReg.Involvement.EndOn);
+                    Assert.AreEqual(sectionRegistrationsDto.Involvement.StartOn, sectReg.Involvement.StartOn);
+                    Assert.AreEqual(sectionRegistrationsDto.OriginallyRegisteredOn, sectReg.OriginallyRegisteredOn);
+                    Assert.AreEqual(sectionRegistrationsDto.Override.AcademicPeriod.Id, sectReg.Override.AcademicPeriod.Id);
+                    Assert.AreEqual(sectionRegistrationsDto.Override.Site.Id, sectReg.Override.Site.Id);
+                    Assert.AreEqual(sectionRegistrationsDto.Registrant.Id, sectReg.Registrant.Id);
+                    Assert.AreEqual(sectionRegistrationsDto.Status.Detail.Id, sectReg.Status.Detail.Id);
+                    Assert.AreEqual(sectionRegistrationsDto.Status.RegistrationStatus, sectReg.Status.RegistrationStatus);
+                    Assert.AreEqual(sectionRegistrationsDto.Status.SectionRegistrationStatusReason, sectReg.Status.SectionRegistrationStatusReason);
+                    Assert.AreEqual(sectionRegistrationsDto.StatusDate, sectReg.StatusDate);
+                }
+            }
+
+            [TestMethod]
+            public async Task SectionRegistrationsController_GetSectionRegistrations4Async_EmptyFilterParams()
+            {
+                sectionRegistrationsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+                sectionRegistrationsController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+
+                var filterGroupName = "criteria";
+                sectionRegistrationsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
+                      new Dtos.SectionRegistration4() { Registrant = new GuidObject2("") });
+                //EmptyFilterProperties
+                sectionRegistrationsController.Request.Properties.Add("EmptyFilterProperties", true);
+
+
+                var tuple = new Tuple<IEnumerable<Dtos.SectionRegistration4>, int>(allSectionRegistrations4Dtos, 2);
+
+                sectionRegistrationServiceMock.Setup(s => s.GetSectionRegistrations3Async(It.IsAny<int>(), It.IsAny<int>(), It
+                    .IsAny<SectionRegistration4>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+
+                var sectionRegistrations = await sectionRegistrationsController.GetSectionRegistrations3Async(It.IsAny<Paging>(), It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>());
+
+                var cancelToken = new System.Threading.CancellationToken(false);
+
+                System.Net.Http.HttpResponseMessage httpResponseMessage = await sectionRegistrations.ExecuteAsync(cancelToken);
+
+                IEnumerable<Dtos.SectionRegistration4> results =
+                    ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.SectionRegistration4>>)httpResponseMessage.Content).Value as IEnumerable<Dtos.SectionRegistration4>;
+
+            }
+
+            [TestMethod]
+            public async Task SectionRegistrationsController_GetSectionRegistrationByGuid3Async()
+            {
+                sectionRegistrationsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+                sectionRegistrationsController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+
+                var guid = "1d95b329-edbe-4420-909a-df57a962a30c";
+
+                var sectionRegistrationsDto = allSectionRegistrations4Dtos.ElementAt(0);
+
+                sectionRegistrationServiceMock.Setup(s => s.GetSectionRegistrationByGuid3Async(guid, It.IsAny<bool>())).ReturnsAsync(sectionRegistrationsDto);
+
+                var sectReg = await sectionRegistrationsController.GetSectionRegistrationByGuid3Async("1d95b329-edbe-4420-909a-df57a962a30c");
+
+                Assert.AreEqual(sectionRegistrationsDto.Id, sectReg.Id);
+                Assert.AreEqual(sectionRegistrationsDto.Section.Id, sectReg.Section.Id);
+                Assert.AreEqual(sectionRegistrationsDto.AcademicLevel.Id, sectReg.AcademicLevel.Id);
+                Assert.AreEqual(sectionRegistrationsDto.Approval.Count(), sectReg.Approval.Count());
+                Assert.AreEqual(sectionRegistrationsDto.Credit.Measure.Value, sectReg.Credit.Measure.Value);
+                Assert.AreEqual(sectionRegistrationsDto.Credit.RegistrationCredit.Value, sectReg.Credit.RegistrationCredit.Value);
+                Assert.AreEqual(sectionRegistrationsDto.GradingOption.GradeScheme.Id, sectReg.GradingOption.GradeScheme.Id);
+                Assert.AreEqual(sectionRegistrationsDto.GradingOption.Mode, sectReg.GradingOption.Mode);
+                Assert.AreEqual(sectionRegistrationsDto.Involvement.EndOn, sectReg.Involvement.EndOn);
+                Assert.AreEqual(sectionRegistrationsDto.Involvement.StartOn, sectReg.Involvement.StartOn);
+                Assert.AreEqual(sectionRegistrationsDto.OriginallyRegisteredOn, sectReg.OriginallyRegisteredOn);
+                Assert.AreEqual(sectionRegistrationsDto.Override.AcademicPeriod.Id, sectReg.Override.AcademicPeriod.Id);
+                Assert.AreEqual(sectionRegistrationsDto.Override.Site.Id, sectReg.Override.Site.Id);
+                Assert.AreEqual(sectionRegistrationsDto.Registrant.Id, sectReg.Registrant.Id);
+                Assert.AreEqual(sectionRegistrationsDto.Status.Detail.Id, sectReg.Status.Detail.Id);
+                Assert.AreEqual(sectionRegistrationsDto.Status.RegistrationStatus, sectReg.Status.RegistrationStatus);
+                Assert.AreEqual(sectionRegistrationsDto.Status.SectionRegistrationStatusReason, sectReg.Status.SectionRegistrationStatusReason);
+                Assert.AreEqual(sectionRegistrationsDto.StatusDate, sectReg.StatusDate);
+
+            }
+
             #region Exception Tests
+
+            //V16.0.0
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_GetSectionRegistrations3Async_PermissionsException()
+            {
+                sectionRegistrationServiceMock
+                    .Setup(s => s.GetSectionRegistrations3Async(It.IsAny<int>(), It.IsAny<int>(), It
+                    .IsAny<SectionRegistration4>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
+                    .ThrowsAsync(new PermissionsException());
+                await sectionRegistrationsController.GetSectionRegistrations3Async(It.IsAny<Paging>(), It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>(), 
+                    It.IsAny<QueryStringFilter>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_GetSectionRegistrations3Async_ArgumentNullException()
+            {
+                sectionRegistrationServiceMock
+                    .Setup(s => s.GetSectionRegistrations3Async(It.IsAny<int>(), It.IsAny<int>(), It
+                    .IsAny<SectionRegistration4>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
+                    .ThrowsAsync(new ArgumentNullException());
+                await sectionRegistrationsController.GetSectionRegistrations3Async(It.IsAny<Paging>(), It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>(),
+                    It.IsAny<QueryStringFilter>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_GetSectionRegistrations3Async_Exception()
+            {
+                sectionRegistrationServiceMock
+                    .Setup(s => s.GetSectionRegistrations3Async(It.IsAny<int>(), It.IsAny<int>(), It
+                    .IsAny<SectionRegistration4>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
+                    .ThrowsAsync(new Exception());
+                await sectionRegistrationsController.GetSectionRegistrations3Async(It.IsAny<Paging>(), It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>(),
+                    It.IsAny<QueryStringFilter>());
+            }
+
+            //V16.0.0 GET By Id Exception
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_GetSectionRegistrationByGuid3Async_PermissionsException()
+            {
+                sectionRegistrationServiceMock
+                    .Setup(s => s.GetSectionRegistrationByGuid3Async("GUID", It.IsAny<bool>()))
+                    .ThrowsAsync(new PermissionsException());
+                await sectionRegistrationsController.GetSectionRegistrationByGuid3Async("GUID");
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_GetSectionRegistrationByGuid3Async_KeyNotFoundException()
+            {
+                sectionRegistrationServiceMock
+                    .Setup(s => s.GetSectionRegistrationByGuid3Async("GUID", It.IsAny<bool>()))
+                    .ThrowsAsync(new KeyNotFoundException());
+                await sectionRegistrationsController.GetSectionRegistrationByGuid3Async("GUID");
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_GetSectionRegistrationByGuid3Async_ArgumentNullException()
+            {
+                sectionRegistrationServiceMock
+                    .Setup(s => s.GetSectionRegistrationByGuid3Async("GUID", It.IsAny<bool>()))
+                    .ThrowsAsync(new ArgumentNullException());
+                await sectionRegistrationsController.GetSectionRegistrationByGuid3Async("GUID");
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_GetSectionRegistrationByGuid3Async_IntegrationApiException()
+            {
+                sectionRegistrationServiceMock
+                    .Setup(s => s.GetSectionRegistrationByGuid3Async("GUID", It.IsAny<bool>()))
+                    .ThrowsAsync(new IntegrationApiException());
+                await sectionRegistrationsController.GetSectionRegistrationByGuid3Async("GUID");
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_GetSectionRegistrationByGuid3Async_ConfigurationException()
+            {
+                sectionRegistrationServiceMock
+                    .Setup(s => s.GetSectionRegistrationByGuid3Async("GUID", It.IsAny<bool>()))
+                    .ThrowsAsync(new ConfigurationException());
+                await sectionRegistrationsController.GetSectionRegistrationByGuid3Async("GUID");
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_GetSectionRegistrationByGuid3Async_ArgumentOutOfRangeException()
+            {
+                sectionRegistrationServiceMock
+                    .Setup(s => s.GetSectionRegistrationByGuid3Async("GUID", It.IsAny<bool>()))
+                    .ThrowsAsync(new ArgumentOutOfRangeException());
+                await sectionRegistrationsController.GetSectionRegistrationByGuid3Async("GUID");
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_GetSectionRegistrationByGuid3Async_Exception()
+            {
+                sectionRegistrationServiceMock
+                    .Setup(s => s.GetSectionRegistrationByGuid3Async("GUID", It.IsAny<bool>()))
+                    .ThrowsAsync(new Exception());
+                await sectionRegistrationsController.GetSectionRegistrationByGuid3Async("GUID");
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_PostSectionRegistrations3Async()
+            {                
+                await sectionRegistrationsController.PostSectionRegistrations3Async(It.IsAny<SectionRegistration4>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_PutSectionRegistrations3Async()
+            {
+                await sectionRegistrationsController.PutSectionRegistrations3Async(It.IsAny<string>(), It.IsAny<SectionRegistration4>());
+            }
+
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
             public async Task SectionRegistrationsController_GetSectionRegistrationAsync_PermissionsException()
@@ -492,9 +750,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task SectionRegistrationsController_PutSectionRegistrationAsync_PermissionsException()
             {
                 sectionRegistrationServiceMock
-                    .Setup(s => s.UpdateSectionRegistrationAsync("asdf", It.IsAny<SectionRegistration2>()))
+                    .Setup(s => s.UpdateSectionRegistration2Async("asdf", It.IsAny<SectionRegistration3>()))
                     .ThrowsAsync(new PermissionsException());
-                await sectionRegistrationsController.PutSectionRegistrationAsync("asdf", It.IsAny<SectionRegistration2>());
+                await sectionRegistrationsController.PutSectionRegistration2Async("asdf", It.IsAny<SectionRegistration3>());
             }
 
             [TestMethod]
@@ -502,9 +760,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task SectionRegistrationsController_PutSectionRegistrationAsync_KeyNotFoundException()
             {
                 sectionRegistrationServiceMock
-                    .Setup(s => s.UpdateSectionRegistrationAsync("asdf", It.IsAny<SectionRegistration2>()))
+                    .Setup(s => s.UpdateSectionRegistration2Async("asdf", It.IsAny<SectionRegistration3>()))
                     .ThrowsAsync(new KeyNotFoundException());
-                await sectionRegistrationsController.PutSectionRegistrationAsync("asdf", It.IsAny<SectionRegistration2>());
+                await sectionRegistrationsController.PutSectionRegistration2Async("asdf", It.IsAny<SectionRegistration3>());
             }
 
             [TestMethod]
@@ -512,9 +770,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task SectionRegistrationsController_PutSectionRegistrationAsync_ArgumentNullException()
             {
                 sectionRegistrationServiceMock
-                    .Setup(s => s.UpdateSectionRegistrationAsync("asdf", It.IsAny<SectionRegistration2>()))
+                    .Setup(s => s.UpdateSectionRegistration2Async("asdf", It.IsAny<SectionRegistration3>()))
                     .ThrowsAsync(new ArgumentNullException());
-                await sectionRegistrationsController.PutSectionRegistrationAsync("asdf", It.IsAny<SectionRegistration2>());
+                await sectionRegistrationsController.PutSectionRegistration2Async("asdf", It.IsAny<SectionRegistration3>());
             }
 
             [TestMethod]
@@ -522,9 +780,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task SectionRegistrationsController_PutSectionRegistrationAsync_ArgumentOutOfRangeException()
             {
                 sectionRegistrationServiceMock
-                    .Setup(s => s.UpdateSectionRegistrationAsync("asdf", It.IsAny<SectionRegistration2>()))
+                    .Setup(s => s.UpdateSectionRegistration2Async("asdf", It.IsAny<SectionRegistration3>()))
                     .ThrowsAsync(new ArgumentOutOfRangeException());
-                await sectionRegistrationsController.PutSectionRegistrationAsync("asdf", It.IsAny<SectionRegistration2>());
+                await sectionRegistrationsController.PutSectionRegistration2Async("asdf", It.IsAny<SectionRegistration3>());
             }
 
             [TestMethod]
@@ -532,9 +790,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task SectionRegistrationsController_PutSectionRegistrationAsync_IntegrationApiException()
             {
                 sectionRegistrationServiceMock
-                    .Setup(s => s.UpdateSectionRegistrationAsync("asdf", It.IsAny<SectionRegistration2>()))
+                    .Setup(s => s.UpdateSectionRegistration2Async("asdf", It.IsAny<SectionRegistration3>()))
                     .ThrowsAsync(new IntegrationApiException());
-                await sectionRegistrationsController.PutSectionRegistrationAsync("asdf", It.IsAny<SectionRegistration2>());
+                await sectionRegistrationsController.PutSectionRegistration2Async("asdf", It.IsAny<SectionRegistration3>());
             }
 
             [TestMethod]
@@ -542,9 +800,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task SectionRegistrationsController_PutSectionRegistrationAsync_InvalidOperationException()
             {
                 sectionRegistrationServiceMock
-                    .Setup(s => s.UpdateSectionRegistrationAsync("asdf", It.IsAny<SectionRegistration2>()))
+                    .Setup(s => s.UpdateSectionRegistration2Async("asdf", It.IsAny<SectionRegistration3>()))
                     .ThrowsAsync(new InvalidOperationException());
-                await sectionRegistrationsController.PutSectionRegistrationAsync("asdf", It.IsAny<SectionRegistration2>());
+                await sectionRegistrationsController.PutSectionRegistration2Async("asdf", It.IsAny<SectionRegistration3>());
             }
 
             [TestMethod]
@@ -552,9 +810,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task SectionRegistrationsController_PutSectionRegistrationAsync_ConfigurationException()
             {
                 sectionRegistrationServiceMock
-                    .Setup(s => s.UpdateSectionRegistrationAsync("asdf", It.IsAny<SectionRegistration2>()))
+                    .Setup(s => s.UpdateSectionRegistration2Async("asdf", It.IsAny<SectionRegistration3>()))
                     .ThrowsAsync(new ConfigurationException());
-                await sectionRegistrationsController.PutSectionRegistrationAsync("asdf", It.IsAny<SectionRegistration2>());
+                await sectionRegistrationsController.PutSectionRegistration2Async("asdf", It.IsAny<SectionRegistration3>());
             }
 
             [TestMethod]
@@ -562,9 +820,172 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task SectionRegistrationsController_PutSectionRegistrationAsync_Exception()
             {
                 sectionRegistrationServiceMock
-                    .Setup(s => s.UpdateSectionRegistrationAsync("asdf", It.IsAny<SectionRegistration2>()))
+                    .Setup(s => s.UpdateSectionRegistration2Async("asdf", It.IsAny<SectionRegistration3>()))
                     .ThrowsAsync(new Exception());
-                await sectionRegistrationsController.PutSectionRegistrationAsync("asdf", It.IsAny<SectionRegistration2>());
+                await sectionRegistrationsController.PutSectionRegistration2Async("asdf", It.IsAny<SectionRegistration3>());
+            }
+            #endregion
+
+        }
+
+        [TestClass]
+        public class Put_V16_0_0
+        {
+            #region Test Context
+
+            private TestContext testContextInstance;
+
+            /// <summary>
+            ///Gets or sets the test context which provides
+            ///information about and functionality for the current test run.
+            ///</summary>
+            public TestContext TestContext
+            {
+                get
+                {
+                    return testContextInstance;
+                }
+                set
+                {
+                    testContextInstance = value;
+                }
+            }
+
+            #endregion
+
+            private SectionRegistrationsController sectionRegistrationsController;
+
+            private Mock<ISectionRegistrationService> sectionRegistrationServiceMock;
+            private ISectionRegistrationService sectionRegistrationService;
+            private IStudentReferenceDataRepository studentReferenceDataRepository;
+
+            private IAdapterRegistry AdapterRegistry = null;
+
+            private IEnumerable<Ellucian.Colleague.Dtos.SectionRegistration4> allSectionRegistrationsDtos;
+
+            ILogger logger = new Mock<ILogger>().Object;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+                sectionRegistrationServiceMock = new Mock<ISectionRegistrationService>();
+                sectionRegistrationService = sectionRegistrationServiceMock.Object;
+
+                allSectionRegistrationsDtos = SectionRegistrationControllerTests.BuildSectionRegistrations4();
+                Dtos.SectionRegistration4 registration = allSectionRegistrationsDtos.ElementAt(0);
+
+                sectionRegistrationsController = new SectionRegistrationsController(AdapterRegistry, studentReferenceDataRepository, sectionRegistrationService, logger)
+                {
+                    Request = new HttpRequestMessage()
+                };
+                sectionRegistrationsController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
+                sectionRegistrationsController.Request.Properties.Add("PartialInputJsonObject", JObject.FromObject(registration));
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                sectionRegistrationsController = null;
+                sectionRegistrationService = null;
+                studentReferenceDataRepository = null;
+            }
+
+            [TestMethod]
+            public async Task UpdatesSectionRegistrationByGuid()
+            {
+                Dtos.SectionRegistration4 registration = allSectionRegistrationsDtos.ElementAt(0);
+                string guid = registration.Id;
+                sectionRegistrationServiceMock.Setup(x => x.UpdateSectionRegistration3Async(guid, It.IsAny<SectionRegistration4>())).ReturnsAsync(registration);
+                sectionRegistrationServiceMock.Setup(x => x.GetSectionRegistrationByGuid3Async(guid, false)).ReturnsAsync(registration);
+                var result = await sectionRegistrationsController.PutSectionRegistrations3Async(guid, registration);
+                Assert.AreEqual(result.Id, registration.Id);
+                Assert.AreEqual(result.Registrant, registration.Registrant);
+                Assert.AreEqual(result.Section, registration.Section);
+                Assert.AreEqual(result.Status.RegistrationStatus, registration.Status.RegistrationStatus);
+                Assert.AreEqual(result.AcademicLevel, registration.AcademicLevel);
+            }
+            #region Exception Test PUT
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_PutSectionRegistrationAsync_PermissionsException()
+            {
+                sectionRegistrationServiceMock
+                    .Setup(s => s.UpdateSectionRegistration3Async("asdf", It.IsAny<SectionRegistration4>()))
+                    .ThrowsAsync(new PermissionsException());
+                await sectionRegistrationsController.PutSectionRegistrations3Async("asdf", It.IsAny<SectionRegistration4>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_PutSectionRegistrationAsync_KeyNotFoundException()
+            {
+                sectionRegistrationServiceMock
+                    .Setup(s => s.UpdateSectionRegistration3Async("asdf", It.IsAny<SectionRegistration4>()))
+                    .ThrowsAsync(new KeyNotFoundException());
+                await sectionRegistrationsController.PutSectionRegistrations3Async("asdf", It.IsAny<SectionRegistration4>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_PutSectionRegistrationAsync_ArgumentNullException()
+            {
+                sectionRegistrationServiceMock
+                    .Setup(s => s.UpdateSectionRegistration3Async("asdf", It.IsAny<SectionRegistration4>()))
+                    .ThrowsAsync(new ArgumentNullException());
+                await sectionRegistrationsController.PutSectionRegistrations3Async("asdf", It.IsAny<SectionRegistration4>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_PutSectionRegistrationAsync_ArgumentOutOfRangeException()
+            {
+                sectionRegistrationServiceMock
+                    .Setup(s => s.UpdateSectionRegistration3Async("asdf", It.IsAny<SectionRegistration4>()))
+                    .ThrowsAsync(new ArgumentOutOfRangeException());
+                await sectionRegistrationsController.PutSectionRegistrations3Async("asdf", It.IsAny<SectionRegistration4>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_PutSectionRegistrationAsync_IntegrationApiException()
+            {
+                sectionRegistrationServiceMock
+                    .Setup(s => s.UpdateSectionRegistration3Async("asdf", It.IsAny<SectionRegistration4>()))
+                    .ThrowsAsync(new IntegrationApiException());
+                await sectionRegistrationsController.PutSectionRegistrations3Async("asdf", It.IsAny<SectionRegistration4>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_PutSectionRegistrationAsync_InvalidOperationException()
+            {
+                sectionRegistrationServiceMock
+                    .Setup(s => s.UpdateSectionRegistration3Async("asdf", It.IsAny<SectionRegistration4>()))
+                    .ThrowsAsync(new InvalidOperationException());
+                await sectionRegistrationsController.PutSectionRegistrations3Async("asdf", It.IsAny<SectionRegistration4>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_PutSectionRegistrationAsync_ConfigurationException()
+            {
+                sectionRegistrationServiceMock
+                    .Setup(s => s.UpdateSectionRegistration3Async("asdf", It.IsAny<SectionRegistration4>()))
+                    .ThrowsAsync(new ConfigurationException());
+                await sectionRegistrationsController.PutSectionRegistrations3Async("asdf", It.IsAny<SectionRegistration4>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_PutSectionRegistrationAsync_Exception()
+            {
+                sectionRegistrationServiceMock
+                    .Setup(s => s.UpdateSectionRegistration3Async("asdf", It.IsAny<SectionRegistration4>()))
+                    .ThrowsAsync(new Exception());
+                await sectionRegistrationsController.PutSectionRegistrations3Async("asdf", It.IsAny<SectionRegistration4>());
             }
             #endregion
 
@@ -825,9 +1246,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task SectionRegistrationsController_PostSectionRegistrationAsync_PermissionsException()
             {
                 sectionRegistrationServiceMock
-                    .Setup(s => s.CreateSectionRegistrationAsync(It.IsAny<SectionRegistration2>()))
+                    .Setup(s => s.CreateSectionRegistration2Async(It.IsAny<SectionRegistration3>()))
                     .ThrowsAsync(new PermissionsException());
-                await sectionRegistrationsController.PostSectionRegistrationAsync(It.IsAny<SectionRegistration2>());
+                await sectionRegistrationsController.PostSectionRegistration2Async(It.IsAny<SectionRegistration3>());
             }
 
             [TestMethod]
@@ -835,9 +1256,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task SectionRegistrationsController_PostSectionRegistrationAsync_KeyNotFoundException()
             {
                 sectionRegistrationServiceMock
-                    .Setup(s => s.CreateSectionRegistrationAsync(It.IsAny<SectionRegistration2>()))
+                    .Setup(s => s.CreateSectionRegistration2Async(It.IsAny<SectionRegistration3>()))
                     .ThrowsAsync(new KeyNotFoundException());
-                await sectionRegistrationsController.PostSectionRegistrationAsync(It.IsAny<SectionRegistration2>());
+                await sectionRegistrationsController.PostSectionRegistration2Async(It.IsAny<SectionRegistration3>());
             }
 
             [TestMethod]
@@ -845,9 +1266,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task SectionRegistrationsController_PostSectionRegistrationAsync_ArgumentNullException()
             {
                 sectionRegistrationServiceMock
-                    .Setup(s => s.CreateSectionRegistrationAsync(It.IsAny<SectionRegistration2>()))
+                    .Setup(s => s.CreateSectionRegistration2Async(It.IsAny<SectionRegistration3>()))
                     .ThrowsAsync(new ArgumentNullException());
-                await sectionRegistrationsController.PostSectionRegistrationAsync(It.IsAny<SectionRegistration2>());
+                await sectionRegistrationsController.PostSectionRegistration2Async(It.IsAny<SectionRegistration3>());
             }
 
             [TestMethod]
@@ -855,9 +1276,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task SectionRegistrationsController_PostSectionRegistrationAsync_ArgumentOutOfRangeException()
             {
                 sectionRegistrationServiceMock
-                    .Setup(s => s.CreateSectionRegistrationAsync(It.IsAny<SectionRegistration2>()))
+                    .Setup(s => s.CreateSectionRegistration2Async(It.IsAny<SectionRegistration3>()))
                     .ThrowsAsync(new ArgumentOutOfRangeException());
-                await sectionRegistrationsController.PostSectionRegistrationAsync(It.IsAny<SectionRegistration2>());
+                await sectionRegistrationsController.PostSectionRegistration2Async(It.IsAny<SectionRegistration3>());
             }
 
             [TestMethod]
@@ -865,9 +1286,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task SectionRegistrationsController_PostSectionRegistrationAsync_ArgumentException()
             {
                 sectionRegistrationServiceMock
-                    .Setup(s => s.CreateSectionRegistrationAsync(It.IsAny<SectionRegistration2>()))
+                    .Setup(s => s.CreateSectionRegistration2Async(It.IsAny<SectionRegistration3>()))
                     .ThrowsAsync(new ArgumentException());
-                await sectionRegistrationsController.PostSectionRegistrationAsync(It.IsAny<SectionRegistration2>());
+                await sectionRegistrationsController.PostSectionRegistration2Async(It.IsAny<SectionRegistration3>());
             }
 
             [TestMethod]
@@ -875,9 +1296,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task SectionRegistrationsController_PostSectionRegistrationAsync_IntegrationApiException()
             {
                 sectionRegistrationServiceMock
-                    .Setup(s => s.CreateSectionRegistrationAsync(It.IsAny<SectionRegistration2>()))
+                    .Setup(s => s.CreateSectionRegistration2Async(It.IsAny<SectionRegistration3>()))
                     .ThrowsAsync(new IntegrationApiException());
-                await sectionRegistrationsController.PostSectionRegistrationAsync(It.IsAny<SectionRegistration2>());
+                await sectionRegistrationsController.PostSectionRegistration2Async(It.IsAny<SectionRegistration3>());
             }
 
             [TestMethod]
@@ -885,9 +1306,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task SectionRegistrationsController_PostSectionRegistrationAsync_InvalidOperationException()
             {
                 sectionRegistrationServiceMock
-                    .Setup(s => s.CreateSectionRegistrationAsync(It.IsAny<SectionRegistration2>()))
+                    .Setup(s => s.CreateSectionRegistration2Async(It.IsAny<SectionRegistration3>()))
                     .ThrowsAsync(new InvalidOperationException());
-                await sectionRegistrationsController.PostSectionRegistrationAsync(It.IsAny<SectionRegistration2>());
+                await sectionRegistrationsController.PostSectionRegistration2Async(It.IsAny<SectionRegistration3>());
             }
 
             [TestMethod]
@@ -895,9 +1316,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task SectionRegistrationsController_PostSectionRegistrationAsync_FormatException()
             {
                 sectionRegistrationServiceMock
-                    .Setup(s => s.CreateSectionRegistrationAsync(It.IsAny<SectionRegistration2>()))
+                    .Setup(s => s.CreateSectionRegistration2Async(It.IsAny<SectionRegistration3>()))
                     .ThrowsAsync(new FormatException());
-                await sectionRegistrationsController.PostSectionRegistrationAsync(It.IsAny<SectionRegistration2>());
+                await sectionRegistrationsController.PostSectionRegistration2Async(It.IsAny<SectionRegistration3>());
             }
 
             [TestMethod]
@@ -905,9 +1326,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task SectionRegistrationsController_PostSectionRegistrationAsync_ConfigurationException()
             {
                 sectionRegistrationServiceMock
-                    .Setup(s => s.CreateSectionRegistrationAsync(It.IsAny<SectionRegistration2>()))
+                    .Setup(s => s.CreateSectionRegistration2Async(It.IsAny<SectionRegistration3>()))
                     .ThrowsAsync(new ConfigurationException());
-                await sectionRegistrationsController.PostSectionRegistrationAsync(It.IsAny<SectionRegistration2>());
+                await sectionRegistrationsController.PostSectionRegistration2Async(It.IsAny<SectionRegistration3>());
             }
 
             [TestMethod]
@@ -915,13 +1336,189 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task SectionRegistrationsController_PostSectionRegistrationAsync_Exception()
             {
                 sectionRegistrationServiceMock
-                    .Setup(s => s.CreateSectionRegistrationAsync(It.IsAny<SectionRegistration2>()))
+                    .Setup(s => s.CreateSectionRegistration2Async(It.IsAny<SectionRegistration3>()))
                     .ThrowsAsync(new Exception());
-                await sectionRegistrationsController.PostSectionRegistrationAsync(It.IsAny<SectionRegistration2>());
+                await sectionRegistrationsController.PostSectionRegistration2Async(It.IsAny<SectionRegistration3>());
             }
             #endregion
         }
 
+        [TestClass]
+        public class PostV16_0_0
+        {
+            #region Test Context
+
+            private TestContext testContextInstance;
+
+            /// <summary>
+            ///Gets or sets the test context which provides
+            ///information about and functionality for the current test run.
+            ///</summary>
+            public TestContext TestContext
+            {
+                get
+                {
+                    return testContextInstance;
+                }
+                set
+                {
+                    testContextInstance = value;
+                }
+            }
+
+            #endregion
+
+            private SectionRegistrationsController sectionRegistrationsController;
+
+            private Mock<ISectionRegistrationService> sectionRegistrationServiceMock;
+            private ISectionRegistrationService sectionRegistrationService;
+            private IStudentReferenceDataRepository studentReferenceDataRepository;
+
+            private IAdapterRegistry AdapterRegistry = null;
+
+            private IEnumerable<Ellucian.Colleague.Dtos.SectionRegistration4> allSectionRegistrationsDtos;
+
+            ILogger logger = new Mock<ILogger>().Object;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+                sectionRegistrationServiceMock = new Mock<ISectionRegistrationService>();
+                sectionRegistrationService = sectionRegistrationServiceMock.Object;
+
+                allSectionRegistrationsDtos = SectionRegistrationControllerTests.BuildSectionRegistrations4();
+
+                sectionRegistrationsController = new SectionRegistrationsController(AdapterRegistry, studentReferenceDataRepository, sectionRegistrationService, logger);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                sectionRegistrationsController = null;
+                sectionRegistrationService = null;
+                studentReferenceDataRepository = null;
+            }
+
+            [TestMethod]
+            public async Task CreatesSectionRegistration()
+            {
+                Dtos.SectionRegistration4 registration = allSectionRegistrationsDtos.ElementAt(0);
+                sectionRegistrationServiceMock.Setup(x => x.CreateSectionRegistration3Async(registration)).ReturnsAsync(allSectionRegistrationsDtos.ElementAt(0));
+
+                var sectionRegistration = await sectionRegistrationsController.PostSectionRegistrations3Async(registration);
+                Assert.AreEqual(sectionRegistration.Id, registration.Id);
+                Assert.AreEqual(sectionRegistration.Registrant, registration.Registrant);
+                Assert.AreEqual(sectionRegistration.Section, registration.Section);
+                Assert.AreEqual(sectionRegistration.Status.RegistrationStatus, registration.Status.RegistrationStatus);
+                Assert.AreEqual(sectionRegistration.AcademicLevel, registration.AcademicLevel);
+
+            }
+
+            #region Exception Test POST
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_PostSectionRegistrationAsync_PermissionsException()
+            {
+                sectionRegistrationServiceMock
+                    .Setup(s => s.CreateSectionRegistration3Async(It.IsAny<SectionRegistration4>()))
+                    .ThrowsAsync(new PermissionsException());
+                await sectionRegistrationsController.PostSectionRegistrations3Async(It.IsAny<SectionRegistration4>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_PostSectionRegistrationAsync_KeyNotFoundException()
+            {
+                sectionRegistrationServiceMock
+                    .Setup(s => s.CreateSectionRegistration3Async(It.IsAny<SectionRegistration4>()))
+                    .ThrowsAsync(new KeyNotFoundException());
+                await sectionRegistrationsController.PostSectionRegistrations3Async(It.IsAny<SectionRegistration4>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_PostSectionRegistrationAsync_ArgumentNullException()
+            {
+                sectionRegistrationServiceMock
+                    .Setup(s => s.CreateSectionRegistration3Async(It.IsAny<SectionRegistration4>()))
+                    .ThrowsAsync(new ArgumentNullException());
+                await sectionRegistrationsController.PostSectionRegistrations3Async(It.IsAny<SectionRegistration4>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_PostSectionRegistrationAsync_ArgumentOutOfRangeException()
+            {
+                sectionRegistrationServiceMock
+                    .Setup(s => s.CreateSectionRegistration3Async(It.IsAny<SectionRegistration4>()))
+                    .ThrowsAsync(new ArgumentOutOfRangeException());
+                await sectionRegistrationsController.PostSectionRegistrations3Async(It.IsAny<SectionRegistration4>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_PostSectionRegistrationAsync_ArgumentException()
+            {
+                sectionRegistrationServiceMock
+                    .Setup(s => s.CreateSectionRegistration3Async(It.IsAny<SectionRegistration4>()))
+                    .ThrowsAsync(new ArgumentException());
+                await sectionRegistrationsController.PostSectionRegistrations3Async(It.IsAny<SectionRegistration4>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_PostSectionRegistrationAsync_IntegrationApiException()
+            {
+                sectionRegistrationServiceMock
+                    .Setup(s => s.CreateSectionRegistration3Async(It.IsAny<SectionRegistration4>()))
+                    .ThrowsAsync(new IntegrationApiException());
+                await sectionRegistrationsController.PostSectionRegistrations3Async(It.IsAny<SectionRegistration4>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_PostSectionRegistrationAsync_InvalidOperationException()
+            {
+                sectionRegistrationServiceMock
+                    .Setup(s => s.CreateSectionRegistration3Async(It.IsAny<SectionRegistration4>()))
+                    .ThrowsAsync(new InvalidOperationException());
+                await sectionRegistrationsController.PostSectionRegistrations3Async(It.IsAny<SectionRegistration4>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_PostSectionRegistrationAsync_FormatException()
+            {
+                sectionRegistrationServiceMock
+                    .Setup(s => s.CreateSectionRegistration3Async(It.IsAny<SectionRegistration4>()))
+                    .ThrowsAsync(new FormatException());
+                await sectionRegistrationsController.PostSectionRegistrations3Async(It.IsAny<SectionRegistration4>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_PostSectionRegistrationAsync_ConfigurationException()
+            {
+                sectionRegistrationServiceMock
+                    .Setup(s => s.CreateSectionRegistration3Async(It.IsAny<SectionRegistration4>()))
+                    .ThrowsAsync(new ConfigurationException());
+                await sectionRegistrationsController.PostSectionRegistrations3Async(It.IsAny<SectionRegistration4>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_PostSectionRegistrationAsync_Exception()
+            {
+                sectionRegistrationServiceMock
+                    .Setup(s => s.CreateSectionRegistration3Async(It.IsAny<SectionRegistration4>()))
+                    .ThrowsAsync(new Exception());
+                await sectionRegistrationsController.PostSectionRegistrations3Async(It.IsAny<SectionRegistration4>());
+            }
+            #endregion
+        }
 
         internal static IEnumerable<Dtos.SectionRegistration2> BuildSectionRegistrations()
         {
@@ -968,9 +1565,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             return sectionRegistrationDtos;
         }
-
-
-
         internal static IEnumerable<Dtos.SectionRegistration3> BuildSectionRegistrations3()
         {
             var sectionRegistrationDtos = new List<Dtos.SectionRegistration3>();
@@ -1011,6 +1605,104 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 },
                 AwardGradeScheme = new Dtos.GuidObject2() { Id = "098975864tgu17637ajhdf" },
                 AcademicLevel = new GuidObject2() { Id = "qwertyuiop" },
+            };
+
+            sectionRegistrationDtos.Add(sectionRegistrationDto1);
+            sectionRegistrationDtos.Add(sectionRegistrationDto2);
+
+            return sectionRegistrationDtos;
+        }
+
+        internal static IEnumerable<Dtos.SectionRegistration4> BuildSectionRegistrations4()
+        {
+            var sectionRegistrationDtos = new List<Dtos.SectionRegistration4>();
+
+            var sectionRegistrationDto1 = new Dtos.SectionRegistration4()
+            {
+                Id = "1d95b329-edbe-4420-909a-df57a962a30c",
+                Section = new Dtos.GuidObject2() { Id = "b6e6edae-df08-4081-aa24-c8442fa5fb2d" },
+                Registrant = new Dtos.GuidObject2() { Id = "f0deb5c6-7e3e-450b-a861-ea07e7340a97" },
+                Status = new Dtos.DtoProperties.SectionRegistrationStatusDtoProperty
+                {
+                    RegistrationStatus = Dtos.EnumProperties.RegistrationStatus3.NotRegistered,
+                    SectionRegistrationStatusReason = Dtos.EnumProperties.RegistrationStatusReason3.Dropped,
+                    Detail = new GuidObject2("7d51cda6-6ade-447a-9271-b57784d64ad4")
+                },
+                AcademicLevel = new GuidObject2() { Id = "97776a59-5f1e-4a1d-b509-b2206596f2a2" },
+                Approval = new List<Approval2>()
+                {
+                    new Approval2()
+                    {
+                        ApprovalEntity = ApprovalEntity.System,
+                        ApprovalType = ApprovalType2.All
+                    }
+                },
+                Credit = new Dtos.DtoProperties.Credit4DtoProperty()
+                {
+                    Measure = Dtos.EnumProperties.StudentCourseTransferMeasure.Credit,
+                    RegistrationCredit = 3.50m
+                },
+                GradingOption = new Dtos.DtoProperties.SectionRegistrationTranscript2()
+                {
+                    GradeScheme = new GuidObject2("b48e621c-2a4e-48cf-a99f-7bcb0d4459a6"),
+                    Mode = Dtos.EnumProperties.TranscriptMode2.Standard
+                },
+                Involvement = new SectionRegistrationInvolvement()
+                {
+                    StartOn = DateTimeOffset.Now.Date,
+                    EndOn = DateTimeOffset.Now.Date.AddMonths(3)
+                },
+                OriginallyRegisteredOn = DateTime.Now.AddDays(-45),
+                Override = new Dtos.DtoProperties.SectionRegistrationsOverrideDtoProperty()
+                {
+                    AcademicPeriod = new GuidObject2("6bb46125-8462-45c6-a070-ea0eb6474518"),
+                    Site = new GuidObject2("a9f666de-8e21-4c04-a670-7109da6a363a")
+                },
+                StatusDate = DateTime.Now
+            };
+
+            var sectionRegistrationDto2 = new Dtos.SectionRegistration4()
+            {
+                Id = "2d95b329-edbe-4420-909a-df57a962a30d",
+                Section = new Dtos.GuidObject2() { Id = "c6e6edae-df08-4081-aa24-c8442fa5fb2e" },
+                Registrant = new Dtos.GuidObject2() { Id = "g0deb5c6-7e3e-450b-a861-ea07e7340a98" },
+                Status = new Dtos.DtoProperties.SectionRegistrationStatusDtoProperty
+                {
+                    RegistrationStatus = Dtos.EnumProperties.RegistrationStatus3.NotRegistered,
+                    SectionRegistrationStatusReason = Dtos.EnumProperties.RegistrationStatusReason3.Dropped,
+                    Detail = new GuidObject2("8d51cda6-6ade-447a-9271-b57784d64ad5")
+                },
+                AcademicLevel = new GuidObject2() { Id = "07776a59-5f1e-4a1d-b509-b2206596f2a3" },
+                Approval = new List<Approval2>()
+                {
+                    new Approval2()
+                    {
+                        ApprovalEntity = ApprovalEntity.System,
+                        ApprovalType = ApprovalType2.All
+                    }
+                },
+                Credit = new Dtos.DtoProperties.Credit4DtoProperty()
+                {
+                    Measure = Dtos.EnumProperties.StudentCourseTransferMeasure.Credit,
+                    RegistrationCredit = 3.50m
+                },
+                GradingOption = new Dtos.DtoProperties.SectionRegistrationTranscript2()
+                {
+                    GradeScheme = new GuidObject2("c48e621c-2a4e-48cf-a99f-7bcb0d4459a7"),
+                    Mode = Dtos.EnumProperties.TranscriptMode2.Standard
+                },
+                Involvement = new SectionRegistrationInvolvement()
+                {
+                    StartOn = DateTimeOffset.Now.Date,
+                    EndOn = DateTimeOffset.Now.Date.AddMonths(3)
+                },
+                OriginallyRegisteredOn = DateTime.Now.AddDays(-45),
+                Override = new Dtos.DtoProperties.SectionRegistrationsOverrideDtoProperty()
+                {
+                    AcademicPeriod = new GuidObject2("7bb46125-8462-45c6-a070-ea0eb6474519"),
+                    Site = new GuidObject2("c9f666de-8e21-4c04-a670-7109da6a363b")
+                },
+                StatusDate = DateTime.Now
             };
 
             sectionRegistrationDtos.Add(sectionRegistrationDto1);

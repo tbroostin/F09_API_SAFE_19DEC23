@@ -5,6 +5,7 @@ using System.Runtime.Serialization;
 using Ellucian.Colleague.Dtos.Converters;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using Newtonsoft.Json;
+using Ellucian.Colleague.Dtos.Attributes;
 
 namespace Ellucian.Colleague.Dtos
 {
@@ -33,6 +34,7 @@ namespace Ellucian.Colleague.Dtos
         /// The financial aid year for which the applicant applied.
         /// </summary>
         [JsonProperty("aidYear", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        [FilterProperty("criteria")]
         public GuidObject2 AidYear { get; set; }
 
         /// <summary>

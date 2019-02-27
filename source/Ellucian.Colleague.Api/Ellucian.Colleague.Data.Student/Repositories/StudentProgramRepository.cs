@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -519,7 +519,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     foreach (var ar in prog.StprCcdListEntityAssociation)
                     {
                         // Make sure the start date is on or before the current date AND the end date is null or after the current date
-                        if ((ar.StprCcdsStartDateAssocMember != null ) && (ar.StprCcdsEndDateAssocMember == null || ar.StprCcdsEndDateAssocMember >= DateTime.Today))
+                        if ((ar.StprCcdsStartDateAssocMember != null) && (ar.StprCcdsEndDateAssocMember == null || ar.StprCcdsEndDateAssocMember >= DateTime.Today))
                         {
                             try
                             {
@@ -540,7 +540,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     foreach (var ar in prog.StprSpecialtiesEntityAssociation)
                     {
                         // Make sure the start date is on or before the current date AND the end date is null or after the current date
-                        if ((ar.StprSpecializationStartAssocMember != null ) && (ar.StprSpecializationEndAssocMember == null || ar.StprSpecializationEndAssocMember >= DateTime.Today))
+                        if ((ar.StprSpecializationStartAssocMember != null) && (ar.StprSpecializationEndAssocMember == null || ar.StprSpecializationEndAssocMember >= DateTime.Today))
                         {
                             try
                             {
@@ -567,8 +567,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             if (over.StovAcadReqmtBlock != "")
                             {
                                 //Make sure the data accessor didn't leave blanks in these
-                                over.StovInclStudentAcadCred.RemoveAll(delegate(string s) { return s.Trim() == ""; });
-                                over.StovExclStudentAcadCred.RemoveAll(delegate(string s) { return s.Trim() == ""; });
+                                over.StovInclStudentAcadCred.RemoveAll(delegate (string s) { return s.Trim() == ""; });
+                                over.StovExclStudentAcadCred.RemoveAll(delegate (string s) { return s.Trim() == ""; });
 
                                 IEnumerable<string> includeCredits = over.StovInclStudentAcadCred;
                                 IEnumerable<string> excludeCredits = over.StovExclStudentAcadCred;
@@ -599,7 +599,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     }
                     catch (Exception ex)
                     {
-                        var errorMessage = string.Concat("Unable to add all student statuses. Student ID: ",  studentid);
+                        var errorMessage = string.Concat("Unable to add all student statuses. Student ID: ", studentid);
                         logger.Warn(ex, errorMessage);
                     }
                     stpr.StudentProgramStatuses = allStudentProgramStatuses;
@@ -623,7 +623,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         {
             char _VM = Convert.ToChar(DynamicArray.VM);
 
-            if (exceptionids.Count > 0 && exceptionData.Count() > 0)
+            if (exceptionids != null && exceptionData != null && stpr != null && exceptionids.Count > 0 && exceptionData.Count() > 0)
             {
                 foreach (var excp in exceptionData.Where(ex => exceptionids.Contains(ex.Recordkey)))
                 {
@@ -784,14 +784,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                         }
                                     }
                                     FromCoursesAddition fromCourseAddition = new FromCoursesAddition(blockid, noweligiblecourselist, message);
-                                        stpr.AddRequirementModification(fromCourseAddition);
+                                    stpr.AddRequirementModification(fromCourseAddition);
                                 }
                             }
                         }
-                        catch(NotSupportedException ex)
+                        catch (NotSupportedException ex)
                         {
                             var errorMessage = string.Format("Unable to add Exception: {0} for student id: {1} and program code: {2}", excp.Recordkey, stpr.StudentId, stpr.ProgramCode);
-                            logger.Warn(ex,string.Concat(errorMessage,Environment.NewLine,"Exception record is missing pointer to requirement block"));
+                            logger.Warn(ex, string.Concat(errorMessage, Environment.NewLine, "Exception record is missing pointer to requirement block"));
                         }
 
                     }
@@ -805,46 +805,90 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             // can have its own minimum grade (making it its own group) - in the interest
                             // of simplicity we will just put each in its own group anyway.
 
-                            Requirement req = new Requirement("", "", "", "", null);
-                            Subrequirement sub = new Subrequirement("", "");
+                            Requirement req = new Requirement("", "", "", "", null) { IsBlockReplacement = true };
+                            Subrequirement sub = new Subrequirement("", "") { IsBlockReplacement = true };
 
                             sub.Requirement = req;
                             req.MinSubRequirements = 1;
                             req.SubRequirements.Add(sub);
 
                             int groupcount = 0;
-                            foreach (var blk in excp.BlockReplEntityAssociation)
+                            if (excp.BlockReplEntityAssociation != null && excp.BlockReplEntityAssociation.Any())
                             {
-                                string courseid = blk.StexBlockReplCoursesAssocMember;
-                                if (!string.IsNullOrEmpty(courseid))
+                                foreach (var blk in excp.BlockReplEntityAssociation)
                                 {
-                                    string gradeid = blk.StexBlockReplMinGradeAssocMember;
-                                    string groupid = "Group " + (++groupcount).ToString();
-
-                                    Group g = new Group(groupid, groupid, sub);
-                                    g.Courses.Add(courseid);
-                                    if (!string.IsNullOrEmpty(gradeid))
+                                    string courseid = blk.StexBlockReplCoursesAssocMember;
+                                    if (!string.IsNullOrEmpty(courseid))
                                     {
-                                        //  g.MinGrade = gradeRepo.Get().FirstOrDefault(grd => grd.Id == gradeid);
-                                        g.MinGrade = (await gradeRepo.GetAsync()).ToList().FirstOrDefault(grd => grd.Id == gradeid);
-                                    }
-                                    g.MinCourses = 1;
-                                    g.GroupType = GroupType.TakeAll;
-                                    g.SubRequirement = sub;
-                                    // g.RequirementType - should this come from the replaced requirement?
-                                    sub.Groups.Add(g);
+                                        string gradeid = blk.StexBlockReplMinGradeAssocMember;
+                                        string groupid = "Group " + (++groupcount).ToString();
 
+                                        Group g = new Group(groupid, groupid, sub);
+                                        g.Courses.Add(courseid);
+                                        if (!string.IsNullOrEmpty(gradeid))
+                                        {
+                                            g.MinGrade = (await gradeRepo.GetAsync()).ToList().FirstOrDefault(grd => grd.Id == gradeid);
+                                        }
+                                        g.MinCourses = 1;
+                                        g.GroupType = GroupType.TakeAll;
+                                        g.SubRequirement = sub;
+                                        g.IsBlockReplacement = true;
+                                        sub.Groups.Add(g);
+
+                                    }
                                 }
+                                sub.MinGroups = groupcount;
+                                newRequirement = req;
                             }
-                            sub.MinGroups = groupcount;
-                            newRequirement = req;
+                        }
+                        try
+                        {
+                            BlockReplacement blockReplacement = new BlockReplacement(excp.StexAcadReqmtBlock, newRequirement, message);
+                            stpr.AddRequirementModification(blockReplacement);
+                        }
+                        catch (Exception)
+                        {
+                            var errorMessage = string.Format("Unable to create block replacement for Student ID: '{0}, Program: '{1}', Exception: '{2}'", stpr.StudentId, stpr.ProgramCode, excp.Recordkey);
+                            logger.Error(errorMessage);
                         }
 
-                        BlockReplacement blockReplacement = new BlockReplacement(excp.StexAcadReqmtBlock, newRequirement, message);
-                        stpr.AddRequirementModification(blockReplacement);
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// returns student program entities with just status information for student academic period profile. 
+        /// </summary>
+        /// <param name="stuProgIds">student program Ids</param>
+        /// <returns>An IEnumerable list of StudentProgram Entities .</returns>
+        public async Task<List<StudentProgram>> GetStudentAcademicPeriodProfileStudentProgramInfoAsync(List<string> stuProgIds)
+        {
+            var studentProgramCollection = await DataReader.BulkReadRecordAsync<StudentPrograms>(stuProgIds.ToArray());
+            var studentProgramEntities = new List<Ellucian.Colleague.Domain.Student.Entities.StudentProgram>();
+
+            if (studentProgramCollection != null & studentProgramCollection.Any())
+            {
+                foreach (var student in studentProgramCollection)
+                {
+                    string catcode = student.StprCatalog;
+                    string studentid = student.Recordkey.Split('*')[0];
+                    string progcode = student.Recordkey.Split('*')[1];
+                    StudentProgram studentEntity = new StudentProgram(studentid, progcode, catcode);
+                    if (student.StprStatusesEntityAssociation != null && student.StprStatusesEntityAssociation.Any())
+                    {
+                        var allStudentProgramStatuses = new List<StudentProgramStatus>();
+                        foreach (var studentProgramStatus in student.StprStatusesEntityAssociation)
+                        {
+                            allStudentProgramStatuses.Add(new StudentProgramStatus(studentProgramStatus.StprStatusAssocMember, studentProgramStatus.StprStatusDateAssocMember));
+                        }
+                        studentEntity.StudentProgramStatuses = allStudentProgramStatuses;
+                    }
+
+                    studentProgramEntities.Add(studentEntity);
+                }
+            }
+            return studentProgramEntities;
         }
 
         /// <summary>

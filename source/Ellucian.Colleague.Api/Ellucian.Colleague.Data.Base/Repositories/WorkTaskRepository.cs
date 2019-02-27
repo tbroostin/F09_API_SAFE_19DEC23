@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -7,6 +7,7 @@ using Ellucian.Data.Colleague.DataContracts;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Configuration;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -21,6 +22,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
     {
 
         private ApplValcodes categories;
+        private readonly string _colleagueTimeZone;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="WorkTaskRepository"/> class.
@@ -28,9 +30,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <param name="cacheProvider">The cache provider.</param>
         /// <param name="transactionFactory">The transaction factory.</param>
         /// <param name="logger">The logger.</param>
-        public WorkTaskRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger)
+        public WorkTaskRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings apiSettings)
             : base(cacheProvider, transactionFactory, logger)
         {
+            _colleagueTimeZone = apiSettings.ColleagueTimeZone;
         }
 
         private async Task<ApplValcodes> GetCategoriesAsync()
@@ -54,6 +57,28 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             return categories;
         }
 
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="code"></param>
+        /// <returns></returns>
+        private ExecutionState? ConvertCodeToExecutionState(string executionCode)
+        {
+            switch (executionCode)
+            {
+                case null:
+                    return null;
+                case "NS":
+                    return ExecutionState.NS;
+                case "ON":
+                    return ExecutionState.ON;
+                case "C":
+                    return ExecutionState.C;
+                default:
+                    return null;
+            }
+        }
 
         /// <summary>
         /// Gets the list of work tasks for the specified user and roles.
@@ -124,6 +149,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 {
                     foreach (var item in worklistRecords)
                     {
+                      
                         if (IsOpen(item.WklExecState))
                         {
                             var categoryAssociation = await GetCategoryValcodeAssociation(item.WklCategory);
@@ -143,7 +169,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             }
                             // The process code for which application to route this type of task to is stored in the second action code
                             var processCode = categoryAssociation != null ? categoryAssociation.ValActionCode2AssocMember : string.Empty;
-                            var task = new WorkTask(item.Recordkey, categoryName, item.WklDescription, processCode);
+
+                            DateTimeOffset itemDateTime = item.WklStartTime.ToPointInTimeDateTimeOffset(item.WklStartDate, _colleagueTimeZone).GetValueOrDefault();
+
+                            var task = new WorkTask(item.Recordkey, categoryName, item.WklDescription, processCode, itemDateTime, ConvertCodeToExecutionState(item.WklExecState));
                             taskList.Add(task);
                         }
                     }

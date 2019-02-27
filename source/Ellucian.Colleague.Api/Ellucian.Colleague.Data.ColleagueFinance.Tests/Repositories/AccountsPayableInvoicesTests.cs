@@ -290,7 +290,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 var purchaseOrder = new PurchaseOrders() { PoNo = "P0000001" };
                 dataReaderMock.Setup(repo => repo.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), true)).ReturnsAsync(purchaseOrder);
 
-                var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoicesAsync(0, 100);
+                var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 100);
 
                 Assert.AreEqual(dataContractVouchers.Count(), accountsPayables.Item1.Count());
 
@@ -444,7 +444,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 var purchaseOrder = new PurchaseOrders() { PoNo = "P0000001" };
                 dataReaderMock.Setup(repo => repo.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), true)).ReturnsAsync(purchaseOrder);
 
-                var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoicesAsync(0, 3);
+                var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 3);
 
                 Assert.AreEqual(3, accountsPayables.Item1.Count());
 
@@ -460,7 +460,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
             dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", It.IsAny<string[]>(), true)).ReturnsAsync(people);
 
-            var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoicesAsync(0, 100);
+            var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 100);
 
         }
 
@@ -552,7 +552,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             string[] personIds = { "0001234", "0000002" };
             dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", personIds, true)).ReturnsAsync(null);
 
-            var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoicesAsync(0, 100);
+            var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 100);
         }
 
         [TestMethod]

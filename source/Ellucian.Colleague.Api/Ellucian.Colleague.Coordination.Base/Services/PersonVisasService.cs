@@ -157,8 +157,8 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// </summary>
         private void CheckUserPersonVisasViewPermissions()
         {
-            // access is ok if the current user has the view person visas permission
-            if (!HasPermission(BasePermissionCodes.ViewAnyPersonVisa))
+            // access is ok if the current user has the view or update person visas permission
+            if (!HasPermission(BasePermissionCodes.ViewAnyPersonVisa) && !HasPermission(BasePermissionCodes.UpdateAnyPersonVisa))
             {
                 logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view person-visas.");
                 throw new PermissionsException("User is not authorized to view person-visas.");

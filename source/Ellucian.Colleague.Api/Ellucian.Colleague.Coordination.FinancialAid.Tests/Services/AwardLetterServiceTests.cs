@@ -61,6 +61,8 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
             testFafsaRepository = new Domain.FinancialAid.Tests.TestFafsaRepository();
         }
 
+        #region Obsolete methods tests
+
         [TestClass]
         public class GetSingleAwardLetterTests : AwardLetterServiceTests
         {
@@ -3428,6 +3430,1181 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
             }
         }
 
-        
+        #endregion
+
+        [TestClass]
+        public class UpdateAwardLetter3AsyncTests : AwardLetterServiceTests
+        {
+            private string studentId;
+            private StudentAwardYear studentAwardYear;
+
+            private AwardLetter3 inputAwardLetterEntity;
+
+            private Dtos.FinancialAid.AwardLetter3 expectedAwardLetter;
+            private Dtos.FinancialAid.AwardLetter3 actualAwardLetter;
+
+            private AwardLetterService awardLetterService;
+
+            [TestInitialize]
+            public async void Initialize()
+            {
+                AwardLetterServiceTestsInitialize();
+
+                studentId = currentUserFactory.CurrentUser.PersonId;
+
+                var currentOfficeService = new CurrentOfficeService(testOfficeRepository.GetFinancialAidOffices());
+                var studentAwardYears = testStudentAwardYearRepository.GetStudentAwardYears(studentId, currentOfficeService);
+
+                var allAwards = testFinancialAidReferenceDataRepository.Awards;
+
+                var inputLetter = await testAwardLetterHistoryRepository.GetAwardLetter2Async(studentId, studentAwardYears.First(ay => ay.Code == "2015"), allAwards, false);
+                inputAwardLetterEntity = await testAwardLetterHistoryRepository.UpdateAwardLetter2Async(studentId, inputLetter, studentAwardYears.First(ay => ay.Code == "2015"), allAwards);
+
+                fafsaRepositoryMock = new Mock<IFafsaRepository>();
+                awardLetterRepositoryMock = new Mock<IAwardLetterRepository>();
+
+                awardLetterHistoryRepositoryMock = new Mock<IAwardLetterHistoryRepository>();
+                awardLetterHistoryRepositoryMock.Setup(l => l.UpdateAwardLetter2Async(It.IsAny<string>(), It.IsAny<AwardLetter3>(), It.IsAny<StudentAwardYear>(), It.IsAny<IEnumerable<Award>>()))
+                    .ReturnsAsync(inputAwardLetterEntity);
+
+                financialAidReferenceDataRepositoryMock = new Mock<IFinancialAidReferenceDataRepository>();
+                financialAidReferenceDataRepositoryMock.Setup(r => r.Awards).Returns(testFinancialAidReferenceDataRepository.Awards);
+                financialAidReferenceDataRepositoryMock.Setup(r => r.AwardStatuses).Returns(testFinancialAidReferenceDataRepository.AwardStatuses);
+
+                var studentAwards = testStudentAwardRepository.GetAllStudentAwardsAsync(
+                    studentId,
+                    testStudentAwardYearRepository.GetStudentAwardYears(studentId, currentOfficeService),
+                    testFinancialAidReferenceDataRepository.Awards,
+                    testFinancialAidReferenceDataRepository.AwardStatuses);
+
+                studentAwardRepositoryMock = new Mock<IStudentAwardRepository>();
+                studentAwardRepositoryMock.Setup(r =>
+                    r.GetAllStudentAwardsAsync(studentId, It.IsAny<IEnumerable<StudentAwardYear>>(), It.IsAny<IEnumerable<Award>>(), It.IsAny<IEnumerable<AwardStatus>>())
+                    ).Returns(studentAwards);
+
+                studentRepositoryMock = new Mock<IStudentRepository>();
+                Domain.Student.Entities.Student student = null;
+                studentRepositoryMock.Setup(r => r.Get(studentId)).Returns(student);
+
+                applicantRepositoryMock = new Mock<IApplicantRepository>();
+                Domain.Student.Entities.Applicant applicant = new Domain.Student.Entities.Applicant(studentId, "LastName");
+                applicantRepositoryMock.Setup(r => r.GetApplicant(studentId)).Returns(applicant);
+
+                studentAwardYearRepositoryMock = new Mock<IStudentAwardYearRepository>();
+                studentAwardYearRepositoryMock.Setup(
+                    y => y.GetStudentAwardYearsAsync(studentId, It.IsAny<CurrentOfficeService>(), It.IsAny<bool>())
+                    ).ReturnsAsync(testStudentAwardYearRepository.GetStudentAwardYears(studentId, currentOfficeService));
+
+                officeRepositoryMock = new Mock<IFinancialAidOfficeRepository>();
+                officeRepositoryMock.Setup(f => f.GetFinancialAidOfficesAsync()).ReturnsAsync(testOfficeRepository.GetFinancialAidOffices());
+
+
+                var awardLetterEntityAdapter = new AwardLetter3EntityToDtoAdapter(adapterRegistryMock.Object, loggerMock.Object);
+                //expectedAwardLetter = awardLetterEntityAdapter.MapToType(inputAwardLetterEntity, applicant);
+                expectedAwardLetter = awardLetterEntityAdapter.MapToType(inputAwardLetterEntity);
+
+                awardLetterService = new AwardLetterService(adapterRegistryMock.Object,
+                    awardLetterRepositoryMock.Object,
+                    awardLetterHistoryRepositoryMock.Object,
+                    financialAidReferenceDataRepositoryMock.Object,
+                    studentAwardRepositoryMock.Object,
+                    studentRepositoryMock.Object,
+                    applicantRepositoryMock.Object,
+                    studentAwardYearRepositoryMock.Object,
+                    officeRepositoryMock.Object,
+                    fafsaRepositoryMock.Object,
+                    baseConfigurationRepository,
+                    currentUserFactory,
+                    roleRepositoryMock.Object,
+                    loggerMock.Object);
+
+                actualAwardLetter = await awardLetterService.UpdateAwardLetter3Async(expectedAwardLetter);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                BaseCleanup();
+                studentId = null;
+                studentAwardYear = null;
+                inputAwardLetterEntity = null;
+                expectedAwardLetter = null;
+                actualAwardLetter = null;
+                awardLetterService = null;
+
+                fafsaRepositoryMock = null;
+                awardLetterRepositoryMock = null;
+                awardLetterHistoryRepositoryMock = null;
+                financialAidReferenceDataRepositoryMock = null;
+                studentAwardRepositoryMock = null;
+                studentRepositoryMock = null;
+                applicantRepositoryMock = null;
+                studentAwardYearRepositoryMock = null;
+                officeRepositoryMock = null;
+
+            }
+
+            /// <summary>
+            /// User is self
+            /// </summary>
+            [TestMethod]
+            public void ActualAwardLetter_EqualsExpectedTest()
+            {
+                Assert.AreEqual(expectedAwardLetter.Id, actualAwardLetter.Id);
+                Assert.AreEqual(expectedAwardLetter.AcceptedDate, actualAwardLetter.AcceptedDate);
+                Assert.AreEqual(DateTime.Today, actualAwardLetter.AcceptedDate);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task NullAwardLetter_ExceptionThrownTest()
+            {
+                await awardLetterService.UpdateAwardLetter3Async(null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task NullStudentId_ExceptionThrownTest()
+            {
+                expectedAwardLetter.StudentId = null;
+                await awardLetterService.UpdateAwardLetter3Async(expectedAwardLetter);
+            }
+
+            [TestMethod]
+            public async Task NullStudentId_ExpectedMessageIsLoggedTest()
+            {
+                expectedAwardLetter.StudentId = null;
+                try
+                {
+                    await awardLetterService.UpdateAwardLetter3Async(expectedAwardLetter);
+                }
+                catch (ArgumentException)
+                {
+                    loggerMock.Verify(l => l.Error("Input argument awardLetter is invalid. StudentId cannot be null or empty"));
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task EmptyStringAwardYear_ExceptionThrownTest()
+            {
+                expectedAwardLetter.AwardLetterYear = string.Empty;
+                await awardLetterService.UpdateAwardLetter3Async(expectedAwardLetter);
+            }
+
+            [TestMethod]
+            public async Task NullAwardLetterYear_ExpectedMessageIsLoggedTest()
+            {
+                expectedAwardLetter.AwardLetterYear = null;
+                try
+                {
+                    await awardLetterService.UpdateAwardLetter3Async(expectedAwardLetter);
+                }
+                catch (ArgumentException)
+                {
+                    loggerMock.Verify(l => l.Error("Input argument awardLetter is invalid. AwardYear cannot be null or empty"));
+                }
+            }
+
+            /// <summary>
+            /// User is not self
+            /// </summary>
+            /// <returns></returns>
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task NotUserIsSelf_ExceptionThrownTest()
+            {
+                expectedAwardLetter.StudentId = "foo";
+                await awardLetterService.UpdateAwardLetter3Async(expectedAwardLetter);
+            }
+
+            [TestMethod]
+            public async Task NotUserIsSelf_ExpectedMessageIsLoggedTest()
+            {
+                expectedAwardLetter.StudentId = "foo";
+                try
+                {
+                    await awardLetterService.UpdateAwardLetter3Async(expectedAwardLetter);
+                }
+                catch (PermissionsException)
+                {
+                    loggerMock.Verify(l => l.Error(string.Format("{0} does not have permission to update award letter for {1}", currentUserFactory.CurrentUser.PersonId, expectedAwardLetter.StudentId)));
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(InvalidOperationException))]
+            public async Task NoMatchingAwardYearRetreived_ExceptionThrownTest()
+            {
+                studentAwardYearRepositoryMock.Setup(
+                    y => y.GetStudentAwardYearsAsync(studentId, It.IsAny<CurrentOfficeService>(), It.IsAny<bool>())
+                    ).ReturnsAsync(new List<StudentAwardYear>());
+
+                await awardLetterService.UpdateAwardLetter3Async(expectedAwardLetter);
+            }
+
+            [TestMethod]
+            public async Task NoMatchingAwardYearRetrieved_ExpectedMessageIsLoggedTest()
+            {
+                studentAwardYearRepositoryMock.Setup(
+                    y => y.GetStudentAwardYearsAsync(studentId, It.IsAny<CurrentOfficeService>(), It.IsAny<bool>())
+                    ).ReturnsAsync(new List<StudentAwardYear>());
+
+                try
+                {
+                    await awardLetterService.UpdateAwardLetter3Async(expectedAwardLetter);
+                }
+                catch (InvalidOperationException)
+                {
+                    loggerMock.Verify(l => l.Error(string.Format("Student has no financial aid data for {0}", expectedAwardLetter.AwardLetterYear)));
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(InvalidOperationException))]
+            public async Task NoStudentAwardsRetrieved_ExceptionThrownTest()
+            {
+                studentAwardRepositoryMock.Setup(r =>
+                    r.GetAllStudentAwardsAsync(studentId, It.IsAny<IEnumerable<StudentAwardYear>>(), It.IsAny<IEnumerable<Award>>(), It.IsAny<IEnumerable<AwardStatus>>())
+                    ).ReturnsAsync((IEnumerable<StudentAward>)null);
+
+                await awardLetterService.UpdateAwardLetter3Async(expectedAwardLetter);
+            }
+
+            [TestMethod]
+            public async Task NoStudentAwardsRetrieved_ExcpectedMessageIsLoggedTest()
+            {
+                studentAwardRepositoryMock.Setup(r =>
+                    r.GetAllStudentAwardsAsync(studentId, It.IsAny<IEnumerable<StudentAwardYear>>(), It.IsAny<IEnumerable<Award>>(), It.IsAny<IEnumerable<AwardStatus>>())
+                    ).ReturnsAsync((IEnumerable<StudentAward>)null);
+
+                try
+                {
+                    await awardLetterService.UpdateAwardLetter3Async(expectedAwardLetter);
+                }
+                catch (InvalidOperationException)
+                {
+                    loggerMock.Verify(l => l.Error(string.Format("Student has no awards or Configuration filtered out all StudentAwards for student {0} and award year {1}", expectedAwardLetter.StudentId, expectedAwardLetter.AwardLetterYear)));
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(Exception))]
+            public async Task NoUpdatedAwardLetterEntityReceived_ExceptionThrownTest()
+            {
+                awardLetterHistoryRepositoryMock.Setup(l => l.UpdateAwardLetter2Async(It.IsAny<string>(), It.IsAny<AwardLetter3>(), It.IsAny<StudentAwardYear>(), It.IsAny<IEnumerable<Award>>()))
+                    .ReturnsAsync(null);
+
+                await awardLetterService.UpdateAwardLetter3Async(expectedAwardLetter);
+            }
+
+            [TestMethod]
+            public async Task NoUpdatedAwardLetterEntityReceived_ExpectedMessageIsLoggedTest()
+            {
+                awardLetterHistoryRepositoryMock.Setup(l => l.UpdateAwardLetter2Async(It.IsAny<string>(), It.IsAny<AwardLetter3>(), It.IsAny<StudentAwardYear>(), It.IsAny<IEnumerable<Award>>()))
+                    .ReturnsAsync(null);
+
+                try
+                {
+                    await awardLetterService.UpdateAwardLetter3Async(expectedAwardLetter);
+                }
+                catch (Exception)
+                {
+                    loggerMock.Verify(l => l.Error(string.Format("Null award letter object returned by repository update method for student {0} award year {1}", expectedAwardLetter.StudentId, expectedAwardLetter.AwardLetterYear)));
+                }
+            }
+        }
+
+        [TestClass]
+        public class GetAwardLetters4AsyncTests : AwardLetterServiceTests
+        {
+            private string studentId;
+            private IEnumerable<Domain.FinancialAid.Entities.StudentAwardYear> studentAwardYears;
+            private Task<IEnumerable<Domain.FinancialAid.Entities.StudentAward>> studentAwards;
+
+            private IEnumerable<Domain.FinancialAid.Entities.AwardLetter3> inputAwardLetterEntities;
+
+            private List<Dtos.FinancialAid.AwardLetter3> expectedAwardLetters;
+            private List<Dtos.FinancialAid.AwardLetter3> actualAwardLetters;
+
+            private AwardLetterService awardLetterService;
+
+            [TestInitialize]
+            public async void Initialize()
+            {
+                AwardLetterServiceTestsInitialize();
+
+                studentId = currentUserFactory.CurrentUser.PersonId;
+                var currentOfficeService = new CurrentOfficeService(testOfficeRepository.GetFinancialAidOffices());
+                studentAwardYears = testStudentAwardYearRepository.GetStudentAwardYears(studentId, currentOfficeService);
+
+                var awardYear = studentAwardYears.First();
+
+                var allAwards = testFinancialAidReferenceDataRepository.Awards;
+
+                inputAwardLetterEntities = await testAwardLetterHistoryRepository.GetAwardLetters2Async(studentId, studentAwardYears, allAwards);
+
+                awardLetterRepositoryMock = new Mock<IAwardLetterRepository>();
+                fafsaRepositoryMock = new Mock<IFafsaRepository>();
+
+                awardLetterHistoryRepositoryMock = new Mock<IAwardLetterHistoryRepository>();
+                awardLetterHistoryRepositoryMock.Setup(l => l.GetAwardLetters2Async(studentId, It.IsAny<IEnumerable<StudentAwardYear>>(), It.IsAny<IEnumerable<Award>>())).ReturnsAsync(inputAwardLetterEntities);
+
+                financialAidReferenceDataRepositoryMock = new Mock<IFinancialAidReferenceDataRepository>();
+                financialAidReferenceDataRepositoryMock.Setup(r => r.Awards).Returns(testFinancialAidReferenceDataRepository.Awards);
+                financialAidReferenceDataRepositoryMock.Setup(r => r.AwardStatuses).Returns(testFinancialAidReferenceDataRepository.AwardStatuses);
+
+                studentAwardRepositoryMock = new Mock<IStudentAwardRepository>();
+                studentAwards = testStudentAwardRepository.GetAllStudentAwardsAsync(
+                    studentId,
+                    testStudentAwardYearRepository.GetStudentAwardYears(studentId, currentOfficeService),
+                    testFinancialAidReferenceDataRepository.Awards,
+                    testFinancialAidReferenceDataRepository.AwardStatuses);
+
+                studentAwardRepositoryMock.Setup(r =>
+                    r.GetAllStudentAwardsAsync(studentId, It.IsAny<IEnumerable<StudentAwardYear>>(), It.IsAny<IEnumerable<Award>>(), It.IsAny<IEnumerable<AwardStatus>>())
+                    ).Returns(studentAwards);
+
+                studentRepositoryMock = new Mock<IStudentRepository>();
+                Domain.Student.Entities.Student student = null;
+                studentRepositoryMock.Setup(r => r.Get(studentId)).Returns(student);
+
+                applicantRepositoryMock = new Mock<IApplicantRepository>();
+                Domain.Student.Entities.Applicant applicant = new Domain.Student.Entities.Applicant(studentId, "LastName");
+                applicantRepositoryMock.Setup(r => r.GetApplicant(studentId)).Returns(applicant);
+
+                studentAwardYearRepositoryMock = new Mock<IStudentAwardYearRepository>();
+                studentAwardYearRepositoryMock.Setup(y => y.GetStudentAwardYearsAsync(studentId, It.IsAny<CurrentOfficeService>(), It.IsAny<bool>())).ReturnsAsync(studentAwardYears);
+
+                officeRepositoryMock = new Mock<IFinancialAidOfficeRepository>();
+                officeRepositoryMock.Setup(f => f.GetFinancialAidOfficesAsync()).ReturnsAsync(testOfficeRepository.GetFinancialAidOffices());
+
+                var awardLetterEntityAdapter = new AwardLetter3EntityToDtoAdapter(adapterRegistryMock.Object, loggerMock.Object);
+                expectedAwardLetters = new List<Dtos.FinancialAid.AwardLetter3>();
+                foreach (var letterEntity in inputAwardLetterEntities)
+                {
+                    //expectedAwardLetters.Add(awardLetterEntityAdapter.MapToType(letterEntity, applicant));
+                    expectedAwardLetters.Add(awardLetterEntityAdapter.MapToType(letterEntity));
+                }
+
+                awardLetterService = new AwardLetterService(adapterRegistryMock.Object,
+                    awardLetterRepositoryMock.Object,
+                    awardLetterHistoryRepositoryMock.Object,
+                    financialAidReferenceDataRepositoryMock.Object,
+                    studentAwardRepositoryMock.Object,
+                    studentRepositoryMock.Object,
+                    applicantRepositoryMock.Object,
+                    studentAwardYearRepositoryMock.Object,
+                    officeRepositoryMock.Object,
+                    fafsaRepositoryMock.Object,
+                    baseConfigurationRepository,
+                    currentUserFactory,
+                    roleRepositoryMock.Object,
+                    loggerMock.Object);
+
+                actualAwardLetters = (await awardLetterService.GetAwardLetters4Async(studentId)).ToList();
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                studentId = null;
+                studentAwardYears = null;
+                studentAwards = null;
+                inputAwardLetterEntities = null;
+                expectedAwardLetters = null;
+                actualAwardLetters = null;
+                awardLetterService = null;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task StudentIdIsRequiredTest()
+            {
+                await awardLetterService.GetAwardLetters4Async(null);
+            }
+
+            /// <summary>
+            /// User is not self nor proxy nor counselor
+            /// </summary>
+            /// <returns></returns>
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task NotUserIsSelf_ExceptionThrownTest()
+            {
+                await awardLetterService.GetAwardLetters4Async("0004791");
+            }
+
+            /// <summary>
+            /// User is a counselor but does not have the correct permission
+            /// </summary>
+            /// <returns></returns>
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task NotUserHasPermissions_ExceptionThrownTest()
+            {
+                currentUserFactory = new CurrentUserSetup.CounselorUserFactory();
+                await awardLetterService.GetAwardLetters4Async(currentUserFactory.CurrentUser.PersonId);
+            }
+
+            /// <summary>
+            /// User is counselor
+            /// </summary>
+            /// <returns></returns>
+            [TestMethod]
+            public async Task UserIsCounselor_CanAccessDataTest()
+            {
+                currentUserFactory = new CurrentUserSetup.CounselorUserFactory();
+                counselorRole.AddPermission(new Permission(StudentPermissionCodes.ViewFinancialAidInformation));
+                roleRepositoryMock.Setup(r => r.Roles).Returns(new List<Role>() { counselorRole });
+
+                awardLetterService = new AwardLetterService(adapterRegistryMock.Object,
+                    awardLetterRepositoryMock.Object,
+                    awardLetterHistoryRepositoryMock.Object,
+                    financialAidReferenceDataRepositoryMock.Object,
+                    studentAwardRepositoryMock.Object,
+                    studentRepositoryMock.Object,
+                    applicantRepositoryMock.Object,
+                    studentAwardYearRepositoryMock.Object,
+                    officeRepositoryMock.Object,
+                    fafsaRepositoryMock.Object,
+                    baseConfigurationRepository,
+                    currentUserFactory,
+                    roleRepositoryMock.Object,
+                    loggerMock.Object);
+
+                bool exceptionThrown = false;
+                try
+                {
+                    await awardLetterService.GetAwardLetters4Async(studentId);
+                }
+                catch { exceptionThrown = true; }
+                finally { Assert.IsFalse(exceptionThrown); }
+            }
+
+            /// <summary>
+            /// User is proxy
+            /// </summary>
+            /// <returns></returns>
+            [TestMethod]
+            public async Task UserIsProxy_CanAccessDataTest()
+            {
+                currentUserFactory = new CurrentUserSetup.StudentUserFactoryWithProxy();
+
+                awardLetterService = new AwardLetterService(adapterRegistryMock.Object,
+                    awardLetterRepositoryMock.Object,
+                    awardLetterHistoryRepositoryMock.Object,
+                    financialAidReferenceDataRepositoryMock.Object,
+                    studentAwardRepositoryMock.Object,
+                    studentRepositoryMock.Object,
+                    applicantRepositoryMock.Object,
+                    studentAwardYearRepositoryMock.Object,
+                    officeRepositoryMock.Object,
+                    fafsaRepositoryMock.Object,
+                    baseConfigurationRepository,
+                    currentUserFactory,
+                    roleRepositoryMock.Object,
+                    loggerMock.Object);
+
+                bool exceptionThrown = false;
+                try
+                {
+                    await awardLetterService.GetAwardLetters4Async(studentId);
+                }
+                catch { exceptionThrown = true; }
+                finally { Assert.IsFalse(exceptionThrown); }
+            }
+
+            /// <summary>
+            /// User is proxy for another person
+            /// </summary>
+            /// <returns></returns>
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task UserIsProxyForAnotherPerson_CannnotAccessDataTest()
+            {
+                currentUserFactory = new CurrentUserSetup.StudentUserFactoryWithDifferentProxy();
+
+                awardLetterService = new AwardLetterService(adapterRegistryMock.Object,
+                    awardLetterRepositoryMock.Object,
+                    awardLetterHistoryRepositoryMock.Object,
+                    financialAidReferenceDataRepositoryMock.Object,
+                    studentAwardRepositoryMock.Object,
+                    studentRepositoryMock.Object,
+                    applicantRepositoryMock.Object,
+                    studentAwardYearRepositoryMock.Object,
+                    officeRepositoryMock.Object,
+                    fafsaRepositoryMock.Object,
+                    baseConfigurationRepository,
+                    currentUserFactory,
+                    roleRepositoryMock.Object,
+                    loggerMock.Object);
+
+                await awardLetterService.GetAwardLetters4Async(studentId);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(InvalidOperationException))]
+            public async Task NoStudentAwardYearsReturned_ExceptionThrownTest()
+            {
+                studentAwardYearRepositoryMock.Setup(r => r.GetStudentAwardYearsAsync(It.IsAny<string>(), It.IsAny<CurrentOfficeService>(), It.IsAny<bool>())).ReturnsAsync((IEnumerable<StudentAwardYear>)null);
+                awardLetterService = new AwardLetterService(adapterRegistryMock.Object,
+                    awardLetterRepositoryMock.Object,
+                    awardLetterHistoryRepositoryMock.Object,
+                    financialAidReferenceDataRepositoryMock.Object,
+                    studentAwardRepositoryMock.Object,
+                    studentRepositoryMock.Object,
+                    applicantRepositoryMock.Object,
+                    studentAwardYearRepositoryMock.Object,
+                    officeRepositoryMock.Object,
+                    fafsaRepositoryMock.Object,
+                    baseConfigurationRepository,
+                    currentUserFactory,
+                    roleRepositoryMock.Object,
+                    loggerMock.Object);
+
+                await awardLetterService.GetAwardLetters4Async(studentId);
+            }
+
+            [TestMethod]
+            public async Task NoAwardLetterEntitiesReceived_EmptyDtoListReturnedTest()
+            {
+                awardLetterHistoryRepositoryMock.Setup(r => r.GetAwardLetters2Async(It.IsAny<string>(), It.IsAny<IEnumerable<StudentAwardYear>>(), It.IsAny<IEnumerable<Award>>()))
+                    .ReturnsAsync(new List<AwardLetter3>());
+                Assert.IsTrue((await awardLetterService.GetAwardLetters4Async(studentId)).Count() == 0);
+            }
+
+            [TestMethod]
+            public void ExpectedNumberOfAwardLetterDtosIsReturnedTest()
+            {
+                Assert.AreEqual(expectedAwardLetters.Count, actualAwardLetters.Count);
+            }
+
+            /// <summary>
+            /// User is self
+            /// </summary>
+            [TestMethod]
+            public void AllExpectedAwardLettersReturnedTest()
+            {
+                foreach (var expectedLetter in expectedAwardLetters)
+                {
+                    Assert.IsTrue(actualAwardLetters.Any(al => al.Id == expectedLetter.Id));
+                }
+            }
+
+        }
+
+        [TestClass]
+        public class GetAwardLetterById2AsyncTests : AwardLetterServiceTests
+        {
+            private string studentId;
+            private string recordId;
+
+            private Domain.FinancialAid.Entities.AwardLetter3 inputAwardLetterEntity;
+
+            private Dtos.FinancialAid.AwardLetter3 expectedAwardLetter;
+            private Dtos.FinancialAid.AwardLetter3 actualAwardLetter;
+
+            private AwardLetterService awardLetterService;
+
+            [TestInitialize]
+            public async void Initialize()
+            {
+                AwardLetterServiceTestsInitialize();
+
+                studentId = currentUserFactory.CurrentUser.PersonId;
+
+                var currentOfficeService = new CurrentOfficeService(testOfficeRepository.GetFinancialAidOffices());
+                var studentAwardYears = testStudentAwardYearRepository.GetStudentAwardYears(studentId, currentOfficeService);
+
+                var allAwards = testFinancialAidReferenceDataRepository.Awards;
+
+                inputAwardLetterEntity = await testAwardLetterHistoryRepository.GetAwardLetter2Async(studentId, studentAwardYears.First(ay => ay.Code == "2015"), allAwards, false);
+                recordId = inputAwardLetterEntity.Id;
+
+                fafsaRepositoryMock = new Mock<IFafsaRepository>();
+                awardLetterRepositoryMock = new Mock<IAwardLetterRepository>();
+
+                awardLetterHistoryRepositoryMock = new Mock<IAwardLetterHistoryRepository>();
+                awardLetterHistoryRepositoryMock.Setup(l => l.GetAwardLetterById2Async(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IEnumerable<StudentAwardYear>>(), It.IsAny<IEnumerable<Award>>()))
+                    .ReturnsAsync(inputAwardLetterEntity);
+
+                financialAidReferenceDataRepositoryMock = new Mock<IFinancialAidReferenceDataRepository>();
+                financialAidReferenceDataRepositoryMock.Setup(r => r.Awards).Returns(testFinancialAidReferenceDataRepository.Awards);
+                financialAidReferenceDataRepositoryMock.Setup(r => r.AwardStatuses).Returns(testFinancialAidReferenceDataRepository.AwardStatuses);
+
+                var studentAwards = testStudentAwardRepository.GetAllStudentAwardsAsync(
+                    studentId,
+                    testStudentAwardYearRepository.GetStudentAwardYears(studentId, currentOfficeService),
+                    testFinancialAidReferenceDataRepository.Awards,
+                    testFinancialAidReferenceDataRepository.AwardStatuses);
+
+                studentAwardRepositoryMock = new Mock<IStudentAwardRepository>();
+                studentAwardRepositoryMock.Setup(r =>
+                    r.GetAllStudentAwardsAsync(studentId, It.IsAny<IEnumerable<StudentAwardYear>>(), It.IsAny<IEnumerable<Award>>(), It.IsAny<IEnumerable<AwardStatus>>())
+                    ).Returns(studentAwards);
+
+                studentRepositoryMock = new Mock<IStudentRepository>();
+                Domain.Student.Entities.Student student = null;
+                studentRepositoryMock.Setup(r => r.Get(studentId)).Returns(student);
+
+                applicantRepositoryMock = new Mock<IApplicantRepository>();
+                Domain.Student.Entities.Applicant applicant = new Domain.Student.Entities.Applicant(studentId, "LastName");
+                applicantRepositoryMock.Setup(r => r.GetApplicant(studentId)).Returns(applicant);
+
+                studentAwardYearRepositoryMock = new Mock<IStudentAwardYearRepository>();
+                studentAwardYearRepositoryMock.Setup(
+                    y => y.GetStudentAwardYearsAsync(studentId, It.IsAny<CurrentOfficeService>(), It.IsAny<bool>())
+                    ).ReturnsAsync(testStudentAwardYearRepository.GetStudentAwardYears(studentId, currentOfficeService));
+
+                officeRepositoryMock = new Mock<IFinancialAidOfficeRepository>();
+                officeRepositoryMock.Setup(f => f.GetFinancialAidOfficesAsync()).ReturnsAsync(testOfficeRepository.GetFinancialAidOffices());
+
+
+                var awardLetterEntityAdapter = new AwardLetter3EntityToDtoAdapter(adapterRegistryMock.Object, loggerMock.Object);
+                //expectedAwardLetter = awardLetterEntityAdapter.MapToType(inputAwardLetterEntity, applicant);
+                expectedAwardLetter = awardLetterEntityAdapter.MapToType(inputAwardLetterEntity);
+
+                awardLetterService = new AwardLetterService(adapterRegistryMock.Object,
+                    awardLetterRepositoryMock.Object,
+                    awardLetterHistoryRepositoryMock.Object,
+                    financialAidReferenceDataRepositoryMock.Object,
+                    studentAwardRepositoryMock.Object,
+                    studentRepositoryMock.Object,
+                    applicantRepositoryMock.Object,
+                    studentAwardYearRepositoryMock.Object,
+                    officeRepositoryMock.Object,
+                    fafsaRepositoryMock.Object,
+                    baseConfigurationRepository,
+                    currentUserFactory,
+                    roleRepositoryMock.Object,
+                    loggerMock.Object);
+
+                actualAwardLetter = await awardLetterService.GetAwardLetterById2Async(studentId, recordId);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                BaseCleanup();
+                studentId = null;
+                recordId = null;
+                expectedAwardLetter = null;
+                actualAwardLetter = null;
+                awardLetterService = null;
+                inputAwardLetterEntity = null;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task StudentIdIsRequiredTest()
+            {
+                await awardLetterService.GetAwardLetterById2Async(null, recordId);
+            }
+
+            /// <summary>
+            /// User is not self, proxy, or admin
+            /// </summary>
+            /// <returns></returns>
+            [TestMethod]
+            [TestCategory("GetAwardLetterByIdAsync")]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task NotUserIsSelf_ExceptionThrownTest()
+            {
+                await awardLetterService.GetAwardLetterById2Async("0004791", recordId);
+            }
+
+            /// <summary>
+            /// User is counselor
+            /// </summary>
+            /// <returns></returns>
+            [TestMethod]
+            [TestCategory("GetAwardLetterByIdAsync")]
+            public async Task UserIsCounselor_CanAccesDataTest()
+            {
+                currentUserFactory = new CurrentUserSetup.CounselorUserFactory();
+                counselorRole.AddPermission(new Permission(StudentPermissionCodes.ViewFinancialAidInformation));
+                roleRepositoryMock.Setup(r => r.Roles).Returns(new List<Role>() { counselorRole });
+
+                awardLetterService = new AwardLetterService(adapterRegistryMock.Object,
+                    awardLetterRepositoryMock.Object,
+                    awardLetterHistoryRepositoryMock.Object,
+                    financialAidReferenceDataRepositoryMock.Object,
+                    studentAwardRepositoryMock.Object,
+                    studentRepositoryMock.Object,
+                    applicantRepositoryMock.Object,
+                    studentAwardYearRepositoryMock.Object,
+                    officeRepositoryMock.Object,
+                    fafsaRepositoryMock.Object,
+                    baseConfigurationRepository,
+                    currentUserFactory,
+                    roleRepositoryMock.Object,
+                    loggerMock.Object);
+
+                bool exceptionThrown = false;
+                try
+                {
+                    await awardLetterService.GetAwardLetterById2Async(studentId, recordId);
+                }
+                catch { exceptionThrown = true; }
+                finally { Assert.IsFalse(exceptionThrown); }
+            }
+
+            /// <summary>
+            /// User is counselor with no permissions
+            /// </summary>
+            /// <returns></returns>
+            [TestMethod]
+            [TestCategory("GetAwardLetterByIdAsync")]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task NotUserHasPermissions_ExceptionThrownTest()
+            {
+                currentUserFactory = new CurrentUserSetup.CounselorUserFactory();
+                await awardLetterService.GetAwardLetterById2Async(currentUserFactory.CurrentUser.PersonId, recordId);
+            }
+
+            /// <summary>
+            /// User is proxy
+            /// </summary>
+            /// <returns></returns>
+            [TestMethod]
+            [TestCategory("GetAwardLetterByIdAsync")]
+            public async Task UserIsProxy_CanAccesDataTest()
+            {
+                currentUserFactory = new CurrentUserSetup.StudentUserFactoryWithProxy();
+
+                awardLetterService = new AwardLetterService(adapterRegistryMock.Object,
+                    awardLetterRepositoryMock.Object,
+                    awardLetterHistoryRepositoryMock.Object,
+                    financialAidReferenceDataRepositoryMock.Object,
+                    studentAwardRepositoryMock.Object,
+                    studentRepositoryMock.Object,
+                    applicantRepositoryMock.Object,
+                    studentAwardYearRepositoryMock.Object,
+                    officeRepositoryMock.Object,
+                    fafsaRepositoryMock.Object,
+                    baseConfigurationRepository,
+                    currentUserFactory,
+                    roleRepositoryMock.Object,
+                    loggerMock.Object);
+
+                bool exceptionThrown = false;
+                try
+                {
+                    await awardLetterService.GetAwardLetterById2Async(studentId, recordId);
+                }
+                catch { exceptionThrown = true; }
+                finally { Assert.IsFalse(exceptionThrown); }
+            }
+
+            /// <summary>
+            /// User is proxy for different person
+            /// </summary>
+            /// <returns></returns>
+            [TestMethod]
+            [TestCategory("GetAwardLetterByIdAsync")]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task UserIsProxyDifferentPerson_CannotAccesDataTest()
+            {
+                currentUserFactory = new CurrentUserSetup.StudentUserFactoryWithDifferentProxy();
+
+                awardLetterService = new AwardLetterService(adapterRegistryMock.Object,
+                    awardLetterRepositoryMock.Object,
+                    awardLetterHistoryRepositoryMock.Object,
+                    financialAidReferenceDataRepositoryMock.Object,
+                    studentAwardRepositoryMock.Object,
+                    studentRepositoryMock.Object,
+                    applicantRepositoryMock.Object,
+                    studentAwardYearRepositoryMock.Object,
+                    officeRepositoryMock.Object,
+                    fafsaRepositoryMock.Object,
+                    baseConfigurationRepository,
+                    currentUserFactory,
+                    roleRepositoryMock.Object,
+                    loggerMock.Object);
+
+                await awardLetterService.GetAwardLetterById2Async(studentId, recordId);
+            }
+
+            [TestMethod]
+            [TestCategory("GetAwardLetterByIdAsync")]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task RecordIdIsRequiredTest()
+            {
+                await awardLetterService.GetAwardLetterById2Async(studentId, null);
+            }
+
+            [TestMethod]
+            [TestCategory("GetAwardLetterByIdAsync")]
+            [ExpectedException(typeof(InvalidOperationException))]
+            public async Task NoStudentAwardYearsReturned_ExceptionThrownTest()
+            {
+                studentAwardYearRepositoryMock.Setup(r => r.GetStudentAwardYearsAsync(It.IsAny<string>(), It.IsAny<CurrentOfficeService>(), It.IsAny<bool>())).ReturnsAsync((IEnumerable<StudentAwardYear>)null);
+                awardLetterService = new AwardLetterService(adapterRegistryMock.Object,
+                    awardLetterRepositoryMock.Object,
+                    awardLetterHistoryRepositoryMock.Object,
+                    financialAidReferenceDataRepositoryMock.Object,
+                    studentAwardRepositoryMock.Object,
+                    studentRepositoryMock.Object,
+                    applicantRepositoryMock.Object,
+                    studentAwardYearRepositoryMock.Object,
+                    officeRepositoryMock.Object,
+                    fafsaRepositoryMock.Object,
+                    baseConfigurationRepository,
+                    currentUserFactory,
+                    roleRepositoryMock.Object,
+                    loggerMock.Object);
+
+                await awardLetterService.GetAwardLetterById2Async(studentId, recordId);
+            }
+
+            [TestMethod]
+            [TestCategory("GetAwardLetterByIdAsync")]
+            public async Task EmptyAwardLetterEntityReceived_InitializedDtoIsReturnedTest()
+            {
+                awardLetterHistoryRepositoryMock.Setup(r => r.GetAwardLetterById2Async(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IEnumerable<StudentAwardYear>>(), It.IsAny<IEnumerable<Award>>()))
+                    .ReturnsAsync(new AwardLetter3());
+
+                awardLetterService = new AwardLetterService(adapterRegistryMock.Object,
+                    awardLetterRepositoryMock.Object,
+                    awardLetterHistoryRepositoryMock.Object,
+                    financialAidReferenceDataRepositoryMock.Object,
+                    studentAwardRepositoryMock.Object,
+                    studentRepositoryMock.Object,
+                    applicantRepositoryMock.Object,
+                    studentAwardYearRepositoryMock.Object,
+                    officeRepositoryMock.Object,
+                    fafsaRepositoryMock.Object,
+                    baseConfigurationRepository,
+                    currentUserFactory,
+                    roleRepositoryMock.Object,
+                    loggerMock.Object);
+
+                Assert.IsNotNull(await awardLetterService.GetAwardLetterById2Async(studentId, recordId));
+            }
+
+
+            /// <summary>
+            /// User is self
+            /// </summary>
+            [TestMethod]
+            [TestCategory("GetAwardLetterByIdAsync")]
+            public void ExpectedAwardLetterDtoIsReturnedTest()
+            {
+                Assert.AreEqual(expectedAwardLetter.Id, actualAwardLetter.Id);
+                Assert.AreEqual(expectedAwardLetter.AwardLetterParameterId, actualAwardLetter.AwardLetterParameterId);
+                Assert.AreEqual(expectedAwardLetter.StudentId, actualAwardLetter.StudentId);
+            }
+        }
+
+        [TestClass]
+        public class GetAwardLetter4AsyncTests : AwardLetterServiceTests
+        {
+            private string studentId;
+            private StudentAwardYear awardYear;
+            private IEnumerable<Domain.FinancialAid.Entities.StudentAwardYear> studentAwardYears;
+
+            private Domain.FinancialAid.Entities.AwardLetter3 inputAwardLetterEntity;
+
+            private Dtos.FinancialAid.AwardLetter3 expectedAwardLetter;
+            private Dtos.FinancialAid.AwardLetter3 actualAwardLetter;
+
+            private AwardLetterService awardLetterService;
+
+            [TestInitialize]
+            public async void Initialize()
+            {
+                AwardLetterServiceTestsInitialize();
+
+                studentId = currentUserFactory.CurrentUser.PersonId;
+
+                var currentOfficeService = new CurrentOfficeService(testOfficeRepository.GetFinancialAidOffices());
+                studentAwardYears = testStudentAwardYearRepository.GetStudentAwardYears(studentId, currentOfficeService);
+
+                awardYear = studentAwardYears.First();
+
+                var allAwards = testFinancialAidReferenceDataRepository.Awards;
+
+
+                inputAwardLetterEntity = await testAwardLetterHistoryRepository.GetAwardLetter2Async(studentId, awardYear, allAwards, false);
+
+                fafsaRepositoryMock = new Mock<IFafsaRepository>();
+                awardLetterRepositoryMock = new Mock<IAwardLetterRepository>();
+                awardLetterHistoryRepositoryMock = new Mock<IAwardLetterHistoryRepository>();
+                awardLetterHistoryRepositoryMock.Setup(l => l.GetAwardLetter2Async(It.IsAny<string>(), It.IsAny<StudentAwardYear>(), It.IsAny<IEnumerable<Award>>(), It.IsAny<bool>())).ReturnsAsync(inputAwardLetterEntity);
+
+                financialAidReferenceDataRepositoryMock = new Mock<IFinancialAidReferenceDataRepository>();
+                financialAidReferenceDataRepositoryMock.Setup(r => r.Awards).Returns(testFinancialAidReferenceDataRepository.Awards);
+                financialAidReferenceDataRepositoryMock.Setup(r => r.AwardStatuses).Returns(testFinancialAidReferenceDataRepository.AwardStatuses);
+
+                var studentAwards = testStudentAwardRepository.GetAllStudentAwardsAsync(
+                    studentId,
+                    testStudentAwardYearRepository.GetStudentAwardYears(studentId, currentOfficeService),
+                    testFinancialAidReferenceDataRepository.Awards,
+                    testFinancialAidReferenceDataRepository.AwardStatuses);
+
+                studentAwardRepositoryMock = new Mock<IStudentAwardRepository>();
+                studentAwardRepositoryMock.Setup(r =>
+                    r.GetAllStudentAwardsAsync(studentId, It.IsAny<IEnumerable<StudentAwardYear>>(), It.IsAny<IEnumerable<Award>>(), It.IsAny<IEnumerable<AwardStatus>>())
+                    ).Returns(studentAwards);
+
+                studentRepositoryMock = new Mock<IStudentRepository>();
+                Domain.Student.Entities.Student student = null;
+                studentRepositoryMock.Setup(r => r.Get(studentId)).Returns(student);
+
+                applicantRepositoryMock = new Mock<IApplicantRepository>();
+                Domain.Student.Entities.Applicant applicant = new Domain.Student.Entities.Applicant(studentId, "LastName");
+                applicantRepositoryMock.Setup(r => r.GetApplicant(studentId)).Returns(applicant);
+
+                studentAwardYearRepositoryMock = new Mock<IStudentAwardYearRepository>();
+                studentAwardYearRepositoryMock.Setup(
+                    y => y.GetStudentAwardYearsAsync(studentId, It.IsAny<CurrentOfficeService>(), It.IsAny<bool>())
+                    ).ReturnsAsync(testStudentAwardYearRepository.GetStudentAwardYears(studentId, currentOfficeService));
+
+                officeRepositoryMock = new Mock<IFinancialAidOfficeRepository>();
+                officeRepositoryMock.Setup(f => f.GetFinancialAidOfficesAsync()).ReturnsAsync(testOfficeRepository.GetFinancialAidOffices());
+
+
+                var awardLetterEntityAdapter = new AwardLetter3EntityToDtoAdapter(adapterRegistryMock.Object, loggerMock.Object);
+                //expectedAwardLetter = awardLetterEntityAdapter.MapToType(inputAwardLetterEntity, applicant);
+                expectedAwardLetter = awardLetterEntityAdapter.MapToType(inputAwardLetterEntity);
+
+                awardLetterService = new AwardLetterService(adapterRegistryMock.Object,
+                    awardLetterRepositoryMock.Object,
+                    awardLetterHistoryRepositoryMock.Object,
+                    financialAidReferenceDataRepositoryMock.Object,
+                    studentAwardRepositoryMock.Object,
+                    studentRepositoryMock.Object,
+                    applicantRepositoryMock.Object,
+                    studentAwardYearRepositoryMock.Object,
+                    officeRepositoryMock.Object,
+                    fafsaRepositoryMock.Object,
+                    baseConfigurationRepository,
+                    currentUserFactory,
+                    roleRepositoryMock.Object,
+                    loggerMock.Object);
+
+                actualAwardLetter = await awardLetterService.GetAwardLetter4Async(studentId, awardYear.Code);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                BaseCleanup();
+                studentId = null;
+                awardYear = null;
+                studentAwardYears = null;
+                inputAwardLetterEntity = null;
+                expectedAwardLetter = null;
+                actualAwardLetter = null;
+                awardLetterService = null;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task StudentIdIsRequiredTest()
+            {
+                await awardLetterService.GetAwardLetter4Async(null, awardYear.Code);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task AwardYearIsRequiredTest()
+            {
+                await awardLetterService.GetAwardLetter4Async(studentId, null);
+            }
+
+            /// <summary>
+            /// User is not self, proxy, or admin
+            /// </summary>
+            /// <returns></returns>
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task NotUserIsSelf_ExceptionThrownTest()
+            {
+                await awardLetterService.GetAwardLetter4Async("0004791", awardYear.Code);
+            }
+
+            /// <summary>
+            /// Current user is counselor
+            /// </summary>
+            [TestMethod]
+            public async Task CurrentUserIsCounselor_CanAccessDataTest()
+            {
+                currentUserFactory = new CurrentUserSetup.CounselorUserFactory();
+                counselorRole.AddPermission(new Permission(StudentPermissionCodes.ViewFinancialAidInformation));
+                roleRepositoryMock.Setup(r => r.Roles).Returns(new List<Role>() { counselorRole });
+
+                awardLetterService = new AwardLetterService(adapterRegistryMock.Object,
+                    awardLetterRepositoryMock.Object,
+                    awardLetterHistoryRepositoryMock.Object,
+                    financialAidReferenceDataRepositoryMock.Object,
+                    studentAwardRepositoryMock.Object,
+                    studentRepositoryMock.Object,
+                    applicantRepositoryMock.Object,
+                    studentAwardYearRepositoryMock.Object,
+                    officeRepositoryMock.Object,
+                    fafsaRepositoryMock.Object,
+                    baseConfigurationRepository,
+                    currentUserFactory,
+                    roleRepositoryMock.Object,
+                    loggerMock.Object);
+
+                bool exceptionThrown = false;
+                try
+                {
+                    actualAwardLetter = await awardLetterService.GetAwardLetter4Async(studentId, awardYear.Code);
+                }
+                catch { exceptionThrown = true; }
+                finally
+                {
+                    Assert.IsFalse(exceptionThrown);
+                    Assert.IsNotNull(actualAwardLetter);
+                }
+            }
+
+            /// <summary>
+            /// User is counselor with no permissions
+            /// </summary>
+            /// <returns></returns>
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task NotUserHasPermissions_ExceptionThrownTest()
+            {
+                currentUserFactory = new CurrentUserSetup.CounselorUserFactory();
+                await awardLetterService.GetAwardLetter4Async(currentUserFactory.CurrentUser.PersonId, awardYear.Code);
+            }
+
+            /// <summary>
+            /// Current user is proxy
+            /// </summary>
+            [TestMethod]
+            public async Task CurrentUserIsProxy_CanAccessDataTest()
+            {
+                currentUserFactory = new CurrentUserSetup.StudentUserFactoryWithProxy();
+
+                awardLetterService = new AwardLetterService(adapterRegistryMock.Object,
+                    awardLetterRepositoryMock.Object,
+                    awardLetterHistoryRepositoryMock.Object,
+                    financialAidReferenceDataRepositoryMock.Object,
+                    studentAwardRepositoryMock.Object,
+                    studentRepositoryMock.Object,
+                    applicantRepositoryMock.Object,
+                    studentAwardYearRepositoryMock.Object,
+                    officeRepositoryMock.Object,
+                    fafsaRepositoryMock.Object,
+                    baseConfigurationRepository,
+                    currentUserFactory,
+                    roleRepositoryMock.Object,
+                    loggerMock.Object);
+
+                bool exceptionThrown = false;
+                try
+                {
+                    actualAwardLetter = await awardLetterService.GetAwardLetter4Async(studentId, awardYear.Code);
+                }
+                catch { exceptionThrown = true; }
+                finally
+                {
+                    Assert.IsFalse(exceptionThrown);
+                    Assert.IsNotNull(actualAwardLetter);
+                }
+            }
+
+            /// <summary>
+            /// Current user is proxy for different person
+            /// </summary>
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task CurrentUserIsProxyDifferentPerson_CannotAccessDataTest()
+            {
+                currentUserFactory = new CurrentUserSetup.StudentUserFactoryWithDifferentProxy();
+
+                awardLetterService = new AwardLetterService(adapterRegistryMock.Object,
+                    awardLetterRepositoryMock.Object,
+                    awardLetterHistoryRepositoryMock.Object,
+                    financialAidReferenceDataRepositoryMock.Object,
+                    studentAwardRepositoryMock.Object,
+                    studentRepositoryMock.Object,
+                    applicantRepositoryMock.Object,
+                    studentAwardYearRepositoryMock.Object,
+                    officeRepositoryMock.Object,
+                    fafsaRepositoryMock.Object,
+                    baseConfigurationRepository,
+                    currentUserFactory,
+                    roleRepositoryMock.Object,
+                    loggerMock.Object);
+
+                actualAwardLetter = await awardLetterService.GetAwardLetter4Async(studentId, awardYear.Code);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(InvalidOperationException))]
+            public async Task NoStudentAwardYearsReturned_ExceptionThrownTest()
+            {
+                studentAwardYearRepositoryMock.Setup(r => r.GetStudentAwardYearsAsync(It.IsAny<string>(), It.IsAny<CurrentOfficeService>(), It.IsAny<bool>())).ReturnsAsync((IEnumerable<StudentAwardYear>)null);
+                awardLetterService = new AwardLetterService(adapterRegistryMock.Object,
+                    awardLetterRepositoryMock.Object,
+                    awardLetterHistoryRepositoryMock.Object,
+                    financialAidReferenceDataRepositoryMock.Object,
+                    studentAwardRepositoryMock.Object,
+                    studentRepositoryMock.Object,
+                    applicantRepositoryMock.Object,
+                    studentAwardYearRepositoryMock.Object,
+                    officeRepositoryMock.Object,
+                    fafsaRepositoryMock.Object,
+                    baseConfigurationRepository,
+                    currentUserFactory,
+                    roleRepositoryMock.Object,
+                    loggerMock.Object);
+
+                await awardLetterService.GetAwardLetter4Async(studentId, awardYear.Code);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(InvalidOperationException))]
+            public async Task NoMatchingStudentAwardYear_ExceptionThrownTest()
+            {
+                await awardLetterService.GetAwardLetter4Async(studentId, "foo");
+            }
+
+            [TestMethod]
+            public async Task NoAwardLetterEntityReturned_InitializedDtoIsReturnedTest()
+            {
+                awardLetterHistoryRepositoryMock.Setup(r => r.GetAwardLetter2Async(It.IsAny<string>(), It.IsAny<StudentAwardYear>(), It.IsAny<IEnumerable<Award>>(), It.IsAny<bool>())).ReturnsAsync(null);
+                awardLetterService = new AwardLetterService(adapterRegistryMock.Object,
+                    awardLetterRepositoryMock.Object,
+                    awardLetterHistoryRepositoryMock.Object,
+                    financialAidReferenceDataRepositoryMock.Object,
+                    studentAwardRepositoryMock.Object,
+                    studentRepositoryMock.Object,
+                    applicantRepositoryMock.Object,
+                    studentAwardYearRepositoryMock.Object,
+                    officeRepositoryMock.Object,
+                    fafsaRepositoryMock.Object,
+                    baseConfigurationRepository,
+                    currentUserFactory,
+                    roleRepositoryMock.Object,
+                    loggerMock.Object);
+
+                actualAwardLetter = await awardLetterService.GetAwardLetter4Async(studentId, awardYear.Code);
+                Assert.IsNotNull(actualAwardLetter);
+                Assert.IsNull(actualAwardLetter.Id);
+            }
+
+
+            /// <summary>
+            /// User is self
+            /// </summary>
+            [TestMethod]
+            public void ExpectedAwardLetterReturnedTest()
+            {
+                Assert.AreEqual(expectedAwardLetter.Id, actualAwardLetter.Id);
+                Assert.AreEqual(expectedAwardLetter.StudentId, actualAwardLetter.StudentId);
+                Assert.AreEqual(expectedAwardLetter.StudentName, actualAwardLetter.StudentName);
+                Assert.AreEqual(expectedAwardLetter.AwardLetterParameterId, actualAwardLetter.AwardLetterParameterId);
+            }
+        }
+
     }
 }

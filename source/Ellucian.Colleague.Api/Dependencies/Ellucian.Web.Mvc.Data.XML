@@ -172,7 +172,8 @@
             <summary>
             Initializes a new instance of the XmlSiteRepository class.
             </summary>
-            <param name="stream">the stream to write to, must not be null</param>
+            <param name="stream">The stream to write to, must not be null.
+            Stream will seek to origin before each operation.</param>
         </member>
         <member name="M:Ellucian.Web.Mvc.Data.Repositories.XmlSiteRepository.Get">
             <summary>
@@ -184,6 +185,16 @@
             <summary>
             Updates the site map.
             </summary>
+            <remarks>
+            <para>
+            If supplied during object construction, the stream will be cleared and replaced with the
+            new sitemap.config contents.
+            </para>
+            <para>
+            If a stream was not supplied, the function will attempts to write to the sitemap.config
+            available in the current hosting environment
+            </para>
+            </remarks>
             <param name="site"></param>
             <exception cref="T:System.ArgumentNullException">site</exception>
             <exception cref="T:Ellucian.Web.Mvc.Domain.SiteDataException">No access to update sitemap.config file.  + 

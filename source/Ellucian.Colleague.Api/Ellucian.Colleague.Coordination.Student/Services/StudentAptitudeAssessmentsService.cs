@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -139,7 +139,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var totalCount = studentAptitudeAssessmentsEntitiesTuple.Item2;
                 if (studentAptitudeAssessmentsEntities != null && studentAptitudeAssessmentsEntities.Any())
                 {
-                    //var check = await ConvertStudentAptitudeAssessmentsEntityToDto(studentAptitudeAssessmentsEntities.ToList(), bypassCache);
                     return new Tuple<IEnumerable<Dtos.StudentAptitudeAssessments>, int>(await ConvertStudentTestScoresEntityToDtoCollection2Async(studentAptitudeAssessmentsEntities.ToList(), bypassCache), totalCount);
                 }
                 else
@@ -217,7 +216,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             catch (KeyNotFoundException ex)
             {
-                throw new KeyNotFoundException("student-aptitude-assessments not found for GUID " + guid, ex);
+                throw ex;
             }
             catch (InvalidOperationException ex)
             {
@@ -349,7 +348,19 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to delete student aptitude assessment.");
             }
-            await _studentAptitudeAssessmentsRepository.DeleteAsync(guid);
+            try
+            {
+                var studentAptitudeAssessment = await _studentAptitudeAssessmentsRepository.GetStudentTestScoresByGuidAsync(guid);
+                if (studentAptitudeAssessment == null)
+                {
+                    throw new KeyNotFoundException();
+                }
+                await _studentAptitudeAssessmentsRepository.DeleteAsync(guid);
+            }
+            catch (KeyNotFoundException)
+            {
+                throw new KeyNotFoundException(string.Format("Student-aptitude-assessments not found for guid: '{0}'.", guid));
+            }
         }
 
         /// <summary>
@@ -543,33 +554,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
         }
        
-        /// <summary>
-        /// Convert Aptitude Assessment code to GUID
-        /// </summary>
-        /// <param name="aptitudeAssessments">List of Aptitude Assesments Entities</param>
-        /// <param name="aptitudeAssesmentCode">Aptitude Assesment Code</param>
-        /// <returns>Aptitude Assesment GUID</returns>
-        private Ellucian.Colleague.Dtos.GuidObject2 ConvertAptitudeAssesmentCodeToGuid(IEnumerable<NonCourse> aptitudeAssessments, string aptitudeAssesmentCode)
-        {
-            Ellucian.Colleague.Dtos.GuidObject2 guidObject = null;
-
-            if (!string.IsNullOrEmpty(aptitudeAssesmentCode))
-            {
-                if (aptitudeAssessments != null && aptitudeAssessments.Any())
-                {
-                    var acadCatalog = aptitudeAssessments.FirstOrDefault(a => a.Code == aptitudeAssesmentCode);
-                    if (acadCatalog != null)
-                    {
-                        var acadGuid = acadCatalog.Guid;
-                        if (!string.IsNullOrEmpty(acadGuid))
-                        {
-                            guidObject = new Ellucian.Colleague.Dtos.GuidObject2(acadGuid);
-                        }
-                    }
-                }
-            }
-            return guidObject;
-        }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
@@ -633,14 +617,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 if (!string.IsNullOrEmpty(studentTestScoreEntity.Code))
                 {
-                    var nonCourse = await this.GetAptitudeAssessmentAsync(bypassCache);
-                    if (nonCourse != null)
+                    var nonCourse = await _aptitudeAssessmentsRepository.GetAptitudeAssessmentsGuidAsync(studentTestScoreEntity.Code);
+                    if (!string.IsNullOrEmpty(nonCourse))
                     {
-                        var aptitudeGuid = ConvertAptitudeAssesmentCodeToGuid(nonCourse, studentTestScoreEntity.Code);
-                        if (aptitudeGuid != null)
-                        {
-                            studentAptitudeAssessmentDto.Assessment = aptitudeGuid;
-                        }
+                        studentAptitudeAssessmentDto.Assessment = new Ellucian.Colleague.Dtos.GuidObject2(nonCourse);
                     }
                 }
                 studentAptitudeAssessmentDto.AssessedOn = studentTestScoreEntity.DateTaken;
@@ -658,7 +638,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var percentiles = new List<StudentAptitudeAssessmentsPercentile>();
                 if (studentTestScoreEntity.Percentile1.HasValue)
                 {
-                    var percentileType = ConvertCodeToGuid(await this.GetAssesmentPercentileTypesAsync(bypassCache), "1");
+                    var percentileType = await _studentReferenceDataRepository.GetIntgTestPercentileTypesGuidAsync("1");
                     if (!string.IsNullOrEmpty(percentileType))
                     {
                         var percentile = new StudentAptitudeAssessmentsPercentile();
@@ -669,7 +649,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 if (studentTestScoreEntity.Percentile2.HasValue)
                 {
-                    var percentileType = ConvertCodeToGuid(await this.GetAssesmentPercentileTypesAsync(bypassCache), "2");
+                    var percentileType = await _studentReferenceDataRepository.GetIntgTestPercentileTypesGuidAsync("2");
                     if (!string.IsNullOrEmpty(percentileType))
                     {
                         var percentile = new StudentAptitudeAssessmentsPercentile();
@@ -694,10 +674,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     var factors = new List<Dtos.GuidObject2>();
                     foreach (var factor in studentTestScoreEntity.SpecialFactors)
                     {
-                        var factorGuid = ConvertCodeToGuid(await this.GetAssessmentSpecialCircumstancesAsync(bypassCache), factor);
-                        if (factorGuid != null)
+                        if (!string.IsNullOrEmpty(factor))
                         {
-                            factors.Add(new Dtos.GuidObject2(factorGuid));
+                            var factorGuid = await _studentReferenceDataRepository.GetAssessmentSpecialCircumstancesGuidAsync(factor);
+                            if (!string.IsNullOrEmpty(factorGuid))
+                            {
+                                factors.Add(new Dtos.GuidObject2(factorGuid));
+                            }
                         }
                     }
                     studentAptitudeAssessmentDto.SpecialCircumstances = factors;
@@ -705,8 +688,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
                 if (!string.IsNullOrEmpty(studentTestScoreEntity.Source))
                 {
-                    var sourceGuid = ConvertCodeToGuid(await this.GetTestSourcesAsync(bypassCache), studentTestScoreEntity.Source);
-                    if (sourceGuid != null)
+                    var sourceGuid = await _studentReferenceDataRepository.GetTestSourcesGuidAsync(studentTestScoreEntity.Source);
+                    if (!string.IsNullOrEmpty(sourceGuid ))
                     {
                         studentAptitudeAssessmentDto.Source = new Dtos.GuidObject2(sourceGuid);
                     }
@@ -749,9 +732,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
 
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw new KeyNotFoundException("Student Aptitude Assessment not found for ID." + studentTestScoreEntity.Guid);
+                throw new KeyNotFoundException(string.Concat(ex.Message, "Student Aptitude Assessment not found for ID." + studentTestScoreEntity.Guid));
             }
             return studentAptitudeAssessmentDto;
         }
@@ -780,14 +763,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 if (!string.IsNullOrEmpty(studentTestScoreEntity.Code))
                 {
-                    var nonCourse = await this.GetAptitudeAssessmentAsync(bypassCache);
-                    if (nonCourse != null)
+                    var nonCourse = await _aptitudeAssessmentsRepository.GetAptitudeAssessmentsGuidAsync(studentTestScoreEntity.Code);
+                    if (!string.IsNullOrEmpty(nonCourse))
                     {
-                        var aptitudeGuid = ConvertAptitudeAssesmentCodeToGuid(nonCourse, studentTestScoreEntity.Code);
-                        if (aptitudeGuid != null)
-                        {
-                            studentAptitudeAssessmentDto.Assessment = aptitudeGuid;
-                        }
+                        studentAptitudeAssessmentDto.Assessment = new Ellucian.Colleague.Dtos.GuidObject2(nonCourse);
                     }
                 }
                 studentAptitudeAssessmentDto.AssessedOn = studentTestScoreEntity.DateTaken;
@@ -805,7 +784,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var percentiles = new List<StudentAptitudeAssessmentsPercentile>();
                 if (studentTestScoreEntity.Percentile1.HasValue)
                 {
-                    var percentileType = ConvertCodeToGuid(await this.GetAssesmentPercentileTypesAsync(bypassCache), "1");
+                    var percentileType = await _studentReferenceDataRepository.GetIntgTestPercentileTypesGuidAsync("1");
                     if (!string.IsNullOrEmpty(percentileType))
                     {
                         var percentile = new StudentAptitudeAssessmentsPercentile();
@@ -816,7 +795,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 if (studentTestScoreEntity.Percentile2.HasValue)
                 {
-                    var percentileType = ConvertCodeToGuid(await this.GetAssesmentPercentileTypesAsync(bypassCache), "2");
+                    var percentileType = await _studentReferenceDataRepository.GetIntgTestPercentileTypesGuidAsync("2");
                     if (!string.IsNullOrEmpty(percentileType))
                     {
                         var percentile = new StudentAptitudeAssessmentsPercentile();
@@ -840,20 +819,21 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     var factors = new List<Dtos.GuidObject2>();
                     foreach (var factor in studentTestScoreEntity.SpecialFactors)
-                    {
-                        var factorGuid = ConvertCodeToGuid(await this.GetAssessmentSpecialCircumstancesAsync(bypassCache), factor);
-                        if (factorGuid != null)
+                        if (!string.IsNullOrEmpty(factor))
                         {
-                            factors.Add(new Dtos.GuidObject2(factorGuid));
+                            var factorGuid = await _studentReferenceDataRepository.GetAssessmentSpecialCircumstancesGuidAsync(factor);
+                            if (!string.IsNullOrEmpty(factorGuid))
+                            {
+                                factors.Add(new Dtos.GuidObject2(factorGuid));
+                            }
                         }
-                    }
                     studentAptitudeAssessmentDto.SpecialCircumstances = factors;
                 }
 
                 if (!string.IsNullOrEmpty(studentTestScoreEntity.Source))
                 {
-                    var sourceGuid = ConvertCodeToGuid(await this.GetTestSourcesAsync(bypassCache), studentTestScoreEntity.Source);
-                    if (sourceGuid != null)
+                    var sourceGuid = await _studentReferenceDataRepository.GetTestSourcesGuidAsync(studentTestScoreEntity.Source);
+                    if (!string.IsNullOrEmpty(sourceGuid))
                     {
                         studentAptitudeAssessmentDto.Source = new Dtos.GuidObject2(sourceGuid);
                     }
@@ -897,9 +877,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     studentAptitudeAssessmentDto.Status = StudentAptitudeAssessmentsStatus.Active;
 
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw new KeyNotFoundException("Student Aptitude Assessment not found for ID." + studentTestScoreEntity.Guid);
+                throw new KeyNotFoundException(string.Concat(ex.Message, "Student Aptitude Assessment not found for ID." + studentTestScoreEntity.Guid));
             }
             return studentAptitudeAssessmentDto;
         }

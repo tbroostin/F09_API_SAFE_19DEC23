@@ -254,6 +254,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                             var yearlyStartMonth = leavePlan.YearlyStartDate.HasValue ? leavePlan.YearlyStartDate.Value.Month : 1;
                             var yearlyStartDay = leavePlan.YearlyStartDate.HasValue ? leavePlan.YearlyStartDate.Value.Day : 1;
 
+                            //Used for comp time display in Time Entry
+                            var earningTypeList = leavePlan.EarningsTypes;
                             var employeeLeavePlan = new EmployeeLeavePlan(perLeaveDataContract.Recordkey, 
                                 perLeaveDataContract.PerlvHrpId, 
                                 perLeaveDataContract.PerlvStartDate.Value,
@@ -269,6 +271,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                                 priorPeriodBalance, 
                                 yearlyStartMonth,
                                 yearlyStartDay,
+                                leavePlan.EarningsTypes,
                                 allowNegative);
 
                             employeeLeavePlans.Add(employeeLeavePlan);

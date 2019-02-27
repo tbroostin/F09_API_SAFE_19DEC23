@@ -11,7 +11,6 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
 {
     public interface IAccountsPayableInvoicesRepository : IEthosExtended
     {
-        Task<Tuple<IEnumerable<AccountsPayableInvoices>, int>> GetAccountsPayableInvoicesAsync(int offset, int limit);
         Task<Tuple<IEnumerable<AccountsPayableInvoices>, int>> GetAccountsPayableInvoices2Async(int offset, int limit);
         Task<AccountsPayableInvoices> GetAccountsPayableInvoicesByGuidAsync(string guid, bool allowVoid);
         Task<AccountsPayableInvoices> UpdateAccountsPayableInvoicesAsync(AccountsPayableInvoices accountsPayableInvoicesEntity);

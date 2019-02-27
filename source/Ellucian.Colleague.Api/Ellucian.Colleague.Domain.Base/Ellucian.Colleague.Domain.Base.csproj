@@ -38,32 +38,32 @@
     <SignAssembly>false</SignAssembly>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Ellucian.Colleague.Configuration, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Colleague.Configuration.dll</HintPath>
+    <Reference Include="Ellucian.Colleague.Configuration, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Colleague.Configuration.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Ellucian.Colleague.Domain, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Colleague.Domain.dll</HintPath>
+    <Reference Include="Ellucian.Colleague.Domain, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Colleague.Domain.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Ellucian.Colleague.Legacy, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Colleague.Legacy.dll</HintPath>
+    <Reference Include="Ellucian.Colleague.Legacy, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Colleague.Legacy.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Ellucian.Colleague.Property, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Colleague.Property.dll</HintPath>
+    <Reference Include="Ellucian.Colleague.Property, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Colleague.Property.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Ellucian.Data.Colleague, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Data.Colleague.dll</HintPath>
+    <Reference Include="Ellucian.Data.Colleague, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Data.Colleague.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Ellucian.Dmi.Client, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Dmi.Client.dll</HintPath>
+    <Reference Include="Ellucian.Dmi.Client, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Dmi.Client.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Ellucian.Dmi.Runtime, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Dmi.Runtime.dll</HintPath>
+    <Reference Include="Ellucian.Dmi.Runtime, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Dmi.Runtime.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Ellucian.Logging, Version=1.0.0.1, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
@@ -90,8 +90,8 @@
       <HintPath>..\packages\Ellucian.Web.Utility.1.0.0.181\lib\net451\Ellucian.Web.Utility.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Ellucian.WebServices.Core.Config, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.WebServices.Core.Config.dll</HintPath>
+    <Reference Include="Ellucian.WebServices.Core.Config, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.WebServices.Core.Config.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="KellermanSoftware.Compare-NET-Objects, Version=2.1.0.0, Culture=neutral, PublicKeyToken=d970ace04cc85217, processorArchitecture=MSIL">
@@ -164,10 +164,15 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Entities\DeprecatedResources.cs" />
+    <Compile Include="Entities\AltIdTypes.cs" />
     <Compile Include="Entities\BackupConfiguration.cs" />
+    <Compile Include="Entities\CorrespondenceRequest.cs" />
+    <Compile Include="Entities\CorrespondenceRequestStatus.cs" />
     <Compile Include="Entities\CorrStatus.cs" />
     <Compile Include="Entities\CcdType.cs" />
     <Compile Include="Entities\Distribution2.cs" />
+    <Compile Include="Entities\ExecutionState.cs" />
     <Compile Include="Entities\GenderIdentityType.cs" />
     <Compile Include="Entities\GeographicArea.cs" />
     <Compile Include="Entities\EthosExtensibleData.cs" />
@@ -179,6 +184,7 @@
     <Compile Include="Entities\EthosSecurityDefinitions.cs" />
     <Compile Include="Entities\AcquisitionMethod.cs" />
     <Compile Include="Entities\ItemCondition.cs" />
+    <Compile Include="Entities\Message.cs" />
     <Compile Include="Entities\OrganizationalPersonPosition.cs" />
     <Compile Include="Entities\ExternalEmploymentStatus.cs" />
     <Compile Include="Entities\OrganizationalPersonPositionStatus.cs" />
@@ -190,10 +196,13 @@
     <Compile Include="Entities\PersonalPronounType.cs" />
     <Compile Include="Entities\PersonFilterCriteria.cs" />
     <Compile Include="Entities\PersonNamesCriteria.cs" />
+    <Compile Include="Entities\PersonProxyDetails.cs" />
     <Compile Include="Entities\Position.cs" />
     <Compile Include="Entities\ProjectType.cs" />
+    <Compile Include="Entities\RequiredDocumentConfiguration.cs" />
     <Compile Include="Entities\SelfServiceConfiguration.cs" />
     <Compile Include="Entities\SpecialDay.cs" />
+    <Compile Include="Entities\ProxyWorkflowConstants.cs" />
     <Compile Include="Entities\UserProfileConfiguration2.cs" />
     <Compile Include="Entities\NameAddressHierarchy.cs" />
     <Compile Include="Entities\PersonFormattedName.cs" />
@@ -253,6 +262,7 @@
     <Compile Include="Entities\TaxFormNotations.cs" />
     <Compile Include="Entities\TaxFormStatement2.cs" />
     <Compile Include="Entities\Vocation.cs" />
+    <Compile Include="Entities\WebSortField.cs" />
     <Compile Include="Entities\WorkTask.cs" />
     <Compile Include="Entities\ValidReciprocalRelationship.cs">
       <SubType>Code</SubType>
@@ -436,12 +446,15 @@
     <Compile Include="Exceptions\RecordLockException.cs" />
     <Compile Include="IRoomAvailabilityService.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Repositories\IDeprecatedResourcesRepository.cs" />
     <Compile Include="Repositories\IBankingAuthenticationClaimRepository.cs" />
     <Compile Include="Repositories\IBankingInformationConfigurationRepository.cs" />
     <Compile Include="Repositories\IBankRepository.cs" />
+    <Compile Include="Repositories\ICorrespondenceRequestsRepository.cs" />
     <Compile Include="Repositories\IEthosExtended.cs" />
     <Compile Include="Repositories\IGeographicAreasRepository.cs" />
     <Compile Include="Repositories\IExternalEmploymentsRepository.cs" />
+    <Compile Include="Repositories\IMessageRepository.cs" />
     <Compile Include="Repositories\IMiscellaneousTextRepository.cs" />
     <Compile Include="Repositories\IOrganizationalPositionRelationshipRepository.cs" />
     <Compile Include="Repositories\IOrganizationalPositionRepository.cs" />
@@ -496,6 +509,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Entities\RelationshipStatus.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos.Base\Ellucian.Colleague.Dtos.Base.csproj">
+      <Project>{A147BD58-ECC6-409B-A633-128946AAA456}</Project>
+      <Name>Ellucian.Colleague.Dtos.Base</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- begin ellucian project settings -->

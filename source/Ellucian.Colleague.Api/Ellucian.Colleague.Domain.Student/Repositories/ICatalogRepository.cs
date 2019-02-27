@@ -11,5 +11,12 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
     {
         Task<ICollection<Catalog>> GetAsync();
         Task<ICollection<Catalog>> GetAsync(bool bypassCache = false);
+
+        /// <summary>
+        /// Get guid for Catalog code
+        /// </summary>
+        /// <param name="code">AcademicLevels code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetCatalogGuidAsync(string code);
     }
 }

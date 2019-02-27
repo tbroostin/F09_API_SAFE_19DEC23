@@ -1,5 +1,5 @@
-# Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
-# Version 1.21 (Delivered with Colleague Web API 1.21)
+# Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
+# Version 1.22 (Delivered with Colleague Web API 1.22)
 
 # PURPOSE:
 # Warm up the Colleague Web API by pre-loading the most frequently-used and shared API data
@@ -406,6 +406,9 @@ if ($runEthosApi)
 	Write-Host "Getting Ethos academic-credentials..."
 	$results = get ($webApiBaseUrl + "/academic-credentials") $token
 
+    Write-Host "Getting Ethos alternative-credential-types..."
+	$results = get ($webApiBaseUrl + "/alternative-credential-types") $token
+
 	Write-Host "Getting Ethos academic-disciplines..."
 	$results = get ($webApiBaseUrl + "/academic-disciplines") $token 
 
@@ -694,6 +697,9 @@ if ($runEthosApi)
 	Write-Host "Getting Ethos grants..."
 	$results = get ($webApiBaseUrl + "/grants") $token
 
+	Write-Host "Getting Ethos gender-identities..."
+	$results = get ($webApiBaseUrl + "/gender-identities") $token
+
 	Write-Host "Getting Ethos housing-resident-types..."
 	$results = get ($webApiBaseUrl + "/housing-resident-types") $token
 
@@ -759,6 +765,9 @@ if ($runEthosApi)
 
 	Write-Host "Getting Ethos payroll-deduction-arrangement-change-reasons..."
 	$results = get ($webApiBaseUrl + "/payroll-deduction-arrangement-change-reasons") $token
+
+    Write-Host "Getting Ethos personal-pronouns..."
+	$results = get ($webApiBaseUrl + "/personal-pronouns") $token
 
 	Write-Host "Getting Ethos personal-relationship-statuses..."
 	$results = get ($webApiBaseUrl + "/personal-relationship-statuses") $token

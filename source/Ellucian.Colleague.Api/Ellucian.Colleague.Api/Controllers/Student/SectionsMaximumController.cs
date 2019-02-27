@@ -381,6 +381,145 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         }
 
         /// <summary>
+        /// Return a list of SectionMaximum objects based on selection criteria.
+        /// </summary>
+        /// <param name="page">Section page Contains ...page...</param>
+        /// <param name="criteria"> filter criteria</param>
+        /// <returns>List of SectionMaximum <see cref="Dtos.SectionMaximum5"/> objects representing matching SectionMaximum</returns>
+        [HttpGet, FilteringFilter(IgnoreFiltering = true)]
+        [ValidateQueryStringFilter()]
+        [QueryStringFilterFilter("criteria", typeof(Dtos.SectionMaximum5))]
+        [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
+        public async Task<IHttpActionResult> GetHedmSectionsMaximum5Async(Paging page, QueryStringFilter criteria)
+        {
+            string title = string.Empty, startOn = string.Empty, endOn = string.Empty, code = string.Empty,
+                 number = string.Empty, instructionalPlatform = string.Empty, academicPeriod = string.Empty, scheduleAcademicPeriod = string.Empty,
+                 course = string.Empty, site = string.Empty, status = string.Empty, reportingAcademicPeriod = string.Empty;
+            List<string> academicLevels = new List<string>(), owningOrganizations = new List<string>(), instructors = new List<string>();
+
+
+            var bypassCache = false;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
+
+            try
+            {
+                if (page == null)
+                {
+                    page = new Paging(100, 0);
+                }
+                var criteriaObj = GetFilterObject<Dtos.SectionMaximum5>(_logger, "criteria");
+                if (criteriaObj != null)
+                {
+                    title = criteriaObj.Title != null ? criteriaObj.Title : string.Empty;
+                    startOn = criteriaObj.StartOn != null ? criteriaObj.StartOn.ToString() : string.Empty;
+                    endOn = criteriaObj.EndOn != null ? criteriaObj.EndOn.ToString() : string.Empty;
+                    code = criteriaObj.Code != null ? criteriaObj.Code : string.Empty;
+                    number = criteriaObj.Number != null ? criteriaObj.Number : string.Empty;
+                    instructionalPlatform = ((criteriaObj.InstructionalPlatform != null)
+                        && (criteriaObj.InstructionalPlatform.Detail != null)
+                        && (!string.IsNullOrEmpty(criteriaObj.InstructionalPlatform.Detail.Id)))
+                        ? criteriaObj.InstructionalPlatform.Detail.Id : string.Empty;
+                    academicPeriod = ((criteriaObj.AcademicPeriod != null)
+                        && (criteriaObj.AcademicPeriod.Detail != null)
+                        && (!string.IsNullOrEmpty(criteriaObj.AcademicPeriod.Detail.Id)))
+                        ? criteriaObj.AcademicPeriod.Detail.Id : string.Empty;
+                    scheduleAcademicPeriod = ((criteriaObj.ScheduleAcademicPeriod != null)
+                        && (criteriaObj.ScheduleAcademicPeriod.Detail != null)
+                        && (!string.IsNullOrEmpty(criteriaObj.ScheduleAcademicPeriod.Detail.Id)))
+                        ? criteriaObj.ScheduleAcademicPeriod.Detail.Id : string.Empty;
+                    reportingAcademicPeriod = ((criteriaObj.ReportingAcademicPeriod != null)
+                        && (!string.IsNullOrEmpty(criteriaObj.ReportingAcademicPeriod.Id)))
+                        ? criteriaObj.ReportingAcademicPeriod.Id : string.Empty;
+                    course = ((criteriaObj.Course != null)
+                        && (criteriaObj.Course.Detail != null)
+                        && (!string.IsNullOrEmpty(criteriaObj.Course.Detail.Id)))
+                        ? criteriaObj.Course.Detail.Id : string.Empty;
+                    site = ((criteriaObj.Site != null)
+                        && (criteriaObj.Site.Detail != null)
+                        && (!string.IsNullOrEmpty(criteriaObj.Site.Detail.Id)))
+                        ? criteriaObj.Site.Detail.Id : string.Empty;
+                    status = ((criteriaObj.Status != null) && (criteriaObj.Status.Category != SectionStatus2.NotSet))
+                        ? criteriaObj.Status.Category.ToString() : string.Empty;
+                    if ((criteriaObj.AcademicLevels != null) && (criteriaObj.AcademicLevels.Any()))
+                    {
+                        var academiclevel = new List<string>();
+                        foreach (var acadLevel in criteriaObj.AcademicLevels)
+                        {
+                            if ((acadLevel != null) && (acadLevel.Detail != null) && (!string.IsNullOrEmpty(acadLevel.Detail.Id)))
+                            {
+                                academiclevel.Add(acadLevel.Detail.Id);
+                            }
+                        }
+                        academicLevels = academiclevel;
+                    }
+                    if ((criteriaObj.InstructorRoster != null) && (criteriaObj.InstructorRoster.Any()))
+                    {
+                        var instrs = new List<string>();
+                        foreach (var instr in criteriaObj.InstructorRoster)
+                        {
+                            if ((instr != null) && (instr.Instructor != null) && (instr.Instructor.Detail != null) && (!string.IsNullOrEmpty(instr.Instructor.Detail.Id)))
+                            {
+                                instrs.Add(instr.Instructor.Detail.Id);
+                            }
+                        }
+                        instructors = instrs;
+                    }
+                    if ((criteriaObj.OwningOrganizations != null) && (criteriaObj.OwningOrganizations.Any()))
+                    {
+                        var organizations = new List<string>();
+                        foreach (var owningInstitutionUnit in criteriaObj.OwningOrganizations)
+                        {
+                            if ((owningInstitutionUnit != null) && (owningInstitutionUnit.Detail != null) && (!string.IsNullOrEmpty(owningInstitutionUnit.Detail.Id)))
+                            {
+                                organizations.Add(owningInstitutionUnit.Detail.Id);
+                            }
+                        }
+                        owningOrganizations = organizations;
+                    }
+                }
+
+                if (CheckForEmptyFilterParameters())
+                    return new PagedHttpActionResult<IEnumerable<Dtos.SectionMaximum5>>(new List<Dtos.SectionMaximum5>(), page, 0, this.Request);
+
+                AddDataPrivacyContextProperty((await _sectionCoordinationService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
+                var pageOfItems = await _sectionCoordinationService.GetSectionsMaximum5Async(page.Offset, page.Limit, title, startOn, endOn, code, number, instructionalPlatform, academicPeriod, reportingAcademicPeriod, academicLevels, course, site, status, owningOrganizations, instructors, scheduleAcademicPeriod, bypassCache);
+
+                return new PagedHttpActionResult<IEnumerable<Dtos.SectionMaximum5>>(pageOfItems.Item1, page, pageOfItems.Item2, this.Request);
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
+
+        /// <summary>
         /// Read (GET) a section using a GUID
         /// </summary>
         /// <param name="id">GUID to desired section</param>
@@ -497,6 +636,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
         }
+
         /// <summary>
         /// Read (GET) a section using a GUID
         /// </summary>
@@ -523,6 +663,65 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 AddDataPrivacyContextProperty((await _sectionCoordinationService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
                 return await _sectionCoordinationService.GetSectionMaximumByGuid4Async(id);
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
+
+        /// <summary>
+        /// Read (GET) a section using a GUID
+        /// </summary>
+        /// <param name="id">GUID to desired section</param>
+        /// <returns>A SectionMaximum object <see cref="Dtos.SectionMaximum5"/> in HeDM format</returns>
+        [HttpGet, EedmResponseFilter]
+        public async Task<Dtos.SectionMaximum5> GetHedmSectionMaximumByGuid5Async(string id)
+        {
+            var bypassCache = false;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
+
+            if (string.IsNullOrEmpty(id))
+            {
+                throw CreateHttpResponseException(new IntegrationApiException("Null id argument",
+                    IntegrationApiUtility.GetDefaultApiError("The GUID must be specified in the request URL.")));
+            }
+            try
+            {
+                AddDataPrivacyContextProperty((await _sectionCoordinationService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
+                return await _sectionCoordinationService.GetSectionMaximumByGuid5Async(id, bypassCache);
             }
             catch (KeyNotFoundException e)
             {

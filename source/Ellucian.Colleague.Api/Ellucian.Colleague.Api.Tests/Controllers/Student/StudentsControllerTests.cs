@@ -21,10 +21,12 @@ using Moq;
 using slf4net;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
+using System.Web;
 using System.Web.Http;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Student
@@ -79,7 +81,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             private string residencyFilter = "b4bcb3a0-2e8d-4643-bd17-ba93f36e8f09";
 
             private Ellucian.Colleague.Dtos.Students studentsDto;
-            
+
             Mock<IAcademicHistoryService> academicHistoryServiceMock;
             Mock<IStudentService> studentServiceMock;
             Mock<IStudentRestrictionService> studentRestrictionServiceMock;
@@ -90,7 +92,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             Mock<ICourseRepository> courseRepoMock;
             Mock<IEmergencyInformationService> emergencyInformationServiceMock;
             Mock<IAdapterRegistry> adapterRegistryMock;
-            
+
             private IStudentRepository testStudentRepo;
 
             [TestInitialize]
@@ -122,7 +124,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 adapterRegistry = adapterRegistryMock.Object;
                 logger = new Mock<ILogger>().Object;
                 emergencyInformationService = emergencyInformationServiceMock.Object;
-                
+
                 testStudentRepo = new TestStudentRepository();
 
                 // setup students Dto object                
@@ -130,9 +132,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 studentsDto.Id = studentGuid;
                 studentsDto.Person = new GuidObject2(personFilter);
                 studentsDto.Residency = new GuidObject2("1a507924-f207-460a-8c1d-1854ebe80567");
-                studentsDto.Tags = new List<GuidObject2>() {new GuidObject2("1a507924-f207-460a-8c1d-1854ebe80562")};
+                studentsDto.Tags = new List<GuidObject2>() { new GuidObject2("1a507924-f207-460a-8c1d-1854ebe80562") };
                 studentsDto.Type = new GuidObject2(typeFilter);
-                studentsDto.Cohorts = new List<GuidObject2>() {new GuidObject2(cohortsFilter)};
+                studentsDto.Cohorts = new List<GuidObject2>() { new GuidObject2(cohortsFilter) };
                 studentsDto.Residency = new GuidObject2(residencyFilter);
 
                 var studentDtoList = new List<Students>() { studentsDto };
@@ -148,7 +150,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                         s.GetStudentsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), string.Empty, string.Empty, string.Empty, string.Empty)).ReturnsAsync(studentTuple);
 
                 studentServiceMock.Setup(s => s.GetStudentsByGuidAsync(studentGuid, It.IsAny<bool>())).ReturnsAsync(studentsDto);
-                
+
                 // create new students controller
                 studentsController = new StudentsController(adapterRegistry, academicHistoryService, studentService,
                     studentProgramRepo, studentRestrictionService, requirementRepo, emergencyInformationService, logger,
@@ -169,8 +171,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             [TestMethod]
             public async Task GetStudentsByFilter_NoCache_V7()
             {
-                studentsController.Request.Headers.CacheControl = 
-                     new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true }; 
+                studentsController.Request.Headers.CacheControl =
+                     new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
 
                 var student = await studentsController.GetStudentsAsync(new Paging(1, 0), personFilter, typeFilter, cohortsFilter, residencyFilter);
                 Assert.IsTrue(student is IHttpActionResult);
@@ -180,7 +182,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task GetStudentsByFitler_NoPaging_NoCache_V7()
             {
                 studentsController.Request.Headers.CacheControl =
-                     new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true }; 
+                     new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
 
                 var student = await studentsController.GetStudentsAsync(null, personFilter, typeFilter, cohortsFilter, residencyFilter);
                 Assert.IsTrue(student is IHttpActionResult);
@@ -253,10 +255,10 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                      new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
 
                 HttpStatusCode statusCode = HttpStatusCode.Unused;
-                                studentServiceMock.Setup(
-                    s =>
-                        s.GetStudentsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), personFilter, typeFilter,
-                            cohortsFilter, residencyFilter)).Throws(new PermissionsException());
+                studentServiceMock.Setup(
+    s =>
+        s.GetStudentsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), personFilter, typeFilter,
+            cohortsFilter, residencyFilter)).Throws(new PermissionsException());
                 try
                 {
                     await studentsController.GetStudentsAsync(null, personFilter, typeFilter, cohortsFilter, residencyFilter);
@@ -465,7 +467,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 Assert.AreEqual(HttpStatusCode.BadRequest, statusCode);
             }
 
-            
+
             [TestCleanup]
             public void Cleanup()
             {
@@ -484,8 +486,468 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 emergencyInformationService = null;
             }
 
-            
+
         }
+
+        [TestClass]
+        public class StudentTests_GetStudents2
+        {
+            #region Test Context
+
+            private TestContext testContextInstance;
+
+            /// <summary>
+            ///Gets or sets the test context which provides
+            ///information about and functionality for the current test run.
+            ///</summary>
+            public TestContext TestContext
+            {
+                get { return testContextInstance; }
+                set { testContextInstance = value; }
+            }
+
+            #endregion
+
+            private IAcademicHistoryService academicHistoryService;
+            private IStudentService studentService;
+            private IStudentRestrictionService studentRestrictionService;
+            private IStudentRepository studentRepo;
+            private IStudentProgramRepository studentProgramRepo;
+            private IRequirementRepository requirementRepo;
+            private IAcademicCreditRepository acadCredRepo;
+            private ICourseRepository courseRepo;
+            private IAdapterRegistry adapterRegistry;
+            private StudentsController studentsController;
+            private IEmergencyInformationService emergencyInformationService;
+            private ILogger logger;
+            private ApiSettings apiSettings;
+            private string studentId = "0000001";
+            private string lastName = "Smith";
+            //private string studentProgramId1 = "10";
+            private string[] programIds = new string[] { "BA.MATH", "BA.ENGL" };
+            private string[] programCodes = new string[] { "PROG1", "PROG2" };
+            private string[] catalogCodes = new string[] { "2011", "2012" };
+            private string[] academicCreditIds = new string[] { "19000", "38001", "39" };
+
+            private string personFilter = "1a507924-f207-460a-8c1d-1854ebe80565";
+            private string typeFilter = "1a507924-f207-460a-8c1d-1854ebe80561";
+            private string cohortsFilter = "1b507924-f207-460a-8c1d-1854ebe80561";
+            private string studentGuid = "1a507924-f207-460a-8c1d-1854ebe80566";
+            private string residencyFilter = "b4bcb3a0-2e8d-4643-bd17-ba93f36e8f09";
+
+            private Ellucian.Web.Http.Models.QueryStringFilter criteriaFilter
+                = new Web.Http.Models.QueryStringFilter("criteria", "");
+            private Ellucian.Web.Http.Models.QueryStringFilter personCriteriaFilter 
+                = new Web.Http.Models.QueryStringFilter("personFilter", "");
+
+            private Ellucian.Colleague.Dtos.Students2 studentsDto;
+
+            Mock<IAcademicHistoryService> academicHistoryServiceMock;
+            Mock<IStudentService> studentServiceMock;
+            Mock<IStudentRestrictionService> studentRestrictionServiceMock;
+            Mock<IStudentRepository> studentRepoMock;
+            Mock<IStudentProgramRepository> studentProgramRepoMock;
+            Mock<IRequirementRepository> requirementRepoMock;
+            Mock<IAcademicCreditRepository> acadCredRepoMock;
+            Mock<ICourseRepository> courseRepoMock;
+            Mock<IEmergencyInformationService> emergencyInformationServiceMock;
+            Mock<IAdapterRegistry> adapterRegistryMock;
+
+            private IStudentRepository testStudentRepo;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+                // mock needed ctor items
+                academicHistoryServiceMock = new Mock<IAcademicHistoryService>();
+                studentServiceMock = new Mock<IStudentService>();
+                studentRestrictionServiceMock = new Mock<IStudentRestrictionService>();
+                studentRepoMock = new Mock<IStudentRepository>();
+                studentProgramRepoMock = new Mock<IStudentProgramRepository>();
+                requirementRepoMock = new Mock<IRequirementRepository>();
+                acadCredRepoMock = new Mock<IAcademicCreditRepository>();
+                courseRepoMock = new Mock<ICourseRepository>();
+                emergencyInformationServiceMock = new Mock<IEmergencyInformationService>();
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+
+                academicHistoryService = academicHistoryServiceMock.Object;
+                studentService = studentServiceMock.Object;
+                studentRestrictionService = studentRestrictionServiceMock.Object;
+                studentRepo = studentRepoMock.Object;
+                studentProgramRepo = studentProgramRepoMock.Object;
+                requirementRepo = requirementRepoMock.Object;
+                acadCredRepo = acadCredRepoMock.Object;
+                courseRepo = courseRepoMock.Object;
+                adapterRegistry = adapterRegistryMock.Object;
+                logger = new Mock<ILogger>().Object;
+                emergencyInformationService = emergencyInformationServiceMock.Object;
+
+                testStudentRepo = new TestStudentRepository();
+
+                // setup students Dto object                
+                studentsDto = new Dtos.Students2();
+                studentsDto.Id = studentGuid;
+                studentsDto.Person = new GuidObject2(personFilter);
+                studentsDto.Residencies = new List<StudentResidenciesDtoProperty>()
+                {  new StudentResidenciesDtoProperty()
+                    { Residency = new GuidObject2("1a507924-f207-460a-8c1d-1854ebe80567") } };
+                studentsDto.Tags = new List<StudentTagsDtoProperty>()
+                {  new StudentTagsDtoProperty()
+                { Tag = new GuidObject2("1a507924-f207-460a-8c1d-1854ebe80562") }};
+                studentsDto.Types = new List<StudentTypesDtoProperty>()
+                {  new StudentTypesDtoProperty() { Type  =  new GuidObject2(typeFilter) } };
+                studentsDto.Cohorts = new List<StudentCohortsDtoProperty>()
+                {  new StudentCohortsDtoProperty() { Cohort =  new GuidObject2(cohortsFilter) }};
+                studentsDto.LevelClassifications = new List<StudentLevelClassificationsDtoProperty>()
+                {  new StudentLevelClassificationsDtoProperty() { Level = new GuidObject2("2a507924-f207-460a-8c1d-1854ebe80561") }};
+
+                var studentDtoList = new List<Students2>() { studentsDto };
+                var studentTuple = new Tuple<IEnumerable<Students2>, int>(studentDtoList, 1);
+
+                // GetStudents2Async(int offset, int limit, Dtos.Students2 criteriaFilter, string personFilter, bool bypassCache = false);
+                studentServiceMock.Setup(
+                    s =>
+                        s.GetStudents2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.Students2>(), personFilter, It.IsAny<bool>()))
+                        .ReturnsAsync(studentTuple);
+
+                studentServiceMock.Setup(
+                    s =>
+                        s.GetStudents2Async(It.IsAny<int>(), It.IsAny<int>(), null, string.Empty, It.IsAny<bool>()))
+                        .ReturnsAsync(studentTuple);
+
+                studentServiceMock.Setup(s => s.GetStudentsByGuid2Async(studentGuid, It.IsAny<bool>())).ReturnsAsync(studentsDto);
+
+                // create new students controller
+                studentsController = new StudentsController(adapterRegistry, academicHistoryService, studentService,
+                    studentProgramRepo, studentRestrictionService, requirementRepo, emergencyInformationService, logger,
+                    apiSettings)
+                {
+                    Request = new HttpRequestMessage()
+                };
+            }
+
+            [TestMethod]
+            public async Task GetStudentByGuid_Students2()
+            {
+                var student = await studentsController.GetStudentsByGuid2Async(studentGuid);
+                Assert.AreSame(student.Id, studentGuid);
+            }
+         
+
+            [TestMethod]
+            public async Task GetStudents_NoCache_Students2()
+            {
+                studentsController.Request.Headers.CacheControl =
+                     new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+
+                studentsController.Request.Properties.Add(
+                     string.Format("FilterObject{0}", "criteria"),
+                     new Dtos.Students2 { Person = new GuidObject2("guid1") });
+                studentsController.Request.Properties.Add(
+                      string.Format("FilterObject{0}", "personFilter"),
+                      new Dtos.Filters.PersonFilterFilter { personFilterId = personFilter });
+
+                var student = await studentsController.GetStudents2Async(new Paging(1, 0), 
+                    criteriaFilter, personCriteriaFilter);
+                Assert.IsTrue(student is IHttpActionResult);
+            }
+
+            [TestMethod]
+            public async Task GetStudents_NoPaging_NoCache_Students2()
+            {
+                studentsController.Request.Headers.CacheControl =
+                     new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+
+                studentsController.Request.Properties.Add(
+                     string.Format("FilterObject{0}", "criteria"),
+                     new Dtos.Students2 { Person = new GuidObject2("guid1") });
+                studentsController.Request.Properties.Add(
+                      string.Format("FilterObject{0}", "personFilter"),
+                      new Dtos.Filters.PersonFilterFilter { personFilterId = personFilter });
+
+                var student = await studentsController.GetStudents2Async(null, 
+                    criteriaFilter, personCriteriaFilter);
+                Assert.IsTrue(student is IHttpActionResult);
+            }
+
+            [TestMethod]
+            public async Task GetStudents_Cache_Students2()
+            {
+                studentsController.Request.Headers.CacheControl =
+                     new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
+                studentsController.Request.Properties.Add(
+                      string.Format("FilterObject{0}", "criteria"),
+                      new Dtos.Students2 { Person = new GuidObject2("guid1") });
+                studentsController.Request.Properties.Add(
+                      string.Format("FilterObject{0}", "personFilter"),
+                      new Dtos.Filters.PersonFilterFilter { personFilterId = personFilter });
+                var student = await studentsController.GetStudents2Async(new Paging(1, 0), 
+                    criteriaFilter, personCriteriaFilter);
+                Assert.IsTrue(student is IHttpActionResult);
+            }
+
+            [TestMethod]
+            public async Task GetStudents_NoPaging_Cache_Students2()
+            {
+                studentsController.Request.Headers.CacheControl =
+                     new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
+                studentsController.Request.Properties.Add(
+                     string.Format("FilterObject{0}", "criteria"),
+                     new Dtos.Students2 { Person = new GuidObject2("guid1") });
+                studentsController.Request.Properties.Add(
+                      string.Format("FilterObject{0}", "personFilter"),
+                      new Dtos.Filters.PersonFilterFilter { personFilterId = personFilter });
+
+                var student = await studentsController.GetStudents2Async(null, 
+                    criteriaFilter, personCriteriaFilter);
+                Assert.IsTrue(student is IHttpActionResult);
+            }
+
+            [TestMethod]
+            public async Task GetStudentsByFitler_PermissionsException_Students2()
+            {
+                studentsController.Request.Headers.CacheControl =
+                     new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+                
+                HttpStatusCode statusCode = HttpStatusCode.Unused;
+                studentServiceMock.Setup(
+                s =>
+                 s.GetStudents2Async(It.IsAny<int>(), It.IsAny<int>(), 
+                    It.IsAny<Dtos.Students2>(), It.IsAny<string>(), It.IsAny<bool>()))
+                    .Throws(new PermissionsException());
+                try
+                {
+                    await studentsController.GetStudents2Async(null, criteriaFilter, personCriteriaFilter);
+                }
+                catch (HttpResponseException e)
+                {
+                    statusCode = e.Response.StatusCode;
+                }
+                Assert.AreEqual(HttpStatusCode.Unauthorized, statusCode);
+            }
+
+            [TestMethod]
+            public async Task GetStudentsByFitler_ArgumentException_Students2()
+            {
+                studentsController.Request.Headers.CacheControl =
+                     new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+
+                HttpStatusCode statusCode = HttpStatusCode.Unused;
+                studentServiceMock.Setup(
+                    s =>
+                        s.GetStudents2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.Students2>(), It.IsAny<string>(), It.IsAny<bool>()))
+                        .Throws(new ArgumentException());
+                try
+                {
+                    await studentsController.GetStudents2Async(null, criteriaFilter, personCriteriaFilter);
+                }
+                catch (HttpResponseException e)
+                {
+                    statusCode = e.Response.StatusCode;
+                }
+                Assert.AreEqual(HttpStatusCode.BadRequest, statusCode);
+            }
+
+            [TestMethod]
+            public async Task GetStudentsByFitler_RepositoryException_Students2()
+            {
+                studentsController.Request.Headers.CacheControl =
+                     new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+
+                HttpStatusCode statusCode = HttpStatusCode.Unused;
+                studentServiceMock.Setup(
+                    s =>
+                        s.GetStudents2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.Students2>(), It.IsAny<string>(), It.IsAny<bool>()))
+                        .Throws(new RepositoryException());
+                try
+                {
+                    await studentsController.GetStudents2Async(null, criteriaFilter, personCriteriaFilter);
+                }
+                catch (HttpResponseException e)
+                {
+                    statusCode = e.Response.StatusCode;
+                }
+                Assert.AreEqual(HttpStatusCode.BadRequest, statusCode);
+            }
+
+            [TestMethod]
+            public async Task GetStudentsByFitler_InegrationApiException_Students2()
+            {
+                studentsController.Request.Headers.CacheControl =
+                     new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+
+                HttpStatusCode statusCode = HttpStatusCode.Unused;
+                studentServiceMock.Setup(
+                    s =>
+                        s.GetStudents2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.Students2>(), It.IsAny<string>(), It.IsAny<bool>()))
+                        .Throws(new IntegrationApiException());
+                try
+                {
+                    await studentsController.GetStudents2Async(null, criteriaFilter, personCriteriaFilter);
+                }
+                catch (HttpResponseException e)
+                {
+                    statusCode = e.Response.StatusCode;
+                }
+                Assert.AreEqual(HttpStatusCode.BadRequest, statusCode);
+            }
+
+            [TestMethod]
+            public async Task GetStudentsByFitler_Exception_Students2()
+            {
+                studentsController.Request.Headers.CacheControl =
+                     new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+
+                HttpStatusCode statusCode = HttpStatusCode.Unused;
+                studentServiceMock.Setup(
+                    s =>
+                        s.GetStudents2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.Students2>(), It.IsAny<string>(), It.IsAny<bool>()))
+                        .Throws(new Exception());
+                try
+                {
+                    await studentsController.GetStudents2Async(null, criteriaFilter, personCriteriaFilter);
+                }
+                catch (HttpResponseException e)
+                {
+                    statusCode = e.Response.StatusCode;
+                }
+                Assert.AreEqual(HttpStatusCode.BadRequest, statusCode);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetStudentByGuid_NoGuidException_Students2()
+            {
+                var student = await studentsController.GetStudentsByGuid2Async(null);
+            }
+
+            [TestMethod]
+            public async Task GetStudentByGuid_Exception_Students2()
+            {
+                HttpStatusCode statusCode = HttpStatusCode.Unused;
+                studentServiceMock.Setup(s => s.GetStudentsByGuid2Async(studentGuid, It.IsAny<bool>())).Throws(new Exception());
+
+                try
+                {
+                    await studentsController.GetStudentsByGuid2Async(studentGuid);
+                }
+                catch (HttpResponseException e)
+                {
+                    statusCode = e.Response.StatusCode;
+                }
+                Assert.AreEqual(HttpStatusCode.BadRequest, statusCode);
+            }
+
+            [TestMethod]
+            public async Task GetStudentByGuid_PermissionsException_Students2()
+            {
+                HttpStatusCode statusCode = HttpStatusCode.Unused;
+                studentServiceMock.Setup(s => s.GetStudentsByGuid2Async(studentGuid, It.IsAny<bool>())).Throws(new PermissionsException());
+
+                try
+                {
+                    await studentsController.GetStudentsByGuid2Async(studentGuid);
+                }
+                catch (HttpResponseException e)
+                {
+                    statusCode = e.Response.StatusCode;
+                }
+                Assert.AreEqual(HttpStatusCode.Unauthorized, statusCode);
+            }
+
+            [TestMethod]
+            public async Task GetStudentByGuid_KeyNotFoundException_Students2()
+            {
+                HttpStatusCode statusCode = HttpStatusCode.Unused;
+                studentServiceMock.Setup(s => s.GetStudentsByGuid2Async(studentGuid, It.IsAny<bool>())).Throws(new KeyNotFoundException());
+
+                try
+                {
+                    await studentsController.GetStudentsByGuid2Async(studentGuid);
+                }
+                catch (HttpResponseException e)
+                {
+                    statusCode = e.Response.StatusCode;
+                }
+                Assert.AreEqual(HttpStatusCode.NotFound, statusCode);
+            }
+
+            [TestMethod]
+            public async Task GetStudentByGuid_ArgumentNullException_Students2()
+            {
+                HttpStatusCode statusCode = HttpStatusCode.Unused;
+                studentServiceMock.Setup(s => s.GetStudentsByGuid2Async(studentGuid, It.IsAny<bool>())).Throws(new ArgumentNullException());
+
+                try
+                {
+                    await studentsController.GetStudentsByGuid2Async(studentGuid);
+                }
+                catch (HttpResponseException e)
+                {
+                    statusCode = e.Response.StatusCode;
+                }
+                Assert.AreEqual(HttpStatusCode.BadRequest, statusCode);
+            }
+
+            [TestMethod]
+            public async Task GetStudentByGuid_RepositoryException_Students2()
+            {
+                HttpStatusCode statusCode = HttpStatusCode.Unused;
+                studentServiceMock.Setup(s => s.GetStudentsByGuid2Async(studentGuid, It.IsAny<bool>())).Throws(new RepositoryException());
+
+                try
+                {
+                    await studentsController.GetStudentsByGuid2Async(studentGuid);
+                }
+                catch (HttpResponseException e)
+                {
+                    statusCode = e.Response.StatusCode;
+                }
+                Assert.AreEqual(HttpStatusCode.BadRequest, statusCode);
+            }
+
+            [TestMethod]
+            public async Task GetStudentByGuid_IntegrationApiException_Students2()
+            {
+                HttpStatusCode statusCode = HttpStatusCode.Unused;
+                studentServiceMock.Setup(s => s.GetStudentsByGuid2Async(studentGuid, It.IsAny<bool>())).Throws(new IntegrationApiException());
+
+                try
+                {
+                    await studentsController.GetStudentsByGuid2Async(studentGuid);
+                }
+                catch (HttpResponseException e)
+                {
+                    statusCode = e.Response.StatusCode;
+                }
+                Assert.AreEqual(HttpStatusCode.BadRequest, statusCode);
+            }
+
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                testStudentRepo = null;
+                studentsController = null;
+                academicHistoryService = null;
+                studentService = null;
+                studentRestrictionService = null;
+                studentRepo = null;
+                studentProgramRepo = null;
+                requirementRepo = null;
+                acadCredRepo = null;
+                courseRepo = null;
+                adapterRegistry = null;
+                logger = null;
+                emergencyInformationService = null;
+            }
+        }
+
 
         [TestClass]
         public class BaseStudentTests
@@ -522,10 +984,10 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             private string studentId = "0000001";
             private string lastName = "Smith";
             //private string studentProgramId1 = "10";
-            private string[] programIds = new string[] {"BA.MATH", "BA.ENGL"};
-            private string[] programCodes = new string[] {"PROG1", "PROG2"};
-            private string[] catalogCodes = new string[] {"2011", "2012"};
-            private string[] academicCreditIds = new string[] {"19000", "38001", "39"};
+            private string[] programIds = new string[] { "BA.MATH", "BA.ENGL" };
+            private string[] programCodes = new string[] { "PROG1", "PROG2" };
+            private string[] catalogCodes = new string[] { "2011", "2012" };
+            private string[] academicCreditIds = new string[] { "19000", "38001", "39" };
             private IEnumerable<Dtos.Student.SectionRegistration> sectionRegistrations;
 
             private IStudentRepository testStudentRepo;
@@ -566,8 +1028,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
                 // mock student repo call
                 var student = new Domain.Student.Entities.Student(studentId, lastName, 2,
-                    new List<string> {programIds[0], programIds[1]},
-                    new List<string> {academicCreditIds[0], academicCreditIds[1]});
+                    new List<string> { programIds[0], programIds[1] },
+                    new List<string> { academicCreditIds[0], academicCreditIds[1] });
                 studentRepoMock.Setup(repo => repo.GetAsync(studentId)).Returns(Task.FromResult(student));
 
                 // mock studentprogram repo call
@@ -664,13 +1126,13 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
 
                 // mock a valid student search response
-                var studentDto1 = new Dtos.Student.Student() {Id = "00000001", LastName = "Dog", FirstName = "Able"};
-                var studentDto2 = new Dtos.Student.Student() {Id = "00000002", LastName = "Dog", FirstName = "Baker"};
-                var studentDto3 = new Dtos.Student.Student() {Id = "00000003", LastName = "Dog", FirstName = "Charlie"};
+                var studentDto1 = new Dtos.Student.Student() { Id = "00000001", LastName = "Dog", FirstName = "Able" };
+                var studentDto2 = new Dtos.Student.Student() { Id = "00000002", LastName = "Dog", FirstName = "Baker" };
+                var studentDto3 = new Dtos.Student.Student() { Id = "00000003", LastName = "Dog", FirstName = "Charlie" };
 
-                var justOne = new List<Dtos.Student.Student>() {studentDto1};
-                var justTwo = new List<Dtos.Student.Student>() {studentDto2};
-                var allThree = new List<Dtos.Student.Student>() {studentDto1, studentDto2, studentDto3};
+                var justOne = new List<Dtos.Student.Student>() { studentDto1 };
+                var justTwo = new List<Dtos.Student.Student>() { studentDto2 };
+                var allThree = new List<Dtos.Student.Student>() { studentDto1, studentDto2, studentDto3 };
 
 
                 studentServiceMock.Setup(svc => svc.SearchAsync("Dog", DateTime.Parse("3/3/33"), null, null, null, null))
@@ -729,10 +1191,10 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
                 // mock student service call
                 var student1 = new Domain.Student.Entities.Student(studentId, lastName, 2,
-                    new List<string> {programIds[0], programIds[1]},
-                    new List<string> {academicCreditIds[0], academicCreditIds[1]});
+                    new List<string> { programIds[0], programIds[1] },
+                    new List<string> { academicCreditIds[0], academicCreditIds[1] });
                 var studentDto = stuAdapter.MapToType(student1);
-                studentServiceMock.Setup(svc => svc.GetAsync(studentId)).Returns(Task.FromResult(new PrivacyWrapper<Dtos.Student.Student>(studentDto,false)));
+                studentServiceMock.Setup(svc => svc.GetAsync(studentId)).Returns(Task.FromResult(new PrivacyWrapper<Dtos.Student.Student>(studentDto, false)));
 
                 // mock controller
                 studentsController = new StudentsController(adapterRegistry, academicHistoryService, studentService,
@@ -758,7 +1220,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 Assert.AreEqual(studentId, studentDTO.Id);
                 Assert.IsTrue(studentDTO.DegreePlanId.HasValue);
                 Assert.AreEqual(2, studentDTO.DegreePlanId);
-                    // MBS changed to 2 so I could use the test repo - there is no DP1.
+                // MBS changed to 2 so I could use the test repo - there is no DP1.
                 Assert.AreEqual(2, studentDTO.ProgramIds.Count);
             }
 
@@ -766,7 +1228,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task Get_StudentPrograms_All()
             {
                 List<StudentProgram> studentProgramDTO =
-                    (List<StudentProgram>) (await studentsController.GetStudentProgramsAsync(studentId));
+                    (List<StudentProgram>)(await studentsController.GetStudentProgramsAsync(studentId));
                 Assert.AreEqual(2, studentProgramDTO.Count);
                 Assert.AreEqual(studentId, studentProgramDTO[0].StudentId);
                 Assert.AreEqual(studentId, studentProgramDTO[1].StudentId);
@@ -793,7 +1255,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             }
 
             [TestMethod]
-            [ExpectedException(typeof (HttpResponseException))]
+            [ExpectedException(typeof(HttpResponseException))]
             public async Task GetTranscriptRestrictions_MissingStudent()
             {
                 IEnumerable<Dtos.Student.TranscriptRestriction> restrictions =
@@ -833,28 +1295,28 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             }
 
             [TestMethod]
-            [ExpectedException(typeof (HttpResponseException))]
+            [ExpectedException(typeof(HttpResponseException))]
             public async Task GetTranscriptRestrictions2_MissingStudent()
             {
                 var transcriptAccess = await studentsController.GetTranscriptRestrictions2Async("00000005");
             }
 
             [TestMethod]
-            [ExpectedException(typeof (HttpResponseException))]
+            [ExpectedException(typeof(HttpResponseException))]
             public async Task GetStudentRestrictions_NullStudentId()
             {
                 var rests = await studentsController.GetStudentRestrictionsAsync(null);
             }
 
             [TestMethod]
-            [ExpectedException(typeof (HttpResponseException))]
+            [ExpectedException(typeof(HttpResponseException))]
             public async Task GetStudentRestrictions_EmptyStudentId()
             {
                 var rests = await studentsController.GetStudentRestrictionsAsync(string.Empty);
             }
 
             [TestMethod]
-            [ExpectedException(typeof (HttpResponseException))]
+            [ExpectedException(typeof(HttpResponseException))]
             public async Task GetStudentRestrictions_UnauthorizedUser()
             {
                 var rests = await studentsController.GetStudentRestrictionsAsync("0000002");
@@ -867,21 +1329,21 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             }
 
             [TestMethod]
-            [ExpectedException(typeof (HttpResponseException))]
+            [ExpectedException(typeof(HttpResponseException))]
             public async Task GetStudentRestrictions2_NullStudentId()
             {
                 var rests = await studentsController.GetStudentRestrictionsAsync2(null);
             }
 
             [TestMethod]
-            [ExpectedException(typeof (HttpResponseException))]
+            [ExpectedException(typeof(HttpResponseException))]
             public async Task GetStudentRestrictions2_EmptyStudentId()
             {
                 var rests = await studentsController.GetStudentRestrictionsAsync2(string.Empty);
             }
 
             [TestMethod]
-            [ExpectedException(typeof (HttpResponseException))]
+            [ExpectedException(typeof(HttpResponseException))]
             public async Task GetStudentRestrictions2_UnauthorizedUser()
             {
                 studentsController.Request = new HttpRequestMessage();
@@ -950,21 +1412,21 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             //}
 
             [TestMethod]
-            [ExpectedException(typeof (HttpResponseException))]
+            [ExpectedException(typeof(HttpResponseException))]
             public async Task Register_NullStudentId()
             {
                 var messages = await studentsController.RegisterAsync(null, sectionRegistrations);
             }
 
             [TestMethod]
-            [ExpectedException(typeof (HttpResponseException))]
+            [ExpectedException(typeof(HttpResponseException))]
             public async Task Register_NullSectionRegistrations()
             {
                 var messages = await studentsController.RegisterAsync("1111", null);
             }
 
             [TestMethod]
-            [ExpectedException(typeof (HttpResponseException))]
+            [ExpectedException(typeof(HttpResponseException))]
             public async Task Register_ZeroSectionRegistrations()
             {
                 var messages =
@@ -1291,6 +1753,282 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             {
                 var history = await studentsController.GetAcademicHistory4Async(studentId);
                 Assert.IsNotNull(history);
+            }
+        }
+
+        [TestClass]
+        public class QueryStudentByPost2Async_Tests
+        {
+            #region Test Context
+
+            private TestContext testContextInstance;
+
+            /// <summary>
+            ///Gets or sets the test context which provides
+            ///information about and functionality for the current test run.
+            ///</summary>
+            public TestContext TestContext
+            {
+                get { return testContextInstance; }
+                set { testContextInstance = value; }
+            }
+
+            #endregion
+
+            private IAcademicHistoryService academicHistoryService;
+            private IStudentService studentService;
+            private IStudentRestrictionService studentRestrictionService;
+            private IStudentRepository studentRepo;
+            private IStudentProgramRepository studentProgramRepo;
+            private IRequirementRepository requirementRepo;
+            private IAcademicCreditRepository acadCredRepo;
+            private ICourseRepository courseRepo;
+            private IAdapterRegistry adapterRegistry;
+            private StudentsController studentsController;
+            private IEmergencyInformationService emergencyInformationService;
+            private ILogger logger;
+            private ApiSettings apiSettings;
+            private IStudentRepository testStudentRepo;
+
+            private PrivacyWrapper<List<Dtos.Student.Student>> studentDtos;
+
+            [TestInitialize]
+            public void QueryStudentByPost2Async_Tests_Initialize()
+            {
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+                studentDtos = new PrivacyWrapper<List<Dtos.Student.Student>>();
+                studentDtos.Dto = new List<Dtos.Student.Student>() { new Dtos.Student.Student()
+                    {
+                        Id = "0001234",
+                        LastName = "Smith"
+                    } };
+
+
+                // mock needed ctor items
+                Mock<IAcademicHistoryService> academicHistoryServiceMock = new Mock<IAcademicHistoryService>();
+                Mock<IStudentService> studentServiceMock = new Mock<IStudentService>();
+                studentServiceMock.Setup(svc => svc.Search3Async(It.IsAny<StudentSearchCriteria>(), It.IsAny<int>(), It.IsAny<int>())).ReturnsAsync(studentDtos);
+                Mock<IStudentRestrictionService> studentRestrictionServiceMock = new Mock<IStudentRestrictionService>();
+                Mock<IStudentRepository> studentRepoMock = new Mock<IStudentRepository>();
+                Mock<IStudentProgramRepository> studentProgramRepoMock = new Mock<IStudentProgramRepository>();
+                Mock<IRequirementRepository> requirementRepoMock = new Mock<IRequirementRepository>();
+                Mock<IAcademicCreditRepository> acadCredRepoMock = new Mock<IAcademicCreditRepository>();
+                Mock<ICourseRepository> courseRepoMock = new Mock<ICourseRepository>();
+                Mock<IEmergencyInformationService> emergencyInformationServiceMock = new Mock<IEmergencyInformationService>();
+                Mock<IAdapterRegistry> adapterRegistryMock = new Mock<IAdapterRegistry>();
+                academicHistoryService = academicHistoryServiceMock.Object;
+                studentService = studentServiceMock.Object;
+                studentRestrictionService = studentRestrictionServiceMock.Object;
+                studentRepo = studentRepoMock.Object;
+                studentProgramRepo = studentProgramRepoMock.Object;
+                requirementRepo = requirementRepoMock.Object;
+                acadCredRepo = acadCredRepoMock.Object;
+                courseRepo = courseRepoMock.Object;
+                adapterRegistry = adapterRegistryMock.Object;
+                logger = new Mock<ILogger>().Object;
+                apiSettings = null;
+
+                HttpContext.Current = new HttpContext(new HttpRequest("", "http://localhost/api/qapi/students", ""), new HttpResponse(new StringWriter()));
+
+                studentsController = new StudentsController(adapterRegistry, academicHistoryService, studentService,
+                    studentProgramRepo, studentRestrictionService, requirementRepo, emergencyInformationService, logger, apiSettings);
+            }
+
+            [TestCleanup]
+            public void QueryStudentByPost2Async_Tests_Cleanup()
+            {
+                studentsController = null;
+                adapterRegistry = null;
+                studentRepo = null;
+                studentProgramRepo = null;
+                acadCredRepo = null;
+                courseRepo = null;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task QueryStudentByPost2Async_handles_PermissionsException()
+            {
+                Mock<IStudentService> studentServiceMock = new Mock<IStudentService>();
+                studentServiceMock.Setup(svc => svc.Search3Async(It.IsAny<StudentSearchCriteria>(), It.IsAny<int>(), It.IsAny<int>())).ThrowsAsync(new PermissionsException());
+                studentService = studentServiceMock.Object;
+                studentsController = new StudentsController(adapterRegistry, academicHistoryService, studentService,
+                    studentProgramRepo, studentRestrictionService, requirementRepo, emergencyInformationService, logger, apiSettings);
+                var result = await studentsController.QueryStudentByPost2Async(new StudentSearchCriteria() { StudentKeyword = "0001234" });
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task QueryStudentByPost2Async_handles_generic_Exception()
+            {
+                Mock<IStudentService> studentServiceMock = new Mock<IStudentService>();
+                studentServiceMock.Setup(svc => svc.Search3Async(It.IsAny<StudentSearchCriteria>(), It.IsAny<int>(), It.IsAny<int>())).ThrowsAsync(new ApplicationException());
+                studentService = studentServiceMock.Object;
+                studentsController = new StudentsController(adapterRegistry, academicHistoryService, studentService,
+                    studentProgramRepo, studentRestrictionService, requirementRepo, emergencyInformationService, logger, apiSettings);
+                var result = await studentsController.QueryStudentByPost2Async(new StudentSearchCriteria() { StudentKeyword = "0001234" });
+            }
+
+            [TestMethod]
+            public async Task QueryStudentByPost2Async_valid_without_privacy_restrictions()
+            {
+                var result = await studentsController.QueryStudentByPost2Async(new StudentSearchCriteria() { StudentKeyword = "0001234" });
+                Assert.AreEqual(studentDtos.Dto.Count, result.Count());
+            }
+
+            [TestMethod]
+            public async Task QueryStudentByPost2Async_valid_with_privacy_restrictions()
+            {
+                studentDtos.HasPrivacyRestrictions = true;
+                var result = await studentsController.QueryStudentByPost2Async(new StudentSearchCriteria() { StudentKeyword = "0001234" });
+                Assert.AreEqual(studentDtos.Dto.Count, result.Count());
+            }
+        }
+
+
+        [TestClass]
+        public class QueryStudentsById4Async_Tests
+        {
+            #region Test Context
+
+            private TestContext testContextInstance;
+
+            /// <summary>
+            ///Gets or sets the test context which provides
+            ///information about and functionality for the current test run.
+            ///</summary>
+            public TestContext TestContext
+            {
+                get { return testContextInstance; }
+                set { testContextInstance = value; }
+            }
+
+            #endregion
+
+            private IAcademicHistoryService academicHistoryService;
+            private IStudentService studentService;
+            private IStudentRestrictionService studentRestrictionService;
+            private IStudentRepository studentRepo;
+            private IStudentProgramRepository studentProgramRepo;
+            private IRequirementRepository requirementRepo;
+            private IAcademicCreditRepository acadCredRepo;
+            private ICourseRepository courseRepo;
+            private IAdapterRegistry adapterRegistry;
+            private StudentsController studentsController;
+            private IEmergencyInformationService emergencyInformationService;
+            private ILogger logger;
+            private ApiSettings apiSettings;
+            private IStudentRepository testStudentRepo;
+
+            private PrivacyWrapper<IEnumerable<StudentBatch3>> studentBatch3s;
+
+            [TestInitialize]
+            public void QueryStudentsById4Async_Tests_Initialize()
+            {
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+                studentBatch3s = new PrivacyWrapper<IEnumerable<Dtos.Student.StudentBatch3>>();
+                studentBatch3s.Dto = new List<Dtos.Student.StudentBatch3>()
+                {
+                    new StudentBatch3()
+                    {
+                        Id = "0001234",
+                        LastName = "Smith"
+                    }
+                };
+
+                // mock needed ctor items
+                Mock<IAcademicHistoryService> academicHistoryServiceMock = new Mock<IAcademicHistoryService>();
+                Mock<IStudentService> studentServiceMock = new Mock<IStudentService>();
+                studentServiceMock.Setup(svc => svc.QueryStudentsById4Async(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string>())).ReturnsAsync(studentBatch3s);
+                Mock<IStudentRestrictionService> studentRestrictionServiceMock = new Mock<IStudentRestrictionService>();
+                Mock<IStudentRepository> studentRepoMock = new Mock<IStudentRepository>();
+                Mock<IStudentProgramRepository> studentProgramRepoMock = new Mock<IStudentProgramRepository>();
+                Mock<IRequirementRepository> requirementRepoMock = new Mock<IRequirementRepository>();
+                Mock<IAcademicCreditRepository> acadCredRepoMock = new Mock<IAcademicCreditRepository>();
+                Mock<ICourseRepository> courseRepoMock = new Mock<ICourseRepository>();
+                Mock<IEmergencyInformationService> emergencyInformationServiceMock = new Mock<IEmergencyInformationService>();
+                Mock<IAdapterRegistry> adapterRegistryMock = new Mock<IAdapterRegistry>();
+                academicHistoryService = academicHistoryServiceMock.Object;
+                studentService = studentServiceMock.Object;
+                studentRestrictionService = studentRestrictionServiceMock.Object;
+                studentRepo = studentRepoMock.Object;
+                studentProgramRepo = studentProgramRepoMock.Object;
+                requirementRepo = requirementRepoMock.Object;
+                acadCredRepo = acadCredRepoMock.Object;
+                courseRepo = courseRepoMock.Object;
+                adapterRegistry = adapterRegistryMock.Object;
+                logger = new Mock<ILogger>().Object;
+                apiSettings = null;
+
+                HttpContext.Current = new HttpContext(new HttpRequest("", "http://localhost/api/qapi/students", ""), new HttpResponse(new StringWriter()));
+
+
+                studentsController = new StudentsController(adapterRegistry, academicHistoryService, studentService, 
+                    studentProgramRepo, studentRestrictionService, requirementRepo, emergencyInformationService, logger, apiSettings);
+            }
+
+            [TestCleanup]
+            public void QueryStudentsById4Async_Tests_Cleanup()
+            {
+                studentsController = null;
+                adapterRegistry = null;
+                studentRepo = null;
+                studentProgramRepo = null;
+                acadCredRepo = null;
+                courseRepo = null;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task QueryStudentsById4Async_handles_PermissionsException()
+            {
+                Mock<IStudentService> studentServiceMock = new Mock<IStudentService>();
+                studentServiceMock.Setup(svc => svc.QueryStudentsById4Async(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string>())).ThrowsAsync(new PermissionsException());
+                studentService = studentServiceMock.Object;
+                studentsController = new StudentsController(adapterRegistry, academicHistoryService, studentService,
+                    studentProgramRepo, studentRestrictionService, requirementRepo, emergencyInformationService, logger, apiSettings);
+                var result = await studentsController.QueryStudentsById4Async(new StudentQueryCriteria() { StudentIds = new List<string>() { "0001234" } });
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task QueryStudentsById4Async_handles_generic_Exception()
+            {
+                Mock<IStudentService> studentServiceMock = new Mock<IStudentService>();
+                studentServiceMock.Setup(svc => svc.QueryStudentsById4Async(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string>())).ThrowsAsync(new ApplicationException());
+                studentService = studentServiceMock.Object;
+                studentsController = new StudentsController(adapterRegistry, academicHistoryService, studentService,
+                    studentProgramRepo, studentRestrictionService, requirementRepo, emergencyInformationService, logger, apiSettings);
+                var result = await studentsController.QueryStudentsById4Async(new StudentQueryCriteria() { StudentIds = new List<string>() { "0001234" } });
+            }
+
+            [TestMethod]
+            public async Task QueryStudentsById4Async_valid_without_privacy_restrictions()
+            {
+                Mock<IStudentService> studentServiceMock = new Mock<IStudentService>();
+                studentServiceMock.Setup(svc => svc.QueryStudentsById4Async(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string>())).ReturnsAsync(studentBatch3s);
+                studentService = studentServiceMock.Object;
+                studentsController = new StudentsController(adapterRegistry, academicHistoryService, studentService,
+                    studentProgramRepo, studentRestrictionService, requirementRepo, emergencyInformationService, logger, apiSettings);
+                var result = await studentsController.QueryStudentsById4Async(new StudentQueryCriteria() { StudentIds = new List<string>() { "0001234" } });
+                Assert.AreEqual(studentBatch3s.Dto.Count(), result.Count());
+            }
+
+            [TestMethod]
+            public async Task QueryStudentsById4Async_valid_with_privacy_restrictions()
+            {
+                studentBatch3s.HasPrivacyRestrictions = true;
+                Mock<IStudentService> studentServiceMock = new Mock<IStudentService>();
+                studentServiceMock.Setup(svc => svc.QueryStudentsById4Async(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string>())).ReturnsAsync(studentBatch3s);
+                studentService = studentServiceMock.Object;
+                studentsController = new StudentsController(adapterRegistry, academicHistoryService, studentService,
+                    studentProgramRepo, studentRestrictionService, requirementRepo, emergencyInformationService, logger, apiSettings);
+                var result = await studentsController.QueryStudentsById4Async(new StudentQueryCriteria() { StudentIds = new List<string>() { "0001234" } });
+                Assert.AreEqual(studentBatch3s.Dto.Count(), result.Count());
             }
         }
     }

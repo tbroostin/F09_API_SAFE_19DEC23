@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
 
 using System;
 
@@ -52,6 +52,21 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         public TaxFormNotations Notation { get; set; }
 
         /// <summary>
+        /// Id of state representing the current tax form.
+        /// </summary>
+        public string State { get; set; }
+
+        /// <summary>
+        /// Date of when the record was created.
+        /// </summary>
+        public DateTime? AddDate { get { return addDate; } }
+
+        /// <summary>
+        /// Backing variable for TaxForm.
+        /// </summary>
+        private readonly DateTime? addDate;
+
+        /// <summary>
         /// Set up a tax form statement.
         /// </summary>
         /// <param name="taxYear">Tax year represented by this statement</param>
@@ -72,6 +87,57 @@ namespace Ellucian.Colleague.Domain.Base.Entities
             this.personId = personId;
             this.taxYear = taxYear;
             this.taxForm = taxform;
+        }
+
+        /// <summary>
+        /// Set up a tax form statement.
+        /// </summary>
+        /// <param name="taxYear">Tax year represented by this statement</param>
+        /// <param name="notation">Name of the statement file.</param>
+        /// <param name="taxform">Type of form (W-2, 1095-C, etc.)</param>
+        public TaxFormStatement2(string personId, string taxYear, TaxForms taxform, string pdfRecordId, DateTime? addDate)
+        {
+            if (string.IsNullOrEmpty(personId))
+                throw new ArgumentNullException("personId", "personId is required.");
+
+            if (string.IsNullOrEmpty(taxYear))
+                throw new ArgumentNullException("taxYear", "taxYear is required.");
+
+            if (string.IsNullOrEmpty(pdfRecordId))
+                throw new ArgumentNullException("pdfRecordId", "pdfRecordId is required.");
+            if (!addDate.HasValue)
+                throw new ArgumentNullException("addDate", "addDate is required");
+
+            this.pdfRecordId = pdfRecordId;
+            this.personId = personId;
+            this.taxYear = taxYear;
+            this.taxForm = taxform;
+            this.addDate = addDate.Value;
+        }
+
+        /// <summary>
+        /// Set up a tax form statement.
+        /// </summary>
+        /// <param name="taxYear">Tax year represented by this statement</param>
+        /// <param name="notation">Name of the statement file.</param>
+        /// <param name="taxform">Type of form (W-2, 1095-C, etc.)</param>
+        /// <param name="state">State Id of the current tax form</param>
+        public TaxFormStatement2(string personId, string taxYear, TaxForms taxform, string pdfRecordId, string state)
+        {
+            if (string.IsNullOrEmpty(personId))
+                throw new ArgumentNullException("personId", "personId is required.");
+
+            if (string.IsNullOrEmpty(taxYear))
+                throw new ArgumentNullException("taxYear", "taxYear is required.");
+
+            if (string.IsNullOrEmpty(pdfRecordId))
+                throw new ArgumentNullException("pdfRecordId", "pdfRecordId is required.");
+
+            this.pdfRecordId = pdfRecordId;
+            this.personId = personId;
+            this.taxYear = taxYear;
+            this.taxForm = taxform;
+            this.State = state;
         }
     }
 }

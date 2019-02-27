@@ -545,7 +545,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                 var page = new Paging(10, 0);
                 var filterGroupName = "criteria";
                 personsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
-                      new Dtos.Filters.PersonFilter() { Credentials = new List<CredentialDtoProperty2> { new CredentialDtoProperty2 { Type = Dtos.EnumProperties.CredentialType2.ColleaguePersonId, Value = "00009999" } }});
+                      new Dtos.Filters.PersonFilter() { Credentials = new List<CredentialDtoProperty2> { new CredentialDtoProperty2 { Type = Dtos.EnumProperties.CredentialType2.ColleaguePersonId, Value = "00009999" } } });
                 var personList = await personsController.GetPerson3Async(page, criteria, personFilterFilter, preferredNameFilter);
                 Assert.IsTrue(personList is IHttpActionResult);
             }
@@ -556,7 +556,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                 var page = new Paging(10, 0);
                 var filterGroupName = "criteria";
                 personsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
-                      new Dtos.Filters.PersonFilter() { PersonFilterFilter = "anyfilter"  } );
+                      new Dtos.Filters.PersonFilter() { PersonFilterFilter = "anyfilter" });
                 var personList = await personsController.GetPerson3Async(page, criteria, personFilterFilter, preferredNameFilter);
                 Assert.IsTrue(personList is IHttpActionResult);
             }
@@ -742,7 +742,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             {
                 var filterGroupName = "criteria";
                 personsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
-                      new Dtos.Filters.PersonFilter() { FirstName = "Ricky" } );
+                      new Dtos.Filters.PersonFilter() { FirstName = "Ricky" });
                 HttpStatusCode statusCode = HttpStatusCode.Unused;
                 personServiceMock.Setup(s => s.GetPerson3NonCachedAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<Dtos.Filters.PersonFilter>(), It.IsAny<string>(), It.IsAny<string>())).Throws(new IntegrationApiException());
                 try
@@ -956,7 +956,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                 var page = new Paging(10, 0);
                 var filterGroupName = "personFilter";
                 personsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
-                      new Dtos.Filters.PersonFilterFilter() { personFilterId =personGuid  });
+                      new Dtos.Filters.PersonFilterFilter() { personFilterId = personGuid });
                 var personList = await personsController.GetPerson4Async(page, personFilterFilter, criteriaFilter);
                 Assert.IsTrue(personList is IHttpActionResult);
 
@@ -1023,7 +1023,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                 var page = new Paging(10, 0);
                 var filterGroupName = "criteria";
                 personsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
-                      new Dtos.Person4() { Roles = new List<PersonRoleDtoProperty> { new PersonRoleDtoProperty { RoleType = null} } });
+                      new Dtos.Person4() { Roles = new List<PersonRoleDtoProperty> { new PersonRoleDtoProperty { RoleType = null } } });
                 var personList = await personsController.GetPerson4Async(page, personFilterFilter, criteriaFilter);
                 Assert.IsTrue(personList is IHttpActionResult);
             }
@@ -1034,7 +1034,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                 var page = new Paging(10, 0);
                 var filterGroupName = "criteria";
                 personsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
-                      new Dtos.Person4() { Roles = new List<PersonRoleDtoProperty> { new PersonRoleDtoProperty { RoleType = Dtos.EnumProperties.PersonRoleType.Student} } });
+                      new Dtos.Person4() { Roles = new List<PersonRoleDtoProperty> { new PersonRoleDtoProperty { RoleType = Dtos.EnumProperties.PersonRoleType.Student } } });
                 var personList = await personsController.GetPerson4Async(page, personFilterFilter, criteriaFilter);
                 Assert.IsTrue(personList is IHttpActionResult);
             }
@@ -1070,7 +1070,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                       new Dtos.Person4() { Credentials = new List<Credential3DtoProperty> { new Credential3DtoProperty { Type = Dtos.EnumProperties.Credential3Type.ColleaguePersonId, Value = "0000009999" } } });
                 var personList = await personsController.GetPerson4Async(page, personFilterFilter, criteriaFilter);
                 Assert.IsTrue(personList is IHttpActionResult);
-                
+
             }
 
             [TestMethod]
@@ -1092,7 +1092,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                       new Dtos.Person4() { EmailAddresses = new List<PersonEmailDtoProperty> { new PersonEmailDtoProperty { Address = "emailaddress" } } });
                 var personList = await personsController.GetPerson4Async(page, personFilterFilter, criteriaFilter);
                 Assert.IsTrue(personList is IHttpActionResult);
-                
+
             }
 
 
@@ -1102,7 +1102,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                 var filterGroupName = "criteria";
                 personsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
                       new Dtos.Person4() { PersonNames = new List<PersonName2DtoProperty> { new PersonName2DtoProperty { FirstName = "Ricky" } } });
-                
+
                 HttpStatusCode statusCode = HttpStatusCode.Unused;
                 personServiceMock.Setup(s => s.GetPerson4NonCachedAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<Person4>(), It.IsAny<string>())).
                     ThrowsAsync(new KeyNotFoundException());
@@ -1176,6 +1176,428 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                 personServiceMock.Setup(s => s.GetPerson4NonCachedAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<Person4>(), It.IsAny<string>())).
                     ThrowsAsync(new Exception());
                 await personsController.GetPerson4Async(page, personFilterFilter, criteriaFilter);
+            }
+        }
+
+        #endregion
+
+        #region Get Tests HEDM v12_1_0
+
+        [TestClass]
+        public class PersonsHedmGet_v12_1_0
+        {
+            private PersonsController personsController;
+            private IAdapterRegistry adapterRegistry;
+            private Mock<IPersonService> personServiceMock;
+            private IPersonService personService;
+            private Mock<IPersonRestrictionTypeService> personRestrictionTypeServiceMock;
+            private IPersonRestrictionTypeService personRestrictionTypeService;
+            private Mock<IEmergencyInformationService> emergencyInformationServiceMock;
+            private IEmergencyInformationService emergencyInformationService;
+            private Ellucian.Colleague.Dtos.Person5 personDto;
+            string personGuid = "1a507924-f207-460a-8c1d-1854ebe80566";
+            ILogger logger = new Mock<ILogger>().Object;
+            private Ellucian.Web.Http.Models.QueryStringFilter criteriaFilter = new Web.Http.Models.QueryStringFilter("criteria", "");
+            private Ellucian.Web.Http.Models.QueryStringFilter personFilterFilter = new Web.Http.Models.QueryStringFilter("personFilter", "");
+
+            #region Test Context
+
+            private TestContext testContextInstance;
+
+            /// <summary>
+            ///Gets or sets the test context which provides
+            ///information about and functionality for the current test run.
+            ///</summary>
+            public TestContext TestContext
+            {
+                get
+                {
+                    return testContextInstance;
+                }
+                set
+                {
+                    testContextInstance = value;
+                }
+            }
+
+            #endregion
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+                HashSet<ITypeAdapter> adapters = new HashSet<ITypeAdapter>();
+                adapterRegistry = new AdapterRegistry(adapters, logger);
+
+                personServiceMock = new Mock<IPersonService>();
+                personService = personServiceMock.Object;
+
+                personRestrictionTypeServiceMock = new Mock<IPersonRestrictionTypeService>();
+                personRestrictionTypeService = personRestrictionTypeServiceMock.Object;
+
+                emergencyInformationServiceMock = new Mock<IEmergencyInformationService>();
+                emergencyInformationService = emergencyInformationServiceMock.Object;
+
+                // setup personDto object                
+                personDto = new Dtos.Person5();
+                personDto.Id = personGuid;
+                var personNames = new List<Dtos.PersonName>();
+                var personPrimaryName = new Dtos.PersonName()
+                {
+                    NameType = Dtos.PersonNameType.Primary,
+                    FirstName = "Ricky",
+                    LastName = "Brown"
+                };
+                personServiceMock.Setup(s => s.GetPerson5ByGuidAsync(personGuid, It.IsAny<bool>())).ReturnsAsync(personDto);
+                var personDtoList = new List<Dtos.Person5>() { personDto };
+                var personTuple = new Tuple<IEnumerable<Dtos.Person5>, int>(personDtoList, 1);
+                personServiceMock.Setup(s => s.GetPerson5NonCachedAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<Person5>(), It.IsAny<string>())).ReturnsAsync(personTuple);
+
+                personsController = new PersonsController(adapterRegistry, personService, personRestrictionTypeService, emergencyInformationService, logger)
+                {
+                    Request = new HttpRequestMessage()
+                };
+                personsController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
+
+
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                personsController = null;
+                personService = null;
+                personRestrictionTypeService = null;
+            }
+
+            [TestMethod]
+            public async Task GetPerson5ById_Cache()
+            {
+                personsController.Request.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
+                var person = await personsController.GetPerson5ByIdAsync(personGuid);
+                Assert.IsTrue(person is Person5);
+            }
+
+            [TestMethod]
+            public async Task GetPerson5ById_NoCache()
+            {
+                personsController.Request.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+
+                var person = await personsController.GetPerson5ByIdAsync(personGuid);
+                Assert.IsTrue(person is Person5);
+            }
+
+            [TestMethod]
+            public async Task GetPerson5ByIdPermissionsException()
+            {
+                HttpStatusCode statusCode = HttpStatusCode.Unused;
+                personServiceMock.Setup(s => s.GetPerson5ByGuidAsync(personGuid, It.IsAny<bool>())).Throws(new PermissionsException());
+                try
+                {
+                    await personsController.GetPerson5ByIdAsync(personGuid);
+                }
+                catch (HttpResponseException e)
+                {
+                    statusCode = e.Response.StatusCode;
+                }
+                Assert.AreEqual(HttpStatusCode.Forbidden, statusCode);
+            }
+
+            [TestMethod]
+            public async Task GetPerson5ByIdKeyNotFoundException()
+            {
+                HttpStatusCode statusCode = HttpStatusCode.Unused;
+                personServiceMock.Setup(s => s.GetPerson5ByGuidAsync(personGuid, It.IsAny<bool>())).Throws(new KeyNotFoundException());
+                try
+                {
+                    await personsController.GetPerson5ByIdAsync(personGuid);
+                }
+                catch (HttpResponseException e)
+                {
+                    statusCode = e.Response.StatusCode;
+                }
+                Assert.AreEqual(HttpStatusCode.NotFound, statusCode);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetPerson5ByIdArgumentException()
+            {
+                personServiceMock.Setup(s => s.GetPerson5ByGuidAsync(personGuid, It.IsAny<bool>())).Throws(new ArgumentException());
+                await personsController.GetPerson5ByIdAsync(personGuid);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetPerson5ByIdRepositoryException()
+            {
+                personServiceMock.Setup(s => s.GetPerson5ByGuidAsync(personGuid, It.IsAny<bool>())).Throws(new RepositoryException());
+                await personsController.GetPerson5ByIdAsync(personGuid);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetPerson5ByIdIntegrationApiException()
+            {
+                personServiceMock.Setup(s => s.GetPerson5ByGuidAsync(personGuid, It.IsAny<bool>())).Throws(new IntegrationApiException());
+                await personsController.GetPerson5ByIdAsync(personGuid);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetPerson5ByIdException()
+            {
+                personServiceMock.Setup(s => s.GetPerson5ByGuidAsync(personGuid, It.IsAny<bool>())).Throws(new Exception());
+                await personsController.GetPerson5ByIdAsync(personGuid);
+            }
+
+            [TestMethod]
+            public async Task GetPerson5_Cache()
+            {
+                personsController.Request.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
+                var personList = await personsController.GetPerson5Async(null, personFilterFilter, criteriaFilter);
+                Assert.IsTrue(personList is IHttpActionResult);
+            }
+
+            [TestMethod]
+            public async Task GetPerson5_NoCache()
+            {
+                personsController.Request.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+
+                var personList = await personsController.GetPerson5Async(null, personFilterFilter, criteriaFilter);
+                Assert.IsTrue(personList is IHttpActionResult);
+            }
+
+            [TestMethod]
+            public async Task GetPerson5_PersonFilter()
+            {
+                var page = new Paging(10, 0);
+                var filterGroupName = "personFilter";
+                personsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
+                      new Dtos.Filters.PersonFilterFilter() { personFilterId = personGuid });
+                var personList = await personsController.GetPerson5Async(page, personFilterFilter, criteriaFilter);
+                Assert.IsTrue(personList is IHttpActionResult);
+
+            }
+
+            [TestMethod]
+            public async Task GetPerson5_title()
+            {
+                var page = new Paging(10, 0);
+                var filterGroupName = "criteria";
+                personsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
+                      new Dtos.Person5() { PersonNames = new List<PersonName2DtoProperty> { new PersonName2DtoProperty { Title = "Mr." } } });
+                var personList = await personsController.GetPerson5Async(page, personFilterFilter, criteriaFilter);
+                Assert.IsTrue(personList is IHttpActionResult);
+            }
+
+            [TestMethod]
+            public async Task GetPerson5_firstname()
+            {
+                var page = new Paging(10, 0);
+                var filterGroupName = "criteria";
+                personsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
+                      new Dtos.Person5() { PersonNames = new List<PersonName2DtoProperty> { new PersonName2DtoProperty { FirstName = "Ricky" } } });
+                var personList = await personsController.GetPerson5Async(page, personFilterFilter, criteriaFilter);
+                Assert.IsTrue(personList is IHttpActionResult);
+            }
+
+            [TestMethod]
+            public async Task GetPerson5_middlename()
+            {
+                var page = new Paging(10, 0);
+                var filterGroupName = "criteria";
+                personsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
+                      new Dtos.Person5() { PersonNames = new List<PersonName2DtoProperty> { new PersonName2DtoProperty { MiddleName = "Bobby" } } });
+                var personList = await personsController.GetPerson5Async(page, personFilterFilter, criteriaFilter);
+                Assert.IsTrue(personList is IHttpActionResult);
+            }
+
+            [TestMethod]
+            public async Task GetPerson5_lastnameprefix()
+            {
+                var page = new Paging(10, 0);
+                var filterGroupName = "criteria";
+                personsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
+                      new Dtos.Person5() { PersonNames = new List<PersonName2DtoProperty> { new PersonName2DtoProperty { LastNamePrefix = "Van" } } });
+                var personList = await personsController.GetPerson5Async(page, personFilterFilter, criteriaFilter);
+                Assert.IsTrue(personList is IHttpActionResult);
+            }
+
+            [TestMethod]
+            public async Task GetPerson5_lastname()
+            {
+                var page = new Paging(10, 0);
+                var filterGroupName = "criteria";
+                personsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
+                      new Dtos.Person5() { PersonNames = new List<PersonName2DtoProperty> { new PersonName2DtoProperty { LastName = "Brown" } } });
+                var personList = await personsController.GetPerson5Async(page, personFilterFilter, criteriaFilter);
+                Assert.IsTrue(personList is IHttpActionResult);
+            }
+
+            [TestMethod]
+            public async Task GetPerson5_role_Invalid()
+            {
+                var page = new Paging(10, 0);
+                var filterGroupName = "criteria";
+                personsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
+                      new Dtos.Person5() { Roles = new List<PersonRoleDtoProperty> { new PersonRoleDtoProperty { RoleType = null } } });
+                var personList = await personsController.GetPerson5Async(page, personFilterFilter, criteriaFilter);
+                Assert.IsTrue(personList is IHttpActionResult);
+            }
+
+            [TestMethod]
+            public async Task GetPerson5_role()
+            {
+                var page = new Paging(10, 0);
+                var filterGroupName = "criteria";
+                personsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
+                      new Dtos.Person5() { Roles = new List<PersonRoleDtoProperty> { new PersonRoleDtoProperty { RoleType = Dtos.EnumProperties.PersonRoleType.Student } } });
+                var personList = await personsController.GetPerson5Async(page, personFilterFilter, criteriaFilter);
+                Assert.IsTrue(personList is IHttpActionResult);
+            }
+
+            [TestMethod]
+            public async Task GetPerson5_Credentials()
+            {
+                var page = new Paging(10, 0);
+                var filterGroupName = "criteria";
+                personsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
+                      new Dtos.Person5() { Credentials = new List<Credential3DtoProperty> { new Credential3DtoProperty { Type = Dtos.EnumProperties.Credential3Type.ColleaguePersonId, Value = "00009999" } } });
+                var personList = await personsController.GetPerson5Async(page, personFilterFilter, criteriaFilter);
+                Assert.IsTrue(personList is IHttpActionResult);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetPerson5_Credentials_NotSupportedType()
+            {
+                var page = new Paging(10, 0);
+                var filterGroupName = "criteria";
+                personsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
+                      new Dtos.Person5() { Credentials = new List<Credential3DtoProperty> { new Credential3DtoProperty { Type = Dtos.EnumProperties.Credential3Type.BannerUserName, Value = "00009999" } } });
+                var personList = await personsController.GetPerson5Async(page, personFilterFilter, criteriaFilter);
+            }
+
+            [TestMethod]
+            public async Task GetPerson5_credentials_Invalid()
+            {
+                var page = new Paging(10, 0);
+                var filterGroupName = "criteria";
+                personsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
+                      new Dtos.Person5() { Credentials = new List<Credential3DtoProperty> { new Credential3DtoProperty { Type = Dtos.EnumProperties.Credential3Type.ColleaguePersonId, Value = "0000009999" } } });
+                var personList = await personsController.GetPerson5Async(page, personFilterFilter, criteriaFilter);
+                Assert.IsTrue(personList is IHttpActionResult);
+
+            }
+
+            [TestMethod]
+            public async Task GetPerson5Filtered_NoPaging()
+            {
+                var filterGroupName = "criteria";
+                personsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
+                      new Dtos.Person5() { PersonNames = new List<PersonName2DtoProperty> { new PersonName2DtoProperty { FirstName = "Ricky" } } });
+                var personList = await personsController.GetPerson5Async(null, personFilterFilter, criteriaFilter);
+                Assert.IsTrue(personList is IHttpActionResult);
+            }
+
+            [TestMethod]
+            public async Task GetPerson5_email()
+            {
+                var page = new Paging(10, 0);
+                var filterGroupName = "criteria";
+                personsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
+                      new Dtos.Person5() { EmailAddresses = new List<PersonEmailDtoProperty> { new PersonEmailDtoProperty { Address = "emailaddress" } } });
+                var personList = await personsController.GetPerson5Async(page, personFilterFilter, criteriaFilter);
+                Assert.IsTrue(personList is IHttpActionResult);
+
+            }
+
+
+            [TestMethod]
+            public async Task GetGetPersons5KeyNotFoundException()
+            {
+                var filterGroupName = "criteria";
+                personsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
+                      new Dtos.Person4() { PersonNames = new List<PersonName2DtoProperty> { new PersonName2DtoProperty { FirstName = "Ricky" } } });
+
+                HttpStatusCode statusCode = HttpStatusCode.Unused;
+                personServiceMock.Setup(s => s.GetPerson5NonCachedAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<Person5>(), It.IsAny<string>())).
+                    ThrowsAsync(new KeyNotFoundException());
+                try
+                {
+                    await personsController.GetPerson5Async(new Paging(10, 0), personFilterFilter, criteriaFilter);
+                }
+                catch (HttpResponseException e)
+                {
+                    statusCode = e.Response.StatusCode;
+                }
+                Assert.AreEqual(HttpStatusCode.NotFound, statusCode);
+            }
+
+            [TestMethod]
+            public async Task GetGetPersons5PermissionsException()
+            {
+
+                var filterGroupName = "criteria";
+                personsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
+                      new Dtos.Person5() { PersonNames = new List<PersonName2DtoProperty> { new PersonName2DtoProperty { FirstName = "Ricky" } } });
+                HttpStatusCode statusCode = HttpStatusCode.Unused;
+                personServiceMock.Setup(s => s.GetPerson5NonCachedAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<Person5>(), It.IsAny<string>())).
+                    ThrowsAsync(new PermissionsException());
+                try
+                {
+                    await personsController.GetPerson5Async(new Paging(10, 0), personFilterFilter, criteriaFilter);
+                }
+                catch (HttpResponseException e)
+                {
+                    statusCode = e.Response.StatusCode;
+                }
+                Assert.AreEqual(HttpStatusCode.Forbidden, statusCode);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetPerson5ArgumentException()
+            {
+                var page = new Paging(10, 0);
+                personServiceMock.Setup(s => s.GetPerson5NonCachedAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<Person5>(), It.IsAny<string>())).
+                    ThrowsAsync(new ArgumentException());
+                await personsController.GetPerson5Async(page, personFilterFilter, criteriaFilter);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetPerson5RepositoryException()
+            {
+                var page = new Paging(10, 0);
+                personServiceMock.Setup(s => s.GetPerson5NonCachedAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<Person5>(), It.IsAny<string>())).
+                    ThrowsAsync(new RepositoryException());
+                await personsController.GetPerson5Async(page, personFilterFilter, criteriaFilter);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetPerson5IntegrationApiException()
+            {
+                var page = new Paging(10, 0);
+                personServiceMock.Setup(s => s.GetPerson5NonCachedAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<Person5>(), It.IsAny<string>())).
+                    ThrowsAsync(new IntegrationApiException());
+                await personsController.GetPerson5Async(page, personFilterFilter, criteriaFilter);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetPerson4Exception()
+            {
+                var page = new Paging(10, 0);
+                personServiceMock.Setup(s => s.GetPerson5NonCachedAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<Person5>(), It.IsAny<string>())).
+                    ThrowsAsync(new Exception());
+                await personsController.GetPerson5Async(page, personFilterFilter, criteriaFilter);
             }
         }
 
@@ -1594,6 +2016,158 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
 
         #endregion
 
+        #region GetPersonCredential4ByGuid Tests
+
+        [TestClass]
+        public class PersonsController_GetPersonCredential4ByGuid
+        {
+            private PersonsController personsController;
+            private IAdapterRegistry adapterRegistry;
+            private Mock<IPersonService> personServiceMock;
+            private IPersonService personService;
+            private Mock<IPersonRestrictionTypeService> personRestrictionTypeServiceMock;
+            private IPersonRestrictionTypeService personRestrictionTypeService;
+            private Mock<IEmergencyInformationService> emergencyInformationServiceMock;
+            private IEmergencyInformationService emergencyInformationService;
+            private Ellucian.Colleague.Dtos.PersonCredential3 personCredential;
+            string personGuid = "1a507924-f207-460a-8c1d-1854ebe80566";
+            ILogger logger = new Mock<ILogger>().Object;
+
+            #region Test Context
+
+            private TestContext testContextInstance;
+
+            /// <summary>
+            ///Gets or sets the test context which provides
+            ///information about and functionality for the current test run.
+            ///</summary>
+            public TestContext TestContext
+            {
+                get
+                {
+                    return testContextInstance;
+                }
+                set
+                {
+                    testContextInstance = value;
+                }
+            }
+
+            #endregion
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+                HashSet<ITypeAdapter> adapters = new HashSet<ITypeAdapter>();
+                adapterRegistry = new AdapterRegistry(adapters, logger);
+
+                personServiceMock = new Mock<IPersonService>();
+                personService = personServiceMock.Object;
+
+                personRestrictionTypeServiceMock = new Mock<IPersonRestrictionTypeService>();
+                personRestrictionTypeService = personRestrictionTypeServiceMock.Object;
+
+                emergencyInformationServiceMock = new Mock<IEmergencyInformationService>();
+                emergencyInformationService = emergencyInformationServiceMock.Object;
+
+                // setup personCredential Dto object                
+
+                personCredential = new Dtos.PersonCredential3()
+                {
+                    Id = personGuid,
+                    Credentials = new List<Dtos.DtoProperties.Credential3DtoProperty>(),
+                    AlternativeCredentials = new List<AlternativeCredentials>()
+
+                };
+                var credentials = new List<Dtos.DtoProperties.Credential3DtoProperty>();
+                credentials.Add(new Dtos.DtoProperties.Credential3DtoProperty()
+                {
+                    Type = Dtos.EnumProperties.Credential3Type.Ssn,
+                    Value = "444-33-2222"
+                });
+                personCredential.Credentials = credentials;
+
+                var altCredentials = new List<Dtos.DtoProperties.AlternativeCredentials>();
+                altCredentials.Add(new Dtos.DtoProperties.AlternativeCredentials()
+                {
+                    Type = new GuidObject2("123"),
+                    Value = "444-33-2222"
+                });
+                personCredential.AlternativeCredentials = altCredentials;
+
+                personServiceMock.Setup(s => s.GetPersonCredential4ByGuidAsync(personGuid)).ReturnsAsync(personCredential);
+
+                personServiceMock.Setup(s => s.GetDataPrivacyListByApi(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(new List<string>());
+
+                personsController = new PersonsController(adapterRegistry, personService, personRestrictionTypeService, emergencyInformationService, logger)
+                {
+                    Request = new HttpRequestMessage()
+                };
+                personsController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                personsController = null;
+                personService = null;
+                personRestrictionTypeService = null;
+            }
+
+            [TestMethod]
+            public async Task GetPersonCredential4ByGuid()
+            {
+                var personCredential = await personsController.GetPersonCredential4ByGuidAsync(personGuid);
+                Assert.IsTrue(personCredential is PersonCredential3);
+            }
+
+            [TestMethod]
+            public async Task GetPersonCredential4ByGuid_PermissionsException()
+            {
+                HttpStatusCode statusCode = HttpStatusCode.Unused;
+                personServiceMock.Setup(s => s.GetPersonCredential4ByGuidAsync(personGuid)).Throws(new PermissionsException());
+                try
+                {
+                    await personsController.GetPersonCredential4ByGuidAsync(personGuid);
+                }
+                catch (HttpResponseException e)
+                {
+                    statusCode = e.Response.StatusCode;
+                }
+                Assert.AreEqual(HttpStatusCode.Forbidden, statusCode);
+            }
+
+            [TestMethod]
+            public async Task GetPersonCredential4ByGuid_NotFoundException()
+            {
+                HttpStatusCode statusCode = HttpStatusCode.Unused;
+                personServiceMock.Setup(s => s.GetPersonCredential4ByGuidAsync(personGuid)).Throws(new Exception());
+                try
+                {
+                    await personsController.GetPersonCredential4ByGuidAsync(personGuid);
+                }
+                catch (HttpResponseException e)
+                {
+                    statusCode = e.Response.StatusCode;
+                }
+                Assert.AreEqual(HttpStatusCode.NotFound, statusCode);
+            }
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetPersonCredential4ByGuid_KeyNotFoundException()
+            {
+                personServiceMock.Setup(i => i.GetPersonCredential4ByGuidAsync(It.IsAny<string>())).ThrowsAsync(new KeyNotFoundException());
+                await personsController.GetPersonCredential4ByGuidAsync("invalid");
+            }
+        }
+
+        #endregion
+
+
+
         #region Get PersonCredentials Tests
 
         [TestClass]
@@ -1654,7 +2228,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
 
                 // setup personCredential Dto object                
 
-                personCredentialDtos = new List<Dtos.PersonCredential>() 
+                personCredentialDtos = new List<Dtos.PersonCredential>()
                 {
                     new Dtos.PersonCredential()
                     {
@@ -1790,7 +2364,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
 
                 // setup personCredential Dto object                
 
-                personCredentialDtos = new List<Dtos.PersonCredential2>() 
+                personCredentialDtos = new List<Dtos.PersonCredential2>()
                 {
                     new Dtos.PersonCredential2()
                     {
@@ -2172,7 +2746,314 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         }
 
         #endregion
-                         
+
+        #region Get PersonCredentials4 Tests
+
+        [TestClass]
+        public class PersonsCredentialsGet4_ALL
+        {
+            private PersonsController personsController;
+            private IAdapterRegistry adapterRegistry;
+            private Mock<IPersonService> personServiceMock;
+            private IPersonService personService;
+            private Mock<IPersonRestrictionTypeService> personRestrictionTypeServiceMock;
+            private IPersonRestrictionTypeService personRestrictionTypeService;
+            private Mock<IEmergencyInformationService> emergencyInformationServiceMock;
+            private IEmergencyInformationService emergencyInformationService;
+            private IEnumerable<Dtos.PersonCredential3> personCredentialDtos;
+            private Tuple<IEnumerable<Dtos.PersonCredential3>, int> personCredentialDtosTuple;
+            string personGuid = "1a507924-f207-460a-8c1d-1854ebe80566";
+            ILogger logger = new Mock<ILogger>().Object;
+
+            private Ellucian.Web.Http.Models.QueryStringFilter criteriaFilter = new Web.Http.Models.QueryStringFilter("criteria", "");
+
+            #region Test Context
+
+            private TestContext testContextInstance;
+
+            /// <summary>
+            ///Gets or sets the test context which provides
+            ///information about and functionality for the current test run.
+            ///</summary>
+            public TestContext TestContext
+            {
+                get
+                {
+                    return testContextInstance;
+                }
+                set
+                {
+                    testContextInstance = value;
+                }
+            }
+
+            #endregion
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+                HashSet<ITypeAdapter> adapters = new HashSet<ITypeAdapter>();
+                adapterRegistry = new AdapterRegistry(adapters, logger);
+
+                personServiceMock = new Mock<IPersonService>();
+                personService = personServiceMock.Object;
+
+                personRestrictionTypeServiceMock = new Mock<IPersonRestrictionTypeService>();
+                personRestrictionTypeService = personRestrictionTypeServiceMock.Object;
+
+                emergencyInformationServiceMock = new Mock<IEmergencyInformationService>();
+                emergencyInformationService = emergencyInformationServiceMock.Object;
+
+                // setup personCredential Dto object                
+
+                personCredentialDtos = new List<Dtos.PersonCredential3>()
+                {
+                    new Dtos.PersonCredential3()
+                    {
+                        Id = personGuid,
+                        Credentials = new List<Dtos.DtoProperties.Credential3DtoProperty>()
+                        {
+                            new Dtos.DtoProperties.Credential3DtoProperty()
+                            {
+                                Type = Dtos.EnumProperties.Credential3Type.Ssn,
+                                Value = "444-33-2222"
+                            },
+                            new Dtos.DtoProperties.Credential3DtoProperty()
+                            {
+                                Type = Dtos.EnumProperties.Credential3Type.ColleaguePersonId,
+                                Value = "PID123"
+                            }
+                        }
+                    }
+                };
+                personCredentialDtosTuple = new Tuple<IEnumerable<PersonCredential3>, int>(personCredentialDtos, personCredentialDtos.Count());
+                personServiceMock.Setup(s => s.GetAllPersonCredentials4Async(0, 2, It.IsAny<PersonCredential3>(), It.IsAny<bool>())).ReturnsAsync(personCredentialDtosTuple);
+
+                personsController = new PersonsController(adapterRegistry, personService, personRestrictionTypeService, emergencyInformationService, logger);
+                personsController.Request = new HttpRequestMessage();
+                personsController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
+
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                personsController = null;
+                personService = null;
+                personRestrictionTypeService = null;
+            }
+
+            [TestMethod]
+            public async Task GetPersonAllCredential4()
+            {
+                personsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+                personsController.Request.Headers.CacheControl =
+                 new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+                personServiceMock.Setup(s => s.GetAllPersonCredentials4Async(It.IsAny<int>(), It.IsAny<int>(),
+                    It.IsAny<PersonCredential3>(), It.IsAny<bool>())).ReturnsAsync(personCredentialDtosTuple);
+
+                var personCredential = await personsController.GetPersonCredentials4Async(It.IsAny<Paging>(), criteriaFilter);
+                Assert.IsNotNull(personCredential);
+            }
+
+            [TestMethod]
+            public async Task GetPersonAllCredential4_Filter_colleaguePersonId()
+            {
+                personsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+                personsController.Request.Headers.CacheControl =
+                 new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+                personServiceMock.Setup(s => s.GetAllPersonCredentials4Async(It.IsAny<int>(), It.IsAny<int>(),
+                    It.IsAny<PersonCredential3>(), It.IsAny<bool>())).ReturnsAsync(personCredentialDtosTuple);
+                var expected = personCredentialDtosTuple.Item1.FirstOrDefault(x => x.Id == personGuid);
+
+                var personCredential = await personsController.GetPersonCredentials4Async(It.IsAny<Paging>(), criteriaFilter);
+
+                var cancelToken = new System.Threading.CancellationToken(false);
+                var httpResponseMessage = await personCredential.ExecuteAsync(cancelToken);
+                var results = ((ObjectContent<IEnumerable<Dtos.PersonCredential3>>)httpResponseMessage.Content).Value as IEnumerable<Dtos.PersonCredential3>;
+                var actual = results.FirstOrDefault(x => x.Id == personGuid);
+
+                Assert.IsTrue(personCredential is IHttpActionResult);
+
+                Assert.AreEqual(expected.Id, actual.Id);
+            }
+
+            [TestMethod]
+            public async Task GetPersonAllCredential4_Filter_ssn()
+            {
+                personsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+                personsController.Request.Headers.CacheControl =
+                 new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+                personServiceMock.Setup(s => s.GetAllPersonCredentials4Async(It.IsAny<int>(), It.IsAny<int>(),
+                    It.IsAny<PersonCredential3>(), It.IsAny<bool>())).ReturnsAsync(personCredentialDtosTuple);
+                var expected = personCredentialDtosTuple.Item1.FirstOrDefault(x => x.Id == personGuid);
+
+                //string criteria = @"{'credentials':[{'type':'ssn','value':'444-33-2222'}]}";
+                var personCredential = await personsController.GetPersonCredentials4Async(It.IsAny<Paging>(), criteriaFilter);
+
+                var cancelToken = new System.Threading.CancellationToken(false);
+                var httpResponseMessage = await personCredential.ExecuteAsync(cancelToken);
+                var results = ((ObjectContent<IEnumerable<Dtos.PersonCredential3>>)httpResponseMessage.Content).Value as IEnumerable<Dtos.PersonCredential3>;
+                var actual = results.FirstOrDefault(x => x.Id == personGuid);
+
+                Assert.IsTrue(personCredential is IHttpActionResult);
+
+                Assert.AreEqual(expected.Id, actual.Id);
+            }
+
+            [TestMethod]
+            public async Task GetPersonAllCredential4_Filter_InvalidValue()
+            {
+                personsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+                personsController.Request.Headers.CacheControl =
+                 new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+                personCredentialDtosTuple = new Tuple<IEnumerable<Dtos.PersonCredential3>, int>(new List<PersonCredential3>(), 0);
+                personServiceMock.Setup(s => s.GetAllPersonCredentials4Async(It.IsAny<int>(), It.IsAny<int>(),
+                    It.IsAny<PersonCredential3>(), It.IsAny<bool>())).ReturnsAsync(personCredentialDtosTuple);
+
+                //string criteria = @"{'credentials':[{'type':'colleaguePersonId','value':'INVALID'}]}";
+                var personCredential = await personsController.GetPersonCredentials4Async(It.IsAny<Paging>(), criteriaFilter);
+
+                var cancelToken = new System.Threading.CancellationToken(false);
+                var httpResponseMessage = await personCredential.ExecuteAsync(cancelToken);
+                var results = ((ObjectContent<IEnumerable<Dtos.PersonCredential3>>)httpResponseMessage.Content).Value as IEnumerable<Dtos.PersonCredential3>;
+
+                Assert.IsTrue(personCredential is IHttpActionResult);
+
+                Assert.AreEqual(0, results.Count());
+            }
+
+            [TestMethod]
+            public async Task GetPersonAllCredential4_Filter_InvalidType()
+            {
+                personsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+                personsController.Request.Headers.CacheControl =
+                 new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+                personCredentialDtosTuple = new Tuple<IEnumerable<Dtos.PersonCredential3>, int>(new List<PersonCredential3>(), 0);
+                personServiceMock.Setup(s => s.GetAllPersonCredentials4Async(It.IsAny<int>(), It.IsAny<int>(),
+                    It.IsAny<PersonCredential3>(), It.IsAny<bool>())).ReturnsAsync(personCredentialDtosTuple);
+
+                //string criteria = @"{'credentials':[{'type':'invalid','value':'INVALID'}]}";
+                var personCredential = await personsController.GetPersonCredentials4Async(It.IsAny<Paging>(), criteriaFilter);
+
+                var cancelToken = new System.Threading.CancellationToken(false);
+                var httpResponseMessage = await personCredential.ExecuteAsync(cancelToken);
+                var results = ((ObjectContent<IEnumerable<Dtos.PersonCredential3>>)httpResponseMessage.Content).Value as IEnumerable<Dtos.PersonCredential3>;
+
+                Assert.IsTrue(personCredential is IHttpActionResult);
+
+                Assert.AreEqual(0, results.Count());
+            }
+
+            [TestMethod]
+            public async Task GetPersonAllCredential4_Filter_DuplicateType()
+            {
+                personsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+                personsController.Request.Headers.CacheControl =
+                 new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+                personCredentialDtosTuple = new Tuple<IEnumerable<Dtos.PersonCredential3>, int>(new List<PersonCredential3>(), 0);
+                personServiceMock.Setup(s => s.GetAllPersonCredentials4Async(It.IsAny<int>(), It.IsAny<int>(),
+                    It.IsAny<PersonCredential3>(), It.IsAny<bool>())).ReturnsAsync(personCredentialDtosTuple);
+
+                //string criteria = @"{'credentials':[{'type':'colleaguePersonId','value':'ABC1234'}, {'type':'colleaguePersonId','value':'4321CBA'}]}";
+                var filterGroupName = "criteria";
+                personsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
+                new Dtos.PersonCredential3() { Credentials = new List<Credential3DtoProperty> { new Credential3DtoProperty { Type = Dtos.EnumProperties.Credential3Type.ColleaguePersonId, Value = "4321CBA" } } });
+                var personCredential = await personsController.GetPersonCredentials4Async(It.IsAny<Paging>(), criteriaFilter);
+
+                var cancelToken = new System.Threading.CancellationToken(false);
+                var httpResponseMessage = await personCredential.ExecuteAsync(cancelToken);
+                var results = ((ObjectContent<IEnumerable<Dtos.PersonCredential3>>)httpResponseMessage.Content).Value as IEnumerable<Dtos.PersonCredential3>;
+
+                Assert.IsTrue(personCredential is IHttpActionResult);
+
+                Assert.AreEqual(0, results.Count());
+            }
+
+            [TestMethod]
+            public async Task GetPersonAllCredential4_Filter_MissingType()
+            {
+                personsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+                personsController.Request.Headers.CacheControl =
+                 new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+                personCredentialDtosTuple = new Tuple<IEnumerable<Dtos.PersonCredential3>, int>(new List<PersonCredential3>(), 0);
+                personServiceMock.Setup(s => s.GetAllPersonCredentials4Async(It.IsAny<int>(), It.IsAny<int>(),
+                    It.IsAny<PersonCredential3>(), It.IsAny<bool>())).ReturnsAsync(personCredentialDtosTuple);
+
+                //string criteria = @"{'credentials':[{'value':'INVALID'}]}";                
+                var filterGroupName = "criteria";
+                personsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
+                new Dtos.PersonCredential3() { Credentials = new List<Credential3DtoProperty> { new Credential3DtoProperty { Type = Dtos.EnumProperties.Credential3Type.NotSet, Value = "0000009999" } } });
+                var personCredential = await personsController.GetPersonCredentials4Async(It.IsAny<Paging>(), criteriaFilter);
+
+                var cancelToken = new System.Threading.CancellationToken(false);
+                var httpResponseMessage = await personCredential.ExecuteAsync(cancelToken);
+                var results = ((ObjectContent<IEnumerable<Dtos.PersonCredential3>>)httpResponseMessage.Content).Value as IEnumerable<Dtos.PersonCredential3>;
+
+                Assert.IsTrue(personCredential is IHttpActionResult);
+
+                Assert.AreEqual(0, results.Count());
+            }
+
+            [TestMethod]
+            public async Task GetPersonAllCredential4_Filter_MissingValue()
+            {
+                personsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+                personsController.Request.Headers.CacheControl =
+                 new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+                personCredentialDtosTuple = new Tuple<IEnumerable<Dtos.PersonCredential3>, int>(new List<PersonCredential3>(), 0);
+                personServiceMock.Setup(s => s.GetAllPersonCredentials4Async(It.IsAny<int>(), It.IsAny<int>(),
+                    It.IsAny<PersonCredential3>(), It.IsAny<bool>())).ReturnsAsync(personCredentialDtosTuple);
+
+                //string criteria = @"{'credentials':[{'type':'colleaguePersonId'}]}";
+                var filterGroupName = "criteria";
+                personsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
+                new Dtos.PersonCredential3() { Credentials = new List<Credential3DtoProperty> { new Credential3DtoProperty { Type = Dtos.EnumProperties.Credential3Type.ColleaguePersonId, Value = "" } } });
+                var personCredential = await personsController.GetPersonCredentials4Async(It.IsAny<Paging>(), criteriaFilter);
+
+                var cancelToken = new System.Threading.CancellationToken(false);
+                var httpResponseMessage = await personCredential.ExecuteAsync(cancelToken);
+                var results = ((ObjectContent<IEnumerable<Dtos.PersonCredential3>>)httpResponseMessage.Content).Value as IEnumerable<Dtos.PersonCredential3>;
+
+                Assert.IsTrue(personCredential is IHttpActionResult);
+
+                Assert.AreEqual(0, results.Count());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetPersonAllCredential4_ArgumentNullException()
+            {
+                personServiceMock.Setup(s => s.GetAllPersonCredentials4Async(It.IsAny<int>(), It.IsAny<int>(),
+                   It.IsAny<PersonCredential3>(), It.IsAny<bool>())).ThrowsAsync(new ArgumentNullException());
+                var personCredential = await personsController.GetPersonCredentials4Async(It.IsAny<Paging>(), criteriaFilter);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetPersonAllCredential4_KeyNotFoundException()
+            {
+                personServiceMock.Setup(s => s.GetAllPersonCredentials4Async(It.IsAny<int>(), It.IsAny<int>(),
+                    It.IsAny<PersonCredential3>(), It.IsAny<bool>())).ThrowsAsync(new KeyNotFoundException());
+                var personCredential = await personsController.GetPersonCredentials4Async(It.IsAny<Paging>(), criteriaFilter);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetPersonAllCredential4_Exception()
+            {
+                personServiceMock.Setup(s => s.GetAllPersonCredentials4Async(It.IsAny<int>(), It.IsAny<int>(),
+                    It.IsAny<PersonCredential3>(), It.IsAny<bool>())).ThrowsAsync(new Exception());
+                var personCredential = await personsController.GetPersonCredentials4Async(It.IsAny<Paging>(), criteriaFilter);
+            }
+
+        }
+
+        #endregion
+
         #region GetPersonsActiveRestrictionTypes Tests
 
         [TestClass]
@@ -2266,7 +3147,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                 personRestrictionTypeServiceMock.Setup(s => s.GetActivePersonRestrictionTypesAsync(personGuid)).Throws(new Exception());
                 try
                 {
-                   await personsController.GetActivePersonRestrictionTypesAsync(personGuid);
+                    await personsController.GetActivePersonRestrictionTypesAsync(personGuid);
                 }
                 catch (HttpResponseException e)
                 {
@@ -2416,6 +3297,144 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             }
         }
 
+        #endregion
+
+        #region GetPersonProxyDetailsAsync Test
+        [TestClass]
+
+        public class GetPersonProxyDetailsAsyncTest
+        {
+            private PersonsController personsController;
+            private IAdapterRegistry adapterRegistry;
+            private Mock<IPersonService> personServiceMock;
+            private IPersonService personService;
+            private Mock<IPersonRestrictionTypeService> personRestrictionTypeServiceMock;
+            private IPersonRestrictionTypeService personRestrictionTypeService;
+            private Mock<IEmergencyInformationService> emergencyInformationServiceMock;
+            private IEmergencyInformationService emergencyInformationService;
+            private Dtos.Base.PersonProxyDetails personProxyDetailsDto;
+            private string personId;
+
+            ILogger logger = new Mock<ILogger>().Object;
+
+            #region Test Context
+
+            private TestContext testContextInstance;
+
+            /// <summary>
+            /// Gets or sets the test context which provides
+            /// information about and functionality for the current test run.
+            /// </summary>
+            public TestContext TestContext
+            {
+                get
+                {
+                    return testContextInstance;
+                }
+                set
+                {
+                    testContextInstance = value;
+                }
+            }
+
+            #endregion
+            [TestInitialize]
+            public void Initialize()
+            {
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+                HashSet<ITypeAdapter> adapters = new HashSet<ITypeAdapter>();
+                adapterRegistry = new AdapterRegistry(adapters, logger);
+
+                personServiceMock = new Mock<IPersonService>();
+                personService = personServiceMock.Object;
+
+                personRestrictionTypeServiceMock = new Mock<IPersonRestrictionTypeService>();
+                personRestrictionTypeService = personRestrictionTypeServiceMock.Object;
+
+                emergencyInformationServiceMock = new Mock<IEmergencyInformationService>();
+                emergencyInformationService = emergencyInformationServiceMock.Object;
+
+
+                // Set up the Dto Object
+                personId = "0000010";
+                personProxyDetailsDto = new Dtos.Base.PersonProxyDetails()
+                {
+                    PersonId = personId,
+                    ProxyEmailAddress = "hierarchyJulie@test.com",
+                    PreferredName = "Julie Adams"
+                };
+
+                personServiceMock.Setup(s => s.GetPersonProxyDetailsAsync(personId)).ReturnsAsync(personProxyDetailsDto);
+
+                personsController = new PersonsController(adapterRegistry, personService, personRestrictionTypeService, emergencyInformationService, logger);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                personsController = null;
+                personService = null;
+                personRestrictionTypeService = null;
+                emergencyInformationService = null;
+            }
+
+            [TestMethod]
+            public async Task GetPersonProxyDetailsAsync_Success()
+            {
+                var personProxyDetails = await personsController.GetPersonProxyDetailsAsync(personId);
+                Assert.IsTrue(personProxyDetails is Dtos.Base.PersonProxyDetails);
+            }
+            
+            [TestMethod]
+            public async Task GetPersonProxyDetailsAsync_PermissionsException()
+            {
+                HttpStatusCode statusCode = HttpStatusCode.Unused;
+                personServiceMock.Setup(s => s.GetPersonProxyDetailsAsync(personId)).Throws(new PermissionsException());
+                try
+                {
+                    await personsController.GetPersonProxyDetailsAsync(personId);
+                }
+                catch (HttpResponseException e)
+                {
+                    statusCode = e.Response.StatusCode;
+                }
+                Assert.AreEqual(HttpStatusCode.Forbidden, statusCode);
+            }
+
+            [TestMethod]
+            public async Task GetPersonProxyDetailsAsync_NotFoundException()
+            {
+                HttpStatusCode statusCode = HttpStatusCode.Unused;
+                personServiceMock.Setup(s => s.GetPersonProxyDetailsAsync(personId)).Throws(new Exception());
+                try
+                {
+                    await personsController.GetPersonProxyDetailsAsync(personId);
+                }
+                catch(HttpResponseException e)
+                {
+                    statusCode = e.Response.StatusCode;
+                }
+                Assert.AreEqual(HttpStatusCode.BadRequest, statusCode);
+            }
+
+            [TestMethod]
+            public async Task GetPersonProxyDetailsAsync_ArgumentNullException()
+            {
+                HttpStatusCode statusCode = HttpStatusCode.Unused;
+                personServiceMock.Setup(s => s.GetPersonProxyDetailsAsync(null)).Throws(new ArgumentNullException());
+                try
+                {
+                    await personsController.GetPersonProxyDetailsAsync(null);
+                }
+                catch(HttpResponseException e)
+                {
+                    statusCode = e.Response.StatusCode;
+                }
+                Assert.AreEqual(HttpStatusCode.BadRequest, statusCode);
+            }
+        }
         #endregion
 
         #region GetEmergencyInformationAsync Tests
@@ -2757,7 +3776,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                 _emergencyInformationService = _emergencyInformationServiceMock.Object;
 
                 // setup personDto object                
-                _personDto = new Dtos.Person2 {Id = personGuid};
+                _personDto = new Dtos.Person2 { Id = personGuid };
                 var personNames = new List<Dtos.PersonName>();
                 var personPrimaryName = new Dtos.PersonName()
                 {
@@ -2766,7 +3785,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                     LastName = "Brown"
                 };
                 _personServiceMock.Setup(s => s.GetPerson2ByGuidNonCachedAsync(personGuid)).ReturnsAsync(_personDto);
-           
+
                 _personServiceMock.Setup(s => s.CreatePerson2Async(_personDto)).ReturnsAsync(_personDto);
 
                 _personsController = new PersonsController(_adapterRegistry, _personService, _personRestrictionTypeService, _emergencyInformationService, logger);
@@ -2806,10 +3825,10 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
 
 
             [TestMethod]
-            [ExpectedException(typeof (HttpResponseException))]
+            [ExpectedException(typeof(HttpResponseException))]
             public async Task PostPerson2ArgumentException()
             {
-                 _personServiceMock.Setup(s => s.CreatePerson2Async(_personDto)).Throws(new ArgumentException());
+                _personServiceMock.Setup(s => s.CreatePerson2Async(_personDto)).Throws(new ArgumentException());
                 await _personsController.PostPerson2Async(_personDto);
             }
 
@@ -2824,7 +3843,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
             public async Task PostPerson2IntegrationApiException()
-            {           
+            {
                 _personServiceMock.Setup(s => s.CreatePerson2Async(_personDto)).Throws(new IntegrationApiException());
                 await _personsController.PostPerson2Async(_personDto);
             }
@@ -2841,7 +3860,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             [ExpectedException(typeof(HttpResponseException))]
             public async Task PostPerson2NullException()
             {
-               
+
                 _personServiceMock.Setup(s => s.CreatePerson2Async(_personDto)).Throws(new ConfigurationException());
                 await _personsController.PostPerson2Async(null);
             }
@@ -3380,7 +4399,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                 await _personsController.PutPerson2Async(null, _personDto);
             }
 
-           
+
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
@@ -4053,7 +5072,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                     statusCode = e.Response.StatusCode;
                 }
                 Assert.AreEqual(HttpStatusCode.Forbidden, statusCode);
-        }
+            }
 
             [TestMethod]
             public void PutEmergencyInformation_Exception()
@@ -4452,6 +5471,129 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                 try
                 {
                     await personsController.QueryPerson4ByPostAsync(personDto);
+                }
+                catch (HttpResponseException e)
+                {
+                    statusCode = e.Response.StatusCode;
+                }
+                Assert.AreEqual(HttpStatusCode.BadRequest, statusCode);
+            }
+        }
+
+        [TestClass]
+        public class PersonQuery5ByPost
+        {
+            private PersonsController personsController;
+            private IAdapterRegistry adapterRegistry;
+            private Mock<IPersonService> personServiceMock;
+            private IPersonService personService;
+            private Mock<IPersonRestrictionTypeService> personRestrictionTypeServiceMock;
+            private IPersonRestrictionTypeService personRestrictionTypeService;
+            private Mock<IEmergencyInformationService> emergencyInformationServiceMock;
+            private IEmergencyInformationService emergencyInformationService;
+
+            private Ellucian.Colleague.Dtos.Person5 personDto;
+            string personGuid = "1a507924-f207-460a-8c1d-1854ebe80566";
+            ILogger logger = new Mock<ILogger>().Object;
+
+            #region Test Context
+
+            private TestContext testContextInstance;
+
+            /// <summary>
+            ///Gets or sets the test context which provides
+            ///information about and functionality for the current test run.
+            ///</summary>
+            public TestContext TestContext
+            {
+                get
+                {
+                    return testContextInstance;
+                }
+                set
+                {
+                    testContextInstance = value;
+                }
+            }
+
+            #endregion
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+                HashSet<ITypeAdapter> adapters = new HashSet<ITypeAdapter>();
+                adapterRegistry = new AdapterRegistry(adapters, logger);
+
+                personServiceMock = new Mock<IPersonService>();
+                personService = personServiceMock.Object;
+
+                personRestrictionTypeServiceMock = new Mock<IPersonRestrictionTypeService>();
+                personRestrictionTypeService = personRestrictionTypeServiceMock.Object;
+
+                emergencyInformationServiceMock = new Mock<IEmergencyInformationService>();
+                emergencyInformationService = emergencyInformationServiceMock.Object;
+
+                // setup personDto object                
+                personDto = new Dtos.Person5();
+                personDto.Id = personGuid;
+                var personNames = new List<Dtos.PersonName>();
+                var personPrimaryName = new Dtos.PersonName()
+                {
+                    NameType = Dtos.PersonNameType.Primary,
+                    FirstName = "Ricky",
+                    LastName = "Brown"
+                };
+                personServiceMock.Setup(s => s.QueryPerson5ByPostAsync(personDto, false)).ReturnsAsync(new List<Person5>() { personDto }.AsEnumerable());
+
+                personsController = new PersonsController(adapterRegistry, personService, personRestrictionTypeService, emergencyInformationService, logger)
+                {
+                    Request = new HttpRequestMessage()
+                };
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                personsController = null;
+                personService = null;
+                personRestrictionTypeService = null;
+                emergencyInformationService = null;
+            }
+
+            [TestMethod]
+            public async Task QueryPersonByPost()
+            {
+                var person = await personsController.QueryPerson5ByPostAsync(personDto);
+                Assert.IsTrue(person is IEnumerable<Person5>);
+            }
+
+            [TestMethod]
+            public async Task QueryPersonByPostPermissionsException()
+            {
+                HttpStatusCode statusCode = HttpStatusCode.Unused;
+                personServiceMock.Setup(s => s.QueryPerson5ByPostAsync(personDto, false)).Throws(new PermissionsException());
+                try
+                {
+                    await personsController.QueryPerson5ByPostAsync(personDto);
+                }
+                catch (HttpResponseException e)
+                {
+                    statusCode = e.Response.StatusCode;
+                }
+                Assert.AreEqual(HttpStatusCode.Forbidden, statusCode);
+            }
+
+            [TestMethod]
+            public async Task QueryPersonByPostException()
+            {
+                HttpStatusCode statusCode = HttpStatusCode.Unused;
+                personServiceMock.Setup(s => s.QueryPerson5ByPostAsync(personDto, false)).Throws(new Exception());
+                try
+                {
+                    await personsController.QueryPerson5ByPostAsync(personDto);
                 }
                 catch (HttpResponseException e)
                 {

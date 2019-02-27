@@ -211,6 +211,75 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
                 Assert.IsNull(result.EndDate);
             }
 
+            [TestMethod]
+            public void DetailedAccountIneligibilityReasons_ReturnsExpectedNumberTest()
+            {
+                transManagerMock.Setup<StudentFinancialActivityAdminResponse>(
+                trans => trans.Execute<StudentFinancialActivityAdminRequest, StudentFinancialActivityAdminResponse>(It.IsAny<StudentFinancialActivityAdminRequest>()))
+                    .Returns(new StudentFinancialActivityAdminResponse() {
+                        AnticipatedFinancialAid = new List<AnticipatedFinancialAid>()
+                        {
+                            new AnticipatedFinancialAid() { FaAwardAmt = 1000m, FaAwardDesc = "Award", FaAwardIneligAmt = 0m, FaAwardLoanFee = 50m, FaAwardOtherAmt = 0m, FaAwardPeriodAward = "2014/FA",
+                            FaAwardEligibilityMsgs = "Reason1üReason2üReason3"}
+                        }
+                    });
+                var result = repository.GetTermActivityForStudent2("2014/FA", "0001234");
+                Assert.IsTrue(result.FinancialAid.AnticipatedAid.First().IneligibilityReasons.Any());
+                Assert.AreEqual(3, result.FinancialAid.AnticipatedAid.First().IneligibilityReasons.Count);
+            }
+
+            [TestMethod]
+            public void DetailedAccountIneligibilityReasons_EmptyMsgsString_ReturnsEmptyListTest()
+            {
+                transManagerMock.Setup<StudentFinancialActivityAdminResponse>(
+                trans => trans.Execute<StudentFinancialActivityAdminRequest, StudentFinancialActivityAdminResponse>(It.IsAny<StudentFinancialActivityAdminRequest>()))
+                    .Returns(new StudentFinancialActivityAdminResponse()
+                    {
+                        AnticipatedFinancialAid = new List<AnticipatedFinancialAid>()
+                        {
+                            new AnticipatedFinancialAid() { FaAwardAmt = 1000m, FaAwardDesc = "Award", FaAwardIneligAmt = 0m, FaAwardLoanFee = 50m, FaAwardOtherAmt = 0m, FaAwardPeriodAward = "2014/FA",
+                            FaAwardEligibilityMsgs = ""}
+                        }
+                    });
+                var result = repository.GetTermActivityForStudent2("2014/FA", "0001234");
+                Assert.IsFalse(result.FinancialAid.AnticipatedAid.First().IneligibilityReasons.Any());
+            }
+
+            [TestMethod]
+            public void DetailedAccountIneligibilityReasons_NullMsgsString_ReturnsEmptyListTest()
+            {
+                transManagerMock.Setup<StudentFinancialActivityAdminResponse>(
+                trans => trans.Execute<StudentFinancialActivityAdminRequest, StudentFinancialActivityAdminResponse>(It.IsAny<StudentFinancialActivityAdminRequest>()))
+                    .Returns(new StudentFinancialActivityAdminResponse()
+                    {
+                        AnticipatedFinancialAid = new List<AnticipatedFinancialAid>()
+                        {
+                            new AnticipatedFinancialAid() { FaAwardAmt = 1000m, FaAwardDesc = "Award", FaAwardIneligAmt = 0m, FaAwardLoanFee = 50m, FaAwardOtherAmt = 0m, FaAwardPeriodAward = "2014/FA",
+                            FaAwardEligibilityMsgs = null}
+                        }
+                    });
+                var result = repository.GetTermActivityForStudent2("2014/FA", "0001234");
+                Assert.IsFalse(result.FinancialAid.AnticipatedAid.First().IneligibilityReasons.Any());
+            }
+
+            [TestMethod]
+            public void DetailedAccountIneligibilityReasons_SingleMsgString_ReturnsSingleReasonTest()
+            {
+                transManagerMock.Setup<StudentFinancialActivityAdminResponse>(
+                trans => trans.Execute<StudentFinancialActivityAdminRequest, StudentFinancialActivityAdminResponse>(It.IsAny<StudentFinancialActivityAdminRequest>()))
+                    .Returns(new StudentFinancialActivityAdminResponse()
+                    {
+                        AnticipatedFinancialAid = new List<AnticipatedFinancialAid>()
+                        {
+                            new AnticipatedFinancialAid() { FaAwardAmt = 1000m, FaAwardDesc = "Award", FaAwardIneligAmt = 0m, FaAwardLoanFee = 50m, FaAwardOtherAmt = 0m, FaAwardPeriodAward = "2014/FA",
+                            FaAwardEligibilityMsgs = "SingleReason"}
+                        }
+                    });
+                var result = repository.GetTermActivityForStudent2("2014/FA", "0001234");
+                Assert.IsTrue(result.FinancialAid.AnticipatedAid.First().IneligibilityReasons.Any());
+                Assert.AreEqual(1, result.FinancialAid.AnticipatedAid.First().IneligibilityReasons.Count);
+            }
+
             [TestCleanup]
             public void AccountActivityRepository_GetTermActivityForStudent2_Cleanup()
             {
@@ -821,7 +890,8 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
                 },
                 AnticipatedFinancialAid = new List<AnticipatedFinancialAid>()
                 {
-                    new AnticipatedFinancialAid() { FaAwardAmt = 1000m, FaAwardDesc = "Award", FaAwardIneligAmt = 0m, FaAwardLoanFee = 50m, FaAwardOtherAmt = 0m, FaAwardPeriodAward = "2014/FA" }
+                    new AnticipatedFinancialAid() { FaAwardAmt = 1000m, FaAwardDesc = "Award", FaAwardIneligAmt = 0m, FaAwardLoanFee = 50m, FaAwardOtherAmt = 0m, FaAwardPeriodAward = "2014/FA",
+                    FaAwardEligibilityMsgs = "Reason1üReason2üReason3"}
                 },
                 FinancialActivityAppliedDeposits = new List<FinancialActivityAppliedDeposits>()
                 {

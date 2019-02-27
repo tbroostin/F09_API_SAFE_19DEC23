@@ -40,6 +40,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         private IEnumerable<Term> termList;
         private string colleagueTimeZone;
         private IEnumerable<SectionStatusCode> _sectionStatusCodes;
+        private Data.Base.DataContracts.IntlParams internationalParameters;
         //private IEnumerable<CourseCategory> _courseCategories;
 
         private async Task<IEnumerable<SectionStatusCode>> GetSectionStatusCodesAsync()
@@ -652,6 +653,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 return new Dictionary<string, string>();
             }
             var sectionGuidCollection = new Dictionary<string, string>();
+            var missingGuids = new List<string>();
             try
             {
                 var sectionGuidLookup = sectionIds
@@ -664,13 +666,33 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     var splitKeys = recordKeyLookupResult.Key.Split(new[] { "+" }, StringSplitOptions.RemoveEmptyEntries);
                     if (!sectionGuidCollection.ContainsKey(splitKeys[1]))
                     {
-                        sectionGuidCollection.Add(splitKeys[1], recordKeyLookupResult.Value.Guid);
+                        if (recordKeyLookupResult.Value == null || string.IsNullOrEmpty(recordKeyLookupResult.Value.Guid))
+                        {
+                            missingGuids.Add(splitKeys[1]);
+                        }
+                        else
+                        {
+                            sectionGuidCollection.Add(splitKeys[1], recordKeyLookupResult.Value.Guid);
+                        }
                     }
                 }
+                if (missingGuids != null && missingGuids.Any())
+                {
+                    var repositoryException = new RepositoryException();
+                    foreach (var csKey in missingGuids)
+                    {
+                        repositoryException.AddError(new RepositoryError("section.id", string.Format("The guid is missing for COURSE.SECTIONS ID: '{0}'", csKey)));
+                    }
+                    throw repositoryException;
+                }
+            }
+            catch (RepositoryException ex)
+            {
+                throw ex;
             }
             catch (Exception ex)
             {
-                throw new Exception("Error occured while getting person guids.", ex); ;
+                throw new Exception("Error occured while getting course section guids.", ex); ;
             }
 
             return sectionGuidCollection;
@@ -746,7 +768,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             if (foundEntry.Value.Entity != "COURSE.SECTIONS")
             {
-                throw new RepositoryException("GUID " + guid + " has different entity, " + foundEntry.Value.Entity + ", than expected, COURSE.SECTIONS");
+                var errorMessage = string.Format("GUID {0} has different entity, {1}, than expected, COURSE.SECTIONS", guid, foundEntry.Value.Entity);
+                logger.Error(errorMessage);
+                var exception = new RepositoryException(errorMessage);
+                exception.AddError(new RepositoryError("invalid.guid", errorMessage));
+                throw exception;
             }
 
             return foundEntry.Value.PrimaryKey;
@@ -836,7 +862,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         public async Task<Tuple<IEnumerable<Section>, int>> GetSectionsAsync(int offset, int limit, string title = "", string startDate = "", string endDate = "",
             string code = "", string number = "", string learningProvider = "", string termId = "", string reportingTermId = "",
             List<string> academicLevels = null, string course = "", string location = "", string status = "", List<string> departments = null,
-            string subject = "", List<string> instructors = null)
+            string subject = "", List<string> instructors = null, string scheduleTermId = "")
         {
             IEnumerable<Section> sections = new List<Section>();
             string[] limitingKeys = null;
@@ -845,7 +871,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             // If we have a course, then select the limited list from the COURSES record first
             if (!string.IsNullOrEmpty(course))
             {
-                limitingKeys = await DataReader.SelectAsync("COURSES", new string[] { course }, "SAVING CRS.SECTIONS");
+                limitingKeys = await DataReader.SelectAsync("COURSES", new string[] { course }, "BY.EXP CRS.SECTIONS SAVING CRS.SECTIONS");
                 if (limitingKeys == null || !limitingKeys.Any())
                 {
                     return new Tuple<IEnumerable<Section>, int>(sections, 0);
@@ -871,6 +897,33 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     }
                     // index on SEC.TERM
                     criteria += "WITH SEC.TERM EQ '" + termId + "'";
+                }
+                limitingKeys = await DataReader.SelectAsync("COURSE.SECTIONS", limitingKeys, criteria);
+                if (limitingKeys == null || !limitingKeys.Any())
+                {
+                    return new Tuple<IEnumerable<Section>, int>(sections, 0);
+                }
+                criteria = "";
+            }
+            if (!string.IsNullOrEmpty(scheduleTermId))
+            {
+                if (!string.IsNullOrEmpty(course) && !string.IsNullOrEmpty(number))
+                {
+                    if (criteria != "")
+                    {
+                        criteria += " AND ";
+                    }
+                    // index contains SEC.COURSE:SEC.TERM:SEC.NO
+                    criteria += "WITH SECTION.TERM.INDEX EQ '" + course + scheduleTermId + number + "'";
+                }
+                else
+                {
+                    if (criteria != "")
+                    {
+                        criteria += " AND ";
+                    }
+                    // index on SEC.TERM
+                    criteria += "WITH SEC.TERM EQ '" + scheduleTermId + "'";
                 }
                 limitingKeys = await DataReader.SelectAsync("COURSE.SECTIONS", limitingKeys, criteria);
                 if (limitingKeys == null || !limitingKeys.Any())
@@ -1026,13 +1079,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     i++;
                 }
             }
-            int totalCount = 0;
-
-            //execute existing criteria to limit potential sections
-            var sectionIds = await DataReader.SelectAsync("COURSE.SECTIONS", limitingKeys, criteria);
 
             //Apply instructors filter
-            if (instructors != null && instructors.Any() && sectionIds != null && sectionIds.Any())
+            if (instructors != null && instructors.Any())
             {
                 var instructor = "";
                 foreach (var instr in instructors)
@@ -1044,21 +1093,68 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
                 if (!string.IsNullOrEmpty(instructor))
                 {
-                    limitingKeys = await DataReader.SelectAsync("COURSE.SECTIONS", sectionIds, "SAVING UNIQUE SEC.FACULTY");
-                    if (limitingKeys == null || !limitingKeys.Any())
+                    string[] instructorKeys = null;
+                    if (!string.IsNullOrEmpty(criteria) || limitingKeys != null && limitingKeys.Any())
+                    {
+                        if (criteria != "")
+                        {
+                            criteria += " ";
+                        }
+                        criteria += "WITH SEC.FACULTY BY.EXP SEC.FACULTY SAVING SEC.FACULTY";
+                        instructorKeys = await DataReader.SelectAsync("COURSE.SECTIONS", limitingKeys, criteria);
+                        if (instructorKeys == null || !instructorKeys.Any())
+                        {
+                            return new Tuple<IEnumerable<Section>, int>(sections, 0);
+                        }
+                        criteria = "";
+                    }
+                    var instructorCriteria = "WITH CSF.FACULTY = " + instructor;
+                    if (instructorKeys != null && instructorKeys.Any()) instructorKeys = instructorKeys.Distinct().ToArray();
+                    var courseSecFacultyIds = await DataReader.SelectAsync("COURSE.SEC.FACULTY", instructorKeys, instructorCriteria);
+                    if (courseSecFacultyIds == null || !courseSecFacultyIds.Any())
                     {
                         return new Tuple<IEnumerable<Section>, int>(sections, 0);
                     }
-                    var instructorCriteria = "WITH CSF.FACULTY = " + instructor + " SAVING UNIQUE CSF.COURSE.SECTION";
-                    sectionIds = await DataReader.SelectAsync("COURSE.SEC.FACULTY", limitingKeys, instructorCriteria);
+                    // build list of COURSE.SEC.FACULTY records with all instructors assigned
+                    // so, if we have 2 or more instructors in the filter, then only sections taught
+                    // by ALL of these instructors would be returned.
+                    if (instructors.Count() > 1)
+                    {
+                        var facultyDict = new Dictionary<string, List<string>>();
+                        var secFacultyData = await DataReader.BulkReadRecordAsync<CourseSecFaculty>(courseSecFacultyIds);
+                        instructors.ForEach(instrId =>
+                            facultyDict.Add(instrId, secFacultyData.Where(sfd =>
+                                sfd.CsfFaculty == instrId).Select(sv => sv.CsfCourseSection).ToList()));
+
+                        limitingKeys = facultyDict.Values.ElementAt(0).ToArray();
+                        facultyDict.ForEach(fd =>
+                            limitingKeys = limitingKeys.Intersect(fd.Value).ToArray());
+
+                        if (limitingKeys == null || !limitingKeys.Any())
+                        {
+                            return new Tuple<IEnumerable<Section>, int>(sections, 0);
+                        }
+                    }
+                    else
+                    {
+                        limitingKeys = await DataReader.SelectAsync("COURSE.SEC.FACULTY", courseSecFacultyIds, "SAVING UNIQUE CSF.COURSE.SECTION");
+                        if (limitingKeys == null || !limitingKeys.Any())
+                        {
+                            return new Tuple<IEnumerable<Section>, int>(sections, 0);
+                        }
+                    }
                 }
             }
+
+            //execute existing criteria to limit potential sections
+            var sectionIds = await DataReader.SelectAsync("COURSE.SECTIONS", limitingKeys, criteria);
+
             if (sectionIds == null || !sectionIds.Any())
             {
                 return new Tuple<IEnumerable<Section>, int>(sections, 0);
             }
-
-            totalCount = sectionIds.Count();
+            
+            int totalCount = sectionIds.Count();
 
             Array.Sort(sectionIds);
 
@@ -1107,7 +1203,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             //get all course types to view special processing
             var courseTypes = await GetGuidValcodeAsync<CourseType>("ST", "COURSE.TYPES",
                     (courseType, g) => new CourseType(g, courseType.ValInternalCodeAssocMember, courseType.ValExternalRepresentationAssocMember, courseType.ValActionCode2AssocMember == "N" ? false : true) { Categorization = courseType.ValActionCode1AssocMember });
-            
+
             switch (searchable.ToLower())
             {
                 case ("yes"):
@@ -2013,6 +2109,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 foreach (var changedSection in changedSections)
                 {
                     sectionsDict[changedSection.Id] = changedSection;
+                    //now for all the changedSections if any of the section is primary section and have associated cross-listed sections then modify the primary section meetings on those secondary sections
+                    //this is to keep cache up-to-date so that if primary section meeting was changed then all the associated cross-listed sections that have property to carry primary section
+                    //Meeting info should also be updated.
+                    foreach (var secondarySection in changedSection.CrossListedSections)
+                    {
+                        sectionsDict[secondarySection.Id] = secondarySection;
+                    }
+
                 }
             }
             catch (Exception ex)
@@ -3325,6 +3429,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     LogDataError("Section", sec.Recordkey, null, ex, secString);
                 }
             }
+
+
             // Now that the Sections have been built - use the cross list data to link up cross listed sections and add any global info
             // to the appropriate sections.
             foreach (var crossList in crosslistData)
@@ -3340,6 +3446,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             updateSection.GlobalWaitlistMaximum = crossList.CsxlWaitlistMax;
                             updateSection.PrimarySectionId = crossList.CsxlPrimarySection;
                             updateSection.CombineCrosslistWaitlists = crossList.CsxlWaitlistFlag == "Y" ? true : false;
+
                             foreach (var otherCrossListSection in crossList.CsxlCourseSections)
                             {
                                 if (otherCrossListSection != updateSection.Id)
@@ -3349,7 +3456,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                     {
                                         updateSection.AddCrossListedSection(sections[otherCrossListSection]);
                                     }
-                                    
+
                                 }
                             }
                             // When the section being updated is not the primary, update the secondary with some key information from the primary section.
@@ -3362,6 +3469,28 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                     // Attendance type of a secondary section MUST ALWAYS be the same as the primary.  Cannot enter
                                     // attendance by hour for a secondary section but a different type for the primary.
                                     updateSection.AttendanceTrackingType = primarySection.AttendanceTrackingType;
+                                    //update PrimarySectionMeetings on cross-listed section with Primary section meetings only when flag allows to do so and cross-listed section does not have its own meeting section
+                                    if ((updateSection.Meetings == null || updateSection.Meetings.Count() == 0) && primarySection.Meetings != null && primarySection.Meetings.Any())
+                                    {
+                                        bool shouldUsePrimarySectionMeetings = false;
+                                        //check for primary section meeting override flag on crossList
+                                        if (!string.IsNullOrEmpty(crossList.CsxlPrimSecMngOvrdeFlag))
+                                        {
+                                            shouldUsePrimarySectionMeetings = crossList.CsxlPrimSecMngOvrdeFlag.ToUpper() == "Y" ? true : false;
+
+                                        }
+                                        else
+                                        {
+                                            //get STWEB.DEFAULTS value here retrieve default value that determines if corss-listed with no meetings should use primary section meeting info
+                                            var stwebDefaults = await GetStwebDefaultsAsync();
+                                            shouldUsePrimarySectionMeetings = stwebDefaults != null && stwebDefaults.StwebUsePrimSecMtgFlag.ToUpper() == "Y" ? true : false;
+
+                                        }
+                                        if (shouldUsePrimarySectionMeetings)
+                                        {
+                                            updateSection.UpdatePrimarySectionMeetings(primarySection.Meetings);
+                                        }
+                                    }
                                 }
                             }
                             sections[updateSection.Id] = updateSection;
@@ -3651,7 +3780,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             // If we have a section, then select the limited list from the COURSE.SECTIONS record first
             if (!string.IsNullOrEmpty(section))
             {
-                limitingKeys = await DataReader.SelectAsync("COURSE.SECTIONS", new string[] { section }, "SAVING UNIQUE SEC.MEETING");
+                limitingKeys = await DataReader.SelectAsync("COURSE.SECTIONS", new string[] { section }, "WITH SEC.MEETING BY.EXP SEC.MEETING SAVING SEC.MEETING");
                 if (limitingKeys == null || !limitingKeys.Any())
                 {
                     return new Tuple<IEnumerable<SectionMeeting>, int>(meetings, 0);
@@ -3661,7 +3790,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             // Look at any index fields first
             if (!string.IsNullOrEmpty(termId) && string.IsNullOrEmpty(section))
             {
-                limitingKeys = await DataReader.SelectAsync("COURSE.SECTIONS", string.Format("WITH SEC.TERM = '{0}' SAVING UNIQUE SEC.MEETING", termId));
+                limitingKeys = await DataReader.SelectAsync("COURSE.SECTIONS", string.Format("WITH SEC.TERM = '{0}' WITH SEC.MEETING BY.EXP SEC.MEETING SAVING SEC.MEETING", termId));
                 if (limitingKeys == null || !limitingKeys.Any())
                 {
                     return new Tuple<IEnumerable<SectionMeeting>, int>(meetings, 0);
@@ -3746,18 +3875,18 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
                 if (!string.IsNullOrEmpty(instructorSelect))
                 {
-                    instructorSelect = string.Concat("WITH CSF.FACULTY = ", instructorSelect, " SAVING UNIQUE CSF.COURSE.SECTION");
+                    instructorSelect = string.Concat("WITH CSF.FACULTY = ", instructorSelect, "SAVING UNIQUE CSF.COURSE.SECTION");
                     var courseSectionKeys = await DataReader.SelectAsync("COURSE.SEC.FACULTY", instructorSelect);
                     if (courseSectionKeys != null && courseSectionKeys.Any())
                     {
-                        var meetingKeys = await DataReader.SelectAsync("COURSE.SECTIONS", courseSectionKeys, "SAVING UNIQUE SEC.MEETING");
+                        var meetingKeys = await DataReader.SelectAsync("COURSE.SECTIONS", courseSectionKeys, "WITH SEC.MEETING BY.EXP SEC.MEETING SAVING SEC.MEETING"); 
                         if (limitingKeys != null && limitingKeys.Any())
                         {
-                            limitingKeys = limitingKeys.Intersect(meetingKeys).ToArray();
+                            limitingKeys = limitingKeys.Distinct().Intersect(meetingKeys).ToArray();
                         }
                         else
                         {
-                            limitingKeys = meetingKeys;
+                            limitingKeys = meetingKeys.Distinct().ToArray();
                         }
                     }
                     if (limitingKeys == null || !limitingKeys.Any())
@@ -3793,7 +3922,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
 
             if (limit == 0 && offset == 0)
-            {                
+            {
                 sectionMeetings = await DataReader.BulkReadRecordAsync<CourseSecMeeting>(secMeetingIds);
                 totalCount = sectionMeetings.Count();
             }
@@ -3836,7 +3965,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             string[] limitingKeys = null;
             if (!string.IsNullOrEmpty(section))
             {
-                limitingKeys = await DataReader.SelectAsync("COURSE.SECTIONS", new string[] { section }, "SAVING UNIQUE SEC.FACULTY");
+                limitingKeys = await DataReader.SelectAsync("COURSE.SECTIONS", new string[] { section }, "WITH SEC.FACULTY BY.EXP SEC.FACULTY SAVING SEC.FACULTY");
                 if (limitingKeys == null || !limitingKeys.Any())
                 {
                     return new Tuple<IEnumerable<SectionFaculty>, int>(faculties, 0);
@@ -3894,15 +4023,16 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             int totalCount = 0;
             string criteria = selectStatement.ToString();
             Collection<CourseSecFaculty> sectionFaculties = null;
-            
+
             // Now we have criteria, so we can select and read the records
+            if (limitingKeys != null && limitingKeys.Any()) limitingKeys = limitingKeys.Distinct().ToArray();
             var secFacultyIds = await DataReader.SelectAsync("COURSE.SEC.FACULTY", limitingKeys, criteria);
             if (secFacultyIds == null || !secFacultyIds.Any())
             {
                 return new Tuple<IEnumerable<SectionFaculty>, int>(faculties, 0);
             }
             if (limit == 0 && offset == 0)
-            {                
+            {
                 sectionFaculties = await DataReader.BulkReadRecordAsync<CourseSecFaculty>(secFacultyIds);
                 totalCount = sectionFaculties.Count();
             }
@@ -3917,7 +4047,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 // Now we have criteria, so we can select and read the records
                 sectionFaculties = await DataReader.BulkReadRecordAsync<CourseSecFaculty>("COURSE.SEC.FACULTY", subList);
             }
-            
+
             // Read in course sections records to get Primary indicator and meeting pointers
             var courseSectionIds = sectionFaculties.Select(sf => sf.CsfCourseSection).Distinct().ToArray();
             var courseSections = await DataReader.BulkReadRecordAsync<CourseSections>("COURSE.SECTIONS", courseSectionIds);
@@ -4170,6 +4300,125 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         public async Task<SectionFaculty> PutSectionFacultyAsync(SectionFaculty sectionFaculty, string guid)
         {
             return await UpdateSectionFacultyAsync(sectionFaculty, guid);
+        }
+
+        /// <summary>
+        /// Gets the specified calendar schedule type.
+        /// </summary>
+        /// <param name="calendarScheduleType">Type of the calendar schedule.</param>
+        /// <param name="calendarSchedulePointers">The calendar schedule pointers.</param>
+        /// <param name="startDate">The start date.</param>
+        /// <param name="endDate">The end date.</param>
+        /// <returns></returns>
+        /// <exception cref="System.ArgumentNullException">
+        /// calendarScheduleType;Calendar Schedule Type may not be null or empty
+        /// or
+        /// calendarSchedulePointers;Calendar Schedule Associated Record Pointers may not be null
+        /// </exception>
+        /// <exception cref="System.ArgumentException">At least one Calendar Schedule Pointer to an Associated Record is required</exception>
+        public async Task<IEnumerable<Event>> GetSectionEventsICalAsync(string calendarScheduleType, IEnumerable<string> calendarSchedulePointers, DateTime? startDate, DateTime? endDate)
+        {
+            string startDatePart = string.Empty;
+            string endDatePart = string.Empty;
+            IEnumerable<Event> calendarEvents = new List<Event>();
+            Dictionary<Section, Collection<CalendarSchedules>> sectionWiseCalData = new Dictionary<Section, Collection<CalendarSchedules>>();
+
+            if (string.IsNullOrEmpty(calendarScheduleType))
+            {
+                throw new ArgumentNullException("calendarScheduleType", "Calendar Schedule Type may not be null or empty");
+            }
+            if (calendarSchedulePointers == null)
+            {
+                throw new ArgumentNullException("calendarSchedulePointers", "Calendar Schedule Associated Record Pointers may not be null");
+            }
+            else
+            {
+                if (calendarSchedulePointers.Count() < 1)
+                {
+                    throw new ArgumentException("At least one Calendar Schedule Pointer to an Associated Record is required");
+                }
+            }
+            try
+            {
+                //get all the section details. This is check for each section if its cross-listed. Check for PrimarysectionMeetings property.
+                //if not null take primary section id to retrieve calendar schedules, if empty take section id
+                List<Section> sections = (await GetCachedSectionsAsync(calendarSchedulePointers)).ToList();
+
+
+                IEnumerable<string> calendarPointersNotFoundInCache = calendarSchedulePointers.Except(sections.Select(s => s.Id));
+                //Validate count of sections retrieved with sections in calendarschedulPointers
+                if (calendarPointersNotFoundInCache.Any())
+                {
+                    string message = "Following calendarSchedulePointers have no corresponding Section information in a cache, their calendar schedules will not be retrieved. " + string.Join(",", calendarPointersNotFoundInCache);
+                    logger.Info(message);
+                }
+
+                if (sections.Any())
+                {
+                    if (startDate.HasValue || endDate.HasValue)
+                    {
+                        internationalParameters = await GetInternationalParametersAsync();
+
+
+                        if (startDate.HasValue)
+                        {
+                            startDatePart = string.Format("AND WITH CALS.DATE GE '{0}'", UniDataFormatter.UnidataFormatDate(startDate.Value, internationalParameters.HostShortDateFormat, internationalParameters.HostDateDelimiter));
+                        }
+                        if (endDate.HasValue)
+                        {
+                            endDatePart = string.Format("AND WITH CALS.DATE LE '{0}'", UniDataFormatter.UnidataFormatDate(endDate.Value, internationalParameters.HostShortDateFormat, internationalParameters.HostDateDelimiter));
+                        }
+                    }
+                    foreach (var section in sections)
+                    {
+                        try
+                        {
+                            string sectionId = section.Id;
+                            if (section.PrimarySectionMeetings != null && section.PrimarySectionMeetings.Any())
+                            {
+                                sectionId = section.PrimarySectionId ?? section.Id;
+                            }
+                            string criteria = null;
+                            if (startDatePart != null && endDatePart != null)
+                            {
+                                criteria = string.Format("WITH CALS.TYPE = '{0}' AND WITH CALS.POINTER = '{1}' {2} {3} BY CALS.DATE BY CALS.START.TIME", calendarScheduleType, sectionId, startDatePart, endDatePart);
+                            }
+                            else if (startDatePart != null)
+                            {
+                                criteria = string.Format("WITH CALS.TYPE = '{0}' AND WITH CALS.POINTER = '{1}' {2} BY CALS.DATE BY CALS.START.TIME", calendarScheduleType, sectionId, startDatePart);
+                            }
+                            else if (endDatePart != null)
+                            {
+                                criteria = string.Format("WITH CALS.TYPE = '{0}' AND WITH CALS.POINTER = '{1}' {2} BY CALS.DATE BY CALS.START.TIME", calendarScheduleType, sectionId, endDatePart);
+                            }
+                            else
+                            {
+                                criteria = string.Format("WITH CALS.TYPE = '{0}' AND WITH CALS.POINTER = '{1}' BY CALS.DATE BY CALS.START.TIME", calendarScheduleType, sectionId);
+                            }
+                            Collection<CalendarSchedules> cals = await DataReader.BulkReadRecordAsync<CalendarSchedules>("CALENDAR.SCHEDULES", criteria);
+                            if (!sectionWiseCalData.ContainsKey(section))
+                            {
+                                sectionWiseCalData.Add(section, cals);
+                            }
+                            else
+                            {
+                                logger.Info(string.Format("Section with id {0} is already in dictionary with its calendar schedules", section.Id));
+                            }
+                        }
+                        catch(Exception ex)
+                        {
+                            logger.Error(ex, ex.Message);
+                        }
+                    }
+                }
+                calendarEvents = BuildEvents(sectionWiseCalData);
+            }
+            catch(Exception e)
+            {
+                logger.Error("Error occured while retrieving section's calendar schedule events for iCal");
+                logger.Error(e, e.Message);
+            }
+            return calendarEvents;
         }
 
         private async Task<SectionFaculty> UpdateSectionFacultyAsync(SectionFaculty sectionFaculty, string guid)
@@ -4480,13 +4729,13 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             if (allSectionFaculty == null)
             {
-                var limitingKeys = await DataReader.SelectAsync("COURSE.SECTIONS", new string[] { csm.CsmCourseSection }, "SAVING UNIQUE SEC.FACULTY");
+                var limitingKeys = await DataReader.SelectAsync("COURSE.SECTIONS", new string[] { csm.CsmCourseSection }, "WITH SEC.FACULTY BY.EXP SEC.FACULTY SAVING SEC.FACULTY");
                 if (limitingKeys == null || !limitingKeys.Any())
                 {
                     return meeting;
                 }
                 // Get the faculty info for this section, limiting it by the section faculty, if there are any
-                allSectionFaculty = await DataReader.BulkReadRecordAsync<CourseSecFaculty>(limitingKeys);
+                allSectionFaculty = await DataReader.BulkReadRecordAsync<CourseSecFaculty>(limitingKeys.Distinct().ToArray());
             }
             if (allSectionFaculty == null)
             {
@@ -5412,6 +5661,37 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             return postItems;
         }
+        /// <summary>
+        /// Read the international parameters records to extract date format used
+        /// locally and setup in the INTL parameters.
+        /// </summary>
+        /// <returns>International Parameters with date properties</returns>
+        new private async Task<Ellucian.Colleague.Data.Base.DataContracts.IntlParams> GetInternationalParametersAsync()
+        {
+            if (internationalParameters != null)
+            {
+                return internationalParameters;
+            }
+            // Overriding cache timeout to be Level1 Cache time out for data that rarely changes.
+            internationalParameters = await GetOrAddToCacheAsync<Ellucian.Colleague.Data.Base.DataContracts.IntlParams>("InternationalParameters",
+                async () =>
+                {
+                    Data.Base.DataContracts.IntlParams intlParams = await DataReader.ReadRecordAsync<Data.Base.DataContracts.IntlParams>("INTL.PARAMS", "INTERNATIONAL");
+                    if (intlParams == null)
+                    {
+                        var errorMessage = "Unable to access international parameters INTL.PARAMS INTERNATIONAL.";
+                        logger.Info(errorMessage);
+                        // If we cannot read the international parameters default to US with a / delimiter.
+                        // throw new Exception(errorMessage);
+                        Data.Base.DataContracts.IntlParams newIntlParams = new Data.Base.DataContracts.IntlParams();
+                        newIntlParams.HostShortDateFormat = "MDY";
+                        newIntlParams.HostDateDelimiter = "/";
+                        intlParams = newIntlParams;
+                    }
+                    return intlParams;
+                }, Level1CacheTimeoutValue);
+            return internationalParameters;
+        }
 
         private string LookupImportErrorMessage(string code)
         {
@@ -5643,7 +5923,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// </summary>
         /// <param name="section"></param>
         /// <returns><see cref="AttendanceTrackingType"/></returns>
-        private AttendanceTrackingType ConvertStringToAttendanceTrackingType (CourseSections section )
+        private AttendanceTrackingType ConvertStringToAttendanceTrackingType(CourseSections section)
         {
             try
             {
@@ -5675,6 +5955,77 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 LogDataError("Section Attendance Tracking Type", section.Recordkey, section, ex);
                 throw ex;
             }
+        }
+
+        private IEnumerable<Event> BuildEvents(Dictionary<Section, Collection<CalendarSchedules>> sectionsWiseCalendarScehdules)
+        {
+            var cals = new List<Event>();
+            if (sectionsWiseCalendarScehdules == null)
+            {
+                throw new ArgumentNullException("sectionsWiseCalendarScehdules", "Sections calendar schedules may not be null");
+
+            }
+
+            foreach (var sectionWiseCal in sectionsWiseCalendarScehdules)
+            {
+                try
+                {
+                    Section section = sectionWiseCal.Key;
+                    string sectionDescription = section.PrimarySectionMeetings != null && section.PrimarySectionMeetings.Any() ? string.Join(" ", section.Name, section.Title) : null;
+                    Collection<CalendarSchedules> calData = sectionWiseCal.Value;
+                    if (calData != null)
+                    {
+                        foreach (var cal in calData)
+                        {
+
+                            try
+                            {
+                                // Calculate the start/end datetimeoffset value based on the Colleague time zone for the given date
+                                if (!cal.CalsDate.HasValue || cal.CalsDate == new DateTime(1968, 1, 1))
+                                {
+                                    throw new Exception("Calendar item must have at least a date.");
+                                }
+                                DateTimeOffset startDateTime = ColleagueTimeZoneUtility.ToPointInTimeDateTimeOffset(cal.CalsStartTime, cal.CalsDate, colleagueTimeZone).GetValueOrDefault();
+                                DateTimeOffset endDateTime = ColleagueTimeZoneUtility.ToPointInTimeDateTimeOffset(cal.CalsEndTime, cal.CalsDate, colleagueTimeZone).GetValueOrDefault();
+                                var calEvent = new Event(cal.Recordkey,
+                                    sectionDescription ?? cal.CalsDescription,
+                                    cal.CalsType,
+                                    cal.CalsLocation,
+                                    cal.CalsPointer,
+                                    startDateTime,
+                                    endDateTime);
+                                if (cal.CalsBldgRoomEntityAssociation != null && cal.CalsBldgRoomEntityAssociation.Count > 0)
+                                {
+                                    for (int i = 0; i < cal.CalsBldgRoomEntityAssociation.Count; i++)
+                                    {
+                                        calEvent.AddRoom(cal.CalsBuildings[i] + "*" + cal.CalsRooms[i]);
+                                    }
+                                }
+                                if (cal.CalsPeople != null && cal.CalsPeople.Count > 0)
+                                {
+                                    foreach (var person in cal.CalsPeople)
+                                    {
+                                        calEvent.AddPerson(person);
+                                    }
+                                }
+                                cals.Add(calEvent);
+                            }
+                            catch (Exception ex)
+                            {
+                                var calString = String.Format("Calendar Schedule couldn't be retrieved for Id:{0} sectionId:{1} Type:{2} Pointer:{3}", cal.Recordkey, section.Id, cal.CalsType, cal.CalsPointer);
+                                logger.Error(ex, calString);
+                            }
+                        }
+                    }
+                }
+                catch(Exception e)
+                {
+                    logger.Error(e, e.Message);
+
+                }
+            }
+        
+            return cals;
         }
     }
 }

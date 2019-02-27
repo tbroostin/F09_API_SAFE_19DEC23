@@ -26,12 +26,34 @@ namespace Ellucian.Colleague.Api.Client.Tests
         private const string _contentType = "application/json";
         private const string _studentId = "123456";
         private const string _studentId2 = "678";
+        private const string _personId = "0003914";
         private const string _token = "1234567890";
         private const string _courseId = "MATH-100";
         private const string _courseId2 = "ENGL-101";
 
-        #endregion
+        private List<CorrespondenceRequest> expectedCorrespondenceRequestsResponse = new List<CorrespondenceRequest>()
+            {
+                new CorrespondenceRequest()
+                {
+                    PersonId = _personId,
+                    Code ="Doc1",
+                    StatusDescription = "Complete",
+                    Status = CorrespondenceRequestStatus.Received
+                },
 
+                new CorrespondenceRequest()
+                {
+                    PersonId = _personId,
+                    Code ="Doc2",
+                    StatusDescription = "Waived",
+                    Status = CorrespondenceRequestStatus.Waived
+                }
+            };
+
+        #endregion
+        
+        private ColleagueApiClient client;
+        private MockHandler mockHandler;
         private Mock<ILogger> _loggerMock;
         private ILogger _logger;
 
@@ -41,6 +63,8 @@ namespace Ellucian.Colleague.Api.Client.Tests
             _loggerMock = MockLogger.Instance;
 
             _logger = _loggerMock.Object;
+
+            mockHandler = new MockHandler();
         }
 
         #region Version Tests
@@ -2023,7 +2047,90 @@ namespace Ellucian.Colleague.Api.Client.Tests
         }
         #endregion
 
-        #region QueryEmployeeNamesByPostAsync
+        #region GetCorrespondenceRequestsAsync
+        
+        [TestMethod]
+        public async Task GetCorrespondenceRequests_ReturnsExpectedResultTest()
+        {
+            var serializedResponse = JsonConvert.SerializeObject(expectedCorrespondenceRequestsResponse);
+            setResponse(serializedResponse, HttpStatusCode.OK);
+
+            var expectedResult = expectedCorrespondenceRequestsResponse.First();
+            var actualResult = (await client.GetCorrespondenceRequestsAsync(_personId)).First();
+
+            Assert.AreEqual(expectedResult.Code, actualResult.Code);
+            Assert.AreEqual(expectedResult.PersonId, actualResult.PersonId);
+            Assert.AreEqual(expectedResult.Status, actualResult.Status);
+            Assert.AreEqual(expectedResult.StatusDescription, actualResult.StatusDescription);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task NullPersonId_ThrowsExceptionTest()
+        {
+            setResponse(string.Empty, HttpStatusCode.OK);
+            await client.GetCorrespondenceRequestsAsync(null);
+        }
+
+        [TestMethod]
+        public async Task GetCorrespondenceRequests_RethrowsBadRequestExceptionTest()
+        {
+            bool exceptionCaught = false;
+
+            var serializedResponse = JsonConvert.SerializeObject(expectedCorrespondenceRequestsResponse);
+            setResponse(serializedResponse, HttpStatusCode.BadRequest);
+            try
+            {
+                await client.GetCorrespondenceRequestsAsync(_personId);
+            }
+            catch { exceptionCaught = true; }
+            Assert.IsTrue(exceptionCaught);
+        }
+
+        [TestMethod]
+        public async Task GetCorrespondenceRequests_RethrowsNotFoundExceptionTest()
+        {
+            bool exceptionCaught = false;
+
+            var serializedResponse = JsonConvert.SerializeObject(expectedCorrespondenceRequestsResponse);
+            setResponse(serializedResponse, HttpStatusCode.BadRequest);
+            try
+            {
+                await client.GetCorrespondenceRequestsAsync(_personId);
+            }
+            catch { exceptionCaught = true; }
+            Assert.IsTrue(exceptionCaught);
+        }
+
+        [TestMethod]
+        public async Task GetCorrespondenceRequests_ReturnsEmptyCorrespondenceRequestsListTest()
+        {
+            var serializedResponse = JsonConvert.SerializeObject(new List<CorrespondenceRequest>());
+            setResponse(serializedResponse, HttpStatusCode.OK);
+            var actualResult = await client.GetCorrespondenceRequestsAsync(_personId);
+            Assert.IsFalse(actualResult.Any());
+        }
+
+        #endregion
+
+        #region Helpers
+
+        private void setResponse(string serializedResponse, HttpStatusCode responseStatusCode)
+        {
+            var response = new HttpResponseMessage(responseStatusCode);
+            response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+            mockHandler.Responses.Enqueue(response);
+
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+            client = new ColleagueApiClient(testHttpClient, _loggerMock.Object);
+            client.Credentials = "otorres";
+        }
+
+        #endregion
+
+    #region QueryEmployeeNamesByPostAsync
 
         [TestClass]
         public class QueryEmployeeNamesByPostAsync
@@ -2159,7 +2266,7 @@ namespace Ellucian.Colleague.Api.Client.Tests
 
             _logger = _loggerMock.Object;
 
-            selfServiceConfiguration = new SelfServiceConfiguration() { AlwaysUseClipboardForBulkMailToLinks = true};
+            selfServiceConfiguration = new SelfServiceConfiguration() { AlwaysUseClipboardForBulkMailToLinks = true };
         }
 
         [TestMethod]
@@ -2204,5 +2311,78 @@ namespace Ellucian.Colleague.Api.Client.Tests
         }
     }
     #endregion
+    #region GetRequiredDocumentConfigurationAsyncTests
+
+    [TestClass]
+    public class GetRequiredDocumentConfigurationAsync
+    {
+        private const string _serviceUrl = "http://service.url";
+        private const string _contentType = "application/json";
+        private const string _token = "1234567890";
+
+        private Mock<ILogger> _loggerMock;
+        private ILogger _logger;
+
+        private RequiredDocumentConfiguration requiredDocumentConfiguration;
+
+        [TestInitialize]
+        public void Initialize()
+        {
+            _loggerMock = MockLogger.Instance;
+
+            _logger = _loggerMock.Object;
+
+            requiredDocumentConfiguration = new RequiredDocumentConfiguration() {
+                SuppressInstance = false,
+                PrimarySortField = WebSortField.Status,
+                SecondarySortField = WebSortField.OfficeDescription,
+                TextForBlankStatus = "",
+                TextForBlankDueDate = ""
+            };
+        }
+
+        [TestMethod]
+        public async Task Client_GetRequiredDocumentConfigurationAsync_Success()
+        {
+            var serializedResponse = JsonConvert.SerializeObject(requiredDocumentConfiguration);
+
+            var response = new HttpResponseMessage(HttpStatusCode.OK);
+            response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+            var mockHandler = new MockHandler();
+            mockHandler.Responses.Enqueue(response);
+
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+            var client = new ColleagueApiClient(testHttpClient, _logger);
+
+            // Act
+            var clientResponse = await client.GetRequiredDocumentConfigurationAsync();
+
+            // Assert that the expected item is found in the response
+            Assert.IsNotNull(requiredDocumentConfiguration);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpRequestFailedException))]
+        public async Task Client_GetRequiredDocumentConfigurationAsync_Error()
+        {
+            var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
+            response.Content = new StringContent(string.Empty, Encoding.UTF8, _contentType);
+            response.RequestMessage = new HttpRequestMessage(HttpMethod.Get, "http://test");
+            var mockHandler = new MockHandler();
+            mockHandler.Responses.Enqueue(response);
+
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+            var client = new ColleagueApiClient(testHttpClient, _logger);
+            var clientResponse = await client.GetRequiredDocumentConfigurationAsync();
+
+            _loggerMock.Verify(l => l.Error(It.IsAny<Exception>(), "Unable to retrieve Required Document configuration data."));
+        }
+    }
+    #endregion
+
 }
 

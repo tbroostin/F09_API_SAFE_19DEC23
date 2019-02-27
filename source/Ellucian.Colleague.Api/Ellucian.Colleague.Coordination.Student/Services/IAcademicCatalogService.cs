@@ -20,5 +20,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <returns>AcademicCatalog2 DTO object</returns>
         Task<Ellucian.Colleague.Dtos.AcademicCatalog2> GetAcademicCatalogByGuid2Async(string guid);
+
+        /// <remarks>FOR USE WITH ELLUCIAN SS</remarks>
+        /// <summary>
+        /// Gets all academic catalogs
+        /// </summary>
+        /// <returns>Collection of Catalog DTO objects</returns>
+        Task<IEnumerable<Dtos.Student.Catalog>> GetAllAcademicCatalogsAsync(bool bypassCache = false);
     }
 }

@@ -41,15 +41,6 @@ namespace Ellucian.Colleague.Dtos.Converters
             if (token.Type == JTokenType.Array)
             {
                 var value = token.ToObject<List<OwningInstitutionUnit>>();
-
-                // Verify all the properties from the query object are included.
-                // JObject created from DTO property type
-                var jArray1 = JToken.Parse(JsonConvert.SerializeObject(value)) as JArray;
-                if ((jArray1 != null) && (!JArray.DeepEquals(jArray1, token)))
-                {
-                    throw new Exception("Invalid Properties");
-                }
-                
                 return value;
             }
 

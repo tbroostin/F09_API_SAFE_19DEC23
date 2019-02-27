@@ -17,7 +17,7 @@ using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 
-namespace Ellucian.Colleague.Coordination.HumanResoures.Services
+namespace Ellucian.Colleague.Coordination.HumanResources.Services
 {
     [RegisterType]
     public class PositionClassificationsService : BaseCoordinationService, IPositionClassificationsService

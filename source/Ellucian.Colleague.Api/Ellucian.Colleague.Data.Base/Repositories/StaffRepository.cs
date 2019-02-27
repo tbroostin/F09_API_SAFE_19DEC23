@@ -193,6 +193,23 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         }
 
         /// <summary>
+        /// Get the staff log in ID based on a person ID.
+        /// </summary>
+        /// <param name="personId">person ID used to locate the staff record.</param>
+        /// <returns>the staff login id for the person.</returns>
+        public async Task<string> GetStaffLoginIdForPersonAsync(string personId)
+        {
+            var staffRecord = await DataReader.ReadRecordAsync<DataContracts.Staff>("STAFF", personId);
+            if (staffRecord == null)
+            {
+                LogDataError("The user", personId, "does not have a STAFF record.");
+                throw new ApplicationException("The user " + personId + " does not have a STAFF record.");
+            }
+
+            return staffRecord.StaffLoginId;
+        }
+
+        /// <summary>
         /// Validates if the requested Staff record is of Staff type, updates IsActive flag, or throws ans exception if record with
         /// the specified id was not found
         /// </summary>

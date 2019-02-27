@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -165,6 +165,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 {
                     new Domain.Base.Entities.Department("dddf089a-b631-46cf-9884-e9d310eeb683","MATH","MATH DEPARTMENT", true),
                     new Domain.Base.Entities.Department("ddd5d1f-910b-4f1a-a771-5847f554e8ab","ART","ART DEPARTMENT", true),
+                    new Domain.Base.Entities.Department("ddd5d1f-910b-4f1a-a771-5847f554e8ac","ENG","ENGLISH DEPARTMENT", true),
                     new Domain.Base.Entities.Department("ddd5d1f-910b-4f1a-a771-5847f554e8ab","COMP","COMP SCIENCE DEPARTMENT", true)
                 };
                 acadLevels = new List<Domain.Student.Entities.AcademicLevel>()
@@ -208,6 +209,54 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 studentReferenceDataRepositoryMock.Setup(en => en.GetEnrollmentStatusesAsync(false)).ReturnsAsync(statusItems);
                 stuAcadProgs = new TestStudentAcademicProgramRepository().GetStudentAcademicProgramsAsync(It.IsAny<bool>()).Result.ToList();
                 stuAcadProgsTuple = new Tuple<IEnumerable<StudentAcademicProgram>, int>(stuAcadProgs, 3);
+                foreach (var acadProg in acadProgs)
+                {
+                    studentReferenceDataRepositoryMock.Setup(srdr => srdr.GetAcademicProgramsGuidAsync(acadProg.Code)).ReturnsAsync(acadProg.Guid);
+                }
+                foreach (var catalog in catalogs)
+                {
+                    catalogRepositoryMock.Setup(cat => cat.GetCatalogGuidAsync(catalog.Code)).ReturnsAsync(catalog.Guid);
+                }
+                foreach (var location in locations)
+                {
+                    referenceDataRepositoryMock.Setup(loc => loc.GetLocationsGuidAsync(location.Code)).ReturnsAsync(location.Guid);
+                }
+                foreach (var dept in depts)
+                {
+                    referenceDataRepositoryMock.Setup(d => d.GetDepartments2GuidAsync(dept.Code)).ReturnsAsync(dept.Guid);
+                }
+                foreach (var academicPeriod in academicPeriodCollection)
+                {
+                    termRepositoryMock.Setup(repo => repo.GetAcademicPeriodsGuidAsync(academicPeriod.Code)).ReturnsAsync(academicPeriod.Guid);
+                }
+                foreach (var acadLevel in acadLevels)
+                {
+                    studentReferenceDataRepositoryMock.Setup(srdr => srdr.GetAcademicLevelsGuidAsync(acadLevel.Code)).ReturnsAsync(acadLevel.Guid);
+                }
+                foreach (var honor in allHonors)
+                {
+                    referenceDataRepositoryMock.Setup(repo => repo.GetOtherHonorsGuidAsync(honor.Code)).ReturnsAsync(honor.Guid);
+                }
+                foreach (var degree in allDegrees)
+                {
+                    referenceDataRepositoryMock.Setup(repo => repo.GetOtherDegreeGuidAsync(degree.Code)).ReturnsAsync(degree.Guid);
+                }
+                foreach (var major in allMajors)
+                {
+                    referenceDataRepositoryMock.Setup(repo => repo.GetOtherMajorsGuidAsync(major.Code)).ReturnsAsync(major.Guid);
+                }
+                foreach (var minor in allMinors)
+                {
+                    referenceDataRepositoryMock.Setup(repo => repo.GetOtherMinorsGuidAsync(minor.Code)).ReturnsAsync(minor.Guid);
+                }
+                foreach (var sp in allSp)
+                {
+                    referenceDataRepositoryMock.Setup(repo => repo.GetOtherSpecialsGuidAsync(sp.Code)).ReturnsAsync(sp.Guid);
+                }
+                foreach (var ccd in allCcds)
+                {
+                    referenceDataRepositoryMock.Setup(repo => repo.GetOtherCcdsGuidAsync(ccd.Code)).ReturnsAsync(ccd.Guid);
+                }
             }
 
             [TestCleanup]
@@ -509,7 +558,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 //Act
                 var acadProgEnroll = (await StudentAcademicProgramService.GetStudentAcademicProgramsAsync(0, 1, true, "BadStudentId", "01/06/2016", "01/06/2017", "1c5bbbbc-80e3-4042-8151-db9893ac337a", "10909901-3d7f-4e6b-89ca-79b164cbd8cc", "active", "ART", "MAC", "01/01/2001", "12344", "72b7737b-27db-4a06-944b-97d00c29b3ca")).Item1;
                 Assert.IsNotNull(acadProgEnroll);
-            
+
             }
 
             [TestMethod]
@@ -518,12 +567,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 //Arrange
                 viewStudentProgramRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.ViewStudentAcademicProgramConsent));
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewStudentProgramRole });
-                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms2Async(defaultInst, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), 
-                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), 
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms2Async(defaultInst, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
                     It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(stuAcadProgsTuple);
                 studentAcademicProgramRepositoryMock.Setup(s => s.GetUnidataFormattedDate(It.IsAny<string>())).ReturnsAsync("01/06/2016");
                 //Act
-                var acadProgEnroll = (await StudentAcademicProgramService.GetStudentAcademicProgramsAsync(0, 1, true, "12345678", "01/06/2016", "01/06/2017", 
+                var acadProgEnroll = (await StudentAcademicProgramService.GetStudentAcademicProgramsAsync(0, 1, true, "12345678", "01/06/2016", "01/06/2017",
                     "1c5bbbbc-80e3-4042-8151-db9893ac337a", "10909901-3d7f-4e6b-89ca-79b164cbd8cc", "active", "", "", "", "", "72b7737b-27db-4a06-944b-97d00c29b3ca")).Item1;
                 Assert.IsNotNull(acadProgEnroll);
             }
@@ -534,8 +583,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 //Arrange
                 viewStudentProgramRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.ViewStudentAcademicProgramConsent));
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewStudentProgramRole });
-                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms2Async(defaultInst, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), 
-                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), 
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms2Async(defaultInst, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
                     It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(stuAcadProgsTuple);
                 studentAcademicProgramRepositoryMock.Setup(s => s.GetUnidataFormattedDate(It.IsAny<string>())).ReturnsAsync("01/06/2016");
                 //Act
@@ -550,7 +599,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 //Arrange
                 viewStudentProgramRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.ViewStudentAcademicProgramConsent));
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewStudentProgramRole });
-                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms2Async(defaultInst, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(stuAcadProgsTuple);
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms2Async(defaultInst, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(stuAcadProgsTuple);
                 studentAcademicProgramRepositoryMock.Setup(s => s.GetUnidataFormattedDate(It.IsAny<string>())).ReturnsAsync("01/06/2016");
                 //Act
                 var acadProgEnroll = (await StudentAcademicProgramService.GetStudentAcademicProgramsAsync(0, 1, true, "12345678", "01/06/2016", "01/06/2017", "1c5bbbbc-80e3-4042-8151-db9893ac337a",
@@ -565,8 +615,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 //Arrange
                 viewStudentProgramRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.ViewStudentAcademicProgramConsent));
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewStudentProgramRole });
-                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms2Async(defaultInst, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), 
-                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), 
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms2Async(defaultInst, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
                     It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(stuAcadProgsTuple);
                 studentAcademicProgramRepositoryMock.Setup(s => s.GetUnidataFormattedDate(It.IsAny<string>())).ThrowsAsync(new InvalidOperationException());
                 //Act
@@ -580,7 +630,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 //Arrange
                 viewStudentProgramRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.ViewStudentAcademicProgramConsent));
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewStudentProgramRole });
-                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms2Async(defaultInst, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(stuAcadProgsTuple);
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms2Async(defaultInst, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(stuAcadProgsTuple);
                 studentAcademicProgramRepositoryMock.Setup(s => s.GetUnidataFormattedDate(It.IsAny<string>())).ReturnsAsync("01/06/2016");
                 //Act
                 var acadProgEnroll = (await StudentAcademicProgramService.GetStudentAcademicProgramsAsync(0, 1, true, "12345678", "01/06/2016", "01/06/2017", "1c5bbbbc-80e3-4042-8151-db9893ac337a", "10909901-3d7f-4e6b-89ca-79b164cbd8cc", "active", "dddf089a-b631-46cf-9884-e9d310eeb683", "0d2f089a-b631-46cf-9884-e9d310eeb683", "aaaf089a-b631-46cf-9884-e9d310eeb683", "dd0c42ca-c61d-4ca6-8d21-96ab5be35623", "diploma123456")).Item1;
@@ -593,7 +644,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 //Arrange
                 viewStudentProgramRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.ViewStudentAcademicProgramConsent));
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewStudentProgramRole });
-                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms2Async(defaultInst, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(stuAcadProgsTuple);
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms2Async(defaultInst, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(stuAcadProgsTuple);
                 studentAcademicProgramRepositoryMock.Setup(s => s.GetUnidataFormattedDate(It.IsAny<string>())).ReturnsAsync("01/06/2016");
                 //Act
                 var acadProgEnroll = (await StudentAcademicProgramService.GetStudentAcademicProgramsAsync(0, 1, true, "12345678", "01/06/2016", "01/06/2017", "1c5bbbbc-80e3-4042-8151-db9893ac337a", "10909901-3d7f-4e6b-89ca-79b164cbd8cc", "active", "dddf089a-b631-46cf-9884-e9d310eeb683", "0d2f089a-b631-46cf-9884-e9d310eeb683", "aaaf089a-b631-46cf-9884-e9d310eeb683", "dd0c42ca-c61d-4ca6-8d21-96ab5be35623", "9ae3a175-1dfd-4937-b97b-3c9ad596e023")).Item1;
@@ -608,7 +660,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewStudentProgramRole });
                 studentReferenceDataRepositoryMock.Setup(srdr => srdr.GetAcademicProgramsAsync(It.IsAny<bool>())).ReturnsAsync(null);
 
-                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms2Async(defaultInst, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(stuAcadProgsTuple);
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms2Async(defaultInst, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(stuAcadProgsTuple);
                 studentAcademicProgramRepositoryMock.Setup(s => s.GetUnidataFormattedDate(It.IsAny<string>())).ReturnsAsync("01/06/2016");
                 //Act
                 var acadProgEnroll = (await StudentAcademicProgramService.GetStudentAcademicProgramsAsync(0, 1, true, "12345678", "01/06/2016", "01/06/2017", "1c5bbbbc-80e3-4042-8151-db9893ac337a", "10909901-3d7f-4e6b-89ca-79b164cbd8cc", "active", "dddf089a-b631-46cf-9884-e9d310eeb683", "0d2f089a-b631-46cf-9884-e9d310eeb683", "aaaf089a-b631-46cf-9884-e9d310eeb683", "dd0c42ca-c61d-4ca6-8d21-96ab5be35623", "9ae3a175-1dfd-4937-b97b-3c9ad596e023")).Item1;
@@ -622,7 +675,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 viewStudentProgramRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.ViewStudentAcademicProgramConsent));
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewStudentProgramRole });
 
-                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms2Async(defaultInst, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(stuAcadProgsTuple);
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms2Async(defaultInst, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(stuAcadProgsTuple);
                 studentAcademicProgramRepositoryMock.Setup(s => s.GetUnidataFormattedDate(It.IsAny<string>())).ReturnsAsync("01/06/2016");
                 //Act
                 var acadProgEnroll = (await StudentAcademicProgramService.GetStudentAcademicProgramsAsync(0, 1, true, "1234567", "01/06/2016", "01/06/2017", "BadGuid", "10909901-3d7f-4e6b-89ca-79b164cbd8cc", "active", "dddf089a-b631-46cf-9884-e9d310eeb683", "0d2f089a-b631-46cf-9884-e9d310eeb683", "aaaf089a-b631-46cf-9884-e9d310eeb683", "dd0c42ca-c61d-4ca6-8d21-96ab5be35623", "9ae3a175-1dfd-4937-b97b-3c9ad596e023")).Item1;
@@ -635,7 +689,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 //Arrange
                 viewStudentProgramRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.ViewStudentAcademicProgramConsent));
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewStudentProgramRole });
-                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms2Async(defaultInst, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(stuAcadProgsTuple);
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms2Async(defaultInst, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(stuAcadProgsTuple);
 
                 //Act
                 var acadProgEnroll = (await StudentAcademicProgramService.GetStudentAcademicProgramsAsync(It.IsAny<int>(), It.IsAny<int>())).Item1;
@@ -728,7 +783,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 viewStudentProgramRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.ViewStudentAcademicProgramConsent));
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewStudentProgramRole });
 
-                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms2Async(defaultInst, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(null);
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms2Async(defaultInst, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(null);
 
                 var result = await StudentAcademicProgramService.GetStudentAcademicProgramsAsync(It.IsAny<int>(), It.IsAny<int>());
                 Assert.AreEqual(result.Item2, 0);
@@ -743,7 +799,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 viewStudentProgramRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.ViewStudentAcademicProgramConsent));
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewStudentProgramRole });
                 var stuProgTuple = new Tuple<IEnumerable<StudentAcademicProgram>, int>(null, 0);
-                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms2Async(defaultInst, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(stuProgTuple);
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms2Async(defaultInst, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(stuProgTuple);
                 var result = await StudentAcademicProgramService.GetStudentAcademicProgramsAsync(It.IsAny<int>(), It.IsAny<int>());
                 Assert.AreEqual(result.Item2, 0);
 
@@ -755,7 +812,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 //Arrange
                 viewStudentProgramRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.ViewStudentAcademicProgramConsent));
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewStudentProgramRole });
-                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms2Async(defaultInst, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(stuAcadProgsTuple);
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms2Async(defaultInst, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(stuAcadProgsTuple);
                 studentAcademicProgramRepositoryMock.Setup(s => s.GetUnidataFormattedDate(It.IsAny<string>())).ReturnsAsync("01/06/2016");
                 //Act
                 var acadProgEnroll = (await StudentAcademicProgramService.GetStudentAcademicProgramsAsync(0, 1, true, "12345678", "01/06/2016", "01/06/2017", "1c5bbbbc-80e3-4042-8151-db9893ac337a", "10909901-3d7f-4e6b-89ca-79b164cbd8cc", "active", "dddf089a-b631-46cf-9884-e9d310eeb683", "0d2f089a-b631-46cf-9884-e9d310eeb683", "aaaf089a-b631-46cf-9884-e9d310eeb683", "dd0c42ca-c61d-4ca6-8d21-96ab5be35623", "72b7737b-27db-4a06-944b-97d00c29b3db")).Item1;
@@ -836,7 +894,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 //Arrange
                 viewStudentProgramRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.ViewStudentAcademicProgramConsent));
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewStudentProgramRole });
-                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms2Async(defaultInst, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(stuAcadProgsTuple);
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms2Async(defaultInst, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(stuAcadProgsTuple);
                 studentAcademicProgramRepositoryMock.Setup(s => s.GetUnidataFormattedDate(It.IsAny<string>())).ReturnsAsync("01/06/2016");
                 //Act
                 var acadProgEnroll = (await StudentAcademicProgramService.GetStudentAcademicProgramsAsync(0, 1, true, "12345678", "01/06/2016", "01/06/2017", "1c5bbbbc-80e3-4042-8151-db9893ac337a", "10909901-3d7f-4e6b-89ca-79b164cbd8cc", "active", "dddf089a-b631-46cf-9884-e9d310eeb683", "0d2f089a-b631-46cf-9884-e9d310eeb683", "aaaf089a-b631-46cf-9884-e9d310eeb683", "dd0c42ca-c61d-4ca6-8d21-96ab5be35623", "31d8aa32-dbe6-3b89-a1c4-2cad39e232e4")).Item1;
@@ -1008,6 +1067,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 {
                     new Domain.Base.Entities.Department("dddf089a-b631-46cf-9884-e9d310eeb683","MATH","MATH DEPARTMENT", true),
                     new Domain.Base.Entities.Department("ddd5d1f-910b-4f1a-a771-5847f554e8ab","ART","ART DEPARTMENT", true),
+                    new Domain.Base.Entities.Department("dddf089a-b631-46cf-9884-e9d310eeb685","ENG","English DEPARTMENT", true),
                     new Domain.Base.Entities.Department("ddd5d1f-910b-4f1a-a771-5847f554e8ac","COMP","COMP SCIENCE DEPARTMENT", true)
                 };
                 acadLevels = new List<Domain.Student.Entities.AcademicLevel>()
@@ -1059,6 +1119,54 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 studentReferenceDataRepositoryMock.Setup(en => en.GetEnrollmentStatusesAsync(false)).ReturnsAsync(statusItems);
                 stuAcadProgs = new TestStudentAcademicProgramRepository().GetStudentAcademicProgramsAsync(It.IsAny<bool>()).Result.ToList();
                 stuAcadProgsTuple = new Tuple<IEnumerable<StudentAcademicProgram>, int>(stuAcadProgs, 3);
+                foreach (var acadProg in acadProgs)
+                {
+                    studentReferenceDataRepositoryMock.Setup(srdr => srdr.GetAcademicProgramsGuidAsync(acadProg.Code)).ReturnsAsync(acadProg.Guid);
+                }
+                foreach (var catalog in catalogs)
+                {
+                    catalogRepositoryMock.Setup(cat => cat.GetCatalogGuidAsync(catalog.Code)).ReturnsAsync(catalog.Guid);
+                }
+                foreach (var location in locations)
+                {
+                    referenceDataRepositoryMock.Setup(loc => loc.GetLocationsGuidAsync(location.Code)).ReturnsAsync(location.Guid);
+                }
+                foreach (var dept in depts)
+                {
+                    referenceDataRepositoryMock.Setup(d => d.GetDepartments2GuidAsync(dept.Code)).ReturnsAsync(dept.Guid);
+                }
+                foreach (var academicPeriod in academicPeriodCollection)
+                {
+                    termRepositoryMock.Setup(repo => repo.GetAcademicPeriodsGuidAsync(academicPeriod.Code)).ReturnsAsync(academicPeriod.Guid);
+                }
+                foreach (var acadLevel in acadLevels)
+                {
+                    studentReferenceDataRepositoryMock.Setup(srdr => srdr.GetAcademicLevelsGuidAsync(acadLevel.Code)).ReturnsAsync(acadLevel.Guid);
+                }
+                foreach (var honor in allHonors)
+                {
+                    referenceDataRepositoryMock.Setup(repo => repo.GetOtherHonorsGuidAsync(honor.Code)).ReturnsAsync(honor.Guid);
+                }
+                foreach (var degree in allDegrees)
+                {
+                    referenceDataRepositoryMock.Setup(repo => repo.GetOtherDegreeGuidAsync(degree.Code)).ReturnsAsync(degree.Guid);
+                }
+                foreach (var major in allMajors)
+                {
+                    referenceDataRepositoryMock.Setup(repo => repo.GetOtherMajorsGuidAsync(major.Code)).ReturnsAsync(major.Guid);
+                }
+                foreach (var minor in allMinors)
+                {
+                    referenceDataRepositoryMock.Setup(repo => repo.GetOtherMinorsGuidAsync(minor.Code)).ReturnsAsync(minor.Guid);
+                }
+                foreach (var sp in allSp)
+                {
+                    referenceDataRepositoryMock.Setup(repo => repo.GetOtherSpecialsGuidAsync(sp.Code)).ReturnsAsync(sp.Guid);
+                }
+                foreach (var ccd in allCcds)
+                {
+                    referenceDataRepositoryMock.Setup(repo => repo.GetOtherCcdsGuidAsync(ccd.Code)).ReturnsAsync(ccd.Guid);
+                }
             }
 
             private static List<StudentAcademicPrograms> BuildStudentAcademicProgramsDtos()
@@ -1137,7 +1245,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var dto = StuAcadProgDtos[0];
 
                 //Act
-                var result = await StudentAcademicProgramService.CreateStudentAcademicProgramAsync(dto);
+                var result = await StudentAcademicProgramService.CreateStudentAcademicProgramAsync(dto, true);
 
                 //Assert
                 Assert.AreEqual(result.Id, expected.Guid);
@@ -1158,7 +1266,6 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Assert.AreEqual(result.ProgramOwner.Id, (depts.FirstOrDefault(de => de.Code == expected.DepartmentCode)).Guid);
                 if (expected.GradGPA > 0)
                     Assert.AreEqual(result.PerformanceMeasure, expected.GradGPA.ToString());
-                Assert.AreEqual(result.ProgramOwner.Id, (depts.FirstOrDefault(de => de.Code == expected.DepartmentCode)).Guid);
                 if (result.Recognitions != null)
                 {
                     foreach (var hnr in result.Recognitions)
@@ -1206,7 +1313,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var dto = StuAcadProgDtos[0];
 
                 //Act
-                var result = await StudentAcademicProgramService.UpdateStudentAcademicProgramAsync(dto);
+                var result = await StudentAcademicProgramService.UpdateStudentAcademicProgramAsync(dto, true);
 
                 //Assert
                 Assert.AreEqual(result.Id, expected.Guid);
@@ -1277,7 +1384,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 dto.EndDate = new DateTimeOffset(DateTime.Parse("01/06/2099"));
 
                 //Act
-                var result = await StudentAcademicProgramService.CreateStudentAcademicProgramAsync(dto);
+                var result = await StudentAcademicProgramService.CreateStudentAcademicProgramAsync(dto, true);
 
                 //Assert
                 Assert.AreEqual(result.Id, expected.Guid);
@@ -1354,7 +1461,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 dto.EndDate = new DateTimeOffset(DateTime.Parse("01/06/2099"));
 
                 //Act
-                var result = await StudentAcademicProgramService.CreateStudentAcademicProgramAsync(dto);
+                var result = await StudentAcademicProgramService.CreateStudentAcademicProgramAsync(dto, true);
 
                 //Assert
                 Assert.AreEqual(result.Id, expected.Guid);
@@ -1425,11 +1532,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewStudentProgramRole });
                 var expected = stuAcadProgs[0];
                 studentAcademicProgramRepositoryMock.Setup(s => s.CreateStudentAcademicProgramAsync(It.IsAny<Domain.Student.Entities.StudentAcademicProgram>(), defaultInst)).ReturnsAsync(expected);
+                studentAcademicProgramRepositoryMock.Setup(s => s.UpdateStudentAcademicProgramAsync(It.IsAny<Domain.Student.Entities.StudentAcademicProgram>(), defaultInst)).ReturnsAsync(expected);
                 var dto = StuAcadProgDtos[2];
                 dto.EnrollmentStatus.EnrollStatus = Dtos.EnrollmentStatusType.Active;
                 dto.EnrollmentStatus.Detail = null;
                 //Act
-                var result = await StudentAcademicProgramService.CreateStudentAcademicProgramAsync(dto);
+                var result = await StudentAcademicProgramService.CreateStudentAcademicProgramAsync(dto, true);
 
                 //Assert
                 Assert.AreEqual(result.Id, expected.Guid);
@@ -2402,8 +2510,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             public async Task StuAcadPrgm_GetStudentAcademicPrograms2Async_ArgumentException()
             {
                 personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("");
-                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms2Async(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(), 
-                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), 
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms2Async(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
                     It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>())).ThrowsAsync(new Exception());
 
                 var results = await studentAcademicProgramService.GetStudentAcademicPrograms2Async(0, 100, true, Guid.NewGuid().ToString());
@@ -2415,7 +2523,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [TestMethod]
             public async Task StuAcadPrgm_GetStudentAcademicPrograms2Async_Repository_Returns_Null()
             {
-                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms2Async(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(), 
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms2Async(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(),
                     It.IsAny<string>(), It.IsAny<string>()
                     , It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
                    It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(null);
@@ -2429,7 +2537,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [TestMethod]
             public async Task StuAcadPrgm_GetStudentAcademicPrograms2Async_Repository_Returns_EmptyResult()
             {
-                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms2Async(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(), 
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms2Async(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(),
                     It.IsAny<string>(), It.IsAny<string>()
                     , It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
                     It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(new Tuple<IEnumerable<StudentAcademicProgram>, int>(new List<StudentAcademicProgram>() { }, 0));
@@ -2671,7 +2779,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 studentReferenceDataRepositoryMock.Setup(s => s.GetAcademicLevelsAsync(bypassCache)).ReturnsAsync(academicLevels);
                 referenceDataRepositoryMock.Setup(r => r.GetOtherDegreesAsync(bypassCache)).ReturnsAsync(otherDegrees);
                 referenceDataRepositoryMock.Setup(r => r.GetOtherMajorsAsync(bypassCache)).ReturnsAsync(otherMajors);
-                referenceDataRepositoryMock.Setup(r => r.GetOtherHonorsAsync(true)).ReturnsAsync(otherHonors);
+                referenceDataRepositoryMock.Setup(r => r.GetOtherHonorsAsync(bypassCache)).ReturnsAsync(otherHonors);
                 referenceDataRepositoryMock.Setup(r => r.GetOtherHonorsAsync(false)).ReturnsAsync(otherHonors);
                 studentReferenceDataRepositoryMock.Setup(s => s.GetEnrollmentStatusesAsync(bypassCache)).ReturnsAsync(enrollmentStatuses);
                 studentAcademicProgramRepositoryMock.Setup(s => s.GetUnidataFormattedDate(It.IsAny<string>())).ReturnsAsync(DateTime.Today.ToString());
@@ -2683,6 +2791,51 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 studentAcademicProgramRepositoryMock.Setup(s => s.CreateStudentAcademicProgramAsync(It.IsAny<StudentAcademicProgram>(), It.IsAny<string>())).ReturnsAsync(studentAcademicProgramEntity);
                 studentAcademicProgramRepositoryMock.Setup(s => s.UpdateStudentAcademicProgramAsync(It.IsAny<StudentAcademicProgram>(), It.IsAny<string>())).ReturnsAsync(studentAcademicProgramEntity);
+                foreach (var acadProg in academicPrograms)
+                {
+                    studentReferenceDataRepositoryMock.Setup(srdr => srdr.GetAcademicProgramsGuidAsync(acadProg.Code)).ReturnsAsync(acadProg.Guid);
+                }
+                foreach (var catalog in catalogs)
+                {
+                    catalogRepositoryMock.Setup(cat => cat.GetCatalogGuidAsync(catalog.Code)).ReturnsAsync(catalog.Guid);
+                }
+                foreach (var location in locations)
+                {
+                    referenceDataRepositoryMock.Setup(loc => loc.GetLocationsGuidAsync(location.Code)).ReturnsAsync(location.Guid);
+                }
+                foreach (var dept in departments)
+                {
+                    referenceDataRepositoryMock.Setup(d => d.GetDepartments2GuidAsync(dept.Code)).ReturnsAsync(dept.Guid);
+                }
+                foreach (var academicPeriod in academicPeriods)
+                {
+                    termRepositoryMock.Setup(repo => repo.GetAcademicPeriodsGuidAsync(academicPeriod.Code)).ReturnsAsync(academicPeriod.Guid);
+                }
+                foreach (var acadLevel in academicLevels)
+                {
+                    studentReferenceDataRepositoryMock.Setup(srdr => srdr.GetAcademicLevelsGuidAsync(acadLevel.Code)).ReturnsAsync(acadLevel.Guid);
+                }
+                foreach (var honor in otherHonors)
+                {
+                    referenceDataRepositoryMock.Setup(repo => repo.GetOtherHonorsGuidAsync(honor.Code)).ReturnsAsync(honor.Guid);
+                }
+                foreach (var degree in otherDegrees)
+                {
+                    referenceDataRepositoryMock.Setup(repo => repo.GetOtherDegreeGuidAsync(degree.Code)).ReturnsAsync(degree.Guid);
+                }
+                foreach (var major in otherMajors)
+                {
+                    referenceDataRepositoryMock.Setup(repo => repo.GetOtherMajorsGuidAsync(major.Code)).ReturnsAsync(major.Guid);
+                }
+                studentReferenceDataRepositoryMock.Setup(srdr => srdr.GetAcademicProgramsGuidAsync(It.IsAny<string>())).ReturnsAsync(academicPrograms.FirstOrDefault().Guid);
+                catalogRepositoryMock.Setup(cat => cat.GetCatalogGuidAsync(It.IsAny<string>())).ReturnsAsync(catalogs.FirstOrDefault().Guid);
+                referenceDataRepositoryMock.Setup(loc => loc.GetLocationsGuidAsync(It.IsAny<string>())).ReturnsAsync(locations.FirstOrDefault().Guid);
+                referenceDataRepositoryMock.Setup(dept => dept.GetDepartments2GuidAsync(It.IsAny<string>())).ReturnsAsync(departments.FirstOrDefault().Guid);
+                termRepositoryMock.Setup(repo => repo.GetAcademicPeriodsGuidAsync(It.IsAny<string>())).ReturnsAsync(academicPeriods.FirstOrDefault().Guid);
+                studentReferenceDataRepositoryMock.Setup(srdr => srdr.GetAcademicLevelsGuidAsync(It.IsAny<string>())).ReturnsAsync(academicLevels.FirstOrDefault().Guid);
+                referenceDataRepositoryMock.Setup(repo => repo.GetOtherHonorsGuidAsync(It.IsAny<string>())).ReturnsAsync(otherHonors.FirstOrDefault().Guid);
+                referenceDataRepositoryMock.Setup(repo => repo.GetOtherDegreeGuidAsync(It.IsAny<string>())).ReturnsAsync(otherDegrees.FirstOrDefault().Guid);
+                referenceDataRepositoryMock.Setup(repo => repo.GetOtherMajorsGuidAsync(It.IsAny<string>())).ReturnsAsync(otherMajors.FirstOrDefault().Guid);
             }
 
             #endregion
@@ -2960,7 +3113,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [TestMethod]
             public async Task StuAcadPrgm_CreateStudentAcademicProgram()
             {
-                var result = await studentAcademicProgramService.CreateStudentAcademicProgram2Async(studentAcademicProgram);
+                var result = await studentAcademicProgramService.CreateStudentAcademicProgram2Async(studentAcademicProgram, true);
 
                 Assert.IsNotNull(result);
             }
@@ -2978,9 +3131,866 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             {
                 studentAcademicProgram.Disciplines.FirstOrDefault().Discipline.Id = "1a59eed8-5fe7-4120-b1cf-f23266b9e876";
                 studentAcademicProgram.EnrollmentStatus.Detail = new GuidObject2(guid);
-                var result = await studentAcademicProgramService.UpdateStudentAcademicProgram2Async(studentAcademicProgram);
+                var result = await studentAcademicProgramService.UpdateStudentAcademicProgram2Async(studentAcademicProgram, true);
 
                 Assert.IsNotNull(result);
+            }
+        }
+    }
+
+    [TestClass]
+    public class StudentAcademicProgramServiceTests_V16
+    {
+        [TestClass]
+        public class StudentAcademicProgramServiceTests_GET_AND_GETALL : StudentUserSetup
+        {
+            #region DECLARATION
+
+            protected Domain.Entities.Role getStudentAcademicPrograms = new Domain.Entities.Role(1, "VIEW.STUDENT.ACADEMIC.PROGRAM");
+
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private Mock<IStudentRepository> studentRepositoryMock;
+            private Mock<IStudentAcademicProgramRepository> studentAcademicProgramRepositoryMock;
+            private Mock<ITermRepository> termRepositoryMock;
+            private Mock<IStudentReferenceDataRepository> studentReferenceDataRepositoryMock;
+            private Mock<ICatalogRepository> catalogRepositoryMock;
+            private Mock<IPersonRepository> personRepositoryMock;
+            private Mock<IReferenceDataRepository> referenceDataRepositoryMock;
+            private Mock<IRoleRepository> roleRepositoryMock;
+            private Mock<ILogger> loggerMock;
+            private Mock<IConfigurationRepository> configurationRepositoryMock;
+            private ICurrentUserFactory currentUserFactory;
+
+            private StudentAcademicProgramService studentAcademicProgramService;
+
+            private DefaultsConfiguration defaultConfiguration;
+            private StudentAcademicProgram studentAcademicProgramEntity;
+            private List<Domain.Student.Entities.AcademicProgram> academicPrograms;
+            private List<Domain.Student.Entities.Requirements.Catalog> catalogs;
+            private List<Domain.Base.Entities.Location> locations;
+            private List<Department> departments;
+            private List<Term> terms;
+            private List<Domain.Student.Entities.AcademicPeriod> academicPeriods;
+            private List<Domain.Student.Entities.AcademicLevel> academicLevels;
+            private List<Domain.Base.Entities.OtherDegree> otherDegrees;
+            private List<Domain.Base.Entities.OtherMajor> otherMajors;
+            private List<Domain.Base.Entities.OtherMinor> otherMinors;
+            private List<Domain.Base.Entities.OtherSpecial> otherSpecials;
+            private List<Domain.Base.Entities.OtherHonor> otherHonors;
+            private List<Domain.Student.Entities.EnrollmentStatus> enrollmentStatuses;
+            private List<Domain.Base.Entities.AcadCredential> academicCredentials;
+
+            private Tuple<IEnumerable<StudentAcademicProgram>, int> studentAcademicPrograms;
+
+            private string guid = "1a59eed8-5fe7-4120-b1cf-f23266b9e874";
+            private Dictionary<string, string> personGuidCollection;
+
+            private DateTime today = DateTime.Today;
+
+            #endregion
+
+            #region TEST SETUP
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                studentRepositoryMock = new Mock<IStudentRepository>();
+                studentAcademicProgramRepositoryMock = new Mock<IStudentAcademicProgramRepository>();
+                termRepositoryMock = new Mock<ITermRepository>();
+                studentReferenceDataRepositoryMock = new Mock<IStudentReferenceDataRepository>();
+                catalogRepositoryMock = new Mock<ICatalogRepository>();
+                personRepositoryMock = new Mock<IPersonRepository>();
+                referenceDataRepositoryMock = new Mock<IReferenceDataRepository>();
+                roleRepositoryMock = new Mock<IRoleRepository>();
+                loggerMock = new Mock<ILogger>();
+                configurationRepositoryMock = new Mock<IConfigurationRepository>();
+                currentUserFactory = new ThirdPartyUserFactory();
+
+                InitializeTestData();
+
+                InitializeMock();
+
+                studentAcademicProgramService = new StudentAcademicProgramService(adapterRegistryMock.Object, studentRepositoryMock.Object, studentAcademicProgramRepositoryMock.Object,
+                    termRepositoryMock.Object, studentReferenceDataRepositoryMock.Object, catalogRepositoryMock.Object, personRepositoryMock.Object, referenceDataRepositoryMock.Object,
+                    currentUserFactory, roleRepositoryMock.Object, configurationRepositoryMock.Object, loggerMock.Object);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                adapterRegistryMock = null;
+                studentRepositoryMock = null;
+                studentAcademicProgramRepositoryMock = null;
+                termRepositoryMock = null;
+                studentReferenceDataRepositoryMock = null;
+                catalogRepositoryMock = null;
+                personRepositoryMock = null;
+                referenceDataRepositoryMock = null;
+                roleRepositoryMock = null;
+                loggerMock = null;
+                currentUserFactory = null;
+                configurationRepositoryMock = null;
+            }
+
+            private void InitializeTestData()
+            {
+                defaultConfiguration = new DefaultsConfiguration() { HostInstitutionCodeId = "1" };
+                personGuidCollection = new Dictionary<string, string>();
+                personGuidCollection.Add("1", guid);
+
+                academicPrograms = new List<Domain.Student.Entities.AcademicProgram>() { new Domain.Student.Entities.AcademicProgram(guid, "1", "desc") };
+
+                catalogs = new List<Domain.Student.Entities.Requirements.Catalog>() { new Domain.Student.Entities.Requirements.Catalog(guid, "1", "desc", DateTime.Today) };
+
+                locations = new List<Domain.Base.Entities.Location>() { new Domain.Base.Entities.Location(guid, "1", "desc") };
+
+                departments = new List<Department>() { new Department(guid, "1", "desc", true) };
+
+                terms = new List<Term>() { new Term(guid, "1", "desc", DateTime.Today, DateTime.Today.AddDays(100), 2017, 1, true, true, "1", true) };
+
+                academicPeriods = new List<Domain.Student.Entities.AcademicPeriod>() { new Domain.Student.Entities.AcademicPeriod(guid, "1", "desc", DateTime.Today, DateTime.Today.AddDays(100), 2017,
+                    1, "1", "1", "1", new List<RegistrationDate>() { })};
+
+                academicLevels = new List<Domain.Student.Entities.AcademicLevel>() { new Domain.Student.Entities.AcademicLevel(guid, "1", "desc") };
+
+                otherDegrees = new List<Domain.Base.Entities.OtherDegree>() { new Domain.Base.Entities.OtherDegree(guid, "1", "desc") };
+
+                otherMajors = new List<Domain.Base.Entities.OtherMajor>() { new Domain.Base.Entities.OtherMajor(Guid.NewGuid().ToString(), "1", "major1") };
+
+                otherMinors = new List<Domain.Base.Entities.OtherMinor>() { new Domain.Base.Entities.OtherMinor(Guid.NewGuid().ToString(), "2", "minor2") };
+
+                otherSpecials = new List<Domain.Base.Entities.OtherSpecial>() { new Domain.Base.Entities.OtherSpecial(Guid.NewGuid().ToString(), "3", "special3") };
+
+                otherHonors = new List<Domain.Base.Entities.OtherHonor>() { new Domain.Base.Entities.OtherHonor(guid, "1", "desc") };
+
+                academicCredentials = new List<Domain.Base.Entities.AcadCredential>() { new Domain.Base.Entities.AcadCredential(guid, "1", "desc", Domain.Base.Entities.AcademicCredentialType.Degree) };
+
+                enrollmentStatuses = new List<Domain.Student.Entities.EnrollmentStatus>()
+                {
+                    new Domain.Student.Entities.EnrollmentStatus(Guid.NewGuid().ToString(), "A", "active", Domain.Student.Entities.EnrollmentStatusType.active),
+                    new Domain.Student.Entities.EnrollmentStatus(Guid.NewGuid().ToString(), "C", "complete", Domain.Student.Entities.EnrollmentStatusType.complete),
+                    new Domain.Student.Entities.EnrollmentStatus(Guid.NewGuid().ToString(), "I", "inactive", Domain.Student.Entities.EnrollmentStatusType.inactive)
+                };
+
+                studentAcademicProgramEntity = new StudentAcademicProgram("1", "1", "1", guid, DateTime.Today, "A")
+                {
+                    GraduationDate = DateTime.Today,
+                    IsPrimary = true,
+                    Location = "1",
+                    DepartmentCode = "1",
+                    StartTerm = "1",
+                    AnticipatedCompletionTerm = "1",
+                    GradTerm = "1",
+                    AcademicLevelCode = "1",
+                    DegreeCode = "1",
+                    CreditsEarned = 0
+                };
+
+                //studentAcademicProgramEntity.AddMajors("1");
+                //studentAcademicProgramEntity.AddHonors("1");
+
+                studentAcademicPrograms = new Tuple<IEnumerable<StudentAcademicProgram>, int>(new List<StudentAcademicProgram>() { studentAcademicProgramEntity }, 1);
+            }
+
+            private void InitializeMock(bool bypassCache = true)
+            {
+                getStudentAcademicPrograms.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewStudentAcademicProgramConsent));
+
+                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { getStudentAcademicPrograms });
+                configurationRepositoryMock.Setup(c => c.GetDefaultsConfiguration()).Returns(defaultConfiguration);
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicProgramByGuid2Async(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(studentAcademicProgramEntity);
+                studentReferenceDataRepositoryMock.Setup(s => s.GetAcademicProgramsAsync(It.IsAny<bool>())).ReturnsAsync(academicPrograms);
+                foreach (var academicProgram in academicPrograms)
+                {
+                    studentReferenceDataRepositoryMock.Setup(s => s.GetAcademicProgramByGuidAsync(academicProgram.Code)).ReturnsAsync(academicProgram);
+                    studentReferenceDataRepositoryMock.Setup(s => s.GetAcademicProgramsGuidAsync(academicProgram.Code)).ReturnsAsync(academicProgram.Guid);
+                }
+
+                catalogRepositoryMock.Setup(c => c.GetAsync(It.IsAny<bool>())).ReturnsAsync(catalogs);
+                personRepositoryMock.Setup(p => p.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(guid);
+                personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
+                personRepositoryMock.Setup(p => p.GetPersonGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(personGuidCollection);
+                referenceDataRepositoryMock.Setup(r => r.GetLocationsAsync(It.IsAny<bool>())).ReturnsAsync(locations);
+                foreach (var location in locations)
+                {
+                    referenceDataRepositoryMock.Setup(r => r.GetLocationsGuidAsync(location.Code)).ReturnsAsync(location.Guid);
+                }
+                referenceDataRepositoryMock.Setup(r => r.GetDepartments2Async(It.IsAny<bool>())).ReturnsAsync(departments);
+                foreach (var department in departments)
+                {
+                    referenceDataRepositoryMock.Setup(r => r.GetDepartments2GuidAsync(department.Code)).ReturnsAsync(department.Guid);
+                }
+
+                referenceDataRepositoryMock.Setup(r => r.GetAcadCredentialsAsync(It.IsAny<bool>())).ReturnsAsync(academicCredentials);
+               
+                termRepositoryMock.Setup(t => t.GetAsync(It.IsAny<bool>())).ReturnsAsync(terms);
+                termRepositoryMock.Setup(t => t.GetAcademicPeriods(It.IsAny<List<Term>>())).Returns(academicPeriods);
+                foreach (var academicPeriod in academicPeriods)
+                {
+                    termRepositoryMock.Setup(t => t.GetAcademicPeriodsGuidAsync(academicPeriod.Code)).ReturnsAsync(academicPeriod.Guid);
+                }
+                studentReferenceDataRepositoryMock.Setup(s => s.GetAcademicLevelsAsync(It.IsAny<bool>())).ReturnsAsync(academicLevels);
+                foreach (var acadLevel in academicLevels)
+                {
+                    studentReferenceDataRepositoryMock.Setup(s => s.GetAcademicLevelsGuidAsync(acadLevel.Code)).ReturnsAsync(acadLevel.Guid);
+                }
+
+                referenceDataRepositoryMock.Setup(r => r.GetOtherDegreesAsync(It.IsAny<bool>())).ReturnsAsync(otherDegrees);
+
+                foreach (var otherDegree in otherDegrees)
+                {
+                    referenceDataRepositoryMock.Setup(r => r.GetOtherDegreeGuidAsync(otherDegree.Code)).ReturnsAsync(otherDegree.Guid);
+                }
+
+                referenceDataRepositoryMock.Setup(r => r.GetOtherMajorsAsync(It.IsAny<bool>())).ReturnsAsync(otherMajors);
+                foreach (var major in otherMajors)
+                {
+                    referenceDataRepositoryMock.Setup(r => r.GetOtherMajorsGuidAsync(major.Code)).ReturnsAsync(major.Guid);
+                }
+                referenceDataRepositoryMock.Setup(r => r.GetOtherMinorsAsync(It.IsAny<bool>())).ReturnsAsync(otherMinors);
+                foreach (var minor in otherMinors)
+                {
+                    referenceDataRepositoryMock.Setup(r => r.GetOtherMinorsGuidAsync(minor.Code)).ReturnsAsync(minor.Guid);
+                }
+                referenceDataRepositoryMock.Setup(r => r.GetOtherSpecialsAsync(It.IsAny<bool>())).ReturnsAsync(otherSpecials);
+                foreach (var special in otherSpecials)
+                {
+                    referenceDataRepositoryMock.Setup(r => r.GetOtherSpecialsGuidAsync(special.Code)).ReturnsAsync(special.Guid);
+                }
+                referenceDataRepositoryMock.Setup(r => r.GetOtherHonorsAsync(It.IsAny<bool>())).ReturnsAsync(otherHonors);
+                foreach (var honor in otherHonors)
+                {
+                    referenceDataRepositoryMock.Setup(r => r.GetOtherHonorsGuidAsync(honor.Code)).ReturnsAsync(honor.Guid);
+                }
+                studentReferenceDataRepositoryMock.Setup(s => s.GetEnrollmentStatusesAsync(It.IsAny<bool>())).ReturnsAsync(enrollmentStatuses);
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetUnidataFormattedDate(It.IsAny<string>())).ReturnsAsync(DateTime.Today.ToString());
+            }
+
+            #endregion
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task StuAcadPrgm_GetStudentAcademicProgramByGuid3Async_Guid_As_Null()
+            {
+                await studentAcademicProgramService.GetStudentAcademicProgramByGuid3Async(null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task StuAcadPrgm_GetStudentAcademicProgramByGuid3Async_PermissionException()
+            {
+                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
+                await studentAcademicProgramService.GetStudentAcademicProgramByGuid3Async(guid);
+            }
+
+            [TestMethod]
+            public async Task StuAcadPrgm_GetStudentAcademicProgramByGuid3Async()
+            {
+                var result = await studentAcademicProgramService.GetStudentAcademicProgramByGuid3Async(guid);
+                Assert.IsNotNull(result);
+                Assert.AreEqual(guid, result.Id);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task StuAcadPrgm_GetStudentAcademicPrograms3Async_PermissionException()
+            {
+                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
+                await studentAcademicProgramService.GetStudentAcademicPrograms3Async(0, 100, null);
+            }
+
+            [TestMethod]
+            public async Task StuAcadPrgm_GetStudentAcademicPrograms3Async_ArgumentException()
+            {
+                personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("");
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms2Async(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>())).ThrowsAsync(new Exception());
+
+                var results = await studentAcademicProgramService.GetStudentAcademicPrograms3Async(0, 100, new StudentAcademicPrograms3() { Id = Guid.NewGuid().ToString() });
+
+                Assert.IsNotNull(results);
+                Assert.AreEqual(0, results.Item2);
+            }
+
+            [TestMethod]
+            public async Task StuAcadPrgm_GetStudentAcademicPrograms3Async_Repository_Returns_Null()
+            {
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms3Async(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>()
+                    , It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                   It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>(), CurriculumObjectiveCategory.NotSet)).ReturnsAsync(null);
+
+                var result = await studentAcademicProgramService.GetStudentAcademicPrograms3Async(0, 100, new StudentAcademicPrograms3() { Id = guid });
+
+                Assert.IsNotNull(result);
+                Assert.AreEqual(0, result.Item2);
+            }
+
+            [TestMethod]
+            public async Task StuAcadPrgm_GetStudentAcademicPrograms3Async_Repository_Returns_EmptyResult()
+            {
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms3Async(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>()
+                    , It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>(), CurriculumObjectiveCategory.NotSet)).ReturnsAsync(new Tuple<IEnumerable<StudentAcademicProgram>, int>(new List<StudentAcademicProgram>() { }, 0));
+
+                var result = await studentAcademicProgramService.GetStudentAcademicPrograms3Async(0, 100, new StudentAcademicPrograms3() { Id = guid });
+
+                Assert.IsNotNull(result);
+                Assert.AreEqual(0, result.Item2);
+            }
+
+            [TestMethod]
+            public async Task StuAcadPrgm_GetStudentAcademicPrograms3Async()
+            {
+                var studentAcadProgramTuple = new Tuple<IEnumerable<StudentAcademicProgram>, int>(new List<StudentAcademicProgram>() { studentAcademicProgramEntity }, 1);
+
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms3Async(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), 
+                    It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CurriculumObjectiveCategory>()))
+                    .ReturnsAsync(studentAcadProgramTuple);
+
+                var result = await studentAcademicProgramService.GetStudentAcademicPrograms3Async(0, 100, new StudentAcademicPrograms3());
+
+                Assert.IsNotNull(result);
+                Assert.AreEqual(1, result.Item2);
+                var response = result.Item1.FirstOrDefault();
+                Assert.AreEqual(response.Id, studentAcademicProgramEntity.Guid, "guid");
+                Assert.AreEqual(response.EnrollmentStatus.EnrollStatus, Dtos.EnrollmentStatusType.Active, "EnrollStatus");
+                var enrollmentStatus = enrollmentStatuses.FirstOrDefault(x => x.EnrollmentStatusType == Domain.Student.Entities.EnrollmentStatusType.active);
+                Assert.AreEqual(response.EnrollmentStatus.Detail.Id, enrollmentStatus.Guid, "EnrollmentStatus.Detail.Id");
+                Assert.AreEqual(response.Student.Id, guid, "Student.Id");
+                Assert.AreEqual(response.StartOn, DateTime.Today, "StartOn");
+                Assert.AreEqual(response.GraduatedOn, DateTime.Today, "GraduatedOn");
+                Assert.AreEqual(response.Preference, Dtos.EnumProperties.StudentAcademicProgramsPreference.Primary, "Preference");
+            }
+
+            [TestMethod]
+            public async Task StuAcadPrgm_GetStudentAcademicPrograms3Async_EnrollmentStatusType_Complete()
+            {
+                var allStatusItems = new TestStudentReferenceDataRepository().GetEnrollmentStatusesAsync(It.IsAny<bool>()).Result.ToList();
+
+                studentAcademicProgramEntity = new StudentAcademicProgram("1", "1", "1", guid, DateTime.Today, "C")
+                {
+                    GraduationDate = DateTime.Today,
+                    IsPrimary = true,
+                    Location = "1",
+                    DepartmentCode = "1",
+                    StartTerm = "1",
+                    AnticipatedCompletionTerm = "1",
+                    GradTerm = "1",
+                    AcademicLevelCode = "1",
+                    DegreeCode = "1",
+                    CreditsEarned = 0
+                };
+                var studentAcadProgramTuple = new Tuple<IEnumerable<StudentAcademicProgram>, int>(new List<StudentAcademicProgram>() { studentAcademicProgramEntity }, 1);
+
+                
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms3Async(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CurriculumObjectiveCategory>()))
+                    .ReturnsAsync(studentAcadProgramTuple);
+
+                var result = await studentAcademicProgramService.GetStudentAcademicPrograms3Async(0, 100, new StudentAcademicPrograms3());
+
+                Assert.IsNotNull(result);
+                Assert.AreEqual(1, result.Item2);
+                var response = result.Item1.FirstOrDefault();
+                Assert.AreEqual(response.Id, studentAcademicProgramEntity.Guid, "guid");
+                Assert.AreEqual(response.EnrollmentStatus.EnrollStatus, Dtos.EnrollmentStatusType.Complete, "EnrollStatus");
+                var enrollmentStatus = enrollmentStatuses.FirstOrDefault(x => x.EnrollmentStatusType == Domain.Student.Entities.EnrollmentStatusType.complete);
+                Assert.AreEqual(response.EnrollmentStatus.Detail.Id, enrollmentStatus.Guid, "EnrollmentStatus.Detail.Id");
+            }
+
+
+            [TestMethod]
+            public async Task StuAcadPrgm_GetStudentAcademicPrograms3Async_EnrollmentStatusType_Inactive()
+            {
+                var allStatusItems = new TestStudentReferenceDataRepository().GetEnrollmentStatusesAsync(It.IsAny<bool>()).Result.ToList();
+
+                studentAcademicProgramEntity = new StudentAcademicProgram("1", "1", "1", guid, DateTime.Today, "I")
+                {
+                    GraduationDate = DateTime.Today,
+                    IsPrimary = true,
+                    Location = "1",
+                    DepartmentCode = "1",
+                    StartTerm = "1",
+                    AnticipatedCompletionTerm = "1",
+                    GradTerm = "1",
+                    AcademicLevelCode = "1",
+                    DegreeCode = "1",
+                    CreditsEarned = 0
+                };
+                var studentAcadProgramTuple = new Tuple<IEnumerable<StudentAcademicProgram>, int>(new List<StudentAcademicProgram>() { studentAcademicProgramEntity }, 1);
+
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms3Async(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CurriculumObjectiveCategory>()))
+                    .ReturnsAsync(studentAcadProgramTuple);
+
+                var result = await studentAcademicProgramService.GetStudentAcademicPrograms3Async(0, 100, new StudentAcademicPrograms3());
+
+                Assert.IsNotNull(result);
+                Assert.AreEqual(1, result.Item2);
+                var response = result.Item1.FirstOrDefault();
+                Assert.AreEqual(response.Id, studentAcademicProgramEntity.Guid, "guid");
+                Assert.AreEqual(response.EnrollmentStatus.EnrollStatus, Dtos.EnrollmentStatusType.Inactive, "EnrollStatus");
+                var enrollmentStatus = enrollmentStatuses.FirstOrDefault(x => x.EnrollmentStatusType == Domain.Student.Entities.EnrollmentStatusType.inactive);
+                Assert.AreEqual(response.EnrollmentStatus.Detail.Id, enrollmentStatus.Guid, "EnrollmentStatus.Detail.Id");
+            }
+
+            [TestMethod]
+            public async Task StuAcadPrgm_GetStudentAcademicPrograms3Async_Disciplines()
+            {
+                
+                studentAcademicProgramEntity.AddMajors("1", today.AddDays(-1), today);
+                studentAcademicProgramEntity.AddMinors("2", today.AddDays(-1), today);
+                studentAcademicProgramEntity.AddSpecializations("3", today.AddDays(-1), today);
+    
+                var studentAcadProgramTuple = new Tuple<IEnumerable<StudentAcademicProgram>, int>
+                    (new List<StudentAcademicProgram>() { studentAcademicProgramEntity }, 1);
+
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms3Async(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CurriculumObjectiveCategory>()))
+                    .ReturnsAsync(studentAcadProgramTuple);
+
+                var result = await studentAcademicProgramService.GetStudentAcademicPrograms3Async(0, 100, new StudentAcademicPrograms3());
+
+                Assert.IsNotNull(result);
+                Assert.AreEqual(1, result.Item2);
+                var response = result.Item1.FirstOrDefault();
+                Assert.AreEqual(response.Id, studentAcademicProgramEntity.Guid, "guid");
+                foreach (var discipline in response.Disciplines)
+                {
+                    var disciplineResponse = GetDiscipline(discipline.Discipline.Id, studentAcademicProgramEntity);
+                    Assert.AreEqual(discipline.Discipline.Id, disciplineResponse.Item1, "Discipline.Id");
+                    if (disciplineResponse.Item2 != null)
+                    {
+                        Assert.AreEqual(discipline.StartOn, disciplineResponse.Item2, "startOn");
+                    }
+                    if (disciplineResponse.Item3 != null)
+                    {
+                        Assert.AreEqual(discipline.EndOn, disciplineResponse.Item3, "endOn");
+                    }
+                }
+            }
+
+            [TestMethod]
+            public async Task StuAcadPrgm_GetStudentAcademicPrograms3Async_Disciplines2()
+            {
+
+                studentAcademicProgramEntity.AddMajors("1");
+                studentAcademicProgramEntity.AddMinors("2");
+                studentAcademicProgramEntity.AddSpecializations("3");
+
+                var studentAcadProgramTuple = new Tuple<IEnumerable<StudentAcademicProgram>, int>
+                    (new List<StudentAcademicProgram>() { studentAcademicProgramEntity }, 1);
+
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms3Async(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CurriculumObjectiveCategory>()))
+                    .ReturnsAsync(studentAcadProgramTuple);
+
+                var result = await studentAcademicProgramService.GetStudentAcademicPrograms3Async(0, 100, new StudentAcademicPrograms3());
+
+                Assert.IsNotNull(result);
+                Assert.AreEqual(1, result.Item2);
+                var response = result.Item1.FirstOrDefault();
+                Assert.AreEqual(response.Id, studentAcademicProgramEntity.Guid, "guid");
+                foreach (var discipline in response.Disciplines)
+                {
+                    var disciplineResponse = GetDiscipline2(discipline.Discipline.Id, studentAcademicProgramEntity);
+                    Assert.AreEqual(discipline.Discipline.Id, disciplineResponse, "Discipline.Id");
+                    
+                }
+            }
+
+
+            [TestMethod]
+            public async Task StuAcadPrgm_GetStudentAcademicPrograms3Async_AdmitStatus()
+            {
+                var studentAcadProgramTuple = new Tuple<IEnumerable<StudentAcademicProgram>, int>
+                  (new List<StudentAcademicProgram>() { studentAcademicProgramEntity }, 1);
+
+                studentAcademicProgramEntity.AdmitStatus = "CR";
+
+                var admissionPopulationEntityList = new List<Domain.Student.Entities.AdmissionPopulation>()
+            {
+                new Domain.Student.Entities.AdmissionPopulation("03ef76f3-61be-4990-8a9d-9a80282fc420", "CR", "Certificate"),
+                new Domain.Student.Entities.AdmissionPopulation("d2f4f0af-6714-48c7-88dd-1c40cb407b6c", "FH", "Freshman Honors"),
+                new Domain.Student.Entities.AdmissionPopulation("c517d7a5-f06a-42c8-85ad-b6320e1c0c2a", "FR", "First Time Freshman"),
+                new Domain.Student.Entities.AdmissionPopulation("6c591aaa-5d33-4b19-b5ed-f6cf8956ef0a", "GD", "Graduate"),
+                new Domain.Student.Entities.AdmissionPopulation("81cd5b52-9705-4b1b-8eed-669c63db05e2", "ND", "Non-Degree"),
+                new Domain.Student.Entities.AdmissionPopulation("164dc1ad-4d72-4dae-987d-52f761bb0132", "TR", "Transfer"),
+            };
+
+                studentReferenceDataRepositoryMock.Setup(i => i.GetAdmissionPopulationsAsync(It.IsAny<bool>())).ReturnsAsync(admissionPopulationEntityList);
+
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms3Async(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CurriculumObjectiveCategory>()))
+                    .ReturnsAsync(studentAcadProgramTuple);
+
+                var result = await studentAcademicProgramService.GetStudentAcademicPrograms3Async(0, 100, new StudentAcademicPrograms3());
+
+                Assert.IsNotNull(result);
+                Assert.AreEqual(1, result.Item2);
+                var response = result.Item1.FirstOrDefault();
+                Assert.AreEqual(response.Id, studentAcademicProgramEntity.Guid, "guid");
+                Assert.AreEqual(response.AdmissionClassification.AdmissionCategory.Id, (admissionPopulationEntityList.FirstOrDefault(x => x.Code == "CR")).Guid, "AdmissionCategory.Id");
+            }
+
+
+            [TestMethod]
+            public async Task StuAcadPrgm_GetStudentAcademicPrograms3Async_PersonFilter()
+            {
+                var studentAcadProgramTuple = new Tuple<IEnumerable<StudentAcademicProgram>, int>(new List<StudentAcademicProgram>() { studentAcademicProgramEntity }, 1);
+
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms3Async(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CurriculumObjectiveCategory>()))
+                    .ReturnsAsync(studentAcadProgramTuple);
+
+                var result = await studentAcademicProgramService.GetStudentAcademicPrograms3Async(0, 100, new StudentAcademicPrograms3() { Student = new GuidObject2(guid) });
+
+                Assert.IsNotNull(result);
+                Assert.AreEqual(1, result.Item2);
+                var response = result.Item1.FirstOrDefault();
+                Assert.AreEqual(response.Id, studentAcademicProgramEntity.Guid, "guid");
+                Assert.AreEqual(response.EnrollmentStatus.EnrollStatus, Dtos.EnrollmentStatusType.Active, "EnrollStatus");
+                var enrollmentStatus = enrollmentStatuses.FirstOrDefault(x => x.EnrollmentStatusType == Domain.Student.Entities.EnrollmentStatusType.active);
+                Assert.AreEqual(response.EnrollmentStatus.Detail.Id, enrollmentStatus.Guid, "EnrollmentStatus.Detail.Id");
+                Assert.AreEqual(response.Student.Id, guid, "Student.Id");
+                Assert.AreEqual(response.StartOn, DateTime.Today, "StartOn");
+                Assert.AreEqual(response.GraduatedOn, DateTime.Today, "GraduatedOn");
+                Assert.AreEqual(response.Preference, Dtos.EnumProperties.StudentAcademicProgramsPreference.Primary, "Preference");
+            }
+
+            [TestMethod]
+            public async Task StuAcadPrgm_GetStudentAcademicPrograms3Async_AcademicProgramFilter()
+            {
+
+                var studentAcadProgramTuple = new Tuple<IEnumerable<StudentAcademicProgram>, int>(new List<StudentAcademicProgram>() { studentAcademicProgramEntity }, 1);
+
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms3Async(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CurriculumObjectiveCategory>()))
+                    .ReturnsAsync(studentAcadProgramTuple);
+
+                var result = await studentAcademicProgramService.GetStudentAcademicPrograms3Async(0, 100, new StudentAcademicPrograms3() { AcademicProgram = new GuidObject2(guid) });
+
+                Assert.IsNotNull(result);
+                Assert.AreEqual(1, result.Item2);
+                var response = result.Item1.FirstOrDefault();
+                Assert.AreEqual(response.Id, studentAcademicProgramEntity.Guid, "guid");
+                Assert.AreEqual(response.AcademicProgram.Id, guid, "AcademicProgram.Id");
+
+            }
+
+            [TestMethod]
+            public async Task StuAcadPrgm_GetStudentAcademicPrograms3Async_EnrollStatusFilter()
+            {
+                var studentAcadProgramTuple = new Tuple<IEnumerable<StudentAcademicProgram>, int>(new List<StudentAcademicProgram>() { studentAcademicProgramEntity }, 1);
+
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms3Async(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CurriculumObjectiveCategory>()))
+                    .ReturnsAsync(studentAcadProgramTuple);
+
+                var result = await studentAcademicProgramService.GetStudentAcademicPrograms3Async(0, 100, new StudentAcademicPrograms3() { EnrollmentStatus = new EnrollmentStatusDetail() { EnrollStatus = Dtos.EnrollmentStatusType.Active } });
+
+                Assert.IsNotNull(result);
+                Assert.AreEqual(1, result.Item2);
+                var response = result.Item1.FirstOrDefault();
+                Assert.AreEqual(response.Id, studentAcademicProgramEntity.Guid, "guid");
+                Assert.AreEqual(response.EnrollmentStatus.EnrollStatus, Dtos.EnrollmentStatusType.Active, "EnrollStatus");
+                var enrollmentStatus = enrollmentStatuses.FirstOrDefault(x => x.EnrollmentStatusType == Domain.Student.Entities.EnrollmentStatusType.active);
+                Assert.AreEqual(response.EnrollmentStatus.Detail.Id, enrollmentStatus.Guid, "EnrollmentStatus.Detail.Id");
+                Assert.AreEqual(response.Student.Id, guid, "Student.Id");
+                Assert.AreEqual(response.StartOn, DateTime.Today, "StartOn");
+                Assert.AreEqual(response.GraduatedOn, DateTime.Today, "GraduatedOn");
+                Assert.AreEqual(response.Preference, Dtos.EnumProperties.StudentAcademicProgramsPreference.Primary, "Preference");
+            }
+
+            [TestMethod]
+            public async Task StuAcadPrgm_GetStudentAcademicPrograms3Async_SiteFilter()
+            {
+                studentAcademicProgramEntity.Location = "1";
+                var studentAcadProgramTuple = new Tuple<IEnumerable<StudentAcademicProgram>, int>(new List<StudentAcademicProgram>() { studentAcademicProgramEntity }, 1);
+
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms3Async(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CurriculumObjectiveCategory>()))
+                    .ReturnsAsync(studentAcadProgramTuple);
+
+                var result = await studentAcademicProgramService.GetStudentAcademicPrograms3Async(0, 100, new StudentAcademicPrograms3() { Site = new GuidObject2(guid) });
+
+                Assert.IsNotNull(result);
+                Assert.AreEqual(1, result.Item2);
+                var response = result.Item1.FirstOrDefault();
+                Assert.AreEqual(response.Id, studentAcademicProgramEntity.Guid, "guid");
+                Assert.AreEqual(response.Site.Id, guid, "Site.Id");
+            }
+
+            [TestMethod]
+            public async Task StuAcadPrgm_GetStudentAcademicPrograms3Async_AcademicLevelFilter()
+            {
+                studentAcademicProgramEntity.AcademicLevelCode = "1";
+                var studentAcadProgramTuple = new Tuple<IEnumerable<StudentAcademicProgram>, int>(new List<StudentAcademicProgram>() { studentAcademicProgramEntity }, 1);
+
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms3Async(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CurriculumObjectiveCategory>()))
+                    .ReturnsAsync(studentAcadProgramTuple);
+
+                var result = await studentAcademicProgramService.GetStudentAcademicPrograms3Async(0, 100, new StudentAcademicPrograms3() { AcademicLevel = new GuidObject2(guid) });
+
+                Assert.IsNotNull(result);
+                Assert.AreEqual(1, result.Item2);
+                var response = result.Item1.FirstOrDefault();
+                Assert.AreEqual(response.Id, studentAcademicProgramEntity.Guid, "guid");
+                Assert.AreEqual(response.AcademicLevel.Id, guid, "AcademicLevel.Id");
+            }
+
+            [TestMethod]
+            public async Task StuAcadPrgm_GetStudentAcademicPrograms3Async_AcademicPeriodsFilter()
+            {
+                studentAcademicProgramEntity.StartTerm = "1";
+                var studentAcadProgramTuple = new Tuple<IEnumerable<StudentAcademicProgram>, int>(new List<StudentAcademicProgram>() { studentAcademicProgramEntity }, 1);
+
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms3Async(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CurriculumObjectiveCategory>()))
+                    .ReturnsAsync(studentAcadProgramTuple);
+
+                var result = await studentAcademicProgramService.GetStudentAcademicPrograms3Async(0, 100, new StudentAcademicPrograms3()
+                {
+                    AcademicPeriods = new StudentAcademicProgramsAcademicPeriods()
+                    {
+                        ActualGraduation = new GuidObject2(guid)
+                    }
+                });
+
+                Assert.IsNotNull(result);
+                Assert.AreEqual(1, result.Item2);
+                var response = result.Item1.FirstOrDefault();
+                Assert.AreEqual(response.Id, studentAcademicProgramEntity.Guid, "guid");
+                Assert.AreEqual(response.AcademicPeriods.ActualGraduation.Id, guid, "AcademicPeriods.Id");
+            }
+
+            [TestMethod]
+            public async Task StuAcadPrgm_GetStudentAcademicPrograms3Async_CredentialsFilter()
+            {
+                var academicCredential = academicCredentials.FirstOrDefault();
+
+                studentAcademicProgramEntity.DegreeCode = "1";
+
+                var studentAcadProgramTuple = new Tuple<IEnumerable<StudentAcademicProgram>, int>(new List<StudentAcademicProgram>() { studentAcademicProgramEntity }, 1);
+
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms3Async(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CurriculumObjectiveCategory>()))
+                    .ReturnsAsync(studentAcadProgramTuple);
+
+                var result = await studentAcademicProgramService.GetStudentAcademicPrograms3Async(0, 100, 
+                    new StudentAcademicPrograms3()
+                    {
+                        Credentials = new List<GuidObject2>()
+                        { new GuidObject2(academicCredential.Guid) }
+                    });
+
+               
+                Assert.IsNotNull(result);
+                Assert.AreEqual(1, result.Item2);
+                var response = result.Item1.FirstOrDefault();
+                Assert.AreEqual(response.Id, studentAcademicProgramEntity.Guid, "guid");
+                Assert.AreEqual(response.Credentials[0].Id, academicCredential.Guid, "Credentials[0].Id");
+            }
+
+            [TestMethod]
+            public async Task StuAcadPrgm_GetStudentAcademicPrograms3Async_CurriculumObjective2_Applied()
+            {
+                studentAcademicProgramEntity.CurriculumObjective = CurriculumObjectiveCategory.Applied;
+                var studentAcadProgramTuple = new Tuple<IEnumerable<StudentAcademicProgram>, int>(new List<StudentAcademicProgram>() { studentAcademicProgramEntity }, 1);
+
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms3Async(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CurriculumObjectiveCategory>()))
+                    .ReturnsAsync(studentAcadProgramTuple);
+
+                var result = await studentAcademicProgramService.GetStudentAcademicPrograms3Async(0, 100, new StudentAcademicPrograms3()
+                {
+                   CurriculumObjective = Dtos.EnumProperties.StudentAcademicProgramsCurriculumObjective2.Applied
+                });
+
+                Assert.IsNotNull(result);
+                Assert.AreEqual(1, result.Item2);
+                var response = result.Item1.FirstOrDefault();
+                Assert.AreEqual(response.Id, studentAcademicProgramEntity.Guid, "guid");
+                Assert.AreEqual(response.CurriculumObjective, Dtos.EnumProperties.StudentAcademicProgramsCurriculumObjective2.Applied, "CurriculumObjective");
+            }
+
+            [TestMethod]
+            public async Task StuAcadPrgm_GetStudentAcademicPrograms3Async_CurriculumObjective2_Matriculated()
+            {
+                studentAcademicProgramEntity.CurriculumObjective = CurriculumObjectiveCategory.Matriculated;
+                var studentAcadProgramTuple = new Tuple<IEnumerable<StudentAcademicProgram>, int>(new List<StudentAcademicProgram>() { studentAcademicProgramEntity }, 1);
+
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms3Async(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CurriculumObjectiveCategory>()))
+                    .ReturnsAsync(studentAcadProgramTuple);
+
+                var result = await studentAcademicProgramService.GetStudentAcademicPrograms3Async(0, 100, new StudentAcademicPrograms3()
+                {
+                    CurriculumObjective = Dtos.EnumProperties.StudentAcademicProgramsCurriculumObjective2.Matriculated
+                });
+
+                Assert.IsNotNull(result);
+                Assert.AreEqual(1, result.Item2);
+                var response = result.Item1.FirstOrDefault();
+                Assert.AreEqual(response.Id, studentAcademicProgramEntity.Guid, "guid");
+                Assert.AreEqual(response.CurriculumObjective, Dtos.EnumProperties.StudentAcademicProgramsCurriculumObjective2.Matriculated, "CurriculumObjective");
+            }
+
+            [TestMethod]
+            public async Task StuAcadPrgm_GetStudentAcademicPrograms3Async_CurriculumObjective2_Outcome()
+            {
+                studentAcademicProgramEntity.CurriculumObjective = CurriculumObjectiveCategory.Outcome;
+                var studentAcadProgramTuple = new Tuple<IEnumerable<StudentAcademicProgram>, int>(new List<StudentAcademicProgram>() { studentAcademicProgramEntity }, 1);
+
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms3Async(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CurriculumObjectiveCategory>()))
+                    .ReturnsAsync(studentAcadProgramTuple);
+
+                var result = await studentAcademicProgramService.GetStudentAcademicPrograms3Async(0, 100, new StudentAcademicPrograms3()
+                {
+                    CurriculumObjective = Dtos.EnumProperties.StudentAcademicProgramsCurriculumObjective2.Outcome
+                });
+
+                Assert.IsNotNull(result);
+                Assert.AreEqual(1, result.Item2);
+                var response = result.Item1.FirstOrDefault();
+                Assert.AreEqual(response.Id, studentAcademicProgramEntity.Guid, "guid");
+                Assert.AreEqual(response.CurriculumObjective, Dtos.EnumProperties.StudentAcademicProgramsCurriculumObjective2.Outcome, "CurriculumObjective");
+            }
+
+            [TestMethod]
+            public async Task StuAcadPrgm_GetStudentAcademicPrograms3Async_CurriculumObjective2_Recruited()
+            {
+                studentAcademicProgramEntity.CurriculumObjective = CurriculumObjectiveCategory.Recruited;
+                var studentAcadProgramTuple = new Tuple<IEnumerable<StudentAcademicProgram>, int>(new List<StudentAcademicProgram>() { studentAcademicProgramEntity }, 1);
+
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms3Async(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CurriculumObjectiveCategory>()))
+                    .ReturnsAsync(studentAcadProgramTuple);
+
+                var result = await studentAcademicProgramService.GetStudentAcademicPrograms3Async(0, 100, new StudentAcademicPrograms3()
+                {
+                    CurriculumObjective = Dtos.EnumProperties.StudentAcademicProgramsCurriculumObjective2.Recruited
+                });
+
+                Assert.IsNotNull(result);
+                Assert.AreEqual(1, result.Item2);
+                var response = result.Item1.FirstOrDefault();
+                Assert.AreEqual(response.Id, studentAcademicProgramEntity.Guid, "guid");
+                Assert.AreEqual(response.CurriculumObjective, Dtos.EnumProperties.StudentAcademicProgramsCurriculumObjective2.Recruited, "CurriculumObjective");
+            }
+            /// <summary>
+            /// When validating if the discipline.id is valid in the response, you must also check if it has a
+            /// corresponding tuple object in studentAcadProgram containing a criteria start/end date.
+            /// 
+            /// This is made more difficult because there is no indicator in the DTO discipline response
+            /// to indicate which displine the record is associated with
+            /// </summary>
+            /// <param name="disciplineId"></param>
+            /// <param name="studentAcadProgram"></param>
+            /// <returns></returns>
+            private Tuple<string, DateTime?, DateTime?> GetDiscipline(string disciplineId, StudentAcademicProgram studentAcadProgram)
+            {
+                if (string.IsNullOrEmpty(disciplineId))
+                    return new Tuple<string, DateTime?, DateTime?>(null, null, null);
+
+                Tuple<string, DateTime?, DateTime?> disciplineTuple = null;
+               
+
+                var major = otherMajors.FirstOrDefault(x => x.Guid == disciplineId);
+                if (major != null)
+                {
+                    if (studentAcadProgram.StudentProgramMajorsTuple != null)
+                    {
+                        disciplineTuple = studentAcadProgram.StudentProgramMajorsTuple.FirstOrDefault(t => t.Item1 == major.Code);
+                    }
+                    if (disciplineTuple != null)
+                    {
+                        return new Tuple<string, DateTime?, DateTime?>(major.Guid, disciplineTuple.Item2, disciplineTuple.Item3);
+                    }
+                    else
+                        return new Tuple<string, DateTime?, DateTime?>(major.Guid, null, null);
+                }
+
+                var minor = otherMinors.FirstOrDefault(x => x.Guid == disciplineId);
+                if (minor != null)
+                {
+                    if (studentAcadProgram.StudentProgramMinorsTuple != null)
+                    {
+                        disciplineTuple = studentAcadProgram.StudentProgramMinorsTuple.FirstOrDefault(t => t.Item1 == minor.Code);
+                    }
+                    if (disciplineTuple != null)
+                    {
+                        return new Tuple<string, DateTime?, DateTime?>(minor.Guid, disciplineTuple.Item2, disciplineTuple.Item3);
+                    }
+                    else
+                        return new Tuple<string, DateTime?, DateTime?>(minor.Guid, null, null);
+                }
+
+
+                var special = otherSpecials.FirstOrDefault(x => x.Guid == disciplineId);
+                if (special != null)
+                {
+                    if (studentAcadProgram.StudentProgramSpecializationsTuple != null)
+                    {
+                        disciplineTuple = studentAcadProgram.StudentProgramSpecializationsTuple.FirstOrDefault(t => t.Item1 == special.Code);
+                    }
+                    if (disciplineTuple != null)
+                    {
+                        return new Tuple<string, DateTime?, DateTime?>(special.Guid, disciplineTuple.Item2, disciplineTuple.Item3);
+                    }
+                    else
+                        return new Tuple<string, DateTime?, DateTime?>(minor.Guid, null, null);
+                }
+
+                return new Tuple<string, DateTime?, DateTime?>(null, null, null);
+            }
+
+            private string GetDiscipline2(string disciplineId, StudentAcademicProgram studentAcadProgram)
+            {
+                if (string.IsNullOrEmpty(disciplineId))
+                    return string.Empty;
+         
+                var major = otherMajors.FirstOrDefault(x => x.Guid == disciplineId);
+                if (major != null)
+                {
+                    return major.Guid;
+                }
+
+                var minor = otherMinors.FirstOrDefault(x => x.Guid == disciplineId);
+                if (minor != null)
+                {
+                    return minor.Guid;
+                }
+                var special = otherSpecials.FirstOrDefault(x => x.Guid == disciplineId);
+                if (special != null)
+                {
+                    return special.Guid;
+                }
+
+                return string.Empty;
             }
         }
     }

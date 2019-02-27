@@ -107,12 +107,12 @@ namespace Ellucian.Colleague.Domain.Student.Tests
             return Task.FromResult(new Tuple<IEnumerable<AdmissionApplication>, int>(applicationEntities, totalRecords));
         }
 
-        public Task<Tuple<IEnumerable<AdmissionApplication>, int>> GetAdmissionApplications2Async(int offset, int limit, bool bypassCache)
-        {
-            Populate();
-            var totalRecords = applicationEntities.Count();
-            return Task.FromResult(new Tuple<IEnumerable<AdmissionApplication>, int>(applicationEntities, totalRecords));
-        }
+        //public Task<Tuple<IEnumerable<AdmissionApplication>, int>> GetAdmissionApplications2Async(int offset, int limit, bool bypassCache)
+        //{
+        //    Populate();
+        //    var totalRecords = applicationEntities.Count();
+        //    return Task.FromResult(new Tuple<IEnumerable<AdmissionApplication>, int>(applicationEntities, totalRecords));
+        //}
 
         public Task<Dictionary<string, string>> GetPersonGuidsAsync(IEnumerable<string> aptitudeAssessmentKeys)
         {
@@ -120,9 +120,9 @@ namespace Ellucian.Colleague.Domain.Student.Tests
             return Task.FromResult(dictionary);
         }
 
-        public Task<IDictionary<string, string>> GetStaffOperIdsAsync(List<string> ownerIds)
+        public Task<Dictionary<string, string>> GetStaffOperIdsAsync(List<string> ownerIds)
         {
-            IDictionary<string, string> dictionary = new Dictionary<string, string>();
+            Dictionary<string, string> dictionary = new Dictionary<string, string>();
             return Task.FromResult(dictionary);
         }
 

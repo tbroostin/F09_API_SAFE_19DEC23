@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
 using Ellucian.Web.Adapters;
 using slf4net;
 using System;
@@ -28,7 +28,9 @@ namespace Ellucian.Colleague.Coordination.Base.Adapters
                 Id = source.Id,
                 Category = source.Category,
                 Description = source.Description,
-                TaskProcess = MapProcessCodeToTaskProcess(source.ProcessCode)
+                TaskProcess = MapProcessCodeToTaskProcess(source.ProcessCode),
+                StartDate = source.StartDate,
+                ExecState = MapExecutionStateToExecutionState(source.ExecState)
             };
             return workTaskDto;
         }
@@ -48,6 +50,29 @@ namespace Ellucian.Colleague.Coordination.Base.Adapters
                     return Dtos.Base.WorkTaskProcess.LeaveRequestApproval;
                 default:
                     return Dtos.Base.WorkTaskProcess.None;
+            }
+
+        }
+
+        /// <summary>
+        /// Maps the ExecutionState to the correct ExecutionState, if possible
+        /// </summary>
+        /// <param name="executionState"></param>
+        /// <returns></returns>
+        private Dtos.Base.ExecutionState? MapExecutionStateToExecutionState(Domain.Base.Entities.ExecutionState? executionState)
+        {
+            switch (executionState)
+            {
+                case null:
+                    return null;
+                case Domain.Base.Entities.ExecutionState.NS:
+                    return Dtos.Base.ExecutionState.OpenNotStarted;
+                case Domain.Base.Entities.ExecutionState.ON:
+                    return Dtos.Base.ExecutionState.OpenNotActive;
+                case Domain.Base.Entities.ExecutionState.C:
+                    return Dtos.Base.ExecutionState.ClosedCompleted;
+                default:
+                    return null;
             }
 
         }

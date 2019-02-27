@@ -3,9 +3,11 @@ using Ellucian.Colleague.Api.Controllers.ColleagueFinance;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
 using Ellucian.Web.Adapters;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using Newtonsoft.Json;
 using slf4net;
 using System.Collections.Generic;
 using System.Linq;
@@ -62,18 +64,41 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             loggerMock = null;
         }
 
+        #region GetT4aAsync controller method tests
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task ColleagueFinanceTaxFormStatementsController_GetT4aAsync_PersonIDNullException()
         {
-            await controller.GetT4aAsync(null);
+            try
+            {
+                await controller.GetT4aAsync(null);
+            }
+            catch (HttpResponseException ex)
+            {
+                var exceptionResponse = ex.Response.Content.ReadAsStringAsync().Result;
+                WebApiException responseJson = JsonConvert.DeserializeObject<WebApiException>(exceptionResponse);
+                Assert.IsNotNull(responseJson);
+                Assert.AreEqual("Person ID must be specified.", responseJson.Message);
+                throw;
+            }
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task ColleagueFinanceTaxFormStatementsController_GetT4aAsync_PersonIDEmptyException()
         {
-            await controller.GetT4aAsync("");
+            try
+            {
+                await controller.GetT4aAsync("");
+            }
+            catch (HttpResponseException ex)
+            {
+                var exceptionResponse = ex.Response.Content.ReadAsStringAsync().Result;
+                WebApiException responseJson = JsonConvert.DeserializeObject<WebApiException>(exceptionResponse);
+                Assert.IsNotNull(responseJson);
+                Assert.AreEqual("Person ID must be specified.", responseJson.Message);
+                throw;
+            }
         }
 
         [TestMethod]
@@ -81,7 +106,75 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task ColleagueFinanceTaxFormStatementsController_GetT4aAsync_PermissionsException()
         {
             taxFormStatementServiceMock.Setup(x => x.GetAsync(personId, Dtos.Base.TaxForms.FormT4A)).Throws<PermissionsException>();
-            await controller.GetT4aAsync(personId);
+            try
+            {
+                await controller.GetT4aAsync(personId);
+            }
+            catch (HttpResponseException ex)
+            {
+                var exceptionResponse = ex.Response.Content.ReadAsStringAsync().Result;
+                WebApiException responseJson = JsonConvert.DeserializeObject<WebApiException>(exceptionResponse);
+                Assert.IsNotNull(responseJson);
+                Assert.AreEqual("Insufficient permissions to access T4A statements.", responseJson.Message);
+                throw;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task ColleagueFinanceTaxFormStatementsController_GetT4aAsync_ArgumentOutOfRangeException()
+        {
+            taxFormStatementServiceMock.Setup(x => x.GetAsync(personId, Dtos.Base.TaxForms.FormT4A)).Throws<System.ArgumentOutOfRangeException>();
+            try
+            {
+                await controller.GetT4aAsync(personId);
+            }
+            catch (HttpResponseException ex)
+            {
+                var exceptionResponse = ex.Response.Content.ReadAsStringAsync().Result;
+                WebApiException responseJson = JsonConvert.DeserializeObject<WebApiException>(exceptionResponse);
+                Assert.IsNotNull(responseJson);
+                Assert.AreEqual("Invalid tax form.", responseJson.Message);
+                throw;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task ColleagueFinanceTaxFormStatementsController_GetT4aAsync_ArgumentNullException()
+        {
+            taxFormStatementServiceMock.Setup(x => x.GetAsync(personId, Dtos.Base.TaxForms.FormT4A)).Throws<System.ArgumentNullException>();
+            try
+            {
+                await controller.GetT4aAsync(personId);
+            }
+            catch (HttpResponseException ex)
+            {
+                var exceptionResponse = ex.Response.Content.ReadAsStringAsync().Result;
+                WebApiException responseJson = JsonConvert.DeserializeObject<WebApiException>(exceptionResponse);
+                Assert.IsNotNull(responseJson);
+                Assert.AreEqual("Invalid argument.", responseJson.Message);
+                throw;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task ColleagueFinanceTaxFormStatementsController_GetT4aAsync_ArgumentException()
+        {
+            taxFormStatementServiceMock.Setup(x => x.GetAsync(personId, Dtos.Base.TaxForms.FormT4A)).Throws<System.ArgumentException>();
+            try
+            {
+                await controller.GetT4aAsync(personId);
+            }
+            catch (HttpResponseException ex)
+            {
+                var exceptionResponse = ex.Response.Content.ReadAsStringAsync().Result;
+                WebApiException responseJson = JsonConvert.DeserializeObject<WebApiException>(exceptionResponse);
+                Assert.IsNotNull(responseJson);
+                Assert.AreEqual("Invalid tax form.", responseJson.Message);
+                throw;
+            }
         }
 
         [TestMethod]
@@ -89,7 +182,18 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task ColleagueFinanceTaxFormStatementsController_GetT4aAsync_Exception()
         {
             taxFormStatementServiceMock.Setup(x => x.GetAsync(personId, Dtos.Base.TaxForms.FormT4A)).Throws<System.Exception>();
-            await controller.GetT4aAsync(personId);
+            try
+            {
+                await controller.GetT4aAsync(personId);
+            }
+            catch (HttpResponseException ex)
+            {
+                var exceptionResponse = ex.Response.Content.ReadAsStringAsync().Result;
+                WebApiException responseJson = JsonConvert.DeserializeObject<WebApiException>(exceptionResponse);
+                Assert.IsNotNull(responseJson);
+                Assert.AreEqual("Unable to get T4A statements", responseJson.Message);
+                throw;
+            }
         }
 
         [TestMethod]
@@ -106,18 +210,44 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             Assert.AreEqual("2017", result.ToList().First().TaxYear);
         }
 
+        #endregion
+
+        #region Get1099MIAsync controller method tests
+
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task ColleagueFinanceTaxFormStatementsController_Get1099MIAsync_PersonIDNullException()
         {
-            await controller.Get1099MIAsync(null);
+            try
+            {
+                await controller.Get1099MIAsync(null);
+            }
+            catch (HttpResponseException ex)
+            {
+                var exceptionResponse = ex.Response.Content.ReadAsStringAsync().Result;
+                WebApiException responseJson = JsonConvert.DeserializeObject<WebApiException>(exceptionResponse);
+                Assert.IsNotNull(responseJson);
+                Assert.AreEqual("Person ID must be specified.", responseJson.Message);
+                throw;
+            }
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task ColleagueFinanceTaxFormStatementsController_Get1099MIAsync_PersonIDEmptyException()
         {
-            await controller.Get1099MIAsync("");
+            try
+            {
+                await controller.Get1099MIAsync("");
+            }
+            catch (HttpResponseException ex)
+            {
+                var exceptionResponse = ex.Response.Content.ReadAsStringAsync().Result;
+                WebApiException responseJson = JsonConvert.DeserializeObject<WebApiException>(exceptionResponse);
+                Assert.IsNotNull(responseJson);
+                Assert.AreEqual("Person ID must be specified.", responseJson.Message);
+                throw;
+            }
         }
 
         [TestMethod]
@@ -125,7 +255,56 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task ColleagueFinanceTaxFormStatementsController_Get1099MIAsync_PermissionsException()
         {
             taxFormStatementServiceMock.Setup(x => x.GetAsync(personId, Dtos.Base.TaxForms.Form1099MI)).Throws<PermissionsException>();
-            await controller.Get1099MIAsync(personId);
+            try
+            {
+                await controller.Get1099MIAsync(personId);
+            }
+            catch (HttpResponseException ex)
+            {
+                var exceptionResponse = ex.Response.Content.ReadAsStringAsync().Result;
+                WebApiException responseJson = JsonConvert.DeserializeObject<WebApiException>(exceptionResponse);
+                Assert.IsNotNull(responseJson);
+                Assert.AreEqual("Insufficient permissions to access 1099-MISC statements.", responseJson.Message);
+                throw;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task ColleagueFinanceTaxFormStatementsController_Get1099MIAsync_ArgumentOutOfRangesException()
+        {
+            taxFormStatementServiceMock.Setup(x => x.GetAsync(personId, Dtos.Base.TaxForms.Form1099MI)).Throws<System.ArgumentOutOfRangeException>();
+            try
+            {
+                await controller.Get1099MIAsync(personId);
+            }
+            catch (HttpResponseException ex)
+            {
+                var exceptionResponse = ex.Response.Content.ReadAsStringAsync().Result;
+                WebApiException responseJson = JsonConvert.DeserializeObject<WebApiException>(exceptionResponse);
+                Assert.IsNotNull(responseJson);
+                Assert.AreEqual("Invalid tax form.", responseJson.Message);
+                throw;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task ColleagueFinanceTaxFormStatementsController_Get1099MIAsync_ArgumentNullException()
+        {
+            taxFormStatementServiceMock.Setup(x => x.GetAsync(personId, Dtos.Base.TaxForms.Form1099MI)).Throws<System.ArgumentNullException>();
+            try
+            {
+                await controller.Get1099MIAsync(personId);
+            }
+            catch (HttpResponseException ex)
+            {
+                var exceptionResponse = ex.Response.Content.ReadAsStringAsync().Result;
+                WebApiException responseJson = JsonConvert.DeserializeObject<WebApiException>(exceptionResponse);
+                Assert.IsNotNull(responseJson);
+                Assert.AreEqual("Invalid argument.", responseJson.Message);
+                throw;
+            }
         }
 
         [TestMethod]
@@ -133,7 +312,18 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task ColleagueFinanceTaxFormStatementsController_Get1099MIAsync_Exception()
         {
             taxFormStatementServiceMock.Setup(x => x.GetAsync(personId, Dtos.Base.TaxForms.Form1099MI)).Throws<System.Exception>();
-            await controller.Get1099MIAsync(personId);
+            try
+            {
+                await controller.Get1099MIAsync(personId);
+            }
+            catch (HttpResponseException ex)
+            {
+                var exceptionResponse = ex.Response.Content.ReadAsStringAsync().Result;
+                WebApiException responseJson = JsonConvert.DeserializeObject<WebApiException>(exceptionResponse);
+                Assert.IsNotNull(responseJson);
+                Assert.AreEqual("Unable to get 1099-MISC statements", responseJson.Message);
+                throw;
+            }
         }
 
         [TestMethod]
@@ -149,6 +339,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             Assert.AreEqual(personId, result.ToList().First().PersonId);
             Assert.AreEqual("2017", result.ToList().First().TaxYear);
         }
+
+        #endregion
 
         private List<Dtos.Base.TaxFormStatement2> BuildTaxFormStatementsList(Dtos.Base.TaxForms taxFormEnum = Dtos.Base.TaxForms.FormT4A, string year = "2017", string pdfRecordId = "10")
         {

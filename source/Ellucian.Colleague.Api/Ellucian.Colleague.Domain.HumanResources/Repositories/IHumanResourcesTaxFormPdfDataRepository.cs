@@ -33,5 +33,13 @@ namespace Ellucian.Colleague.Domain.HumanResources.Repositories
         /// <param name="recordId">ID of the T4 record/param>
         /// <returns>T4 data for a PDF</returns>
         Task<FormT4PdfData> GetT4PdfAsync(string personId, string recordId);
+
+        /// <summary>
+        /// Get the W-2c data for a PDF.
+        /// </summary>
+        /// <param name="personId"></param>
+        /// <param name="recordId"></param>
+        /// <returns></returns>
+        Task<FormW2cPdfData> GetW2cPdfAsync(string personId, string recordId);
     }
 }

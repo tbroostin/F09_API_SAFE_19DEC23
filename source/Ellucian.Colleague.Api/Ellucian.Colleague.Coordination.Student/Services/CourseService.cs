@@ -209,7 +209,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             return coursePage;
         }
 
-       
+
 
         public static void ClearIndex()
         {
@@ -243,7 +243,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             IEnumerable<Domain.Student.Entities.Section> registeredSections = new List<Domain.Student.Entities.Section>();
             // Registration terms used to limit sections retrieved
             var registrationTerms = await _termRepository.GetRegistrationTermsAsync();
-             registeredSections = (await _sectionRepository.GetRegistrationSectionsAsync(registrationTerms));
+            registeredSections = (await _sectionRepository.GetRegistrationSectionsAsync(registrationTerms));
             // Get all sections for the selected courses
             var sections = (from crs in courses
                             join sec in registeredSections.Where(s => s.IsActive && !s.HideInCatalog)
@@ -335,10 +335,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 filterResult.Sections = FilterSectionsByDayOfWeek(filterResult.Sections, criteria.DaysOfWeek).ToList();
                 sectionFiltersUsed = true;
             }
-            // Create a join of all section meetings to determine if the filter should be used
-            var meetingCollection = from sec in filterResult.Sections
-                                    from mtg in sec.Meetings
-                                    select new { mtg, sec };
+            // Create a join of all section meetings to determine if the filter should be used.
+            //Union section.Meetings with section.PrimarySectionMeetings because for cross-listed sections meetings could be in either of the property
+
+            var meetingCollection = (from sec in filterResult.Sections
+                                     from mtg in sec.Meetings
+                                     select new { mtg, sec })
+                                     .Union
+                                    (from sec in filterResult.Sections
+                                     from mtg in sec.PrimarySectionMeetings
+                                     select new { mtg, sec });
             // Determine earliest start time and latest end time
             var collectionEarliestTime = meetingCollection.Select(mc => mc.mtg.StartTime).Min().GetValueOrDefault().DateTime.TimeOfDay.TotalMinutes;
             var collectionLatestTime = meetingCollection.Select(mc => mc.mtg.EndTime).Max().GetValueOrDefault().DateTime.TimeOfDay.TotalMinutes;
@@ -613,10 +619,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 filteredCollection = new List<Ellucian.Colleague.Domain.Student.Entities.Section>();
                 // Build a collection of day of week/section for query by day of week
-                var dayCollection = from sec in sectionCollection
-                                    from mtg in sec.Meetings
-                                    from dayOfWk in mtg.Days
-                                    select new { dayOfWk, sec };
+                var dayCollection = (from sec in sectionCollection
+                                     from mtg in sec.Meetings
+                                     from dayOfWk in mtg.Days
+                                     select new { dayOfWk, sec })
+                                    .Union
+                                    (from sec in sectionCollection
+                                     from mtg in sec.PrimarySectionMeetings
+                                     from dayOfWk in mtg.Days
+                                     select new { dayOfWk, sec });
+
                 foreach (var day in daysOfWeek)
                 {
                     // Add the list of sections that have the specified day of week in the meeting information
@@ -631,23 +643,24 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             var filteredCollection = new List<Ellucian.Colleague.Domain.Student.Entities.Section>();
             // Create a join of all section meetings to determine if the filter should be used
-            var meetingCollection = from sec in sectionCollection
-                                    from mtg in sec.Meetings
-                                    select new { mtg, sec };
+            //Union section.Meetings and section.PrimarySectionMeetings because cross-listed sections can have meetings in either of the collection
+            var meetingCollection = (from sec in sectionCollection
+                                     from mtg in sec.Meetings
+                                     select new { mtg, sec })
+                                     .Union
+                                    (from sec in sectionCollection
+                                     from mtg in sec.PrimarySectionMeetings
+                                     select new { mtg, sec });
             // Determine earliest start time and latest end time
             var collectionEarliestTime = meetingCollection.Select(mc => mc.mtg.StartTime).Min().GetValueOrDefault().DateTime.TimeOfDay.TotalMinutes;
             var collectionLatestTime = meetingCollection.Select(mc => mc.mtg.EndTime).Min().GetValueOrDefault().DateTime.TimeOfDay.TotalMinutes;
             // If provided start/end times fall outside the criteria time range, filter sections
             if (collectionEarliestTime > earliestTime || collectionLatestTime < latestTime)
             {
-                // Select the sections that meet limited times by expanding and examining meetings of all provided sections
-                filteredCollection = (from sec in sectionCollection
-                                      from mtg in sec.Meetings
-                                      where ((mtg.StartTime.GetValueOrDefault().DateTime.TimeOfDay == TimeSpan.MaxValue) ||
-                                             (mtg.StartTime.GetValueOrDefault().DateTime.TimeOfDay.TotalMinutes >= earliestTime)) &&
-                                            ((mtg.EndTime.GetValueOrDefault().DateTime.TimeOfDay == TimeSpan.MaxValue) ||
-                                             (mtg.EndTime.GetValueOrDefault().DateTime.TimeOfDay.TotalMinutes <= latestTime))
-                                      select sec).ToList();
+                filteredCollection = meetingCollection.Where(m => ((m.mtg.StartTime.GetValueOrDefault().DateTime.TimeOfDay == TimeSpan.MaxValue) ||
+                                              (m.mtg.StartTime.GetValueOrDefault().DateTime.TimeOfDay.TotalMinutes >= earliestTime)) &&
+                                             ((m.mtg.EndTime.GetValueOrDefault().DateTime.TimeOfDay == TimeSpan.MaxValue) ||
+                                              (m.mtg.EndTime.GetValueOrDefault().DateTime.TimeOfDay.TotalMinutes <= latestTime))).Select(s => s.sec).ToList();
             }
             return filteredCollection.Distinct();
         }
@@ -978,12 +991,18 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var filter = new List<Ellucian.Colleague.Dtos.Base.Filter>();
 
             // Get the unique list of faculty from all courses and sections
-            var daysOfWeek = sections.SelectMany(s => s.Meetings).SelectMany(m => m.Days).Distinct().ToList();
+
+            var allTheMeetings = sections.SelectMany(s => s.Meetings).Union(sections.SelectMany(s => s.PrimarySectionMeetings));
+            var daysOfWeek = allTheMeetings.SelectMany(m => m.Days).Distinct().ToList();
+
+
             // Build collection of section/day
             var dayCollection = from sec in sections
-                                from mtg in sec.Meetings
+                                from mtg in allTheMeetings
                                 from dayOfWk in mtg.Days
                                 select new { dayOfWk, sec.CourseId };
+
+
             // Count the courses with this faculty
             foreach (var day in daysOfWeek)
             {
@@ -4182,29 +4201,23 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var course = new Ellucian.Colleague.Dtos.Course4();
 
             course.Id = source.Guid;
-            var subjects = await GetSubjectAsync(bypassCache);
-            if ((subjects != null) && (subjects.Any()))
+            if (!string.IsNullOrEmpty(source.SubjectCode))
             {
-                var subject = subjects.FirstOrDefault(s => s.Code == source.SubjectCode);
-                if (subject != null)
-                {
-                    course.Subject = new Dtos.GuidObject2(subject.Guid);
-                }
+                var subject = await _studentReferenceDataRepository.GetSubjectGuidAsync(source.SubjectCode);
+                if (!string.IsNullOrEmpty(subject))
+                    course.Subject = new Dtos.GuidObject2(subject);
             }
             course.CourseLevels = new List<Dtos.GuidObject2>();
             if (source.CourseLevelCodes != null && source.CourseLevelCodes.Count > 0)
             {
                 var courseLevelGuids = new List<Dtos.GuidObject2>();
-                var courseLevels = await GetCourseLevelsAsync(bypassCache);
-                if ((courseLevels != null) && (courseLevels.Any()))
+                foreach (var courseLevelCode in source.CourseLevelCodes)
                 {
-                    foreach (var courseLevelCode in source.CourseLevelCodes)
+                    if (!string.IsNullOrEmpty(courseLevelCode))
                     {
-                        var courseLevel = courseLevels.FirstOrDefault(cl => cl.Code == courseLevelCode);
-                        if (courseLevel != null)
-                        {
-                            courseLevelGuids.Add(new Dtos.GuidObject2(courseLevel.Guid));
-                        }
+                        var courseLevel = await _studentReferenceDataRepository.GetCourseLevelGuidAsync(courseLevelCode);
+                        if (!string.IsNullOrEmpty(courseLevel))
+                            courseLevelGuids.Add(new Dtos.GuidObject2(courseLevel));
                     }
                 }
                 if (courseLevelGuids.Any())
@@ -4217,16 +4230,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (source.InstructionalMethodCodes != null && source.InstructionalMethodCodes.Count > 0)
             {
                 var instructionMethodGuids = new List<Dtos.GuidObject2>();
-                var instructionalMethods = await GetInstructionalMethodsAsync(bypassCache);
-                if ((instructionalMethods != null) && (instructionalMethods.Any()))
+                foreach (var instrMethodCode in source.InstructionalMethodCodes)
                 {
-                    foreach (var instrMethodCode in source.InstructionalMethodCodes)
+                    if (!string.IsNullOrEmpty(instrMethodCode))
                     {
-                        var instructionalMethod = instructionalMethods.FirstOrDefault(im => im.Code == instrMethodCode);
-                        if (instructionalMethod != null)
-                        {
-                            instructionMethodGuids.Add(new Dtos.GuidObject2(instructionalMethod.Guid));
-                        }
+                        var instructionalMethod = await _studentReferenceDataRepository.GetInstructionalMethodGuidAsync(instrMethodCode);
+                        if (!string.IsNullOrEmpty(instructionalMethod))
+                            instructionMethodGuids.Add(new Dtos.GuidObject2(instructionalMethod));
                     }
                 }
                 if (instructionMethodGuids.Any())
@@ -4237,27 +4247,18 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             if (!(string.IsNullOrEmpty(source.AcademicLevelCode)))
             {
-                var academicLevels = await GetAcademicLevelsAsync(bypassCache);
-                if ((academicLevels != null) && (academicLevels.Any()))
-                {
-                    var acadLevel = academicLevels.FirstOrDefault(al => al.Code == source.AcademicLevelCode);
-                    if (acadLevel != null)
-                        course.AcademicLevels = new List<Dtos.GuidObject2>() { new Dtos.GuidObject2(acadLevel.Guid) };
-                }
+                var acadLevel = await _studentReferenceDataRepository.GetAcademicLevelsGuidAsync(source.AcademicLevelCode);
+                if (!string.IsNullOrEmpty(acadLevel))
+                    course.AcademicLevels = new List<Dtos.GuidObject2>() { new Dtos.GuidObject2(acadLevel) };
             }
 
             if (!string.IsNullOrEmpty(source.GradeSchemeCode))
             {
-                var gradeSchemes = await GetGradeSchemesAsync(bypassCache);
-                if ((gradeSchemes != null) && (gradeSchemes.Any()))
-                {
-                    var gradeScheme = gradeSchemes.FirstOrDefault(gs => gs.Code == source.GradeSchemeCode);
-                    if (gradeScheme != null)
-                    {
-                        course.GradeSchemes = new List<Dtos.GuidObject2> { new Dtos.GuidObject2((gradeScheme.Guid)) };
-                    }
-                }
+                var gradeScheme = await _studentReferenceDataRepository.GetGradeSchemeGuidAsync(source.GradeSchemeCode);
+                if (!string.IsNullOrEmpty(gradeScheme))
+                    course.GradeSchemes = new List<Dtos.GuidObject2> { new Dtos.GuidObject2((gradeScheme)) };
             }
+        
 
             course.Title = source.LongTitle;
             course.Description = source.Description;
@@ -4268,23 +4269,23 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             if (source.Departments != null && source.Departments.Any())
             {
-                var allDepartments = await GetDepartmentsAsync(bypassCache);
-                if ((allDepartments != null) && (allDepartments.Any()))
+                foreach (var offeringDept in source.Departments)
                 {
-                    foreach (var offeringDept in source.Departments)
+                    if (!string.IsNullOrEmpty(offeringDept.AcademicDepartmentCode))
                     {
-                        var academicDepartment = (allDepartments.FirstOrDefault(d => d.Code == offeringDept.AcademicDepartmentCode));
-                        if (academicDepartment != null)
+                        var academicDepartment = await _referenceDataRepository.GetDepartments2GuidAsync(offeringDept.AcademicDepartmentCode);
+                        if (!string.IsNullOrEmpty(academicDepartment))
                         {
                             var department = new Ellucian.Colleague.Dtos.OwningInstitutionUnit
                             {
-                                InstitutionUnit = { Id = academicDepartment.Guid },
+                                InstitutionUnit = { Id = academicDepartment },
                                 OwnershipPercentage = offeringDept.ResponsibilityPercentage
                             };
                             departments.Add(department);
                         }
                     }
                 }
+
                 if ((departments != null) && (departments.Any()))
                 {
                     course.OwningInstitutionUnits = departments;
@@ -4300,61 +4301,68 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             // Determine the Credit information for the course
             course.Credits = new List<Dtos.Credit3>();
-            var creditCategories = await GetCreditCategoriesAsync(bypassCache);
-            if ((creditCategories != null) && (creditCategories.Any()))
-            {
-                var creditType = creditCategories.FirstOrDefault(ct => ct.Code == source.LocalCreditType);
-                if (creditType != null)
-                {
-                    var creditCategory = new CreditIdAndTypeProperty2() { Detail = new GuidObject2(creditType.Guid) };
 
-                    switch (creditType.CreditType)
+            if (!string.IsNullOrEmpty(source.LocalCreditType))
+            {
+                //get the guid to ensure the cache has the item or refresh the cache.
+                var creditCategoryGuid = await _studentReferenceDataRepository.GetCreditCategoriesGuidAsync(source.LocalCreditType);
+                var creditCategories = await GetCreditCategoriesAsync(false);
+
+                if ((creditCategories != null) && (creditCategories.Any()))
+                {
+                    var creditType = creditCategories.FirstOrDefault(ct => ct.Code == source.LocalCreditType);
+                    if (creditType != null)
                     {
-                        case CreditType.ContinuingEducation:
-                            creditCategory.CreditType = CreditCategoryType3.ContinuingEducation;
-                            break;
-                        case CreditType.Institutional:
-                            creditCategory.CreditType = CreditCategoryType3.Institutional;
-                            break;
-                        case CreditType.Transfer:
-                            creditCategory.CreditType = CreditCategoryType3.Transfer;
-                            break;
-                        case CreditType.Exchange:
-                            creditCategory.CreditType = CreditCategoryType3.Exchange;
-                            break;
-                        case CreditType.Other:
-                            creditCategory.CreditType = CreditCategoryType3.Other;
-                            break;
-                        case CreditType.None:
-                            creditCategory.CreditType = CreditCategoryType3.NoCredit;
-                            break;
-                        default:
-                            creditCategory.CreditType = CreditCategoryType3.ContinuingEducation;
-                            break;
-                    }
-                    if (source.Ceus.HasValue)
-                    {
-                        course.Credits.Add(new Dtos.Credit3()
+                        var creditCategory = new CreditIdAndTypeProperty2() { Detail = new GuidObject2(creditType.Guid) };
+
+                        switch (creditType.CreditType)
                         {
-                            CreditCategory = creditCategory,
-                            Measure = Dtos.CreditMeasure2.CEU,
-                            Minimum = source.Ceus,
-                        });
-                    }
-                    if (source.MinimumCredits.HasValue)
-                    {
-                        course.Credits.Add(new Dtos.Credit3()
+                            case CreditType.ContinuingEducation:
+                                creditCategory.CreditType = CreditCategoryType3.ContinuingEducation;
+                                break;
+                            case CreditType.Institutional:
+                                creditCategory.CreditType = CreditCategoryType3.Institutional;
+                                break;
+                            case CreditType.Transfer:
+                                creditCategory.CreditType = CreditCategoryType3.Transfer;
+                                break;
+                            case CreditType.Exchange:
+                                creditCategory.CreditType = CreditCategoryType3.Exchange;
+                                break;
+                            case CreditType.Other:
+                                creditCategory.CreditType = CreditCategoryType3.Other;
+                                break;
+                            case CreditType.None:
+                                creditCategory.CreditType = CreditCategoryType3.NoCredit;
+                                break;
+                            default:
+                                creditCategory.CreditType = CreditCategoryType3.ContinuingEducation;
+                                break;
+                        }
+                        if (source.Ceus.HasValue)
                         {
-                            CreditCategory = creditCategory,
-                            Measure = Dtos.CreditMeasure2.Credit,
-                            Minimum = source.MinimumCredits,
-                            Maximum = source.MaximumCredits,
-                            Increment = source.VariableCreditIncrement
-                        });
-                    }
-                    if (source.BillingCredits != null && source.BillingCredits.HasValue)
-                    {
-                        course.Billing = new BillingCreditDtoProperty() { Minimum = (decimal)source.BillingCredits };
+                            course.Credits.Add(new Dtos.Credit3()
+                            {
+                                CreditCategory = creditCategory,
+                                Measure = Dtos.CreditMeasure2.CEU,
+                                Minimum = source.Ceus,
+                            });
+                        }
+                        if (source.MinimumCredits.HasValue)
+                        {
+                            course.Credits.Add(new Dtos.Credit3()
+                            {
+                                CreditCategory = creditCategory,
+                                Measure = Dtos.CreditMeasure2.Credit,
+                                Minimum = source.MinimumCredits,
+                                Maximum = source.MaximumCredits,
+                                Increment = source.VariableCreditIncrement
+                            });
+                        }
+                        if (source.BillingCredits != null && source.BillingCredits.HasValue)
+                        {
+                            course.Billing = new BillingCreditDtoProperty() { Minimum = (decimal)source.BillingCredits };
+                        }
                     }
                 }
             }
@@ -5017,51 +5025,31 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             if (_contactMeasures == null)
             {
-                _contactMeasures = (await _studentReferenceDataRepository.GetContactMeasuresAsync(bypassCache)).ToList();
+                _contactMeasures = (await _studentReferenceDataRepository.GetContactMeasuresAsync(false)).ToList();
             }
-            if (_courseCategories == null)
-            {
-                _courseCategories = (await _studentReferenceDataRepository.GetCourseTypesAsync(bypassCache)).ToList();
-            }
-            if (_topicCodes == null)
-            {
-                _topicCodes = (await _studentReferenceDataRepository.GetTopicCodesAsync(bypassCache)).ToList();
-            }
-            if (_courseLevels == null)
-            {
-                _courseLevels = (await _studentReferenceDataRepository.GetCourseLevelsAsync(bypassCache)).ToList();
-            }
-            if (_courseStatuses == null)
-            {
-                _courseStatuses = (await _studentReferenceDataRepository.GetCourseStatusesAsync(bypassCache)).ToList();
-            }
-            if (_courseTitleTypes == null)
-            {
-                _courseTitleTypes = (await _studentReferenceDataRepository.GetCourseTitleTypesAsync(bypassCache)).ToList();
-            }
-
+            
             var course = new Ellucian.Colleague.Dtos.Course5();
 
             course.Id = source.Guid;
-            var subjects = await GetSubjectAsync(bypassCache);
-            if ((subjects != null) && (subjects.Any()))
+            //get subject
+            if (!string.IsNullOrEmpty(source.SubjectCode))
             {
-                var subject = subjects.FirstOrDefault(s => s.Code == source.SubjectCode);
-                if (subject != null)
-                {
-                    course.Subject = new Dtos.GuidObject2(subject.Guid);
-                }
+                var subject = await _studentReferenceDataRepository.GetSubjectGuidAsync(source.SubjectCode);
+                if (!string.IsNullOrEmpty(subject))
+                    course.Subject = new Dtos.GuidObject2(subject);
             }
+            //get course levels
             course.CourseLevels = new List<Dtos.GuidObject2>();
             if (source.CourseLevelCodes != null && source.CourseLevelCodes.Count > 0)
             {
                 var courseLevelGuids = new List<Dtos.GuidObject2>();
                 foreach (var courseLevelCode in source.CourseLevelCodes)
                 {
-                    var courseLevel = _courseLevels.FirstOrDefault(cl => cl.Code == courseLevelCode);
-                    if (courseLevel != null)
+                    if (!string.IsNullOrEmpty(courseLevelCode))
                     {
-                        courseLevelGuids.Add(new Dtos.GuidObject2(courseLevel.Guid));
+                        var courseLevel = await _studentReferenceDataRepository.GetCourseLevelGuidAsync(courseLevelCode);
+                        if (!string.IsNullOrEmpty(courseLevel))
+                            courseLevelGuids.Add(new Dtos.GuidObject2(courseLevel));
                     }
                 }
                 if (courseLevelGuids.Any())
@@ -5075,26 +5063,23 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             course.InstructionalMethodDetails = new List<InstructionalMethodDetail>();
             if (source.InstructionalMethodCodes != null && source.InstructionalMethodCodes.Any())
             {
-                var instructionalMethods = await GetInstructionalMethodsAsync(bypassCache);
-                var administrativeInstructionalMethods = await GetAdministrativeInstructionalMethodsAsync(bypassCache);
-                if ((instructionalMethods != null) && (instructionalMethods.Any()))
+
+                // var administrativeInstructionalMethods = await GetAdministrativeInstructionalMethodsAsync(bypassCache);
+
+                foreach (var instrMethodCode in source.InstructionalMethodCodes)
                 {
-                    foreach (var instrMethodCode in source.InstructionalMethodCodes)
+                    if (!string.IsNullOrEmpty(instrMethodCode))
                     {
                         var position = source.InstructionalMethodCodes.IndexOf(instrMethodCode);
-                        var instructionalMethod = instructionalMethods.FirstOrDefault(im => im.Code == instrMethodCode);
-                        if (instructionalMethod == null)
-                        {
-                            throw new ArgumentException("Instructional method '" + instrMethodCode + "' GUID could not be found. ", "instructionalMethod");
-                        }
+                        var instructionalMethod = await _studentReferenceDataRepository.GetInstructionalMethodGuidAsync(instrMethodCode);
                         ContactHoursPeriod instrMethodPeriod = ContactHoursPeriod.NotSet;
                         decimal? instrMethodHours = null;
 
-                        if (instructionalMethod != null && !string.IsNullOrEmpty(instructionalMethod.Guid))
+                        if (!string.IsNullOrEmpty(instructionalMethod))
                         {
                             var instrMethodDetail = new InstructionalMethodDetail()
                             {
-                                InstructionalMethod = new GuidObject2(instructionalMethod.Guid)
+                                InstructionalMethod = new GuidObject2(instructionalMethod)
                             };
                             course.InstructionalMethodDetails.Add(instrMethodDetail);
 
@@ -5109,16 +5094,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                             {
                                 instrMethodHours = source.InstructionalMethodContactHours[position];
                             }
-                            var administrativeInstructionalMethod = administrativeInstructionalMethods.FirstOrDefault(im => im.Code == instrMethodCode);
-                            if (administrativeInstructionalMethod == null)
-                            {
-                                throw new ArgumentException("Administrative Instructional method '" + instrMethodCode + "' GUID could not be found. ", "instructionalMethod");
-                            }
-                            if (administrativeInstructionalMethod != null && !string.IsNullOrEmpty(administrativeInstructionalMethod.Guid) && instrMethodHours != null)
+                            var administrativeInstructionalMethod = await _studentReferenceDataRepository.GetAdministrativeInstructionalMethodGuidAsync(instrMethodCode);
+                            if (!string.IsNullOrEmpty(administrativeInstructionalMethod) && instrMethodHours != null)
                             {
                                 var instrMethodHoursDetail = new CoursesHoursDtoProperty()
                                 {
-                                    AdministrativeInstructionalMethod = new GuidObject2(administrativeInstructionalMethod.Guid)
+                                    AdministrativeInstructionalMethod = new GuidObject2(administrativeInstructionalMethod)
                                 };
 
                                 if (instrMethodHours != null)
@@ -5139,54 +5120,45 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                 }
             }
-
-
+            //get academic levels
             if (!(string.IsNullOrEmpty(source.AcademicLevelCode)))
             {
-                var academicLevels = await GetAcademicLevelsAsync(bypassCache);
-                if ((academicLevels != null) && (academicLevels.Any()))
-                {
-                    var acadLevel = academicLevels.FirstOrDefault(al => al.Code == source.AcademicLevelCode);
-                    if (acadLevel != null && !string.IsNullOrEmpty(acadLevel.Guid))
-                        course.AcademicLevels = new List<Dtos.GuidObject2>() { new Dtos.GuidObject2(acadLevel.Guid) };
-                }
+                var acadLevel = await _studentReferenceDataRepository.GetAcademicLevelsGuidAsync(source.AcademicLevelCode);
+                if (!string.IsNullOrEmpty(acadLevel))
+                    course.AcademicLevels = new List<Dtos.GuidObject2>() { new Dtos.GuidObject2(acadLevel) };
             }
 
             if (!string.IsNullOrEmpty(source.GradeSchemeCode))
             {
-                var gradeSchemes = await GetGradeSchemesAsync(bypassCache);
-                if ((gradeSchemes != null) && (gradeSchemes.Any()))
+                var gradeScheme = await _studentReferenceDataRepository.GetGradeSchemeGuidAsync(source.GradeSchemeCode);
+                if (!string.IsNullOrEmpty(gradeScheme))
                 {
-                    var gradeScheme = gradeSchemes.FirstOrDefault(gs => gs.Code == source.GradeSchemeCode);
-                    if (gradeScheme != null && !string.IsNullOrEmpty(gradeScheme.Guid))
-                    {
-                        course.GradeSchemes = new List<GradeSchemesDtoProperty>()
+                    course.GradeSchemes = new List<GradeSchemesDtoProperty>()
                         {
                             new GradeSchemesDtoProperty()
                             {
-                             GradeScheme = new Dtos.GuidObject2((gradeScheme.Guid)),
+                             GradeScheme = new Dtos.GuidObject2((gradeScheme)),
                              Usage = CoursesUsage.Default
                             }
                         };
-                    }
                 }
             }
 
             course.Titles = new List<CoursesTitlesDtoProperty>();
-            var shortEntity = _courseTitleTypes.FirstOrDefault(ctt => ctt.Code.ToLower() == "short");
-            if (shortEntity != null && !string.IsNullOrEmpty(shortEntity.Guid))
+            var shortEntity = await _studentReferenceDataRepository.GetCourseTitleTypeGuidAsync("SHORT");
+            if (!string.IsNullOrEmpty(shortEntity))
             {
-                var shortTitle = new CoursesTitlesDtoProperty() { Type = new GuidObject2(shortEntity.Guid), Value = source.Title };
+                var shortTitle = new CoursesTitlesDtoProperty() { Type = new GuidObject2(shortEntity), Value = source.Title };
                 course.Titles.Add(shortTitle);
             }
             else
             {
                 throw new ArgumentNullException("titles.type", "The record 'SHORT' or it's GUID is missing from course title types. ");
             }
-            var longEntity = _courseTitleTypes.FirstOrDefault(ctt => ctt.Code.ToLower() == "long");
-            if (longEntity != null && !string.IsNullOrEmpty(longEntity.Guid))
+            var longEntity = await _studentReferenceDataRepository.GetCourseTitleTypeGuidAsync("LONG");
+            if (!string.IsNullOrEmpty(longEntity))
             {
-                var longTitle = new CoursesTitlesDtoProperty() { Type = new GuidObject2(longEntity.Guid), Value = source.LongTitle };
+                var longTitle = new CoursesTitlesDtoProperty() { Type = new GuidObject2(longEntity), Value = source.LongTitle };
                 course.Titles.Add(longTitle);
             }
             else
@@ -5203,23 +5175,20 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             if (source.Departments != null && source.Departments.Any())
             {
-                var allDepartments = await GetDepartmentsAsync(bypassCache);
-                if ((allDepartments != null) && (allDepartments.Any()))
+                foreach (var offeringDept in source.Departments)
                 {
-                    foreach (var offeringDept in source.Departments)
+                    var academicDepartment = await _referenceDataRepository.GetDepartments2GuidAsync(offeringDept.AcademicDepartmentCode);
+                    if (!string.IsNullOrEmpty(academicDepartment))
                     {
-                        var academicDepartment = (allDepartments.FirstOrDefault(d => d.Code == offeringDept.AcademicDepartmentCode));
-                        if (academicDepartment != null)
+                        var department = new Ellucian.Colleague.Dtos.OwningInstitutionUnit
                         {
-                            var department = new Ellucian.Colleague.Dtos.OwningInstitutionUnit
-                            {
-                                InstitutionUnit = { Id = academicDepartment.Guid },
-                                OwnershipPercentage = offeringDept.ResponsibilityPercentage
-                            };
-                            departments.Add(department);
-                        }
+                            InstitutionUnit = { Id = academicDepartment },
+                            OwnershipPercentage = offeringDept.ResponsibilityPercentage
+                        };
+                        departments.Add(department);
                     }
                 }
+
                 if ((departments != null) && (departments.Any()))
                 {
                     course.OwningInstitutionUnits = departments;
@@ -5297,37 +5266,38 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             if (!string.IsNullOrEmpty(source.TopicCode))
             {
-                var topicEntity = _topicCodes.FirstOrDefault(tc => tc.Code == source.TopicCode);
-                if (topicEntity != null && !string.IsNullOrEmpty(topicEntity.Guid))
+                var topicGuid = await _studentReferenceDataRepository.GetTopicCodeGuidAsync(source.TopicCode);
+                if (!string.IsNullOrEmpty(topicGuid))
                 {
-                    course.Topic = new GuidObject2(topicEntity.Guid);
+                    course.Topic = new GuidObject2(topicGuid);
                 }
             }
             if (source.CourseTypeCodes != null && source.CourseTypeCodes.Any())
             {
                 foreach (var cat in source.CourseTypeCodes)
                 {
-                    var categoryEntity = _courseCategories.FirstOrDefault(cc => cc.Code == cat);
-                    if (categoryEntity != null && !string.IsNullOrEmpty(categoryEntity.Guid))
+                    if (!string.IsNullOrEmpty(cat))
                     {
-                        if (course.Categories == null)
+                        var TypeGuid = await _studentReferenceDataRepository.GetCourseTypeGuidAsync(cat);
+                        if (!string.IsNullOrEmpty(TypeGuid))
                         {
-                            course.Categories = new List<GuidObject2>();
+                            if (course.Categories == null)
+                                course.Categories = new List<GuidObject2>();
+
+                            course.Categories.Add(new GuidObject2(TypeGuid));
                         }
-                        course.Categories.Add(new GuidObject2(categoryEntity.Guid));
                     }
                 }
+                
             }
             if (source.CourseApprovals != null && source.CourseApprovals.Any())
             {
                 var approval = source.CourseApprovals.ElementAtOrDefault(0);
-                if (approval != null)
+                if (approval != null && !string.IsNullOrEmpty(approval.StatusCode))
                 {
-                    var courseStatusEntity = _courseStatuses.FirstOrDefault(cs => cs.Code == approval.StatusCode);
-                    if (courseStatusEntity != null)
-                    {
-                        course.Status = new GuidObject2(courseStatusEntity.Guid);
-                    }
+                    var courseStatusGuid = await _studentReferenceDataRepository.GetCourseStatusGuidAsync(approval.StatusCode);
+                    if (!string.IsNullOrEmpty(courseStatusGuid))
+                        course.Status = new GuidObject2(courseStatusGuid);
                 }
             }
 
@@ -5386,7 +5356,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
             if (course.CourseLevels != null && course.CourseLevels.Any())
-            {                
+            {
                 foreach (var level in course.CourseLevels)
                 {
                     if (string.IsNullOrEmpty(level.Id))
@@ -5431,7 +5401,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 if (course.Credits.Count() == 2)
                 {
-                    if (course.Credits.Any() && course.Credits.ElementAt(0).CreditCategory != null && course.Credits.ElementAt(1).CreditCategory != null && 
+                    if (course.Credits.Any() && course.Credits.ElementAt(0).CreditCategory != null && course.Credits.ElementAt(1).CreditCategory != null &&
                         course.Credits.ElementAt(0).CreditCategory.CreditType != course.Credits.ElementAt(1).CreditCategory.CreditType)
                     {
                         throw new ArgumentException("The same Credit Type must be used for each entry in the Credits array. ", "credits.creditCategory.creditType");
@@ -5461,10 +5431,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     {
                         throw new ArgumentException("Credit Category id is required within the detail section of Credit Category is defined. ", "credit.creditCategory.detail.id");
                     }
-                    if (credit.Increment == null && credit.Maximum != null)
-                    {
-                        throw new ArgumentException("Credit Increment is required when Credit Maximum exists. ", "credit.maximum");
-                    }
+                    //if (credit.Increment == null && credit.Maximum != null)
+                    //{
+                    //    throw new ArgumentException("Credit Increment is required when Credit Maximum exists. ", "credit.maximum");
+                    //}
                     if (credit.Maximum == null && credit.Increment != null)
                     {
                         throw new ArgumentException("Credit Maximum is required when Credit Increment exists. ", "credit.increment");
@@ -5632,14 +5602,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         }
 
                         var acadLvl = _academicLevels.Where(al => al.Guid == acadLevel.Id).FirstOrDefault();
-                        if(acadLvl == null)
+                        if (acadLvl == null)
                         {
                             throw new ArgumentNullException("Invalid Id '" + acadLevel.Id + "' supplied for academicLevels. ", "academicLevels.id");
                         }
                         acadLevelCode = acadLvl.Code;
                         counter++;
                     }
-                    catch(Exception)
+                    catch (Exception)
                     {
                         throw;
                     }

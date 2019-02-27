@@ -97,7 +97,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
             try
             {
-                return await _personHoldTypeService.GetPersonHoldTypeByGuid2Async(id);
+                return await _personHoldTypeService.GetPersonHoldTypeByGuid2Async(id, bypassCache);
             }
             catch (Exception ex)
             {

@@ -77,6 +77,11 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         public bool RequireImmediatePayment { get; set; }
 
         /// <summary>
+        /// Hiding parameter for anticipateddate for a program
+        /// </summary>
+        public bool HideAnticipatedCompletionDate { get; set; }
+
+        /// <summary>
         /// Constructor for GraduationConfiguration
         /// </summary>
         public GraduationConfiguration()

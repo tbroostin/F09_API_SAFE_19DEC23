@@ -1,4 +1,5 @@
-﻿// Copyright 2014-2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -104,13 +105,13 @@ namespace Ellucian.Colleague.Api.Utility
         public static IntegrationApiError ConvertToIntegrationApiError(RepositoryError error)
         {
             var errorMessage = GetMessage(error.Code);
-            return new IntegrationApiError() 
-                { 
-                    Code = error.Code, 
-                    Description = errorMessage.Description,
-                    Message = error.Message,
-                    StatusCode = errorMessage.ReturnCode
-                };
+            return new IntegrationApiError(
+                error.Code,
+                errorMessage.Description,
+                error.Message,
+                errorMessage.ReturnCode,
+                string.IsNullOrEmpty(error.Id) ? null : error.Id,
+                string.IsNullOrEmpty(error.SourceId) ? null : error.SourceId);
         }
 
         /// <summary>
@@ -182,7 +183,9 @@ namespace Ellucian.Colleague.Api.Utility
             return new IntegrationApiError(error.Code,                     
                 string.IsNullOrEmpty(error.Description) ? apiError.Description : error.Description,
                 error.Message,
-                apiError.ReturnCode);
+                apiError.ReturnCode,
+                string.IsNullOrEmpty(error.Guid) ? null : error.Guid,
+                string.IsNullOrEmpty(error.Id) ? null : error.Id);
         }
 
         private static IntegrationApiErrorMessage GetMessage(string code)
@@ -205,6 +208,8 @@ namespace Ellucian.Colleague.Api.Utility
         /// List of standard error messages for the Integration API
         /// </summary>
         public static List<IntegrationApiErrorMessage> ApiErrorMessages = new List<IntegrationApiErrorMessage>() {
+            new IntegrationApiErrorMessage( "Authentication.Required                                               ", "Authentication failed or wasn't provided.                                                                                                                                          ", 401 ),
+            new IntegrationApiErrorMessage( "Access.Denied                                                         ", "Client not authorized to perform this action.                                                                                                                                      ", 403 ),
             new IntegrationApiErrorMessage( "Global.Internal.Error                                                 ", "Unspecified Error on the system which prevented execution.                                                                                                                         ", 400 ),
             new IntegrationApiErrorMessage( "Global.SchemaValidation.Error                                         ", "Errors parsing input JSON.                                                                                                                                                         ", 400 ),
             new IntegrationApiErrorMessage( "Global.Client.UnauthorizedOperation                                   ", "Client not authorized to perform this action.                                                                                                                                      ", 403 ),

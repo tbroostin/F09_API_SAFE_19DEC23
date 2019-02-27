@@ -2,6 +2,7 @@
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
+using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
 using Ellucian.Colleague.Data.ColleagueFinance.Repositories;
 using Ellucian.Colleague.Data.ColleagueFinance.Transactions;
@@ -26,6 +27,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         private string t4aBinReposId = "1";
 
         #region Data contracts
+        private string miPersonId = "0001001";
         private TaxFormT4aBinRepos binReposContract = null;
         private ParmT4a parmT4aContract = null;
         private TaxT4aDetailRepos detailReposContract = null;
@@ -36,8 +38,21 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         private Countries countriesContract = null;
         private Person personContract = null;
 
+        private string transmitterId = "0000043";
+        private string transmitterEin = "56565675";
+        private Parm1099mi parm1099miContract;
+        private TaxForm1099miYears taxForm1099miYearsContract;
+        private Tax1099miDetailRepos tax1099miDetailContract;
+        private TaxForm1099miRepos taxForm1099miReposContract;
+        private Collection<CorpFounds> corpFoundsContract;
+        private Person miPersonContract;
+        private Corp corpContract;
+        private States1099Org states1099OrgContract;
+        private TxGetHierarchyAddressResponse txGetHierarchyAddressResponse = new TxGetHierarchyAddressResponse(); 
+
         private void InitializeDataContracts()
         {
+            #region T4Contracts
             binReposContract = new TaxFormT4aBinRepos()
             {
                 Recordkey = "1",
@@ -142,12 +157,127 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 Recordkey = personId,
                 PersonCorpIndicator = "Y"
             };
+            #endregion
 
+            #region 1099MiContracts
+            parm1099miContract = new Parm1099mi()
+            {
+                P1099miTCoName = new List<string> {"Pacific University", "Ellucian University"},
+                P1099miTCoAddr = new List<string> {"234 Street", "123 Fairy lakes" },
+                P1099miTCoCity = new List<string> {"City123", "City" },
+                P1099miTState = new List<string> {"SD", "ST" },
+                P1099miTZip = new List<string> {"7654321","1234567" },
+                P1099miTTransmitterId = new List<string> {"0000041", transmitterId },
+                P1099miTTransmitterTin = new List<string> {"12312312",transmitterEin },
+                P1099miPhoneNumber ="9876543210",
+                P1099miPhoneExtension = "123"
+                
+            };
+
+            taxForm1099miYearsContract = new TaxForm1099miYears()
+            {
+                TfmyMaskSsn = "N",
+                TfmyWebEnabled = "Y",
+                Recordkey = "2017",
+                TfmySubmitSeqNos = new List<string> { "01" },
+                TfmySubmitDates = new List<DateTime?> { DateTime.Now },
+                TfmySubmitTitles = new List<string> { "Original" },
+                TfmySubmitOpers = new List<string> { "", "", "", "" },
+                TfmySubmitTimes = new List<DateTime?> { DateTime.Now, DateTime.Now, DateTime.Now, DateTime.Now }
+            };
+            tax1099miDetailContract = new Tax1099miDetailRepos()
+            {
+                TmidtlrBoxNumber = new List<string> {
+                    "1","2","3","4","5","6","7","8","10","11","12","13","14","15A","15B","16","17","18"
+                },
+                TmidtlrAmt = new List<decimal?> { },
+                TmidtlrQualifiedFlag = "Y",
+                TmidtlrReposId = "101",
+                TmidtlrYear = "2017",
+                TmidtlrEin = "121323",
+                TmidtlrStateId = "VA",
+                TmidtlrStatus = "N",
+                TmidtlrRefId = "01",
+                TmidtlrVendorId = miPersonId,
+                Recordkey = "201",
+            };
+            taxForm1099miReposContract = new TaxForm1099miRepos()
+            {
+                Recordkey = "101",
+                TfmirId = "1001",
+                TfmirName = "Abc",
+                TfmirSecondName="Def",
+                TfmirAddress = "123 Xyz",
+                TfmirAddressLine1 = "123 Xyz",
+                TfmirAddressLine2 = "street1",
+                TfmirAddressLine3 = "street2",
+                TfmirCity = "City",
+                TfmirState = "ST",
+                TfmirYear = 2017,
+                TfmirTin = "1234567890",
+                TfmirZip = "1234567",
+                TfmirEin = transmitterEin,
+                TfmirDirectResale = "Y",
+                TfmirCertifyAddress = new List<string> { "123 Xyz" },
+                TfmirCertifyAddressLine1 = new List<string> { "123 Xyz" },
+                TfmirCertifyAddressLine2 = new List<string> { "street1" },
+                TfmirCertifyAddressLine3 = new List<string> { "street2" },
+                TfmirCertifyCity = new List<string> { "City" },
+                TfmirCertifyName = new List<string> { "Abc" },
+                TfmirCertifySecondName = new List<string> { "Def" },
+                TfmirCertifyState = new List<string> {"ST" },
+                TfmirCertifyTin = new List<string> { "12345678" },
+                TfmirCertifyZip = new List<string> { "1234567" },
+                TfmirCertifyDirectResale = new List<string> {"Y" }
+            };
+
+            corpFoundsContract = new Collection<CorpFounds>() { new CorpFounds()
+            {
+                CorpTaxId = transmitterEin,
+                Recordkey = transmitterId
+            }};
+
+            miPersonContract = new Person()
+            {
+                PersonCorpIndicator = "Y"
+            };
+
+            corpContract = new Corp() {
+                CorpName = new List<string>() { "Ellucian University" },
+                Recordkey =transmitterId
+            };
+
+            states1099OrgContract = new States1099Org
+            {
+                Recordkey = "ST*0000043",
+                St1099OrgEin= "5656577"
+            };
+
+            txGetHierarchyAddressResponse = new TxGetHierarchyAddressResponse()
+            {
+                OutAddressId = "100",
+                OutAddressLabel = new List<string> { "adresslabel1", "adresslabel2", "adresslabel3", "adresslabel4" },
+                OutAddressLines = new List<string> { "addressline1", "addressline2" },
+                OutAddressCity = "city",
+                OutAddressCountry = "country",
+                OutAddressState = "ST",
+                OutAddressZip = "1234567",
+                OutAddressModifier = "addressmodifier"
+            };
+
+            #endregion
+            
             #region Build associations
             InitializeT4aDetailReposBoxAmounts();
             binReposContract.buildAssociations();
             t4aYearsContract.buildAssociations();
             t4aReposContract.buildAssociations();
+
+            Initialize1099MiDetailReposBoxAmounts();
+            tax1099miDetailContract.buildAssociations();
+            taxForm1099miYearsContract.buildAssociations();
+            taxForm1099miReposContract.buildAssociations();
+            parm1099miContract.buildAssociations();
             #endregion
         }
 
@@ -164,6 +294,17 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
             detailReposContractsList = new Collection<TaxT4aDetailRepos>() { detailReposContract };
         }
+
+        private void Initialize1099MiDetailReposBoxAmounts()
+        {
+            int index = 1;
+            foreach (var box in tax1099miDetailContract.TmidtlrBoxNumber)
+            {
+                tax1099miDetailContract.TmidtlrAmt.Add(Convert.ToDecimal(index));
+                index++;
+            }
+            tax1099miDetailContract.buildAssociations();
+        }
         #endregion
 
         [TestInitialize]
@@ -175,6 +316,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             InitializeDataContracts();
 
             #region Mock initializations
+
+            #region T4A-Mock Initializations
             dataReaderMock.Setup(x => x.ReadRecordAsync<TaxFormT4aBinRepos>(It.IsAny<string>(), true)).Returns(() =>
             {
                 return Task.FromResult(binReposContract);
@@ -220,10 +363,72 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 return Task.FromResult(t4aReposContract);
             });
 
-            dataReaderMock.Setup(x => x.ReadRecordAsync<Person>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(() =>
+            dataReaderMock.Setup(x => x.ReadRecordAsync<Person>(It.IsAny<string>(), personId, true)).Returns(() =>
             {
                 return Task.FromResult(personContract);
             });
+            transManagerMock.Setup(x => x.ExecuteAsync<GetHierarchyNamesForIdsRequest, GetHierarchyNamesForIdsResponse>(It.IsAny<GetHierarchyNamesForIdsRequest>())).Returns(() =>
+            {
+                return Task.FromResult(payerNameResponse);
+            });
+
+            #endregion
+
+            #region 1099MI- Mock Initializations
+
+            dataReaderMock.Setup(x => x.ReadRecordAsync<TaxForm1099miRepos>(It.IsAny<string>(), true)).Returns(() =>
+            {
+                return Task.FromResult(taxForm1099miReposContract);
+            });
+
+            dataReaderMock.Setup(x => x.ReadRecordAsync<Parm1099mi>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(() =>
+            {
+                return Task.FromResult(parm1099miContract);
+            });
+
+            dataReaderMock.Setup(x => x.ReadRecordAsync<TaxForm1099miYears>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(() =>
+            {
+                return Task.FromResult(taxForm1099miYearsContract);
+            });
+
+            dataReaderMock.Setup(x => x.ReadRecordAsync<Tax1099miDetailRepos>(It.IsAny<string>(), true)).Returns(() =>
+            {
+                return Task.FromResult(tax1099miDetailContract);
+            });
+
+            dataReaderMock.Setup(x => x.BulkReadRecordAsync<CorpFounds>(It.IsAny<string>(), true)).Returns(() =>
+            {
+                return Task.FromResult(corpFoundsContract);
+            });
+            dataReaderMock.Setup(x => x.ReadRecordAsync<Person>(It.IsAny<string>(), miPersonId, true)).Returns(() =>
+            {
+                return Task.FromResult(miPersonContract);
+            });
+            dataReaderMock.Setup(x => x.ReadRecordAsync<Corp>("PERSON", transmitterId, true)).Returns(() =>
+            {
+                return Task.FromResult(corpContract);
+            });
+            dataReaderMock.Setup(x => x.BulkReadRecordAsync<CorpFounds>(It.IsAny<string>(), true)).Returns(() =>
+            {
+                return Task.FromResult(corpFoundsContract);
+            });
+          
+            transManagerMock.Setup(x => x.ExecuteAsync<TxGetHierarchyAddressRequest, TxGetHierarchyAddressResponse>(It.IsAny<TxGetHierarchyAddressRequest>())).Returns(() =>
+            {
+                return Task.FromResult(txGetHierarchyAddressResponse);
+            });
+
+            dataReaderMock.Setup(x => x.ReadRecordAsync<TaxForm1099miRepos>(It.IsAny<string>(), true)).Returns(() =>
+            {
+                return Task.FromResult(taxForm1099miReposContract);
+            });
+            dataReaderMock.Setup(x => x.ReadRecordAsync<States1099Org>(It.IsAny<string>(), true)).Returns(() =>
+            {
+                return Task.FromResult(states1099OrgContract);
+            });
+
+            #endregion
+
             #endregion
         }
 
@@ -233,6 +438,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             repository = null;
         }
         #endregion
+
+        #region T4A Test methods
 
         #region GetFormT4aPdfDataAsync
         [TestMethod]
@@ -912,6 +1119,387 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         //    // Box 022 should be positive.
         //    Assert.AreEqual(detailReposContract.TtdrAmt[0] * -1, actualPdfData.IncomeTaxDeducted);
         //}
+        #endregion
+
+        #endregion
+
+        #region 1099Mi Test Methods
+
+        #region GetForm1099MiPdfDataAsync
+        [TestMethod]
+        public async Task GetForm1099MiPdfDataAsync_NullPersonId()
+        {
+            var expetedParam = "personId";
+            var actualParam = "";
+            try
+            {
+                await repository.GetForm1099MiPdfDataAsync(null, "1");
+            }
+            catch (ArgumentNullException anex)
+            {
+                actualParam = anex.ParamName;
+            }
+            Assert.AreEqual(expetedParam, actualParam);
+        }
+
+        [TestMethod]
+        public async Task GetForm1099MiPdfDataAsync_EmptyPersonId()
+        {
+            var expetedParam = "personId";
+            var actualParam = "";
+            try
+            {
+                await repository.GetForm1099MiPdfDataAsync("", "1");
+            }
+            catch (ArgumentNullException anex)
+            {
+                actualParam = anex.ParamName;
+            }
+            Assert.AreEqual(expetedParam, actualParam);
+        }
+
+        [TestMethod]
+        public async Task GetForm1099MiPdfDataAsync_NullRecordId()
+        {
+            var expetedParam = "recordId";
+            var actualParam = "";
+            try
+            {
+                await repository.GetForm1099MiPdfDataAsync("1", null);
+            }
+            catch (ArgumentNullException anex)
+            {
+                actualParam = anex.ParamName;
+            }
+            Assert.AreEqual(expetedParam, actualParam);
+        }
+
+        [TestMethod]
+        public async Task GetForm1099MiPdfDataAsync_EmptyRecordId()
+        {
+            var expetedParam = "recordId";
+            var actualParam = "";
+            try
+            {
+                await repository.GetForm1099MiPdfDataAsync("1", "");
+            }
+            catch (ArgumentNullException anex)
+            {
+                actualParam = anex.ParamName;
+            }
+            Assert.AreEqual(expetedParam, actualParam);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException), "1099Mi Detail Record cannot be null.")]
+        public async Task GetForm1099MiPdfDataAsync_MiReposDetail_Null()
+        {
+            tax1099miDetailContract = null;
+            var actualPdf = await repository.GetForm1099MiPdfDataAsync("1", "201");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException), "PARM.1099MI cannot be null.")]
+        public async Task GetForm1099MiPdfDataAsync_Parm1099_Null()
+        {
+            parm1099miContract = null;
+            var actualPdf = await repository.GetForm1099MiPdfDataAsync("1", "201");
+        }
+
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException), "1099Mi Repos cannot be null.")]
+        public async Task GetForm1099MiPdfDataAsync_MiRepos_Null()
+        {
+            taxForm1099miReposContract = null;
+            var actualPdf = await repository.GetForm1099MiPdfDataAsync("1", "201");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException), "TAX.FORM.1099MI.YEARS cannot be null.")]
+        public async Task GetForm1099MiPdfDataAsync_Tax1099MiYear_Null()
+        {
+            taxForm1099miYearsContract = null;
+            var actualPdf = await repository.GetForm1099MiPdfDataAsync("1", "201");
+        }
+
+
+        [TestMethod]
+        public async Task GetForm1099MiPdfDataAsync_CurrentYear_Mrecord_And_MaskSsn()
+        {
+            //update MI detail record with M Record for this test case
+            tax1099miDetailContract.TmidtlrRefId = "M";
+            //to assume person is an individual
+            miPersonContract.PersonCorpIndicator = "N";
+            //MaskSSN is true
+            taxForm1099miYearsContract.TfmyMaskSsn = "Y";
+
+            var actualPdfData = await repository.GetForm1099MiPdfDataAsync("1", "201");
+            
+            // Check the payer specific boxes from parm1099 contract.
+            Assert.AreEqual("2017", actualPdfData.TaxYear);
+            Assert.AreEqual(parm1099miContract.P1099miTCoName[1], actualPdfData.PayerName);
+            Assert.AreEqual(parm1099miContract.P1099miTCoAddr[1], actualPdfData.PayerAddressLine1);
+            Assert.AreEqual(parm1099miContract.P1099miTCoCity[1] + " " + parm1099miContract.P1099miTState[1] + " " + parm1099miContract.P1099miTZip[1], actualPdfData.PayerAddressLine2);
+            Assert.AreEqual("", actualPdfData.PayerAddressLine3);
+            Assert.AreEqual("987-654-3210 " + parm1099miContract.P1099miPhoneExtension, actualPdfData.PayerAddressLine4);
+            
+            // Check the recipient specific boxes
+            Assert.IsTrue(!string.IsNullOrEmpty(actualPdfData.Ein));
+            Assert.AreEqual("XXX-XX-7890", actualPdfData.Ein);
+            // Check the recipient name and address.
+            Assert.AreEqual(taxForm1099miReposContract.TfmirName, actualPdfData.RecipientsName);
+            Assert.AreEqual(taxForm1099miReposContract.TfmirSecondName, actualPdfData.RecipientSecondName);
+            Assert.AreEqual(taxForm1099miReposContract.TfmirAddress, actualPdfData.RecipientAddr1);
+            Assert.AreEqual(taxForm1099miReposContract.TfmirAddressLine2 + " " + taxForm1099miReposContract.TfmirAddressLine3, actualPdfData.RecipientAddr2);
+            Assert.AreEqual(taxForm1099miReposContract.TfmirCity + ", " + taxForm1099miReposContract.TfmirState + " " + taxForm1099miReposContract.TfmirZip, actualPdfData.RecipientAddr3);
+            Assert.AreEqual(true, actualPdfData.IsDirectResale);
+            Assert.AreEqual(tax1099miDetailContract.TmidtlrVendorId, actualPdfData.RecipientAccountNumber);
+            Assert.AreEqual(actualPdfData.RecipientAccountNumber + "*" + tax1099miDetailContract.TmidtlrStateId, actualPdfData.AccountNumber);
+            //Checking the box values are set appropriately to the pdf domain model.
+            Assert.AreEqual(actualPdfData.TaxFormBoxesList.Where(x => x.BoxNumber == "1").Select(i => i.Amount).FirstOrDefault(), 1);
+            Assert.AreEqual(actualPdfData.TaxFormBoxesList.Where(x => x.BoxNumber == "2").Select(i => i.Amount).FirstOrDefault(), 2);
+            Assert.AreEqual(actualPdfData.TaxFormBoxesList.Where(x => x.BoxNumber == "3").Select(i => i.Amount).FirstOrDefault(), 3);
+            Assert.AreEqual(actualPdfData.TaxFormBoxesList.Where(x => x.BoxNumber == "4").Select(i => i.Amount).FirstOrDefault(), 4);
+            Assert.AreEqual(actualPdfData.TaxFormBoxesList.Where(x => x.BoxNumber == "5").Select(i => i.Amount).FirstOrDefault(), 5);
+            Assert.AreEqual(actualPdfData.TaxFormBoxesList.Where(x => x.BoxNumber == "6").Select(i => i.Amount).FirstOrDefault(), 6);
+            Assert.AreEqual(actualPdfData.TaxFormBoxesList.Where(x => x.BoxNumber == "7").Select(i => i.Amount).FirstOrDefault(), 7);
+            Assert.AreEqual(actualPdfData.TaxFormBoxesList.Where(x => x.BoxNumber == "8").Select(i => i.Amount).FirstOrDefault(), 8);
+            Assert.AreEqual(actualPdfData.TaxFormBoxesList.Where(x => x.BoxNumber == "10").Select(i => i.Amount).FirstOrDefault(), 9);
+            Assert.AreEqual(actualPdfData.TaxFormBoxesList.Where(x => x.BoxNumber == "11").Select(i => i.Amount).FirstOrDefault(), 10);
+            Assert.AreEqual(actualPdfData.TaxFormBoxesList.Where(x => x.BoxNumber == "12").Select(i => i.Amount).FirstOrDefault(), 11);
+            Assert.AreEqual(actualPdfData.TaxFormBoxesList.Where(x => x.BoxNumber == "13").Select(i => i.Amount).FirstOrDefault(), 12);
+            Assert.AreEqual(actualPdfData.TaxFormBoxesList.Where(x => x.BoxNumber == "14").Select(i => i.Amount).FirstOrDefault(), 13);
+            Assert.AreEqual(actualPdfData.TaxFormBoxesList.Where(x => x.BoxNumber == "15A").Select(i => i.Amount).FirstOrDefault(), 14);
+            Assert.AreEqual(actualPdfData.TaxFormBoxesList.Where(x => x.BoxNumber == "15B").Select(i => i.Amount).FirstOrDefault(), 15);
+            Assert.AreEqual(actualPdfData.TaxFormBoxesList.Where(x => x.BoxNumber == "16").Select(i => i.Amount).FirstOrDefault(), 16);
+            Assert.AreEqual(actualPdfData.TaxFormBoxesList.Where(x => x.BoxNumber == "17").Select(i => i.Amount).FirstOrDefault(), 17);
+            Assert.AreEqual(actualPdfData.TaxFormBoxesList.Where(x => x.BoxNumber == "18").Select(i => i.Amount).FirstOrDefault(), 18);
+        }
+
+        [TestMethod]
+        public async Task GetForm1099MiPdfDataAsync_IsCorpVendor_Level01_MaskSsn_DirectSale_Request()
+        {
+            //Level 01 is set on the mock object by default, so no explicit setting required
+            //set person is an individual
+            miPersonContract.PersonCorpIndicator = "Y";
+            //MaskSSN is true
+            taxForm1099miYearsContract.TfmyMaskSsn = "Y";
+
+            var actualPdfData = await repository.GetForm1099MiPdfDataAsync("1", "201");
+            //TIN is not masked for corp vendor
+            Assert.AreEqual(taxForm1099miReposContract.TfmirCertifyTin[0], actualPdfData.Ein);
+            Assert.AreEqual(true, actualPdfData.IsDirectResale);
+        }
+
+        [TestMethod]
+        public async Task GetForm1099MiPdfDataAsync_IsIndividualVendor_MaskSsn_LengthLessThan4_Request()
+        {
+            //set person is an individual
+            miPersonContract.PersonCorpIndicator = "N";
+            //MaskSSN is true
+            taxForm1099miYearsContract.TfmyMaskSsn = "Y";
+            //set the ssn less than 4 characters
+            taxForm1099miReposContract.TfmirCertifyTin[0] = "123";
+
+            var actualPdfData = await repository.GetForm1099MiPdfDataAsync("1", "201");
+            //SSN is shown with prepended mask characters with the 3 letter SSN
+            Assert.AreEqual("XXX-XX-" + taxForm1099miReposContract.TfmirCertifyTin[0], actualPdfData.Ein);
+        }
+
+        [TestMethod]
+        public async Task GetForm1099MiPdfDataAsync_TransmitterPhone_Contains_Hyphen_Request()
+        {
+            parm1099miContract.P1099miPhoneNumber = "987-654-3210";
+            var actualPdfData = await repository.GetForm1099MiPdfDataAsync("1", "201");
+            Assert.AreEqual(parm1099miContract.P1099miPhoneNumber + " " + parm1099miContract.P1099miPhoneExtension, actualPdfData.PayerAddressLine4);
+        }
+
+        [TestMethod]
+        public async Task GetForm1099MiPdfDataAsync_TransmitterPhone_LengthMoreThan10_Request()
+        {
+            parm1099miContract.P1099miPhoneNumber = "98765432101";
+            var actualPdfData = await repository.GetForm1099MiPdfDataAsync("1", "201");
+            Assert.AreEqual(parm1099miContract.P1099miPhoneNumber + " " + parm1099miContract.P1099miPhoneExtension, actualPdfData.PayerAddressLine4);
+        }
+
+        [TestMethod]
+        public async Task GetForm1099MiPdfDataAsync_Level01_EmptyCertifyArrays_Request()
+        {
+            //Level 01 is set on the mock object by default, so no explicit setting required
+            //set empty certify arrays
+            taxForm1099miReposContract.TfmirCertifyName = new List<string>();
+            taxForm1099miReposContract.TfmirCertifyAddress = new List<string>();
+            taxForm1099miReposContract.TfmirCertifyAddressLine1 = new List<string>();
+            taxForm1099miReposContract.TfmirCertifyAddressLine2 = new List<string>();
+            taxForm1099miReposContract.TfmirCertifyAddressLine3 = new List<string>();
+            taxForm1099miReposContract.TfmirCertifyCity = new List<string>();
+            taxForm1099miReposContract.TfmirCertifyName = new List<string>();
+            taxForm1099miReposContract.TfmirCertifySecondName = new List<string>();
+            taxForm1099miReposContract.TfmirCertifyState = new List<string>();
+            taxForm1099miReposContract.TfmirCertifyTin = new List<string>();
+            taxForm1099miReposContract.TfmirCertifyZip = new List<string>();
+            taxForm1099miReposContract.TfmirCertifyDirectResale = new List<string>();
+          
+            var actualPdfData = await repository.GetForm1099MiPdfDataAsync("1", "201");
+            // Check the recipient name and address.
+            Assert.AreEqual(true, string.IsNullOrWhiteSpace(actualPdfData.RecipientsName));
+            Assert.AreEqual(true, string.IsNullOrWhiteSpace(actualPdfData.RecipientSecondName));
+            Assert.AreEqual(",", actualPdfData.RecipientAddr1.Trim());
+            Assert.AreEqual(true, string.IsNullOrWhiteSpace(actualPdfData.RecipientAddr2));
+            Assert.AreEqual(true, string.IsNullOrWhiteSpace(actualPdfData.RecipientAddr3));
+            Assert.AreEqual(true, !actualPdfData.IsDirectResale);
+        }
+        //response valid - OutAddressModifier, OutAddressLines, OutAddressCity, OutAddressState, OutAddressZip valid
+
+        [TestMethod]
+        public async Task GetForm1099MiPdfDataAsync_TransmitterArraysEmpty_Request()
+        {
+            parm1099miContract.P1099miTTransmitterId = new List<string>();
+            parm1099miContract.P1099miTCoName = new List<string>();
+            parm1099miContract.P1099miTCoAddr = new List<string>();
+            parm1099miContract.P1099miTCoCity = new List<string>();
+            parm1099miContract.P1099miTState = new List<string>();
+            parm1099miContract.P1099miTZip = new List<string>();
+            txGetHierarchyAddressResponse = null;
+            var actualPdfData = await repository.GetForm1099MiPdfDataAsync("1", "201");
+            // check the transmitter name and addresslines
+            Assert.AreEqual(corpContract.CorpName[0], actualPdfData.PayerName);
+            Assert.AreEqual(true, string.IsNullOrWhiteSpace(actualPdfData.PayerAddressLine1));
+            Assert.AreEqual(true, string.IsNullOrWhiteSpace(actualPdfData.PayerAddressLine2));
+            Assert.AreEqual(true, string.IsNullOrWhiteSpace(actualPdfData.PayerAddressLine3));
+            Assert.AreEqual("987-654-3210 " + parm1099miContract.P1099miPhoneExtension, actualPdfData.PayerAddressLine4);
+        }
+        [TestMethod]
+        public async Task GetForm1099MiPdfDataAsync_AddressHierarchy_Null_Request()
+        {
+            //setting transmitter array empty to  invoke transaction for address hierarchy request
+            parm1099miContract.P1099miTTransmitterId = new List<string>();
+            txGetHierarchyAddressResponse = null;
+            var actualPdfData = await repository.GetForm1099MiPdfDataAsync("1", "201");
+            Assert.AreEqual(corpContract.CorpName[0], actualPdfData.PayerName);
+            Assert.AreEqual(true, string.IsNullOrWhiteSpace(actualPdfData.PayerAddressLine1));
+            Assert.AreEqual(true, string.IsNullOrWhiteSpace(actualPdfData.PayerAddressLine2));
+            Assert.AreEqual(true, string.IsNullOrWhiteSpace(actualPdfData.PayerAddressLine3));
+            Assert.AreEqual("987-654-3210 " + parm1099miContract.P1099miPhoneExtension, actualPdfData.PayerAddressLine4);
+        }
+
+        [TestMethod]
+        public async Task GetForm1099MiPdfDataAsync_AddressHierarchy_OutAddressId_Null_Request()
+        {
+            //setting transmitter array empty to  invoke transaction for address hierarchy request
+            parm1099miContract.P1099miTTransmitterId = new List<string>();
+            txGetHierarchyAddressResponse.OutAddressId = null;
+            var actualPdfData = await repository.GetForm1099MiPdfDataAsync("1", "201");
+            // check the transmitter name and addresslines
+            Assert.AreEqual(corpContract.CorpName[0], actualPdfData.PayerName);
+            Assert.AreEqual(true, string.IsNullOrWhiteSpace(actualPdfData.PayerAddressLine1));
+            Assert.AreEqual(true, string.IsNullOrWhiteSpace(actualPdfData.PayerAddressLine2));
+            Assert.AreEqual(true, string.IsNullOrWhiteSpace(actualPdfData.PayerAddressLine3));
+            Assert.AreEqual("987-654-3210 " + parm1099miContract.P1099miPhoneExtension, actualPdfData.PayerAddressLine4);
+        }
+
+        [TestMethod]
+        public async Task GetForm1099MiPdfDataAsync_AddressHierarchy_OutAddressId_Empty_Request()
+        {
+            //setting transmitter array empty to  invoke transaction for address hierarchy request
+            parm1099miContract.P1099miTTransmitterId = new List<string>();
+            txGetHierarchyAddressResponse.OutAddressId = "";
+            var actualPdfData = await repository.GetForm1099MiPdfDataAsync("1", "201");
+            // check the transmitter name and addresslines
+            Assert.AreEqual(corpContract.CorpName[0], actualPdfData.PayerName);
+            Assert.AreEqual(true, string.IsNullOrWhiteSpace(actualPdfData.PayerAddressLine1));
+            Assert.AreEqual(true, string.IsNullOrWhiteSpace(actualPdfData.PayerAddressLine2));
+            Assert.AreEqual(true, string.IsNullOrWhiteSpace(actualPdfData.PayerAddressLine3));
+            Assert.AreEqual("987-654-3210 " + parm1099miContract.P1099miPhoneExtension, actualPdfData.PayerAddressLine4);
+        }
+
+        [TestMethod]
+        public async Task GetForm1099MiPdfDataAsync_AddressHierarchy_FromAddressLabel_Request()
+        {
+            //setting transmitter array empty to  invoke transaction for address hierarchy request
+            parm1099miContract.P1099miTTransmitterId = new List<string>();
+            var actualPdfData = await repository.GetForm1099MiPdfDataAsync("1", "201");
+            
+            // check the transmitter name and addresslines
+            Assert.AreEqual(corpContract.CorpName[0], actualPdfData.PayerName);
+            Assert.AreEqual(txGetHierarchyAddressResponse.OutAddressLabel[0] + " " + txGetHierarchyAddressResponse.OutAddressLabel[1], actualPdfData.PayerAddressLine1);
+            Assert.AreEqual(txGetHierarchyAddressResponse.OutAddressLabel[2] + " " + txGetHierarchyAddressResponse.OutAddressLabel[3], actualPdfData.PayerAddressLine2);
+            Assert.AreEqual(true, string.IsNullOrWhiteSpace(actualPdfData.PayerAddressLine3));
+            Assert.AreEqual("987-654-3210 " + parm1099miContract.P1099miPhoneExtension, actualPdfData.PayerAddressLine4);
+        }
+
+        [TestMethod]
+        public async Task GetForm1099MiPdfDataAsync_AddressHierarchy_AddressLabel_Empty_AddressModifier_Null_Request()
+        {
+            //setting transmitter array empty to  invoke transaction for address hierarchy request
+            parm1099miContract.P1099miTTransmitterId = new List<string>();
+            txGetHierarchyAddressResponse.OutAddressLabel = new List<string>();
+            txGetHierarchyAddressResponse.OutAddressModifier = null;
+            txGetHierarchyAddressResponse.OutAddressCountryDesc = null;
+            var actualPdfData = await repository.GetForm1099MiPdfDataAsync("1", "201");
+
+            // check the transmitter name and addresslines
+            Assert.AreEqual(corpContract.CorpName[0], actualPdfData.PayerName);
+            Assert.AreEqual(txGetHierarchyAddressResponse.OutAddressLines[0] + " " + txGetHierarchyAddressResponse.OutAddressLines[1], actualPdfData.PayerAddressLine1);
+            Assert.AreEqual("city, ST 1234567", actualPdfData.PayerAddressLine2);
+            Assert.AreEqual(true, string.IsNullOrWhiteSpace(actualPdfData.PayerAddressLine3));
+            Assert.AreEqual("987-654-3210 " + parm1099miContract.P1099miPhoneExtension, actualPdfData.PayerAddressLine4);
+        }
+
+        [TestMethod]
+        public async Task GetForm1099MiPdfDataAsync_AddressHierarchy_AddressLabel_Empty_AddressModifier_Empty_Request()
+        {
+            //setting transmitter array empty to  invoke transaction for address hierarchy request
+            parm1099miContract.P1099miTTransmitterId = new List<string>();
+            txGetHierarchyAddressResponse.OutAddressLabel = new List<string>();
+            txGetHierarchyAddressResponse.OutAddressModifier = "";
+            txGetHierarchyAddressResponse.OutAddressCountryDesc = null;
+            var actualPdfData = await repository.GetForm1099MiPdfDataAsync("1", "201");
+
+            // check the transmitter name and addresslines
+            Assert.AreEqual(corpContract.CorpName[0], actualPdfData.PayerName);
+            Assert.AreEqual(txGetHierarchyAddressResponse.OutAddressLines[0] + " " + txGetHierarchyAddressResponse.OutAddressLines[1], actualPdfData.PayerAddressLine1);
+            Assert.AreEqual("city, ST 1234567", actualPdfData.PayerAddressLine2);
+            Assert.AreEqual(true, string.IsNullOrWhiteSpace(actualPdfData.PayerAddressLine3));
+            Assert.AreEqual("987-654-3210 " + parm1099miContract.P1099miPhoneExtension, actualPdfData.PayerAddressLine4);
+        }
+
+        [TestMethod]
+        public async Task GetForm1099MiPdfDataAsync_CurrentYear_01Record_And_MaskSsn()
+        {
+            //update MI detail record with M Record for this test case
+            tax1099miDetailContract.TmidtlrRefId = "01";
+            //to assume person is an individual
+            miPersonContract.PersonCorpIndicator = "N";
+            //MaskSSN is true
+            taxForm1099miYearsContract.TfmyMaskSsn = "Y";
+
+            var actualPdfData = await repository.GetForm1099MiPdfDataAsync("1", "201");
+
+            // Check the payer specific boxes from parm1099 contract.
+            Assert.AreEqual("2017", actualPdfData.TaxYear);
+            Assert.AreEqual(parm1099miContract.P1099miTCoName[1], actualPdfData.PayerName);
+            Assert.AreEqual(parm1099miContract.P1099miTCoAddr[1], actualPdfData.PayerAddressLine1);
+            Assert.AreEqual(parm1099miContract.P1099miTCoCity[1] + " " + parm1099miContract.P1099miTState[1] + " " + parm1099miContract.P1099miTZip[1], actualPdfData.PayerAddressLine2);
+            Assert.AreEqual("", actualPdfData.PayerAddressLine3);
+            Assert.AreEqual("987-654-3210 " + parm1099miContract.P1099miPhoneExtension, actualPdfData.PayerAddressLine4);
+
+            // Check the recipient specific boxes
+            Assert.IsTrue(!string.IsNullOrEmpty(actualPdfData.Ein));
+            Assert.AreEqual("XXX-XX-5678", actualPdfData.Ein);
+            // Check the recipient name and address.
+            Assert.AreEqual(taxForm1099miReposContract.TfmirName, actualPdfData.RecipientsName);
+            Assert.AreEqual(taxForm1099miReposContract.TfmirSecondName, actualPdfData.RecipientSecondName);
+            Assert.AreEqual(taxForm1099miReposContract.TfmirAddress, actualPdfData.RecipientAddr1);
+            Assert.AreEqual(taxForm1099miReposContract.TfmirAddressLine2 + " " + taxForm1099miReposContract.TfmirAddressLine3, actualPdfData.RecipientAddr2);
+            Assert.AreEqual(taxForm1099miReposContract.TfmirCity + ", " + taxForm1099miReposContract.TfmirState + " " + taxForm1099miReposContract.TfmirZip, actualPdfData.RecipientAddr3);
+            Assert.IsTrue(actualPdfData.IsDirectResale);
+            Assert.AreEqual(tax1099miDetailContract.TmidtlrVendorId, actualPdfData.RecipientAccountNumber);
+            Assert.AreEqual(actualPdfData.RecipientAccountNumber + "*" + tax1099miDetailContract.TmidtlrStateId, actualPdfData.AccountNumber);
+        }
+        #endregion
+
         #endregion
     }
 }

@@ -41,48 +41,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <summary>
         /// Get AccountsPayableInvoices Domain Entity
         /// Will not support vouchers that are paying student refunds or employee payroll related refunds, advances.
-        /// </summary>
-        /// <param name="offset">item number to start at</param>
-        /// <param name="limit">number of items to return on page</param>
-        /// <returns></returns>
-        public async Task<Tuple<IEnumerable<AccountsPayableInvoices>, int>> GetAccountsPayableInvoicesAsync(int offset, int limit)
-        {
-            // We need to exclude any AP Types where the source does not equal Regular Accounts Payable
-            // (ie - exclude Accounts Receivable and PayrollTax.Deductions)
-            var apTypesToInclude = await DataReader.SelectAsync("AP.TYPES", "WITH APT.SOURCE EQ 'R'");
-
-            var criteria = "WITH VOU.VENDOR NE '' AND VOU.AP.TYPE EQ ?";
-
-            var voucherIds = await DataReader.SelectAsync("VOUCHERS", criteria, 
-                apTypesToInclude.Select(id => string.Format("\"{0}\"", id)).ToArray());
-
-            //Exclude any voucher with a status of 'X' 
-            
-            voucherIds = await DataReader.SelectAsync("VOUCHERS", voucherIds, 
-                "WITH EVERY VOU.STATUS NE 'X'" ); //AND EVERY VOU.STATUS NE 'V'");
-           
-            var totalCount = voucherIds.Count();
-            Array.Sort(voucherIds);
-            var subList = voucherIds.Skip(offset).Take(limit).ToArray();
-
-            var voucherData = await DataReader.BulkReadRecordAsync<DataContracts.Vouchers>("VOUCHERS", subList);
-
-            if (voucherData == null)
-            {
-                throw new KeyNotFoundException("No records selected from Vouchers file in Colleague.");
-            }
-
-            var personSubList = voucherData.Where(x => !string.IsNullOrEmpty(x.VouVendor)).Select(c => c.VouVendor).Distinct().ToArray();
-            var personsData = await DataReader.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", personSubList); 
-
-            var accountsPayableInvoices = await BuildAccountsPayableInvoices(voucherData, personsData);
-
-            return new Tuple<IEnumerable<AccountsPayableInvoices>, int>(accountsPayableInvoices, totalCount);
-        }
-
-        /// <summary>
-        /// Get AccountsPayableInvoices Domain Entity
-        /// Will not support vouchers that are paying student refunds or employee payroll related refunds, advances.
         /// Does now support invoices without VOU.VENDOR for V11 EEDM accounts-payable-invoices.
         /// </summary>
         /// <param name="offset">item number to start at</param>

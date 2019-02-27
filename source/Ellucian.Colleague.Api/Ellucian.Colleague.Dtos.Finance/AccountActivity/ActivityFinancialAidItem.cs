@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2013 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
 
 namespace Ellucian.Colleague.Dtos.Finance.AccountActivity
@@ -70,5 +70,10 @@ namespace Ellucian.Colleague.Dtos.Finance.AccountActivity
         /// Concatenation of newline-delimited anticipated amounts for the award for use with student statements
         /// </summary>
         public string StudentStatementAnticipatedAmounts { get; set; }
+
+        /// <summary>
+        /// List of reasons this account holder is not eligible for aid
+        /// </summary>
+        public List<string> IneligibilityReasons { get; set; }
     }
 }

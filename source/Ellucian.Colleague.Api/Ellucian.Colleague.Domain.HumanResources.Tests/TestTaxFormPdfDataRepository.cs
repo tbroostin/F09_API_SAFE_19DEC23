@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using System.Linq;
@@ -15,17 +15,18 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
         {
             this.FormW2PdfDataObjects = new List<FormW2PdfData>()
             {
-                new FormW2PdfData("2016", "12-345678", "000-00-0001"),
-                new FormW2PdfData("2015", "12-345678", "000-00-0001"),
-                new FormW2PdfData("2014", "12-345678", "000-00-0001"),
-                new FormW2PdfData("2013", "12-345678", "000-00-0001"),
-                new FormW2PdfData("2012", "12-345678", "000-00-0001"),
-                new FormW2PdfData("2011", "12-345678", "000-00-0001"),
-                new FormW2PdfData("2010", "12-345678", "000-00-0001"),
+                new FormW2PdfData("2016", "12-345678", "000-00-0001") { EmployeeId = "000001" },
+                new FormW2PdfData("2015", "12-345678", "000-00-0001") { EmployeeId = "000001" },
+                new FormW2PdfData("2014", "12-345678", "000-00-0001") { EmployeeId = "000001" },
+                new FormW2PdfData("2013", "12-345678", "000-00-0001") { EmployeeId = "000001" },
+                new FormW2PdfData("2012", "12-345678", "000-00-0001") { EmployeeId = "000001" },
+                new FormW2PdfData("2011", "12-345678", "000-00-0001") { EmployeeId = "000001" },
+                new FormW2PdfData("2010", "12-345678", "000-00-0001") { EmployeeId = "000001" },
             };
 
             var form1095C = new Form1095cPdfData("2015", "12-345678", "000-00-0001")
             {
+                EmployeeId = "000001",
                 EmployeePostalCode = "20191",
                 EmployeeZipExtension = "1234",
                 EmployeeCountry = "US",

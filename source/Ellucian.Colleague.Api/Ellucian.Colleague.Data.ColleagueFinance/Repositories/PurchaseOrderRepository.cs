@@ -761,8 +761,14 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             foreach (var purchaseOrder in purchaseOrders)
             {
-
-                purchaseOrderCollection.Add(await BuildPurchaseOrderAsync(purchaseOrder));
+                try
+                {
+                    purchaseOrderCollection.Add(await BuildPurchaseOrderAsync(purchaseOrder));
+                }
+                catch (Exception ex)
+                {
+                    throw new ApplicationException(string.Concat(ex.Message, "  Purchase Order: '", purchaseOrder.PoNo, "', Entity: 'PURCHASE.ORDERS', Record ID: '", purchaseOrder.Recordkey, "'"));
+                }
             }
 
             return purchaseOrderCollection.AsEnumerable();
@@ -805,24 +811,24 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 // Do not allow a status of "H" on the PO even though a Line item status can have this status.
                 if (purchaseOrderStatus == null)
                 {
-                    throw new ApplicationException(string.Concat("Invalid purchase order status for purchase order.  Status: '", purchaseOrder.PoStatus.FirstOrDefault(), "', Entity: 'PURCHASE.ORDERS', Record ID: '", purchaseOrder.Recordkey, "'"));
+                    throw new ApplicationException(string.Concat("Invalid purchase order status for purchase order '", purchaseOrder.PoNo, "'.  Status: '", purchaseOrder.PoStatus.FirstOrDefault(), "', Entity: 'PURCHASE.ORDERS', Record ID: '", purchaseOrder.Recordkey, "'"));
                 }
             }
             else
             {
-                throw new ApplicationException("Missing status for purchase order: " + purchaseOrder.Recordkey);
+                throw new ApplicationException("Missing status for purchase order '" + purchaseOrder.PoNo + "', Entity: 'PURCHASE.ORDERS', Record ID: '" + purchaseOrder.Recordkey + "'");
             }
 
             string purchaseOrderVendorName = "";
 
-            if (purchaseOrder.PoStatusDate == null || !purchaseOrder.PoStatusDate.First().HasValue)
+            if (purchaseOrder.PoStatusDate == null || !purchaseOrder.PoStatusDate.Any() || !purchaseOrder.PoStatusDate.First().HasValue)
             {
-                throw new ApplicationException("Missing status date for purchase order: " + purchaseOrder.Recordkey);
+                throw new ApplicationException("Missing status date for purchase order '" + purchaseOrder.PoNo + "', Entity: 'PURCHASE.ORDERS', Record ID: '" + purchaseOrder.Recordkey + "'");
             }
 
             if (!purchaseOrder.PoDate.HasValue)
             {
-                throw new ApplicationException("Missing date for purchase order: " + purchaseOrder.Recordkey);
+                throw new ApplicationException("Missing date for purchase order '" + purchaseOrder.PoNo + "', Entity: 'PURCHASE.ORDERS', Record ID: '" + purchaseOrder.Recordkey + "'");
             }
 
             // The purchase order status date contains one to many dates
@@ -982,7 +988,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             var lineItemIds = purchaseOrder.PoItemsId;
             if (lineItemIds == null || !lineItemIds.Any())
             {
-                throw new ApplicationException(string.Format("Line Items are missing for purchase order entity '{0}'.", purchaseOrder.Recordkey));
+                throw new ApplicationException(string.Format("Line Items are missing for Purchase Order '{0}', Entity: 'PURCHASE.ORDERS', Record ID: '{1}'.", purchaseOrder.PoNo, purchaseOrder.Recordkey));
             }
             await GetLineItems(expenseAccounts, purchaseOrder, purchaseOrderDomainEntity, lineItemIds);
 
@@ -995,7 +1001,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             // Read the item records for the list of IDs in the purchase order record
             var lineItemRecords = await DataReader.BulkReadRecordAsync<Items>(lineItemIds.ToArray());
-            if ((lineItemRecords != null) && (lineItemRecords.Count > 0))
+            if ((lineItemRecords != null) && (lineItemRecords.Any()))
             {
 
                 List<string> glAccountsAllowed = new List<string>();
@@ -1039,8 +1045,25 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     }
 
                     decimal itemQuantity = lineItem.ItmPoQty.HasValue ? lineItem.ItmPoQty.Value : 0;
+                    // Accepted line items will have an accepted quantity and accepted price so
+                    // if we have accepted values, then use them (regardless of status).
+                    if (lineItem.ItmAcceptedQty.HasValue)
+                    {
+                        itemQuantity = lineItem.ItmAcceptedQty.Value;
+                    }
                     decimal itemPrice = lineItem.ItmPoPrice.HasValue ? lineItem.ItmPoPrice.Value : 0;
+                    if (lineItem.ItmAcceptedPrice.HasValue)
+                    {
+                        itemPrice = lineItem.ItmAcceptedPrice.Value;
+                    }
                     decimal extendedPrice = lineItem.ItmPoExtPrice.HasValue ? lineItem.ItmPoExtPrice.Value : 0;
+                    // If the integration type is "travel" then make sure unit price is $1.00 and quantity
+                    // represents the actual dollar amount of the purchase order.
+                    if (!string.IsNullOrEmpty(purchaseOrder.PoIntgType) && purchaseOrder.PoIntgType.ToLower() == "travel" && itemPrice != 1)
+                    {
+                        var errorMessage = string.Format("Invalid Price/Quantity on Travel Purchase Order: '{0}', Entity: 'PURCHASE.ORDERS', Record ID: {1}", purchaseOrder.PoNo, purchaseOrder.Recordkey);
+                        throw new ApplicationException(errorMessage);
+                    }
 
                     LineItem lineItemDomainEntity = new LineItem(lineItem.Recordkey, itemDescription, itemQuantity, itemPrice, extendedPrice);
 
@@ -1063,7 +1086,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
                     if (lineItem.ItemPoStatusEntityAssociation != null && lineItem.ItemPoStatusEntityAssociation.Any())
                     {
-                        var poStatus = lineItem.ItemPoStatusEntityAssociation.OrderByDescending(s => s.ItmPoStatusDateAssocMember).FirstOrDefault();
+                        // Current status is always in the first position in the association.
+                        var poStatus = lineItem.ItemPoStatusEntityAssociation.FirstOrDefault();
                         if (poStatus != null)
                         {
                             if (!string.IsNullOrEmpty(poStatus.ItmPoStatusAssocMember))

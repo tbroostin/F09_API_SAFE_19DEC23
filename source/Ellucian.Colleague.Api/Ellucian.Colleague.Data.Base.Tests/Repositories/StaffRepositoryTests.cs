@@ -25,6 +25,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
     {
         protected StaffRepository staffRepository;
         protected TestStaffRepository expectedRepository;
+        protected Staff staffDataContract;
 
         [TestClass]
         public class GetSingleStaffTests : StaffRepositoryTests
@@ -436,6 +437,50 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             }
         }
 
+        [TestClass]
+        public class GetStaffLoginIdForPerson : StaffRepositoryTests
+        {
+            [TestInitialize]
+            public void Initialize()
+            {
+                MockInitialize();
+
+                expectedRepository = new TestStaffRepository();
+                
+                staffRepository = BuildMockStaffRepository();
+            }
+
+            [TestCleanup]
+            public void TestCleanup()
+            {
+                staffRepository = null;
+                expectedRepository = null;
+                staffDataContract = null;
+            }
+
+            [TestMethod]
+            public async Task GetStaffLoginIdForPerson_Success()
+            {
+                staffDataContract = new Staff()
+                {
+                    StaffLoginId = "TEST"
+                };
+
+                var actual = await staffRepository.GetStaffLoginIdForPersonAsync("0000001");
+
+                Assert.AreEqual(staffDataContract.StaffLoginId, actual);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ApplicationException))]
+            public async Task GetStaffLoginIdForPerson_NullStaffRecord()
+            {
+                staffDataContract = null;
+
+                var actual = await staffRepository.GetStaffLoginIdForPersonAsync("0000001");
+            }
+        }
+
         private StaffRepository BuildMockStaffRepository()
         {
             dataReaderMock.Setup<IEnumerable<Staff>>(a => a.BulkReadRecord<Staff>(It.IsAny<string[]>(), true))
@@ -482,6 +527,14 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                                  FirstName = p.firstName
                              }).ToList()));
                      });
+
+            staffDataContract = new Staff();
+
+            dataReaderMock.Setup(a => a.ReadRecordAsync<Staff>(It.IsAny<string>(), It.IsAny<string>(), true))
+                .Returns(() =>
+                {
+                    return Task.FromResult(staffDataContract);
+                });
 
 
             // mock data access for preferred address - all will return null...

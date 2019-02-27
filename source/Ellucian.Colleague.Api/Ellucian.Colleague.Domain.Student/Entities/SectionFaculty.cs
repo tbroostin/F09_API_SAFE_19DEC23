@@ -162,11 +162,11 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             }
             if (startDate == default(DateTime))
             {
-                throw new ArgumentOutOfRangeException("startDate", string.Format("Section meeting record {0} for section {1} missing faculty start date for faculty {2}", id, sectionId, facultyId));
+                throw new ArgumentOutOfRangeException("startDate", string.Format("Section faculty record {0} for section {1} missing faculty start date for faculty {2}", id, sectionId, facultyId));
             }
             if (endDate == default(DateTime))
             {
-                throw new ArgumentOutOfRangeException("endDate", string.Format("Section meeting record {0} for section {1} missing faculty end date for faculty {2}", id, sectionId, facultyId));
+                throw new ArgumentOutOfRangeException("endDate", string.Format("Section faculty record {0} for section {1} missing faculty end date for faculty {2}", id, sectionId, facultyId));
             }
             if (respPercent < 0)
             {

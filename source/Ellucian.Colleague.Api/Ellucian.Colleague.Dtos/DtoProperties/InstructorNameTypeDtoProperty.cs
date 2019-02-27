@@ -20,7 +20,7 @@ namespace Ellucian.Colleague.Dtos.DtoProperties
         /// The <see cref="PersonNameType">type</see> of the person's name
         /// </summary>
         [JsonProperty("category")]
-        public InstructorNameType2? NameType { get; set; }
+        public InstructorNameType2? Category { get; set; }
 
         /// <summary>
         /// Person's title/prefix

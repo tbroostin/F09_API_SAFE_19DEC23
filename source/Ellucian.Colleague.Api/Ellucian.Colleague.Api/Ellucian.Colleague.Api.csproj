@@ -44,6 +44,7 @@
     <DocumentationFile>bin\Ellucian.Colleague.Api.xml</DocumentationFile>
     <WarningsAsErrors>1570,1571,1572,1573,1591</WarningsAsErrors>
     <Prefer32Bit>false</Prefer32Bit>
+    <FilesToIncludeForPublish>OnlyFilesToRunTheApp</FilesToIncludeForPublish>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -67,32 +68,32 @@
     <Reference Include="AutoMapper">
       <HintPath>..\packages\AutoMapper.2.1.267\lib\net40\AutoMapper.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Colleague.Configuration, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Colleague.Configuration.dll</HintPath>
+    <Reference Include="Ellucian.Colleague.Configuration, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Colleague.Configuration.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Ellucian.Colleague.Domain, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Colleague.Domain.dll</HintPath>
+    <Reference Include="Ellucian.Colleague.Domain, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Colleague.Domain.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Ellucian.Colleague.Legacy, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Colleague.Legacy.dll</HintPath>
+    <Reference Include="Ellucian.Colleague.Legacy, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Colleague.Legacy.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Ellucian.Colleague.Property, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Colleague.Property.dll</HintPath>
+    <Reference Include="Ellucian.Colleague.Property, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Colleague.Property.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Ellucian.Data.Colleague, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Data.Colleague.dll</HintPath>
+    <Reference Include="Ellucian.Data.Colleague, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Data.Colleague.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Ellucian.Dmi.Client, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Dmi.Client.dll</HintPath>
+    <Reference Include="Ellucian.Dmi.Client, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Dmi.Client.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Ellucian.Dmi.Runtime, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Dmi.Runtime.dll</HintPath>
+    <Reference Include="Ellucian.Dmi.Runtime, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Dmi.Runtime.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Ellucian.Logging, Version=1.0.0.1, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
@@ -142,8 +143,8 @@
       <HintPath>..\packages\Ellucian.Web.Utility.1.0.0.181\lib\net451\Ellucian.Web.Utility.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Ellucian.WebServices.Core.Config, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.WebServices.Core.Config.dll</HintPath>
+    <Reference Include="Ellucian.WebServices.Core.Config, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.WebServices.Core.Config.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="ICSharpCode.SharpZipLib">
@@ -296,7 +297,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App_Start\BundleConfig.cs" />
-    <Compile Include="App_Start\F09RouteConfig.cs" />
     <Compile Include="App_Start\FilterConfig.cs" />
     <Compile Include="App_Start\RouteConfig.cs" />
     <Compile Include="Areas\Student\Controllers\TestController.cs" />
@@ -307,7 +307,10 @@
     <Compile Include="Areas\Student\Models\Tests\TestSectionsForCourses.cs" />
     <Compile Include="Areas\Student\StudentAreaRegistration.cs" />
     <Compile Include="Controllers\Base\AdmissionApplicationSupportingItemStatusesController.cs" />
+    <Compile Include="Controllers\Base\AlternativeCredentialTypesController.cs" />
+    <Compile Include="Controllers\Base\CorrespondenceRequestsController.cs" />
     <Compile Include="Controllers\Base\GenderIdentityTypesController.cs" />
+    <Compile Include="Controllers\Base\MessageController.cs" />
     <Compile Include="Controllers\Base\OrganizationalPositionController.cs" />
     <Compile Include="Controllers\Base\OrganizationalPositionRelationshipsController.cs" />
     <Compile Include="Controllers\Base\NonPersonRelationshipsController.cs" />
@@ -340,9 +343,11 @@
     <Compile Include="Controllers\ColleagueFinance\ColleagueFinanceTaxFormStatementsController.cs" />
     <Compile Include="Controllers\ColleagueFinance\ColleagueFinanceTaxFormPdfsController.cs" />
     <Compile Include="Controllers\ColleagueFinance\PurchasingArrangementsController.cs" />
-    <Compile Include="Controllers\F09\ActiveRestrictionsController.cs" />
-    <Compile Include="Controllers\F09\StudentRestrictionController.cs" />
     <Compile Include="Controllers\HumanResources\LeaveBalanceConfigurationController.cs" />
+    <Compile Include="Controllers\Student\SectionRegistrationsGradeOptionsController.cs" />
+    <Compile Include="Controllers\Student\StudentUnverifiedGradesSubmissionsController.cs" />
+    <Compile Include="Controllers\Student\StudentTranscriptGradesOptionsController.cs" />
+    <Compile Include="Controllers\Student\StudentTranscriptGradesController.cs" />
     <Compile Include="Controllers\Student\FinancialAidAcademicProgressStatusesController.cs" />
     <Compile Include="Controllers\Student\FinancialAidAcademicProgressTypesController.cs" />
     <Compile Include="Controllers\Student\StudentSectionAttendancesController.cs" />
@@ -454,6 +459,7 @@
     <Compile Include="Controllers\Student\AdmissionDecisionsController.cs" />
     <Compile Include="Controllers\Student\AttendanceCategoriesController.cs" />
     <Compile Include="Controllers\Student\BookOptionsController.cs" />
+    <Compile Include="Controllers\Student\StudentUnverifiedGradesController.cs" />
     <Compile Include="Controllers\Student\CourseTitleTypesController.cs" />
     <Compile Include="Controllers\Student\DropReasonsController.cs" />
     <Compile Include="Controllers\Student\ExternalEducationController.cs" />
@@ -477,6 +483,7 @@
     <Compile Include="Controllers\Student\SectionInstructorsController.cs" />
     <Compile Include="Controllers\Student\SectionAttendancesController.cs" />
     <Compile Include="Controllers\Student\StudentCourseTransferController.cs" />
+    <Compile Include="Controllers\Student\StudentGradePointAveragesController.cs" />
     <Compile Include="Controllers\Student\StudentMealPlansController.cs" />
     <Compile Include="Controllers\Student\MealPlanRatesController.cs" />
     <Compile Include="Controllers\Student\AcademicDisciplinesController.cs" />
@@ -868,9 +875,7 @@
     <Content Include="Views\Shared\Error.cshtml" />
     <Content Include="Views\Shared\_Layout.cshtml" />
   </ItemGroup>
-  <ItemGroup>
-    <Content Include="App_Data\ellucian.license" />
-  </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
     <Content Include="App_Data\settings.config">
       <SubType>Designer</SubType>
@@ -893,6 +898,9 @@
     <Content Include="Areas\Student\Views\Test\Subjects.cshtml" />
     <Content Include="Areas\Student\Views\_ViewStart.cshtml" />
     <Content Include="Areas\Student\Views\Test\CourseSearchParallel.cshtml" />
+    <Content Include="App_Data\deprecatedResources.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="packages.config">
       <SubType>Designer</SubType>
     </Content>
@@ -947,10 +955,6 @@
       <Project>{7461afa8-f600-4df5-9b43-6fed35402279}</Project>
       <Name>Ellucian.Colleague.Coordination.ColleagueFinance</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Ellucian.Colleague.Coordination.F09\Ellucian.Colleague.Coordination.F09.csproj">
-      <Project>{f08b4ce9-ee30-4192-a527-a330e6e66f15}</Project>
-      <Name>Ellucian.Colleague.Coordination.F09</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Ellucian.Colleague.Coordination.Finance\Ellucian.Colleague.Coordination.Finance.csproj">
       <Project>{E58B8C16-5BF9-45E5-934B-1C4804B157E4}</Project>
       <Name>Ellucian.Colleague.Coordination.Finance</Name>
@@ -974,10 +978,6 @@
     <ProjectReference Include="..\Ellucian.Colleague.Data.ColleagueFinance\Ellucian.Colleague.Data.ColleagueFinance.csproj">
       <Project>{8dd19909-a3b4-486f-959f-ac0a9cfd963c}</Project>
       <Name>Ellucian.Colleague.Data.ColleagueFinance</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Ellucian.Colleague.Data.F09\Ellucian.Colleague.Data.F09.csproj">
-      <Project>{bcd020c1-d32f-482c-9d89-8849bfedcceb}</Project>
-      <Name>Ellucian.Colleague.Data.F09</Name>
     </ProjectReference>
     <ProjectReference Include="..\Ellucian.Colleague.Data.Finance\Ellucian.Colleague.Data.Finance.csproj">
       <Project>{51453AB3-7CD4-4319-863E-24C08E205C9E}</Project>
@@ -1026,10 +1026,6 @@
     <ProjectReference Include="..\Ellucian.Colleague.Dtos.ColleagueFinance\Ellucian.Colleague.Dtos.ColleagueFinance.csproj">
       <Project>{ca034d7a-0963-4463-b974-bef18be515ae}</Project>
       <Name>Ellucian.Colleague.Dtos.ColleagueFinance</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Ellucian.Colleague.Dtos.F09\Ellucian.Colleague.Dtos.F09.csproj">
-      <Project>{a6cd3ada-1605-48b1-a41c-9989b42c3eda}</Project>
-      <Name>Ellucian.Colleague.Dtos.F09</Name>
     </ProjectReference>
     <ProjectReference Include="..\Ellucian.Colleague.Dtos.Finance\Ellucian.Colleague.Dtos.Finance.csproj">
       <Project>{F2409F02-791E-43B3-85E3-B577226FCF55}</Project>
@@ -1221,13 +1217,50 @@
     <Content Include="Reports\Student\2008-1098E.rdlc" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Reports\ColleagueFinance\2014-1099MI.rdlc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\ColleagueFinance\2013-1099MI.rdlc" />
+  </ItemGroup>
+  <ItemGroup>
     <Content Include="Reports\ColleagueFinance\20XX-1099MI.rdlc" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Views\ActiveRestrictions\" />
+    <Content Include="Reports\Student\2018-1098T.rdlc" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Properties\PublishProfiles\F09ColleagueApi.pubxml" />
+    <Content Include="Reports\Student\2018-1098E.rdlc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\ColleagueFinance\2009-1099MI.rdlc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\HumanResources\2018-W2-W2ST.rdlc">
+      <SubType>Designer</SubType>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\HumanResources\2018-1095C.rdlc">
+      <SubType>Designer</SubType>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\HumanResources\2014-W2c-8.rdlc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\Student\2018-T2202a.rdlc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\ColleagueFinance\2018-T4A.rdlc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Reports\HumanResources\2018-T4.rdlc" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Reports\FinancialAid\AwardLetter3.rdlc">
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <Content Include="Reports\HumanResources\2014-W2c-8.rdlc" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
@@ -1262,9 +1295,7 @@
           <AutoAssignPort>True</AutoAssignPort>
           <DevelopmentServerPort>57276</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
-          <IISUrl>http://localhost/Ellucian.Colleague.Api.F09</IISUrl>
-          <OverrideIISAppRootUrl>True</OverrideIISAppRootUrl>
-          <IISAppRootUrl>http://localhost/Ellucian.Colleague.Api.F09</IISAppRootUrl>
+          <IISUrl>http://localhost/Ellucian.Colleague.Api</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>
           <UseCustomServer>False</UseCustomServer>
           <CustomServerUrl>

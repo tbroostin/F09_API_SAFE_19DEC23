@@ -103,7 +103,7 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <param name="addresses">List of <see cref="Address">addresses</see> to associate to the person in the database.</param>
         /// <param name="phones">List of <see cref="Phone">phones</see> to associate to the person in the database.</param>
         /// <returns>The newly created <see cref="PersonIntegration">person</see> entity</returns>
-        Task<PersonIntegration> Create2Async(PersonIntegration person, IEnumerable<Address> addresses, IEnumerable<Phone> phones);
+        Task<PersonIntegration> Create2Async(PersonIntegration person, IEnumerable<Address> addresses, IEnumerable<Phone> phones, int version = 1);
 
         /// <summary>
         /// Create a organization.
@@ -130,7 +130,7 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <param name="addresses">List of <see cref="Address">addresses</see> to associate to the person in the database.</param>
         /// <param name="phones">List of <see cref="Phone">phones</see> to associate to the person in the database.</param>
         /// <returns>The newly updated <see cref="PersonIntegration">person</see> entity</returns>
-        Task<PersonIntegration> Update2Async(PersonIntegration person, IEnumerable<Address> addresses, IEnumerable<Phone> phones);
+        Task<PersonIntegration> Update2Async(PersonIntegration person, IEnumerable<Address> addresses, IEnumerable<Phone> phones, int version = 1);
 
 
         /// <summary>
@@ -268,6 +268,20 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         Task<Dictionary<string, string>> GetPersonGuidsCollectionAsync(IEnumerable<string> personIds);
 
         /// <summary>
+        /// Using a collection of person ids, get a dictionary collection of associated guids for person who are not orgs or institutions.
+        /// </summary>
+        /// <param name="personIds"></param>
+        /// <returns></returns>
+        Task<Dictionary<string, string>> GetPersonGuidsWithNoCorpCollectionAsync(IEnumerable<string> personIds);
+
+        /// <summary>
+        /// Return dictionary with combination of opersKey, person record key, person guid.
+        /// </summary>
+        /// <param name="operKeys"></param>
+        /// <returns></returns>
+        Task<Dictionary<string, KeyValuePair<string, string>>> GetPersonGuidsFromOperKeysAsync(IEnumerable<string> operKeys);
+
+        /// <summary>
         /// Gets all paged person guids with Filter
         /// </summary>
         /// <param name="offset"></param>
@@ -289,5 +303,8 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <param name="personGuids"></param>
         /// <returns></returns>
         Task<IEnumerable<Ellucian.Colleague.Domain.Base.Entities.PersonPin>> GetPersonPinsAsync(string[] personGuids);
+
+        Task<EmailAddress> GetEmailAddressFromHierarchyAsync(string personId, string emailHierarchy);
+
     }
 }

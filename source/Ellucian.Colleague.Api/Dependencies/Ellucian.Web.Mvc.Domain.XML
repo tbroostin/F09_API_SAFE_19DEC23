@@ -4,6 +4,26 @@
         <name>Ellucian.Web.Mvc.Domain</name>
     </assembly>
     <members>
+        <member name="T:Ellucian.Web.Mvc.Domain.Entities.CloudMaintenance">
+            <summary>
+            Reponsibility of administrative maintenance when cloud-hosted
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Domain.Entities.CloudMaintenance.None">
+            <summary>
+            Not maintained by cloud administrators
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Domain.Entities.CloudMaintenance.Shared">
+            <summary>
+            Shared maintenace by cloud and onsite administrators
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Mvc.Domain.Entities.CloudMaintenance.CloudOnly">
+            <summary>
+            Maintained by only cloud administrators
+            </summary>
+        </member>
         <member name="T:Ellucian.Web.Mvc.Domain.Entities.DetailPage">
             <summary>
             Detail page entity.
@@ -436,6 +456,14 @@
             Indicates if this page should be subject to elevated security rules
             If true, this page's security will be controlled by a separate
             administration page
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Domain.Entities.Page.CloudMaintenance">
+            <summary>
+            Indicates how the page is maintained in a cloud environment. This is used
+            during bootstrapping of the Self-Service host to secure admin functionality.
+            CloudOnly pages should only be accessible to cloud admins
+            Shared pages should be accessible to both cloud and client admins
             </summary>
         </member>
         <member name="T:Ellucian.Web.Mvc.Domain.Entities.Link">

@@ -265,8 +265,20 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
 
             CheckDeleteRequisitionPermission();
+            try
+            {
+                var requisitionData = await requisitionRepository.GetRequisitionsByGuidAsync(guid);
+                if (requisitionData == null)
+                {
+                    throw new KeyNotFoundException();
+                }
 
-            await requisitionRepository.DeleteRequisitionAsync(guid);
+                await requisitionRepository.DeleteRequisitionAsync(guid);
+            }
+            catch (KeyNotFoundException)
+            {
+                throw new KeyNotFoundException(string.Format("Requisitions not found for guid: '{0}'.", guid));
+            }
         }
 
         /// <summary>

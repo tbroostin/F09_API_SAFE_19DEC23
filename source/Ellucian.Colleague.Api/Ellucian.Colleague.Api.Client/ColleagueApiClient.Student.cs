@@ -4914,140 +4914,8 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
-        /// <summary>
-        /// Retrieve Student Objects without cache based on a Post transaction with multiple keys
-        /// </summary>
-        /// <param name="studentIds">Post a list of student keys</param>
-        /// <returns>list of Student objects</returns>
-        public IEnumerable<Student> GetStudentsById(IEnumerable<string> studentIds)
-        {
-            StudentQueryCriteria criteria = new StudentQueryCriteria();
-            criteria.StudentIds = studentIds;
-            criteria.InheritFromPerson = true;
-            criteria.GetDegreePlan = true;
 
-            if (studentIds == null)
-            {
-                throw new ArgumentNullException("studentIds", "IDs cannot be empty/null for Student retrieval.");
-            }
-            try
-            {
-                // Build url path from qapi path and student path
-                string[] pathStrings = new string[] { _qapiPath, _studentsPath };
-                var urlPath = UrlUtility.CombineUrlPath(pathStrings);
-
-                var headers = new NameValueCollection();
-                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-                var response = ExecutePostRequestWithResponse(criteria, urlPath, headers: headers);
-                return JsonConvert.DeserializeObject<IEnumerable<Student>>(response.Content.ReadAsStringAsync().Result);
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex.GetBaseException(), "Unable to retrieve students.");
-                throw;
-            }
-        }
-        /// <summary>
-        /// Retrieve Student Objects without cache based on a Post transaction with multiple keys async.
-        /// </summary>
-        /// <param name="studentIds">Post a list of student keys</param>
-        /// <returns>list of Student objects</returns>
-        public async Task<IEnumerable<Student>> GetStudentsByIdAsync(IEnumerable<string> studentIds)
-        {
-            StudentQueryCriteria criteria = new StudentQueryCriteria();
-            criteria.StudentIds = studentIds;
-            criteria.InheritFromPerson = true;
-            criteria.GetDegreePlan = true;
-
-            if (studentIds == null)
-            {
-                throw new ArgumentNullException("studentIds", "IDs cannot be empty/null for Student retrieval.");
-            }
-            try
-            {
-                // Build url path from qapi path and student path
-                string[] pathStrings = new string[] { _qapiPath, _studentsPath };
-                var urlPath = UrlUtility.CombineUrlPath(pathStrings);
-
-                var headers = new NameValueCollection();
-                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
-                return JsonConvert.DeserializeObject<IEnumerable<Student>>(await response.Content.ReadAsStringAsync());
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex.GetBaseException(), "Unable to retrieve students.");
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Retrieve Student Objects in Batch without cache based on a Post transaction with multiple keys
-        /// </summary>
-        /// <param name="studentIds">Post a list of student keys</param>
-        /// <returns>list of StudentBatch objects</returns>
-        public IEnumerable<StudentBatch> QueryStudentsById(IEnumerable<string> studentIds)
-        {
-            StudentQueryCriteria criteria = new StudentQueryCriteria();
-            criteria.StudentIds = studentIds;
-            criteria.InheritFromPerson = false;
-            criteria.GetDegreePlan = false;
-
-            if (studentIds == null)
-            {
-                throw new ArgumentNullException("studentIds", "IDs cannot be empty/null for Student retrieval.");
-            }
-            try
-            {
-                // Build url path from qapi path and student path
-                string[] pathStrings = new string[] { _qapiPath, _studentsPath };
-                var urlPath = UrlUtility.CombineUrlPath(pathStrings);
-
-                var headers = new NameValueCollection();
-                headers.Add(AcceptHeaderKey, "application/vnd.ellucian-batch.v1+json");
-                var response = ExecutePostRequestWithResponse(criteria, urlPath, headers: headers);
-                return JsonConvert.DeserializeObject<IEnumerable<StudentBatch>>(response.Content.ReadAsStringAsync().Result);
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex.GetBaseException(), "Unable to retrieve students.");
-                throw;
-            }
-        }
-        /// <summary>
-        /// Retrieve Student Objects in Batch without cache based on a Post transaction with multiple keys async.
-        /// </summary>
-        /// <param name="studentIds">Post a list of student keys</param>
-        /// <returns>list of StudentBatch objects</returns>
-        public async Task<IEnumerable<StudentBatch>> QueryStudentsByIdAsync(IEnumerable<string> studentIds)
-        {
-            StudentQueryCriteria criteria = new StudentQueryCriteria();
-            criteria.StudentIds = studentIds;
-            criteria.InheritFromPerson = false;
-            criteria.GetDegreePlan = false;
-
-            if (studentIds == null)
-            {
-                throw new ArgumentNullException("studentIds", "IDs cannot be empty/null for Student retrieval.");
-            }
-            try
-            {
-                // Build url path from qapi path and student path
-                string[] pathStrings = new string[] { _qapiPath, _studentsPath };
-                var urlPath = UrlUtility.CombineUrlPath(pathStrings);
-
-                var headers = new NameValueCollection();
-                headers.Add(AcceptHeaderKey, "application/vnd.ellucian-batch.v1+json");
-                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
-                return JsonConvert.DeserializeObject<IEnumerable<StudentBatch>>(await response.Content.ReadAsStringAsync());
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex.GetBaseException(), "Unable to retrieve students.");
-                throw;
-            }
-        }
-
+        
         /// <summary>
         /// Retrieve Student Objects in Batch without cache based on a Post transaction with multiple keys async.
         /// </summary>
@@ -5087,76 +4955,6 @@ namespace Ellucian.Colleague.Api.Client
         /// </summary>
         /// <param name="studentIds">Post a list of student keys</param>
         /// <returns>list of StudentBatch objects</returns>
-        public IEnumerable<StudentBatch2> QueryStudents2ById(IEnumerable<string> studentIds, string term)
-        {
-            StudentQueryCriteria criteria = new StudentQueryCriteria();
-            criteria.StudentIds = studentIds;
-            criteria.InheritFromPerson = false;
-            criteria.GetDegreePlan = false;
-            criteria.Term = term;
-
-            if (studentIds == null)
-            {
-                throw new ArgumentNullException("studentIds", "IDs cannot be empty/null for Student retrieval.");
-            }
-            try
-            {
-                // Build url path from qapi path and student path
-                string[] pathStrings = new string[] { _qapiPath, _studentsPath };
-                var urlPath = UrlUtility.CombineUrlPath(pathStrings);
-
-                var headers = new NameValueCollection();
-                headers.Add(AcceptHeaderKey, "application/vnd.ellucian-batch.v2+json");
-                var response = ExecutePostRequestWithResponse(criteria, urlPath, headers: headers);
-                return JsonConvert.DeserializeObject<IEnumerable<StudentBatch2>>(response.Content.ReadAsStringAsync().Result);
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex.GetBaseException(), "Unable to retrieve students.");
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Retrieve Student Objects in Batch without cache based on a Post transaction with multiple keys
-        /// </summary>
-        /// <param name="studentIds">Post a list of student keys</param>
-        /// <returns>list of StudentBatch objects</returns>
-        public IEnumerable<StudentBatch3> QueryStudents3ById(IEnumerable<string> studentIds, string term)
-        {
-            StudentQueryCriteria criteria = new StudentQueryCriteria();
-            criteria.StudentIds = studentIds;
-            criteria.InheritFromPerson = false;
-            criteria.GetDegreePlan = false;
-            criteria.Term = term;
-
-            if (studentIds == null)
-            {
-                throw new ArgumentNullException("studentIds", "IDs cannot be empty/null for Student retrieval.");
-            }
-            try
-            {
-                // Build url path from qapi path and student path
-                string[] pathStrings = new string[] { _qapiPath, _studentsPath };
-                var urlPath = UrlUtility.CombineUrlPath(pathStrings);
-
-                var headers = new NameValueCollection();
-                headers.Add(AcceptHeaderKey, "application/vnd.ellucian-batch.v3+json");
-                var response = ExecutePostRequestWithResponse(criteria, urlPath, headers: headers);
-                return JsonConvert.DeserializeObject<IEnumerable<StudentBatch3>>(response.Content.ReadAsStringAsync().Result);
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex.GetBaseException(), "Unable to retrieve students.");
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Retrieve Student Objects in Batch without cache based on a Post transaction with multiple keys
-        /// </summary>
-        /// <param name="studentIds">Post a list of student keys</param>
-        /// <returns>list of StudentBatch objects</returns>
         public IEnumerable<StudentBatch3> QueryStudents4ById(IEnumerable<string> studentIds, string term)
         {
             StudentQueryCriteria criteria = new StudentQueryCriteria();
@@ -5179,41 +4977,6 @@ namespace Ellucian.Colleague.Api.Client
                 headers.Add(AcceptHeaderKey, "application/vnd.ellucian-batch.v4+json");
                 var response = ExecutePostRequestWithResponse(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<StudentBatch3>>(response.Content.ReadAsStringAsync().Result);
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex.GetBaseException(), "Unable to retrieve students.");
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Retrieve Student Objects in Batch without cache based on a Post transaction with multiple keys async.
-        /// </summary>
-        /// <param name="studentIds">Post a list of student keys</param>
-        /// <returns>list of StudentBatch objects</returns>
-        public async Task<IEnumerable<StudentBatch2>> QueryStudents2ByIdAsync(IEnumerable<string> studentIds, string term = null)
-        {
-            StudentQueryCriteria criteria = new StudentQueryCriteria();
-            criteria.StudentIds = studentIds;
-            criteria.InheritFromPerson = false;
-            criteria.GetDegreePlan = false;
-            criteria.Term = term;
-
-            if (studentIds == null)
-            {
-                throw new ArgumentNullException("studentIds", "IDs cannot be empty/null for Student retrieval.");
-            }
-            try
-            {
-                // Build url path from qapi path and student path
-                string[] pathStrings = new string[] { _qapiPath, _studentsPath };
-                var urlPath = UrlUtility.CombineUrlPath(pathStrings);
-
-                var headers = new NameValueCollection();
-                headers.Add(AcceptHeaderKey, "application/vnd.ellucian-batch.v2+json");
-                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
-                return JsonConvert.DeserializeObject<IEnumerable<StudentBatch2>>(await response.Content.ReadAsStringAsync());
             }
             catch (Exception ex)
             {
@@ -5470,6 +5233,36 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
+        /// <summary>
+        /// Get all Academic Catalogs async.
+        /// </summary>
+        /// <returns>The set of all AcademicCatalogs in the database</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<Catalog>> GetAllAcademicCatalogsAsync()
+        {
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_academicCatalogsPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<Catalog>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to get AcademicPrograms");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get AcademicPrograms");
+                throw;
+            }
+        }
+
         /// <summary>
         /// Get all Advisor Types
         /// </summary>
@@ -8905,7 +8698,64 @@ namespace Ellucian.Colleague.Api.Client
             }
 
         }
-        
+        /// <summary>
+        /// Retrieve sections calendar schedules in iCal format
+        /// </summary>
+        /// <param name="criteria" <see cref="SectionEventsICalQueryCriteria"/> >Post in Body a list of section ids or date ranges</param>
+        /// <returns>iCal in string format</returns>
+        public async Task<string> QuerySectionEventsICalAsync(SectionEventsICalQueryCriteria criteria)
+        {
+            // Throw exception if section Id is not supplied
+            if (criteria == null || criteria.SectionIds == null || !criteria.SectionIds.Any())
+            {
+                throw new ArgumentNullException("You must supply a criteria with at least one section Id to retrieve section Ical from calendar schedules.");
+            }
+            try
+            {
+
+                string urlPath = UrlUtility.CombineUrlPath(_qapiPath, _sectionsPath, _iCalPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<EventsICal>(await response.Content.ReadAsStringAsync());
+                return resource.iCal;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, string.Format("Unable to query sections iCal information."));
+                return string.Empty;
+            }
+        }
+
+        /// <summary>
+        /// Returns graduation application eligibilty information for a student 
+        /// </summary>
+        /// <param name="studentId">(Required) Id of student</param>
+        /// <param name="programCodes">List of program Codes for which graduation application eligibility is desired. Must provide at least 1</param>
+        /// <returns>List of <see cref="GraduationApplicationProgramEligibility">Graduation Application Program Eligibility</see> objects</returns>
+        public async Task<IEnumerable<GraduationApplicationProgramEligibility>> QueryGraduationApplicationEligibilityAsync(string studentId, List<string> programCodes)
+        {
+            // Throw exception if incoming student or program code is not supplied
+            if (string.IsNullOrEmpty(studentId) || programCodes == null || !programCodes.Any())
+            {
+                throw new ArgumentNullException("You must supply a student Id and at least one program code to get graduation application eligiblity.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_qapiPath, _graduationApplicationEligibilityPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var criteria = new GraduationApplicationEligibilityCriteria() { StudentId = studentId, ProgramCodes = programCodes };
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<IEnumerable<GraduationApplicationProgramEligibility>>(await response.Content.ReadAsStringAsync());
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.GetBaseException(), "Unable to retrieve graduation application eligibility.");
+                throw new ApplicationException("Unable to retrieve graduation application eligibility.");
+            }
+        }
+
     }
 }
 

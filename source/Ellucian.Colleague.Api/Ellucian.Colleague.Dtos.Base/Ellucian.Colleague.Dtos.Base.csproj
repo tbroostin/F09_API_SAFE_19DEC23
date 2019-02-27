@@ -60,7 +60,10 @@
     <Compile Include="BackupConfigurationQueryCriteria.cs" />
     <Compile Include="BackupConfiguration.cs" />
     <Compile Include="CampusCalendar.cs" />
+    <Compile Include="CorrespondenceRequest.cs" />
+    <Compile Include="CorrespondenceRequestStatus.cs" />
     <Compile Include="EmployeeNameQueryCriteria.cs" />
+    <Compile Include="ExecutionState.cs" />
     <Compile Include="FacultyContract.cs" />
     <Compile Include="FacultyContractAssignment.cs" />
     <Compile Include="FacultyContractAssignmentType.cs" />
@@ -113,6 +116,7 @@
     <Compile Include="OrganizationalRelationship.cs" />
     <Compile Include="OrganizationalPersonPosition.cs" />
     <Compile Include="PersonNameQueryCriteria.cs" />
+    <Compile Include="PersonProxyDetails.cs" />
     <Compile Include="PilotPhoneNumber.cs" />
     <Compile Include="DemographicFieldRequirement.cs" />
     <Compile Include="DemographicFieldType.cs" />
@@ -185,6 +189,7 @@
     <Compile Include="RelatedPerson.cs" />
     <Compile Include="Relationship.cs" />
     <Compile Include="RelationshipType.cs" />
+    <Compile Include="RequiredDocumentConfiguration.cs" />
     <Compile Include="ResourceBusinessEventMapping.cs" />
     <Compile Include="RestrictionConfiguration.cs" />
     <Compile Include="Role.cs" />
@@ -215,6 +220,7 @@
     <Compile Include="UserProfileViewUpdateOption.cs" />
     <Compile Include="VisaType.cs" />
     <Compile Include="RequestExceptionDetails.cs" />
+    <Compile Include="WebSortField.cs" />
     <Compile Include="WorkTask.cs" />
     <Compile Include="WorkTaskProcess.cs" />
   </ItemGroup>

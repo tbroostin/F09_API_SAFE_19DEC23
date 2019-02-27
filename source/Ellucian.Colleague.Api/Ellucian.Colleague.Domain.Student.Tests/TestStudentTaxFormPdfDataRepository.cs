@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using System.Linq;
@@ -15,24 +15,25 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         {
             this.Form1098PdfDataObjects = new List<Form1098PdfData>()
             {
-                new Form1098PdfData("2016", "1"),
-                new Form1098PdfData("2015", "2"),
-                new Form1098PdfData("2014", "3"),
-                new Form1098PdfData("2013", "4"),
-                new Form1098PdfData("2012", "5"),
-                new Form1098PdfData("2011", "6"),
-                new Form1098PdfData("2010", "7"),
-                new Form1098PdfData("2017", "8")
+                new Form1098PdfData("2016", "1") { StudentId = "000001" },
+                new Form1098PdfData("2015", "2") { StudentId = "000001" },
+                new Form1098PdfData("2014", "3") { StudentId = "000001" },
+                new Form1098PdfData("2013", "4") { StudentId = "000001" },
+                new Form1098PdfData("2012", "5") { StudentId = "000001" },
+                new Form1098PdfData("2011", "6") { StudentId = "000001" },
+                new Form1098PdfData("2010", "7") { StudentId = "000001" },
+                new Form1098PdfData("2017", "8") { StudentId = "000001" },
+                new Form1098PdfData("2018", "9") { StudentId = "000001" }
             };
             this.FormT2202aPdfDataObjects = new List<FormT2202aPdfData>()
             {
-                new FormT2202aPdfData("2016", "1"),
-                new FormT2202aPdfData("2015", "2"),
-                new FormT2202aPdfData("2014", "3"),
-                new FormT2202aPdfData("2013", "4"),
-                new FormT2202aPdfData("2012", "5"),
-                new FormT2202aPdfData("2011", "6"),
-                new FormT2202aPdfData("2010", "7")
+                new FormT2202aPdfData("2016", "000001"),
+                new FormT2202aPdfData("2015", "000001"),
+                new FormT2202aPdfData("2014", "000001"),
+                new FormT2202aPdfData("2013", "000001"),
+                new FormT2202aPdfData("2012", "000001"),
+                new FormT2202aPdfData("2011", "000001"),
+                new FormT2202aPdfData("2010", "000001")
             };
         }
 

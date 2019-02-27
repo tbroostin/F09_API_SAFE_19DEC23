@@ -1,4 +1,4 @@
-﻿// Copyright 2014 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Net;
 using Ellucian.Web.Http.Exceptions;
@@ -10,7 +10,8 @@ namespace Ellucian.Web.Http.Tests.Exceptions
     public class IntegrationApiErrorTests
     {
         HttpStatusCode status;
-        string code, desc, message;
+        string code, desc, message, guid, id;
+
 
         [TestInitialize]
         public void Initialize()
@@ -18,6 +19,8 @@ namespace Ellucian.Web.Http.Tests.Exceptions
             code = "Error.Code";
             desc = "This is an error.";
             message = "This is a message.";
+            id = "000001";
+            guid = Guid.NewGuid().ToString();
             status = HttpStatusCode.OK;
         }
 
@@ -113,6 +116,20 @@ namespace Ellucian.Web.Http.Tests.Exceptions
         {
             var error = new IntegrationApiError(code);
             Assert.AreEqual(null, error.Description);
+        }
+
+        [TestMethod]
+        public void IntegrationApiError_Constructor_Guid()
+        {
+            var error = new IntegrationApiError(code, desc, message, status, guid, id);
+            Assert.AreEqual(guid, error.Guid);
+        }
+
+        [TestMethod]
+        public void IntegrationApiError_Constructor_Id()
+        {
+            var error = new IntegrationApiError(code, desc, message, status, guid, id);
+            Assert.AreEqual(id, error.Id);
         }
     }
 }

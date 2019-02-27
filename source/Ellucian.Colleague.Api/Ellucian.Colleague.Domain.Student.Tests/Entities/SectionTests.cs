@@ -535,6 +535,13 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
                 sec.AttendanceTrackingType = AttendanceTrackingType.CumulativeHours;
                 Assert.AreEqual(AttendanceTrackingType.CumulativeHours, sec.AttendanceTrackingType);
             }
+
+            [TestMethod]
+            public void Section_PrimarySectionMeetings()
+            {
+                Assert.IsNotNull(sec.PrimarySectionMeetings);
+                Assert.AreEqual(0, sec.PrimarySectionMeetings.Count);
+            }
         }
 
         [TestClass]
@@ -1296,6 +1303,97 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
                 Assert.AreEqual(1, sec.SectionCharges.Count);
                 Assert.AreEqual(sectionCharge, sec.SectionCharges[0]);
             }
+        }
+
+        [TestClass]
+        public class Section_UpdateMeetingsFromPrimarySection
+        {
+            List<SectionMeeting> sectionMeetings = new List<SectionMeeting>();
+            private Section sec;
+            [TestInitialize]
+            public void Initialize()
+            {
+                var dept = "CS";
+                var acadLevel = "UG";
+                var courseLevels = new List<string>() { "100" };
+                var depts = new List<OfferingDepartment>() { new OfferingDepartment(dept, 100m) };
+                var statuses = new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddYears(-4)) };
+                var course1 = "1";
+                var number = "01";
+                var startDate = DateTime.Now;
+                string title = "Title";
+                sec = new Section("S001", course1, number, startDate, 4m, 1m, title, "IN", depts, courseLevels, acadLevel, statuses);
+
+                sectionMeetings.Add(new SectionMeeting("1", "S001", "LEC", DateTime.Today, DateTime.Today.AddMonths(2), "2") {Room="R1" });
+                sectionMeetings.Add(new SectionMeeting("1", "S001", "LAB", DateTime.Today.AddDays(3), DateTime.Today.AddMonths(5), "3"));
+            }
+
+            [TestMethod]
+            public void Section_UpdateMeetingsFromPrimarySection_SectionMeetings()
+            {
+                sec.UpdatePrimarySectionMeetings(sectionMeetings);
+                Assert.IsNotNull(sec.PrimarySectionMeetings);
+                Assert.AreEqual(2, sec.PrimarySectionMeetings.Count());
+
+                Assert.AreEqual("S001",sec.PrimarySectionMeetings[0].SectionId);
+                Assert.AreEqual("LEC",sec.PrimarySectionMeetings[0].InstructionalMethodCode);
+                Assert.AreEqual(sectionMeetings[0].StartDate,sec.PrimarySectionMeetings[0].StartDate);
+                Assert.AreEqual(sectionMeetings[0].EndDate,sec.PrimarySectionMeetings[0].EndDate);
+                Assert.AreEqual("R1",sec.PrimarySectionMeetings[0].Room);
+
+                Assert.AreEqual("S001", sec.PrimarySectionMeetings[1].SectionId);
+                Assert.AreEqual("LAB", sec.PrimarySectionMeetings[1].InstructionalMethodCode);
+                Assert.AreEqual(sectionMeetings[1].StartDate, sec.PrimarySectionMeetings[1].StartDate);
+                Assert.AreEqual(sectionMeetings[1].EndDate, sec.PrimarySectionMeetings[1].EndDate);
+                Assert.IsNull(sec.PrimarySectionMeetings[1].Room);
+            }
+
+            [TestMethod]
+            public void Section_UpdateMeetingsFromPrimarySection_Overwrite_when_SectionMeetings_Already_Exists()
+            {
+
+                sec.UpdatePrimarySectionMeetings(new List<SectionMeeting>() { new SectionMeeting("1", "S009", "something", DateTime.Today.AddMonths(-1), DateTime.Today.AddMonths(2), "everyday") { Room = "my room" } });
+                sec.UpdatePrimarySectionMeetings(sectionMeetings);
+                Assert.IsNotNull(sec.PrimarySectionMeetings);
+                Assert.AreEqual(2, sec.PrimarySectionMeetings.Count());
+
+                Assert.AreEqual("S001", sec.PrimarySectionMeetings[0].SectionId);
+                Assert.AreEqual("LEC", sec.PrimarySectionMeetings[0].InstructionalMethodCode);
+                Assert.AreEqual(sectionMeetings[0].StartDate, sec.PrimarySectionMeetings[0].StartDate);
+                Assert.AreEqual(sectionMeetings[0].EndDate, sec.PrimarySectionMeetings[0].EndDate);
+                Assert.AreEqual("R1", sec.PrimarySectionMeetings[0].Room);
+
+                Assert.AreEqual("S001", sec.PrimarySectionMeetings[1].SectionId);
+                Assert.AreEqual("LAB", sec.PrimarySectionMeetings[1].InstructionalMethodCode);
+                Assert.AreEqual(sectionMeetings[1].StartDate, sec.PrimarySectionMeetings[1].StartDate);
+                Assert.AreEqual(sectionMeetings[1].EndDate, sec.PrimarySectionMeetings[1].EndDate);
+                Assert.IsNull(sec.PrimarySectionMeetings[1].Room);
+            }
+
+            [TestMethod]
+            public void Section_UpdateMeetingsFromPrimarySection_SectionMeetings_is_Null()
+            {
+
+                sec.UpdatePrimarySectionMeetings(new List<SectionMeeting>() { new SectionMeeting("1", "S009", "something", DateTime.Today.AddMonths(-1), DateTime.Today.AddMonths(2), "everyday") { Room = "my room" } });
+                sec.UpdatePrimarySectionMeetings(null);
+                Assert.IsNotNull(sec.PrimarySectionMeetings);
+                Assert.AreEqual(1, sec.PrimarySectionMeetings.Count());
+                Assert.AreEqual("S009", sec.PrimarySectionMeetings[0].SectionId);
+                Assert.AreEqual("something", sec.PrimarySectionMeetings[0].InstructionalMethodCode);
+                Assert.AreEqual(DateTime.Today.AddMonths(-1), sec.PrimarySectionMeetings[0].StartDate);
+                Assert.AreEqual(DateTime.Today.AddMonths(2), sec.PrimarySectionMeetings[0].EndDate);
+                Assert.AreEqual("my room", sec.PrimarySectionMeetings[0].Room);
+
+            }
+            [TestMethod]
+            public void Section_UpdateMeetingsFromPrimarySection_SectionMeetings_is_Null_PrimaryIsEmpty()
+            {
+
+                sec.UpdatePrimarySectionMeetings(null);
+                Assert.IsNotNull(sec.PrimarySectionMeetings);
+                Assert.AreEqual(0, sec.PrimarySectionMeetings.Count());
+            }
+
         }
     }
 }

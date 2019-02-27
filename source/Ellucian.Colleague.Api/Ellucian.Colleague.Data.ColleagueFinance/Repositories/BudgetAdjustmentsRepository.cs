@@ -8,6 +8,7 @@ using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
+using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using slf4net;
@@ -24,6 +25,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class BudgetAdjustmentsRepository : BaseColleagueRepository, IBudgetAdjustmentsRepository
     {
+        private const string ValidationCTXFailedErrorMessage = "Validation CTX failed to return successfully";
         public BudgetAdjustmentsRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger)
             : base(cacheProvider, transactionFactory, logger)
         {
@@ -97,7 +99,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 ATrDate = DateTime.SpecifyKind(budgetAdjustmentInput.TransactionDate, DateTimeKind.Unspecified),
                 AlNextApproverIds = nextApproverIds,
                 AlApprovalIds = approverIds,
-                AlApprovalDates = approverDates 
+                AlApprovalDates = approverDates
             };
 
             var response = await transactionInvoker.ExecuteAsync<TxUpdateBudgetAdjustmentRequest, TxUpdateBudgetAdjustmentResponse>(request);
@@ -179,6 +181,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 toAmountStrings.Add(amount == 0 ? "" : amount.ToString());
             }
 
+            // Separate the comments lines.
+            var comments = new List<string>(budgetAdjustmentInput.Comments.Split(DmiString._VM));
+
             // Assign the next approvers to the CTX argument.
             var nextApproverIds = new List<String>();
             if (budgetAdjustmentInput.NextApprovers != null && budgetAdjustmentInput.NextApprovers.Any())
@@ -225,7 +230,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 AlCredits = fromAmountStrings,
                 AReason = budgetAdjustmentInput.Reason,
                 AAuthor = budgetAdjustmentInput.Initiator,
-                AlComments = new List<string>() { budgetAdjustmentInput.Comments },
+                AlComments = comments,
                 APersonId = budgetAdjustmentInput.PersonId,
                 ATrDate = DateTime.SpecifyKind(budgetAdjustmentInput.TransactionDate, DateTimeKind.Unspecified),
                 AlNextApproverIds = nextApproverIds,
@@ -801,7 +806,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     }
                 }
 
-                // Populate the Initiator Name by using a CTX.
                 if (budgetAdjustmentSummaryEntities != null && budgetAdjustmentSummaryEntities.Any())
                 {
                     // Obtain the list of login IDs from the entities that have one.
@@ -838,7 +842,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                                         else
                                         {
                                             // Populate the initiator id for those entities that have a login id equal to the one in this contract.
-                                            var matchingLoginEntities = budgetAdjustmentSummaryEntities.Where(x => x.InitiatorLoginId == contract.StaffLoginId);
+                                            var matchingLoginEntities = budgetAdjustmentSummaryEntities.Where(x => x.InitiatorLoginId == contract.StaffLoginId).ToList();
                                             foreach (var entity in matchingLoginEntities)
                                             {
                                                 entity.InitiatorId = contract.Recordkey;
@@ -846,10 +850,12 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                                         }
                                     }
                                 }
+
                             }
                         }
                     }
 
+                    // Populate the Initiator Name by using a CTX.
                     // Initialize arguments for the CTX that will get the initiator name.
                     List<string> personIds = new List<string>();
                     List<string> hierarchies = new List<string>();
@@ -870,7 +876,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                             IoPersonIds = personIds,
                             IoHierarchies = hierarchies
                         };
-                        GetHierarchyNamesForIdsResponse response = transactionInvoker.Execute<GetHierarchyNamesForIdsRequest, GetHierarchyNamesForIdsResponse>(request);
+                        GetHierarchyNamesForIdsResponse response = await transactionInvoker.ExecuteAsync<GetHierarchyNamesForIdsRequest, GetHierarchyNamesForIdsResponse>(request);
 
                         // The transaction returns the hierarchy names. If the name is multivalued, 
                         // the transaction only returns the first value of the name.
@@ -903,6 +909,82 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
 
             return budgetAdjustmentSummaryEntities;
+        }
+
+        /// <summary>
+        /// Validates the budget adjustment entity using a Colleague Transaction.
+        /// </summary>
+        /// <param name="budgetAdjustmentEntity">The entity to validate.</param>
+        /// <returns>List of strings that contain error messages from Colleague.</returns>
+        public async Task<List<string>> ValidateBudgetAdjustmentAsync(BudgetAdjustment budgetAdjustmentEntity)
+        {
+            if(budgetAdjustmentEntity == null)
+            {
+                throw new ArgumentNullException("budgetAdjustmentEntity");
+            }
+
+            // Set up the CTX request and execute.
+            TxValidateBudgetAdjustmentRequest request = new TxValidateBudgetAdjustmentRequest()
+            {
+                ATrDate = budgetAdjustmentEntity.TransactionDate,
+                APersonId = budgetAdjustmentEntity.PersonId,
+                AReason = budgetAdjustmentEntity.Reason
+            };
+
+            List<DateTime?> approvalDates = new List<DateTime?>();
+            List<string> approvalIds = new List<string>();
+            if(budgetAdjustmentEntity.Approvers != null)
+            {
+                foreach (var approver in budgetAdjustmentEntity.Approvers)
+                {
+                    approvalDates.Add(approver.ApprovalDate);
+                    approvalIds.Add(approver.ApproverId);
+                }
+            }
+            request.AlApprovalDates = approvalDates;
+            request.AlApprovalIds = approvalIds;
+
+            List<string> nextApproverIds = new List<string>();
+            if(budgetAdjustmentEntity.NextApprovers != null)
+            {
+                foreach (var nextApprover in budgetAdjustmentEntity.NextApprovers)
+                {
+                    nextApproverIds.Add(nextApprover.NextApproverId);
+                }
+            }
+            request.AlNextApproverIds = nextApproverIds;
+
+            List<string> credits = new List<string>();
+            List<string> debits = new List<string>();
+            List<string> glAccounts = new List<string>();
+            if(budgetAdjustmentEntity.AdjustmentLines != null)
+            {
+                foreach (var adjustmentLine in budgetAdjustmentEntity.AdjustmentLines)
+                {
+                    if (adjustmentLine != null && adjustmentLine.GlNumber != null)
+                    {
+                        glAccounts.Add(GlAccountUtility.ConvertToInternalFormat(adjustmentLine.GlNumber));
+                        credits.Add(adjustmentLine.FromAmount == 0 ? "" : adjustmentLine.FromAmount.ToString());
+                        debits.Add(adjustmentLine.ToAmount == 0 ? "" : adjustmentLine.ToAmount.ToString());
+                    }
+                }
+            }
+            request.AlCredits = credits;
+            request.AlDebits = debits;
+            request.AlGlAccounts = glAccounts;
+            
+            var response = await transactionInvoker.ExecuteAsync<TxValidateBudgetAdjustmentRequest, TxValidateBudgetAdjustmentResponse>(request);
+
+            if (response == null)
+            {
+                logger.Error(ValidationCTXFailedErrorMessage);
+                throw new ApplicationException(ValidationCTXFailedErrorMessage);
+            }
+            if (response.AlMessage == null)
+            {
+                response.AlMessage = new List<string>();
+            }
+            return response.AlMessage;
         }
     }
 }

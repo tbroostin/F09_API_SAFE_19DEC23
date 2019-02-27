@@ -4,6 +4,7 @@ using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.DataContracts;
 using Ellucian.Data.Colleague.Repositories;
@@ -119,6 +120,59 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             return academicDisciplineCollection;
         }
 
+        /// <summary>
+        /// Get guid for AcadCredentials code
+        /// </summary>
+        /// <param name="code">AcadCredentials code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetAcadCredentialsGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetAcadCredentialsAsync(false);
+            AcadCredential codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }            
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetAcadCredentialsAsync(true);
+                if (allCodesCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'OTHER.CCDS or OTHER.DEGREES', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'OTHER.CCDS or OTHER.DEGREES', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'OTHER.CCDS or OTHER.DEGREES', Record ID:'", code, "'"));
+            }
+            return guid;
+
+        }
+
+        /// <summary>
+        /// Get a collection of AltIdTypes
+        /// </summary>
+        /// <param name="ignoreCache">Bypass cache flag</param>
+        /// <returns>Collection of AltIdTypes</returns>
+        public async Task<IEnumerable<AltIdTypes>> GetAlternateIdTypesAsync(bool ignoreCache)
+        {
+            return await GetGuidValcodeAsync<AltIdTypes>("CORE", "ALT.ID.TYPES",
+                (cl, g) => new AltIdTypes(g, cl.ValInternalCodeAssocMember, (string.IsNullOrEmpty(cl.ValExternalRepresentationAssocMember)
+                    ? cl.ValInternalCodeAssocMember : cl.ValExternalRepresentationAssocMember)), bypassCache: ignoreCache);
+        }
 
         /// <summary>
         /// Get a collection of Academic Discipline
@@ -784,6 +838,48 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
         }
 
+        /// <summary>
+        /// Get guid for Departments code
+        /// </summary>
+        /// <param name="code">Departments code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetDepartments2GuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetDepartments2Async(false);
+            Department codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetDepartments2Async(true);
+                if (allCodesCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'DEPTS', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'DEPTS', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'DEPTS', Record ID:'", code, "'"));
+            }
+            return guid;
+
+        }
+
 
         /// <summary>
         ///  Build Department domain entity collection.
@@ -1206,6 +1302,48 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         }
 
         /// <summary>
+        /// Get guid for Locations code
+        /// </summary>
+        /// <param name="code">Locations code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetLocationsGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetLocationsAsync(false);
+            Location codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
+             //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetLocationsAsync(true);
+                if (allCodesCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'LOCATIONS', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'LOCATIONS', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'LOCATIONS', Record ID:'", code, "'"));
+            }
+            return guid;
+
+        }
+
+        /// <summary>
         /// Get a collection of location types
         /// </summary>
         /// <param name="ignoreCache">Bypass cache flag</param>
@@ -1307,6 +1445,49 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         }
 
         /// <summary>
+        /// Get guid for Other Degrees code
+        /// </summary>
+        /// <param name="code">Other Degrees code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetOtherDegreeGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetOtherDegreesAsync(false);
+            OtherDegree codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
+           
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetOtherDegreesAsync(true);
+                if (allCodesCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'OTHER.DEGREES', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'OTHER.DEGREES', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'OTHER.DEGREES', Record ID:'", code, "'"));
+            }
+            return guid;
+
+        }
+
+        /// <summary>
         /// Get a collection of Other Ccds
         /// </summary>
         /// <param name="ignoreCache">Bypass cache flag</param>
@@ -1332,6 +1513,49 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         }
 
         /// <summary>
+        /// Get guid for Other Ccds code
+        /// </summary>
+        /// <param name="code">Other Ccds code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetOtherCcdsGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetOtherCcdsAsync(false);
+            OtherCcd codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
+            
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetOtherCcdsAsync(true);
+                if (allCodesCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'OTHER.CCDS', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'OTHER.CCDS', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'OTHER.CCDS', Record ID:'", code, "'"));
+            }
+            return guid;
+
+        }
+
+        /// <summary>
         /// Get a collection of majors
         /// </summary>
         /// <param name="ignoreCache">Bypass cache flag</param>
@@ -1341,6 +1565,49 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             return await GetGuidCodeItemAsync<OtherMajors, OtherMajor>("BaseAllOtherMajors", "OTHER.MAJORS",
                 (m, g) => new OtherMajor(g, m.Recordkey, (string.IsNullOrEmpty(m.OmajDesc) ? m.Recordkey : m.OmajDesc)),
                 CacheTimeout, this.DataReader.IsAnonymous, ignoreCache);
+        }
+
+        /// <summary>
+        /// Get guid for other Majors code
+        /// </summary>
+        /// <param name="code">Other Majors code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetOtherMajorsGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetOtherMajorsAsync(false);
+            OtherMajor codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
+            
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetOtherMajorsAsync(true);
+                if (allCodesCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'OTHER.MAJORS', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'OTHER.MAJORS', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'OTHER.MAJORS', Record ID:'", code, "'"));
+            }
+            return guid;
+
         }
 
         /// <summary>
@@ -1356,6 +1623,49 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         }
 
         /// <summary>
+        /// Get guid for other Minors code
+        /// </summary>
+        /// <param name="code">Other Minors code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetOtherMinorsGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetOtherMinorsAsync(false);
+            OtherMinor codeCache = null; 
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
+             
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetOtherMinorsAsync(true);
+                if (allCodesCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'OTHER.MINORS', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'OTHER.MINORS', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'OTHER.MINORS', Record ID:'", code, "'"));
+            }
+            return guid;
+
+        }
+
+        /// <summary>
         /// Get a collection of specializations
         /// </summary>
         /// <param name="ignoreCache">Bypass cache flag</param>
@@ -1367,6 +1677,48 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 CacheTimeout, this.DataReader.IsAnonymous, ignoreCache);
         }
 
+        /// <summary>
+        /// Get guid for specializations code
+        /// </summary>
+        /// <param name="code">Other specializations code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetOtherSpecialsGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetOtherSpecialsAsync(false);
+            OtherSpecial codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
+            
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetOtherSpecialsAsync(true);
+                if (allCodesCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'OTHER.SPECIALS', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'OTHER.SPECIALS', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'OTHER.SPECIALS', Record ID:'", code, "'"));
+            }
+            return guid;
+
+        }
 
         /// <summary>
         ///  A collection of Other Honors
@@ -1378,6 +1730,49 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             return await GetGuidCodeItemAsync<OtherHonors, OtherHonor>("BaseAllOtherHonors", "OTHER.HONORS",
                  (al, g) => new OtherHonor(g, al.Recordkey, (string.IsNullOrEmpty(al.OhonDesc) ? al.Recordkey : al.OhonDesc)),
                  bypassCache: ignoreCache);
+        }
+
+        /// <summary>
+        /// Get guid for Honors Ccds code
+        /// </summary>
+        /// <param name="code">Other Honors code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetOtherHonorsGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetOtherHonorsAsync(false);
+            OtherHonor codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
+            
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetOtherHonorsAsync(true);
+                if (allCodesCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'OTHER.HONORS', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'OTHER.HONORS', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'OTHER.HONORS', Record ID:'", code, "'"));
+            }
+            return guid;
+
         }
 
         /// <summary>
@@ -1759,11 +2154,33 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <param name="ignoreCache">Bypass cache flag</param>
         /// <returns>Collection of restrictions</returns>
         public async Task<IEnumerable<Restriction>> GetRestrictionsWithCategoryAsync(bool ignoreCache)
-        {
-            return await GetGuidCodeItemAsync<Restrictions, Restriction>("AllRestrictions", "RESTRICTIONS",
-                (r, g) => BuildRestrictionWithCategory(g, r), bypassCache: ignoreCache);
+        {            
+            return await GetGuidCodeItemAsync<Restrictions, Restriction>("AllRestrictionsWithCategories", "RESTRICTIONS",                
+            (r, g) => BuildRestrictionWithCategory(g, r), bypassCache: ignoreCache);
         }
 
+        /// <summary>
+        /// Builds restrictions with category.
+        /// </summary>
+        /// <param name="guid"></param>
+        /// <param name="restriction"></param>
+        /// <returns></returns>
+        private Restriction BuildRestrictionWithCategory(string guid, Restrictions restriction)
+        {
+            Restriction rest;
+            try
+            {
+                rest = new Restriction(guid, restriction.Recordkey, restriction.RestDesc, null, string.Empty, string.Empty, string.Empty, string.Empty,
+                    string.Empty, string.Empty, string.Empty, string.Empty);
+                rest.RestIntgCategory = ConvertRestrictionCategoryToType(restriction.RestIntgCategory);
+                return rest;
+            }
+            catch (Exception ex)
+            {
+                LogDataError("Restriction", restriction.Recordkey, restriction, ex);
+                return null;
+            }
+        }
         /// <summary>
         ///  A collection of Room Characteristics
         /// </summary>
@@ -2011,14 +2428,54 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         }
 
         /// <summary>
+        /// Get guid for Schools code
+        /// </summary>
+        /// <param name="code">Schools code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetSchoolsGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetSchoolsAsync(false);
+            School codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
+
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetSchoolsAsync(true);
+                if (allCodesCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'SCHOOL', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'SCHOOL', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'SCHOOL', Record ID:'", code, "'"));
+            }
+            return guid;
+        }
+
+        /// <summary>
         /// Get all Schools
         /// </summary>
         public async Task<IEnumerable<School>> GetSchoolsAsync(bool ignoreCache)
         {
-            // return await GetGuidCodeItemAsync<Schools, School>("AllEedmSchools", "SCHOOLS",
-            //    (s, g) => new School(g, s.Recordkey, s.SchoolsDesc) { InstitutionId = s.SchoolsInstitutionsId }, CacheTimeout, this.DataReader.IsAnonymous, ignoreCache);
             return await GetGuidCodeItemAsync<Schools, School>("AllEedmSchools", "SCHOOLS",
-               (s, g) => BuildSchools(g, s), CacheTimeout, this.DataReader.IsAnonymous, ignoreCache);
+              (s, g) => BuildSchools(g, s), CacheTimeout, this.DataReader.IsAnonymous, ignoreCache);
 
         }
 
@@ -2891,22 +3348,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 {
                     rest.Hyperlink = hyperlinksResponse.HyperlinksOut[0];
                 }
-                return rest;
-            }
-            catch (Exception ex)
-            {
-                LogDataError("Restriction", restriction.Recordkey, restriction, ex);
-                return null;
-            }
-        }
-
-        private Restriction BuildRestrictionWithCategory(string guid, Restrictions restriction)
-        {
-            Restriction rest;
-            try
-            {
-                rest = BuildRestriction(guid, restriction);
-                rest.RestIntgCategory = ConvertRestrictionCategoryToType(restriction.RestIntgCategory);
                 return rest;
             }
             catch (Exception ex)

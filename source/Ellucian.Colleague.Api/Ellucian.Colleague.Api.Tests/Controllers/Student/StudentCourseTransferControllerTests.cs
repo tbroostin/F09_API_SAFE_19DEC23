@@ -124,7 +124,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
-        public async Task _GetStudentCourseTransfers_PermissionsException()
+        public async Task StudentCourseTransfersController_GetStudentCourseTransfers_PermissionsException()
         {
 
             studentCourseTransfersServiceMock.Setup(x => x.GetStudentCourseTransfersAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>()))

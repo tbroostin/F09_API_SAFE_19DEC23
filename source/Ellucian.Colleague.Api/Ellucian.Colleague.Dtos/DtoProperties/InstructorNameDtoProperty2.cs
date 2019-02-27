@@ -71,6 +71,18 @@ namespace Ellucian.Colleague.Dtos.DtoProperties
         public string PreferredName { get; set; }
 
         /// <summary>
+        /// Indicates the preferred name for the person. Only one name should be set to preferred for a person.
+        /// </summary>
+        [JsonProperty("preference", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public Dtos.EnumProperties.PersonNamePreference? Preference { get; set; }
+
+        /// <summary>
+        /// Person's post-nominal professional abbreviation, reflecting an earned degree or honor.  For example, "M.D." or "Ph.D.".
+        /// </summary>
+        [JsonProperty("professionalAbbreviations", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public IEnumerable<string> ProfessionalAbbreviation { get; set; }
+
+        /// <summary>
         /// constructor
         /// </summary>
         [JsonConstructor]

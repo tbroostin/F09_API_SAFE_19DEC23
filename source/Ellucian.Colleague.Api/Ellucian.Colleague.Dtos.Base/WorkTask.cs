@@ -1,6 +1,8 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using System;
+
 namespace Ellucian.Colleague.Dtos.Base
 {
     /// <summary>
@@ -25,5 +27,16 @@ namespace Ellucian.Colleague.Dtos.Base
         /// </summary>
         [JsonConverter(typeof(StringEnumConverter))]
         public WorkTaskProcess TaskProcess { get; set; }
+
+        /// <summary>
+        /// Exec State
+        /// </summary>
+        [JsonConverter(typeof(StringEnumConverter))]
+        public ExecutionState? ExecState { get; set; }
+
+        /// <summary>
+        /// Start date and time
+        /// </summary>
+        public DateTimeOffset? StartDate { get; set; }
     }
 }

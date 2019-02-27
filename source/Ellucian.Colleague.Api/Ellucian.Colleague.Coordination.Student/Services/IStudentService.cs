@@ -23,11 +23,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         Task<string> OrderTranscriptAsync(TranscriptRequest order);
         Task<string> CheckTranscriptStatusAsync(string orderId, string currentStatusCode);
 
-        Task<IEnumerable<Dtos.Student.Student>> GetStudentsByIdAsync(IEnumerable<string> studentIds, bool inheritFromPerson = false, bool getDegreePlan = false);
-        Task<IEnumerable<Dtos.Student.StudentBatch>> QueryStudentsByIdAsync(IEnumerable<string> studentIds, bool inheritFromPerson = false, bool getDegreePlan = false);
-        Task<IEnumerable<Dtos.Student.StudentBatch2>> QueryStudentsByIdAsync2(IEnumerable<string> studentIds, bool inheritFromPerson = false, bool getDegreePlan = false, string term = null);
-        Task<IEnumerable<Dtos.Student.StudentBatch3>> QueryStudentsByIdAsync3(IEnumerable<string> studentIds, bool inheritFromPerson = false, bool getDegreePlan = false, string term = null);
-        Task<IEnumerable<Dtos.Student.StudentBatch3>> QueryStudentsById4Async(IEnumerable<string> studentIds, bool inheritFromPerson = false, bool getDegreePlan = false, string term = null);
+        Task<PrivacyWrapper<IEnumerable<Dtos.Student.StudentBatch3>>> QueryStudentsById4Async(IEnumerable<string> studentIds, bool inheritFromPerson = false, bool getDegreePlan = false, string term = null);
         Task<Tuple<byte[],string>> GetUnofficialTranscriptAsync(string studentId, string path, string transcriptGrouping, string reportWatermarkPath, string deviceInfoPath);
         Task<Dtos.Student.RegistrationResponse> RegisterAsync(string studentId, IEnumerable<Dtos.Student.SectionRegistration> sectionRegistrations);
         
@@ -45,7 +41,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         Task<Dtos.StudentClassification> GetStudentClassificationByGuidAsync(string id);
 
         Task<Dtos.Students> GetStudentsByGuidAsync(string guid, bool bypassCache = true);
+        Task<Dtos.Students2> GetStudentsByGuid2Async(string guid, bool bypassCache = true);
         Task<Tuple<IEnumerable<Dtos.Students>, int>> GetStudentsAsync(int offset, int limit, bool bypassCache = false, string person = "", string type = "", string cohorts = "", string residency = "");
+        Task<Tuple<IEnumerable<Dtos.Students2>, int>> GetStudents2Async(int offset, int limit, Dtos.Students2 criteriaFilter, string personFilter, bool bypassCache = false);
         Task<PrivacyWrapper<List<Dtos.Student.Student>>> Search3Async(Dtos.Student.StudentSearchCriteria criteria, int pageSize = int.MaxValue, int pageIndex = 1);
     }
 }

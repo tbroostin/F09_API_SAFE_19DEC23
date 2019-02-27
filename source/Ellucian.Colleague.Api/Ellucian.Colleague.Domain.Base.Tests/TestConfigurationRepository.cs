@@ -212,5 +212,12 @@ namespace Ellucian.Colleague.Domain.Base.Tests
         {
             return new SelfServiceConfiguration(true);
         }
+
+        public async Task<RequiredDocumentConfiguration> GetRequiredDocumentConfigurationAsync()
+        {
+            var rdc = new RequiredDocumentConfiguration(true, WebSortField.Status, WebSortField.OfficeDescription, "Blank status text", "Blank due date text");
+            return rdc;
+        }
+
     }
 }

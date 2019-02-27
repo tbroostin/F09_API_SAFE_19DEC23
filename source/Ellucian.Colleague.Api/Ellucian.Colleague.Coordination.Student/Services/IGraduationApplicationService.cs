@@ -44,5 +44,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="programCode">program code that student for which student is applying for graduation</param>
         /// <returns><see cref="Ellucian.Colleague.Dtos.Student.GraduationApplicationFee">Graduation Application</see> object that was created</returns>
         Task<Ellucian.Colleague.Dtos.Student.GraduationApplicationFee> GetGraduationApplicationFeeAsync(string studentId, string programCode);
+
+        /// <summary>
+        /// Determines a student's eligibility to apply for graduation in the requested programs
+        /// </summary>
+        /// <param name="studentId">Id of student to determine eligibility</param>
+        /// <param name="programCodes">Programs for which the eligibility is requested</param>
+        /// <returns>List of Graduation Application Program Eligibility DTOs.</returns>
+        Task<IEnumerable<Dtos.Student.GraduationApplicationProgramEligibility>> GetGraduationApplicationEligibilityAsync(string studentId, IEnumerable<string> programCodes);
     }
 }

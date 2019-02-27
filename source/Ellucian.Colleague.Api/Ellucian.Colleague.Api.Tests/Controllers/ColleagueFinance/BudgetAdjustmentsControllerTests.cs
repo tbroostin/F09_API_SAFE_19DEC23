@@ -1,11 +1,14 @@
-﻿using Ellucian.Colleague.Api.Controllers.ColleagueFinance;
+﻿//Copyright 2018 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Api.Controllers.ColleagueFinance;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Web.Adapters;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using Newtonsoft.Json;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -83,24 +86,57 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         [ExpectedException(typeof(HttpResponseException))]
         public async Task BudgetAdjustmentsController_PutAsync_PermissionsException()
         {
-            _budgetAdjustmentServiceMock.Setup(x => x.UpdateBudgetAdjustmentAsync(It.IsAny<string>(), It.IsAny<Dtos.ColleagueFinance.BudgetAdjustment>())).ThrowsAsync(new PermissionsException());
-            await _budgetAdjustmentsController.PutAsync("1", new Dtos.ColleagueFinance.BudgetAdjustment());
+            try
+            {
+                _budgetAdjustmentServiceMock.Setup(x => x.UpdateBudgetAdjustmentAsync(It.IsAny<string>(), It.IsAny<Dtos.ColleagueFinance.BudgetAdjustment>())).ThrowsAsync(new PermissionsException());
+                await _budgetAdjustmentsController.PutAsync("1", new Dtos.ColleagueFinance.BudgetAdjustment());
+            }
+            catch (HttpResponseException ex)
+            {
+                var exceptionResponse = ex.Response.Content.ReadAsStringAsync().Result;
+                WebApiException responseJson = JsonConvert.DeserializeObject<WebApiException>(exceptionResponse);
+                Assert.IsNotNull(responseJson);
+                Assert.AreEqual("Insufficient permissions to update the budget adjustment.", responseJson.Message);
+                throw;
+            }
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task BudgetAdjustmentsController_PutAsync_ConfigurationException()
         {
-            _budgetAdjustmentServiceMock.Setup(x => x.UpdateBudgetAdjustmentAsync(It.IsAny<string>(), It.IsAny<Dtos.ColleagueFinance.BudgetAdjustment>())).ThrowsAsync(new ConfigurationException());
-            await _budgetAdjustmentsController.PutAsync("1", new Dtos.ColleagueFinance.BudgetAdjustment());
+            try
+            {
+                _budgetAdjustmentServiceMock.Setup(x => x.UpdateBudgetAdjustmentAsync(It.IsAny<string>(), It.IsAny<Dtos.ColleagueFinance.BudgetAdjustment>())).ThrowsAsync(new ConfigurationException());
+                await _budgetAdjustmentsController.PutAsync("1", new Dtos.ColleagueFinance.BudgetAdjustment());
+            }
+            catch (HttpResponseException ex)
+            {
+                var exceptionResponse = ex.Response.Content.ReadAsStringAsync().Result;
+                WebApiException responseJson = JsonConvert.DeserializeObject<WebApiException>(exceptionResponse);
+                Assert.IsNotNull(responseJson);
+                Assert.AreEqual("Unable to get budget adjustment configuration.", responseJson.Message);
+                throw;
+            }
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task BudgetAdjustmentsController_PutAsync_Exception()
         {
-            _budgetAdjustmentServiceMock.Setup(x => x.UpdateBudgetAdjustmentAsync(It.IsAny<string>(), It.IsAny<Dtos.ColleagueFinance.BudgetAdjustment>())).ThrowsAsync(new Exception());
-            await _budgetAdjustmentsController.PutAsync("1", new Dtos.ColleagueFinance.BudgetAdjustment());
+            try
+            {
+                _budgetAdjustmentServiceMock.Setup(x => x.UpdateBudgetAdjustmentAsync(It.IsAny<string>(), It.IsAny<Dtos.ColleagueFinance.BudgetAdjustment>())).ThrowsAsync(new Exception());
+                await _budgetAdjustmentsController.PutAsync("1", new Dtos.ColleagueFinance.BudgetAdjustment());
+            }
+            catch (HttpResponseException ex)
+            {
+                var exceptionResponse = ex.Response.Content.ReadAsStringAsync().Result;
+                WebApiException responseJson = JsonConvert.DeserializeObject<WebApiException>(exceptionResponse);
+                Assert.IsNotNull(responseJson);
+                Assert.AreEqual("Unable to update the budget adjustment.", responseJson.Message);
+                throw;
+            }
         }
     }
 }

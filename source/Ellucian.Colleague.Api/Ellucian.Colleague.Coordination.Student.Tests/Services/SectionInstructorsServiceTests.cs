@@ -620,11 +620,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             #endregion
 
             [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
+            [ExpectedException(typeof(KeyNotFoundException))]
             public async Task SectionInstructorsService_DeleteSectionInstructorsAsync_PermissionException()
             {
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
-
                 await service.DeleteSectionInstructorsAsync(guid);
             }
 

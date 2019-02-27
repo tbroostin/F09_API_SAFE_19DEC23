@@ -16,6 +16,7 @@ using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.DtoProperties;
 using Ellucian.Colleague.Dtos.EnumProperties;
+using Ellucian.Colleague.Domain.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
@@ -67,33 +68,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             if (_studentLoad == null)
             {
+                //always reading from cache as it is the default way. Since we need to read the whole valcode, it make sense to read it all, not just one. 
                 _studentLoad = await _studentReferenceDataRepository.GetStudentLoadsAsync();
             }
             return _studentLoad;
-        }
-
-
-        private IEnumerable<Domain.Student.Entities.StudentStatus> _studentStatuses = null;
-
-        private async Task<IEnumerable<Domain.Student.Entities.StudentStatus>> GetStudentStatusesAsync(bool bypassCache)
-        {
-            if (_studentStatuses == null)
-            {
-                _studentStatuses = await _studentReferenceDataRepository.GetStudentStatusesAsync(bypassCache);
-            }
-            return _studentStatuses;
-        }
-
-
-        private IEnumerable<Domain.Student.Entities.AcademicLevel> _academicLevels = null;
-
-        private async Task<IEnumerable<Domain.Student.Entities.AcademicLevel>> GetAcademicLevelsAsync(bool bypassCache)
-        {
-            if (_academicLevels == null)
-            {
-                _academicLevels = await _studentReferenceDataRepository.GetAcademicLevelsAsync(bypassCache);
-            }
-            return _academicLevels;
         }
 
         private IEnumerable<Domain.Student.Entities.EnrollmentStatus> _enrollmentStatuses = null;
@@ -105,29 +83,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 _enrollmentStatuses = await _studentReferenceDataRepository.GetEnrollmentStatusesAsync(bypassCache);
             }
             return _enrollmentStatuses;
-        }
-
-
-        private IEnumerable<Domain.Student.Entities.StudentClassification> _studentClassification = null;
-
-        private async Task<IEnumerable<Domain.Student.Entities.StudentClassification>> GetAllStudentClassificationAsync(bool bypassCache)
-        {
-            if (_studentClassification == null)
-            {
-                _studentClassification = await _studentReferenceDataRepository.GetAllStudentClassificationAsync(bypassCache);
-            }
-            return _studentClassification;
-        }
-
-        private IEnumerable<Domain.Student.Entities.StudentType> _studentTypes = null;
-
-        private async Task<IEnumerable<Domain.Student.Entities.StudentType>> GetStudentTypesAsync(bool bypassCache)
-        {
-            if (_studentTypes == null)
-            {
-                _studentTypes = await _studentReferenceDataRepository.GetStudentTypesAsync(bypassCache);
-            }
-            return _studentTypes;
         }
 
         private IEnumerable<Domain.Student.Entities.Term> _terms = null;
@@ -176,30 +131,24 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 throw new ArgumentNullException("guid", "GUID is required to get an Student Academic Period Profiles.");
             }
             CheckGetStudentAcademicPeriodProfilesPermission();
-            var studentTermEntity = await _studentTermRepository.GetStudentTermByGuidAsync(guid);
-
-            if (studentTermEntity == null)
+            try
             {
-                throw new KeyNotFoundException("Student Academic Period Profiles not found for GUID " + guid);
+                var studentTermEntity = await _studentTermRepository.GetStudentTermByGuidAsync(guid);
 
+                if (studentTermEntity == null)
+                {
+                    throw new KeyNotFoundException("Student Academic Period Profiles not found for GUID " + guid);
+                }
+                return (await ConvertStudentTermEntityToStudentAcademicPeriodProfileDto(new List<StudentTerm>() { studentTermEntity }, true)).FirstOrDefault();
             }
-            var students = new Dictionary<string, Domain.Student.Entities.Student>();
-
-            if (string.IsNullOrEmpty(studentTermEntity.StudentId))
+            catch (KeyNotFoundException ex)
             {
-                throw new ArgumentNullException("student ID is required.");
+                throw new KeyNotFoundException(ex.Message);
             }
-
-            var studentId = studentTermEntity.StudentId;
-
-            if ((!string.IsNullOrEmpty(studentId) && (!students.ContainsKey(key: studentId))))
-                students.Add(studentId, await _studentRepository.GetAsync(studentId));
-
-            _academicCredits = await AcademicCreditsAsync(studentTermEntity.StudentAcademicCredentials);
-
-            _personGuids = await PersonGuids(new List<string>() { studentTermEntity.StudentId });
-
-            return (await ConvertStudentTermEntityToStudentAcademicPeriodProfileDto(studentTermEntity, students, true));
+            catch (Exception ex)
+            {
+                throw new KeyNotFoundException(string.Concat("Student Academic Period Profiles not found for GUID '", guid, "'. ", ex.Message));
+            }
         }
 
         /// <summary>
@@ -232,7 +181,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var newAcademicPeriod = string.Empty;
                 if (!string.IsNullOrEmpty(academicPeriod))
                 {
-                    var terms = _termRepository.GetAcademicPeriods((await this.GetTermsAsync(bypassCache)));
+                    var terms = _termRepository.GetAcademicPeriods((await this.GetTermsAsync(false)));
                     newAcademicPeriod = ConvertGuidToCode(terms, academicPeriod);
                     if (string.IsNullOrEmpty(newAcademicPeriod))
                     {
@@ -245,37 +194,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var studentAcadProgEntitiesTuple = await _studentTermRepository.GetStudentTermsAsync(offset, limit, bypassCache, newPerson, newAcademicPeriod);
                 if (studentAcadProgEntitiesTuple != null)
                 {
-                    var studentAcadProgEntities = studentAcadProgEntitiesTuple.Item1.ToList();
+                    var studentAcadProgEntities = studentAcadProgEntitiesTuple.Item1;
                     var totalCount = studentAcadProgEntitiesTuple.Item2;
 
-                    if (studentAcadProgEntities.Any())
+                    if (studentAcadProgEntities != null && studentAcadProgEntities.Any())
                     {
-                        var students = new Dictionary<string, Domain.Student.Entities.Student>();
-
-                        foreach (var studentAcadProgEntity in studentAcadProgEntities)
-                        {
-                            var studentId = studentAcadProgEntity.StudentId;
-
-                            if ((!string.IsNullOrEmpty(studentId) && (!students.ContainsKey(key: studentId))))
-                                students.Add(studentId, await _studentRepository.GetAsync(studentId));
-
-                        }
-
-                        var studentAcadPeriodProfiles = new List<Colleague.Dtos.StudentAcademicPeriodProfiles>();
-
-                        //Academic Credits
-                        var stAcadCreds = studentAcadProgEntities
-                            .Where(i => i.StudentAcademicCredentials != null && i.StudentAcademicCredentials.Any())
-                            .SelectMany(cr => cr.StudentAcademicCredentials);
-                        _academicCredits = await AcademicCreditsAsync(stAcadCreds.Distinct().ToList());
-
-                        _personGuids = await PersonGuids(studentAcadProgEntities.Select(i => i.StudentId).Distinct());
-
-                        foreach (var studentAcadProgEntity in studentAcadProgEntities)
-                        {
-                            studentAcadPeriodProfiles.Add(await ConvertStudentTermEntityToStudentAcademicPeriodProfileDto(studentAcadProgEntity, students, bypassCache));
-                        }
-                        return new Tuple<IEnumerable<Dtos.StudentAcademicPeriodProfiles>, int>(studentAcadPeriodProfiles, totalCount);
+                        return new Tuple<IEnumerable<Dtos.StudentAcademicPeriodProfiles>, int>(await ConvertStudentTermEntityToStudentAcademicPeriodProfileDto(studentAcadProgEntities.ToList(), bypassCache), totalCount);
                     }
                     // no results
                     return new Tuple<IEnumerable<Dtos.StudentAcademicPeriodProfiles>, int>(new List<Dtos.StudentAcademicPeriodProfiles>(), totalCount);
@@ -296,262 +220,311 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="students"></param>
         /// <param name="bypassCache"></param>
         /// <returns>A <see cref="StudentAcademicPeriodProfiles">StudentAcademicPeriodProfiles</see> DTO</returns>
-        private async Task<StudentAcademicPeriodProfiles> ConvertStudentTermEntityToStudentAcademicPeriodProfileDto(StudentTerm studentTerm, Dictionary<string, Domain.Student.Entities.Student> students, bool bypassCache)
+        private async Task<IEnumerable<StudentAcademicPeriodProfiles>> ConvertStudentTermEntityToStudentAcademicPeriodProfileDto(List<StudentTerm> studentTerms, bool bypassCache)
         {
-
-            if (studentTerm == null)
-            {
-                throw new ArgumentNullException("student term is required.");
-            }
-
-            if (string.IsNullOrEmpty(studentTerm.StudentId))
-            {
-                throw new ArgumentNullException("student ID is required.");
-            }
-
-            var academicPeriods = (await GetAcademicPeriodsAsync(bypassCache)).ToList();
-
-            var studentAcadPeriodProfileDto = new Colleague.Dtos.StudentAcademicPeriodProfiles();
             try
             {
-                studentAcadPeriodProfileDto.Id = studentTerm.Guid;
-
-                Domain.Student.Entities.Student student = null;
-                if (!students.TryGetValue(studentTerm.StudentId, out student))
-                    throw new ArgumentNullException("student is required.");
-
-                if(student == null)
+                var studentAcadPeriodProfileDtos = new List<Colleague.Dtos.StudentAcademicPeriodProfiles>();
+                //get student Ids
+                var ids = new List<string>();
+                ids.AddRange(studentTerms.Where(p => (!string.IsNullOrEmpty(p.StudentId)))
+                    .Select(p => p.StudentId).Distinct().ToList());
+                //get student acad cred Ids
+                var stAcadCreds = studentTerms
+                             .Where(i => i.StudentAcademicCredentials != null && i.StudentAcademicCredentials.Any())
+                             .SelectMany(cr => cr.StudentAcademicCredentials);
+                //get academic credits 
+                var _academicCredits = new List<AcademicCreditMinimum>();
+                if (stAcadCreds != null && stAcadCreds.Any())
                 {
-                    throw new ArgumentNullException("student is required.");
+                    _academicCredits = (await _academicCreditRepository.GetAcademicCreditMinimumAsync(stAcadCreds.Distinct().ToList())).ToList();
                 }
-
-
-                if (!string.IsNullOrEmpty(studentTerm.StudentId))
+                //get person guids collection
+                var _personGuids = await _personRepository.GetPersonGuidsCollectionAsync(ids);
+                // get students collections
+                var students = await _studentRepository.GetStudentAcademicPeriodProfileStudentInfoAsync(ids);
+                //get student programs collection for the selected stuents
+                var studentPrograms = new List<StudentProgram>();
+                if (students != null && students.Any())
                 {
-                    var guid = _personGuids.FirstOrDefault(i => i.Key.Equals(studentTerm.StudentId, StringComparison.OrdinalIgnoreCase));
-
-                    if (!guid.Equals(default(KeyValuePair<string, string>)) && !string.IsNullOrEmpty(guid.Value))
+                    var stuProgIds = new List<string>();
+                    foreach (var stu in students)
                     {
-                        studentAcadPeriodProfileDto.Person = new Dtos.GuidObject2(guid.Value);
-                    }
-
-                    if ((student.StudentTypeInfo != null) && (student.StudentTypeInfo.Any()))
-                    {
-                        var studentTypes = await GetStudentTypesAsync(bypassCache);
-                        if (studentTypes != null)
+                        if (stu.ProgramIds != null && stu.ProgramIds.Any())
                         {
-                            var term = academicPeriods.FirstOrDefault(t => t.Code == studentTerm.Term);
-                            var termEndDate = (term == null) ? DateTime.Now : term.EndDate;
-                            var type = student.StudentTypeInfo
-                                .Where(st => st.TypeDate <= termEndDate)
-                                .OrderByDescending(x => x.TypeDate)
-                                .FirstOrDefault();
-                            if (type != null)
+                            foreach (var prog in stu.ProgramIds)
                             {
-                                var studentType = studentTypes.FirstOrDefault(st => st.Code == type.Type);
-                                studentAcadPeriodProfileDto.Type = studentType == null ? null : new GuidObject2(studentType.Guid);
+                                if (!string.IsNullOrEmpty(stu.Id) && !string.IsNullOrEmpty(prog))
+                                {
+                                    stuProgIds.Add(string.Concat(stu.Id, "*", prog));
+                                }
+
                             }
                         }
                     }
+                    if (stuProgIds != null && stuProgIds.Any())
+                        studentPrograms = await _studentProgramRepository.GetStudentAcademicPeriodProfileStudentProgramInfoAsync(stuProgIds);
                 }
 
-                //process start term
-                if (!string.IsNullOrEmpty(studentTerm.Term))
+                foreach (var studentTerm in studentTerms)
                 {
-                    
-                    if (academicPeriods.Any())
+                    try
                     {
-                        var term = academicPeriods.FirstOrDefault(t => t.Code == studentTerm.Term);
-                        studentAcadPeriodProfileDto.AcademicPeriod = term == null ? null : new Dtos.GuidObject2(term.Guid);
-
-                        if (term != null)
+                        if (string.IsNullOrEmpty(studentTerm.StudentId))
                         {
-                            StudentProgram studentProgram = null;
-                            var enrollmentStatuses = await GetEnrollmentStatusesAsync(bypassCache);
+                            throw new ArgumentNullException(string.Concat("Student ID is required, Entity:'STUDENT.TERMS', Record ID:'", studentTerm.Guid, "'"));
+                        }
+                        //we are looking for studentTerm.Term here so calling the guid suber to check if it is in cache and refresh it if it is not so that other calls are always going to be from cache
+                        if (!string.IsNullOrEmpty(studentTerm.Term))
+                        {
+                            var acadPeriodGuid = await _termRepository.GetAcademicPeriodsGuidAsync(studentTerm.Term);
+                        }
+                        var academicPeriods = (await GetAcademicPeriodsAsync(false)).ToList();
 
-                            foreach (var program in student.ProgramIds)
+                        var studentAcadPeriodProfileDto = new Colleague.Dtos.StudentAcademicPeriodProfiles();
+                        Domain.Student.Entities.Student student = null;
+                        if (!string.IsNullOrEmpty(studentTerm.Guid))
+                            studentAcadPeriodProfileDto.Id = studentTerm.Guid;
+                        else
+                            throw new ArgumentNullException(string.Concat("No Guid found, Entity:'STUDENT.TERMS', Record ID:'", studentTerm.StudentId,"*",studentTerm.Term, "*", studentTerm.AcademicLevel,  "'"));
+
+                        if (!string.IsNullOrEmpty(studentTerm.StudentId))
+                        {
+                            var guid = _personGuids.FirstOrDefault(i => i.Key.Equals(studentTerm.StudentId, StringComparison.OrdinalIgnoreCase));
+
+                            if (!guid.Equals(default(KeyValuePair<string, string>)) && !string.IsNullOrEmpty(guid.Value))
                             {
-                                var acadProgram = (await GetAcademicProgramsAsync(bypassCache)).FirstOrDefault(x => x.Code == program);
-                                if (acadProgram != null && acadProgram.AcadLevelCode == studentTerm.AcademicLevel)
+                                studentAcadPeriodProfileDto.Person = new Dtos.GuidObject2(guid.Value);
+                            }
+                            else
+                            {
+                                throw new ArgumentNullException(string.Concat("No Guid for Person found, Entity:'PERSONS', Record ID:'", studentTerm.StudentId, "'"));
+                            }
+                            // get student entities
+                            if (students != null && students.Any())
+                            {
+                                student = students.FirstOrDefault(stu => stu.Id == studentTerm.StudentId);
+                            }
+
+                            if (student == null)
+                            {
+                                throw new ArgumentNullException(string.Concat("Student record is not found, Entity:'STUDENT', Record ID:'", studentTerm.StudentId, "'"));
+                            }
+                            //get type info
+                            if ((student.StudentTypeInfo != null) && (student.StudentTypeInfo.Any()))
+                            {
+                                var term = academicPeriods.FirstOrDefault(t => t.Code == studentTerm.Term);
+                                var termEndDate = (term == null) ? DateTime.Now : term.EndDate;
+                                var type = student.StudentTypeInfo
+                                    .Where(st => st.TypeDate <= termEndDate)
+                                    .OrderByDescending(x => x.TypeDate)
+                                    .FirstOrDefault();
+                                if (type != null && !string.IsNullOrEmpty(type.Type))
                                 {
-                                    studentProgram = await _studentProgramRepository.GetAsync(studentTerm.StudentId, program);
-                                    //break;
-                            
-                                    var studentProgramsStatus = new List<StudentProgramStatus>();
+                                    var studentType = await _studentReferenceDataRepository.GetStudentTypesGuidAsync(type.Type);
+                                    if (!string.IsNullOrEmpty(studentType))
+                                        studentAcadPeriodProfileDto.Type = studentType == null ? null : new GuidObject2(studentType);
+                                }
+                            }
+                        }
 
-                                    if (studentProgram != null)
-                                        foreach (var status in studentProgram.StudentProgramStatuses)
-                                        {
-                                            if ((status.StatusDate >= term.StartDate) && (status.StatusDate <= term.EndDate))
-                                                studentProgramsStatus.Add(status);
+                        //process start term
+                        if (!string.IsNullOrEmpty(studentTerm.Term))
+                        {
+                            if (academicPeriods != null && academicPeriods.Any())
+                            {
+                                var term = academicPeriods.FirstOrDefault(t => t.Code == studentTerm.Term);
+                                studentAcadPeriodProfileDto.AcademicPeriod = term == null ? null : new Dtos.GuidObject2(term.Guid);
+                                if (term != null)
+                                {
+                                    StudentProgram studentProgram = null;
+                                    var enrollmentStatuses = await GetEnrollmentStatusesAsync(bypassCache);
 
-                                        }
-
-                                    // from the qualifying studentPrograms, get the most recent active
-                            
-                                    var myStudentProgStatuses = studentProgramsStatus.OrderByDescending(sps => sps.StatusDate);
-
-                                    if (myStudentProgStatuses != null && myStudentProgStatuses.Any())
+                                    foreach (var program in student.ProgramIds)
                                     {
-                                        foreach (var myStudentProgStatus in myStudentProgStatuses) {
+                                        var acadProgram = (await GetAcademicProgramsAsync(false)).FirstOrDefault(x => x.Code == program);
+                                        if (acadProgram != null && acadProgram.AcadLevelCode == studentTerm.AcademicLevel)
+                                        {
+                                            //studentProgram = await _studentProgramRepository.GetAsync(studentTerm.StudentId, program);
+                                            if (studentPrograms != null && studentPrograms.Any())
+                                                studentProgram = studentPrograms.FirstOrDefault(sp => sp.StudentId == studentTerm.StudentId && sp.ProgramCode == program);
+                                            //break;
 
-                                            if (myStudentProgStatus != null)
-                                            {
-                                                // using the most recent studentProgram from that term, lookup the enrollmentstatus guid
-                                                var enrollmentStatus =  enrollmentStatuses.FirstOrDefault(x => x.Code == myStudentProgStatus.Status);
-                                                if (enrollmentStatus != null && enrollmentStatus.EnrollmentStatusType == Domain.Student.Entities.EnrollmentStatusType.active)
+                                            var studentProgramsStatus = new List<StudentProgramStatus>();
+
+                                            if (studentProgram != null)
+                                                foreach (var status in studentProgram.StudentProgramStatuses)
                                                 {
-                                                    studentAcadPeriodProfileDto.AcademicPeriodEnrollmentStatus = new GuidObject2(enrollmentStatus.Guid);
-                                                    break;
+                                                    if ((status.StatusDate >= term.StartDate) && (status.StatusDate <= term.EndDate))
+                                                        studentProgramsStatus.Add(status);
+
+                                                }
+
+                                            // from the qualifying studentPrograms, get the most recent active
+
+                                            var myStudentProgStatuses = studentProgramsStatus.OrderByDescending(sps => sps.StatusDate);
+
+                                            if (myStudentProgStatuses != null && myStudentProgStatuses.Any())
+                                            {
+                                                foreach (var myStudentProgStatus in myStudentProgStatuses)
+                                                {
+
+                                                    if (myStudentProgStatus != null)
+                                                    {
+                                                        // using the most recent studentProgram from that term, lookup the enrollmentstatus guid
+                                                        var enrollmentStatus = enrollmentStatuses.FirstOrDefault(x => x.Code == myStudentProgStatus.Status);
+                                                        if (enrollmentStatus != null && enrollmentStatus.EnrollmentStatusType == Domain.Student.Entities.EnrollmentStatusType.active)
+                                                        {
+                                                            studentAcadPeriodProfileDto.AcademicPeriodEnrollmentStatus = new GuidObject2(enrollmentStatus.Guid);
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+
+                                            }
+                                        }
+                                        // If we got a legit enrollment status code from this program, no need to check further
+
+                                        if (studentAcadPeriodProfileDto.AcademicPeriodEnrollmentStatus != null)
+                                        {
+                                            break;
+                                        }
+                                    }
+
+                                    // Determine valid residency for this academic period.
+                                    string residencyCode = string.Empty;
+
+                                    if (student != null)
+                                    {
+                                        // For student's residencies (in descending date order with null dates on top) find first residency before/on term end date. 
+                                        var res = student.StudentResidencies.FirstOrDefault(sr => sr.Date <= term.EndDate || sr.Date == null);
+                                        if (res != null)
+                                        {
+                                            residencyCode = res.Residency;
+                                            // lookup the residency guid
+                                            if (!string.IsNullOrEmpty(residencyCode))
+                                            {
+                                                var residency = await _studentRepository.GetResidencyStatusGuidAsync(residencyCode);
+
+                                                if (!string.IsNullOrEmpty(residency))
+                                                {
+                                                    studentAcadPeriodProfileDto.Residency = new GuidObject2(residency);
                                                 }
                                             }
                                         }
-
                                     }
                                 }
-                                // If we got a legit enrollment status code from this program, no need to check further
+                            }
+                        }
 
-                                if (studentAcadPeriodProfileDto.AcademicPeriodEnrollmentStatus != null)
+                        if ((studentTerm.StudentTermStatuses != null) && (studentTerm.StudentTermStatuses.Any()))
+                        {
+                            var currentStatus = studentTerm.StudentTermStatuses.OrderByDescending(sts => sts.StatusDate).FirstOrDefault();
+                            if (currentStatus != null && currentStatus.StatusDate != DateTime.MinValue && !string.IsNullOrEmpty(currentStatus.Status))
+                            {
+                                var status = await _studentReferenceDataRepository.GetStudentStatusesGuidAsync(currentStatus.Status);
+                                if (status != null)
                                 {
-                                    break;
+                                    studentAcadPeriodProfileDto.StudentStatus = new Dtos.GuidObject2(status);
                                 }
                             }
+                        }
 
-                            // Determine valid residency for this academic period.
-                            string residencyCode = string.Empty;
-                            // get domain entity for student of this student term
-                            foreach (var thisStudent in students.Where(s => s.Value.Id == studentTerm.StudentId))
+                        if (!string.IsNullOrEmpty(studentTerm.StudentLoad))
+                        {
+                            //STUDENT.LOADS
+                            var studentLoads = (await GetStudentLoadsAsync()).ToList();
+                            if (studentLoads.Any())
                             {
-                                if (thisStudent.Value != null)
+                                var studentLoad = studentLoads.FirstOrDefault(sl => sl.Code == studentTerm.StudentLoad);
+                                if ((studentLoad != null) && !(string.IsNullOrEmpty(studentLoad.Sp1)) &&
+                                    (new[] { "1", "2", "3" }.Any(c => studentLoad.Sp1.Contains(c))))
                                 {
-                                    // For student's residencies (in descending date order with null dates on top) find first residency before/on term end date. 
-                                    var res = thisStudent.Value.StudentResidencies.FirstOrDefault(sr => sr.Date <= term.EndDate || sr.Date == null);
-                                    if (res != null)
+                                    switch (studentLoad.Code)
                                     {
-                                        residencyCode = res.Residency;
-                                        // lookup the residency guid
-                                        var residencies = await _studentRepository.GetResidencyStatusesAsync(bypassCache);
-                                        var residency = residencies.FirstOrDefault(x => x.Code == residencyCode);
-                                        if (residency != null)
-                                        {
-                                            studentAcadPeriodProfileDto.Residency = new GuidObject2(residency.Guid);
-                                        }
+                                        case "P":
+                                            studentAcadPeriodProfileDto.AcademicLoad = AcademicLoad.PartTime;
+                                            break;
+                                        case "F":
+                                            studentAcadPeriodProfileDto.AcademicLoad = AcademicLoad.FullTime;
+                                            break;
+                                        case "O":
+                                            studentAcadPeriodProfileDto.AcademicLoad = AcademicLoad.OverLoad;
+                                            break;
+
                                     }
                                 }
                             }
                         }
-                    }
-                }
 
-                if ((studentTerm.StudentTermStatuses != null) && (studentTerm.StudentTermStatuses.Any()))
-                {
-                    var currentStatus = studentTerm.StudentTermStatuses.OrderByDescending(sts => sts.StatusDate).FirstOrDefault();
-                    if (currentStatus != null && currentStatus.StatusDate != DateTime.MinValue)
-                    {
-                        var studentStatuses = (await GetStudentStatusesAsync(bypassCache)).ToList();
-                        if (studentStatuses.Any())
+                        var measures = new List<PerformanceMeasureDtoProperty>();
+                        var measure = new PerformanceMeasureDtoProperty();
+
+                        if (!string.IsNullOrEmpty(studentTerm.AcademicLevel))
                         {
-                            var status = studentStatuses.FirstOrDefault(x => x.Code == currentStatus.Status);
-                            if (status != null)
+                            var acadLevel = await _studentReferenceDataRepository.GetAcademicLevelsGuidAsync(studentTerm.AcademicLevel);
+                            if (!string.IsNullOrEmpty(acadLevel))
                             {
-                                studentAcadPeriodProfileDto.StudentStatus = new Dtos.GuidObject2(status.Guid);
+                                measure.Level = new GuidObject2(acadLevel);
                             }
                         }
-                    }
-                }
 
-                if (!string.IsNullOrEmpty(studentTerm.StudentLoad))
-                {
-                    //STUDENT.LOADS
-                    var studentLoads = (await GetStudentLoadsAsync()).ToList();
-                    if (studentLoads.Any())
-                    {
-                        var studentLoad = studentLoads.FirstOrDefault(sl => sl.Code == studentTerm.StudentLoad);
-                        if ((studentLoad != null) && !(string.IsNullOrEmpty(studentLoad.Sp1)) &&
-                            (new[] { "1", "2", "3" }.Any(c => studentLoad.Sp1.Contains(c))))
+                        var classLevel = string.Empty;
+                        if ((student.StudentAcademicLevels != null) && (student.StudentAcademicLevels.Any()) && (!string.IsNullOrEmpty(studentTerm.AcademicLevel)))
                         {
-                            switch (studentLoad.Code)
+                            var studentAcademicLevel = student.StudentAcademicLevels.FirstOrDefault(sal => sal.AcademicLevel == studentTerm.AcademicLevel);
+                            if (studentAcademicLevel != null)
+                                classLevel = studentAcademicLevel.ClassLevel;
+                        }
+
+                        if (!string.IsNullOrEmpty(classLevel))
+                        {
+                            var studentClassification = await _studentReferenceDataRepository.GetStudentClassificationGuidAsync(classLevel);
+                            if (!string.IsNullOrEmpty(studentClassification))
                             {
-                                case "P":
-                                    studentAcadPeriodProfileDto.AcademicLoad = AcademicLoad.PartTime;
-                                    break;
-                                case "F":
-                                    studentAcadPeriodProfileDto.AcademicLoad = AcademicLoad.FullTime;
-                                    break;
-                                case "O":
-                                    studentAcadPeriodProfileDto.AcademicLoad = AcademicLoad.OverLoad;
-                                    break;
+                                measure.Classification = new GuidObject2(studentClassification);
+                            }
+                        }
+
+                        decimal totalGradePoints = 0;
+                        decimal totalGpaCredit = 0;
+
+                        //var studentAcademicCredits = (await _academicCreditRepository.GetAsync(studentTerm.StudentAcademicCredentials)).ToList();
+                        if (_academicCredits != null && _academicCredits.Any())
+                        {
+                            var acadCreds = _academicCredits.Where(i => studentTerm.StudentAcademicCredentials.Contains(i.Id));
+                            foreach (var academicCredential in acadCreds)
+                            {
+                                totalGradePoints += academicCredential.GradePoints;
+                                totalGpaCredit += academicCredential.GpaCredit ?? 0m;
+                            }
+
+                            if (!(totalGradePoints == 0 || totalGpaCredit == 0))
+                            {
+                                var gpa = totalGradePoints / totalGpaCredit;
+                                if (gpa != 0)
+                                {
+                                    measure.PerformanceMeasure = gpa.ToString("#.##");
+                                }
 
                             }
                         }
+                        measures.Add(measure);
+                        studentAcadPeriodProfileDto.Measures = measures;
+                        studentAcadPeriodProfileDtos.Add(studentAcadPeriodProfileDto);
                     }
-                }
-
-                var measures = new List<PerformanceMeasureDtoProperty>();
-                var measure = new PerformanceMeasureDtoProperty();
-
-                if (!string.IsNullOrEmpty(studentTerm.AcademicLevel))
-                {
-                    var academicLevels = (await GetAcademicLevelsAsync(bypassCache)).ToList();
-                    if (academicLevels.Any())
+                    catch (Exception ex)
                     {
-                        var acadLevel = academicLevels.FirstOrDefault(al => al.Code == studentTerm.AcademicLevel);
-                        if (acadLevel != null)
-                        {
-                            measure.Level = new GuidObject2(acadLevel.Guid);
-                        }
+                        throw new ArgumentNullException(string.Concat(ex.Message, "Student terms is not found, Entity:'STUDENT.TERMS', Record ID:'", studentTerm.Guid, "'"));
                     }
                 }
 
-                var classLevel = string.Empty;
-                if ((student.StudentAcademicLevels != null) && (student.StudentAcademicLevels.Any()) && (!string.IsNullOrEmpty(studentTerm.AcademicLevel)))
-                {
-                    var studentAcademicLevel = student.StudentAcademicLevels.FirstOrDefault(sal => sal.AcademicLevel == studentTerm.AcademicLevel);
-                    if (studentAcademicLevel != null)
-                        classLevel = studentAcademicLevel.ClassLevel;
+                return studentAcadPeriodProfileDtos;
 
-                }
-
-                if (!string.IsNullOrEmpty(classLevel))
-                {
-                    var allStudentClassification = (await GetAllStudentClassificationAsync(bypassCache)).ToList();
-                    if (allStudentClassification.Any())
-                    {
-                        var studentClassification = allStudentClassification.FirstOrDefault(sc => sc.Code == classLevel);
-                        if (studentClassification != null)
-                        {
-                            measure.Classification = new GuidObject2(studentClassification.Guid);
-                        }
-                    }
-                }
-
-                decimal totalGradePoints = 0;
-                decimal totalGpaCredit = 0;
-
-                //var studentAcademicCredits = (await _academicCreditRepository.GetAsync(studentTerm.StudentAcademicCredentials)).ToList();
-                if (_academicCredits != null && _academicCredits.Any())
-                {
-                    var acadCreds = _academicCredits.Where(i => studentTerm.StudentAcademicCredentials.Contains(i.Id));
-                    foreach (var academicCredential in acadCreds)
-                    {
-                        totalGradePoints += academicCredential.GradePoints;
-                        totalGpaCredit += academicCredential.GpaCredit??0m;
-                    }
-
-                    if (!(totalGradePoints == 0 || totalGpaCredit == 0))
-                    {
-                        var gpa = totalGradePoints / totalGpaCredit;
-                        if (gpa != 0)
-                        {
-                            measure.PerformanceMeasure = gpa.ToString("#.##");
-                        }
-
-                    }
-                }
-                measures.Add(measure);
-                studentAcadPeriodProfileDto.Measures = measures;
-
-                return studentAcadPeriodProfileDto;
+            }
+            catch (RepositoryException ex)
+            {
+                throw ex;
             }
             catch (Exception ex)
             {
@@ -561,26 +534,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 throw new KeyNotFoundException("Student Academic Period Profiles exception occurred. " + ex.Message);
             }
-        }
-
-        IEnumerable<AcademicCreditMinimum> _academicCredits = null;
-        private async Task<IEnumerable<AcademicCreditMinimum>> AcademicCreditsAsync(IEnumerable<string> stAcadCreds)
-        {
-            if(stAcadCreds != null && stAcadCreds.Any())
-            {
-                _academicCredits = await _academicCreditRepository.GetAcademicCreditMinimumAsync(stAcadCreds.ToList());
-            }
-            return _academicCredits;
-        }
-
-        Dictionary<string, string> _personGuids = new Dictionary<string, string>();
-        private async Task<Dictionary<string, string>> PersonGuids(IEnumerable<string> personIds)
-        {
-            if (!_personGuids.Any())
-            {
-                _personGuids = await _personRepository.GetPersonGuidsCollectionAsync(personIds);
-            }
-            return _personGuids;
+            
         }
 
         /// <summary>

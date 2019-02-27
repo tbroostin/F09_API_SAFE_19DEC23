@@ -14,6 +14,7 @@ using Ellucian.Web.Adapters;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
+using Ellucian.Web.Security;
 
 namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 {
@@ -76,6 +77,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         #endregion
 
         #region GetAsync 1098
+
         [TestMethod]
         public async Task GetAsync_1098_NullPersonId()
         {
@@ -111,10 +113,35 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         }
 
         [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task GetAsync_Missing1098Permission()
+        {
+            Build1098Service(false);
+            var actualTaxFormStatements = await service.GetAsync("1", Dtos.Base.TaxForms.Form1098);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task GetAsync_PersonId_DoesNotMatch_CurrentUser_1098Exception()
+        {
+            var actualTaxFormStatements = await service.GetAsync("3", Dtos.Base.TaxForms.Form1098);
+        }
+
+        [TestMethod]
         [ExpectedException(typeof(ApplicationException))]
         public async Task GetAsync_1098_NullConfiguration()
         {
             taxForm1098Configuration = null;
+            var actualTaxFormStatements = await service.GetAsync("1", Dtos.Base.TaxForms.Form1098);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task GetAsync_1098_StatementsPersonIdNotMatching()
+        {
+            expectedTaxFormStatements = new List<TaxFormStatement2>();
+            expectedTaxFormStatements.Add(new TaxFormStatement2("9", "2016", TaxForms.Form1098, "1234"));
+            expectedTaxFormStatements.Add(new TaxFormStatement2("9", "2015", TaxForms.Form1098, "3452"));
             var actualTaxFormStatements = await service.GetAsync("1", Dtos.Base.TaxForms.Form1098);
         }
 
@@ -164,6 +191,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         #endregion
 
         #region GetAsync T2202a
+
         [TestMethod]
         public async Task GetAsync_T2202a_NullPersonId()
         {
@@ -199,6 +227,21 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         }
 
         [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task GetAsync_MissingT2202aPermission()
+        {
+            BuildT2202aService(false);
+            var actualTaxFormStatements = await t2202aService.GetAsync("1", Dtos.Base.TaxForms.FormT2202A);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task GetAsync_PersonId_DoesNotMatch_CurrentUserT2202aException()
+        {
+            var actualTaxFormStatements = await t2202aService.GetAsync("3", Dtos.Base.TaxForms.FormT2202A);
+        }
+
+        [TestMethod]
         [ExpectedException(typeof(ApplicationException))]
         public async Task GetAsync_T2202a_NullConfiguration()
         {
@@ -210,8 +253,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         [ExpectedException(typeof(ApplicationException))]
         public async Task GetAsync_T2202a_NullStatements()
         {
-            expectedTaxFormStatements = null;
-            var actualTaxFormStatements = await service.GetAsync("1", Dtos.Base.TaxForms.FormT2202A);
+            expectedTaxFormT2202aStatements = null;
+            var actualTaxFormStatements = await t2202aService.GetAsync("1", Dtos.Base.TaxForms.FormT2202A);
         }
         [TestMethod]
         public async Task GetAsync_T2202a_NullConfigurationAvailabilities()
@@ -249,11 +292,12 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
         }
         #endregion
+
         #region Build service method
         /// <summary>
         /// Builds multiple 1098 tax form service objects.
         /// </summary>
-        private void Build1098Service()
+        private void Build1098Service(bool isPermissionsRequired = true)
         {
             var statementRepositoryMock = new Mock<IStudentTaxFormStatementRepository>();
             var configurationRepositoryMock = new Mock<IConfigurationRepository>();
@@ -261,16 +305,24 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             var userFactory = new StudentUserFactory.TaxInformationUserFactory();
             var roleRepositoryMock = new Mock<IRoleRepository>();
             var loggerMock = new Mock<ILogger>();
-            
+
 
             var roles = new List<Domain.Entities.Role>();
 
             var role = new Domain.Entities.Role(1, "VIEW.1098");
-            role.AddPermission(new Domain.Entities.Permission("VIEW.1098"));
+            if (isPermissionsRequired)
+            {
+                role.AddPermission(new Domain.Entities.Permission("VIEW.1098"));
+
+            }
             roles.Add(role);
 
             role = new Domain.Entities.Role(1, "VIEW.T2202A");
-            role.AddPermission(new Domain.Entities.Permission("VIEW.T2202A"));
+            if (isPermissionsRequired)
+            {
+                role.AddPermission(new Domain.Entities.Permission("VIEW.T2202A"));
+
+            }
             roles.Add(role);
 
             roleRepositoryMock.Setup(r => r.Roles).Returns(roles);
@@ -293,7 +345,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 adapterRegistryMock.Object, userFactory, roleRepositoryMock.Object, loggerMock.Object);
         }
 
-        private List<Domain.Base.Entities.TaxFormStatement2> expectedTaxFormStatements; 
+        private List<Domain.Base.Entities.TaxFormStatement2> expectedTaxFormStatements;
 
         private IEnumerable<Domain.Base.Entities.TaxFormStatement2> getStatements()
         {
@@ -305,7 +357,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         /// <summary>
         /// Build multiple T2202a tax form service objects.
         /// </summary>
-        private void BuildT2202aService()
+        private void BuildT2202aService(bool isPermissionsRequired = true)
         {
             var t2202aStatementRepositoryMock = new Mock<IStudentTaxFormStatementRepository>();
             var t2202aConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
@@ -318,11 +370,17 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             var roles = new List<Domain.Entities.Role>();
 
             var role = new Domain.Entities.Role(1, "VIEW.1098");
-            role.AddPermission(new Domain.Entities.Permission("VIEW.1098"));
+            if (isPermissionsRequired)
+            {
+                role.AddPermission(new Domain.Entities.Permission("VIEW.1098"));
+            }
             roles.Add(role);
 
             role = new Domain.Entities.Role(2, "VIEW.T2202A");
-            role.AddPermission(new Domain.Entities.Permission("VIEW.T2202A"));
+            if (isPermissionsRequired)
+            {
+                role.AddPermission(new Domain.Entities.Permission("VIEW.T2202A"));
+            }
             roles.Add(role);
 
             roleRepositoryMock.Setup(r => r.Roles).Returns(roles);

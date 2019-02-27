@@ -31,6 +31,10 @@ namespace Ellucian.Web.Http.Controllers
     {
         private const string RestrictedHeaderName = "X-Content-Restricted";
 
+        public const string IntegrationErrors1 = "application/vnd.hedtech.integration.errors.v1+json";
+        public const string IntegrationErrors2 = "application/vnd.hedtech.integration.errors.v2+json";
+
+
         public BaseCompressedApiController()
         {
             var controllerType = this.GetType();

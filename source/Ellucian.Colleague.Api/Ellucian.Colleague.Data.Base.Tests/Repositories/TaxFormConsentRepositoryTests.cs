@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Repositories;
@@ -69,7 +69,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 var expectedPersonId = consentContract.W2chHrperId;
                 var expectedTaxForm = formToSelect;
                 var expectedStatus = consentContract.W2chNewStatus == "C";
-                var expectedTimeStamp = ColleagueTimeZoneUtility.ToPointInTimeDateTimeOffset(consentContract.W2ConsentHistoryAddtime, consentContract.W2ConsentHistoryAdddate, apiSettings.ColleagueTimeZone).GetValueOrDefault();
+                var expectedTimeStamp = ColleagueTimeZoneUtility.ToPointInTimeDateTimeOffset(consentContract.W2chStatusTime, consentContract.W2chStatusDate, apiSettings.ColleagueTimeZone).GetValueOrDefault();
 
                 var consentEntity = taxFormConsentEntities.FirstOrDefault(x =>
                     x.PersonId == expectedPersonId
@@ -151,7 +151,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 var expectedPersonId = consentContract.T4chHrperId;
                 var expectedTaxForm = formToSelect;
                 var expectedStatus = consentContract.T4chNewStatus == "C";
-                var expectedTimeStamp = ColleagueTimeZoneUtility.ToPointInTimeDateTimeOffset(consentContract.T4ConsentHistoryAddtime, consentContract.T4ConsentHistoryAdddate, apiSettings.ColleagueTimeZone).GetValueOrDefault();
+                var expectedTimeStamp = ColleagueTimeZoneUtility.ToPointInTimeDateTimeOffset(consentContract.T4chStatusTime, consentContract.T4chStatusDate, apiSettings.ColleagueTimeZone).GetValueOrDefault();
 
                 var consentEntity = taxFormConsentEntities.FirstOrDefault(x =>
                     x.PersonId == expectedPersonId
@@ -177,7 +177,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 var expectedPersonId = consentContract.T4achHrperId;
                 var expectedTaxForm = formToSelect;
                 var expectedStatus = consentContract.T4achNewStatus == "C";
-                var expectedTimeStamp = ColleagueTimeZoneUtility.ToPointInTimeDateTimeOffset(consentContract.T4aConsentHistoryAddtime, consentContract.T4aConsentHistoryAdddate, apiSettings.ColleagueTimeZone).GetValueOrDefault();
+                var expectedTimeStamp = ColleagueTimeZoneUtility.ToPointInTimeDateTimeOffset(consentContract.T4achStatusTime, consentContract.T4achStatusDate, apiSettings.ColleagueTimeZone).GetValueOrDefault();
 
                 var consentEntity = taxFormConsentEntities.FirstOrDefault(x =>
                     x.PersonId == expectedPersonId
@@ -276,8 +276,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         [TestMethod]
         public async Task GetAsync_NullDateTimeOffset()
         {
-            this.w2ConsentHistoryContracts[0].W2ConsentHistoryAdddate = null;
-            this.w2ConsentHistoryContracts[0].W2ConsentHistoryAddtime = null;
+            this.w2ConsentHistoryContracts[0].W2chStatusDate = null;
+            this.w2ConsentHistoryContracts[0].W2chStatusTime = null;
             var consentEntities = await taxFormConsentRepository.GetAsync("0003946", TaxForms.FormW2);
 
             // All contracts - except one - should be processed and returned as domain entities.
@@ -410,6 +410,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     Recordkey = "1234",
                     W2chHrperId = personId,
                     W2chNewStatus = "C",
+                    W2chStatusDate = DateTime.Now,
+                    W2chStatusTime = DateTime.Now,
                     W2ConsentHistoryAdddate = DateTime.Now,
                     W2ConsentHistoryAddtime = DateTime.Now
                 },
@@ -418,6 +420,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     Recordkey = "1235",
                     W2chHrperId = personId,
                     W2chNewStatus = "W",
+                    W2chStatusDate = DateTime.Now,
+                    W2chStatusTime = DateTime.Now,
                     W2ConsentHistoryAdddate = DateTime.Now,
                     W2ConsentHistoryAddtime = DateTime.Now
                 },
@@ -519,6 +523,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     Recordkey = "1234",
                     T4chHrperId = personId,
                     T4chNewStatus = "C",
+                    T4chStatusDate = DateTime.Now,
+                    T4chStatusTime = DateTime.Now,
                     T4ConsentHistoryAdddate = DateTime.Now,
                     T4ConsentHistoryAddtime = DateTime.Now
                 },
@@ -527,6 +533,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     Recordkey = "1235",
                     T4chHrperId = personId,
                     T4chNewStatus = "W",
+                    T4chStatusDate = DateTime.Now,
+                    T4chStatusTime = DateTime.Now,
                     T4ConsentHistoryAdddate = DateTime.Now,
                     T4ConsentHistoryAddtime = DateTime.Now
                 },
@@ -545,6 +553,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     Recordkey = "1234",
                     T4achHrperId = personId,
                     T4achNewStatus = "C",
+                    T4achStatusDate = DateTime.Now,
+                    T4achStatusTime = DateTime.Now,
                     T4aConsentHistoryAdddate = DateTime.Now,
                     T4aConsentHistoryAddtime = DateTime.Now
                 },
@@ -553,6 +563,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     Recordkey = "1235",
                     T4achHrperId = personId,
                     T4achNewStatus = "W",
+                    T4achStatusDate = DateTime.Now,
+                    T4achStatusTime = DateTime.Now,
                     T4aConsentHistoryAdddate = DateTime.Now,
                     T4aConsentHistoryAddtime = DateTime.Now
                 },

@@ -35,7 +35,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         private string[] budgetEntriesNotApprovedIds = new string[] { "B009999", "B008888", "B007777", "B006666", "B005555" };
         private string[] draftBudgetEntriesIds = new string[] { "1", "2", "3", "4", "5" };
         private Staff staffDataContract;
+        private Collection<Staff> staffDataContracts;
         private string[] staffIds = new string[] { "0000001" };
+        private string[] pendingApprovalStaffIds = new string[] { "0000001" };
         private string personId = "0000001";
         private List<string> personIds;
         private List<string> hierarchies;
@@ -44,8 +46,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         private IEnumerable<BudgetAdjustmentPendingApprovalSummary> budgetAdjustmentPendingApprovalSummaries;
 
         private TxUpdateBudgetAdjustmentResponse budgetAdjustmentResponse;
-        private GetHierarchyNamesForIdsResponse getHierarchyNamesResponse;
+        private GetHierarchyNamesForIdsResponse getNamesforIdsResponse;
         private TxDeleteDraftBudgetAdjustmentResponse deleteDraftResponse;
+
+        // This is the budget adjustment returned by the CTX when creating one.
         private string journalNumber = "B123456";
         private BudgetEntries budgetEntriesDataContract2 = new BudgetEntries()
         {
@@ -94,10 +98,12 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                     BgteApprovalLevelsAssocMember = ""
                 }
             },
-            BgteNextApprovalIds = new List<string>() { "AER" , "MEL" }
+            BgteNextApprovalIds = new List<string>() { "AER", "MEL" }
         };
+
         private Collection<DataContracts.Opers> opersResponse;
         private Collection<DataContracts.Opers> opersDataContracts;
+        private string criteria = " ";
 
         [TestInitialize]
         public void Initialize()
@@ -113,6 +119,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             budgetEntriesDataContracts = new Collection<BudgetEntries>();
             draftDataContracts = new Collection<DraftBudgetEntries>();
             staffDataContract = new Staff();
+            staffDataContracts = new Collection<Staff>();
 
             InitializeMockStatements();
 
@@ -121,7 +128,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
             personIds = new List<string>() { "0010475", "0013272" };
             hierarchies = new List<string>() { "PREFERRED", "PREFERRED" };
-            getHierarchyNamesResponse.OutPersonNames = new List<string>() { "Anjana Tesa Gutierrez", "Teresa P Castro" };
+            getNamesforIdsResponse.IoPersonIds = new List<string>() { "0010475", "0013272" };
+            getNamesforIdsResponse.IoHierarchies = new List<string>() { "PREFERRED", "PREFERRED" };
+            getNamesforIdsResponse.OutPersonNames = new List<string>() { "Anjana Tesa Gutierrez", "Teresa P Castro" };
         }
 
         [TestCleanup]
@@ -138,9 +147,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             budgetAdjustmentSummaries = null;
             budgetAdjustmentPendingApprovalSummaries = null;
             staffDataContract = null;
-            personIds = null;
-            hierarchies = null;
-            getHierarchyNamesResponse.OutPersonNames = null;
+            staffDataContracts = null;
         }
         #endregion
 
@@ -1268,34 +1275,20 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 Assert.AreEqual(summary.BudgetAdjustmentNumber, dataContractForBudgetEntry.Recordkey);
                 Assert.AreEqual(summary.Status, BudgetEntryStatus.NotApproved);
                 Assert.AreEqual(summary.TransactionDate, dataContractForBudgetEntry.BgteTrDate);
+                Assert.AreEqual(summary.InitiatorId, dataContractForBudgetEntry.BudgetEntriesAddopr);
+                Assert.IsNull(summary.InitiatorLoginId);
 
-                //var initiatorName = getHierarchyNamesResponse.OutPersonNames[personIds.FindIndex(x => x.Equals(dataContractForBudgetEntry.BudgetEntriesAddopr))];
-                //Assert.AreEqual(summary.InitiatorName, initiatorName);
-                   
-                if (dataContractForBudgetEntry.BgteDataEntityAssociation != null && dataContractForBudgetEntry.BgteDataEntityAssociation.Any())
-                {
-                    // Validate the reason against the first description in the association.
-                    if (!string.IsNullOrEmpty(dataContractForBudgetEntry.BgteDataEntityAssociation.FirstOrDefault().BgteDescriptionAssocMember))
-                    {
-                        Assert.AreEqual(summary.Reason, dataContractForBudgetEntry.BgteDataEntityAssociation.FirstOrDefault().BgteDescriptionAssocMember);
-                    }
-                    else
-                    {
-                        Assert.AreEqual(summary.Reason, " ");
-                    }
+                var initiatorName = getNamesforIdsResponse.OutPersonNames[getNamesforIdsResponse.IoPersonIds.FindIndex(x => x.Equals(dataContractForBudgetEntry.BudgetEntriesAddopr))];
+                Assert.AreEqual(summary.InitiatorName, initiatorName);
 
-                    // Validate the ToAmount.
-                    decimal contractToAmount = 0;
-                    foreach (var associationMember in dataContractForBudgetEntry.BgteDataEntityAssociation)
-                    {
-                        if (associationMember != null)
-                        {
-                            var toAmount = associationMember.BgteDebitAssocMember.HasValue ? associationMember.BgteDebitAssocMember.Value : 0m;
-                            contractToAmount += toAmount;
-                        }
-                    }
-                    Assert.AreEqual(summary.ToAmount, contractToAmount);
-                }
+                // Validate the reason against the first description in the association.
+                Assert.AreEqual(summary.Reason, dataContractForBudgetEntry.BgteDataEntityAssociation.FirstOrDefault().BgteDescriptionAssocMember);
+
+                // Validate the ToAmount.
+                decimal? contractToAmount = 0;
+                contractToAmount = dataContractForBudgetEntry.BgteDataEntityAssociation.Sum(am => am.BgteDebitAssocMember);
+                Assert.AreEqual(summary.ToAmount, contractToAmount);
+
             }
         }
 
@@ -1358,34 +1351,19 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 Assert.AreEqual(summary.BudgetAdjustmentNumber, dataContractForBudgetEntry.Recordkey);
                 Assert.AreEqual(summary.Status, BudgetEntryStatus.NotApproved);
                 Assert.AreEqual(summary.TransactionDate, dataContractForBudgetEntry.BgteTrDate);
+                Assert.AreEqual(summary.InitiatorId, dataContractForBudgetEntry.BudgetEntriesAddopr);
+                Assert.IsNull(summary.InitiatorLoginId);
 
-                //var initiatorName = getHierarchyNamesResponse.OutPersonNames[personIds.FindIndex(x => x.Equals(dataContractForBudgetEntry.BudgetEntriesAddopr))];
-                //Assert.AreEqual(summary.InitiatorName, initiatorName);
+                var initiatorName = getNamesforIdsResponse.OutPersonNames[getNamesforIdsResponse.IoPersonIds.FindIndex(x => x.Equals(dataContractForBudgetEntry.BudgetEntriesAddopr))];
+                Assert.AreEqual(summary.InitiatorName, initiatorName);
 
-                if (dataContractForBudgetEntry.BgteDataEntityAssociation != null && dataContractForBudgetEntry.BgteDataEntityAssociation.Any())
-                {
-                    // Validate the reason against the first description in the association.
-                    if (!string.IsNullOrEmpty(dataContractForBudgetEntry.BgteDataEntityAssociation.FirstOrDefault().BgteDescriptionAssocMember))
-                    {
-                        Assert.AreEqual(summary.Reason, dataContractForBudgetEntry.BgteDataEntityAssociation.FirstOrDefault().BgteDescriptionAssocMember);
-                    }
-                    else
-                    {
-                        Assert.AreEqual(summary.Reason, " ");
-                    }
+                // Validate the reason against the first description in the association.
+                Assert.AreEqual(summary.Reason, dataContractForBudgetEntry.BgteDataEntityAssociation.FirstOrDefault().BgteDescriptionAssocMember);
 
-                    // Validate the ToAmount.
-                    decimal contractToAmount = 0;
-                    foreach (var associationMember in dataContractForBudgetEntry.BgteDataEntityAssociation)
-                    {
-                        if (associationMember != null)
-                        {
-                            var toAmount = associationMember.BgteDebitAssocMember.HasValue ? associationMember.BgteDebitAssocMember.Value : 0m;
-                            contractToAmount += toAmount;
-                        }
-                    }
-                    Assert.AreEqual(summary.ToAmount, contractToAmount);
-                }
+                // Validate the ToAmount.
+                decimal? contractToAmount = 0;
+                contractToAmount = dataContractForBudgetEntry.BgteDataEntityAssociation.Sum(am => am.BgteDebitAssocMember);
+                Assert.AreEqual(summary.ToAmount, contractToAmount);
             }
         }
 
@@ -1406,34 +1384,19 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 Assert.AreEqual(summary.BudgetAdjustmentNumber, dataContractForBudgetEntry.Recordkey);
                 Assert.AreEqual(summary.Status, BudgetEntryStatus.NotApproved);
                 Assert.AreEqual(summary.TransactionDate, dataContractForBudgetEntry.BgteTrDate);
+                Assert.AreEqual(summary.InitiatorId, dataContractForBudgetEntry.BudgetEntriesAddopr);
+                Assert.IsNull(summary.InitiatorLoginId);
 
-                //var initiatorName = getHierarchyNamesResponse.OutPersonNames[personIds.FindIndex(x => x.Equals(dataContractForBudgetEntry.BudgetEntriesAddopr))];
-                //Assert.AreEqual(summary.InitiatorName, initiatorName);
+                var initiatorName = getNamesforIdsResponse.OutPersonNames[getNamesforIdsResponse.IoPersonIds.FindIndex(x => x.Equals(dataContractForBudgetEntry.BudgetEntriesAddopr))];
+                Assert.AreEqual(summary.InitiatorName, initiatorName);
 
-                if (dataContractForBudgetEntry.BgteDataEntityAssociation != null && dataContractForBudgetEntry.BgteDataEntityAssociation.Any())
-                {
-                    // Validate the reason against the first description in the association.
-                    if (!string.IsNullOrEmpty(dataContractForBudgetEntry.BgteDataEntityAssociation.FirstOrDefault().BgteDescriptionAssocMember))
-                    {
-                        Assert.AreEqual(summary.Reason, dataContractForBudgetEntry.BgteDataEntityAssociation.FirstOrDefault().BgteDescriptionAssocMember);
-                    }
-                    else
-                    {
-                        Assert.AreEqual(summary.Reason, " ");
-                    }
+                // Validate the reason against the first description in the association.
+                Assert.AreEqual(summary.Reason, dataContractForBudgetEntry.BgteDataEntityAssociation.FirstOrDefault().BgteDescriptionAssocMember);
 
-                    // Validate the ToAmount.
-                    decimal contractToAmount = 0;
-                    foreach (var associationMember in dataContractForBudgetEntry.BgteDataEntityAssociation)
-                    {
-                        if (associationMember != null)
-                        {
-                            var toAmount = associationMember.BgteDebitAssocMember.HasValue ? associationMember.BgteDebitAssocMember.Value : 0m;
-                            contractToAmount += toAmount;
-                        }
-                    }
-                    Assert.AreEqual(summary.ToAmount, contractToAmount);
-                }
+                // Validate the ToAmount.
+                decimal? contractToAmount = 0;
+                contractToAmount = dataContractForBudgetEntry.BgteDataEntityAssociation.Sum(am => am.BgteDebitAssocMember);
+                Assert.AreEqual(summary.ToAmount, contractToAmount);
             }
         }
 
@@ -1454,34 +1417,19 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 Assert.AreEqual(summary.BudgetAdjustmentNumber, dataContractForBudgetEntry.Recordkey);
                 Assert.AreEqual(summary.Status, BudgetEntryStatus.NotApproved);
                 Assert.AreEqual(summary.TransactionDate, dataContractForBudgetEntry.BgteTrDate);
+                Assert.AreEqual(summary.InitiatorId, dataContractForBudgetEntry.BudgetEntriesAddopr);
+                Assert.IsNull(summary.InitiatorLoginId);
 
-                //var initiatorName = getHierarchyNamesResponse.OutPersonNames[personIds.FindIndex(x => x.Equals(dataContractForBudgetEntry.BudgetEntriesAddopr))];
-                //Assert.AreEqual(summary.InitiatorName, initiatorName);
+                var initiatorName = getNamesforIdsResponse.OutPersonNames[getNamesforIdsResponse.IoPersonIds.FindIndex(x => x.Equals(dataContractForBudgetEntry.BudgetEntriesAddopr))];
+                Assert.AreEqual(summary.InitiatorName, initiatorName);
 
-                if (dataContractForBudgetEntry.BgteDataEntityAssociation != null && dataContractForBudgetEntry.BgteDataEntityAssociation.Any())
-                {
-                    // Validate the reason against the first description in the association.
-                    if (!string.IsNullOrEmpty(dataContractForBudgetEntry.BgteDataEntityAssociation.FirstOrDefault().BgteDescriptionAssocMember))
-                    {
-                        Assert.AreEqual(summary.Reason, dataContractForBudgetEntry.BgteDataEntityAssociation.FirstOrDefault().BgteDescriptionAssocMember);
-                    }
-                    else
-                    {
-                        Assert.AreEqual(summary.Reason, " ");
-                    }
+                // Validate the reason against the first description in the association.
+                Assert.AreEqual(summary.Reason, dataContractForBudgetEntry.BgteDataEntityAssociation.FirstOrDefault().BgteDescriptionAssocMember);
 
-                    // Validate the ToAmount.
-                    decimal contractToAmount = 0;
-                    foreach (var associationMember in dataContractForBudgetEntry.BgteDataEntityAssociation)
-                    {
-                        if (associationMember != null)
-                        {
-                            var toAmount = associationMember.BgteDebitAssocMember.HasValue ? associationMember.BgteDebitAssocMember.Value : 0m;
-                            contractToAmount += toAmount;
-                        }
-                    }
-                    Assert.AreEqual(summary.ToAmount, contractToAmount);
-                }
+                // Validate the ToAmount.
+                decimal? contractToAmount = 0;
+                contractToAmount = dataContractForBudgetEntry.BgteDataEntityAssociation.Sum(am => am.BgteDebitAssocMember);
+                Assert.AreEqual(summary.ToAmount, contractToAmount);
             }
         }
 
@@ -1503,6 +1451,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 Assert.AreEqual(summary.BudgetAdjustmentNumber, dataContractForBudgetEntry.Recordkey);
                 Assert.AreEqual(summary.Status, BudgetEntryStatus.NotApproved);
                 Assert.AreEqual(summary.TransactionDate, dataContractForBudgetEntry.BgteTrDate);
+                Assert.AreEqual(summary.InitiatorId, dataContractForBudgetEntry.BudgetEntriesAddopr);
+                Assert.IsNull(summary.InitiatorLoginId);
+
                 if (summary.BudgetAdjustmentNumber == budgetEntriesDataContracts[0].Recordkey)
                 {
                     Assert.AreEqual(summary.Reason, null);
@@ -1511,24 +1462,60 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 {
                     Assert.AreEqual(summary.Reason, dataContractForBudgetEntry.BgteDataEntityAssociation[0].BgteDescriptionAssocMember);
                 }
+                var initiatorName = getNamesforIdsResponse.OutPersonNames[getNamesforIdsResponse.IoPersonIds.FindIndex(x => x.Equals(dataContractForBudgetEntry.BudgetEntriesAddopr))];
+                Assert.AreEqual(summary.InitiatorName, initiatorName); ;
 
-                //var initiatorName = getHierarchyNamesResponse.OutPersonNames[personIds.FindIndex(x => x.Equals(dataContractForBudgetEntry.BudgetEntriesAddopr))];
-                //Assert.AreEqual(summary.InitiatorName, initiatorName);
+                // Validate the ToAmount.
+                decimal? contractToAmount = 0;
+                contractToAmount = dataContractForBudgetEntry.BgteDataEntityAssociation.Sum(am => am.BgteDebitAssocMember);
+                Assert.AreEqual(summary.ToAmount, contractToAmount); Assert.AreEqual(summary.ToAmount, contractToAmount);
+            }
+        }
 
-                if (dataContractForBudgetEntry.BgteDataEntityAssociation != null && dataContractForBudgetEntry.BgteDataEntityAssociation.Any())
+        [TestMethod]
+        public async Task GetBudgetAdjustmentsPendingApprovalSummaryAsync_AddOperIsLogin()
+        {
+            budgetEntriesDataContracts = await testBudgetAdjustmentRepository.GetNotApprovedBudgetEntriesRecords();
+
+            staffDataContract.Recordkey = "0000001";
+            staffDataContract.StaffLoginId = "TGL";
+            staffDataContracts.Add(staffDataContract);
+            budgetEntriesDataContracts[0].BudgetEntriesAddopr = "TGL";
+            getNamesforIdsResponse.IoPersonIds = new List<string>() { "0000001", "0010475", "0013272" };
+            getNamesforIdsResponse.IoHierarchies = new List<string>() { "PREFERRED", "PREFERRED", "PREFERRED" };
+            getNamesforIdsResponse.OutPersonNames = new List<string>() { "Name for 0000001", "Name for 0010475", "Name for 0013272" };
+
+            budgetAdjustmentPendingApprovalSummaries = await actualBudgetAdjustmentRepository2.GetBudgetAdjustmentsPendingApprovalSummaryAsync(personId);
+
+            Assert.AreEqual(budgetAdjustmentPendingApprovalSummaries.Count(), budgetEntriesDataContracts.Count());
+            foreach (var summary in budgetAdjustmentPendingApprovalSummaries)
+            {
+                var dataContractForBudgetEntry = budgetEntriesDataContracts.FirstOrDefault(x => x.Recordkey == summary.BudgetAdjustmentNumber);
+                Assert.AreEqual(summary.BudgetAdjustmentNumber, dataContractForBudgetEntry.Recordkey);
+                Assert.AreEqual(summary.Status, BudgetEntryStatus.NotApproved);
+                Assert.AreEqual(summary.TransactionDate, dataContractForBudgetEntry.BgteTrDate);
+
+                if (summary.InitiatorLoginId != null)
                 {
-                    // Validate the ToAmount.
-                    decimal contractToAmount = 0;
-                    foreach (var associationMember in dataContractForBudgetEntry.BgteDataEntityAssociation)
-                    {
-                        if (associationMember != null)
-                        {
-                            var toAmount = associationMember.BgteDebitAssocMember.HasValue ? associationMember.BgteDebitAssocMember.Value : 0m;
-                            contractToAmount += toAmount;
-                        }
-                    }
-                    Assert.AreEqual(summary.ToAmount, contractToAmount);
+                    Assert.AreEqual(summary.InitiatorId, staffDataContract.Recordkey);
+                    Assert.AreEqual(summary.InitiatorLoginId, dataContractForBudgetEntry.BudgetEntriesAddopr);
                 }
+                else
+                {
+                    Assert.AreEqual(summary.InitiatorId, dataContractForBudgetEntry.BudgetEntriesAddopr);
+                    Assert.IsNull(summary.InitiatorLoginId);
+                }
+
+                // Validate the reason against the first description in the association.
+                Assert.AreEqual(summary.Reason, dataContractForBudgetEntry.BgteDataEntityAssociation.FirstOrDefault().BgteDescriptionAssocMember);
+
+                var initiatorName = getNamesforIdsResponse.OutPersonNames[getNamesforIdsResponse.IoPersonIds.FindIndex(x => x.Equals(summary.InitiatorId))];
+                Assert.AreEqual(summary.InitiatorName, initiatorName);
+
+                // Validate the ToAmount.
+                decimal? contractToAmount = 0;
+                contractToAmount = dataContractForBudgetEntry.BgteDataEntityAssociation.Sum(am => am.BgteDebitAssocMember);
+                Assert.AreEqual(summary.ToAmount, contractToAmount); Assert.AreEqual(summary.ToAmount, contractToAmount);
             }
         }
 
@@ -1549,14 +1536,16 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 return Task.FromResult(budgetAdjustmentResponse);
             });
 
-            getHierarchyNamesResponse = new GetHierarchyNamesForIdsResponse()
+            getNamesforIdsResponse = new GetHierarchyNamesForIdsResponse()
             {
-                IoPersonIds = personIds,
-                IoHierarchies = hierarchies
+                IoPersonIds = new List<string>() { "0010475", "0013272" },
+                IoHierarchies = new List<string>() { "PREFERRED", "PREFERRED" },
+                OutPersonNames = new List<string>() { "Anjana Tesa Gutierrez", "Teresa P Castro" }
             };
+
             transManagerMock.Setup(txio => txio.ExecuteAsync<GetHierarchyNamesForIdsRequest, GetHierarchyNamesForIdsResponse>(It.IsAny<GetHierarchyNamesForIdsRequest>())).Returns(() =>
             {
-                return Task.FromResult(getHierarchyNamesResponse);
+                return Task.FromResult(getNamesforIdsResponse);
             });
 
             deleteDraftResponse = new TxDeleteDraftBudgetAdjustmentResponse()
@@ -1605,12 +1594,13 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 return Task.FromResult(opersResponse);
             });
 
+            // Mock any Budget Entries read that is NOT for B123456
             dataReaderMock.Setup<Task<BudgetEntries>>(dc => dc.ReadRecordAsync<BudgetEntries>(It.IsNotIn("B123456"), true)).Returns(() =>
             {
                 return Task.FromResult(budgetEntriesDataContract);
             });
 
-            // Mock ReadRecordAsync to read a budget entries record for GetBudgetAdjustmentsAsync.
+            // Mock ReadRecordAsync to read a budget entries RECORD with a key other of B123456.
             dataReaderMock.Setup<Task<BudgetEntries>>(dc => dc.ReadRecordAsync<BudgetEntries>("B123456", true)).Returns(() =>
             {
                 return Task.FromResult(budgetEntriesDataContract2);
@@ -1646,6 +1636,16 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 return Task.FromResult(staffIds);
             });
 
+            // Mock the selection of staff records for budget adjustment pending approval summary.
+            dataReaderMock.Setup(li => li.SelectAsync("STAFF", It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>())).Returns(() =>
+            {
+                return Task.FromResult(pendingApprovalStaffIds);
+            });
+
+            dataReaderMock.Setup(sr => sr.BulkReadRecordAsync<Staff>("STAFF", It.IsAny<string[]>(), true)).Returns(() =>
+            {
+                return Task.FromResult(staffDataContracts);
+            });
             // Mock ReadRecordAsync to read a staff record for GetBudgetAdjustmentsSummaryAsync and GetBudgetAdjustmentsPendingApprovalSummaryAsync.
             dataReaderMock.Setup<Task<Staff>>(dc => dc.ReadRecordAsync<Staff>("STAFF", personId, true)).Returns(() =>
             {

@@ -186,33 +186,31 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         }
 
         /// <summary>
-        /// Delete a section faculty
+        /// Delete a section instructor
         /// </summary>
-        /// <param name="guid">The GUID of the section faculty</param>
+        /// <param name="guid">The GUID of the section instructor</param>
         public async Task DeleteSectionInstructorsAsync(string guid)
-        {
-            CheckDeletePermission();
+        {           
             if (string.IsNullOrEmpty(guid))
             {
-                throw new ArgumentNullException("guid");
+                throw new ArgumentNullException("guid", "GUID is required to delete a section-instructors.");
             }
-
-            SectionFaculty sectionInstructors = null;
-
             try
             {
-                sectionInstructors = await _sectionRepository.GetSectionFacultyByGuidAsync(guid);
-            }
-            catch (Exception e)
-            {
-                throw new KeyNotFoundException("No section-instructors found for guid '" + guid + "'.");
-            }
-            if (sectionInstructors == null)
-            {
-                throw new KeyNotFoundException("Invalid Guid for section-instructors");
-            }
+                CheckDeletePermission();
 
-            await _sectionRepository.DeleteSectionFacultyAsync(sectionInstructors, sectionInstructors.Id);
+                var sectionInstructors = await _sectionRepository.GetSectionFacultyByGuidAsync(guid);
+                if (sectionInstructors == null)
+                {
+                    throw new KeyNotFoundException();
+                }
+
+                await _sectionRepository.DeleteSectionFacultyAsync(sectionInstructors, sectionInstructors.Id);
+            }
+            catch (Exception)
+            {
+                throw new KeyNotFoundException(string.Format("Section-instructors not found for guid: '{0}'.", guid));
+            }
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>

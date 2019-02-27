@@ -40,7 +40,14 @@ namespace Ellucian.Colleague.Domain.Student.Tests
             var task = this.GetAsync(id);
             return task.Result;
         }
-        
+
+        public async Task<string> GetAcademicPeriodsGuidAsync(string code)
+        {
+            var task = this.GetAsync();
+            return task.Result.FirstOrDefault(c=>c.Code == code).RecordGuid;
+        }
+
+
         public IEnumerable<Term> Get()
         {
            var task= this.GetAsync();
@@ -233,7 +240,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                                     {"2015/FA","2015","1","2015 Fall Term                ","2015-08-23" ,"2015-12-12", "     ", "Y", "Y", "2015/FA", "F",   "", "term",    "FA"},
                                     {"2016/SP","2015","2","2016 Spring Term              ","2016-01-23" ,"2016-05-12", "     ", "Y", "Y", "2016/SP", "",   "E,O", "term",  "SP"},
                                     {"2016/FA","2016","1","2016 Fall Term                ","2016-08-23" ,""          , "     ", "Y", "Y", "2016/FA", "F",  "E;O", "term",  "SP"},
-                                    {"2017/SP","2016","2","2017 Fall Term                ","2030-01-23" ,"2030-05-12", "     ", "Y", "Y", "",        "",    "",  "term",  ""}
+                                    {"2017/SP","2016","2","2017 Fall Term                ","2030-01-23" ,"2030-05-12", "     ", "Y", "Y", "",        "",    "",  "term",  ""},
+                                     {"2018/SP","2018","2","2018 spring Term                ","2030-01-23" ,"2030-05-12", "     ", "Y", "Y", "",        "",    "",  "term",  ""}
                                      };
             int termcnt = termdata.Length / 14;
 

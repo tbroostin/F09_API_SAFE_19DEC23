@@ -1,10 +1,9 @@
-﻿// Copyright 2014 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using Ellucian.Colleague.Domain.Finance.Entities.AccountActivity;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Linq;
 
 namespace Ellucian.Colleague.Domain.Finance.Tests.Entities
 {
@@ -106,6 +105,21 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Entities
             ap2.AwardTerms[1].AnticipatedAmount = 0;
             var expected = null + Environment.NewLine + string.Format(null, "{0:C}", ap.AwardTerms[1].AnticipatedAmount) + Environment.NewLine + string.Format(null, "{0:C}", ap.AwardTerms[2].AnticipatedAmount);
             Assert.AreEqual(expected, ap2.StudentStatementAnticipatedAmounts);
+        }
+
+        [TestMethod]
+        public void ActivityFinancialAidItem_IneligibilityReasons_DefaultTest()
+        {
+            Assert.IsFalse(ap.IneligibilityReasons.Any());
+        }
+
+        [TestMethod]
+        public void ActivityFinancialAidItem_IneligibilityReasons_GetSetTest()
+        {
+            var expectedReasons = new List<string>() {"Reason 1", "Reason 2" };
+            ap.IneligibilityReasons.AddRange(expectedReasons);
+            Assert.IsTrue(ap.IneligibilityReasons.Any());
+            Assert.AreEqual(expectedReasons.Count, ap.IneligibilityReasons.Count);
         }
     }
 }

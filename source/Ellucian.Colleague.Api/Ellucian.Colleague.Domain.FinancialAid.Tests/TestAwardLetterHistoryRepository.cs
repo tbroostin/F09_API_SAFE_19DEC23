@@ -1,4 +1,4 @@
-﻿//Copyright 2015-2016 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -328,7 +328,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
             public string OpeningParagraph;
             public string ClosingParagraph;
             public int Cost;
-            public int EFC;
+            public int? EFC;
             public string HousingCode;
             public int Need;
             public string OfficeId;
@@ -505,7 +505,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
 
             awardLetterEntity.NeedAmount = awardLetterHistoryRecord.Need;
             awardLetterEntity.BudgetAmount = awardLetterHistoryRecord.Cost;
-            awardLetterEntity.EstimatedFamilyContributionAmount = awardLetterHistoryRecord.EFC;
+            awardLetterEntity.EstimatedFamilyContributionAmount = awardLetterHistoryRecord.EFC.HasValue ? awardLetterHistoryRecord.EFC.Value : 0;
 
             awardLetterEntity.HousingCode = TranslateHousingCode(awardLetterHistoryRecord.HousingCode);
             awardLetterEntity.Id = awardLetterHistoryRecord.Id;
@@ -529,7 +529,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
 
             awardLetterEntity.NeedAmount = awardLetterHistoryRecord.Need;
             awardLetterEntity.BudgetAmount = awardLetterHistoryRecord.Cost;
-            awardLetterEntity.EstimatedFamilyContributionAmount = awardLetterHistoryRecord.EFC;
+            awardLetterEntity.EstimatedFamilyContributionAmount = awardLetterHistoryRecord.EFC.HasValue ? awardLetterHistoryRecord.EFC.Value : 0;
 
             awardLetterEntity.HousingCode = TranslateHousingCode(awardLetterHistoryRecord.HousingCode);
             awardLetterEntity.Id = awardLetterHistoryRecord.Id;
@@ -617,6 +617,172 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
             originalAwardLetter.AcceptedDate = DateTime.Today;
 
             return originalAwardLetter;
+        }
+
+        public async Task<IEnumerable<AwardLetter3>> GetAwardLetters2Async(string studentId, IEnumerable<StudentAwardYear> studentAwardYears, IEnumerable<Award> allAwards)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("studentId");
+            }
+            if (studentAwardYears == null)
+            {
+                throw new ArgumentNullException("studentAwardYears");
+            }
+
+            //if the student has no year-specific financial aid data, return an empty list
+            if (studentAwardYears.Count() == 0)
+            {
+                //logger.Info(string.Format("Student {0} has a Financial Aid record, but no award year data", studentId));
+                return new List<AwardLetter3>();
+            }
+
+            //instantiate the return list
+            var awardLetterEntities = new List<AwardLetter3>();
+
+            foreach (var year in studentAwardYears)
+            {
+                try
+                {
+                    var awardLetterEntity = await Task.FromResult(BuildAwardLetter2(studentId, year, allAwards));
+                    awardLetterEntities.Add(awardLetterEntity);
+                }
+                catch (Exception e)
+                {
+                    //logger.Error(e, e.Message);
+                }
+            }
+            return awardLetterEntities;
+        }
+
+        public async Task<AwardLetter3> GetAwardLetter2Async(string studentId, StudentAwardYear studentAwardYear, IEnumerable<Award> allAwards, bool createAwardLetterHistoryRecord)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("studentId");
+            }
+            if (studentAwardYear == null)
+            {
+                throw new ArgumentNullException("studentAwardYear");
+            }
+
+            if (createAwardLetterHistoryRecord == true)
+            {
+                CreateAwardLetterHistoryRecord(studentId, studentAwardYear.Code);
+            }
+
+            return await Task.FromResult(BuildAwardLetter2(studentId, studentAwardYear, allAwards));
+        }
+
+        public async Task<AwardLetter3> GetAwardLetterById2Async(string studentId, string recordId, IEnumerable<StudentAwardYear> studentAwardYears, IEnumerable<Award> allAwards)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("studentId");
+            }
+            if (studentAwardYears == null || !studentAwardYears.Any())
+            {
+                throw new ArgumentNullException("studentAwardYears");
+            }
+            if (string.IsNullOrEmpty(recordId))
+            {
+                throw new ArgumentNullException("recordId");
+            }
+
+            return await Task.FromResult(BuildAwardLetter2(studentId, recordId, studentAwardYears, allAwards));
+        }
+
+        public async Task<AwardLetter3> UpdateAwardLetter2Async(string studentId, AwardLetter3 studentAwardLetter, StudentAwardYear studentAwardYear, IEnumerable<Award> allAwards)
+        {
+            if (studentAwardLetter == null)
+            {
+                throw new ArgumentNullException("awardLetter");
+            }
+            if (studentAwardLetter.AwardLetterYear == null)
+            {
+                throw new ArgumentNullException("AwardLetterYear");
+            }
+
+            if (studentAwardLetter.StudentId != studentAwardYear.StudentId)
+            {
+                throw new ArgumentException("StudentIds of awardLetter and studentAwardYear do not match");
+            }
+
+            var originalAwardLetter = await Task.FromResult(BuildAwardLetter2(studentId, studentAwardYear, allAwards));
+            originalAwardLetter.AcceptedDate = DateTime.Today;
+
+            return originalAwardLetter;
+        }
+
+        private AwardLetter3 BuildAwardLetter2(string studentId, StudentAwardYear studentAwardYear, IEnumerable<Award> allAwards)
+        {
+            var awardLetterHistoryRecord = awardLetterHistoryData.FirstOrDefault(alhr => alhr.AwardYear == studentAwardYear.Code);
+
+            var awardLetterEntity = new AwardLetter3(studentId, studentAwardYear);
+
+            awardLetterEntity.AcceptedDate = awardLetterHistoryRecord.AcceptedDate;
+            awardLetterEntity.AwardLetterParameterId = awardLetterHistoryRecord.AwardLetterParametersId;
+            awardLetterEntity.CreatedDate = awardLetterHistoryRecord.CreatedDate;
+
+            awardLetterEntity.OpeningParagraph = awardLetterHistoryRecord.OpeningParagraph;
+            awardLetterEntity.ClosingParagraph = awardLetterHistoryRecord.ClosingParagraph;
+
+
+            awardLetterEntity.NeedAmount = awardLetterHistoryRecord.Need;
+            awardLetterEntity.BudgetAmount = awardLetterHistoryRecord.Cost;
+            awardLetterEntity.EstimatedFamilyContributionAmount = awardLetterHistoryRecord.EFC;
+
+            awardLetterEntity.HousingCode = TranslateHousingCode(awardLetterHistoryRecord.HousingCode);
+            awardLetterEntity.Id = awardLetterHistoryRecord.Id;
+
+            return awardLetterEntity;
+        }
+
+        private AwardLetter3 BuildAwardLetter2(string studentId, string recordId, IEnumerable<StudentAwardYear> awardYears, IEnumerable<Award> allAwards)
+        {
+            var awardLetterHistoryRecord = awardLetterHistoryData.FirstOrDefault(alhr => alhr.Id == recordId);
+
+            var awardLetterEntity = new AwardLetter3(studentId, awardYears.FirstOrDefault(y => y.Code == awardLetterHistoryRecord.AwardYear));
+
+            awardLetterEntity.AcceptedDate = awardLetterHistoryRecord.AcceptedDate;
+            awardLetterEntity.AwardLetterParameterId = awardLetterHistoryRecord.AwardLetterParametersId;
+            awardLetterEntity.CreatedDate = awardLetterHistoryRecord.CreatedDate;
+
+            awardLetterEntity.OpeningParagraph = awardLetterHistoryRecord.OpeningParagraph;
+            awardLetterEntity.ClosingParagraph = awardLetterHistoryRecord.ClosingParagraph;
+
+
+            awardLetterEntity.NeedAmount = awardLetterHistoryRecord.Need;
+            awardLetterEntity.BudgetAmount = awardLetterHistoryRecord.Cost;
+            awardLetterEntity.EstimatedFamilyContributionAmount = awardLetterHistoryRecord.EFC;
+
+            awardLetterEntity.HousingCode = TranslateHousingCode(awardLetterHistoryRecord.HousingCode);
+            awardLetterEntity.Id = awardLetterHistoryRecord.Id;
+
+            awardLetterEntity.StudentName = awardLetterHistoryRecord.StudentName;
+            awardLetterEntity.StudentAddress = new List<string>();
+            if (!string.IsNullOrEmpty(awardLetterHistoryRecord.PreferredName))
+            {
+                awardLetterEntity.StudentAddress.Add(awardLetterHistoryRecord.PreferredName);
+            }
+            if (!string.IsNullOrEmpty(awardLetterHistoryRecord.StudentAddressLine1))
+            {
+                awardLetterEntity.StudentAddress.Add(awardLetterHistoryRecord.StudentAddressLine1);
+            }
+            if (!string.IsNullOrEmpty(awardLetterHistoryRecord.StudentAddressLine2))
+            {
+                awardLetterEntity.StudentAddress.Add(awardLetterHistoryRecord.StudentAddressLine2);
+            }
+            if (!string.IsNullOrEmpty(awardLetterHistoryRecord.StudentAddressLine3))
+            {
+                awardLetterEntity.StudentAddress.Add(awardLetterHistoryRecord.StudentAddressLine3);
+            }
+            if (!string.IsNullOrEmpty(awardLetterHistoryRecord.StudentAddressLine4))
+            {
+                awardLetterEntity.StudentAddress.Add(awardLetterHistoryRecord.StudentAddressLine4);
+            }
+
+            return awardLetterEntity;
         }
     }
 }

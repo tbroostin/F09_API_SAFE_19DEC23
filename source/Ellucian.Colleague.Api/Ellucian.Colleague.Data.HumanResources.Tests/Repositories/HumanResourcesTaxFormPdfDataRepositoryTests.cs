@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
@@ -31,10 +31,12 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
         private TxGetHierarchyAddressResponse hierarchyAddressResponse;
         private HumanResourcesTaxFormPdfDataRepository pdfDataRepository;
         private static string webW2OnlineId;
+        private static string webW2cOnlineId;
         private static string personId;
         private string[] pdfIds = new string[] { "8675309" };
 
         private WebW2Online webW2OnlineDataContract;
+        private WebW2cOnline webW2cOnlineDataContract;
         private TaxForm1095cWhist taxForm1095cWhistContract;
         private WebT4Online webT4OnlineDataContract;
         private Collection<TaxForm1095cChist> taxForm1095cChistContracts;
@@ -109,6 +111,58 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                 Ww2oLocalNameD = "Barry"
             };
 
+            webW2cOnlineId = "1";
+            personId = "0004936";
+            webW2cOnlineDataContract = new WebW2cOnline()
+            {
+                Recordkey = "1",
+                Ww2coCorrectionYear ="2011",
+                Ww2coEmployeeId = "0003948",
+                Ww2coEmplyeAddrLine1 = "Employee line 1",
+                Ww2coEmplyeAddrLine2 = "Employee line 2",
+                Ww2coEmplyeAddrLine3 = "Employee line 3",
+                Ww2coEmplyeAddrLine4 = "Employee line 4",
+                Ww2coEmplyeAddrLine5 = "Employee line 5",
+                Ww2coEmplyeAddrLine6 = "Employee line 6",
+                Ww2coEmplyrAddrLine1 = "Employer line 1",
+                Ww2coEmplyrAddrLine2 = "Employer line 2",
+                Ww2coEmplyrAddrLine3 = "Employer line 3",
+                Ww2coEmplyrAddrLine4 = "Employer line 4",
+                Ww2coEmplyrId = "38-1234567",
+                Ww2coEmplyrName = "Susty Corporation, Inc., LLC",
+                Ww2coFirstName = "Gary",
+                Ww2coLastName = "Thorne",
+                Ww2coMiddleName = "Todd",
+                Ww2coSuffix = "Jr.",
+                Ww2coSsn = "000-00-0001",
+                Ww2coCodeBoxCodeE = "E",
+                Ww2coCodeBoxAmountE = "1000",
+                Ww2coCodeBoxCodeF = "F",
+                Ww2coCodeBoxAmountF = "1100",
+                Ww2coOtherBoxCodeE = "E",
+                Ww2coOtherBoxAmountE = "1200",
+                Ww2coOtherBoxCodeF = "F",
+                Ww2coOtherBoxAmountF = "1300",
+                Ww2coOtherBoxCodeC = "C",
+                Ww2coOtherBoxAmountC = "1400",
+                Ww2coOtherBoxCodeD = "D",
+                Ww2coOtherBoxAmountD = "1500",
+                Ww2coStateCodeC = "C",
+                Ww2coStateCodeD = "D",
+                Ww2coStateIdC = "C",
+                Ww2coStateIdD = "D",
+                Ww2coStateWagesC = "1000",
+                Ww2coStateWagesD = "2000",
+                Ww2coStateWithheldC = "1000",
+                Ww2coStateWithheldD = "2000",
+                Ww2coLocalWagesC = "20000",
+                Ww2coLocalWagesD = "20100",
+                Ww2coLocalWithheldC = "3000",
+                Ww2coLocalWithheldD = "3100",
+                Ww2coLocalNameC = "Fairfax",
+                Ww2coLocalNameD = "Barry"
+            };
+
             dataReaderMock.Setup<Task<string[]>>(dr => dr.SelectAsync(It.IsAny<string>(), It.IsAny<string>())).Returns(() =>
             {
                 return Task.FromResult(pdfIds);
@@ -117,6 +171,11 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             dataReaderMock.Setup<Task<WebW2Online>>(dr => dr.ReadRecordAsync<WebW2Online>(It.IsAny<string>(), true)).Returns(() =>
             {
                 return Task.FromResult(webW2OnlineDataContract);
+            });
+
+            dataReaderMock.Setup<Task<WebW2cOnline>>(dr => dr.ReadRecordAsync<WebW2cOnline>(It.IsAny<string>(), true)).Returns(() =>
+            {
+                return Task.FromResult(webW2cOnlineDataContract);
             });
 
             webT4OnlineDataContract = new WebT4Online()
@@ -951,6 +1010,602 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             var actualDomainEntity = await pdfDataRepository.GetW2PdfAsync(personId, webW2OnlineId);
 
             Assert.AreEqual(webW2OnlineDataContract.Ww2oLocalNameB, actualDomainEntity.Box20Line2);
+        }
+        #endregion
+
+        #region W-2
+        [TestMethod]
+        public async Task GetW2cPdfData_Success()
+        {
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coCorrectionYear, actualDomainEntity.TaxYear);
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coEmplyrId, actualDomainEntity.EmployerEin);
+
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coEmplyrName, actualDomainEntity.EmployerName);
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coEmplyrAddrLine1, actualDomainEntity.EmployerAddressLine1);
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coEmplyrAddrLine2, actualDomainEntity.EmployerAddressLine2);
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coEmplyrAddrLine3, actualDomainEntity.EmployerAddressLine3);
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coEmplyrAddrLine4, actualDomainEntity.EmployerAddressLine4);
+
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coFirstName, actualDomainEntity.EmployeeFirstName);
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coLastName, actualDomainEntity.EmployeeLastName);
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coMiddleName, actualDomainEntity.EmployeeMiddleName);
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coSuffix, actualDomainEntity.EmployeeSuffix);
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coEmplyeAddrLine1, actualDomainEntity.EmployeeAddressLine1);
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coEmplyeAddrLine2, actualDomainEntity.EmployeeAddressLine2);
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coEmplyeAddrLine3, actualDomainEntity.EmployeeAddressLine3);
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coEmplyeAddrLine4, actualDomainEntity.EmployeeAddressLine4);
+
+            Assert.AreEqual((Convert.ToDecimal(webW2cOnlineDataContract.Ww2coFederalWages) / 100).ToString("N2", CultureInfo.InvariantCulture), actualDomainEntity.FederalWages);
+            Assert.AreEqual((Convert.ToDecimal(webW2cOnlineDataContract.Ww2coFederalWithholding) / 100).ToString("N2", CultureInfo.InvariantCulture), actualDomainEntity.FederalWithholding);
+            Assert.AreEqual((Convert.ToDecimal(webW2cOnlineDataContract.Ww2coSocSecWages) / 100).ToString("N2", CultureInfo.InvariantCulture), actualDomainEntity.SocialSecurityWages);
+            Assert.AreEqual((Convert.ToDecimal(webW2cOnlineDataContract.Ww2coSocSecWithholding) / 100).ToString("N2", CultureInfo.InvariantCulture), actualDomainEntity.SocialSecurityWithholding);
+            Assert.AreEqual((Convert.ToDecimal(webW2cOnlineDataContract.Ww2coMedicareWages) / 100).ToString("N2", CultureInfo.InvariantCulture), actualDomainEntity.MedicareWages);
+            Assert.AreEqual((Convert.ToDecimal(webW2cOnlineDataContract.Ww2coMedicareWithholding) / 100).ToString("N2", CultureInfo.InvariantCulture), actualDomainEntity.MedicareWithholding);
+            Assert.AreEqual((Convert.ToDecimal(webW2cOnlineDataContract.Ww2coSocSecTips) / 100).ToString("N2", CultureInfo.InvariantCulture), actualDomainEntity.SocialSecurityTips);
+            Assert.AreEqual((Convert.ToDecimal(webW2cOnlineDataContract.Ww2coAllocatedTips) / 100).ToString("N2", CultureInfo.InvariantCulture), actualDomainEntity.AllocatedTips);
+            Assert.AreEqual((Convert.ToDecimal(webW2cOnlineDataContract.Ww2coDependentCare) / 100).ToString("N2", CultureInfo.InvariantCulture), actualDomainEntity.DependentCare);
+            Assert.AreEqual((Convert.ToDecimal(webW2cOnlineDataContract.Ww2coNonqualTotal) / 100).ToString("N2", CultureInfo.InvariantCulture), actualDomainEntity.NonqualifiedTotal);
+        }
+
+        #region SSN scenarios
+        [TestMethod]
+        public async Task GetW2cPdfAsync_DefaultSsn()
+        {
+            hrWebDefaults.HrwebW2oMaskSsn = "N";
+            var pdfData = await pdfDataRepository.GetW2cPdfAsync(personId, "99");
+
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coSsn, pdfData.EmployeeSsn);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfAsync_SsnNotProperLength()
+        {
+            webW2cOnlineDataContract.Ww2coSsn = "000-0";
+            hrWebDefaults.HrwebW2oMaskSsn = "N";
+            var pdfData = await pdfDataRepository.GetW2cPdfAsync(personId, "99");
+
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coSsn, pdfData.EmployeeSsn);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfAsync_NullSsn()
+        {
+            webW2cOnlineDataContract.Ww2coSsn = null;
+            hrWebDefaults.HrwebW2oMaskSsn = "N";
+            var pdfData = await pdfDataRepository.GetW2cPdfAsync(personId, "99");
+
+            Assert.AreEqual("", pdfData.EmployeeSsn);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfAsync_EmptySsn()
+        {
+            webW2cOnlineDataContract.Ww2coSsn = "";
+            hrWebDefaults.HrwebW2oMaskSsn = "N";
+            var pdfData = await pdfDataRepository.GetW2cPdfAsync(personId, "99");
+
+            Assert.AreEqual("", pdfData.EmployeeSsn);
+        }
+        #endregion
+
+        #region Masking scenarios
+        [TestMethod]
+        public async Task GetW2cPdfAsync_MaskedSsn1()
+        {
+            hrWebDefaults.HrwebW2oMaskSsn = "y";
+            var pdfData = await pdfDataRepository.GetW2cPdfAsync(personId, "99");
+
+            Assert.AreEqual("XXX-XX-" + webW2cOnlineDataContract.Ww2coSsn.Substring(webW2cOnlineDataContract.Ww2coSsn.Length - 4),
+                pdfData.EmployeeSsn);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfAsync_MaskedSsn2()
+        {
+            hrWebDefaults.HrwebW2oMaskSsn = "Y";
+            var pdfData = await pdfDataRepository.GetW2cPdfAsync(personId, "99");
+
+            Assert.AreEqual("XXX-XX-" + webW2cOnlineDataContract.Ww2coSsn.Substring(webW2cOnlineDataContract.Ww2coSsn.Length - 4),
+                pdfData.EmployeeSsn);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfAsync_NullHrWebDefaultsContract()
+        {
+            hrWebDefaults = null;
+            var pdfData = await pdfDataRepository.GetW2cPdfAsync(personId, "99");
+
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coSsn, pdfData.EmployeeSsn);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfAsync_NullMaskParameter()
+        {
+            hrWebDefaults.HrwebW2oMaskSsn = null;
+            var pdfData = await pdfDataRepository.GetW2cPdfAsync(personId, "99");
+
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coSsn, pdfData.EmployeeSsn);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfAsync_EmptyMaskParameter()
+        {
+            hrWebDefaults.HrwebW2oMaskSsn = "";
+            var pdfData = await pdfDataRepository.GetW2cPdfAsync(personId, "99");
+
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coSsn, pdfData.EmployeeSsn);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfAsync_SsnNotFullLength()
+        {
+            webW2cOnlineDataContract.Ww2coSsn = "000-0";
+            hrWebDefaults.HrwebW2oMaskSsn = "Y";
+            var pdfData = await pdfDataRepository.GetW2cPdfAsync(personId, "99");
+
+            Assert.AreEqual("XXX-XX-" + webW2cOnlineDataContract.Ww2coSsn.Substring(webW2cOnlineDataContract.Ww2coSsn.Length - 4),
+                pdfData.EmployeeSsn);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfAsync_SsnExactly4Digits()
+        {
+            webW2cOnlineDataContract.Ww2coSsn = "000-";
+            hrWebDefaults.HrwebW2oMaskSsn = "Y";
+            var pdfData = await pdfDataRepository.GetW2cPdfAsync(personId, "99");
+
+            Assert.AreEqual("XXX-XX-" + webW2cOnlineDataContract.Ww2coSsn.Substring(webW2cOnlineDataContract.Ww2coSsn.Length - 4),
+                pdfData.EmployeeSsn);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfAsync_SsnLessThan4Digits()
+        {
+            webW2cOnlineDataContract.Ww2coSsn = "0";
+            hrWebDefaults.HrwebW2oMaskSsn = "Y";
+            var pdfData = await pdfDataRepository.GetW2cPdfAsync(personId, "99");
+
+            Assert.AreEqual("XXX-XX-" + webW2cOnlineDataContract.Ww2coSsn, pdfData.EmployeeSsn);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfAsync_NullSsn_Masked()
+        {
+            webW2cOnlineDataContract.Ww2coSsn = null;
+            hrWebDefaults.HrwebW2oMaskSsn = "Y";
+            var pdfData = await pdfDataRepository.GetW2cPdfAsync(personId, "99");
+
+            Assert.AreEqual("", pdfData.EmployeeSsn);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfAsync_EmptySsn_Masked()
+        {
+            webW2cOnlineDataContract.Ww2coSsn = "";
+            hrWebDefaults.HrwebW2oMaskSsn = "Y";
+            var pdfData = await pdfDataRepository.GetW2cPdfAsync(personId, "99");
+
+            Assert.AreEqual("", pdfData.EmployeeSsn);
+        }
+        #endregion
+
+        [TestMethod]
+        public async Task UnmaskedSsnW2c()
+        {
+            hrWebDefaults.HrwebW2oMaskSsn = "N";
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coSsn, actualDomainEntity.EmployeeSsn);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task GetW2cPdfData_DataReaderReturnsNull()
+        {
+            webW2cOnlineDataContract = null;
+            await pdfDataRepository.GetW2cPdfAsync(personId, webW2OnlineId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetW2cPdfData_NullPersonId()
+        {
+            await pdfDataRepository.GetW2cPdfAsync(null, "11");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetW2cPdfData_EmptyPersonId()
+        {
+            await pdfDataRepository.GetW2cPdfAsync(string.Empty, "11");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetW2cPdfData_NullId()
+        {
+            await pdfDataRepository.GetW2cPdfAsync(personId, null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetW2cPdfData_EmptyId()
+        {
+            webW2cOnlineId = string.Empty;
+            await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task GetW2cPdfData_DataReaderSelectReturnsNull()
+        {
+            pdfIds = null;
+            await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task GetWc2PdfData_DataReaderReturnsZeroW2Ids()
+        {
+            pdfIds = new string[] { };
+            await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task GetW2PdfData_DataReaderReturnsMultipleW2cIds()
+        {
+            pdfIds = new string[] { "1", "2" };
+            await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task GetW2cPdfData_NullTaxYear()
+        {
+            webW2cOnlineDataContract.Ww2coCorrectionYear = string.Empty;
+            await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task GetW2cPdfData_NullEmployerId()
+        {
+            webW2cOnlineDataContract.Ww2coEmplyrId = string.Empty;
+            await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box12aCode_CodeEData()
+        {
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coCodeBoxCodeE, actualDomainEntity.Box12aCode);
+            Assert.AreEqual((Convert.ToDecimal(webW2cOnlineDataContract.Ww2coCodeBoxAmountE) / 100).ToString("N2", CultureInfo.InvariantCulture), actualDomainEntity.Box12aAmount);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box12aCode_CodeAData()
+        {
+            webW2cOnlineDataContract.Ww2coCodeBoxCodeE = string.Empty;
+            webW2cOnlineDataContract.Ww2coCodeBoxAmountE = string.Empty;
+            webW2cOnlineDataContract.Ww2coCodeBoxCodeA = "A";
+            webW2cOnlineDataContract.Ww2coCodeBoxAmountA = "2000";
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coCodeBoxCodeA, actualDomainEntity.Box12aCode);
+            Assert.AreEqual((Convert.ToDecimal(webW2cOnlineDataContract.Ww2coCodeBoxAmountA) / 100).ToString("N2", CultureInfo.InvariantCulture), actualDomainEntity.Box12aAmount);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box12bCode_CodeFData()
+        {
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coCodeBoxCodeF, actualDomainEntity.Box12bCode);
+            Assert.AreEqual((Convert.ToDecimal(webW2cOnlineDataContract.Ww2coCodeBoxAmountF) / 100).ToString("N2", CultureInfo.InvariantCulture), actualDomainEntity.Box12bAmount);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box12bCode_CodeBData()
+        {
+            webW2cOnlineDataContract.Ww2coCodeBoxCodeF = string.Empty;
+            webW2cOnlineDataContract.Ww2coCodeBoxAmountF = string.Empty;
+            webW2cOnlineDataContract.Ww2coCodeBoxCodeB = "B";
+            webW2cOnlineDataContract.Ww2coCodeBoxAmountB = "2100";
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coCodeBoxCodeB, actualDomainEntity.Box12bCode);
+            Assert.AreEqual((Convert.ToDecimal(webW2cOnlineDataContract.Ww2coCodeBoxAmountB) / 100).ToString("N2", CultureInfo.InvariantCulture), actualDomainEntity.Box12bAmount);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box14Line1_OtherBoxCodeE()
+        {
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coOtherBoxCodeE + " - " + (Convert.ToDecimal(webW2cOnlineDataContract.Ww2coOtherBoxAmountE) / 100).ToString("N2", CultureInfo.InvariantCulture), actualDomainEntity.Box14Line1);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box14Line1_OtherBoxCodeA()
+        {
+            webW2cOnlineDataContract.Ww2coOtherBoxCodeE = string.Empty;
+            webW2cOnlineDataContract.Ww2coOtherBoxAmountE = string.Empty;
+            webW2cOnlineDataContract.Ww2coOtherBoxCodeA = "A";
+            webW2cOnlineDataContract.Ww2coOtherBoxAmountA = "2200";
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coOtherBoxCodeA + " - " + (Convert.ToDecimal(webW2cOnlineDataContract.Ww2coOtherBoxAmountA) / 100).ToString("N2", CultureInfo.InvariantCulture), actualDomainEntity.Box14Line1);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box14Line2_OtherBoxCodeF()
+        {
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coOtherBoxCodeF + " - " + (Convert.ToDecimal(webW2cOnlineDataContract.Ww2coOtherBoxAmountF) / 100).ToString("N2", CultureInfo.InvariantCulture), actualDomainEntity.Box14Line2);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box14Line2_OtherBoxCodeB()
+        {
+            webW2cOnlineDataContract.Ww2coOtherBoxCodeF = string.Empty;
+            webW2cOnlineDataContract.Ww2coOtherBoxAmountF = string.Empty;
+            webW2cOnlineDataContract.Ww2coOtherBoxCodeB = "B";
+            webW2cOnlineDataContract.Ww2coOtherBoxAmountB = "2300";
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coOtherBoxCodeB + " - " + (Convert.ToDecimal(webW2cOnlineDataContract.Ww2coOtherBoxAmountB) / 100).ToString("N2", CultureInfo.InvariantCulture), actualDomainEntity.Box14Line2);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box14Line3_OtherBoxCodeC()
+        {
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coOtherBoxCodeC + " - " + (Convert.ToDecimal(webW2cOnlineDataContract.Ww2coOtherBoxAmountC) / 100).ToString("N2", CultureInfo.InvariantCulture), actualDomainEntity.Box14Line3);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box14Line4_OtherBoxCodeD()
+        {
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coOtherBoxCodeD + " - " + (Convert.ToDecimal(webW2cOnlineDataContract.Ww2coOtherBoxAmountD) / 100).ToString("N2", CultureInfo.InvariantCulture), actualDomainEntity.Box14Line4);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box15Line1Section1_StateCodeC()
+        {
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coStateCodeC, actualDomainEntity.Box15Line1Section1);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box15Line1Section1_StateCodeA()
+        {
+            webW2cOnlineDataContract.Ww2coStateCodeC = string.Empty;
+            webW2cOnlineDataContract.Ww2coStateCodeA = "A";
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coStateCodeA, actualDomainEntity.Box15Line1Section1);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box15Line2Section1_StateCodeD()
+        {
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coStateCodeD, actualDomainEntity.Box15Line2Section1);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box15Line2Section1_StateCodeB()
+        {
+            webW2cOnlineDataContract.Ww2coStateCodeD = string.Empty;
+            webW2cOnlineDataContract.Ww2coStateCodeB = "B";
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coStateCodeB, actualDomainEntity.Box15Line2Section1);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box15Line1Section2_StateIdC()
+        {
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coStateIdC, actualDomainEntity.Box15Line1Section2);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box15Line1Section2_StateIdA()
+        {
+            webW2cOnlineDataContract.Ww2coStateIdC = string.Empty;
+            webW2cOnlineDataContract.Ww2coStateIdA = "A";
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coStateIdA, actualDomainEntity.Box15Line1Section2);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box15Line2Section2_StateIdD()
+        {
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coStateIdD, actualDomainEntity.Box15Line2Section2);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box15Line2Section2_StateIdB()
+        {
+            webW2cOnlineDataContract.Ww2coStateIdD = string.Empty;
+            webW2cOnlineDataContract.Ww2coStateIdB = "B";
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coStateIdB, actualDomainEntity.Box15Line2Section2);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box16Line1_StateWagesC()
+        {
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+            Assert.AreEqual((Convert.ToDecimal(webW2cOnlineDataContract.Ww2coStateWagesC) / 100).ToString("N2", CultureInfo.InvariantCulture), actualDomainEntity.Box16Line1);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box16Line1_StateWagesA()
+        {
+            webW2cOnlineDataContract.Ww2coStateWagesC = string.Empty;
+            webW2cOnlineDataContract.Ww2coStateWagesA = "2000";
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+
+            Assert.AreEqual((Convert.ToDecimal(webW2cOnlineDataContract.Ww2coStateWagesA) / 100).ToString("N2", CultureInfo.InvariantCulture), actualDomainEntity.Box16Line1);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box16Line2_StateWagesD()
+        {
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+            Assert.AreEqual((Convert.ToDecimal(webW2cOnlineDataContract.Ww2coStateWagesD) / 100).ToString("N2", CultureInfo.InvariantCulture), actualDomainEntity.Box16Line2);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box16Line2_StateWagesB()
+        {
+            webW2cOnlineDataContract.Ww2coStateWagesD = string.Empty;
+            webW2cOnlineDataContract.Ww2coStateWagesB = "2500";
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+
+            Assert.AreEqual((Convert.ToDecimal(webW2cOnlineDataContract.Ww2coStateWagesB) / 100).ToString("N2", CultureInfo.InvariantCulture), actualDomainEntity.Box16Line2);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box17Line1_StateWithheldC()
+        {
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+            Assert.AreEqual((Convert.ToDecimal(webW2cOnlineDataContract.Ww2coStateWithheldC) / 100).ToString("N2", CultureInfo.InvariantCulture), actualDomainEntity.Box17Line1);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box17Line1_StateWithheldA()
+        {
+            webW2cOnlineDataContract.Ww2coStateWithheldC = string.Empty;
+            webW2cOnlineDataContract.Ww2coStateWithheldA = "2600";
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+
+            Assert.AreEqual((Convert.ToDecimal(webW2cOnlineDataContract.Ww2coStateWithheldA) / 100).ToString("N2", CultureInfo.InvariantCulture), actualDomainEntity.Box17Line1);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box17Line2_StateWithheldD()
+        {
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+            Assert.AreEqual((Convert.ToDecimal(webW2cOnlineDataContract.Ww2coStateWithheldD) / 100).ToString("N2", CultureInfo.InvariantCulture), actualDomainEntity.Box17Line2);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box17Line2_StateWithheldB()
+        {
+            webW2cOnlineDataContract.Ww2coStateWithheldD = string.Empty;
+            webW2cOnlineDataContract.Ww2coStateWithheldB = "2700";
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+
+            Assert.AreEqual((Convert.ToDecimal(webW2cOnlineDataContract.Ww2coStateWithheldB) / 100).ToString("N2", CultureInfo.InvariantCulture), actualDomainEntity.Box17Line2);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box18Line1_LocalWagesC()
+        {
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+            Assert.AreEqual((Convert.ToDecimal(webW2cOnlineDataContract.Ww2coLocalWagesC) / 100).ToString("N2", CultureInfo.InvariantCulture), actualDomainEntity.Box18Line1);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box18Line1_LocalWagesA()
+        {
+            webW2cOnlineDataContract.Ww2coLocalWagesC = string.Empty;
+            webW2cOnlineDataContract.Ww2coLocalWagesA = "2900";
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+
+            Assert.AreEqual((Convert.ToDecimal(webW2cOnlineDataContract.Ww2coLocalWagesA) / 100).ToString("N2", CultureInfo.InvariantCulture), actualDomainEntity.Box18Line1);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box18Line2_LocalWagesD()
+        {
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+            Assert.AreEqual((Convert.ToDecimal(webW2cOnlineDataContract.Ww2coLocalWagesD) / 100).ToString("N2", CultureInfo.InvariantCulture), actualDomainEntity.Box18Line2);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box18Line2_LocalWagesB()
+        {
+            webW2cOnlineDataContract.Ww2coLocalWagesD = string.Empty;
+            webW2cOnlineDataContract.Ww2coLocalWagesB = "3100";
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+
+            Assert.AreEqual((Convert.ToDecimal(webW2cOnlineDataContract.Ww2coLocalWagesB) / 100).ToString("N2", CultureInfo.InvariantCulture), actualDomainEntity.Box18Line2);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box19Line1_LocalWithheldC()
+        {
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+            Assert.AreEqual((Convert.ToDecimal(webW2cOnlineDataContract.Ww2coLocalWithheldC) / 100).ToString("N2", CultureInfo.InvariantCulture), actualDomainEntity.Box19Line1);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box19Line1_LocalWithheldA()
+        {
+            webW2cOnlineDataContract.Ww2coLocalWithheldC = string.Empty;
+            webW2cOnlineDataContract.Ww2coLocalWithheldA = "1100";
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+
+            Assert.AreEqual((Convert.ToDecimal(webW2cOnlineDataContract.Ww2coLocalWithheldA) / 100).ToString("N2", CultureInfo.InvariantCulture), actualDomainEntity.Box19Line1);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box19Line2_LocalWithheldD()
+        {
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+            Assert.AreEqual((Convert.ToDecimal(webW2cOnlineDataContract.Ww2coLocalWithheldD) / 100).ToString("N2", CultureInfo.InvariantCulture), actualDomainEntity.Box19Line2);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box19Line2_LocalWithheldB()
+        {
+            webW2cOnlineDataContract.Ww2coLocalWithheldD = string.Empty;
+            webW2cOnlineDataContract.Ww2coLocalWithheldB = "1200";
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+
+            Assert.AreEqual((Convert.ToDecimal(webW2cOnlineDataContract.Ww2coLocalWithheldB) / 100).ToString("N2", CultureInfo.InvariantCulture), actualDomainEntity.Box19Line2);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box20Line1_LocalNameC()
+        {
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coLocalNameC, actualDomainEntity.Box20Line1);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box20Line1_LocalNameA()
+        {
+            webW2cOnlineDataContract.Ww2coLocalNameC = string.Empty;
+            webW2cOnlineDataContract.Ww2coLocalNameA = "Grant";
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coLocalNameA, actualDomainEntity.Box20Line1);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box20Line2_LocalNameD()
+        {
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coLocalNameD, actualDomainEntity.Box20Line2);
+        }
+
+        [TestMethod]
+        public async Task GetW2cPdfData_Box20Line2_LocalNameB()
+        {
+            webW2cOnlineDataContract.Ww2coLocalNameD = string.Empty;
+            webW2cOnlineDataContract.Ww2coLocalNameB = "Hampshire";
+            var actualDomainEntity = await pdfDataRepository.GetW2cPdfAsync(personId, webW2cOnlineId);
+
+            Assert.AreEqual(webW2cOnlineDataContract.Ww2coLocalNameB, actualDomainEntity.Box20Line2);
         }
         #endregion
 

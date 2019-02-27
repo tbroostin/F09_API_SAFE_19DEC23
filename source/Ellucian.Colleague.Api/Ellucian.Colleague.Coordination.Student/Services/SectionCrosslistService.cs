@@ -153,10 +153,19 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 throw new ArgumentNullException("id", "id is required to delete a sectioncrosslist.");
             }
-
-            var id = await _sectionRepository.GetSectionCrosslistIdFromGuidAsync(guid);
-
-            await _sectionRepository.DeleteSectionCrosslistAsync(id);
+            try
+            {
+                var sectionCrossListEntity = await _sectionRepository.GetSectionCrosslistByGuidAsync(guid);
+                if (sectionCrossListEntity == null)
+                {
+                    throw new KeyNotFoundException();
+                }
+                await _sectionRepository.DeleteSectionCrosslistAsync(sectionCrossListEntity.Id);
+            }
+            catch (KeyNotFoundException)
+            {
+                throw new KeyNotFoundException(string.Format("Section-crosslists not found for guid: '{0}'. ", guid));
+            }
         }
 
         /// <summary>

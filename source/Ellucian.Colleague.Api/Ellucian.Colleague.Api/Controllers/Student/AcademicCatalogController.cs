@@ -11,7 +11,6 @@ using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Web.License;
 using Ellucian.Web.Adapters;
-using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Coordination.Student.Services;
 using slf4net;
 using System;
@@ -119,6 +118,37 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 _logger.Error(ex.ToString());
                 throw CreateHttpResponseException(ex.Message);
+            }
+        }
+
+        /// <remarks>FOR USE WITH ELLUCIAN SS</remarks>
+        /// <summary>
+        /// Retrieves all Academic Catalogs.
+        /// </summary>
+        /// <accessComments>
+        /// Any authenticated user can get these resources
+        /// </accessComments>
+        /// <returns>All <see cref="Catalog">Catalog</see>objects.</returns>
+        public async Task<IEnumerable<Catalog>> GetAllAcademicCatalogsAsync()
+        {
+            try
+            {
+                bool bypassCache = false;
+                if (Request.Headers.CacheControl != null)
+                {
+                    if (Request.Headers.CacheControl.NoCache)
+                    {
+                        bypassCache = true;
+                    }
+                }
+                IEnumerable<Catalog> cats = await _academicCatalogService.GetAllAcademicCatalogsAsync(bypassCache);
+                return cats;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.ToString());
+                var message = "Unable to retrieve academic catalog data.  See Logging for more details.  Exception thrown: " + ex.Message;
+                throw CreateHttpResponseException(message);
             }
         }
 

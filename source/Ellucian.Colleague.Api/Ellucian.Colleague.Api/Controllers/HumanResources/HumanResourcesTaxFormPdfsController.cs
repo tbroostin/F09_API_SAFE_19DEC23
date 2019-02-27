@@ -50,7 +50,13 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <param name="personId">ID of the person assigned to and requesting the W-2.</param>
         /// <param name="recordId">The record ID where the W-2 pdf data is stored</param>
-        /// <returns>HttpResponseMessage</returns>
+        /// <accessComments>
+        /// Requires permission VIEW.W2 for the employee.
+        /// Requires permission VIEW.W2 for someone who currently has permission to proxy for the employee requested.
+        /// Requires permission VIEW.EMPLOYEE.W2 for admin view.
+        /// The tax form record requested must belong to the person ID requested.
+        /// </accessComments>          
+        /// <returns>An HttpResponseMessage containing a byte array representing a PDF.</returns>
         public async Task<HttpResponseMessage> GetW2TaxFormPdf(string personId, string recordId)
         {
             if (string.IsNullOrEmpty(personId))
@@ -73,11 +79,14 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             string pdfTemplatePath = string.Empty;
             try
             {
-                var pdfData = await taxFormPdfService.GetW2TaxFormData(personId, recordId);
+                var pdfData = await taxFormPdfService.GetW2TaxFormDataAsync(personId, recordId);
 
                 // Determine which PDF template to use.
                 switch (pdfData.TaxYear)
                 {
+                    case "2018":
+                        pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/HumanResources/2018-W2-W2ST.rdlc");
+                        break;
                     case "2017":
                         pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/HumanResources/2017-W2-W2ST.rdlc");
                         break;
@@ -146,11 +155,87 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         }
 
         /// <summary>
+        /// Returns the data to be printed on the pdf for the W-2c tax form.
+        /// </summary>
+        /// <param name="personId">ID of the person assigned to and requesting the W-2c.</param>
+        /// <param name="recordId">The record ID where the W-2c pdf data is stored</param>
+        /// <returns>HttpResponseMessage</returns>
+        public async Task<HttpResponseMessage> GetW2cTaxFormPdf(string personId, string recordId)
+        {
+            if (string.IsNullOrEmpty(personId))
+                throw CreateHttpResponseException("Person ID must be specified.", HttpStatusCode.BadRequest);
+
+            if (string.IsNullOrEmpty(recordId))
+                throw CreateHttpResponseException("Record ID must be specified.", HttpStatusCode.BadRequest);
+
+            var consents = await taxFormConsentService.GetAsync(personId, Dtos.Base.TaxForms.FormW2C);
+            consents = consents.OrderByDescending(c => c.TimeStamp);
+            var mostRecentConsent = consents.FirstOrDefault();
+
+            // Check if the person has consented to receiving their W2c online - if not, throw exception
+            var canViewAsAdmin = await taxFormConsentService.CanViewTaxDataWithOrWithoutConsent(Dtos.Base.TaxForms.FormW2C);
+            if ((mostRecentConsent == null || !mostRecentConsent.HasConsented) && !canViewAsAdmin)
+            {
+                throw CreateHttpResponseException("Consent is required to view this information.", HttpStatusCode.Unauthorized);
+            }
+
+            string pdfTemplatePath = string.Empty;
+            try
+            {
+                var pdfData = await taxFormPdfService.GetW2cTaxFormData(personId, recordId);
+
+                // Determine which PDF template to use.
+                pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/HumanResources/2014-W2c-8.rdlc");
+                var pdfBytes = new byte[0];
+
+                bool useRdlc = pdfTemplatePath.EndsWith(".rdlc", StringComparison.CurrentCultureIgnoreCase);
+
+                if (useRdlc)
+                {
+                    pdfBytes = taxFormPdfService.PopulateW2cPdfReport(pdfData, pdfTemplatePath);
+                }
+                else
+                {
+                    pdfBytes = taxFormPdfService.PopulateW2cPdf(pdfData, pdfTemplatePath);
+                }
+
+                // Create and return the HTTP response object
+                var response = new HttpResponseMessage();
+                response.Content = new ByteArrayContent(pdfBytes);
+
+                var fileNameString = "TaxFormW2c" + "_" + recordId;
+                response.Content.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+                response.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
+                {
+                    FileName = fileNameString + ".pdf"
+                };
+                response.Content.Headers.ContentLength = pdfBytes.Length;
+                return response;
+            }
+            catch (PermissionsException pe)
+            {
+                logger.Error(pe, pe.Message);
+                throw CreateHttpResponseException(pe.Message, HttpStatusCode.Forbidden);
+            }
+            catch (Exception e)
+            {
+                logger.Error(e.Message);
+                throw CreateHttpResponseException("Error retrieving W-2c PDF data.", HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
         /// Returns the data to be printed on the pdf for the 1095-C tax form.
         /// </summary>
         /// <param name="personId">ID of the person assigned to and requesting the 1095-C.</param>
         /// <param name="recordId">ID of the record where the 1095-C pdf data is stored</param>
-        /// <returns>HttpResponseMessage</returns>
+        /// <accessComments>
+        /// Requires permission VIEW.1095C for the employee.
+        /// Requires permission VIEW.1095C for someone who currently has permission to proxy for the employee requested.
+        /// Requires permission VIEW.EMPLOYEE.1095C for admin view.
+        /// The tax form record requested must belong to the person ID requested.
+        /// </accessComments>         
+        /// <returns>An HttpResponseMessage containing a byte array representing a PDF.</returns>
         public async Task<HttpResponseMessage> Get1095cTaxFormPdf(string personId, string recordId)
         {
             if (string.IsNullOrEmpty(personId))
@@ -173,10 +258,13 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             string pdfTemplatePath = string.Empty;
             try
             {
-                var pdfData = await taxFormPdfService.Get1095cTaxFormData(personId, recordId);
+                var pdfData = await taxFormPdfService.Get1095cTaxFormDataAsync(personId, recordId);
 
                 switch (pdfData.TaxYear)
                 {
+                    case "2018":
+                        pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/HumanResources/2018-1095C.rdlc");
+                        break;
                     case "2017":
                         pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/HumanResources/2017-1095C.rdlc");
                         break;
@@ -224,7 +312,13 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <param name="personId">ID of the person assigned to and requesting the T4.</param>
         /// <param name="recordId">ID of the record where the T4 pdf data is stored</param>
-        /// <returns>HttpResponseMessage</returns>
+        /// <accessComments>
+        /// Requires permission VIEW.T4.
+        /// Requires permission VIEW.T4 for someone who currently has permission to proxy for the employee requested.
+        /// Requires permission VIEW.EMPLOYEE.T4 for admin view.       
+        /// The tax form record requested must belong to the person ID requested.       
+        /// </accessComments>         
+        /// <returns>An HttpResponseMessage containing a byte array representing a PDF.</returns>
         public async Task<HttpResponseMessage> GetT4TaxFormPdf(string personId, string recordId)
         {
             if (string.IsNullOrEmpty(personId))
@@ -237,9 +331,10 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             consents = consents.OrderByDescending(c => c.TimeStamp);
             var mostRecentConsent = consents.FirstOrDefault();
 
+            // ************* T4s and T2202As are special cases based on CRA regulations! *************
             // Check if the person has explicitly withheld consent to receiving their T4 online - if they opted out, throw exception
             var canViewAsAdmin = await taxFormConsentService.CanViewTaxDataWithOrWithoutConsent(Dtos.Base.TaxForms.FormT4);
-            if ((mostRecentConsent == null || !mostRecentConsent.HasConsented) && !canViewAsAdmin)
+            if ((mostRecentConsent != null && !mostRecentConsent.HasConsented) && !canViewAsAdmin)
             {
                 throw CreateHttpResponseException("Consent is required to view this information.", HttpStatusCode.Unauthorized);
             }
@@ -247,10 +342,13 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             string pdfTemplatePath = string.Empty;
             try
             {
-                var pdfData = await taxFormPdfService.GetT4TaxFormData(personId, recordId);
+                var pdfData = await taxFormPdfService.GetT4TaxFormDataAsync(personId, recordId);
 
                 switch (pdfData.TaxYear)
                 {
+                    case "2018":
+                        pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/HumanResources/2018-T4.rdlc");
+                        break;
                     case "2017":
                         pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/HumanResources/2017-T4.rdlc");
                         break;

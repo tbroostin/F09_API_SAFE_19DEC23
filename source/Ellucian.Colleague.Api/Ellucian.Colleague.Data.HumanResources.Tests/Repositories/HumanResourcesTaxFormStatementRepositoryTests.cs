@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.ObjectModel;
@@ -29,6 +29,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
         private Collection<WebW2Online> webW2OnlineDataContracts;
         private Collection<TaxForm1095cWhist> taxForm1095CWhistDataContracts;
         private Collection<WebT4Online> webT4OnlineDataContracts;
+        private Collection<WebW2cOnline> webW2cOnlineDataContracts;
 
         [TestInitialize]
         public void Initialize()
@@ -44,9 +45,24 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                 new WebW2Online() { Recordkey = "3", Ww2oEmployeeId = personId, Ww2oYear = "2013" },
                 new WebW2Online() { Recordkey = "4", Ww2oEmployeeId = personId, Ww2oYear = "2014" },
             };
+
+            webW2cOnlineDataContracts = new Collection<WebW2cOnline>();
+
+            string[] webW2cExportedRecordKeys = { "1", "2" };
+
             dataReaderMock.Setup<Task<Collection<WebW2Online>>>(dr => dr.BulkReadRecordAsync<WebW2Online>(It.IsAny<string>(), true)).Returns(() =>
             {
                 return Task.FromResult(webW2OnlineDataContracts);
+            });
+
+            dataReaderMock.Setup<Task<Collection<WebW2cOnline>>>(dr => dr.BulkReadRecordAsync<WebW2cOnline>(It.IsAny<string>(), true)).Returns(() =>
+            {
+                return Task.FromResult(webW2cOnlineDataContracts);
+            });
+
+            dataReaderMock.Setup<Task<string[]>>(dr => dr.SelectAsync(It.IsAny<string>(), It.IsAny<string>())).Returns(() =>
+            {
+                return Task.FromResult(webW2cExportedRecordKeys);
             });
 
             taxForm1095CWhistDataContracts = new Collection<TaxForm1095cWhist>()
@@ -303,6 +319,92 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             webW2OnlineDataContracts = null;
             var statementEntities = await taxFormStatementRepository.GetAsync(personId, TaxForms.FormW2);
             Assert.AreEqual(0, statementEntities.Count());
+        }
+
+        [TestMethod]
+        public async Task WebW2OnlineW2cReturned()
+        {
+            this.webW2OnlineDataContracts.Add(new WebW2Online() { Recordkey = "5", Ww2oEmployeeId = personId, Ww2oYear = "2015" });
+            this.webW2cOnlineDataContracts.Add(new WebW2cOnline() { Recordkey = "1", Ww2coEmployeeId = personId, Ww2coCorrectionYear = "2015", WebW2cOnlineAdddate = new DateTime(2015, 1, 31), Ww2coSourceTaxW2cId = "1" });
+            var statementEntities = await taxFormStatementRepository.GetAsync(personId, TaxForms.FormW2);
+
+            // Make sure we have the correct total number of domain entities.
+            var statementEntitiesW2c = statementEntities.Where(x => x.TaxForm == TaxForms.FormW2C);
+            Assert.AreEqual(webW2cOnlineDataContracts.Count, statementEntitiesW2c.Count(), "We should have built the correct number of domain entities.");
+
+            // Make sure each data contract has been used to create a domain entity.
+            foreach (var dataContract in webW2cOnlineDataContracts)
+            {
+                var expectedPersonId = dataContract.Ww2coEmployeeId;
+                var expectedTaxYear = dataContract.Ww2coCorrectionYear;
+
+                var selectedStatementEntities = statementEntities.Where(x =>
+                    x.PersonId == expectedPersonId
+                    && x.TaxYear == expectedTaxYear
+                    && x.TaxForm == TaxForms.FormW2C);
+                Assert.AreEqual(1, selectedStatementEntities.Count(), "Each data contract should be represented in the set of domain entities.");
+            }
+        }
+
+        // Tests that non-exported W-2cs do not get filtered out
+        [TestMethod]
+        public async Task WebW2OnlineW2cNotReturnedWhenNotExported()
+        {
+            this.webW2OnlineDataContracts.Add(new WebW2Online() { Recordkey = "5", Ww2oEmployeeId = personId, Ww2oYear = "2015" });
+            this.webW2cOnlineDataContracts.Add(new WebW2cOnline() { Recordkey = "3", Ww2coEmployeeId = personId, Ww2coCorrectionYear = "2015", WebW2cOnlineAdddate = new DateTime(2015, 1, 31), Ww2coSourceTaxW2cId = "3" });
+            var statementEntities = await taxFormStatementRepository.GetAsync(personId, TaxForms.FormW2);
+
+            // Make sure we have the correct total number of domain entities.
+            var statementEntitiesW2c = statementEntities.Where(x => x.TaxForm == TaxForms.FormW2C).ToList();
+            Assert.AreEqual(0, statementEntitiesW2c.Count(), "We should have built the correct number of domain entities.");
+
+            // Make sure each data contract has been used to create a domain entity.
+            foreach (var dataContract in webW2cOnlineDataContracts)
+            {
+                var expectedPersonId = dataContract.Ww2coEmployeeId;
+                var expectedTaxYear = dataContract.Ww2coCorrectionYear;
+
+                var selectedStatementEntities = statementEntities.Where(x =>
+                    x.PersonId == expectedPersonId
+                    && x.TaxYear == expectedTaxYear
+                    && x.TaxForm == TaxForms.FormW2C);
+                Assert.AreEqual(0, selectedStatementEntities.Count(), "Each data contract should be represented in the set of domain entities.");
+            }
+        }
+
+
+        [TestMethod]
+        public async Task WebW2OnlineNoCorrectionWithW2c()
+        {
+            this.webW2OnlineDataContracts.Add(new WebW2Online() { Recordkey = "5", Ww2oEmployeeId = personId, Ww2oYear = "2015" });
+            this.webW2cOnlineDataContracts.Add(new WebW2cOnline() { Recordkey = "1", Ww2coEmployeeId = personId, Ww2coCorrectionYear = "2015", WebW2cOnlineAdddate = new DateTime(2015, 1, 31), Ww2coSourceTaxW2cId = "1" });
+            this.webW2OnlineDataContracts.Add(new WebW2Online() { Recordkey = "6", Ww2oEmployeeId = personId, Ww2oYear = "2017", Ww2oW2cFlag = "Y" });
+            this.webW2cOnlineDataContracts.Add(new WebW2cOnline() { Recordkey = "2", Ww2coEmployeeId = personId, Ww2coCorrectionYear = "2017", Ww2coW2cFlag = "Y", WebW2cOnlineAdddate = new DateTime(2017, 1, 31), Ww2coSourceTaxW2cId = "2" });
+
+            var statementEntities = await taxFormStatementRepository.GetAsync(personId, TaxForms.FormW2);
+
+            // Make sure we have the correct total number of domain entities.
+            var statementEntitiesW2c = statementEntities.Where(x => x.TaxForm == TaxForms.FormW2C);
+            Assert.AreEqual(webW2cOnlineDataContracts.Count + webW2OnlineDataContracts.Count, statementEntities.Count(), "We should have built the correct number of domain entities.");
+            var w22017 = statementEntities.Where(x => x.TaxYear == "2017").First();
+            Assert.AreEqual(TaxFormNotations.Correction, w22017.Notation, "Notation should be correction");
+        }
+
+        [TestMethod]
+        public async Task WebW2COnlineMultiformWithSameSourceID()
+        {
+            this.webW2OnlineDataContracts.Add(new WebW2Online() { Recordkey = "5", Ww2oEmployeeId = personId, Ww2oYear = "2015" });
+            this.webW2cOnlineDataContracts.Add(new WebW2cOnline() { Recordkey = "1", Ww2coEmployeeId = personId, Ww2coCorrectionYear = "2015", WebW2cOnlineAdddate = new DateTime(2015, 1, 31), Ww2coSourceTaxW2cId = "2" });
+            this.webW2OnlineDataContracts.Add(new WebW2Online() { Recordkey = "6", Ww2oEmployeeId = personId, Ww2oYear = "2017", Ww2oW2cFlag = "Y" });
+            this.webW2cOnlineDataContracts.Add(new WebW2cOnline() { Recordkey = "2", Ww2coEmployeeId = personId, Ww2coCorrectionYear = "2017", Ww2coW2cFlag = "Y", WebW2cOnlineAdddate = new DateTime(2017, 1, 31), Ww2coSourceTaxW2cId = "2" });
+
+            var statementEntities = await taxFormStatementRepository.GetAsync(personId, TaxForms.FormW2);
+
+            // Make sure we have the correct total number of domain entities.
+            var statementEntitiesW2c = statementEntities.Where(x => x.TaxForm == TaxForms.FormW2C);
+            Assert.AreEqual(webW2cOnlineDataContracts.Count + webW2OnlineDataContracts.Count, statementEntities.Count(), "We should have built the correct number of domain entities.");
+            var w22017 = statementEntities.Where(x => x.TaxYear == "2017").First();
+            Assert.AreEqual(TaxFormNotations.MultipleForms, w22017.Notation, "Notation should be MultipleForms");
         }
 
         #region Tests valid for all tax forms using W2 information

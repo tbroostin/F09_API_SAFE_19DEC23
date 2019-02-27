@@ -93,6 +93,10 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         public int PlanYearStartDay { get; private set; }
 
         /// <summary>
+        /// List of all Earning Type IDs associated with a Employee Leave Plan
+        /// </summary>
+        public IEnumerable<string> EarningTypeIDList { get; private set; }
+        /// <summary>
         /// The start date of the current (as of today) plan year.
         /// The start date is built by using the PlanYearStartMonth and PlanYearStartDay and then deriving the year
         /// based on today's date. 
@@ -326,6 +330,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             decimal priorPeriodLeaveBalance,
             int planYearStartMonth,
             int planYearStartDay,
+            IEnumerable<string> earningTypeIDList,
             bool allowNegativeBalance = false)
         {
             if (string.IsNullOrWhiteSpace(id))
@@ -368,6 +373,12 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
                 throw new ArgumentOutOfRangeException("planYearStartDay", "playYearStartDay must be between 1 and the end of the month");
             }
 
+            if(earningTypeIDList==null || !earningTypeIDList.Any())
+            {
+
+                throw new ArgumentNullException("earningTypeIDList");
+            }
+
             try
             {
                 //try to create a dateTime using today's year, the start month and start day
@@ -396,7 +407,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             AllowNegativeBalance = allowNegativeBalance;
             PlanYearStartMonth = planYearStartMonth;
             PlanYearStartDay = planYearStartDay;
-            
+            EarningTypeIDList = earningTypeIDList;
             leaveTransactions = new List<EmployeeLeaveTransaction>();
 
 

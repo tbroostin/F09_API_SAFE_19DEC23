@@ -410,6 +410,20 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             Assert.AreEqual(expected.AlwaysUseClipboardForBulkMailToLinks, dto.AlwaysUseClipboardForBulkMailToLinks);
         }
 
+        [TestMethod]
+        public async Task GetRequiredDocumentConfigurationAsync_Success()
+        {
+            var rdcDto = await this.configurationService.GetRequiredDocumentConfigurationAsync();
+            var rdcEntity = await testConfigurationRepository.GetRequiredDocumentConfigurationAsync();
+
+            Assert.AreEqual(rdcEntity.SuppressInstance, rdcDto.SuppressInstance);
+            Assert.ReferenceEquals(rdcEntity.PrimarySortField, rdcDto.PrimarySortField);
+            Assert.ReferenceEquals(rdcEntity.SecondarySortField, rdcDto.SecondarySortField);
+            Assert.AreEqual(rdcEntity.TextForBlankStatus, rdcDto.TextForBlankStatus);
+            Assert.AreEqual(rdcEntity.TextForBlankDueDate, rdcDto.TextForBlankDueDate);
+        }
+
+
         /// <summary>
         /// Fake an ICurrentUserFactory implementation to construct ConfigurationService
         /// </summary>
@@ -486,6 +500,9 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             var selfServiceConfigurationDtoAdapter = new AutoMapperAdapter<Domain.Base.Entities.SelfServiceConfiguration, Dtos.Base.SelfServiceConfiguration>(adapterRegistry.Object, logger);
             adapterRegistry.Setup(reg => reg.GetAdapter<Domain.Base.Entities.SelfServiceConfiguration, Dtos.Base.SelfServiceConfiguration>()).Returns(selfServiceConfigurationDtoAdapter);
+
+            var requiredDocumentConfigurationAdapter = new AutoMapperAdapter<Domain.Base.Entities.RequiredDocumentConfiguration, Dtos.Base.RequiredDocumentConfiguration>(adapterRegistry.Object, logger);
+            adapterRegistry.Setup(reg => reg.GetAdapter<Domain.Base.Entities.RequiredDocumentConfiguration, Dtos.Base.RequiredDocumentConfiguration>()).Returns(requiredDocumentConfigurationAdapter);
 
             configurationService = new ConfigurationService(testConfigurationRepository, adapterRegistry.Object, currentUserFactory, roleRepository,
                 FakeApiSettings, XmlSettingsRepository, ApiSettingsRepository, ResourceRepository, loggerObject);

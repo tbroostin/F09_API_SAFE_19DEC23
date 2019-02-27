@@ -74,6 +74,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 // Call the repository to get all the data to print in the pdf.
                 var taxFormPdfData = await this.taxFormPdfDataRepository.Get1098PdfAsync(personId, recordId);
 
+                // Validate that the domain entity student ID is the same as the person ID requested.
+                if (personId != taxFormPdfData.StudentId)
+                {
+                    throw new PermissionsException("Insufficient access to 1098 data.");
+                }
+
                 var institutionAddressLines = await personRepository.Get1098HierarchyAddressAsync(taxFormPdfData.InstitutionId);
 
                 // Assign the institution address lines.
@@ -212,6 +218,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (pdfData.TaxFormName == "1098T")
             {
                 parameters.Add(utility.BuildReportParameter("AtLeastHalfTime", pdfData.AtLeastHalfTime ? "X" : ""));                            // Box 8
+                parameters.Add(utility.BuildReportParameter("Box1Amt", pdfData.AmountsPaidForTuitionAndExpenses ?? ""));
                 parameters.Add(utility.BuildReportParameter("Box2Amt", pdfData.AmountsBilledForTuitionAndExpenses ?? ""));
                 parameters.Add(utility.BuildReportParameter("Box4Amt", pdfData.AdjustmentsForPriorYear ?? ""));
                 parameters.Add(utility.BuildReportParameter("Box5Amt", pdfData.ScholarshipsOrGrants ?? ""));
@@ -274,6 +281,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 // Call the repository to get all the data to print in the pdf.
                 var taxFormPdfData = await this.taxFormPdfDataRepository.GetT2202aPdfAsync(personId, recordId);
+
+                // Validate that the domain entity student ID is the same as the person ID requested.
+                if (personId != taxFormPdfData.StudentId)
+                {
+                    throw new PermissionsException("Insufficient access to T2202A data.");
+                }
 
                 // Get the address using the 1098 hierarchy since that is also used for T2202As, and populate the 
                 // two lines of address since the first line contains the institution name.

@@ -88,14 +88,10 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 logger.Error(knfex, knfex.Message);
                 throw CreateHttpResponseException("Record not found.", HttpStatusCode.NotFound);
             }
-            catch (ApplicationException aex)
-            {
-                logger.Error(aex, aex.Message);
-                throw CreateHttpResponseException("Invalid data in record.", HttpStatusCode.BadRequest);
-            }
+            // Application exceptions will be caught below.
             catch (Exception ex)
             {
-                logger.Error(ex.ToString());
+                logger.Error(ex, ex.Message);
                 throw CreateHttpResponseException("Unable to get the purchase order.", HttpStatusCode.BadRequest);
             }
         }
@@ -416,7 +412,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
             if (po.OrderedOn == default(DateTime))
             {
-                throw new ArgumentNullException("purchaseOrders.OrderOn.", "OrderOn is a required field");
+                throw new ArgumentNullException("purchaseOrders.OrderedOn.", "OrderedOn is a required field");
             }
 
             if (po.TransactionDate == default(DateTime))
@@ -426,16 +422,16 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 
             if (po.OrderedOn > po.TransactionDate)
             {
-                throw new ArgumentNullException("purchaseOrders.TransactionDate.", "TransactionDate cannot before OrderOn date.");
+                throw new ArgumentNullException("purchaseOrders.TransactionDate.", "TransactionDate cannot before OrderedOn date.");
             }
 
             if (po.DeliveredBy != default(DateTime) && po.OrderedOn > po.DeliveredBy)
             {
-                throw new ArgumentNullException("purchaseOrders.DeliveredBy.", "DeliveredBy date cannot be before the OrderOn date");
+                throw new ArgumentNullException("purchaseOrders.DeliveredBy.", "DeliveredBy date cannot be before the OrderedOn date");
             }
             if (po.StatusDate != default(DateTime) && po.OrderedOn > po.StatusDate && po.Status == PurchaseOrdersStatus.Voided)
             {
-                throw new ArgumentNullException("purchaseOrders.StatusDate.", "StatusDate date cannot be before the OrderOn date when Voiding the purchase order");
+                throw new ArgumentNullException("purchaseOrders.StatusDate.", "StatusDate date cannot be before the OrderedOn date when Voiding the purchase order");
             }
             
             if (po.OverrideShippingDestination != null && po.OverrideShippingDestination.Place != null)

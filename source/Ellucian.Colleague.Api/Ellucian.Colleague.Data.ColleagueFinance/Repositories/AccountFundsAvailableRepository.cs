@@ -164,9 +164,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     }
                     catch(Exception ex)
                     {
-                        var exception = new RepositoryException(ex.Message);
+                        //var exception = new RepositoryException(ex.Message);
+                        //exception.AddError(new RepositoryError("Invalid.AccountingString", ex.Message));
                         logger.Error(ex, "FundsAvailable");
-                        throw exception;
+                        //throw exception;
                     }
                 }
 
@@ -180,6 +181,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 else
                 {
                     fundsResponse.AvailableStatus = FundsAvailableStatus.NotApplicable;
+                    if (glAvailableResponse.AvailableStatus == "INVALID.ACCOUNTING.STRING")
+                    {
+                        fundsResponse.AvailableStatus = FundsAvailableStatus.Invalid;
+                    }
                 }
                 if (glAvailableResponse.GlAmts != null && glAvailableResponse.GlAmts.HasValue)
                 {
@@ -209,11 +214,13 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             switch (availableStatus)
             {
                 case "AVAILABLE":
-                    return FundsAvailableStatus.Availbale;
+                    return FundsAvailableStatus.Available;
                 case "NOT.AVAILABLE":
                     return FundsAvailableStatus.NotAvailable;
                 case "OVERRIDE":
                     return FundsAvailableStatus.Override;
+                case "INVALID.ACCOUNTING.STRING":
+                    return FundsAvailableStatus.Invalid;
                 default:
                     throw new ArgumentException(string.Concat("Invalid FundsAvailableStatus: ", availableStatus));
             }
@@ -485,7 +492,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             if (memos == null) 
             {
-                throw new RepositoryException(string.Concat("accounting string: ", result.Recordkey, " is not valid for the current fiscal year."));
+                var exception = new RepositoryException();
+                exception.AddError(new RepositoryError(string.Concat("accounting string: ", result.Recordkey, " is not valid for the current fiscal year.")));
+                throw exception;
             }            
 
             FundsAvailable fundsAvailable = new FundsAvailable(result.Recordkey) 

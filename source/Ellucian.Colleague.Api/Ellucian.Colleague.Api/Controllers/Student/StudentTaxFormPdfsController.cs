@@ -50,7 +50,13 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="personId">ID of the person assigned to and requesting the 1098.</param>
         /// <param name="recordId">The record ID where the 1098 pdf data is stored</param>
-        /// <returns>HttpResponseMessage</returns>
+        ///         /// <accessComments>
+        /// Requires permission VIEW.1098 for the student.
+        /// Requires permission VIEW.1098 for someone who currently has permission to proxy for the student requested.
+        /// Requires permission VIEW.STUDENT.1098 for admin view.
+        /// The tax form record requested must belong to the person ID requested.
+        /// </accessComments>
+        /// <returns>An HttpResponseMessage containing a byte array representing a PDF.</returns>
         public async Task<HttpResponseMessage> Get1098TaxFormPdf(string personId, string recordId)
         {
             if (string.IsNullOrEmpty(personId))
@@ -123,6 +129,9 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             // Determine which PDF template to use.
             switch (pdfData.TaxYear)
             {
+                case "2018":
+                    pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/Student/2018-" + pdfData.TaxFormName + ".rdlc");
+                    break;
                 case "2017":
                     pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/Student/2017-"+ pdfData.TaxFormName +".rdlc");
                     break;
@@ -167,7 +176,13 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="personId">ID of the person assigned to and requesting the T2202a.</param>
         /// <param name="recordId">The record ID where the T2202a pdf data is stored</param>
-        /// <returns>HttpResponseMessage</returns>
+        /// <accessComments>
+        /// Requires permission VIEW.T2202A for the student.
+        /// Requires permission VIEW.T2202A for someone who currently has permission to proxy for the student requested.
+        /// Requires permission VIEW.STUDENT.T2202A for admin view.
+        /// The tax form record requested must belong to the person ID requested.
+        /// </accessComments>
+        /// <returns>An HttpResponseMessage containing a byte array representing a PDF.</returns>
         public async Task<HttpResponseMessage> GetT2202aTaxFormPdf(string personId, string recordId)
         {
             if (string.IsNullOrEmpty(personId))
@@ -180,9 +195,10 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             consents = consents.OrderByDescending(c => c.TimeStamp);
             var mostRecentConsent = consents.FirstOrDefault();
 
+            // ************* T4s and T2202As are special cases based on CRA regulations! *************
             // Check if the person has explicitly withheld consent to receiving their T2202a online - if they opted out, throw exception
             var canViewAsAdmin = await taxFormConsentService.CanViewTaxDataWithOrWithoutConsent(Dtos.Base.TaxForms.FormT2202A);
-            if ((mostRecentConsent == null || !mostRecentConsent.HasConsented) && !canViewAsAdmin)
+            if ((mostRecentConsent != null && !mostRecentConsent.HasConsented) && !canViewAsAdmin)
             {
                 throw CreateHttpResponseException("Consent is required to view this information.", HttpStatusCode.Unauthorized);
             }
@@ -200,6 +216,10 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                     if (taxYear >= 2010 && taxYear <= 2017)
                     {
                         pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/Student/20XX-T2202a.rdlc");
+                    }
+                    else if (taxYear == 2018)
+                    {
+                        pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/Student/2018-T2202a.rdlc");
                     }
                 }
                 else

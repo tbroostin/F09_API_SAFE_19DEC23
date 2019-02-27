@@ -23,5 +23,12 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         //V7
         Task<SectionRegistrationResponse> Update2Async(SectionRegistrationRequest request, string guid, string personId, string sectionId, string statusCode);
         Task<bool> CheckStuAcadCredRecord(string id);
+
+        //V16.0.0
+        Task<Tuple<IEnumerable<SectionRegistrationResponse>, int>> GetSectionRegistrations2Async(int offset,
+            int limit, SectionRegistrationResponse sectReg, string acadPeriod, string sectionInstructor);
+        Task<SectionRegistrationResponse> GetSectionRegistrationByIdAsync(string id);
+        Task<Tuple<IEnumerable<StudentAcadCredCourseSecInfo>, int>> GetSectionRegistrationGradeOptionsAsync(int offset, int limit, StudentAcadCredCourseSecInfo criteria);
+        Task<StudentAcadCredCourseSecInfo> GetSectionRegistrationGradeOptionsByIdAsync(string id);
     }
 }

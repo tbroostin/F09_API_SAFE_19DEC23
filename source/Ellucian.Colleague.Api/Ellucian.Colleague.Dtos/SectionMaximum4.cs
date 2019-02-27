@@ -1,10 +1,9 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
 using Ellucian.Colleague.Dtos.DtoProperties;
 using Newtonsoft.Json;
-using System.Runtime.Serialization;
 using Ellucian.Colleague.Dtos.Attributes;
 using Ellucian.Colleague.Dtos.Converters;
 
@@ -103,7 +102,6 @@ namespace Ellucian.Colleague.Dtos
         /// The current status of the section
         /// </summary>
         [JsonProperty("status", NullValueHandling = NullValueHandling.Ignore)]
-        [FilterProperty("criteria")]
         [JsonConverter(typeof(StatusCategoryFilterConverter))]
         public SectionStatusDtoProperty Status { get; set; }
 

@@ -13,6 +13,7 @@ using Ellucian.Web.Adapters;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
+using Ellucian.Web.Security;
 
 namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 {
@@ -21,11 +22,22 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
     {
         #region Initialize and Cleanup
         private ColleagueFinanceTaxFormStatementService service;
+        private Mock<IColleagueFinanceTaxFormStatementRepository> statementRepositoryMock;
+        private Mock<IRoleRepository> roleRepositoryMock;
+        private ICurrentUserFactory userFactory;
+        private Mock<IAdapterRegistry> adapterRegistryMock;
+        private Mock<ILogger> loggerMock;
 
         [TestInitialize]
         public void Initialize()
         {
-            BuildService();
+            statementRepositoryMock = new Mock<IColleagueFinanceTaxFormStatementRepository>();
+            roleRepositoryMock = new Mock<IRoleRepository>();
+            adapterRegistryMock = new Mock<IAdapterRegistry>();
+            userFactory = new GeneralLedgerCurrentUser.TaxInformationUserFactory();
+            loggerMock = new Mock<ILogger>();
+
+            BuildService(true);
         }
 
         [TestCleanup]
@@ -88,6 +100,63 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task GetAsync_MissingT4APermission()
+        {
+            BuildService(false);
+            var actualTaxFormStatements = await service.GetAsync("1", Dtos.Base.TaxForms.FormT4A);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task GetAsync_Missing1099MiscPermission()
+        {
+            BuildService(false);
+            var actualTaxFormStatements = await service.GetAsync("1", Dtos.Base.TaxForms.Form1099MI);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task GetAsync_PersonIdNotMatchingT4AException()
+        {
+            var actualTaxFormStatements = await service.GetAsync("3", Dtos.Base.TaxForms.FormT4A);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task GetAsync_PersonIdNotMatching1099MiscException()
+        {
+            var actualTaxFormStatements = await service.GetAsync("3", Dtos.Base.TaxForms.Form1099MI);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task GetAsync_StatementsPersonIdNotMatching()
+        {
+            expectedTaxFormStatements = new List<TaxFormStatement2>();
+            expectedTaxFormStatements.Add(new TaxFormStatement2("9", "2016", TaxForms.FormT4A, "1234"));
+            expectedTaxFormStatements.Add(new TaxFormStatement2("9", "2015", TaxForms.FormT4A, "3452"));
+            var actualTaxFormStatements = await service.GetAsync("1", Dtos.Base.TaxForms.FormT4A);
+        }
+
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task GetAsync_RepositoryReturnsNullEntities()
+        {
+            statementRepositoryMock.Setup(x => x.GetAsync("3", Domain.Base.Entities.TaxForms.FormT4A)).Returns(() =>
+            {
+                return Task.FromResult(null as IEnumerable<Domain.Base.Entities.TaxFormStatement2>);
+            });
+            var serviceNullEntities = new ColleagueFinanceTaxFormStatementService(statementRepositoryMock.Object,
+                    adapterRegistryMock.Object,
+                    userFactory,
+                    roleRepositoryMock.Object,
+                    loggerMock.Object);
+            var actualTaxFormStatements = await serviceNullEntities.GetAsync("3", Dtos.Base.TaxForms.FormT4A);
+        }
+
+        [TestMethod]
         public async Task GetAsync_Success()
         {
             var actualTaxFormStatements = await service.GetAsync("1", Dtos.Base.TaxForms.FormT4A);
@@ -110,20 +179,27 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         /// <summary>
         /// Builds multiple cost center service objects.
         /// </summary>
-        private void BuildService()
+        private void BuildService(bool isPermissionsRequired = true)
         {
-            var statementRepositoryMock = new Mock<IColleagueFinanceTaxFormStatementRepository>();
-            var adapterRegistryMock = new Mock<IAdapterRegistry>();
-            var userFactory = new GeneralLedgerCurrentUser.TaxInformationUserFactory();
-            var roleRepositoryMock = new Mock<IRoleRepository>();
-            var loggerMock = new Mock<ILogger>();
-
             var roles = new List<Domain.Entities.Role>();
-
             var role = new Domain.Entities.Role(1, "VIEW.T4A");
-            role.AddPermission(new Domain.Entities.Permission("VIEW.T4A"));
+            if (isPermissionsRequired)
+            {
+                role.AddPermission(new Domain.Entities.Permission("VIEW.T4A"));
+            }
             roles.Add(role);
-
+            role = new Domain.Entities.Role(3, "VIEW.RECIPIENT.T4A");
+            if (isPermissionsRequired)
+            {
+                role.AddPermission(new Domain.Entities.Permission("VIEW.RECIPIENT.T4A"));
+            }
+            roles.Add(role);
+            role = new Domain.Entities.Role(3, "VIEW.1099MISC");
+            if (isPermissionsRequired)
+            {
+                role.AddPermission(new Domain.Entities.Permission("VIEW.1099MISC"));
+            }
+            roles.Add(role);
             roleRepositoryMock.Setup(r => r.Roles).Returns(roles);
 
             // Set up and mock the adapter, and setup the GetAdapter method.
@@ -135,7 +211,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     return Task.FromResult(getStatements());
                 });
 
-            service = new ColleagueFinanceTaxFormStatementService(statementRepositoryMock.Object, adapterRegistryMock.Object, userFactory, roleRepositoryMock.Object, loggerMock.Object);
+            service = new ColleagueFinanceTaxFormStatementService(statementRepositoryMock.Object,
+                adapterRegistryMock.Object,
+                userFactory,
+                roleRepositoryMock.Object,
+                loggerMock.Object);
         }
 
         private List<Domain.Base.Entities.TaxFormStatement2> expectedTaxFormStatements = new List<Domain.Base.Entities.TaxFormStatement2>()

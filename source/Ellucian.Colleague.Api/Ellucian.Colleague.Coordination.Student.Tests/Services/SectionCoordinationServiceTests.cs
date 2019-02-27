@@ -1,6 +1,7 @@
 ﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base;
+using Ellucian.Colleague.Coordination.Base.Adapters;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -5915,7 +5916,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 sectionRepoMock.Setup(repo => repo.GetSectionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
                     It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
                     It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(),
-                    It.IsAny<string>(), It.IsAny<List<string>>())).ReturnsAsync(new Tuple<IEnumerable<Domain.Student.Entities.Section>, int>(sections, sections.Count()));
+                    It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>())).ReturnsAsync(new Tuple<IEnumerable<Domain.Student.Entities.Section>, int>(sections, sections.Count()));
 
                 var sectionTitleTypes = new List<Domain.Student.Entities.SectionTitleType>()
                 {
@@ -8876,6 +8877,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 Assert.AreEqual(section1.Guid, res.Id);
             }
         }
+
         [TestClass]
         public class SectionsMaximum_V8 : CurrentUserSetup
         {
@@ -9693,6 +9695,862 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                         new Collection<string>(){ "100", "200"}, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddYears(-6)) })
                         { 
                             Guid = "0b983700-29eb-46ff-8616-21a8c3a48a0c", 
+                            LearningProvider = "CE",
+                            TermId = "2012/FA",
+                            Location = "MAIN",
+                            NumberOfWeeks = 2,
+                            NumberOnWaitlist = 10,
+                            GradeSchemeCode = "UG",
+                            BillingCred = 1
+                        }
+                };
+                sectionMaxEntitiesTuple = new Tuple<IEnumerable<Section>, int>(sectionEntities, sectionEntities.Count());
+            }
+        }
+
+        [TestClass]
+        public class SectionsMaximum_V16 : CurrentUserSetup
+        {
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private Mock<ISectionRepository> sectionRepoMock;
+            private Mock<IStudentRepository> studentRepoMock;
+            private Mock<IStudentReferenceDataRepository> stuRefDataRepoMock;
+            private Mock<IReferenceDataRepository> referenceDataRepoMock;
+            private Mock<ICourseRepository> courseRepoMock;
+            private Mock<ITermRepository> termRepoMock;
+            private Mock<IStudentConfigurationRepository> studentConfigRepoMock;
+            private Mock<IConfigurationRepository> configRepoMock;
+            private Mock<IPersonRepository> personRepoMock;
+            private Mock<IRoomRepository> roomRepoMock;
+            private Mock<IEventRepository> eventRepoMock;
+            private Mock<IBookRepository> bookRepoMock;
+            private Mock<IRoleRepository> roleRepoMock;
+            private Mock<ILogger> loggerMock;
+            private ICurrentUserFactory currentUserFactory;
+
+
+            private SectionCoordinationService sectionCoordinationService;
+            Tuple<IEnumerable<Domain.Student.Entities.Section>, int> sectionMaxEntitiesTuple;
+            IEnumerable<Domain.Student.Entities.Section> sectionEntities;
+
+            IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Course> courseEntities;
+            IEnumerable<CourseTitleType> courseTitleTypeEntities;
+            IEnumerable<SectionStatusCodeGuid> sectionStatusCodeGuidEntities;
+            IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Subject> subjectEntities;
+            IEnumerable<Domain.Student.Entities.CreditCategory> creditCategoryEntities;
+            IEnumerable<Domain.Student.Entities.GradeScheme> gradeSchemeEntities;
+            IEnumerable<Domain.Student.Entities.CourseLevel> courseLevelEntities;
+            IEnumerable<Domain.Student.Entities.AcademicPeriod> acadPeriodsEntities;
+            IEnumerable<Domain.Student.Entities.AcademicLevel> academicLevelEntities;
+            IEnumerable<Domain.Base.Entities.InstructionalPlatform> instructionalPlatformEntities;
+            IEnumerable<Domain.Base.Entities.Location> locationEntities;
+            IEnumerable<Domain.Base.Entities.Department> departmentEntities;
+            IEnumerable<Domain.Student.Entities.InstructionalMethod> instrMethodEntities;
+            IEnumerable<Domain.Base.Entities.Room> roomEntities;
+
+            Domain.Base.Entities.PersonIntegration person;
+            private Domain.Student.Entities.SectionMeeting meeting1;
+
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                sectionRepoMock = new Mock<ISectionRepository>();
+                courseRepoMock = new Mock<ICourseRepository>();
+                studentRepoMock = new Mock<IStudentRepository>();
+                stuRefDataRepoMock = new Mock<IStudentReferenceDataRepository>();
+                referenceDataRepoMock = new Mock<IReferenceDataRepository>();
+                termRepoMock = new Mock<ITermRepository>();
+                studentConfigRepoMock = new Mock<IStudentConfigurationRepository>();
+                configRepoMock = new Mock<IConfigurationRepository>();
+                personRepoMock = new Mock<IPersonRepository>();
+                roomRepoMock = new Mock<IRoomRepository>();
+                eventRepoMock = new Mock<IEventRepository>();
+                bookRepoMock = new Mock<IBookRepository>();
+                roleRepoMock = new Mock<IRoleRepository>();
+                loggerMock = new Mock<ILogger>();
+
+                currentUserFactory = new CurrentUserSetup.StudentUserFactory();
+                BuildData();
+
+                sectionCoordinationService = new SectionCoordinationService(adapterRegistryMock.Object, sectionRepoMock.Object, courseRepoMock.Object, studentRepoMock.Object,
+                    stuRefDataRepoMock.Object, referenceDataRepoMock.Object, termRepoMock.Object, studentConfigRepoMock.Object, configRepoMock.Object, personRepoMock.Object,
+                    roomRepoMock.Object, eventRepoMock.Object, bookRepoMock.Object, currentUserFactory, roleRepoMock.Object, loggerMock.Object);
+
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                adapterRegistryMock = null;
+                sectionRepoMock = null;
+                courseRepoMock = null;
+                studentRepoMock = null;
+                stuRefDataRepoMock = null;
+                referenceDataRepoMock = null;
+                termRepoMock = null;
+                studentConfigRepoMock = null;
+                configRepoMock = null;
+                personRepoMock = null;
+                roomRepoMock = null;
+                eventRepoMock = null;
+                roleRepoMock = null;
+                sectionCoordinationService = null;
+                courseEntities = null;
+                subjectEntities = null;
+                creditCategoryEntities = null;
+                gradeSchemeEntities = null;
+                courseLevelEntities = null;
+                acadPeriodsEntities = null;
+                academicLevelEntities = null;
+                instructionalPlatformEntities = null;
+                locationEntities = null;
+                departmentEntities = null;
+                instrMethodEntities = null;
+                roomEntities = null;
+                person = null;
+                meeting1 = null;
+            }
+
+            [TestMethod]
+            public async Task SectionCoordinationServiceTests_V16_GetSectionsMaximum16Async_ValidateAllFilters()
+            {
+                sectionRepoMock.Setup(repo => repo.GetSectionsAsync(0, 3, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(sectionMaxEntitiesTuple);
+
+                var results = await sectionCoordinationService.GetSectionsMaximum5Async(0, 3, It.IsAny<string>(), "2016-01-01", "2016-10-01", It.IsAny<string>(), It.IsAny<string>(), "840e72f0-57b9-42a2-ae88-df3c2262fbbc", "8d3fcd4d-cec8-4405-90eb-948392bd0a7e",
+                    "840e72f0-57b9-42a2-ae88-df3c2262fbbc", new List<string>() { "558ca14c-718a-4b6e-8d92-77f498034f9f" }, "38b4330c-befa-435e-81d5-c3ffd52759f2", "b0eba383-5acf-4050-949d-8bb7a17c5012", "open", new List<string>() { "1a2e2906-d46b-4698-80f6-af87b8083c64" },
+                    new List<string>() { "1a2e2906-d46b-4698-80f6-af87b8083c64" }, It.IsAny<string>(), It.IsAny<bool>());
+
+                Assert.IsNotNull(results);
+                Assert.AreEqual(0, results.Item1.Count());
+            }
+
+            [TestMethod]
+            public async Task SectionCoordinationServiceTests_V16_GetSectionMaximumByGuid5Async_CE()
+            {
+                sectionEntities = new List<Domain.Student.Entities.Section>()
+                {
+                    new Domain.Student.Entities.Section("1", "180", "111", new DateTime(2016, 01, 01), 3, 3, "Title 1", "C", new Collection<Domain.Student.Entities.OfferingDepartment>(){ new Domain.Student.Entities.OfferingDepartment("MATH") },
+                        new Collection<string>(){ "100", "200"}, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddYears(-6)) })
+                        {
+                            Guid = "0b983700-29eb-46ff-8616-21a8c3a48a0c",
+                            LearningProvider = "CE",
+                            TermId = "2012/FA",
+                            Location = "MAIN",
+                            NumberOfWeeks = 2,
+                            NumberOnWaitlist = 10,
+                            GradeSchemeCode = "UG"
+                        }
+                };
+                sectionMaxEntitiesTuple = new Tuple<IEnumerable<Section>, int>(sectionEntities, sectionEntities.Count());
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<string>())).ReturnsAsync(sectionEntities.ToList()[0]);
+
+                var result = await sectionCoordinationService.GetSectionMaximumByGuid5Async("0b983700-29eb-46ff-8616-21a8c3a48a0c");
+
+                Assert.IsNotNull(result);
+            }
+
+            [TestMethod]
+            public async Task SectionCoordinationServiceTests_V16_GetSectionMaximumByGuid5Async_Transfer()
+            {
+                sectionEntities = new List<Domain.Student.Entities.Section>()
+                {
+                    new Domain.Student.Entities.Section("1", "180", "111", new DateTime(2016, 01, 01), 3, 3, "Title 1", "T", new Collection<Domain.Student.Entities.OfferingDepartment>(){ new Domain.Student.Entities.OfferingDepartment("MATH") },
+                        new Collection<string>(){ "100", "200"}, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddYears(-6)) })
+                        {
+                            Guid = "0b983700-29eb-46ff-8616-21a8c3a48a0c",
+                            LearningProvider = "CE",
+                            TermId = "2012/FA",
+                            Location = "MAIN",
+                            NumberOfWeeks = 2,
+                            NumberOnWaitlist = 10,
+                            GradeSchemeCode = "UG"
+                        }
+                };
+                sectionMaxEntitiesTuple = new Tuple<IEnumerable<Section>, int>(sectionEntities, sectionEntities.Count());
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<string>())).ReturnsAsync(sectionEntities.ToList()[0]);
+
+                var result = await sectionCoordinationService.GetSectionMaximumByGuid5Async("0b983700-29eb-46ff-8616-21a8c3a48a0c");
+
+                Assert.IsNotNull(result);
+            }
+
+            [TestMethod]
+            public async Task SectionCoordinationServiceTests_V16_GetSectionMaximumByGuid5Async_Exchange()
+            {
+                sectionEntities = new List<Domain.Student.Entities.Section>()
+                {
+                    new Domain.Student.Entities.Section("1", "180", "111", new DateTime(2016, 01, 01), 3, 3, "Title 1", "E", new Collection<Domain.Student.Entities.OfferingDepartment>(){ new Domain.Student.Entities.OfferingDepartment("MATH") },
+                        new Collection<string>(){ "100", "200"}, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddYears(-6)) })
+                        {
+                            Guid = "0b983700-29eb-46ff-8616-21a8c3a48a0c",
+                            LearningProvider = "CE",
+                            TermId = "2012/FA",
+                            Location = "MAIN",
+                            NumberOfWeeks = 2,
+                            NumberOnWaitlist = 10,
+                            GradeSchemeCode = "UG"
+                        }
+                };
+                sectionMaxEntitiesTuple = new Tuple<IEnumerable<Section>, int>(sectionEntities, sectionEntities.Count());
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<string>())).ReturnsAsync(sectionEntities.ToList()[0]);
+
+                var result = await sectionCoordinationService.GetSectionMaximumByGuid5Async("0b983700-29eb-46ff-8616-21a8c3a48a0c");
+
+                Assert.IsNotNull(result);
+            }
+
+            [TestMethod]
+            public async Task SectionCoordinationServiceTests_V16_GetSectionMaximumByGuid5Async_Other()
+            {
+                sectionEntities = new List<Domain.Student.Entities.Section>()
+                {
+                    new Domain.Student.Entities.Section("1", "180", "111", new DateTime(2016, 01, 01), 3, 3, "Title 1", "O", new Collection<Domain.Student.Entities.OfferingDepartment>(){ new Domain.Student.Entities.OfferingDepartment("MATH") },
+                        new Collection<string>(){ "100", "200"}, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddYears(-6)) })
+                        {
+                            Guid = "0b983700-29eb-46ff-8616-21a8c3a48a0c",
+                            LearningProvider = "CE",
+                            TermId = "2012/FA",
+                            Location = "MAIN",
+                            NumberOfWeeks = 2,
+                            NumberOnWaitlist = 10,
+                            GradeSchemeCode = "UG"
+                        }
+                };
+                sectionMaxEntitiesTuple = new Tuple<IEnumerable<Section>, int>(sectionEntities, sectionEntities.Count());
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<string>())).ReturnsAsync(sectionEntities.ToList()[0]);
+
+                var result = await sectionCoordinationService.GetSectionMaximumByGuid5Async("0b983700-29eb-46ff-8616-21a8c3a48a0c");
+
+                Assert.IsNotNull(result);
+            }
+
+            [TestMethod]
+            public async Task SectionCoordinationServiceTests_V16_GetSectionMaximumByGuid5Async_NoCredit()
+            {
+                sectionEntities = new List<Domain.Student.Entities.Section>()
+                {
+                    new Domain.Student.Entities.Section("1", "180", "111", new DateTime(2016, 01, 01), 3, 3, "Title 1", "N", new Collection<Domain.Student.Entities.OfferingDepartment>(){ new Domain.Student.Entities.OfferingDepartment("MATH") },
+                        new Collection<string>(){ "100", "200"}, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddYears(-6)) })
+                        {
+                            Guid = "0b983700-29eb-46ff-8616-21a8c3a48a0c",
+                            LearningProvider = "CE",
+                            TermId = "2012/FA",
+                            Location = "MAIN",
+                            NumberOfWeeks = 2,
+                            NumberOnWaitlist = 10,
+                            GradeSchemeCode = "UG"
+                        }
+                };
+                sectionMaxEntitiesTuple = new Tuple<IEnumerable<Section>, int>(sectionEntities, sectionEntities.Count());
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<string>())).ReturnsAsync(sectionEntities.ToList()[0]);
+
+                var result = await sectionCoordinationService.GetSectionMaximumByGuid5Async("0b983700-29eb-46ff-8616-21a8c3a48a0c");
+
+                Assert.IsNotNull(result);
+            }
+
+            [TestMethod]
+            public async Task SectionCoordinationServiceTests_V16_GetSectionMaximumByGuid5Async_WithId_CreditTypeCode_Blank()
+            {
+                sectionEntities = new List<Domain.Student.Entities.Section>()
+                {
+                    new Domain.Student.Entities.Section("1", "180", "111", new DateTime(2016, 01, 01), 3, 3, "Title 1", " ", new Collection<Domain.Student.Entities.OfferingDepartment>(){ new Domain.Student.Entities.OfferingDepartment("MATH") },
+                        new Collection<string>(){ "100", "200"}, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddYears(-6)) })
+                        {
+                            Guid = "0b983700-29eb-46ff-8616-21a8c3a48a0c",
+                            LearningProvider = "CE",
+                            TermId = "2012/FA",
+                            Location = "MAIN",
+                            NumberOfWeeks = 2,
+                            NumberOnWaitlist = 10,
+                            GradeSchemeCode = "UG"
+                        }
+                };
+                sectionMaxEntitiesTuple = new Tuple<IEnumerable<Section>, int>(sectionEntities, sectionEntities.Count());
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<string>())).ReturnsAsync(sectionEntities.ToList()[0]);
+
+                var result = await sectionCoordinationService.GetSectionMaximumByGuid5Async("0b983700-29eb-46ff-8616-21a8c3a48a0c");
+
+                Assert.IsNotNull(result);
+            }
+
+            [TestMethod]
+            public async Task SectionCoordinationServiceTests_V16_GetSectionMaximumByGuid5Async_WithId_No_CEUS()
+            {
+                sectionEntities = new List<Domain.Student.Entities.Section>()
+                {
+                    new Domain.Student.Entities.Section("1", "180", "111", new DateTime(2016, 01, 01), 3, null, "Title 1", "I", new Collection<Domain.Student.Entities.OfferingDepartment>(){ new Domain.Student.Entities.OfferingDepartment("MATH") },
+                        new Collection<string>(){ "100", "200"}, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddYears(-6)) })
+                        {
+                            Guid = "0b983700-29eb-46ff-8616-21a8c3a48a0c",
+                            LearningProvider = "CE",
+                            TermId = "2012/FA",
+                            Location = "MAIN",
+                            NumberOfWeeks = 2,
+                            NumberOnWaitlist = 10,
+                            GradeSchemeCode = "UG"
+                        }
+                };
+                sectionMaxEntitiesTuple = new Tuple<IEnumerable<Section>, int>(sectionEntities, sectionEntities.Count());
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<string>())).ReturnsAsync(sectionEntities.ToList()[0]);
+
+                var result = await sectionCoordinationService.GetSectionMaximumByGuid5Async("0b983700-29eb-46ff-8616-21a8c3a48a0c");
+
+                Assert.IsNotNull(result);
+            }
+
+            [TestMethod]
+            public async Task SectionCoordinationServiceTests_V16_GetSectionMaximumByGuid5Async_WithId_Freq_Daily()
+            {
+                var sectionFaculty = new Domain.Student.Entities.SectionFaculty("1234", "SEC1", "0000678", "LG", new DateTime(2012, 09, 01), new DateTime(2011, 12, 21), 100.0m);
+
+                meeting1 = new Domain.Student.Entities.SectionMeeting("123", "SEC1", "LG", new DateTime(2012, 01, 01), new DateTime(2012, 12, 21), "D");
+                meeting1.Guid = "1f1485cb-2705-4b59-9f51-7aa85c79b377";
+                meeting1.AddFacultyId("0000678");
+                meeting1.AddSectionFaculty(sectionFaculty);
+                meeting1.StartTime = new DateTimeOffset(2012, 01, 01, 08, 30, 00, new TimeSpan());
+                meeting1.EndTime = new DateTimeOffset(2012, 12, 21, 09, 30, 00, new TimeSpan());
+                meeting1.Room = "COE*Room 1";
+                var sectionMeetings = new List<Domain.Student.Entities.SectionMeeting>();
+                sectionMeetings.Add(meeting1);
+                var tuple = new Tuple<IEnumerable<Domain.Student.Entities.SectionMeeting>, int>(sectionMeetings, 1);
+                sectionRepoMock.Setup(repo => repo.GetSectionMeetingAsync(0, 0, "1", "", "", "", "", new List<string>(), new List<string>(), new List<string>(), "")).ReturnsAsync(tuple);
+
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<string>())).ReturnsAsync(sectionEntities.ToList()[0]);
+
+                var result = await sectionCoordinationService.GetSectionMaximumByGuid5Async("0b983700-29eb-46ff-8616-21a8c3a48a0c");
+
+                Assert.IsNotNull(result);
+                Assert.AreEqual(Dtos.FrequencyType2.Daily, result.InstructionalEvents.ToList()[0].Recurrence.RepeatRule.Type);
+            }
+
+            [TestMethod]
+            public async Task SectionCoordinationServiceTests_V16_GetSectionMaximumByGuid5Async_WithId_Freq_Monthly_WithDays()
+            {
+                var sectionFaculty = new Domain.Student.Entities.SectionFaculty("1234", "SEC1", "0000678", "LG", new DateTime(2012, 09, 01), new DateTime(2011, 12, 21), 100.0m);
+
+                meeting1 = new Domain.Student.Entities.SectionMeeting("123", "SEC1", "LG", new DateTime(2012, 01, 01), new DateTime(2012, 12, 21), "M");
+                meeting1.Days = new List<DayOfWeek>() { DayOfWeek.Monday, DayOfWeek.Wednesday };
+                meeting1.Guid = "1f1485cb-2705-4b59-9f51-7aa85c79b377";
+                meeting1.AddFacultyId("0000678");
+                meeting1.AddSectionFaculty(sectionFaculty);
+                meeting1.StartTime = new DateTimeOffset(2012, 01, 01, 08, 30, 00, new TimeSpan());
+                meeting1.EndTime = new DateTimeOffset(2012, 12, 21, 09, 30, 00, new TimeSpan());
+                meeting1.Room = "COE*Room 1";
+                var sectionMeetings = new List<Domain.Student.Entities.SectionMeeting>();
+                sectionMeetings.Add(meeting1);
+                var tuple = new Tuple<IEnumerable<Domain.Student.Entities.SectionMeeting>, int>(sectionMeetings, 1);
+                sectionRepoMock.Setup(repo => repo.GetSectionMeetingAsync(0, 0, "1", "", "", "", "", new List<string>(), new List<string>(), new List<string>(), "")).ReturnsAsync(tuple);
+
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<string>())).ReturnsAsync(sectionEntities.ToList()[0]);
+
+                var result = await sectionCoordinationService.GetSectionMaximumByGuid5Async("0b983700-29eb-46ff-8616-21a8c3a48a0c");
+
+                Assert.IsNotNull(result);
+                Assert.AreEqual(Dtos.FrequencyType2.Monthly, result.InstructionalEvents.ToList()[0].Recurrence.RepeatRule.Type);
+            }
+
+            [TestMethod]
+            public async Task SectionCoordinationServiceTests_V16_GetSectionMaximumByGuid5Async_WithId_Freq_Monthly_WithoutDays()
+            {
+                var sectionFaculty = new Domain.Student.Entities.SectionFaculty("1234", "SEC1", "0000678", "LG", new DateTime(2012, 09, 01), new DateTime(2011, 12, 21), 100.0m);
+
+                meeting1 = new Domain.Student.Entities.SectionMeeting("123", "SEC1", "LG", new DateTime(2012, 01, 01), new DateTime(2012, 12, 21), "M");
+                meeting1.Guid = "1f1485cb-2705-4b59-9f51-7aa85c79b377";
+                meeting1.AddFacultyId("0000678");
+                meeting1.AddSectionFaculty(sectionFaculty);
+                meeting1.StartTime = new DateTimeOffset(2012, 01, 01, 08, 30, 00, new TimeSpan());
+                meeting1.EndTime = new DateTimeOffset(2012, 12, 21, 09, 30, 00, new TimeSpan());
+                meeting1.Room = "COE*Room 1";
+                var sectionMeetings = new List<Domain.Student.Entities.SectionMeeting>();
+                sectionMeetings.Add(meeting1);
+                var tuple = new Tuple<IEnumerable<Domain.Student.Entities.SectionMeeting>, int>(sectionMeetings, 1);
+                sectionRepoMock.Setup(repo => repo.GetSectionMeetingAsync(0, 0, "1", "", "", "", "", new List<string>(), new List<string>(), new List<string>(), "")).ReturnsAsync(tuple);
+
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<string>())).ReturnsAsync(sectionEntities.ToList()[0]);
+
+                var result = await sectionCoordinationService.GetSectionMaximumByGuid5Async("0b983700-29eb-46ff-8616-21a8c3a48a0c");
+
+                Assert.IsNotNull(result);
+                Assert.AreEqual(Dtos.FrequencyType2.Monthly, result.InstructionalEvents.ToList()[0].Recurrence.RepeatRule.Type);
+            }
+
+            [TestMethod]
+            public async Task SectionCoordinationServiceTests_V16_GetSectionMaximumByGuid5Async_WithId_Freq_Yearly()
+            {
+                var sectionFaculty = new Domain.Student.Entities.SectionFaculty("1234", "SEC1", "0000678", "LG", new DateTime(2012, 09, 01), new DateTime(2011, 12, 21), 100.0m);
+
+                meeting1 = new Domain.Student.Entities.SectionMeeting("123", "SEC1", "LG", new DateTime(2012, 01, 01), new DateTime(2012, 12, 21), "Y");
+                meeting1.Guid = "1f1485cb-2705-4b59-9f51-7aa85c79b377";
+                meeting1.AddFacultyId("0000678");
+                meeting1.AddSectionFaculty(sectionFaculty);
+                meeting1.StartTime = new DateTimeOffset(2012, 01, 01, 08, 30, 00, new TimeSpan());
+                meeting1.EndTime = new DateTimeOffset(2012, 12, 21, 09, 30, 00, new TimeSpan());
+                meeting1.Room = "COE*Room 1";
+                var sectionMeetings = new List<Domain.Student.Entities.SectionMeeting>();
+                sectionMeetings.Add(meeting1);
+                var tuple = new Tuple<IEnumerable<Domain.Student.Entities.SectionMeeting>, int>(sectionMeetings, 1);
+                sectionRepoMock.Setup(repo => repo.GetSectionMeetingAsync(0, 0, "1", "", "", "", "", new List<string>(), new List<string>(), new List<string>(), "")).ReturnsAsync(tuple);
+
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<string>())).ReturnsAsync(sectionEntities.ToList()[0]);
+
+                var result = await sectionCoordinationService.GetSectionMaximumByGuid5Async("0b983700-29eb-46ff-8616-21a8c3a48a0c");
+
+                Assert.IsNotNull(result);
+                Assert.AreEqual(Dtos.FrequencyType2.Yearly, result.InstructionalEvents.ToList()[0].Recurrence.RepeatRule.Type);
+            }
+
+            [TestMethod]
+            public async Task SectionCoordinationServiceTests_V16_GetSectionMaximumByGuid5Async_WithId()
+            {
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<string>())).ReturnsAsync(sectionEntities.ToList()[0]);
+
+                var result = await sectionCoordinationService.GetSectionMaximumByGuid5Async("0b983700-29eb-46ff-8616-21a8c3a48a0c");
+
+                Assert.IsNotNull(result);
+            }
+
+            [TestMethod]
+            public async Task SectionCoordinationServiceTests_V16_GetSectionMaximum5Async_WithBadPeriodFilter_ReturnsEmptySet()
+            {
+                var emptyResult = new Tuple<IEnumerable<Section>, int>(new List<Domain.Student.Entities.Section>(), 0);
+                sectionRepoMock.Setup(repo => repo.GetSectionsAsync(1, 1, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(),
+                    It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(emptyResult);
+
+                var result = await sectionCoordinationService.GetSectionsMaximum5Async(1, 1, "", "", "", "", "", "", "badperiod", null, null, "", "", "", null, null);
+                Assert.IsNotNull(result);
+                Assert.AreEqual(0, result.Item1.Count());
+                Assert.AreEqual(0, result.Item2);
+            }
+            [TestMethod]
+            public async Task SectionCoordinationServiceTests_V16_GetSectionMaximum5Async_WithBadSubjectFilter_ReturnsEmptySet()
+            {
+                var emptyResult = new Tuple<IEnumerable<Section>, int>(new List<Domain.Student.Entities.Section>(), 0);
+                sectionRepoMock.Setup(repo => repo.GetSectionsAsync(1, 1, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                  It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                  It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(),
+                  It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(emptyResult);
+                sectionRepoMock.Setup(repo => repo.GetSectionsAsync(1, 1, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                 It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(emptyResult);
+                var result = await sectionCoordinationService.GetSectionsMaximum5Async(1, 1, "", "", "", "badsubject", "", "", "", null, null, "", "", "", null, null);
+                Assert.IsNotNull(result);
+                Assert.AreEqual(0, result.Item1.Count());
+                Assert.AreEqual(0, result.Item2);
+            }
+
+            [TestMethod]
+            public async Task SectionCoordinationServiceTests_V16_GetSectionMaximum5Async_WithBadPlatformFilter_ReturnsEmptySet()
+            {
+                var emptyResult = new Tuple<IEnumerable<Section>, int>(new List<Domain.Student.Entities.Section>(), 0);
+                sectionRepoMock.Setup(repo => repo.GetSectionsAsync(1, 1, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(emptyResult);
+                var result = await sectionCoordinationService.GetSectionsMaximum5Async(1, 1, "", "", "", "", "", "badplatform", "", null, null, "", "", "", null, null);
+                Assert.IsNotNull(result);
+                Assert.AreEqual(0, result.Item1.Count());
+                Assert.AreEqual(0, result.Item2);
+            }
+            [TestMethod]
+            public async Task SectionCoordinationServiceTests_V16_GetSectionMaximum5Async_WithBadLevelFilter_ReturnsEmptySet()
+            {
+                var emptyResult = new Tuple<IEnumerable<Section>, int>(new List<Domain.Student.Entities.Section>(), 0);
+                sectionRepoMock.Setup(repo => repo.GetSectionsAsync(1, 1, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(emptyResult);
+                var result = await sectionCoordinationService.GetSectionsMaximum5Async(1, 1, "", "", "", "", "", "", "", "", new List<string>() { "badlevel" }, null, "", "", null, null);
+                Assert.IsNotNull(result);
+                Assert.AreEqual(0, result.Item1.Count());
+                Assert.AreEqual(0, result.Item2);
+            }
+            [TestMethod]
+            public async Task SectionCoordinationServiceTests_V16_GetSectionMaximum5Async_WithBadSiteFilter_ReturnsEmptySet()
+            {
+                var emptyResult = new Tuple<IEnumerable<Section>, int>(new List<Domain.Student.Entities.Section>(), 0);
+                sectionRepoMock.Setup(repo => repo.GetSectionsAsync(1, 1, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(emptyResult);
+                var result = await sectionCoordinationService.GetSectionsMaximum5Async(1, 1, "", "", "", "", "", "", "", null, null, "", "badsite", "", null, null);
+                Assert.IsNotNull(result);
+                Assert.AreEqual(0, result.Item1.Count());
+                Assert.AreEqual(0, result.Item2);
+            }
+            [TestMethod]
+            public async Task SectionCoordinationServiceTests_V16_GetSectionMaximum5Async_WithBadStatusFilter_ReturnsEmptySet()
+            {
+                var emptyResult = new Tuple<IEnumerable<Section>, int>(new List<Domain.Student.Entities.Section>(), 0);
+                sectionRepoMock.Setup(repo => repo.GetSectionsAsync(1, 1, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(emptyResult);
+                var result = await sectionCoordinationService.GetSectionsMaximum5Async(1, 1, "", "", "", "", "", "", "", null, null, "", "", "badstatus", null, null);
+                Assert.IsNotNull(result);
+                Assert.AreEqual(0, result.Item1.Count());
+                Assert.AreEqual(0, result.Item2);
+            }
+            [TestMethod]
+            public async Task SectionCoordinationServiceTests_V16_GetSectionMaximum5Async_WithBadOwningOrganizationFilter_ReturnsEmptySet()
+            {
+                var emptyResult = new Tuple<IEnumerable<Section>, int>(new List<Domain.Student.Entities.Section>(), 0);
+                sectionRepoMock.Setup(repo => repo.GetSectionsAsync(1, 1, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                 It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(),
+                 It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(emptyResult);
+                sectionRepoMock.Setup(repo => repo.GetSectionsAsync(1, 1, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(emptyResult);
+
+                var result = await sectionCoordinationService.GetSectionsMaximum5Async(1, 1, "", "", "", "", "", "", "", null, null, "", "", "", new List<string> { "badorg" }, null);
+                Assert.IsNotNull(result);
+                Assert.AreEqual(0, result.Item1.Count());
+                Assert.AreEqual(0, result.Item2);
+            }
+            [TestMethod]
+            public async Task SectionCoordinationServiceTests_V16_GetSectionMaximum5Async_WithBadCourseFilter_ReturnsEmptySet()
+            {
+                var emptyResult = new Tuple<IEnumerable<Section>, int>(new List<Domain.Student.Entities.Section>(), 0);
+                sectionRepoMock.Setup(repo => repo.GetSectionsAsync(1, 1, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(),
+                    It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(emptyResult);
+                sectionRepoMock.Setup(repo => repo.GetSectionsAsync(1, 1, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(emptyResult);
+
+                var result = await sectionCoordinationService.GetSectionsMaximum5Async(1, 1, "", "", "", "", "", "", "", null, null, "badcourse", "", "badstatus", null, null);
+                Assert.IsNotNull(result);
+                Assert.AreEqual(0, result.Item1.Count());
+                Assert.AreEqual(0, result.Item2);
+            }
+
+            //[TestMethod]
+            //public async Task SectionCoordinationServiceTests_V16_GetSectionMaximum5Async_ReturnsCorrectCourseTitle()
+            //{
+            //    sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<string>())).ReturnsAsync(sectionEntities.ToList()[0]);
+
+            //    var result = await sectionCoordinationService.GetSectionMaximumByGuid5Async("0b983700-29eb-46ff-8616-21a8c3a48a0c");
+            //    var expectedCourseGuid = await courseRepoMock.Object.GetCourseGuidFromIdAsync("180");
+            //    var expectedCourse = await courseRepoMock.Object.GetCourseByGuidAsync(expectedCourseGuid);
+
+            //    Assert.IsNotNull(result);
+            //    Assert.AreEqual(expectedCourse.LongTitle, result.Course.Titles.Title);
+
+            //}
+
+            #region All Exceptions
+
+            [TestMethod]
+            //[ExpectedException(typeof(ArgumentException))]
+            public async Task SectionCoordinationServiceTests_V16_GetSectionsMaximum5Async_NullSectionGuid_ArgumentException()
+            {
+                sectionRepoMock.Setup(repo => repo.GetSectionsAsync(0, 3, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(sectionMaxEntitiesTuple);
+                sectionRepoMock.Setup(repo => repo.GetSectionGuidFromIdAsync(It.IsAny<string>())).ThrowsAsync(new ArgumentException());
+
+                var results = await sectionCoordinationService.GetSectionsMaximum5Async(0, 3, It.IsAny<string>(), "2016-01-01", "2016-10-01", It.IsAny<string>(), It.IsAny<string>(), "840e72f0-57b9-42a2-ae88-df3c2262fbbc", "8d3fcd4d-cec8-4405-90eb-948392bd0a7e",
+                    "840e72f0-57b9-42a2-ae88-df3c2262fbbc", new List<string>() { "558ca14c-718a-4b6e-8d92-77f498034f9f" }, "38b4330c-befa-435e-81d5-c3ffd52759f2", "b0eba383-5acf-4050-949d-8bb7a17c5012", "open", new List<string>() { "1a2e2906-d46b-4698-80f6-af87b8083c64" },
+                    new List<string>() { "1a2e2906-d46b-4698-80f6-af87b8083c64" }, It.IsAny<string>(), It.IsAny<bool>());
+                
+                Assert.AreEqual(0, results.Item1.Count());
+                Assert.AreEqual(0, results.Item2);
+            }
+
+            [TestMethod]
+            //[ExpectedException(typeof(ArgumentException))]
+            public async Task SectionCoordinationServiceTests_V16_GetSectionsMaximum5Async_NullInstrMethodGuid_ArgumentException()
+            {
+                sectionRepoMock.Setup(repo => repo.GetSectionsAsync(0, 3, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(sectionMaxEntitiesTuple);
+                stuRefDataRepoMock.Setup(repo => repo.GetInstructionalMethodsAsync(It.IsAny<bool>())).ThrowsAsync(new ArgumentException());
+
+                var results = await sectionCoordinationService.GetSectionsMaximum5Async(0, 3, It.IsAny<string>(), "2016-01-01", "2016-10-01", It.IsAny<string>(), It.IsAny<string>(), "840e72f0-57b9-42a2-ae88-df3c2262fbbc", "8d3fcd4d-cec8-4405-90eb-948392bd0a7e",
+                    "840e72f0-57b9-42a2-ae88-df3c2262fbbc", new List<string>() { "558ca14c-718a-4b6e-8d92-77f498034f9f" }, "38b4330c-befa-435e-81d5-c3ffd52759f2", "b0eba383-5acf-4050-949d-8bb7a17c5012", "open", new List<string>() { "1a2e2906-d46b-4698-80f6-af87b8083c64" },
+                    new List<string>() { "1a2e2906-d46b-4698-80f6-af87b8083c64" }, It.IsAny<string>(), It.IsAny<bool>());
+
+                Assert.AreEqual(0, results.Item1.Count());
+                Assert.AreEqual(0, results.Item2);
+            }
+
+            [TestMethod]
+            //[ExpectedException(typeof(ArgumentException))]
+            public async Task SectionCoordinationServiceTests_V16_GetSectionsMaximum5Async_RepeatCodeNull_ArgumentException()
+            {
+                sectionRepoMock.Setup(repo => repo.GetSectionsAsync(0, 3, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(sectionMaxEntitiesTuple);
+
+                meeting1.Frequency = "abc";
+
+                var results = await sectionCoordinationService.GetSectionsMaximum5Async(0, 3, It.IsAny<string>(), "2016-01-01", "2016-10-01", It.IsAny<string>(), It.IsAny<string>(), "840e72f0-57b9-42a2-ae88-df3c2262fbbc", "8d3fcd4d-cec8-4405-90eb-948392bd0a7e",
+                    "840e72f0-57b9-42a2-ae88-df3c2262fbbc", new List<string>() { "558ca14c-718a-4b6e-8d92-77f498034f9f" }, "38b4330c-befa-435e-81d5-c3ffd52759f2", "b0eba383-5acf-4050-949d-8bb7a17c5012", "open", new List<string>() { "1a2e2906-d46b-4698-80f6-af87b8083c64" },
+                    new List<string>() { "1a2e2906-d46b-4698-80f6-af87b8083c64" }, It.IsAny<string>(), It.IsAny<bool>());
+
+                Assert.AreEqual(0, results.Item1.Count());
+                Assert.AreEqual(0, results.Item2);
+            }
+
+            [TestMethod]
+            //[ExpectedException(typeof(ArgumentException))]
+            public async Task SectionCoordinationServiceTests_V16_GetSectionsMaximum5Async_GetPersonGuidFromIdAsync_Error_ArgumentException()
+            {
+                sectionRepoMock.Setup(repo => repo.GetSectionsAsync(0, 3, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(sectionMaxEntitiesTuple);
+
+                personRepoMock.Setup(repo => repo.GetPersonGuidFromIdAsync(It.IsAny<string>())).ThrowsAsync(new ArgumentException());
+
+                var results = await sectionCoordinationService.GetSectionsMaximum5Async(0, 3, It.IsAny<string>(), "2016-01-01", "2016-10-01", It.IsAny<string>(), It.IsAny<string>(), "840e72f0-57b9-42a2-ae88-df3c2262fbbc", "8d3fcd4d-cec8-4405-90eb-948392bd0a7e",
+                    "840e72f0-57b9-42a2-ae88-df3c2262fbbc", new List<string>() { "558ca14c-718a-4b6e-8d92-77f498034f9f" }, "38b4330c-befa-435e-81d5-c3ffd52759f2", "b0eba383-5acf-4050-949d-8bb7a17c5012", "open", new List<string>() { "1a2e2906-d46b-4698-80f6-af87b8083c64" },
+                    new List<string>() { "1a2e2906-d46b-4698-80f6-af87b8083c64" }, It.IsAny<string>(), It.IsAny<bool>());
+
+                Assert.IsNotNull(results);
+                Assert.AreEqual(0, results.Item2);
+            }
+
+            [TestMethod]
+            //[ExpectedException(typeof(RepositoryException))]
+            public async Task SectionCoordinationServiceTests_V16_GetSectionsMaximum5Async_NullCourse_RepositoryException()
+            {
+                sectionRepoMock.Setup(repo => repo.GetSectionsAsync(0, 3, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(sectionMaxEntitiesTuple);
+                courseRepoMock.Setup(repo => repo.GetCourseByGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+
+                var results = await sectionCoordinationService.GetSectionsMaximum5Async(0, 3, It.IsAny<string>(), "2016-01-01", "2016-10-01", It.IsAny<string>(), It.IsAny<string>(), "840e72f0-57b9-42a2-ae88-df3c2262fbbc", "8d3fcd4d-cec8-4405-90eb-948392bd0a7e",
+                    "840e72f0-57b9-42a2-ae88-df3c2262fbbc", new List<string>() { "558ca14c-718a-4b6e-8d92-77f498034f9f" }, "38b4330c-befa-435e-81d5-c3ffd52759f2", "b0eba383-5acf-4050-949d-8bb7a17c5012", "open", new List<string>() { "1a2e2906-d46b-4698-80f6-af87b8083c64" },
+                    new List<string>() { "1a2e2906-d46b-4698-80f6-af87b8083c64" }, It.IsAny<string>(), It.IsAny<bool>());
+
+                Assert.IsNotNull(results);
+                Assert.AreEqual(0, results.Item2);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task SectionCoordinationServiceTests_V16_GetSectionMaximumByGuid5Async_WithNullId_ArgumentNullException()
+            {
+                var result = await sectionCoordinationService.GetSectionMaximumByGuid5Async("");
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(KeyNotFoundException))]
+            public async Task SectionCoordinationServiceTests_V16_GetSectionMaximumByGuid5Async_WithNullEntity_KeyNotFoundException()
+            {
+                sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+
+                var result = await sectionCoordinationService.GetSectionMaximumByGuid5Async("0b983700-29eb-46ff-8616-21a8c3a48a0c");
+            }
+
+
+
+            #endregion
+
+            private void BuildData()
+            {
+                //Course entity
+                courseEntities = new TestCourseRepository().GetAsync().Result.Take(41);
+                var courseEntity = courseEntities.FirstOrDefault(i => i.Id.Equals("180"));
+                courseRepoMock.Setup(repo => repo.GetCourseGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(courseEntity.Guid);
+                courseRepoMock.Setup(repo => repo.GetCourseByGuidAsync(courseEntity.Guid)).ReturnsAsync(courseEntity);
+                //Subject entity
+                subjectEntities = new TestSubjectRepository().Get();
+                stuRefDataRepoMock.Setup(repo => repo.GetSubjectsAsync()).ReturnsAsync(subjectEntities);
+                var subjectEntity = subjectEntities.FirstOrDefault(s => s.Code.Equals(courseEntity.SubjectCode));
+                //Credit Categories
+                creditCategoryEntities = new List<Domain.Student.Entities.CreditCategory>()
+                {
+                    new Domain.Student.Entities.CreditCategory("9C3B805D-CFE6-483B-86C3-4C20562F8C15", "I", "Institutional", Domain.Student.Entities.CreditType.Institutional),
+                    new Domain.Student.Entities.CreditCategory("73244057-D1EC-4094-A0B7-DE602533E3A6", "C", "Continuing Education", Domain.Student.Entities.CreditType.ContinuingEducation),
+                    new Domain.Student.Entities.CreditCategory("73244057-D1EC-4094-A0B7-DE602533E3A6", "E", "Exchange", Domain.Student.Entities.CreditType.Exchange),
+                    new Domain.Student.Entities.CreditCategory("73244057-D1EC-4094-A0B7-DE602533E3A6", "O", "Other", Domain.Student.Entities.CreditType.Other),
+                    new Domain.Student.Entities.CreditCategory("73244057-D1EC-4094-A0B7-DE602533E3A6", "N", "Continuing Education", Domain.Student.Entities.CreditType.None),
+                    new Domain.Student.Entities.CreditCategory("1df164eb-8178-4321-a9f7-24f12d3991d8", "T", "Transfer Credit", Domain.Student.Entities.CreditType.Transfer)
+                };
+                stuRefDataRepoMock.Setup(repo => repo.GetCreditCategoriesAsync()).ReturnsAsync(creditCategoryEntities);
+                //Grade Schemes
+                gradeSchemeEntities = new TestStudentReferenceDataRepository().GetGradeSchemesAsync().Result as List<Ellucian.Colleague.Domain.Student.Entities.GradeScheme>;
+                stuRefDataRepoMock.Setup(repo => repo.GetGradeSchemesAsync()).ReturnsAsync(gradeSchemeEntities);
+                //Course Levels
+                courseLevelEntities = new List<Domain.Student.Entities.CourseLevel>()
+                {
+                    new Domain.Student.Entities.CourseLevel("19f6e2cd-1e5f-4485-9b27-60d4f4e4b1ff", "100", "First Yr"),
+                    new Domain.Student.Entities.CourseLevel("73244057-D1EC-4094-A0B7-DE602533E3A6", "200", "Second Year"),
+                    new Domain.Student.Entities.CourseLevel("1df164eb-8178-4321-a9f7-24f12d3991d8", "300", "Third Year"),
+                    new Domain.Student.Entities.CourseLevel("4aa187ae-6d22-4b10-a2e2-1304ebc18176", "400", "Third Year"),
+                    new Domain.Student.Entities.CourseLevel("d9f42a0f-39de-44bc-87af-517619141bde", "500", "Third Year")
+                };
+                stuRefDataRepoMock.Setup(repo => repo.GetCourseLevelsAsync()).ReturnsAsync(courseLevelEntities);
+
+                courseTitleTypeEntities = new List<CourseTitleType>()
+                {
+                    new Domain.Student.Entities.CourseTitleType("19f6e2cd-1e5f-4485-9b27-60d4f4e4b1ff", "short", "First Yr"),
+                    new Domain.Student.Entities.CourseTitleType("73244057-D1EC-4094-A0B7-DE602533E3A6", "long", "Second Year"),
+                    new Domain.Student.Entities.CourseTitleType("1df164eb-8178-4321-a9f7-24f12d3991d8", "short", "Third Year"),
+                    new Domain.Student.Entities.CourseTitleType("4aa187ae-6d22-4b10-a2e2-1304ebc18176", "long", "Third Year"),
+                    new Domain.Student.Entities.CourseTitleType("d9f42a0f-39de-44bc-87af-517619141bde", "short", "Third Year")
+                };
+                stuRefDataRepoMock.Setup(repo => repo.GetCourseTitleTypesAsync(It.IsAny<bool>())).ReturnsAsync(courseTitleTypeEntities);
+
+                sectionStatusCodeGuidEntities = new List<SectionStatusCodeGuid>()
+                {
+                    new Domain.Student.Entities.SectionStatusCodeGuid("19f6e2cd-1e5f-4485-9b27-60d4f4e4b1ff", "short", "First Yr"),
+                    new Domain.Student.Entities.SectionStatusCodeGuid("73244057-D1EC-4094-A0B7-DE602533E3A6", "long", "Second Year"),
+                    new Domain.Student.Entities.SectionStatusCodeGuid("1df164eb-8178-4321-a9f7-24f12d3991d8", "short", "Third Year"),
+                    new Domain.Student.Entities.SectionStatusCodeGuid("4aa187ae-6d22-4b10-a2e2-1304ebc18176", "long", "Third Year"),
+                    new Domain.Student.Entities.SectionStatusCodeGuid("d9f42a0f-39de-44bc-87af-517619141bde", "short", "Third Year")
+                };
+                sectionRepoMock.Setup(repo => repo.GetStatusCodesWithGuidsAsync()).ReturnsAsync(sectionStatusCodeGuidEntities);
+
+
+                //IEnumerable<SectionMeeting>
+                var sectionFaculty = new Domain.Student.Entities.SectionFaculty("1234", "SEC1", "0000678", "LG", new DateTime(2012, 09, 01), new DateTime(2011, 12, 21), 100.0m);
+                var sectionFacultyTuple = new Tuple<IEnumerable<Domain.Student.Entities.SectionFaculty>, int>(new List<SectionFaculty>() { sectionFaculty }, 1);
+                sectionRepoMock.Setup(repo => repo.GetSectionFacultyAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>())).ReturnsAsync(sectionFacultyTuple);
+
+                meeting1 = new Domain.Student.Entities.SectionMeeting("123", "SEC1", "LG", new DateTime(2012, 01, 01), new DateTime(2012, 12, 21), "W");
+                meeting1.Guid = "1f1485cb-2705-4b59-9f51-7aa85c79b377";
+                meeting1.AddFacultyId("0000678");
+                meeting1.AddSectionFaculty(sectionFaculty);
+                meeting1.StartTime = new DateTimeOffset(2012, 01, 01, 08, 30, 00, new TimeSpan());
+                meeting1.EndTime = new DateTimeOffset(2012, 12, 21, 09, 30, 00, new TimeSpan());
+                meeting1.Room = "COE*Room 1";
+                var sectionMeetings = new List<Domain.Student.Entities.SectionMeeting>();
+                sectionMeetings.Add(meeting1);
+                var tuple = new Tuple<IEnumerable<Domain.Student.Entities.SectionMeeting>, int>(sectionMeetings, 1);
+                sectionRepoMock.Setup(repo => repo.GetSectionMeetingAsync(0, 0, "1", "", "", "", "", new List<string>(), new List<string>(), new List<string>(), "")).ReturnsAsync(tuple);
+                sectionRepoMock.Setup(repo => repo.GetSectionGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("ad7655d0-77e3-4f8a-a07c-5c86f6a6f86a");
+
+                //Instructor Id
+                personRepoMock.Setup(repo => repo.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("ebf585ad-cc1f-478f-a7a3-aefae87f873a");
+                List<PersonPin> personPinList = new List<PersonPin>()
+                {
+                    new PersonPin("1", "PersonPin1")
+                };
+                personRepoMock.Setup(repo => repo.GetPersonPinsAsync(It.IsAny<string[]>())).ReturnsAsync(personPinList);
+                //Instructional Methods
+                instrMethodEntities = new List<Domain.Student.Entities.InstructionalMethod>()
+                {
+                    new Domain.Student.Entities.InstructionalMethod("9C3B805D-CFE6-483B-86C3-4C20562F8C15", "LG", "LG", false),
+                    new Domain.Student.Entities.InstructionalMethod("73244057-D1EC-4094-A0B7-DE602533E3A6", "30", "30", true),
+                    new Domain.Student.Entities.InstructionalMethod("1df164eb-8178-4321-a9f7-24f12d3991d8", "04", "04", false)
+                };
+                stuRefDataRepoMock.Setup(repo => repo.GetInstructionalMethodsAsync(It.IsAny<bool>())).ReturnsAsync(instrMethodEntities);
+                //schedule repeats
+                var scheduleRepeats = new List<Domain.Base.Entities.ScheduleRepeat>()
+                {
+                    new Domain.Base.Entities.ScheduleRepeat("W", "Weekly", "7", FrequencyType.Weekly),
+                    new Domain.Base.Entities.ScheduleRepeat("D", "Daily", "1", FrequencyType.Daily),
+                    new Domain.Base.Entities.ScheduleRepeat("M", "Monthly", "30", FrequencyType.Monthly),
+                    new Domain.Base.Entities.ScheduleRepeat("Y", "Yearly", "365", FrequencyType.Yearly)
+                };
+                referenceDataRepoMock.Setup(repo => repo.ScheduleRepeats).Returns(scheduleRepeats);
+                //Rooms entities
+                roomEntities = new List<Domain.Base.Entities.Room>
+                {
+                    new Room("2ae6e009-40ca-4ac0-bb41-c123f7c344e3", "COE*Room 1", "COE")
+                    {
+                        Capacity = 50,
+                        RoomType = "110",
+                        Name = "Room 1"
+                    },
+                    new Room("8c92e963-5f05-45a2-8484-d9ad21e6ab47", "COE*0110", "CEE")
+                    {
+                        Capacity = 100,
+                        RoomType = "111",
+                        Name = "Room 2"
+                    },
+                    new Room("8fdbaec7-4198-4348-b95a-a48a357e67f5", "COE*0120", "CDF")
+                    {
+                        Capacity = 20,
+                        RoomType = "111",
+                        Name = "Room 13"
+                    },
+                    new Room("327a6856-0230-4a6d-82ed-5c99dc1b1862", "COE*0121", "CSD")
+                    {
+                        Capacity = 50,
+                        RoomType = "111",
+                        Name = "Room 112"
+                    },
+                    new Room("cc9aa34c-db5e-46dc-9e5b-ba3f4b2557a8", "EIN*0121", "BSF")
+                    {
+                        Capacity = 30,
+                        RoomType = "111",
+                        Name = "Room BSF"
+                    }
+                };
+                roomRepoMock.Setup(repo => repo.RoomsAsync()).ReturnsAsync(roomEntities);
+                //Person
+                person = new Domain.Base.Entities.PersonIntegration("1", "Brown")
+                {
+                    Guid = "96cf912f-5e87-4099-96bf-73baac4c7715",
+                    Prefix = "Mr.",
+                    FirstName = "Ricky",
+                    MiddleName = "Lee",
+                    Suffix = "Jr.",
+                    Nickname = "Rick",
+                    BirthDate = new DateTime(1930, 1, 1),
+                    DeceasedDate = new DateTime(2014, 5, 12),
+                    GovernmentId = "111-11-1111",
+                    MaritalStatusCode = "M",
+                    EthnicCodes = new List<string> { "H" },
+                    RaceCodes = new List<string> { "AS" }
+                };
+                person.AddEmailAddress(new EmailAddress("xyz@xmail.com", "COL"));
+                person.AddPersonAlt(new PersonAlt("1", Domain.Base.Entities.PersonAlt.ElevatePersonAltType.ToString()));
+
+                personRepoMock.Setup(repo => repo.GetPersonIntegration2ByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(person);
+                // Mock the reference repository for prefix
+                referenceDataRepoMock.Setup(repo => repo.Prefixes).Returns(new List<Prefix>()
+                {
+                    new Prefix("MR","Mr","Mr."),
+                    new Prefix("MS","Ms","Ms."),
+                    new Prefix("JR","Jr","Jr."),
+                    new Prefix("SR","Sr","Sr.")
+                });
+
+                // Mock the reference repository for suffix
+                referenceDataRepoMock.Setup(repo => repo.Suffixes).Returns(new List<Suffix>()
+                {
+                    new Suffix("JR","Jr","Jr."),
+                    new Suffix("SR","Sr","Sr.")
+                });
+
+                //Acad Periods
+                var registrationDates = new RegistrationDate(null, DateTime.Today.AddYears(1), DateTime.Today.AddYears(1), DateTime.Today.AddYears(1), DateTime.Today.AddYears(1),
+                    DateTime.Today.AddYears(1), DateTime.Today.AddYears(1), DateTime.Today.AddYears(1), DateTime.Today.AddYears(1), DateTime.Today.AddYears(1), new List<DateTime?>() { DateTime.Today.AddYears(1) });
+                acadPeriodsEntities = new List<Domain.Student.Entities.AcademicPeriod>()
+                {
+                    new Domain.Student.Entities.AcademicPeriod("8d3fcd4d-cec8-4405-90eb-948392bd0a7e", "2012/FA", "Fall 2014", DateTime.Today.AddDays(-60), DateTime.Today.AddDays(10),
+                        DateTime.Today.Year, 4, "2012/FA", "5f7e7071-5aef-4d22-891f-86ab472a9f15", "edcfd1ee-4adf-46bc-8b87-8853ae49dbeb",new List<RegistrationDate>(){registrationDates} )
+                };
+                termRepoMock.Setup(repo => repo.GetAcademicPeriods(It.IsAny<IEnumerable<Term>>())).Returns(acadPeriodsEntities);
+
+                academicLevelEntities = new TestAcademicLevelRepository().GetAsync().Result as List<Ellucian.Colleague.Domain.Student.Entities.AcademicLevel>;
+                stuRefDataRepoMock.Setup(repo => repo.GetAcademicLevelsAsync()).ReturnsAsync(academicLevelEntities);
+
+                locationEntities = new TestLocationRepository().Get();
+                referenceDataRepoMock.Setup(repo => repo.Locations).Returns(locationEntities);
+
+                departmentEntities = new TestDepartmentRepository().Get().ToList();
+                referenceDataRepoMock.Setup(repo => repo.DepartmentsAsync()).ReturnsAsync(departmentEntities);
+
+                instructionalPlatformEntities = new List<InstructionalPlatform>
+                {
+                    new InstructionalPlatform("840e72f0-57b9-42a2-ae88-df3c2262fbbc", "CE", "Continuing Education"),
+                    new InstructionalPlatform("e986b8a5-25f3-4aa0-bd0e-90982865e749", "D", "Institutional"),
+                    new InstructionalPlatform("b5cc288b-8692-474e-91be-bdc55778e2f5", "TR", "Transfer")
+                };
+                referenceDataRepoMock.Setup(repo => repo.GetInstructionalPlatformsAsync(It.IsAny<bool>())).ReturnsAsync(instructionalPlatformEntities);
+
+                sectionRepoMock.Setup(repo => repo.GetUnidataFormattedDate(It.IsAny<string>())).ReturnsAsync("2016/01/01");
+                sectionRepoMock.Setup(repo => repo.GetCourseIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
+                sectionRepoMock.Setup(repo => repo.ConvertStatusToStatusCodeAsync(It.IsAny<string>())).ReturnsAsync("Open");
+
+                sectionEntities = new List<Domain.Student.Entities.Section>()
+                {
+                    new Domain.Student.Entities.Section("1", "180", "111", new DateTime(2016, 01, 01), 3, 3, "Title 1", "I", new Collection<Domain.Student.Entities.OfferingDepartment>(){ new Domain.Student.Entities.OfferingDepartment("MATH") },
+                        new Collection<string>(){ "100", "200"}, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddYears(-6)) })
+                        {
+                            Guid = "0b983700-29eb-46ff-8616-21a8c3a48a0c",
                             LearningProvider = "CE",
                             TermId = "2012/FA",
                             Location = "MAIN",
@@ -11379,6 +12237,180 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 sectionCoordinationService = null;
             }
 
+        }
+
+        [TestClass]
+        public class GetSectionEventsICalAsync : CurrentUserSetup
+        {
+            IEnumerable<Event> allCals;
+            private SectionCoordinationService sectionCoordinationService;
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private IAdapterRegistry adapterRegistry;
+            private Mock<ISectionRepository> sectionRepoMock;
+            private ISectionRepository sectionRepo;
+            private Mock<IStudentRepository> studentRepoMock;
+            private IStudentRepository studentRepo;
+            private Mock<IStudentReferenceDataRepository> stuRefDataRepoMock;
+            private IStudentReferenceDataRepository studentReferenceDataRepo;
+            private Mock<IReferenceDataRepository> referenceDataRepoMock;
+            private IReferenceDataRepository referenceDataRepo;
+            private Mock<ICourseRepository> courseRepoMock;
+            private ICourseRepository courseRepo;
+            private Mock<ITermRepository> termRepoMock;
+            private ITermRepository termRepo;
+            private Mock<IStudentConfigurationRepository> studentConfigRepoMock;
+            private IStudentConfigurationRepository studentConfigRepo;
+            private Mock<IConfigurationRepository> configRepoMock;
+            private IConfigurationRepository configRepo;
+            private Mock<IPersonRepository> personRepoMock;
+            private IPersonRepository personRepo;
+            private Mock<IRoomRepository> roomRepoMock;
+            private IRoomRepository roomRepo;
+            private Mock<IEventRepository> eventRepoMock;
+            private IEventRepository eventRepo;
+            private Mock<IBookRepository> bookRepoMock;
+            private IBookRepository bookRepo;
+            private Mock<IRoleRepository> roleRepoMock;
+            private IRoleRepository roleRepo;
+            private ILogger logger;
+            private ICurrentUserFactory currentUserFactory;
+
+            //public AutoMapperAdapter<Ellucian.Colleague.Domain.Base.Entities.Event, Ellucian.Colleague.Dtos.Base.Event> eventDtoAdapter;
+           // public CampusCalendarEntityToDtoAdapter campusCalendarEntityToDtoAdapter;
+
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                sectionRepoMock = new Mock<ISectionRepository>();
+                sectionRepo = sectionRepoMock.Object;
+                studentRepoMock = new Mock<IStudentRepository>();
+                studentRepo = studentRepoMock.Object;
+                personRepoMock = new Mock<IPersonRepository>();
+                personRepo = personRepoMock.Object;
+                roomRepoMock = new Mock<IRoomRepository>();
+                roomRepo = roomRepoMock.Object;
+                stuRefDataRepoMock = new Mock<IStudentReferenceDataRepository>();
+                studentReferenceDataRepo = stuRefDataRepoMock.Object;
+                referenceDataRepoMock = new Mock<IReferenceDataRepository>();
+                referenceDataRepo = referenceDataRepoMock.Object;
+                courseRepoMock = new Mock<ICourseRepository>();
+                courseRepo = courseRepoMock.Object;
+                termRepoMock = new Mock<ITermRepository>();
+                termRepo = termRepoMock.Object;
+                studentConfigRepoMock = new Mock<IStudentConfigurationRepository>();
+                studentConfigRepo = studentConfigRepoMock.Object;
+                configRepoMock = new Mock<IConfigurationRepository>();
+                configRepo = configRepoMock.Object;
+                eventRepoMock = new Mock<IEventRepository>();
+                eventRepo = eventRepoMock.Object;
+                bookRepoMock = new Mock<IBookRepository>();
+                bookRepo = bookRepoMock.Object;
+
+                roleRepoMock = new Mock<IRoleRepository>();
+                roleRepo = roleRepoMock.Object;
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                adapterRegistry = adapterRegistryMock.Object;
+
+                currentUserFactory = new CurrentUserSetup.StudentUserFactory();
+
+                logger = new Mock<ILogger>().Object;
+
+                allCals = new TestEventRepository().Get();
+
+                // Mock the section service
+                sectionCoordinationService = new SectionCoordinationService(adapterRegistry, sectionRepo, courseRepo, studentRepo, studentReferenceDataRepo,
+                    referenceDataRepo, termRepo, studentConfigRepo, configRepo, personRepo, roomRepo, eventRepo, bookRepo, currentUserFactory, roleRepo, logger);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+
+                allCals = null;
+
+            }
+
+
+            [TestMethod]
+            public async Task GetSectionEventsICalAsync_ValidSingleSectionWithEvents()
+            {
+                string secId = "1111111";
+                List<string> secIds = new List<string>() { secId };
+                var csEvents = allCals.Where(c => c.Pointer == secId && c.Type == "CS");
+                sectionRepoMock.Setup(repo => repo.GetSectionEventsICalAsync("CS", secIds, null, null)).ReturnsAsync(csEvents);
+                string iCal =(await sectionCoordinationService.GetSectionEventsICalAsync(secIds, null, null)).iCal;
+                string[] separator = new string[1] { "END:VEVENT" };
+                string[] res = iCal.Split(separator, 99, System.StringSplitOptions.None);
+                Assert.AreEqual(6, res.Length); // 5 events split into 6 pieces (+1 for "END:VCALENDAR" after last VEVENT)
+                // Find the DTSTART and DTEND in each item and verify the correct format (do not process the last item, it's the END:VCALENDAR portion)
+                for (int i = 0; i < res.Count() - 1; i++)
+                {
+                    var eventItem = csEvents.ElementAt(i);
+                    separator[0] = "\r\n";
+                    string[] eventPieces = res[i].Split(separator, 99, StringSplitOptions.None);
+                    string startPiece = eventPieces.Where(e => e.StartsWith("DTSTART:")).FirstOrDefault();
+                    if (startPiece != null)
+                    {
+                        // ical date is formatted: YYYYMMDDTHHMMSSZ (T and Z are hardcoded characters)
+                        var dateTimeString = startPiece.Substring(8);
+                        VerifyICalZuluDateTime(dateTimeString, eventItem.StartTime.UtcDateTime);
+                    }
+                    string endPiece = eventPieces.Where(e => e.StartsWith("DTEND:")).FirstOrDefault();
+                    if (endPiece != null)
+                    {
+                        var dateTimeString = endPiece.Substring(6);
+                        VerifyICalZuluDateTime(dateTimeString, eventItem.EndTime.UtcDateTime);
+                    }
+                }
+
+            }
+
+            [TestMethod]
+            public async Task GetSectionEventsICalAsync_SingleSectionFirstThreeDates()
+            {
+                string secId = "1111111";
+                List<string> secIds = new List<string>() { secId };
+                DateTime start = new DateTime(2012, 8, 1);
+                DateTime end = new DateTime(2012, 8, 3);
+               sectionRepoMock.Setup(repo => repo.GetSectionEventsICalAsync("CS", secIds, start, end)).ReturnsAsync(allCals.Where(c => c.Pointer == secId && c.Type == "CS" && c.Start.Year == 2012 && c.Start.Month == 8 && c.Start.Day <= 3));
+                string iCal = (await sectionCoordinationService.GetSectionEventsICalAsync(secIds, start, end)).iCal;
+                string[] seps = new string[1] { "END:VEVENT" };
+                string[] res = iCal.Split(seps, 99, System.StringSplitOptions.None);
+                Assert.AreEqual(4, res.Length); // 3 events split into 4 pieces (+1 for "END:VCALENDAR" after last VEVENT)
+            }
+
+            [TestMethod]
+            public async Task GetSectionEventsICalAsync_ValidMultipleSectionsWithEvents()
+            {
+                string secId1 = "1111111";
+                string secId2 = "2222222";
+                List<string> secIds = new List<string>() { secId1, secId2 };
+                sectionRepoMock.Setup(repo => repo.GetSectionEventsICalAsync("CS", secIds, null, null)).ReturnsAsync(allCals.Where(c => (c.Pointer == secId1 || c.Pointer == secId2) && c.Type == "CS"));
+                string iCal = (await sectionCoordinationService.GetSectionEventsICalAsync(secIds, null, null)).iCal;
+                string[] seps = new string[1] { "END:VEVENT" };
+                string[] res = iCal.Split(seps, 99, System.StringSplitOptions.None);
+                Assert.AreEqual(9, res.Length); // 8 (5+3) events split into 9 pieces (+1 for "END:VCALENDAR" after last VEVENT)
+            }
+
+            [TestMethod]
+            public async Task GetSectionEventsICalAsync_InvalidSection()
+            {
+                string secId = "9999999";
+                List<string> secIds = new List<string>() { secId };
+                sectionRepoMock.Setup(repo => repo.GetSectionEventsICalAsync("CS", secIds, null, null)).ReturnsAsync(allCals.Where(c => c.Pointer == secId && c.Type == "CS"));
+                string iCal = (await sectionCoordinationService.GetSectionEventsICalAsync(secIds, null, null)).iCal;
+                string[] seps = new string[1] { "END:VEVENT" };
+                string[] res = iCal.Split(seps, 99, System.StringSplitOptions.None);
+                Assert.AreEqual(1, res.Length); // no splits occur
+            }
+
+            private void VerifyICalZuluDateTime(string dateTimeString, DateTime eventTime)
+            {
+                Assert.AreEqual('Z', dateTimeString[15]);
+                Assert.AreEqual('T', dateTimeString[8]);
+                Assert.AreEqual(eventTime, new DateTime(int.Parse(dateTimeString.Substring(0, 4)), int.Parse(dateTimeString.Substring(4, 2)), int.Parse(dateTimeString.Substring(6, 2)), int.Parse(dateTimeString.Substring(9, 2)), int.Parse(dateTimeString.Substring(11, 2)), int.Parse(dateTimeString.Substring(13, 2))));
+            }
         }
     }
 }

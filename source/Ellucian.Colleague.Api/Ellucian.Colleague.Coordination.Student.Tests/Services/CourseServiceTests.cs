@@ -1892,6 +1892,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Assert.IsTrue(coursePage.OpenSections.Count == 4);
 
             }
+
+           
         }
 
         [TestClass]
@@ -5166,6 +5168,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetSubjectsAsync()).ReturnsAsync(allSubjects);
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetSubjectsAsync(true)).ReturnsAsync(allSubjects);
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetSubjectsAsync(false)).ReturnsAsync(allSubjects);
+            foreach (var entity in allSubjects)
+                studentReferenceDataRepositoryMock.Setup(s => s.GetSubjectGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
 
             courseLevelCollection.Add(new Domain.Student.Entities.CourseLevel("19f6e2cd-1e5f-4485-9b27-60d4f4e4b1ff", "100", "First Yr"));
             courseLevelCollection.Add(new Domain.Student.Entities.CourseLevel("73244057-D1EC-4094-A0B7-DE602533E3A6", "200", "Second Year"));
@@ -5175,17 +5179,23 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetCourseLevelsAsync()).ReturnsAsync(courseLevelCollection);
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetCourseLevelsAsync(true)).ReturnsAsync(courseLevelCollection);
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetCourseLevelsAsync(false)).ReturnsAsync(courseLevelCollection);
+            foreach (var entity in courseLevelCollection)
+                studentReferenceDataRepositoryMock.Setup(s => s.GetCourseLevelGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
 
             instructionalMethodCollection.Add(new Domain.Student.Entities.InstructionalMethod("9C3B805D-CFE6-483B-86C3-4C20562F8C15", "LG", "LG", false));
             instructionalMethodCollection.Add(new Domain.Student.Entities.InstructionalMethod("73244057-D1EC-4094-A0B7-DE602533E3A6", "30", "30", true));
             instructionalMethodCollection.Add(new Domain.Student.Entities.InstructionalMethod("1df164eb-8178-4321-a9f7-24f12d3991d8", "04", "04", false));
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetInstructionalMethodsAsync()).ReturnsAsync(instructionalMethodCollection);
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetInstructionalMethodsAsync(It.IsAny<bool>())).ReturnsAsync(instructionalMethodCollection);
+            foreach (var entity in instructionalMethodCollection)
+                studentReferenceDataRepositoryMock.Setup(s => s.GetInstructionalMethodGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
 
             administrativeInstructionalMethodCollection.Add(new Domain.Student.Entities.AdministrativeInstructionalMethod("9C3B805D-CFE6-483B-86C3-4C20562F8C15", "LG", "LG", "D8CED21A-F220-4F79-9544-706E13B51972"));
             administrativeInstructionalMethodCollection.Add(new Domain.Student.Entities.AdministrativeInstructionalMethod("73244057-D1EC-4094-A0B7-DE602533E3A6", "30", "30", ""));
             administrativeInstructionalMethodCollection.Add(new Domain.Student.Entities.AdministrativeInstructionalMethod("1df164eb-8178-4321-a9f7-24f12d3991d8", "04", "04", ""));
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetAdministrativeInstructionalMethodsAsync(It.IsAny<bool>())).ReturnsAsync(administrativeInstructionalMethodCollection);
+            foreach (var entity in administrativeInstructionalMethodCollection)
+                studentReferenceDataRepositoryMock.Setup(s => s.GetAdministrativeInstructionalMethodGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
 
             academicLevelCollection.Add(new Domain.Student.Entities.AcademicLevel("9C3B805D-CFE6-483B-86C3-4C20562F8C15", "CE", "Continuing Education"));
             academicLevelCollection.Add(new Domain.Student.Entities.AcademicLevel("73244057-D1EC-4094-A0B7-DE602533E3A6", "GR", "Graduate"));
@@ -5193,15 +5203,21 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetAcademicLevelsAsync()).ReturnsAsync(academicLevelCollection);
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetAcademicLevelsAsync(true)).ReturnsAsync(academicLevelCollection);
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetAcademicLevelsAsync(false)).ReturnsAsync(academicLevelCollection);
+            foreach (var entity in academicLevelCollection)
+                studentReferenceDataRepositoryMock.Setup(s => s.GetAcademicLevelsGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
 
             allGradeScheme = await new TestStudentReferenceDataRepository().GetGradeSchemesAsync();
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetGradeSchemesAsync()).ReturnsAsync(allGradeScheme);
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetGradeSchemesAsync(true)).ReturnsAsync(allGradeScheme);
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetGradeSchemesAsync(false)).ReturnsAsync(allGradeScheme);
+            foreach (var entity in allGradeScheme)
+                studentReferenceDataRepositoryMock.Setup(s => s.GetGradeSchemeGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
 
             allDepartments = new TestDepartmentRepository().Get();
             referenceDataRepositoryMock.Setup(repo => repo.DepartmentsAsync()).ReturnsAsync(allDepartments);
             referenceDataRepositoryMock.Setup(repo => repo.GetDepartmentsAsync(It.IsAny<bool>())).ReturnsAsync(allDepartments);
+            foreach (var entity in allDepartments)
+                referenceDataRepositoryMock.Setup(s => s.GetDepartments2GuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
 
             academicDepartments = new List<Ellucian.Colleague.Domain.Student.Entities.AcademicDepartment>()
                                     {
@@ -5218,31 +5234,42 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetCreditCategoriesAsync()).ReturnsAsync(creditCategoryCollection);
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetCreditCategoriesAsync(true)).ReturnsAsync(creditCategoryCollection);
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetCreditCategoriesAsync(false)).ReturnsAsync(creditCategoryCollection);
+            foreach (var entity in creditCategoryCollection)
+                studentReferenceDataRepositoryMock.Setup(s => s.GetCreditCategoriesGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
 
             courseTypes = new List<Ellucian.Colleague.Domain.Student.Entities.CourseType>()
             {
                 new Domain.Student.Entities.CourseType("9C3B805D-CFE6-483B-86C3-4C20562F8C15", "MUS", "Descr MUS", true)
             };
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetCourseTypesAsync(It.IsAny<bool>())).ReturnsAsync(courseTypes);
+            foreach (var entity in courseTypes)
+                studentReferenceDataRepositoryMock.Setup(s => s.GetCourseTypeGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
+
 
             topicCodes = new List<Ellucian.Colleague.Domain.Student.Entities.TopicCode>()
             {
                 new Domain.Student.Entities.TopicCode("9C3B805D-CFE6-483B-86C3-4C20562F8C15", "MUS", "Descr MUS")
             };
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetTopicCodesAsync(It.IsAny<bool>())).ReturnsAsync(topicCodes);
+            foreach (var entity in topicCodes)
+                studentReferenceDataRepositoryMock.Setup(s => s.GetTopicCodeGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
 
             courseTitleTypes = new List<Domain.Student.Entities.CourseTitleType>()
             {
-                new Domain.Student.Entities.CourseTitleType("9C3B805D-CFE6-483B-86C3-4C20562F8C15", "short", "Descr"),
-                new Domain.Student.Entities.CourseTitleType("8C3B805D-CFE6-483B-86C3-4C20562F8C15", "long", "Descr")
+                new Domain.Student.Entities.CourseTitleType("9C3B805D-CFE6-483B-86C3-4C20562F8C15", "SHORT", "Descr"),
+                new Domain.Student.Entities.CourseTitleType("8C3B805D-CFE6-483B-86C3-4C20562F8C15", "LONG", "Descr")
             };
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetCourseTitleTypesAsync(It.IsAny<bool>())).ReturnsAsync(courseTitleTypes);
+            foreach (var entity in courseTitleTypes)
+                studentReferenceDataRepositoryMock.Setup(s => s.GetCourseTitleTypeGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
 
             courseStatuses = new List<Domain.Student.Entities.CourseStatuses>()
             {
                 new Domain.Student.Entities.CourseStatuses("9C3B805D-CFE6-483B-86C3-4C20562F8C15", "CS", "Descr CS")
             };
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetCourseStatusesAsync(It.IsAny<bool>())).ReturnsAsync(courseStatuses);
+            foreach (var entity in courseStatuses)
+                studentReferenceDataRepositoryMock.Setup(s => s.GetCourseStatusGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
 
 
         }
@@ -5501,6 +5528,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetSubjectsAsync()).ReturnsAsync(allSubjects);
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetSubjectsAsync(true)).ReturnsAsync(allSubjects);
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetSubjectsAsync(false)).ReturnsAsync(allSubjects);
+            foreach (var entity in allSubjects)
+                studentReferenceDataRepositoryMock.Setup(s => s.GetSubjectGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
 
             code = "LDM.SUBJECTS";
             description = "Mapping of Subjects to Departments";
@@ -5548,6 +5577,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetCourseLevelsAsync()).ReturnsAsync(courseLevelCollection);
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetCourseLevelsAsync(true)).ReturnsAsync(courseLevelCollection);
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetCourseLevelsAsync(false)).ReturnsAsync(courseLevelCollection);
+            foreach (var entity in courseLevelCollection)
+                studentReferenceDataRepositoryMock.Setup(s => s.GetCourseLevelGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);            
 
             instructionalMethodCollection.Add(new Domain.Student.Entities.InstructionalMethod("9C3B805D-CFE6-483B-86C3-4C20562F8C15", "LG", "LG", false));
             instructionalMethodCollection.Add(new Domain.Student.Entities.InstructionalMethod("73244057-D1EC-4094-A0B7-DE602533E3A6", "30", "30", true));
@@ -5555,19 +5586,27 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetInstructionalMethodsAsync()).ReturnsAsync(instructionalMethodCollection);
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetInstructionalMethodsAsync(true)).ReturnsAsync(instructionalMethodCollection);
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetInstructionalMethodsAsync(false)).ReturnsAsync(instructionalMethodCollection);
-
+            foreach (var entity in instructionalMethodCollection)
+                studentReferenceDataRepositoryMock.Setup(s => s.GetInstructionalMethodGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
+            
             academicLevelCollection.Add(new Domain.Student.Entities.AcademicLevel("9C3B805D-CFE6-483B-86C3-4C20562F8C15", "CE", "Continuing Education"));
             academicLevelCollection.Add(new Domain.Student.Entities.AcademicLevel("73244057-D1EC-4094-A0B7-DE602533E3A6", "GR", "Graduate"));
             academicLevelCollection.Add(new Domain.Student.Entities.AcademicLevel("1df164eb-8178-4321-a9f7-24f12d3991d8", "UG", "Undergraduate"));
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetAcademicLevelsAsync()).ReturnsAsync(academicLevelCollection);
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetAcademicLevelsAsync(true)).ReturnsAsync(academicLevelCollection);
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetAcademicLevelsAsync(false)).ReturnsAsync(academicLevelCollection);
+            foreach (var entity in academicLevelCollection)
+                studentReferenceDataRepositoryMock.Setup(s => s.GetAcademicLevelsGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
 
             allGradeScheme = await new TestStudentReferenceDataRepository().GetGradeSchemesAsync();
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetGradeSchemesAsync()).ReturnsAsync(allGradeScheme);
+            foreach (var entity in allGradeScheme)
+                studentReferenceDataRepositoryMock.Setup(s => s.GetGradeSchemeGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
 
             allDepartments = new TestDepartmentRepository().Get();
             referenceDataRepositoryMock.Setup(repo => repo.DepartmentsAsync()).ReturnsAsync(allDepartments);
+            foreach (var entity in allDepartments)
+                referenceDataRepositoryMock.Setup(s => s.GetDepartments2GuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
             academicDepartments = new List<Ellucian.Colleague.Domain.Student.Entities.AcademicDepartment>() 
                                         { 
                                             new Ellucian.Colleague.Domain.Student.Entities.AcademicDepartment("f84e8e9d-1254-4331-a0a5-04d494a6eaa8", "HIST", "History", true) 
@@ -5575,13 +5614,16 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetAcademicDepartmentsAsync()).ReturnsAsync(academicDepartments);
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetAcademicDepartmentsAsync(true)).ReturnsAsync(academicDepartments);
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetAcademicDepartmentsAsync(false)).ReturnsAsync(academicDepartments);
-
+  
             creditCategoryCollection.Add(new Domain.Student.Entities.CreditCategory("9C3B805D-CFE6-483B-86C3-4C20562F8C15", "I", "Institutional", Domain.Student.Entities.CreditType.Institutional));
             creditCategoryCollection.Add(new Domain.Student.Entities.CreditCategory("73244057-D1EC-4094-A0B7-DE602533E3A6", "C", "Continuing Education", Domain.Student.Entities.CreditType.ContinuingEducation));
             creditCategoryCollection.Add(new Domain.Student.Entities.CreditCategory("1df164eb-8178-4321-a9f7-24f12d3991d8", "T", "Transfer Credit", Domain.Student.Entities.CreditType.Transfer));
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetCreditCategoriesAsync()).ReturnsAsync(creditCategoryCollection);
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetCreditCategoriesAsync(true)).ReturnsAsync(creditCategoryCollection);
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetCreditCategoriesAsync(false)).ReturnsAsync(creditCategoryCollection);
+            foreach (var entity in creditCategoryCollection)
+                studentReferenceDataRepositoryMock.Setup(s => s.GetCreditCategoriesGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
+
             referenceDataRepositoryMock.Setup(repo => repo.GetDepartmentsAsync(It.IsAny<bool>())).Returns(Task.FromResult(allDepartments));           
         }
 
@@ -6059,6 +6101,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         private async Task BuildMocksForCourseCreateUpdate()
         {
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetSubjectsAsync(It.IsAny<bool>())).Returns(Task.FromResult(allSubjects));
+            foreach (var entity in allSubjects)
+                studentReferenceDataRepositoryMock.Setup(s => s.GetSubjectGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
 
             code = "LDM.SUBJECTS";
             description = "Mapping of Subjects to Departments";
@@ -6105,6 +6149,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetCourseLevelsAsync()).ReturnsAsync(courseLevelCollection);
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetCourseLevelsAsync(true)).ReturnsAsync(courseLevelCollection);
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetCourseLevelsAsync(false)).ReturnsAsync(courseLevelCollection);
+            foreach (var entity in courseLevelCollection)
+                studentReferenceDataRepositoryMock.Setup(s => s.GetCourseLevelGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
 
             instructionalMethodCollection.Add(new Domain.Student.Entities.InstructionalMethod("9C3B805D-CFE6-483B-86C3-4C20562F8C15", "LG", "LG", false));
             instructionalMethodCollection.Add(new Domain.Student.Entities.InstructionalMethod("73244057-D1EC-4094-A0B7-DE602533E3A6", "30", "30", true));
@@ -6112,6 +6158,9 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetInstructionalMethodsAsync()).ReturnsAsync(instructionalMethodCollection);
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetInstructionalMethodsAsync(true)).ReturnsAsync(instructionalMethodCollection);
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetInstructionalMethodsAsync(false)).ReturnsAsync(instructionalMethodCollection);
+            foreach (var entity in instructionalMethodCollection)
+                studentReferenceDataRepositoryMock.Setup(s => s.GetInstructionalMethodGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
+
 
             academicLevelCollection.Add(new Domain.Student.Entities.AcademicLevel("9C3B805D-CFE6-483B-86C3-4C20562F8C15", "CE", "Continuing Education"));
             academicLevelCollection.Add(new Domain.Student.Entities.AcademicLevel("73244057-D1EC-4094-A0B7-DE602533E3A6", "GR", "Graduate"));
@@ -6119,14 +6168,20 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetAcademicLevelsAsync()).ReturnsAsync(academicLevelCollection);
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetAcademicLevelsAsync(true)).ReturnsAsync(academicLevelCollection);
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetAcademicLevelsAsync(false)).ReturnsAsync(academicLevelCollection);
+            foreach (var entity in academicLevelCollection)
+                studentReferenceDataRepositoryMock.Setup(s => s.GetAcademicLevelsGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
 
             allGradeScheme = await new TestStudentReferenceDataRepository().GetGradeSchemesAsync();
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetGradeSchemesAsync()).ReturnsAsync(allGradeScheme);
+            foreach (var entity in allGradeScheme)
+                studentReferenceDataRepositoryMock.Setup(s => s.GetGradeSchemeGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
 
             allDepartments = new TestDepartmentRepository().Get();
             referenceDataRepositoryMock.Setup(repo => repo.DepartmentsAsync()).ReturnsAsync(allDepartments);
             referenceDataRepositoryMock.Setup(repo => repo.GetDepartmentsAsync(true)).ReturnsAsync(allDepartments);
             referenceDataRepositoryMock.Setup(repo => repo.GetDepartmentsAsync(false)).ReturnsAsync(allDepartments);
+            foreach (var entity in allDepartments)
+                referenceDataRepositoryMock.Setup(s => s.GetDepartments2GuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
             academicDepartments = new List<Ellucian.Colleague.Domain.Student.Entities.AcademicDepartment>() 
                                         { 
                                             new Ellucian.Colleague.Domain.Student.Entities.AcademicDepartment("f84e8e9d-1254-4331-a0a5-04d494a6eaa8", "HIST", "History", true) 
@@ -6139,6 +6194,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             creditCategoryCollection.Add(new Domain.Student.Entities.CreditCategory("73244057-D1EC-4094-A0B7-DE602533E3A6", "C", "Continuing Education", Domain.Student.Entities.CreditType.ContinuingEducation));
             creditCategoryCollection.Add(new Domain.Student.Entities.CreditCategory("1df164eb-8178-4321-a9f7-24f12d3991d8", "T", "Transfer Credit", Domain.Student.Entities.CreditType.Transfer));
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetCreditCategoriesAsync(It.IsAny<bool>())).ReturnsAsync(creditCategoryCollection);
+            foreach (var entity in creditCategoryCollection)
+                studentReferenceDataRepositoryMock.Setup(s => s.GetCreditCategoriesGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
         }
 
         [TestCleanup]
@@ -6332,6 +6389,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         private async Task BuildMocksForCourseCreateUpdate()
         {
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetSubjectsAsync(It.IsAny<bool>())).Returns(Task.FromResult(allSubjects));
+            foreach (var entity in allSubjects)
+                studentReferenceDataRepositoryMock.Setup(s => s.GetSubjectGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
 
             code = "LDM.SUBJECTS";
             description = "Mapping of Subjects to Departments";
@@ -6380,17 +6439,23 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetCourseLevelsAsync()).ReturnsAsync(courseLevelCollection);
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetCourseLevelsAsync(true)).ReturnsAsync(courseLevelCollection);
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetCourseLevelsAsync(false)).ReturnsAsync(courseLevelCollection);
+            foreach (var entity in courseLevelCollection)
+                studentReferenceDataRepositoryMock.Setup(s => s.GetCourseLevelGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
 
             instructionalMethodCollection.Add(new Domain.Student.Entities.InstructionalMethod("9C3B805D-CFE6-483B-86C3-4C20562F8C15", "LG", "LG", false));
             instructionalMethodCollection.Add(new Domain.Student.Entities.InstructionalMethod("73244057-D1EC-4094-A0B7-DE602533E3A6", "30", "30", true));
             instructionalMethodCollection.Add(new Domain.Student.Entities.InstructionalMethod("1df164eb-8178-4321-a9f7-24f12d3991d8", "04", "04", false));
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetInstructionalMethodsAsync()).ReturnsAsync(instructionalMethodCollection);
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetInstructionalMethodsAsync(It.IsAny<bool>())).ReturnsAsync(instructionalMethodCollection);
+            foreach (var entity in instructionalMethodCollection)
+                studentReferenceDataRepositoryMock.Setup(s => s.GetInstructionalMethodGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
 
             administrativeInstructionalMethodCollection.Add(new Domain.Student.Entities.AdministrativeInstructionalMethod("9C3B805D-CFE6-483B-86C3-4C20562F8C15", "LG", "LG", "D8CED21A-F220-4F79-9544-706E13B51972"));
             administrativeInstructionalMethodCollection.Add(new Domain.Student.Entities.AdministrativeInstructionalMethod("73244057-D1EC-4094-A0B7-DE602533E3A6", "30", "30", "705F052C-7B63-492D-A7CA-5769CE003274"));
             administrativeInstructionalMethodCollection.Add(new Domain.Student.Entities.AdministrativeInstructionalMethod("1df164eb-8178-4321-a9f7-24f12d3991d8", "04", "04", "67B0664B-0650-4C88-ACC6-FB0C689CB519"));
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetAdministrativeInstructionalMethodsAsync(It.IsAny<bool>())).ReturnsAsync(administrativeInstructionalMethodCollection);
+            foreach (var entity in academicLevelCollection)
+                studentReferenceDataRepositoryMock.Setup(s => s.GetAcademicLevelsGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
 
             academicLevelCollection.Add(new Domain.Student.Entities.AcademicLevel("9C3B805D-CFE6-483B-86C3-4C20562F8C15", "CE", "Continuing Education"));
             academicLevelCollection.Add(new Domain.Student.Entities.AcademicLevel("73244057-D1EC-4094-A0B7-DE602533E3A6", "GR", "Graduate"));
@@ -6398,14 +6463,21 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetAcademicLevelsAsync()).ReturnsAsync(academicLevelCollection);
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetAcademicLevelsAsync(true)).ReturnsAsync(academicLevelCollection);
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetAcademicLevelsAsync(false)).ReturnsAsync(academicLevelCollection);
+            foreach (var entity in academicLevelCollection)
+                studentReferenceDataRepositoryMock.Setup(s => s.GetAcademicLevelsGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
 
             allGradeScheme = await new TestStudentReferenceDataRepository().GetGradeSchemesAsync();
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetGradeSchemesAsync()).ReturnsAsync(allGradeScheme);
+            foreach (var entity in allGradeScheme)
+                studentReferenceDataRepositoryMock.Setup(s => s.GetGradeSchemeGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
 
             allDepartments = new TestDepartmentRepository().Get();
             referenceDataRepositoryMock.Setup(repo => repo.DepartmentsAsync()).ReturnsAsync(allDepartments);
             referenceDataRepositoryMock.Setup(repo => repo.GetDepartmentsAsync(true)).ReturnsAsync(allDepartments);
             referenceDataRepositoryMock.Setup(repo => repo.GetDepartmentsAsync(false)).ReturnsAsync(allDepartments);
+            foreach (var entity in allDepartments)
+                referenceDataRepositoryMock.Setup(s => s.GetDepartments2GuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
+
             academicDepartments = new List<Ellucian.Colleague.Domain.Student.Entities.AcademicDepartment>()
                                         {
                                             new Ellucian.Colleague.Domain.Student.Entities.AcademicDepartment("f84e8e9d-1254-4331-a0a5-04d494a6eaa8", "HIST", "History", true)
@@ -6418,25 +6490,34 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             creditCategoryCollection.Add(new Domain.Student.Entities.CreditCategory("73244057-D1EC-4094-A0B7-DE602533E3A6", "C", "Continuing Education", Domain.Student.Entities.CreditType.ContinuingEducation));
             creditCategoryCollection.Add(new Domain.Student.Entities.CreditCategory("1df164eb-8178-4321-a9f7-24f12d3991d8", "T", "Transfer Credit", Domain.Student.Entities.CreditType.Transfer));
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetCreditCategoriesAsync(It.IsAny<bool>())).ReturnsAsync(creditCategoryCollection);
+            foreach (var entity in creditCategoryCollection)
+                studentReferenceDataRepositoryMock.Setup(s => s.GetCreditCategoriesGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
 
             courseTypes = new List<Ellucian.Colleague.Domain.Student.Entities.CourseType>()
             {
                 new Domain.Student.Entities.CourseType("9C3B805D-CFE6-483B-86C3-4C20562F8C15", "MUS", "Descr MUS", true)
             };
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetCourseTypesAsync(It.IsAny<bool>())).ReturnsAsync(courseTypes);
+            foreach (var entity in courseTypes)
+                studentReferenceDataRepositoryMock.Setup(s => s.GetCourseTypeGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
 
             topicCodes = new List<Ellucian.Colleague.Domain.Student.Entities.TopicCode>()
             {
                 new Domain.Student.Entities.TopicCode("9C3B805D-CFE6-483B-86C3-4C20562F8C15", "MUS", "Descr MUS")
             };
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetTopicCodesAsync(It.IsAny<bool>())).ReturnsAsync(topicCodes);
+            foreach (var entity in topicCodes)
+                studentReferenceDataRepositoryMock.Setup(s => s.GetTopicCodeGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
 
             courseTitleTypes = new List<Domain.Student.Entities.CourseTitleType>()
             {
-                new Domain.Student.Entities.CourseTitleType("9C3B805D-CFE6-483B-86C3-4C20562F8C15", "short", "Descr"),
-                new Domain.Student.Entities.CourseTitleType("8C3B805D-CFE6-483B-86C3-4C20562F8C15", "long", "Descr")
+                new Domain.Student.Entities.CourseTitleType("9C3B805D-CFE6-483B-86C3-4C20562F8C15", "SHORT", "Descr"),
+                new Domain.Student.Entities.CourseTitleType("8C3B805D-CFE6-483B-86C3-4C20562F8C15", "LONG", "Descr")
             };
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetCourseTitleTypesAsync(It.IsAny<bool>())).ReturnsAsync(courseTitleTypes);
+            foreach (var entity in courseTitleTypes)
+                studentReferenceDataRepositoryMock.Setup(s => s.GetCourseTitleTypeGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
+
 
             courseStatuses = new List<Domain.Student.Entities.CourseStatuses>()
             {
@@ -6454,6 +6535,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 }
             };
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetCourseStatusesAsync(It.IsAny<bool>())).ReturnsAsync(courseStatuses);
+            foreach (var entity in courseStatuses)
+                studentReferenceDataRepositoryMock.Setup(s => s.GetCourseStatusGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
 
             divisions = new List<Division>()
             {
@@ -7009,7 +7092,6 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
         public async Task CourseService_UpdateCourse5Async_CreditIncrementNull()
         {
             var entityCourse = new TestCourseRepository().Hist100;
@@ -7022,6 +7104,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                  .ReturnsAsync(newEntityCourseForCreate);
 
             var result = await courseService.GetCourseByGuid5Async(newEntityCourseForCreate.Guid);
+
             result.Credits = new List<Credit3>()
             {
                 new Credit3() { CreditCategory = new CreditIdAndTypeProperty2()
@@ -7034,13 +7117,19 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 },
                 new Credit3() { CreditCategory = null, Measure = CreditMeasure2.CEU }
             };
-
-            //Act
-            var resultCreate = await courseService.UpdateCourse5Async(result, false);
+            try
+            {
+                await courseService.UpdateCourse5Async(result, false);
+            }
+            catch (ArgumentException ex)
+            {
+                var message = "Credit Category is required if Credits are defined. \r\nParameter name: credit.creditCategory";
+                Assert.AreEqual(ex.Message, message);
+            }
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
+       
         public async Task CourseService_UpdateCourse5Async_CreditMaximumNull()
         {
             var entityCourse = new TestCourseRepository().Hist100;
@@ -7066,8 +7155,13 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 new Credit3() { CreditCategory = null, Measure = CreditMeasure2.CEU }
             };
 
-            //Act
-            var resultCreate = await courseService.UpdateCourse5Async(result, false);
+            try { await courseService.UpdateCourse5Async(result, false);
+            }
+            catch (ArgumentException ex)
+            {
+                var message = "Credit Maximum is required when Credit Increment exists. \r\nParameter name: credit.increment";
+                Assert.AreEqual(ex.Message, message);
+            }
         }
 
         [TestMethod]
@@ -7837,8 +7931,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             result.Credits = null;
             var courseTitleTypesTemp = new List<Domain.Student.Entities.CourseTitleType>()
             {
-                new Domain.Student.Entities.CourseTitleType("9C3B805D-CFE6-483B-86C3-4C20562F8C15", "shortt", "Descr"),
-                new Domain.Student.Entities.CourseTitleType("8C3B805D-CFE6-483B-86C3-4C20562F8C15", "long", "Descr")
+                new Domain.Student.Entities.CourseTitleType("9C3B805D-CFE6-483B-86C3-4C20562F8C15", "SHORT", "Descr"),
+                new Domain.Student.Entities.CourseTitleType("8C3B805D-CFE6-483B-86C3-4C20562F8C15", "LONG", "Descr")
             };
             studentReferenceDataRepositoryMock.Setup(repo => repo.GetCourseTitleTypesAsync(It.IsAny<bool>())).ReturnsAsync(courseTitleTypesTemp);
 
@@ -10105,6 +10199,149 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             var course = catalogCourses.Where(c => c.Id == "46").First();
             Assert.AreEqual(course.LocationCycleRestrictions.Count(), course2Dto.LocationCycleRestrictions.Count());
 
+        }
+
+        [TestMethod]
+        public async Task DayOfWeekFilterCorrectlyLimitsSearchResults_WithSectionsHavePrimarySectionMeetings()
+        {
+            //update few sections to have PrimarySectionMeetings
+            List<Ellucian.Colleague.Domain.Student.Entities.Section> primaryMeetingSections = (await (new TestSectionRepository().BuildSectionsWithPrimaryScetionMeetingsAsync())).ToList();
+            var newList = allSections.ToList();
+            newList.AddRange(primaryMeetingSections);
+            sectionRepoMock.Setup(repo => repo.GetRegistrationSectionsAsync(regTerms)).Returns(Task.FromResult(newList.AsEnumerable()));
+
+            // Arrange - filter sections using day of week
+            // Passed in and out of page as string 0 through 6 (Sun - Sat)
+            var daysOfWeek = new List<string>() { "1", "3" }; // Mon, Wed
+            var criteria = new CourseSearchCriteria() { DaysOfWeek = daysOfWeek };
+            var coursePage = await courseService.Search2Async(criteria, Int16.MaxValue, 1);
+            Assert.IsTrue(coursePage.CurrentPageItems.SelectMany(c => c.MatchingSectionIds).Contains("997-SEC-WITH-PRIM-MTNGS"));
+            Assert.IsTrue(coursePage.CurrentPageItems.SelectMany(c => c.MatchingSectionIds).Contains("999-SEC-WITH-PRIM-MTNGS"));
+
+            // Assert multiple DayOfWeek filters exist
+            Assert.IsTrue(coursePage.DaysOfWeek.Count() == 4); // some courses have MWTH
+                                                               // Assert Selected flag is set properly 
+            Assert.IsTrue(coursePage.DaysOfWeek.Where(c => c.Selected == true).Count() == 2);
+            Assert.IsTrue(coursePage.DaysOfWeek.Where(c => c.Selected == true).Select(x => x.Value).First() == "1");
+
+            // Check Monday course count
+            Assert.IsTrue(coursePage.DaysOfWeek.Where(c => c.Selected == true).Select(x => x.Count).First() >= 25);
+            // Check Wednesday course count
+            Assert.IsTrue(coursePage.DaysOfWeek.Where(c => c.Value == "3").Select(x => x.Count).First() >= 25);
+        }
+
+        [TestMethod]
+       
+        public async Task TimeFilterCorrectlyLimitsSearchResults_WithPrimarySectionMeetings()
+        {
+
+            //update few sections to have PrimarySectionMeetings
+            List<Ellucian.Colleague.Domain.Student.Entities.Section> primaryMeetingSections = (await (new TestSectionRepository().BuildSectionsWithPrimaryScetionMeetingsAsync())).ToList();
+            List<Ellucian.Colleague.Domain.Student.Entities.Section> newList = new List< Ellucian.Colleague.Domain.Student.Entities.Section > ();
+
+            //add few sections that have section.Meetings AND NO PrimaryscetionMeetings
+            newList.Add(allSections.ToList()[0]); //no meetings
+            newList.Add(allSections.ToList()[1]); //no meetings
+            newList.Add(allSections.ToList()[2]);//no meetings
+            newList.Add(allSections.ToList()[3]); // 9-9:50 am
+            newList.Add(allSections.ToList()[4]);//1am - 1:50am 
+            newList.Add(allSections.ToList()[5]); //11-11:50 am  and 12am  to no end date
+
+
+
+            newList.AddRange(primaryMeetingSections);
+            sectionRepoMock.Setup(repo => repo.GetRegistrationSectionsAsync(regTerms)).Returns(Task.FromResult(newList.AsEnumerable()));
+            // Arrange - filter sections using time range
+            var earliestTimeSpan = new TimeSpan(09, 00, 00);
+            var latestTimeSpan = new TimeSpan(11, 00, 00);
+            var criteria = new CourseSearchCriteria() { EarliestTime = (int)earliestTimeSpan.TotalMinutes, LatestTime = (int)latestTimeSpan.TotalMinutes };
+            // Act - call course search
+            var coursePage = await courseService.Search2Async(criteria, Int16.MaxValue, 1);
+            Assert.IsTrue(coursePage.CurrentPageItems.SelectMany(c => c.MatchingSectionIds).Contains("999-SEC-WITH-PRIM-MTNGS"));
+                 Assert.IsFalse(coursePage.CurrentPageItems.SelectMany(c => c.MatchingSectionIds).Contains("997-SEC-WITH-PRIM-MTNGS"));
+            Assert.AreEqual(2,coursePage.CurrentPageItems.Count());
+
+
+
+            // Verify that the sections included take place during the specified time span
+            // foreach (var item in coursePage.CurrentPageItems)
+            // {
+            // Get each section found for this course
+            var courseSections = (from sectionId in coursePage.CurrentPageItems.SelectMany(c => c.MatchingSectionIds)
+                                      join sec in newList
+                                      on sectionId equals sec.Id into joinSections
+                                      from section in joinSections
+                                      select section).ToList();
+                var timeCollection = (from sec in courseSections
+                                      from mtg in sec.Meetings
+                                      select new { mtg.StartTime, mtg.EndTime, sec.Id }).Union
+                                     (from sec in courseSections
+                                      from mtg in sec.PrimarySectionMeetings
+                                      select new { mtg.StartTime, mtg.EndTime, sec.Id });
+                foreach (var mtgTime in timeCollection)
+                {
+                    // If no start/end time given, don't try to compare against the criteria earliest/latest time
+                    if (mtgTime.StartTime != null)
+                    {
+                        DateTimeOffset startTime = mtgTime.StartTime.GetValueOrDefault();
+                        Assert.IsTrue(startTime.DateTime.TimeOfDay.TotalMinutes >= criteria.EarliestTime);
+                    }
+                    if (mtgTime.EndTime != null)
+                    {
+                        DateTimeOffset endTime = mtgTime.EndTime.GetValueOrDefault();
+                        Assert.IsTrue(endTime.DateTime.TimeOfDay.TotalMinutes <= criteria.LatestTime);
+                    }
+                }
+        }
+
+        [TestMethod]
+        public async Task TimeFilterCorrectlyLimitsSearchResults_WithOnlyPrimarySectionMeetings()
+        {
+
+            //update few sections to have PrimarySectionMeetings
+            List<Ellucian.Colleague.Domain.Student.Entities.Section> primaryMeetingSections = (await (new TestSectionRepository().BuildSectionsWithPrimaryScetionMeetingsAsync())).ToList();
+           // var newList = allSections.ToList();
+           // newList.AddRange(primaryMeetingSections);
+            sectionRepoMock.Setup(repo => repo.GetRegistrationSectionsAsync(regTerms)).Returns(Task.FromResult(primaryMeetingSections.AsEnumerable()));
+            // Arrange - filter sections using time range
+            var earliestTimeSpan = new TimeSpan(09, 00, 00);
+            var latestTimeSpan = new TimeSpan(12, 00, 00);
+            var criteria = new CourseSearchCriteria() { EarliestTime = (int)earliestTimeSpan.TotalMinutes, LatestTime = (int)latestTimeSpan.TotalMinutes };
+            // Act - call course search
+#pragma warning disable 618
+            var coursePage = await courseService.Search2Async(criteria, Int16.MaxValue, 1);
+#pragma warning restore 618
+            Assert.IsTrue(coursePage.CurrentPageItems.SelectMany(c => c.MatchingSectionIds).Contains("999-SEC-WITH-PRIM-MTNGS"));
+            Assert.IsTrue(coursePage.CurrentPageItems.SelectMany(c => c.MatchingSectionIds).Contains("997-SEC-WITH-PRIM-MTNGS"));
+
+
+            // Verify that the sections included take place during the specified time span
+            // foreach (var item in coursePage.CurrentPageItems)
+            // {
+            // Get each section found for this course
+            var courseSections = (from sectionId in coursePage.CurrentPageItems.SelectMany(c => c.MatchingSectionIds)
+                                  join sec in primaryMeetingSections
+                                  on sectionId equals sec.Id into joinSections
+                                  from section in joinSections
+                                  select section).ToList();
+            var timeCollection = (from sec in courseSections
+                                  from mtg in sec.PrimarySectionMeetings
+                                  select new { mtg.StartTime, mtg.EndTime, sec.Id });
+                                 
+            foreach (var mtgTime in timeCollection)
+            {
+                // If no start/end time given, don't try to compare against the criteria earliest/latest time
+                if (mtgTime.StartTime != null)
+                {
+                    DateTimeOffset startTime = mtgTime.StartTime.GetValueOrDefault();
+                    Assert.IsTrue(startTime.DateTime.TimeOfDay.TotalMinutes >= criteria.EarliestTime);
+                }
+                if (mtgTime.EndTime != null)
+                {
+                    DateTimeOffset endTime = mtgTime.EndTime.GetValueOrDefault();
+                    Assert.IsTrue(endTime.DateTime.TimeOfDay.TotalMinutes <= criteria.LatestTime);
+                }
+            }
         }
 
 

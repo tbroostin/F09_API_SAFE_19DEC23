@@ -12,5 +12,6 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         Task<IEnumerable<NonCourse>> GetAptitudeAssessmentsAsync(bool bypassCache);
         Task<Dictionary<string, string>> GetAptitudeAssessmentGuidsAsync(IEnumerable<string> aptitudeAssessmentKeys);
         Task<NonCourse> GetAptitudeAssessmentByIdAsync(string guid);
+        Task<string> GetAptitudeAssessmentsGuidAsync(string code);
     }
 }

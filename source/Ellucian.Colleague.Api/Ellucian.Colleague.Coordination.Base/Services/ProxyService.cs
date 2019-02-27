@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using System.Collections.Generic;
@@ -116,7 +116,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 throw new ArgumentNullException("id");
             }
-            if(!CurrentUser.IsPerson(id))
+            if (!CurrentUser.IsPerson(id))
             {
                 throw new PermissionsException("User does not have sufficient privileges to retrieve proxy access permissions for person " + id);
             }
@@ -125,7 +125,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             var adapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.ProxyUser, ProxyUser>();
 
             var users = await _proxyRepository.GetUserProxyPermissionsAsync(id);
-            foreach(var user in users)
+            foreach (var user in users)
             {
                 dtos.Add(adapter.MapToType(user));
             }
@@ -228,6 +228,15 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             if (user == null)
             {
                 throw new ArgumentNullException("user");
+            }
+            var proxyConfig = await _proxyRepository.GetProxyConfigurationAsync();
+            if (proxyConfig == null)
+            {
+                throw new Exception("Unable to create proxy user due to missing proxy configuration.");
+            }
+            if (!proxyConfig.CanAddOtherUsers)
+            {
+                throw new Exception("Unable to create proxy user. Feature disabled in proxy configuration settings.");
             }
             var entAdapter = _adapterRegistry.GetAdapter<Dtos.Base.PersonProxyUser, Domain.Base.Entities.PersonProxyUser>();
             var dtoAdapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.PersonProxyUser, Dtos.Base.PersonProxyUser>();

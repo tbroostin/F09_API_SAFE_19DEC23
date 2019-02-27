@@ -59,10 +59,18 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
         }
 
         [TestMethod]
-        public void PersonAlt_EqualsSameId_VerifyTrue()
+        public void PersonAlt_EqualsSameIdDifferentType_VerifyFalse()
         {
             var target = new PersonAlt(personAltId, "TEST");
             var target2 = new PersonAlt(personAltId, "TEST2");
+            Assert.IsFalse(target.Equals(target2));
+        }
+
+        [TestMethod]
+        public void PersonAlt_EqualsSameIdSameType_VerifyTrue()
+        {
+            var target = new PersonAlt(personAltId, "TEST");
+            var target2 = new PersonAlt(personAltId, "TEST");
             Assert.IsTrue(target.Equals(target2));
         }
 

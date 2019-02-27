@@ -23,6 +23,7 @@ using Ellucian.Web.Http;
 using Ellucian.Web.Http.ModelBinding;
 using System.Web.Http.ModelBinding;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Colleague.Domain.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.Base
 {
@@ -77,7 +78,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                     page = new Paging(200, 0);
                 }
 
-                var pageOfItems = await _personHoldsService.GetPersonHoldsAsync(page.Offset, page.Limit);
+                var pageOfItems = await _personHoldsService.GetPersonHoldsAsync(page.Offset, page.Limit, bypassCache);
 
                 AddEthosContextProperties(await _personHoldsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                               await _personHoldsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -171,7 +172,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                     return new List<Dtos.PersonHold>();
                 }
 
-                var personHolds = await _personHoldsService.GetPersonHoldsAsync(person);
+                var personHolds = await _personHoldsService.GetPersonHoldsAsync(person, bypassCache);
 
                 AddEthosContextProperties(await _personHoldsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                               await _personHoldsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -377,6 +378,11 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (Exception e)
             {

@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Tests.UserFactories;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
@@ -14,6 +14,7 @@ using Moq;
 using PdfSharp.Pdf;
 using slf4net;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -25,11 +26,13 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
     {
         #region Initialize and Cleanup
         private HumanResourcesTaxFormPdfService service = null;
+
         private TestTaxFormPdfDataRepository TestPdfDataRepository;
         private Mock<IHumanResourcesTaxFormPdfDataRepository> mockTaxFormPdfDataRepository;
         private Mock<IPdfSharpRepository> mockPdfSharpRepository;
         private ICurrentUserFactory currentUserFactory;
-        private string personId = "0000001";
+
+        private string personId = "000001";
         private string fakeRdlcPath = "fakePath";
         private string exceptionString = "exception";
 
@@ -44,6 +47,11 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 return Task.FromResult(TestPdfDataRepository.GetW2PdfAsync(personId, recordId));
             });
 
+            mockTaxFormPdfDataRepository.Setup<Task<FormW2PdfData>>(rep => rep.GetW2PdfAsync("000002", "2015")).Returns<string, string>((personId, recordId) =>
+            {
+                return Task.FromResult(new FormW2PdfData("2015", "12-345678", "000-00-0001") { EmployeeId = "000003" });
+            });
+
             // Mock to throw exception
             mockTaxFormPdfDataRepository.Setup<Task<FormW2PdfData>>(rep => rep.GetW2PdfAsync(It.IsAny<string>(), exceptionString)).Returns<string, string>((personId, recordId) =>
             {
@@ -53,6 +61,11 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             mockTaxFormPdfDataRepository.Setup<Task<Form1095cPdfData>>(rep => rep.Get1095cPdfAsync(It.IsAny<string>(), It.IsAny<string>())).Returns<string, string>((personId, recordId) =>
             {
                 return Task.FromResult(TestPdfDataRepository.Get1095cPdfAsync(personId, recordId));
+            });
+
+            mockTaxFormPdfDataRepository.Setup<Task<Form1095cPdfData>>(rep => rep.Get1095cPdfAsync("000002", "2015")).Returns<string, string>((personId, recordId) =>
+            {
+                return Task.FromResult(new Form1095cPdfData("2015", "12-345678", "000-00-0001") { EmployeeId = "000003" });
             });
 
             // Mock to throw exception
@@ -105,88 +118,97 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
         #endregion
 
-        #region GetW2TaxFormData Tests
+        #region GetW2TaxFormDataAsync Tests
+
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
-        public async Task GetW2TaxFormData_NullPersonId()
+        public async Task GetW2TaxFormDataAsync_NullPersonId()
         {
-            var pdfData = await service.GetW2TaxFormData(null, "1");
+            var pdfData = await service.GetW2TaxFormDataAsync(null, "1");
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
-        public async Task GetW2TaxFormData_EmptyPersonId()
+        public async Task GetW2TaxFormDataAsync_EmptyPersonId()
         {
-            var pdfData = await service.GetW2TaxFormData("", "1");
+            var pdfData = await service.GetW2TaxFormDataAsync("", "1");
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
-        public async Task GetW2TaxFormData_NullRecordId()
+        public async Task GetW2TaxFormDataAsync_NullRecordId()
         {
-            var pdfData = await service.GetW2TaxFormData(personId, null);
+            var pdfData = await service.GetW2TaxFormDataAsync(personId, null);
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
-        public async Task GetW2TaxFormData_EmptyRecordId()
+        public async Task GetW2TaxFormDataAsync_EmptyRecordId()
         {
-            var pdfData = await service.GetW2TaxFormData(personId, "");
+            var pdfData = await service.GetW2TaxFormDataAsync(personId, "");
         }
 
         [TestMethod]
         [ExpectedException(typeof(PermissionsException))]
-        public async Task GetW2TaxFormData_PersonId_DoesNotMatch_CurrentUser()
+        public async Task GetW2TaxFormDataAsync_PersonId_MissingPermission()
         {
-            var pdfData = await service.GetW2TaxFormData("2", "1");
+            BuildTaxFormPdfService(false, true, true);
+            var pdfData = await service.GetW2TaxFormDataAsync("2", "1");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task GetW2TaxFormDataAsync_PersonId_DoesNotMatch_CurrentUser()
+        {
+            var pdfData = await service.GetW2TaxFormDataAsync("000002", "2015");
         }
 
         [TestMethod]
         [ExpectedException(typeof(Exception))]
-        public async Task GetW2TaxFormData_RepositoryThrowsException()
+        public async Task GetW2TaxFormDataAsync_RepositoryThrowsException()
         {
-            var pdfData = await service.GetW2TaxFormData(personId, exceptionString);
+            var pdfData = await service.GetW2TaxFormDataAsync(personId, exceptionString);
         }
 
         [TestMethod]
-        public async Task GetW2TaxFormData_Success_2015()
+        public async Task GetW2TaxFormDataAsync_Success_2015()
         {
-            var pdfData = await service.GetW2TaxFormData(personId, "2015");
+            var pdfData = await service.GetW2TaxFormDataAsync(personId, "2015");
             Assert.IsTrue(pdfData is FormW2PdfData);
         }
 
         [TestMethod]
-        public async Task GetW2TaxFormData_Success_2014()
+        public async Task GetW2TaxFormDataAsync_Success_2014()
         {
-            var pdfData = await service.GetW2TaxFormData(personId, "2014");
+            var pdfData = await service.GetW2TaxFormDataAsync(personId, "2014");
             Assert.IsTrue(pdfData is FormW2PdfData);
         }
 
         [TestMethod]
-        public async Task GetW2TaxFormData_Success_2013()
+        public async Task GetW2TaxFormDataAsync_Success_2013()
         {
-            var pdfData = await service.GetW2TaxFormData(personId, "2013");
+            var pdfData = await service.GetW2TaxFormDataAsync(personId, "2013");
             Assert.IsTrue(pdfData is FormW2PdfData);
         }
 
         [TestMethod]
-        public async Task GetW2TaxFormData_Success_2012()
+        public async Task GetW2TaxFormDataAsync_Success_2012()
         {
-            var pdfData = await service.GetW2TaxFormData(personId, "2012");
+            var pdfData = await service.GetW2TaxFormDataAsync(personId, "2012");
             Assert.IsTrue(pdfData is FormW2PdfData);
         }
 
         [TestMethod]
-        public async Task GetW2TaxFormData_Success_2011()
+        public async Task GetW2TaxFormDataAsync_Success_2011()
         {
-            var pdfData = await service.GetW2TaxFormData(personId, "2011");
+            var pdfData = await service.GetW2TaxFormDataAsync(personId, "2011");
             Assert.IsTrue(pdfData is FormW2PdfData);
         }
 
         [TestMethod]
-        public async Task GetW2TaxFormData_Success_2010()
+        public async Task GetW2TaxFormDataAsync_Success_2010()
         {
-            var pdfData = await service.GetW2TaxFormData(personId, "2010");
+            var pdfData = await service.GetW2TaxFormDataAsync(personId, "2010");
             Assert.IsTrue(pdfData is FormW2PdfData);
         }
         #endregion
@@ -240,53 +262,61 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
         #endregion
 
-        #region Get1095cTaxFormData Tests
+        #region Get1095cTaxFormDataAsync Tests
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
-        public async Task Get1095cTaxFormData_NullPersonId()
+        public async Task Get1095cTaxFormDataAsync_NullPersonId()
         {
-            var pdfdata = await service.Get1095cTaxFormData(null, "1");
+            var pdfdata = await service.Get1095cTaxFormDataAsync(null, "1");
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
-        public async Task Get1095cTaxFormData_EmptyPersonId()
+        public async Task Get1095cTaxFormDataAsync_EmptyPersonId()
         {
-            var pdfdata = await service.Get1095cTaxFormData("", "1");
+            var pdfdata = await service.Get1095cTaxFormDataAsync("", "1");
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
-        public async Task Get1095cTaxFormData_NullRecordId()
+        public async Task Get1095cTaxFormDataAsync_NullRecordId()
         {
-            var pdfdata = await service.Get1095cTaxFormData(personId, null);
+            var pdfdata = await service.Get1095cTaxFormDataAsync(personId, null);
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
-        public async Task Get1095cTaxFormData_EmptyRecordId()
+        public async Task Get1095cTaxFormDataAsync_EmptyRecordId()
         {
-            var pdfdata = await service.Get1095cTaxFormData(personId, "");
+            var pdfdata = await service.Get1095cTaxFormDataAsync(personId, "");
         }
 
         [TestMethod]
         [ExpectedException(typeof(PermissionsException))]
-        public async Task Get1095cTaxFormData_PersonId_DoesNotMatch_CurrentUser()
+        public async Task Get1095cTaxFormDataAsync_PersonId_MissingPermission()
         {
-            var pdfdata = await service.Get1095cTaxFormData("2", "1");
+            BuildTaxFormPdfService(true, false, true);
+            var pdfData = await service.Get1095cTaxFormDataAsync(personId, "2015");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task Get1095cTaxFormDataAsync_PersonId_DoesNotMatch_CurrentUser()
+        { 
+            var pdfdata = await service.Get1095cTaxFormDataAsync("000002", "2015");
         }
 
         [TestMethod]
         [ExpectedException(typeof(Exception))]
-        public async Task Get1095cTaxFormData_RepositoryThrowsException()
+        public async Task Get1095cTaxFormDataAsync_RepositoryThrowsException()
         {
-            var pdfData = await service.Get1095cTaxFormData(personId, exceptionString);
+            var pdfData = await service.Get1095cTaxFormDataAsync(personId, exceptionString);
         }
 
         [TestMethod]
-        public async Task Get1095cTaxFormData_Success_2015()
+        public async Task Get1095cTaxFormDataAsync_Success_2015()
         {
-            var pdfdata = await service.Get1095cTaxFormData(personId, "2015");
+            var pdfdata = await service.Get1095cTaxFormDataAsync(personId, "2015");
             Assert.IsTrue(pdfdata is Form1095cPdfData);
         }
         #endregion
@@ -344,15 +374,44 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         #endregion
 
         #region Private methods and helper classes
-        private void BuildTaxFormPdfService()
-        {
-            // Set up the current user
-            currentUserFactory = new GenericUserFactory.UserFactory();
 
+        private void BuildTaxFormPdfService(bool isW2RoleRequired = true, bool is1095CRoleRequired = true, bool isT4RoleRequired = true)
+        {
             // We need the unit tests to be independent of "real" implementations of these classes,
             // so we use Moq to create mock implementations that are based on the same interfaces.
-            var roleRepository = new Mock<IRoleRepository>().Object;
+            var roleRepositoryMock = new Mock<IRoleRepository>();
             var loggerObject = new Mock<ILogger>().Object;
+
+            // Set up the current user
+            currentUserFactory = new GenericUserFactory.TaxInformationUserFactory();
+
+            var roles = new List<Domain.Entities.Role>();
+
+            if (isW2RoleRequired)
+            {
+                var role = new Domain.Entities.Role(1, "VIEW.W2");
+                role.AddPermission(new Domain.Entities.Permission("VIEW.W2"));
+                role.AddPermission(new Domain.Entities.Permission("VIEW.EMPLOYEE.W2"));
+                roles.Add(role);
+            }
+
+            if (is1095CRoleRequired)
+            {
+                var role = new Domain.Entities.Role(2, "VIEW.1095C");
+                role.AddPermission(new Domain.Entities.Permission("VIEW.1095C"));
+                role.AddPermission(new Domain.Entities.Permission("VIEW.EMPLOYEE.1095C"));
+                roles.Add(role);
+            }
+
+            if (isT4RoleRequired)
+            {
+                var role = new Domain.Entities.Role(3, "VIEW.T4");
+                role.AddPermission(new Domain.Entities.Permission("VIEW.T4"));
+                role.AddPermission(new Domain.Entities.Permission("VIEW.EMPLOYEE.T4"));
+                roles.Add(role);
+            }
+
+            roleRepositoryMock.Setup(r => r.Roles).Returns(roles);
 
             // Set up and mock the adapter, and setup the GetAdapter method.
             var adapterRegistry = new Mock<IAdapterRegistry>();
@@ -364,7 +423,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 this.mockPdfSharpRepository.Object,
                 adapterRegistry.Object,
                 currentUserFactory,
-                roleRepository,
+                roleRepositoryMock.Object,
                 loggerObject);
         }
         #endregion

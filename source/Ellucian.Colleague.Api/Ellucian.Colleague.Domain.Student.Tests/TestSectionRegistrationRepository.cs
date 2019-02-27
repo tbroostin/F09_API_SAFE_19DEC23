@@ -21,7 +21,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests
             {
                 Populate(); 
             }
-            var response = responses.Where(g => g.Id == guid).FirstOrDefault();
+            var response = responses.Where(g => g.Guid == guid).FirstOrDefault();
             return await Task.FromResult<SectionRegistrationResponse>(response);
         }
 
@@ -65,6 +65,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                 new MidTermGrade(5, "14", DateTime.Parse("11/9/2015"), "SBHOLE"),
                 new MidTermGrade(6, "16", DateTime.Parse("11/12/2015"), "SBHOLE"),
             };
+            response.StudentAcadCredKey = "123";
+            response.StudentCourseSecKey = "456";
             response.MidTermGrades = new List<MidTermGrade>();
             response.MidTermGrades.AddRange(midTermGrades);
 
@@ -80,6 +82,16 @@ namespace Ellucian.Colleague.Domain.Student.Tests
 
             //V7 changes
             response.AcademicLevel = "UG";
+            //V16.0.0
+            response.StatusDateTuple = new List<Tuple<string, DateTime?>>()
+            {
+                new Tuple<string, DateTime?>("1", DateTime.Today.Date),
+                new Tuple<string, DateTime?>("2", DateTime.Today.Date.AddDays(-1)),
+                new Tuple<string, DateTime?>("3", DateTime.Today.Date.AddDays(-3))
+            };
+            response.StatusCode = "Registered";
+            response.OverrideAcadPeriod = "2018/FA";
+            response.OverrideSite = "Site1";            
 
             return response;
         }
@@ -88,13 +100,13 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         {
             var statusItems = new List<Domain.Student.Entities.SectionRegistrationStatusItem>()
                 {
-                    new Ellucian.Colleague.Domain.Student.Entities.SectionRegistrationStatusItem("12d65fb1-1df7-405c-b0ef-47edd2371392", "Registered", "Registered" ),
-                    new Ellucian.Colleague.Domain.Student.Entities.SectionRegistrationStatusItem("45052d34-1e35-4f38-80f7-472dcb283c5c", "Registered", "Registered" ),
-                    new Ellucian.Colleague.Domain.Student.Entities.SectionRegistrationStatusItem("4102eac9-8646-4d64-bbe2-2164564b77d4", "NotRegistered", "Dropped" ),
-                    new Ellucian.Colleague.Domain.Student.Entities.SectionRegistrationStatusItem("5ce32cba-16e2-4c5e-9796-3d1b59610ec4", "NotRegistered", "Withdrawn" ),
-                    new Ellucian.Colleague.Domain.Student.Entities.SectionRegistrationStatusItem("358c8b40-a59d-48a9-ada9-215b3ee1aa83", "NotRegistered", "Withdrawn" ),
-                    new Ellucian.Colleague.Domain.Student.Entities.SectionRegistrationStatusItem("7cb6da1e-9e79-47b8-b226-8e3d161ea8ad", "Registered", "Registered" ),
-                    new Ellucian.Colleague.Domain.Student.Entities.SectionRegistrationStatusItem("88516505-d27f-45da-9529-8301a3a8aee7", "NotRegistered", "Dropped" )
+                    new Ellucian.Colleague.Domain.Student.Entities.SectionRegistrationStatusItem("12d65fb1-1df7-405c-b0ef-47edd2371392", "Registered", "Registered" ) { Status = new SectionRegistrationStatus() { RegistrationStatus = RegistrationStatus.Registered, SectionRegistrationStatusReason = RegistrationStatusReason.Registered } },
+                    new Ellucian.Colleague.Domain.Student.Entities.SectionRegistrationStatusItem("45052d34-1e35-4f38-80f7-472dcb283c5c", "Registered", "Registered" ) { Status = new SectionRegistrationStatus() { RegistrationStatus = RegistrationStatus.Registered, SectionRegistrationStatusReason = RegistrationStatusReason.Registered } },
+                    new Ellucian.Colleague.Domain.Student.Entities.SectionRegistrationStatusItem("4102eac9-8646-4d64-bbe2-2164564b77d4", "NotRegistered", "Dropped" ) { Status = new SectionRegistrationStatus() { RegistrationStatus = RegistrationStatus.NotRegistered, SectionRegistrationStatusReason = RegistrationStatusReason.Dropped } },
+                    new Ellucian.Colleague.Domain.Student.Entities.SectionRegistrationStatusItem("5ce32cba-16e2-4c5e-9796-3d1b59610ec4", "NotRegistered", "Withdrawn" ) { Status = new SectionRegistrationStatus() { RegistrationStatus = RegistrationStatus.NotRegistered, SectionRegistrationStatusReason = RegistrationStatusReason.Withdrawn } },
+                    new Ellucian.Colleague.Domain.Student.Entities.SectionRegistrationStatusItem("358c8b40-a59d-48a9-ada9-215b3ee1aa83", "NotRegistered", "Withdrawn" ){ Status = new SectionRegistrationStatus() { RegistrationStatus = RegistrationStatus.NotRegistered, SectionRegistrationStatusReason = RegistrationStatusReason.Withdrawn } },
+                    new Ellucian.Colleague.Domain.Student.Entities.SectionRegistrationStatusItem("7cb6da1e-9e79-47b8-b226-8e3d161ea8ad", "Registered", "Registered" ){ Status = new SectionRegistrationStatus() { RegistrationStatus = RegistrationStatus.Registered, SectionRegistrationStatusReason = RegistrationStatusReason.Registered } },
+                    new Ellucian.Colleague.Domain.Student.Entities.SectionRegistrationStatusItem("88516505-d27f-45da-9529-8301a3a8aee7", "NotRegistered", "Dropped" ){ Status = new SectionRegistrationStatus() { RegistrationStatus = RegistrationStatus.NotRegistered, SectionRegistrationStatusReason = RegistrationStatusReason.Dropped } }
                 };
             return statusItems;
         }
@@ -107,6 +119,11 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         public string GetsectionRegistration3Json()
         {
             return "{'id': '0ccc21ba-daeb-4c20-81e1-7a864b91a881', 'registrant': { 'id': 'bfc549d4-c1fa-4dc5-b186-f2aabd8386c0'},'section': {'id': 'f14ed8ef-4f5a-4594-a1b2-268d219c06e7'},'academicLevel':{'id':'5b65853c-3d6c-4949-8de1-74861dfe6bb1'},'approvals': [{'approvalType': 'all','approvalEntity': 'system'}],'status': {'registrationStatus': 'registered','sectionRegistrationStatusReason': 'registered','detail': {'id': '3cf900894jck'}},'awardGradeScheme': {'id': '9a1914f6-ee9c-449c-92bc-8928267dfe4d'},'transcript': {'gradeScheme': {'id': '9a1914f6-ee9c-449c-92bc-8928267dfe4d'},'mode': 'standard'},'grades': [{'type': {'id': 'bb66b971-3ee0-4477-9bb7-539721f93434'},'grade': {'id': 'd874e05d-9d97-4fa3-8862-5044ef2384d0'},'submission': {'submittedBy': {'id': '02dc2629-e8a7-410e-b4df-572d02822f8b'},'submittedOn': '2015-12-03T12:00:00z','method': 'manual','reason': {'id': 'bf775687-6dfe-42ef-b7c0-aee3d9e681cf'}}},{'type': {'id': '5aeebc5c-c973-4f83-be4b-f64c95002124'},'grade': {'id': '62b7fa62-5950-46eb-9145-a67e0733af12'},'submission': {'submittedBy': {'id': '02dc2629-e8a7-410e-b4df-572d02822f8b'},'submittedOn': '2015-12-03T12:00:00z','method': 'manual','reason': {'id': 'bf775687-6dfe-42ef-b7c0-aee3d9e681cf'}}}],'involvement': {'startOn': '2016-01-21T12:00:00z','endOn': '2016-05-11T12:00:00z'},'reporting': {'countryCode': 'USA','lastDayOfAttendance': {'status': 'attended','lastAttendedOn': null}},'metadata': {'dataOrigin': 'Colleague'}}";
+        }
+
+        public string GetsectionRegistration4Json()
+        {
+            return "{'id': '0ccc21ba-daeb-4c20-81e1-7a864b91a881', 'registrant': { 'id': 'bfc549d4-c1fa-4dc5-b186-f2aabd8386c0'},'section': {'id': 'f14ed8ef-4f5a-4594-a1b2-268d219c06e7'},'academicLevel':{'id':'5b65853c-3d6c-4949-8de1-74861dfe6bb1'},'approvals': [{'approvalType': 'all','approvalEntity': 'system'}],'credit': {'measure': 'credit','registrationCredit': 3},'status': { 'registrationStatus': 'registered','sectionRegistrationStatusReason': 'registered','detail': {'id': '3cf900894jck'}},'gradingOption':{'gradeScheme': {'id': '9a1914f6-ee9c-449c-92bc-8928267dfe4d'},'mode':'standard'},'involvement': {'startOn': '2016-01-21T12:00:00z','endOn': '2016-05-11T12:00:00z'},'metadata': {'dataOrigin': 'Colleague'}}";
         }
 
         public string GetsectionRegistration2JsonWithFinalGrade()
@@ -209,6 +226,26 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         public Dictionary<string, string> EthosExtendedDataDictionary { get; set; }
 
         public Tuple<List<string>, List<string>> GetEthosExtendedDataLists()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Tuple<IEnumerable<SectionRegistrationResponse>, int>> GetSectionRegistrations2Async(int offset, int limit, SectionRegistrationResponse sectReg, string acadPeriod, string sectionInstructor)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<SectionRegistrationResponse> GetSectionRegistrationByIdAsync(string id)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Tuple<IEnumerable<StudentAcadCredCourseSecInfo>, int>> GetSectionRegistrationGradeOptionsAsync(int offset, int limit, StudentAcadCredCourseSecInfo criteria)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<StudentAcadCredCourseSecInfo> GetSectionRegistrationGradeOptionsByIdAsync(string id)
         {
             throw new NotImplementedException();
         }

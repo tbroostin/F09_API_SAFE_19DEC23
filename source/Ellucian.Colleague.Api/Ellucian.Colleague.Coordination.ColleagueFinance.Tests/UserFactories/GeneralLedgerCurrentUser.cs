@@ -180,6 +180,27 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.UserFactories
             }
         }
 
+        public class BudgetAdjustmentApproverUser : ICurrentUserFactory
+        {
+            public ICurrentUser CurrentUser
+            {
+                get
+                {
+                    return new CurrentUser(new Claims()
+                    {
+                        PersonId = "0000004",
+                        ControlId = "123",
+                        Name = "Johnny",
+                        SecurityToken = "321",
+                        SessionTimeout = 30,
+                        UserName = "Johnny Budget Adjustment Approver",
+                        Roles = new List<string>() { "VIEW.BUD.ADJ.PENDING.APPR" },
+                        SessionFixationId = "abc123"
+                    });
+                }
+            }
+        }
+
         public class AccountFundsAvailableUser : ICurrentUserFactory
         {
             public ICurrentUser CurrentUser

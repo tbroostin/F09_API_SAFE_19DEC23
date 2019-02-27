@@ -1,9 +1,10 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.DataContracts;
 using Ellucian.Web.Cache;
+using Ellucian.Web.Http.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
@@ -28,11 +29,13 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             protected Mock<IColleagueDataReader> dataAccessorMock;
             protected Mock<IColleagueTransactionInvoker> transactionMock;
             protected Mock<ILogger> loggerMock;
+            protected ApiSettings apiSettingsMock;
             protected WorkTaskRepository workTaskRepo;
 
             public void InitializeBase()
             {
                 loggerMock = new Mock<ILogger>();
+                apiSettingsMock = new ApiSettings("null");
 
                 workTaskRepo = BuildWorkTaskRepository();
 
@@ -59,7 +62,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
 
                 // Set up onboarding user responses
-                return new WorkTaskRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                return new WorkTaskRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettingsMock);
             }
         }
 

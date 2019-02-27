@@ -72,5 +72,10 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// List of objects that describe how much money is being moved from or to each account.
         /// </summary>
         public List<AdjustmentLine> AdjustmentLines { get; set; }
+
+        /// <summary>
+        /// List of strings containing validation information which is used to tell the user what they can do with the budget adjustment.
+        /// </summary>
+        public List<string> ValidationResults { get; set; }
     }
 }

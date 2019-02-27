@@ -13,9 +13,8 @@
     <!-- Framework35 | [Framework40] | Framework45 -->
     <TargetFrameworkVersion>Framework45</TargetFrameworkVersion>
 
-    <!--Unable to include this property until build servers are upgraded to support it-->
     <!-- 0 = As many processes as possible, limited by number of cores on machine, 1 = Sequential (1 process), 2-> Given number of processes up to limit by number of cores on machine-->
-    <!--<MaxCpuCount>0</MaxCpuCount>-->
+    <MaxCpuCount>0</MaxCpuCount>
   </RunConfiguration>
   <DataCollectionRunSettings>
     <DataCollectors>

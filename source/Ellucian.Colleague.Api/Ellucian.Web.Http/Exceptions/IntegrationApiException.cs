@@ -109,7 +109,8 @@ namespace Ellucian.Web.Http.Exceptions
                 throw new ArgumentNullException("error");
             }
 
-            Errors.Add(error);
+            if (!Errors.Contains<IntegrationApiError>(error))
+                Errors.Add(error);
         }
 
         /// <summary>

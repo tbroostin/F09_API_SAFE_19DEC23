@@ -12,9 +12,5 @@ namespace Ellucian.Colleague.Domain.Student
         public const string UpdateRegistrations = "UPDATE.REGISTRATIONS";
         // Authority to view registrations
         public const string ViewRegistrations = "VIEW.REGISTRATIONS";
-        // Authority to create registrations
-        public const string CreateRegistrations = "CREATE.REGISTRATIONS";
-        // Authority to delete registrations
-        public const string DeleteRegistrations = "DELETE.REGISTRATIONS";
     }
 }

@@ -77,7 +77,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         {
             if (_commodityUnitType == null)
             {
-                _commodityUnitType = await colleagueFinanceReferenceDataRepository.GetCommodityUnitTypesAsync(bypassCache);
+                _commodityUnitType = await colleagueFinanceReferenceDataRepository.GetCommodityUnitTypesAsync(false);
             }
             return _commodityUnitType;
         }
@@ -87,7 +87,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         {
             if (_vendorTerm == null)
             {
-                _vendorTerm = await colleagueFinanceReferenceDataRepository.GetVendorTermsAsync(bypassCache);
+                _vendorTerm = await colleagueFinanceReferenceDataRepository.GetVendorTermsAsync(false);
             }
             return _vendorTerm;
         }
@@ -101,8 +101,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <returns></returns>
         private async Task<IEnumerable<Domain.ColleagueFinance.Entities.AccountsPayableSources>> GetAllAccountsPayableSourcesAsync(bool bypassCache)
         {
-            await colleagueFinanceReferenceDataRepository.GetAccountsPayableSourcesAsync(bypassCache);
-            return _accountsPayableSources ?? (_accountsPayableSources = await colleagueFinanceReferenceDataRepository.GetAccountsPayableSourcesAsync(bypassCache));
+            await colleagueFinanceReferenceDataRepository.GetAccountsPayableSourcesAsync(false);
+            return _accountsPayableSources ?? (_accountsPayableSources = await colleagueFinanceReferenceDataRepository.GetAccountsPayableSourcesAsync(false));
         }
 
         private IEnumerable<Domain.ColleagueFinance.Entities.FreeOnBoardType> _freeOnBoardType = null;
@@ -110,7 +110,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         {
             if (_freeOnBoardType == null)
             {
-                _freeOnBoardType = await colleagueFinanceReferenceDataRepository.GetFreeOnBoardTypesAsync(bypassCache);
+                _freeOnBoardType = await colleagueFinanceReferenceDataRepository.GetFreeOnBoardTypesAsync(false);
             }
             return _freeOnBoardType;
         }
@@ -120,7 +120,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         {
             if (_shipToDestination == null)
             {
-                _shipToDestination = await colleagueFinanceReferenceDataRepository.GetShipToDestinationsAsync(bypassCache);
+                _shipToDestination = await colleagueFinanceReferenceDataRepository.GetShipToDestinationsAsync(false);
             }
             return _shipToDestination;
         }
@@ -130,7 +130,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         {
             if (_commodityCode == null)
             {
-                _commodityCode = await colleagueFinanceReferenceDataRepository.GetCommodityCodesAsync(bypassCache);
+                _commodityCode = await colleagueFinanceReferenceDataRepository.GetCommodityCodesAsync(false);
             }
             return _commodityCode;
         }
@@ -140,7 +140,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         {
             if (_commerceTaxCode == null)
             {
-                _commerceTaxCode = await referenceDataRepository.GetCommerceTaxCodesAsync(bypassCache);
+                _commerceTaxCode = await referenceDataRepository.GetCommerceTaxCodesAsync(false);
             }
             return _commerceTaxCode;
         }
@@ -150,7 +150,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         {
             if (_countries == null)
             {
-                _countries = await referenceDataRepository.GetCountryCodesAsync(bypassCache);
+                _countries = await referenceDataRepository.GetCountryCodesAsync(false);
             }
             return _countries;
         }
@@ -160,7 +160,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         {
             if (_states == null)
             {
-                _states = await referenceDataRepository.GetStateCodesAsync(bypassCache);
+                _states = await referenceDataRepository.GetStateCodesAsync(false);
             }
             return _states;
         }
@@ -265,7 +265,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         }
                         catch (Exception ex)
                         {
-                            throw new Exception(string.Concat(ex.Message, "  Entity: 'PURCHASE.ORDERS', Record ID: '", purchaseOrderEntity.Id, "'"));
+                            throw new Exception(string.Concat(ex.Message, "  Purchase Order: '", purchaseOrderEntity.Number, "', Entity: 'PURCHASE.ORDERS', Record ID: '", purchaseOrderEntity.Id, "'"));
                         }
                     }
                 }
@@ -332,7 +332,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
             catch (Exception ex)
             {
-                throw new Exception(string.Format("No Purchase Order was found for guid '{0}'.", guid), ex);
+                throw ex;
             }
         }
 
@@ -539,7 +539,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             if (!string.IsNullOrEmpty(source.ApType))
             {
-                var accountsPayableSources = await colleagueFinanceReferenceDataRepository.GetAccountsPayableSourcesAsync(bypassCache);
+                var accountsPayableSources = await colleagueFinanceReferenceDataRepository.GetAccountsPayableSourcesAsync(false);
                 if (accountsPayableSources == null)
                     throw new Exception("Unable to retrieve accounts payable sources");
                 var accountsPayableSource = accountsPayableSources.FirstOrDefault(aps => aps.Code == source.ApType);
@@ -617,7 +617,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
                 try
                 {
-                    OverRideGLs = await checkFunds2(purchaseOrder, purchaseOrderId);
+                    // Don't check funds availability if we are closing the purchase order
+                    if (purchaseOrder.Status != PurchaseOrdersStatus.Closed && purchaseOrder.Status != PurchaseOrdersStatus.Voided)
+                        OverRideGLs = await checkFunds2(purchaseOrder, purchaseOrderId);
 
                     if ((purchaseOrder.LineItems) != null && (purchaseOrder.LineItems.Any()))
                     {
@@ -838,8 +840,14 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                                 PosID = PosID + ".DS";
                             var budgetCheckOverrideFlag = (details.BudgetCheck == PurchaseOrdersAccountBudgetCheck.Override) ? true : false;
                             budgetOvrCheckTuple.Add(new Tuple<string, bool>(details.AccountingString, budgetCheckOverrideFlag));
-                            // You don't need to have funds available if you are de-activating the line item.
-                            if (details.Status != PurchaseOrdersStatus.Voided && details.Status != PurchaseOrdersStatus.Closed && details.Status != PurchaseOrdersStatus.Notapproved)
+                            // You don't need to have funds available if you are de-activating the line item or if the line item
+                            // status is already paid, invoiced, or reconciled (funds already allocated).
+                            if (details.Status != PurchaseOrdersStatus.Voided 
+                                && details.Status != PurchaseOrdersStatus.Closed 
+                                && details.Status != PurchaseOrdersStatus.Notapproved
+                                && details.Status != PurchaseOrdersStatus.Invoiced
+                                && details.Status != PurchaseOrdersStatus.Paid
+                                && details.Status != PurchaseOrdersStatus.Reconciled)
                             {
                                 fundsAvailable.Add(new Domain.ColleagueFinance.Entities.FundsAvailable(details.AccountingString)
                                 {
@@ -1425,6 +1433,15 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 case PurchaseOrdersStatus.Outstanding:
                     poStatus = PurchaseOrderStatus.Outstanding; //"O";
                     break;
+                case PurchaseOrdersStatus.Accepted:
+                    poStatus = PurchaseOrderStatus.Accepted; //"A";
+                    break;
+                case PurchaseOrdersStatus.Backordered:
+                    poStatus = PurchaseOrderStatus.Backordered; //"B";
+                    break;
+                case PurchaseOrdersStatus.Invoiced:
+                    poStatus = PurchaseOrderStatus.Invoiced; //"I";
+                    break;
                 case PurchaseOrdersStatus.Paid:
                     poStatus = PurchaseOrderStatus.Paid; //"P";
                     break;
@@ -1433,6 +1450,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     break;
                 case PurchaseOrdersStatus.Voided:
                     poStatus = PurchaseOrderStatus.Voided; //"V";
+                    break;
+                case PurchaseOrdersStatus.Closed:
+                    poStatus = PurchaseOrderStatus.Closed; //"C";
                     break;
 
                 default:

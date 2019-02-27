@@ -323,7 +323,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             fundsAvailableResult.Add(new FundsAvailable("11-00-02-67-60000-54004")
             {
                 Amount = 100,
-                AvailableStatus = FundsAvailableStatus.Availbale,
+                AvailableStatus = FundsAvailableStatus.Available,
                 TransactionDate = new DateTime(2017,9,1),
                 CurrencyCode = "USD",
                 Sequence = "0"               
@@ -366,7 +366,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             fundsAvailableResult.Add(new FundsAvailable("11-00-02-67-60000-54004")
             {
                 Amount = 100,
-                AvailableStatus = FundsAvailableStatus.Availbale,
+                AvailableStatus = FundsAvailableStatus.Available,
                 TransactionDate = new DateTime(2017, 9, 1),
                 CurrencyCode = "USD",
                 Sequence = "0",

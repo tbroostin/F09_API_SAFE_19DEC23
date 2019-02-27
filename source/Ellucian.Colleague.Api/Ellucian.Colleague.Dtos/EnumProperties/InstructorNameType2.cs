@@ -28,6 +28,12 @@ namespace Ellucian.Colleague.Dtos.EnumProperties
         /// Legal
         /// </summary>
         [EnumMember(Value = "legal")]
-        Legal
+        Legal,
+
+        /// <summary>
+        /// Legal
+        /// </summary>
+        [EnumMember(Value = "favored")]
+        Favored
     }
 }

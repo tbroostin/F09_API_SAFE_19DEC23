@@ -41,14 +41,22 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         public async Task<ProgramRequirements> GetAsync(string prog, string cat)
         {
             string filekey = prog + "*" + cat;
-            var programRequirementsData = await GetOrAddToCacheAsync<ProgramRequirements>("ProgramRequirements*" + filekey,
-            async () =>
+            try
             {
-                ProgramRequirements pr = await BuildProgramRequirementsAsync(prog, cat);
-                return pr;
+                var programRequirementsData = await GetOrAddToCacheAsync<ProgramRequirements>("ProgramRequirements*" + filekey,
+                    async () =>
+                    {
+                        ProgramRequirements pr = await BuildProgramRequirementsAsync(prog, cat);
+                        return pr;
+                    }
+                    );
+                return programRequirementsData;
             }
-            );
-            return programRequirementsData;
+            catch (Exception ex)
+            {
+                //returning null as no requirements found.
+                return null;
+            }
         }
 
 
@@ -106,7 +114,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 {
                     if (grade != null && grade != "")
                     {
-                        othergrades.Add(grades.Where(g => g.Id == grade).First());
+                        othergrades.Add(grades.Where(g => g.Id == grade).FirstOrDefault());
                     }
                 }
             }

@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2017 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2018 Ellucian Company L.P. and its affiliates. */
 
 using System;
 using System.Collections.Generic;
@@ -108,7 +108,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             {
                 throw new ArgumentNullException(string.Concat("EmployeeLeavePlans plan can not be null or empty. Entity: ‘LEAVPLAN’, Record ID: '", id, "'"));
             }
-            if ((startDate == null) || (startDate == new DateTime(1968,1,1)))
+            if ((startDate == null) || (!startDate.HasValue))
             {
                 throw new ArgumentNullException(string.Concat("EmployeeLeavePlans startDate can not be null or empty. Entity: ‘LEAVPLAN’, Record ID: '", id, "'"));
             }

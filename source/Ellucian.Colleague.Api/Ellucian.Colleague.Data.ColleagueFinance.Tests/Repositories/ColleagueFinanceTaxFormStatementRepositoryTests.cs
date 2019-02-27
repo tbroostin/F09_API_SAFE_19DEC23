@@ -25,6 +25,12 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         private ParmT4a parmT4aContract;
         private TaxT4aDetailRepos detailContract = new TaxT4aDetailRepos();
 
+        private Parm1099mi parm1099miContractNull = null;
+        private Parm1099mi parm1099miContract;
+        private Collection<TaxForm1099miYears> taxForm1099miYearsContracts = new Collection<TaxForm1099miYears>();
+        private Collection<TaxForm1099miYears> taxForm1099miYearsWebDisabledContracts = new Collection<TaxForm1099miYears>();
+        private Collection<Tax1099miDetailRepos> tax1099miDetailContracts = new Collection<Tax1099miDetailRepos>();
+
         #region Initialize and Cleanup
 
         [TestInitialize]
@@ -34,6 +40,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             actualRepository = new ColleagueFinanceTaxFormStatementRepository(apiSettings, cacheProviderMock.Object,
                 transFactoryMock.Object, loggerMock.Object);
 
+            #region T4a records
             // Get the list of TAX.FORM.T4A.BIN.REPOS records for the person
             BuildT4aBinReposcontracts();
             dataReaderMock.Setup(x => x.BulkReadRecordAsync<TaxFormT4aBinRepos>(It.IsAny<string>(), true)).Returns(() =>
@@ -79,6 +86,42 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             {
                 return Task.FromResult(parmT4aContract);
             });
+            #endregion
+
+            #region 1099mi records
+            // Get the list of TAX.FORM.1099MI.DETAIL.REPOS for the person
+
+            //vendor 0011029 - > for empty data records
+            Build1099miDetailYearWiseContracts();
+            var detailCriteriaFor1099miAllYears = "WITH TMIDTLR.VENDOR.ID EQ '0011029'";
+            dataReaderMock.Setup(x => x.BulkReadRecordAsync<Tax1099miDetailRepos>(detailCriteriaFor1099miAllYears, true)).Returns(() =>
+            {
+                var c1 = tax1099miDetailContracts;
+                return Task.FromResult(c1);
+            });
+            //vendor 0011030 - > for empty data records
+            var detailCriteriaFor1099mi0 = "WITH TMIDTLR.VENDOR.ID EQ '0011030'";
+            dataReaderMock.Setup(x => x.BulkReadRecordAsync<Tax1099miDetailRepos>(detailCriteriaFor1099mi0, true)).Returns(() =>
+            {
+                var c1 = new Collection<Tax1099miDetailRepos>();
+                return Task.FromResult(c1);
+            });
+            //build mi year contracts
+            BuildTaxForm1099miYearsContracts();
+            dataReaderMock.Setup(x => x.BulkReadRecordAsync<TaxForm1099miYears>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(() =>
+            {
+                return Task.FromResult(taxForm1099miYearsContracts);
+            });
+            //set current year as 2017
+            parm1099miContract = new Parm1099mi()
+            {
+                P1099miYear = "2017"
+            };
+            dataReaderMock.Setup(x => x.ReadRecordAsync<Parm1099mi>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(() =>
+            {
+                return Task.FromResult(parm1099miContract);
+            });
+            #endregion
         }
 
         [TestCleanup]
@@ -245,9 +288,224 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
         #endregion
 
+        #region GetAsync_1099mi_statements
+
+        [TestMethod]
+        public async Task GetAsync_1099Mi_NullPersonId()
+        {
+            var expectedParam = "personid";
+            var actualParam = "";
+            try
+            {
+                await actualRepository.GetAsync(null, Domain.Base.Entities.TaxForms.Form1099MI);
+            }
+            catch (ArgumentNullException anex)
+            {
+                actualParam = anex.ParamName.ToLower();
+            }
+
+            Assert.AreEqual(expectedParam, actualParam);
+        }
+
+        [TestMethod]
+        public async Task GetAsync_1099Mi_EmptyPersonId()
+        {
+            var expectedParam = "personid";
+            var actualParam = "";
+            try
+            {
+                await actualRepository.GetAsync("", Domain.Base.Entities.TaxForms.Form1099MI);
+            }
+            catch (ArgumentNullException anex)
+            {
+                actualParam = anex.ParamName.ToLower();
+            }
+
+            Assert.AreEqual(expectedParam, actualParam);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException), "PARM.1099MI cannot be null.")]
+        public async Task GetAsync_1099mi_Parm1099Null()
+        {
+            dataReaderMock.Setup(x => x.ReadRecordAsync<Parm1099mi>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(() =>
+            {
+                return Task.FromResult(parm1099miContractNull);
+            });
+
+            var actualStatements = await actualRepository.GetAsync("0011031", Domain.Base.Entities.TaxForms.Form1099MI);
+
+
+            Assert.AreEqual(tax1099miDetailContracts.Count(), actualStatements.Count() + 1);
+        }
+
+        [TestMethod]
+        public async Task GetAsync_1099mi_NoRecordsFound_Success()
+        {
+            var actualStatements = await actualRepository.GetAsync("0011030", Domain.Base.Entities.TaxForms.Form1099MI);
+            //check whether it returns empty statements
+            Assert.IsTrue(!actualStatements.Any());
+        }
+
+        [TestMethod]
+        public async Task GetAsync_1099mi_CurrentYear_Verified_NotCertified_Success()
+        {
+            var actualStatements = await actualRepository.GetAsync("0011029", Domain.Base.Entities.TaxForms.Form1099MI);
+            //check whether it pulls the record with RefId M and qualified, so no notations
+            Assert.IsTrue(actualStatements.Any(x => x.Notation == Domain.Base.Entities.TaxFormNotations.None));
+        }
+
+        [TestMethod]
+        public async Task GetAsync_1099mi_CurrentYear_NonCertified_RecordKeyNull()
+        {
+            var actualStatements = await actualRepository.GetAsync("0011032", Domain.Base.Entities.TaxForms.Form1099MI);
+            //check whether it returns empty statements
+            Assert.IsTrue(!actualStatements.Any());
+        }
+
+        [TestMethod]
+        public async Task GetAsync_Invalid1099miTaxFormId()
+        {
+            var expectedParam = "taxform";
+            var actualParam = "";
+            try
+            {
+                await actualRepository.GetAsync("11031", Domain.Base.Entities.TaxForms.Form1095C);
+            }
+            catch (ArgumentException anex)
+            {
+                actualParam = anex.ParamName.ToLower();
+            }
+
+            Assert.AreEqual(expectedParam, actualParam);
+        }
+
+        [TestMethod]
+        public async Task GetAsync_1099mi_NullPersonId()
+        {
+            var expectedParam = "personid";
+            var actualParam = "";
+            try
+            {
+                await actualRepository.GetAsync(null, Domain.Base.Entities.TaxForms.Form1099MI);
+            }
+            catch (ArgumentNullException anex)
+            {
+                actualParam = anex.ParamName.ToLower();
+            }
+
+            Assert.AreEqual(expectedParam, actualParam);
+        }
+
+        [TestMethod]
+        public async Task GetAsync_1099mi_EmptyPersonId()
+        {
+            var expectedParam = "personid";
+            var actualParam = "";
+            try
+            {
+                await actualRepository.GetAsync("", Domain.Base.Entities.TaxForms.Form1099MI);
+            }
+            catch (ArgumentNullException anex)
+            {
+                actualParam = anex.ParamName.ToLower();
+            }
+
+            Assert.AreEqual(expectedParam, actualParam);
+        }
+        [TestMethod]
+        public async Task GetAsync_1099mi_Result_NullTaxForm1099miFormsRecord()
+        {
+            tax1099miDetailContracts[0] = null;
+            tax1099miDetailContracts[1] = null;
+            var actual1099miEntities = await actualRepository.GetAsync("0011029", Domain.Base.Entities.TaxForms.Form1099MI);
+
+            // The null record should be excluded from the returned list.
+            Assert.AreEqual(tax1099miDetailContracts.Count, actual1099miEntities.Count() + 2);
+        }
+
+        [TestMethod]
+        public async Task GetAsync_1099mi_Result_NullStateId()
+        {
+            tax1099miDetailContracts[0].TmidtlrStateId = null;
+            tax1099miDetailContracts[1].TmidtlrStateId = null;
+            var actualStatements = await actualRepository.GetAsync("0011029", Domain.Base.Entities.TaxForms.Form1099MI);
+            Assert.AreEqual(tax1099miDetailContracts.Count, actualStatements.Count());
+        }
+
+        [TestMethod]
+        public async Task GetAsync_1099mi_Result_NullTaxYear()
+        {
+            tax1099miDetailContracts[0].TmidtlrYear = null;
+            tax1099miDetailContracts[1].TmidtlrYear = null;
+            var actualStatements = await actualRepository.GetAsync("0011029", Domain.Base.Entities.TaxForms.Form1099MI);
+            Assert.AreEqual(tax1099miDetailContracts.Count, actualStatements.Count() + 2);
+        }
+
+        [TestMethod]
+        public async Task GetAsync_1099mi_Result_NullRecordKey()
+        {
+            tax1099miDetailContracts[0].Recordkey = null;
+            var actualStatements = await actualRepository.GetAsync("0011029", Domain.Base.Entities.TaxForms.Form1099MI);
+
+            Assert.AreEqual(tax1099miDetailContracts.Count, actualStatements.Count() + 2);
+        }
+
+        [TestMethod]
+        public async Task GetAsync_1099mi_Result_EmptyRecordKey()
+        {
+            tax1099miDetailContracts[0].Recordkey = "";
+            var actualStatements = await actualRepository.GetAsync("0011029", Domain.Base.Entities.TaxForms.Form1099MI);
+
+            Assert.AreEqual(tax1099miDetailContracts.Count, actualStatements.Count() + 2);
+        }
+
+        [TestMethod]
+        public async Task GetAsync_1099mi_Result_NullPersonId()
+        {
+            tax1099miDetailContracts[0].TmidtlrVendorId = null;
+            var actualStatements = await actualRepository.GetAsync("0011029", Domain.Base.Entities.TaxForms.Form1099MI);
+
+            Assert.AreEqual(tax1099miDetailContracts.Count, actualStatements.Count() + 2);
+        }
+
+        [TestMethod]
+        public async Task GetAsync_1099mi_Result_EmptyPersonId()
+        {
+            tax1099miDetailContracts[0].TmidtlrVendorId = "";
+            var actualStatements = await actualRepository.GetAsync("0011029", Domain.Base.Entities.TaxForms.Form1099MI);
+
+            Assert.AreEqual(tax1099miDetailContracts.Count, actualStatements.Count() + 2);
+        }
+
+        [TestMethod]
+        public async Task GetAsync_1099mi_Result_OneDataContractIsNull()
+        {
+            tax1099miDetailContracts[0] = null;
+            tax1099miDetailContracts[1] = null;
+            var actualStatements = await actualRepository.GetAsync("0011029", Domain.Base.Entities.TaxForms.Form1099MI);
+
+            Assert.AreEqual(tax1099miDetailContracts.Count, actualStatements.Count() + 2);
+        }
+
+        [TestMethod]
+        public async Task GetAsync_1099mi_WebEnabledIsFalse()
+        {
+            BuildTaxForm1099miYearsWebDisabledContracts();
+            dataReaderMock.Setup(x => x.BulkReadRecordAsync<TaxForm1099miYears>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(() =>
+            {
+                return Task.FromResult(taxForm1099miYearsWebDisabledContracts);
+            });
+
+            var actualStatements = await actualRepository.GetAsync("0011029", Domain.Base.Entities.TaxForms.Form1099MI);
+
+            Assert.AreEqual(actualStatements.Select(x=>x.Notation).FirstOrDefault(), Domain.Base.Entities.TaxFormNotations.NotAvailable);
+        }
+        #endregion
 
         #region Private methods
 
+        #region T4A Private methods
         private void BuildT4aBinReposcontracts()
         {
             TaxFormT4aBinRepos contract = new TaxFormT4aBinRepos()
@@ -370,6 +628,83 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             yearContract.buildAssociations();
             taxFormT4aYearsContracts.Add(yearContract);
         }
+
+        #endregion 
+
+        #region 1099mi_PrivateRegion
+             
+        private void Build1099miDetailYearWiseContracts()
+        {
+            Tax1099miDetailRepos contract = new Tax1099miDetailRepos()
+            {
+                Recordkey = "1",
+                TmidtlrYear = "2017",
+                TmidtlrVendorId = "0011029",
+                TmidtlrStateId = "VA",
+                TmidtlrEin = "43",
+                TmidtlrStatus = "",
+                TmidtlrQualifiedFlag = "Y",
+                TmidtlrRefId = "M"
+            };
+            contract.buildAssociations();
+            tax1099miDetailContracts.Add(contract);
+
+            contract = new Tax1099miDetailRepos()
+            {
+                Recordkey = "2",
+                TmidtlrYear = "2016",
+                TmidtlrVendorId = "0011029",
+                TmidtlrStateId = "VA",
+                TmidtlrEin = "43",
+                TmidtlrStatus = "N",
+                TmidtlrQualifiedFlag = "Y",
+                TmidtlrRefId = "01"
+            };
+            contract.buildAssociations();
+            tax1099miDetailContracts.Add(contract);
+        }
+
+        private void BuildTaxForm1099miYearsContracts()
+        {
+            TaxForm1099miYears yearContract = new TaxForm1099miYears()
+            {
+                Recordkey = "2017",
+                TfmyWebEnabled = "Y",
+                TfmySubmitSeqNos = new List<string>() { "01" }
+            };
+            yearContract.buildAssociations();
+            taxForm1099miYearsContracts.Add(yearContract);
+            yearContract = new TaxForm1099miYears()
+            {
+                Recordkey = "2016",
+                TfmyWebEnabled = "Y",
+                TfmySubmitSeqNos = new List<string>() { "01" }
+            };
+            yearContract.buildAssociations();
+            taxForm1099miYearsContracts.Add(yearContract);
+        }
+
+        private void BuildTaxForm1099miYearsWebDisabledContracts()
+        {
+            TaxForm1099miYears yearContract = new TaxForm1099miYears()
+            {
+                Recordkey = "2017",
+                TfmyWebEnabled = "N",
+                TfmySubmitSeqNos = new List<string>() { "01" }
+            };
+            yearContract.buildAssociations();
+            taxForm1099miYearsWebDisabledContracts.Add(yearContract);
+            yearContract = new TaxForm1099miYears()
+            {
+                Recordkey = "2016",
+                TfmyWebEnabled = "N",
+                TfmySubmitSeqNos = new List<string>() { "01" }
+            };
+            yearContract.buildAssociations();
+            taxForm1099miYearsWebDisabledContracts.Add(yearContract);
+        }
+
+        #endregion 
 
         #endregion
     }

@@ -66,6 +66,13 @@ namespace Ellucian.Colleague.Dtos.Student
         /// <see cref="SectionMeeting">Meeting</see> information for this section
         /// </summary>
         public IEnumerable<SectionMeeting2> Meetings { get; set; }
+
+        /// <summary>
+        /// List of meetings for primary section
+        /// This is only populated when there is a flag that allows to override cross-listed section meetings with primary section meetings
+        /// when cross-listed section does not have its own meetings defined.
+        /// </summary>
+        public IEnumerable<SectionMeeting2> PrimarySectionMeetings { get;  set; }
         /// <summary>
         /// Id of all faculty for this section
         /// </summary>

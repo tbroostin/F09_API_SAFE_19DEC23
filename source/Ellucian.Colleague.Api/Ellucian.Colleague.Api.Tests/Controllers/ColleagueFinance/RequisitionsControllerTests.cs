@@ -610,8 +610,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         {
             System.Net.Http.HttpResponseMessage httpResponseMessage = new HttpResponseMessage() {StatusCode = System.Net.HttpStatusCode.OK };
             requisitionsServiceMock.Setup(x => x.DeleteRequisitionAsync("1234")).Returns(Task.FromResult(httpResponseMessage));
-            var result = await requisitionsController.DeleteRequisitionsAsync("1234");
-            Assert.IsTrue(result.IsSuccessStatusCode);        
+            await requisitionsController.DeleteRequisitionsAsync("1234");                
         }
 
         [TestMethod]

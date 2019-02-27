@@ -19,7 +19,6 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Ellucian.Colleague.Domain.HumanResources;
 
 namespace Ellucian.Colleague.Coordination.HumanResources.Services
 {
@@ -27,156 +26,476 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
     /// Service for tax form pdfs.
     /// </summary>
     [RegisterType]
-	public class HumanResourcesTaxFormPdfService : BaseCoordinationService, IHumanResourcesTaxFormPdfService
-	{
+    public class HumanResourcesTaxFormPdfService : BaseCoordinationService, IHumanResourcesTaxFormPdfService
+    {
         public const string ReportType = "PDF";
         public const string DeviceInfo = "<DeviceInfo>" +
                                          " <OutputFormat>PDF</OutputFormat>" +
                                          "</DeviceInfo>";
 
         private IHumanResourcesTaxFormPdfDataRepository taxFormPdfDataRepository;
-		private IPdfSharpRepository pdfSharpRepository;
+        private IPdfSharpRepository pdfSharpRepository;
 
-		/// <summary>
-		/// Constructor TaxFormPdfService
-		/// </summary>
-		/// <param name="adapterRegistry">AdapterRegistry</param>
-		/// <param name="currentUserFactory">CurrentUserFactory</param>
-		/// <param name="roleRepository">RoleRepository</param>
-		/// <param name="logger">Logger</param>
-		public HumanResourcesTaxFormPdfService(IHumanResourcesTaxFormPdfDataRepository taxFormPdfDataRepository,
-			IPdfSharpRepository pdfSharpRepository, IAdapterRegistry adapterRegistry,
-			ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, ILogger logger)
-			: base(adapterRegistry, currentUserFactory, roleRepository, logger)
-		{
-			this.taxFormPdfDataRepository = taxFormPdfDataRepository;
-			this.pdfSharpRepository = pdfSharpRepository;
-		}
+        /// <summary>
+        /// Constructor TaxFormPdfService
+        /// </summary>
+        /// <param name="adapterRegistry">AdapterRegistry</param>
+        /// <param name="currentUserFactory">CurrentUserFactory</param>
+        /// <param name="roleRepository">RoleRepository</param>
+        /// <param name="logger">Logger</param>
+        public HumanResourcesTaxFormPdfService(IHumanResourcesTaxFormPdfDataRepository taxFormPdfDataRepository,
+            IPdfSharpRepository pdfSharpRepository, IAdapterRegistry adapterRegistry,
+            ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, ILogger logger)
+            : base(adapterRegistry, currentUserFactory, roleRepository, logger)
+        {
+            this.taxFormPdfDataRepository = taxFormPdfDataRepository;
+            this.pdfSharpRepository = pdfSharpRepository;
+        }
 
-		/// <summary>
-		/// Returns the pdf data to print a W-2 tax form.
-		/// </summary>
-		/// <param name="personId">ID of the person assigned to and requesting the W-2.</param>
-		/// <param name="recordId">The record ID where the W-2 pdf data is stored</param>
-		/// <returns>Byte array containing PDF data for the W-2 tax form</returns>
-		public async Task<FormW2PdfData> GetW2TaxFormData(string personId, string recordId)
-		{
-			if (string.IsNullOrEmpty(personId))
-				throw new ArgumentNullException("personId", "Person ID must be specified.");
+        /// <summary>
+        /// Returns the pdf data to print a W-2 tax form.
+        /// </summary>
+        /// <param name="personId">ID of the person assigned to and requesting the W-2.</param>
+        /// <param name="recordId">The record ID where the W-2 pdf data is stored</param>
+        /// <returns>Byte array containing PDF data for the W-2 tax form</returns>
+        public async Task<FormW2PdfData> GetW2TaxFormDataAsync(string personId, string recordId)
+        {
+            if (string.IsNullOrEmpty(personId))
+                throw new ArgumentNullException("personId", "Person ID must be specified.");
 
-			if (string.IsNullOrEmpty(recordId))
-				throw new ArgumentNullException("recordId", "Record ID must be specified.");
+            if (string.IsNullOrEmpty(recordId))
+                throw new ArgumentNullException("recordId", "Record ID must be specified.");
 
-            if (personId != CurrentUser.PersonId && !HasPermission(HumanResourcesPermissionCodes.ViewEmployeeW2))
+            if (!HasAccessToW2(personId))
                 throw new PermissionsException("Insufficient access to W-2 data.");
 
             try
             {
-				// Call the repository to get all the data to print in the pdf.
-				var taxFormPdfData = await this.taxFormPdfDataRepository.GetW2PdfAsync(personId, recordId);
-				return taxFormPdfData;
-			}
-			catch (Exception e)
-			{
-				// Log the error and throw the exception that was given
-				logger.Error(e.Message);
-				throw;
-			}
-		}
+                // Call the repository to get all the data to print in the pdf.
+                var taxFormPdfData = await this.taxFormPdfDataRepository.GetW2PdfAsync(personId, recordId);
 
-		/// <summary>
-		/// Populates the W-2 PDF with the supplied data.
-		/// </summary>
-		/// <param name="pdfData">W-2 PDF data</param>
-		/// <returns>Byte array containing PDF data for the W-2 tax form</returns>
-		public byte[] PopulateW2Pdf(FormW2PdfData pdfData, string documentPath)
-		{
-			byte[] reportBytes;
-			var memoryStream = new MemoryStream();
-			try
-			{
-				if (pdfData != null && !string.IsNullOrEmpty(documentPath))
-				{
-					var document = pdfSharpRepository.OpenDocument(documentPath);
+                // Validate that the domain entity employee ID is the same as the person ID requested.
+                // Ensures record belongs to the specified person - specified above
+                // Do not remove this check
+                if (personId != taxFormPdfData.EmployeeId)
+                {
+                    throw new PermissionsException("Insufficient access to W2 data.");
+                }
 
-					var taxFormData = new Dictionary<string, string>()
-					{
-						{ "Tax_Year", pdfData.TaxYear },
-						{ "Box_c_name", pdfData.EmployerName },
-						{ "Box_c_addr_1", pdfData.EmployerAddressLine1 },
-						{ "Box_c_addr_2", pdfData.EmployerAddressLine2 },
-						{ "Box_c_addr_3", pdfData.EmployerAddressLine3 },
-						{ "Box_c_addr_4", pdfData.EmployerAddressLine4 },
-						{ "Box_e",        pdfData.EmployeeName() },
-						{ "Box_f_addr_1", pdfData.EmployeeAddressLine1 },
-						{ "Box_f_addr_2", pdfData.EmployeeAddressLine2 },
-						{ "Box_f_addr_3", pdfData.EmployeeAddressLine3 },
-						{ "Box_f_addr_4", pdfData.EmployeeAddressLine4 },
-						{ "Box_1", pdfData.FederalWages },
-						{ "Box_2", pdfData.FederalWithholding },
-						{ "Box_3", pdfData.SocialSecurityWages },
-						{ "Box_4", pdfData.SocialSecurityWithholding },
-						{ "Box_5", pdfData.MedicareWages },
-						{ "Box_6", pdfData.MedicareWithholding },
-						{ "Box_7", pdfData.SocialSecurityTips },
-						{ "Box_8", pdfData.AllocatedTips },
-						{ "Box_9", pdfData.AdvancedEic},
-						{ "Box_10", pdfData.DependentCare },
-						{ "Box_11", pdfData.NonqualifiedTotal },
-						{ "Box_12a_Code", pdfData.Box12aCode },
-						{ "Box_12a_Amt", pdfData.Box12aAmount },
-						{ "Box_12b_Code", pdfData.Box12bCode },
-						{ "Box_12b_Amt", pdfData.Box12bAmount },
-						{ "Box_12c_Code", pdfData.Box12cCode },
-						{ "Box_12c_Amt", pdfData.Box12cAmount },
-						{ "Box_12d_Code", pdfData.Box12dCode },
-						{ "Box_12d_Amt", pdfData.Box12dAmount },
-						{ "Box_13_1", pdfData.Box13CheckBox1 },
-						{ "Box_13_2", pdfData.Box13CheckBox2 },
-						{ "Box_13_3", pdfData.Box13CheckBox3 },
-						{ "Box_a", pdfData.EmployeeSsn },
-						{ "Box_b", pdfData.EmployerEin },
-						{ "Box_14_line_1", pdfData.Box14Line1 },
-						{ "Box_14_line_2", pdfData.Box14Line2 },
-						{ "Box_14_line_3", pdfData.Box14Line3 },
-						{ "Box_14_line_4", pdfData.Box14Line4 },
-						{ "Box_15_1_1", pdfData.Box15Line1Section1 },
-						{ "Box_15_1_2", pdfData.Box15Line1Section2 },
-						{ "Box_15_2_1", pdfData.Box15Line2Section1 },
-						{ "Box_15_2_2", pdfData.Box15Line2Section2 },
-						{ "Box_16_1", pdfData.Box16Line1 },
-						{ "Box_16_2", pdfData.Box16Line2 },
-						{ "Box_17_1", pdfData.Box17Line1 },
-						{ "Box_17_2", pdfData.Box17Line2 },
-						{ "Box_18_1", pdfData.Box18Line1 },
-						{ "Box_18_2", pdfData.Box18Line2 },
-						{ "Box_19_1", pdfData.Box19Line1 },
-						{ "Box_19_2", pdfData.Box19Line2 },
-						{ "Box_20_1", pdfData.Box20Line1 },
-						{ "Box_20_2", pdfData.Box20Line2 },
-					};
-
-					pdfSharpRepository.PopulatePdfDocument(ref document, taxFormData);
-					memoryStream = pdfSharpRepository.FinalizePdfDocument(document);
-				}
-
-				reportBytes = memoryStream.ToArray();
-				return reportBytes;
-			}
-			catch (Exception e)
-			{
-				// Log the error and throw the exception that was given
-				logger.Error(e.Message);
-				throw;
-			}
-		}
+                return taxFormPdfData;
+            }
+            catch (Exception e)
+            {
+                // Log the error and throw the exception that was given
+                logger.Error(e.Message);
+                throw;
+            }
+        }
 
         /// <summary>
-		/// Populates the W-2 PDF with the supplied data.
-		/// </summary>
-		/// <param name="pdfData">W-2 PDF data</param>
+        /// Returns the pdf data to print a W-2c tax form.
+        /// </summary>
+        /// <param name="personId">ID of the person assigned to and requesting the W-2c.</param>
+        /// <param name="recordId">The record ID where the W-2c pdf data is stored</param>
+        /// <returns>Byte array containing PDF data for the W-2ctax form</returns>
+        public async Task<FormW2cPdfData> GetW2cTaxFormData(string personId, string recordId)
+        {
+            if (string.IsNullOrEmpty(personId))
+                throw new ArgumentNullException("personId", "Person ID must be specified.");
+
+            if (string.IsNullOrEmpty(recordId))
+                throw new ArgumentNullException("recordId", "Record ID must be specified.");
+
+            if (personId != CurrentUser.PersonId && !HasPermission(HumanResourcesPermissionCodes.ViewEmployeeW2))
+                throw new PermissionsException("Insufficient access to W-2c data.");
+
+            try
+            {
+                // Call the repository to get all the data to print in the pdf.
+                var taxFormPdfData = await this.taxFormPdfDataRepository.GetW2cPdfAsync(personId, recordId);
+
+                // Validate that the domain entity employee ID is the same as the person ID requested.
+                // Ensures record belongs to the specified person - specified above
+                // Do not remove this check
+                if (personId != taxFormPdfData.EmployeeId)
+                {
+                    throw new PermissionsException("Insufficient access to W2 data.");
+                }
+
+                return taxFormPdfData;
+            }
+            catch (Exception e)
+            {
+                // Log the error and throw the exception that was given
+                logger.Error(e.Message);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Populates the W-2c PDF with the supplied data.
+        /// </summary>
+        /// <param name="pdfData">W-2c PDF data</param>
         /// <param name="pathToReport">Path indicating the path to the report on the server</param>
-		/// <returns>Byte array containing PDF data for the W-2 tax form</returns>
+        /// <returns>Byte array containing PDF data for the W-2c tax form</returns>
+        public byte[] PopulateW2cPdfReport(FormW2cPdfData pdfData, string pathToReport)
+        {
+            if (pdfData == null)
+            {
+                throw new ArgumentNullException("pdfData");
+            }
+            if (string.IsNullOrEmpty(pathToReport))
+            {
+                throw new ArgumentNullException("pathToReport");
+            }
+
+            var report = new LocalReport();
+            report.ReportPath = pathToReport;
+            report.SetBasePermissionsForSandboxAppDomain(new System.Security.PermissionSet(System.Security.Permissions.PermissionState.Unrestricted));
+            report.EnableExternalImages = true;
+
+            // Specify the report parameters
+            var utility = new ReportUtility();
+            var parameters = new List<ReportParameter>();
+            parameters.Add(utility.BuildReportParameter("Tax_Year", pdfData.CorrectionYear));
+            parameters.Add(utility.BuildReportParameter("Box_a_name", pdfData.EmployerName));
+            parameters.Add(utility.BuildReportParameter("Box_a_addr_1", pdfData.EmployerAddressLine1));
+            parameters.Add(utility.BuildReportParameter("Box_a_addr_2", pdfData.EmployerAddressLine2));
+            parameters.Add(utility.BuildReportParameter("Box_a_addr_3", pdfData.EmployerAddressLine3));
+            parameters.Add(utility.BuildReportParameter("Box_a_addr_4", pdfData.EmployerAddressLine4));
+            parameters.Add(utility.BuildReportParameter("Box_e", pdfData.ChangesSsnOrName));
+            parameters.Add(utility.BuildReportParameter("Box_h_addr_1", pdfData.EmployeeAddressLine1));
+            parameters.Add(utility.BuildReportParameter("Box_h_addr_2", pdfData.EmployeeAddressLine2));
+            parameters.Add(utility.BuildReportParameter("Box_h_addr_3", pdfData.EmployeeAddressLine3));
+            parameters.Add(utility.BuildReportParameter("Box_h_addr_4", pdfData.EmployeeAddressLine4));
+            parameters.Add(utility.BuildReportParameter("Box_h_first_and_initial", pdfData.EmployeeFirstName + ' ' + pdfData.EmployeeMiddleName));
+            parameters.Add(utility.BuildReportParameter("Box_h_last_name", pdfData.EmployeeLastName));
+            parameters.Add(utility.BuildReportParameter("Box_h_suffix", pdfData.EmployeeSuffix));
+            parameters.Add(utility.BuildReportParameter("Box_1_correct", pdfData.FederalWages));
+            parameters.Add(utility.BuildReportParameter("Box_2_correct", pdfData.FederalWithholding));
+            parameters.Add(utility.BuildReportParameter("Box_3_correct", pdfData.SocialSecurityWages));
+            parameters.Add(utility.BuildReportParameter("Box_4_correct", pdfData.SocialSecurityWithholding));
+            parameters.Add(utility.BuildReportParameter("Box_5_correct", pdfData.MedicareWages));
+            parameters.Add(utility.BuildReportParameter("Box_6_correct", pdfData.MedicareWithholding));
+            parameters.Add(utility.BuildReportParameter("Box_7_correct", pdfData.SocialSecurityTips));
+            parameters.Add(utility.BuildReportParameter("Box_8_correct", pdfData.AllocatedTips));
+            parameters.Add(utility.BuildReportParameter("Box_10_correct", pdfData.DependentCare));
+            parameters.Add(utility.BuildReportParameter("Box_11_correct", pdfData.NonqualifiedTotal));
+            parameters.Add(utility.BuildReportParameter("Box_12a_Code_correct", pdfData.Box12aCode));
+            parameters.Add(utility.BuildReportParameter("Box_12a_Amt_correct", pdfData.Box12aAmount));
+            parameters.Add(utility.BuildReportParameter("Box_12b_Code_correct", pdfData.Box12bCode));
+            parameters.Add(utility.BuildReportParameter("Box_12b_Amt_correct", pdfData.Box12bAmount));
+            parameters.Add(utility.BuildReportParameter("Box_12c_Code_correct", pdfData.Box12cCode));
+            parameters.Add(utility.BuildReportParameter("Box_12c_Amt_correct", pdfData.Box12cAmount));
+            parameters.Add(utility.BuildReportParameter("Box_12d_Code_correct", pdfData.Box12dCode));
+            parameters.Add(utility.BuildReportParameter("Box_12d_Amt_correct", pdfData.Box12dAmount));
+            parameters.Add(utility.BuildReportParameter("Box_13_1_correct", pdfData.Box13CheckBox1));
+            parameters.Add(utility.BuildReportParameter("Box_13_2_correct", pdfData.Box13CheckBox2));
+            parameters.Add(utility.BuildReportParameter("Box_13_3_correct", pdfData.Box13CheckBox3));
+            parameters.Add(utility.BuildReportParameter("Box_d", pdfData.EmployeeSsn));
+            parameters.Add(utility.BuildReportParameter("Box_b", pdfData.EmployerEin));
+            parameters.Add(utility.BuildReportParameter("Box_14_line_1", pdfData.Box14Line1));
+            parameters.Add(utility.BuildReportParameter("Box_14_line_2", pdfData.Box14Line2));
+            parameters.Add(utility.BuildReportParameter("Box_14_line_3", pdfData.Box14Line3));
+            parameters.Add(utility.BuildReportParameter("Box_14_line_4", pdfData.Box14Line4));
+            parameters.Add(utility.BuildReportParameter("Box_15_1_1", pdfData.Box15Line1Section1));
+            parameters.Add(utility.BuildReportParameter("Box_15_1_2", pdfData.Box15Line1Section2));
+            parameters.Add(utility.BuildReportParameter("Box_15_2_1", pdfData.Box15Line2Section1));
+            parameters.Add(utility.BuildReportParameter("Box_15_2_2", pdfData.Box15Line2Section2));
+            parameters.Add(utility.BuildReportParameter("Box_16_1", pdfData.Box16Line1));
+            parameters.Add(utility.BuildReportParameter("Box_16_2", pdfData.Box16Line2));
+            parameters.Add(utility.BuildReportParameter("Box_17_1", pdfData.Box17Line1));
+            parameters.Add(utility.BuildReportParameter("Box_17_2", pdfData.Box17Line2));
+            parameters.Add(utility.BuildReportParameter("Box_18_1", pdfData.Box18Line1));
+            parameters.Add(utility.BuildReportParameter("Box_18_2", pdfData.Box18Line2));
+            parameters.Add(utility.BuildReportParameter("Box_19_1", pdfData.Box19Line1));
+            parameters.Add(utility.BuildReportParameter("Box_19_2", pdfData.Box19Line2));
+            parameters.Add(utility.BuildReportParameter("Box_20_1", pdfData.Box20Line1));
+            parameters.Add(utility.BuildReportParameter("Box_20_2", pdfData.Box20Line2));
+            // Set previous parameters
+            parameters.Add(utility.BuildReportParameter("Box_f", pdfData.EmployeeSsnPrev));
+            parameters.Add(utility.BuildReportParameter("Box_g", pdfData.EmployeeNamePrev));
+            parameters.Add(utility.BuildReportParameter("Box_1_previous", pdfData.FederalWagesPrev));
+            parameters.Add(utility.BuildReportParameter("Box_2_previous", pdfData.FederalWithholdingPrev));
+            parameters.Add(utility.BuildReportParameter("Box_3_previous", pdfData.SocialSecurityWagesPrev));
+            parameters.Add(utility.BuildReportParameter("Box_4_previous", pdfData.SocialSecurityWithholdingPrev));
+            parameters.Add(utility.BuildReportParameter("Box_5_previous", pdfData.MedicareWagesPrev));
+            parameters.Add(utility.BuildReportParameter("Box_6_previous", pdfData.MedicareWithholdingPrev));
+            parameters.Add(utility.BuildReportParameter("Box_7_previous", pdfData.SocialSecurityTipsPrev));
+            parameters.Add(utility.BuildReportParameter("Box_8_previous", pdfData.AllocatedTipsPrev));
+            parameters.Add(utility.BuildReportParameter("Box_10_previous", pdfData.DependentCarePrev));
+            parameters.Add(utility.BuildReportParameter("Box_11_previous", pdfData.NonqualifiedTotalPrev));
+            parameters.Add(utility.BuildReportParameter("Box_12a_Code_previous", pdfData.Box12aCodePrev));
+            parameters.Add(utility.BuildReportParameter("Box_12a_Amt_previous", pdfData.Box12aAmountPrev));
+            parameters.Add(utility.BuildReportParameter("Box_12b_Code_previous", pdfData.Box12bCodePrev));
+            parameters.Add(utility.BuildReportParameter("Box_12b_Amt_previous", pdfData.Box12bAmountPrev));
+            parameters.Add(utility.BuildReportParameter("Box_12c_Code_previous", pdfData.Box12cCodePrev));
+            parameters.Add(utility.BuildReportParameter("Box_12c_Amt_previous", pdfData.Box12cAmountPrev));
+            parameters.Add(utility.BuildReportParameter("Box_12d_Code_previous", pdfData.Box12dCodePrev));
+            parameters.Add(utility.BuildReportParameter("Box_12d_Amt_previous", pdfData.Box12dAmountPrev));
+            parameters.Add(utility.BuildReportParameter("Box_13_1_previous", pdfData.Box13CheckBox1Prev));
+            parameters.Add(utility.BuildReportParameter("Box_13_2_previous", pdfData.Box13CheckBox2Prev));
+            parameters.Add(utility.BuildReportParameter("Box_13_3_previous", pdfData.Box13CheckBox3Prev));
+            parameters.Add(utility.BuildReportParameter("Box_14_line_1_previous", pdfData.Box14Line1Prev));
+            parameters.Add(utility.BuildReportParameter("Box_14_line_2_previous", pdfData.Box14Line2Prev));
+            parameters.Add(utility.BuildReportParameter("Box_14_line_3_previous", pdfData.Box14Line3Prev));
+            parameters.Add(utility.BuildReportParameter("Box_14_line_4_previous", pdfData.Box14Line4Prev));
+            parameters.Add(utility.BuildReportParameter("Box_15_1_1_previous", pdfData.Box15Line1Section1Prev));
+            parameters.Add(utility.BuildReportParameter("Box_15_1_2_previous", pdfData.Box15Line1Section2Prev));
+            parameters.Add(utility.BuildReportParameter("Box_15_2_1_previous", pdfData.Box15Line2Section1Prev));
+            parameters.Add(utility.BuildReportParameter("Box_15_2_2_previous", pdfData.Box15Line2Section2Prev));
+            parameters.Add(utility.BuildReportParameter("Box_16_1_previous", pdfData.Box16Line1Prev));
+            parameters.Add(utility.BuildReportParameter("Box_16_2_previous", pdfData.Box16Line2Prev));
+            parameters.Add(utility.BuildReportParameter("Box_17_1_previous", pdfData.Box17Line1Prev));
+            parameters.Add(utility.BuildReportParameter("Box_17_2_previous", pdfData.Box17Line2Prev));
+            parameters.Add(utility.BuildReportParameter("Box_18_1_previous", pdfData.Box18Line1Prev));
+            parameters.Add(utility.BuildReportParameter("Box_18_2_previous", pdfData.Box18Line2Prev));
+            parameters.Add(utility.BuildReportParameter("Box_19_1_previous", pdfData.Box19Line1Prev));
+            parameters.Add(utility.BuildReportParameter("Box_19_2_previous", pdfData.Box19Line2Prev));
+            parameters.Add(utility.BuildReportParameter("Box_20_1_previous", pdfData.Box20Line1Prev));
+            parameters.Add(utility.BuildReportParameter("Box_20_2_previous", pdfData.Box20Line2Prev));
+
+            // Set the report parameters
+            report.SetParameters(parameters);
+
+            // Render the report as a byte array
+            var renderedBytes = report.Render(
+                ReportType,
+                DeviceInfo);
+
+            report.DataSources.Clear();
+            report.ReleaseSandboxAppDomain();
+            report.Dispose();
+
+            return renderedBytes;
+        }
+
+
+        /// <summary>
+        /// Populates the W-2c PDF with the supplied data.
+        /// </summary>
+        /// <param name="pdfData">W-2c PDF data</param>
+        /// <returns>Byte array containing PDF data for the W-2c tax form</returns>
+        public byte[] PopulateW2cPdf(FormW2cPdfData pdfData, string documentPath)
+        {
+            byte[] reportBytes;
+            var memoryStream = new MemoryStream();
+            try
+            {
+                if (pdfData != null && !string.IsNullOrEmpty(documentPath))
+                {
+                    var document = pdfSharpRepository.OpenDocument(documentPath);
+
+                    var taxFormData = new Dictionary<string, string>()
+                        {
+                        { "Tax_Year", pdfData.CorrectionYear },
+                        { "Box_a_name", pdfData.EmployerName },
+                        { "Box_a_addr_1", pdfData.EmployerAddressLine1 },
+                        { "Box_a_addr_2", pdfData.EmployerAddressLine2 },
+                        { "Box_a_addr_3", pdfData.EmployerAddressLine3 },
+                        { "Box_a_addr_4", pdfData.EmployerAddressLine4 },
+                        { "Box_e", pdfData.ChangesSsnOrName },
+                        { "Box_h_addr_1", pdfData.EmployeeAddressLine1 },
+                        { "Box_h_addr_2", pdfData.EmployeeAddressLine2 },
+                        { "Box_h_addr_3", pdfData.EmployeeAddressLine3 },
+                        { "Box_h_addr_4", pdfData.EmployeeAddressLine4 },
+                        { "Box_h_first_and_initial", pdfData.EmployeeFirstName + ' ' + pdfData.EmployeeMiddleName },
+                        { "Box_h_last_name", pdfData.EmployeeLastName },
+                        { "Box_h_suffix", pdfData.EmployeeSuffix },
+                        { "Box_1_correct", pdfData.FederalWages },
+                        { "Box_2_correct", pdfData.FederalWithholding },
+                        { "Box_3_correct", pdfData.SocialSecurityWages },
+                        { "Box_4_correct", pdfData.SocialSecurityWithholding },
+                        { "Box_5_correct", pdfData.MedicareWages },
+                        { "Box_6_correct", pdfData.MedicareWithholding },
+                        { "Box_7_correct", pdfData.SocialSecurityTips },
+                        { "Box_8_correct", pdfData.AllocatedTips },
+                        { "Box_9_correct", pdfData.AdvancedEic },
+                        { "Box_10_correct", pdfData.DependentCare },
+                        { "Box_11_correct", pdfData.NonqualifiedTotal },
+                        { "Box_12a_Code_correct", pdfData.Box12aCode },
+                        { "Box_12a_Amt_correct", pdfData.Box12aAmount },
+                        { "Box_12b_Code_correct", pdfData.Box12bCode },
+                        { "Box_12b_Amt_correct", pdfData.Box12bAmount },
+                        { "Box_12c_Code_correct", pdfData.Box12cCode },
+                        { "Box_12c_Amt_correct", pdfData.Box12cAmount },
+                        { "Box_12d_Code_correct", pdfData.Box12dCode },
+                        { "Box_12d_Amt_correct", pdfData.Box12dAmount },
+                        { "Box_13_1_correct", pdfData.Box13CheckBox1 },
+                        { "Box_13_2_correct", pdfData.Box13CheckBox2 },
+                        { "Box_13_3_correct", pdfData.Box13CheckBox3 },
+                        { "Box_d", pdfData.EmployeeSsn },
+                        { "Box_b", pdfData.EmployerEin },
+                        { "Box_14_line_1", pdfData.Box14Line1 },
+                        { "Box_14_line_2", pdfData.Box14Line2 },
+                        { "Box_14_line_3", pdfData.Box14Line3 },
+                        { "Box_14_line_4", pdfData.Box14Line4 },
+                        { "Box_15_1_1", pdfData.Box15Line1Section1 },
+                        { "Box_15_1_2", pdfData.Box15Line1Section2 },
+                        { "Box_15_2_1", pdfData.Box15Line2Section1 },
+                        { "Box_15_2_2", pdfData.Box15Line2Section2 },
+                        { "Box_16_1", pdfData.Box16Line1 },
+                        { "Box_16_2", pdfData.Box16Line2 },
+                        { "Box_17_1", pdfData.Box17Line1 },
+                        { "Box_17_2", pdfData.Box17Line2 },
+                        { "Box_18_1", pdfData.Box18Line1 },
+                        { "Box_18_2", pdfData.Box18Line2 },
+                        { "Box_19_1", pdfData.Box19Line1 },
+                        { "Box_19_2", pdfData.Box19Line2 },
+                        { "Box_20_1", pdfData.Box20Line1 },
+                        { "Box_20_2", pdfData.Box20Line2 },
+                        { "Box_f", pdfData.EmployeeSsnPrev },
+                        { "Box_g", pdfData.EmployeeNamePrev },
+                        { "Box_1_previous", pdfData.FederalWagesPrev },
+                        { "Box_2_previous", pdfData.FederalWithholdingPrev },
+                        { "Box_3_previous", pdfData.SocialSecurityWagesPrev },
+                        { "Box_4_previous", pdfData.SocialSecurityWithholdingPrev },
+                        { "Box_5_previous", pdfData.MedicareWagesPrev },
+                        { "Box_6_previous", pdfData.MedicareWithholdingPrev },
+                        { "Box_7_previous", pdfData.SocialSecurityTipsPrev },
+                        { "Box_8_previous", pdfData.AllocatedTipsPrev },
+                        { "Box_10_previous", pdfData.DependentCarePrev },
+                        { "Box_11_previous", pdfData.NonqualifiedTotalPrev },
+                        { "Box_12a_Code_previous", pdfData.Box12aCodePrev },
+                        { "Box_12a_Amt_previous", pdfData.Box12aAmountPrev },
+                        { "Box_12b_Code_previous", pdfData.Box12bCodePrev },
+                        { "Box_12b_Amt_previous", pdfData.Box12bAmountPrev },
+                        { "Box_12c_Code_previous", pdfData.Box12cCodePrev },
+                        { "Box_12c_Amt_previous", pdfData.Box12cAmountPrev },
+                        { "Box_12d_Code_previous", pdfData.Box12dCodePrev },
+                        { "Box_12d_Amt_previous", pdfData.Box12dAmountPrev },
+                        { "Box_13_1_previous", pdfData.Box13CheckBox1Prev },
+                        { "Box_13_2_previous", pdfData.Box13CheckBox2Prev },
+                        { "Box_13_3_previous", pdfData.Box13CheckBox3Prev },
+                        { "Box_14_line_1_previous", pdfData.Box14Line1Prev },
+                        { "Box_14_line_2_previous", pdfData.Box14Line2Prev },
+                        { "Box_14_line_3_previous", pdfData.Box14Line3Prev },
+                        { "Box_14_line_4_previous", pdfData.Box14Line4Prev },
+                        { "Box_15_1_1_previous", pdfData.Box15Line1Section1Prev },
+                        { "Box_15_1_2_previous", pdfData.Box15Line1Section2Prev },
+                        { "Box_15_2_1_previous", pdfData.Box15Line2Section1Prev },
+                        { "Box_15_2_2_previous", pdfData.Box15Line2Section2Prev },
+                        { "Box_16_1_previous", pdfData.Box16Line1Prev },
+                        { "Box_16_2_previous", pdfData.Box16Line2Prev },
+                        { "Box_17_1_previous", pdfData.Box17Line1Prev },
+                        { "Box_17_2_previous", pdfData.Box17Line2Prev },
+                        { "Box_18_1_previous", pdfData.Box18Line1Prev },
+                        { "Box_18_2_previous", pdfData.Box18Line2Prev },
+                        { "Box_19_1_previous", pdfData.Box19Line1Prev },
+                        { "Box_19_2_previous", pdfData.Box19Line2Prev },
+                        { "Box_20_1_previous", pdfData.Box20Line1Prev },
+                        { "Box_20_2_previous", pdfData.Box20Line2Prev },
+                    };
+
+                    pdfSharpRepository.PopulatePdfDocument(ref document, taxFormData);
+                    memoryStream = pdfSharpRepository.FinalizePdfDocument(document);
+                }
+
+                reportBytes = memoryStream.ToArray();
+                return reportBytes;        
+            }
+
+            catch (Exception e)
+            {
+                // Log the error and throw the exception that was given
+                logger.Error(e.Message);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Populates the W-2 PDF with the supplied data.
+        /// </summary>
+        /// <param name="pdfData">W-2 PDF data</param>
+        /// <returns>Byte array containing PDF data for the W-2 tax form</returns>
+        public byte[] PopulateW2Pdf(FormW2PdfData pdfData, string documentPath)
+        {
+            byte[] reportBytes;
+            var memoryStream = new MemoryStream();
+            try
+            {
+                if (pdfData != null && !string.IsNullOrEmpty(documentPath))
+                {
+                    var document = pdfSharpRepository.OpenDocument(documentPath);
+
+                    var taxFormData = new Dictionary<string, string>()
+                    {
+                        { "Tax_Year", pdfData.TaxYear },
+                        { "Box_c_name", pdfData.EmployerName },
+                        { "Box_c_addr_1", pdfData.EmployerAddressLine1 },
+                        { "Box_c_addr_2", pdfData.EmployerAddressLine2 },
+                        { "Box_c_addr_3", pdfData.EmployerAddressLine3 },
+                        { "Box_c_addr_4", pdfData.EmployerAddressLine4 },
+                        { "Box_e",        pdfData.EmployeeName() },
+                        { "Box_f_addr_1", pdfData.EmployeeAddressLine1 },
+                        { "Box_f_addr_2", pdfData.EmployeeAddressLine2 },
+                        { "Box_f_addr_3", pdfData.EmployeeAddressLine3 },
+                        { "Box_f_addr_4", pdfData.EmployeeAddressLine4 },
+                        { "Box_1", pdfData.FederalWages },
+                        { "Box_2", pdfData.FederalWithholding },
+                        { "Box_3", pdfData.SocialSecurityWages },
+                        { "Box_4", pdfData.SocialSecurityWithholding },
+                        { "Box_5", pdfData.MedicareWages },
+                        { "Box_6", pdfData.MedicareWithholding },
+                        { "Box_7", pdfData.SocialSecurityTips },
+                        { "Box_8", pdfData.AllocatedTips },
+                        { "Box_9", pdfData.AdvancedEic},
+                        { "Box_10", pdfData.DependentCare },
+                        { "Box_11", pdfData.NonqualifiedTotal },
+                        { "Box_12a_Code", pdfData.Box12aCode },
+                        { "Box_12a_Amt", pdfData.Box12aAmount },
+                        { "Box_12b_Code", pdfData.Box12bCode },
+                        { "Box_12b_Amt", pdfData.Box12bAmount },
+                        { "Box_12c_Code", pdfData.Box12cCode },
+                        { "Box_12c_Amt", pdfData.Box12cAmount },
+                        { "Box_12d_Code", pdfData.Box12dCode },
+                        { "Box_12d_Amt", pdfData.Box12dAmount },
+                        { "Box_13_1", pdfData.Box13CheckBox1 },
+                        { "Box_13_2", pdfData.Box13CheckBox2 },
+                        { "Box_13_3", pdfData.Box13CheckBox3 },
+                        { "Box_a", pdfData.EmployeeSsn },
+                        { "Box_b", pdfData.EmployerEin },
+                        { "Box_14_line_1", pdfData.Box14Line1 },
+                        { "Box_14_line_2", pdfData.Box14Line2 },
+                        { "Box_14_line_3", pdfData.Box14Line3 },
+                        { "Box_14_line_4", pdfData.Box14Line4 },
+                        { "Box_15_1_1", pdfData.Box15Line1Section1 },
+                        { "Box_15_1_2", pdfData.Box15Line1Section2 },
+                        { "Box_15_2_1", pdfData.Box15Line2Section1 },
+                        { "Box_15_2_2", pdfData.Box15Line2Section2 },
+                        { "Box_16_1", pdfData.Box16Line1 },
+                        { "Box_16_2", pdfData.Box16Line2 },
+                        { "Box_17_1", pdfData.Box17Line1 },
+                        { "Box_17_2", pdfData.Box17Line2 },
+                        { "Box_18_1", pdfData.Box18Line1 },
+                        { "Box_18_2", pdfData.Box18Line2 },
+                        { "Box_19_1", pdfData.Box19Line1 },
+                        { "Box_19_2", pdfData.Box19Line2 },
+                        { "Box_20_1", pdfData.Box20Line1 },
+                        { "Box_20_2", pdfData.Box20Line2 },
+                    };
+
+                    pdfSharpRepository.PopulatePdfDocument(ref document, taxFormData);
+                    memoryStream = pdfSharpRepository.FinalizePdfDocument(document);
+                }
+
+                reportBytes = memoryStream.ToArray();
+                return reportBytes;
+            }
+            catch (Exception e)
+            {
+                // Log the error and throw the exception that was given
+                logger.Error(e.Message);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Populates the W-2 PDF with the supplied data.
+        /// </summary>
+        /// <param name="pdfData">W-2 PDF data</param>
+        /// <param name="pathToReport">Path indicating the path to the report on the server</param>
+        /// <returns>Byte array containing PDF data for the W-2 tax form</returns>
         public byte[] PopulateW2PdfReport(FormW2PdfData pdfData, string pathToReport)
         {
             if (pdfData == null)
@@ -271,30 +590,37 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <param name="personId">ID of the person assigned to and requesting the 1095-C.</param>
         /// <param name="recordId">The record ID where the 1095-C pdf data is stored</param>
         /// <returns>Byte array containing PDF data for the 1095-C tax form</returns>
-        public async Task<Form1095cPdfData> Get1095cTaxFormData(string personId, string recordId)
-		{
-			if (string.IsNullOrEmpty(personId))
-				throw new ArgumentNullException("personId", "Person ID must be specified.");
+        public async Task<Form1095cPdfData> Get1095cTaxFormDataAsync(string personId, string recordId)
+        {
+            if (string.IsNullOrEmpty(personId))
+                throw new ArgumentNullException("personId", "Person ID must be specified.");
 
-			if (string.IsNullOrEmpty(recordId))
-				throw new ArgumentNullException("recordId", "Record ID must be specified.");
+            if (string.IsNullOrEmpty(recordId))
+                throw new ArgumentNullException("recordId", "Record ID must be specified.");
 
-			if (personId != CurrentUser.PersonId && !HasPermission(HumanResourcesPermissionCodes.ViewEmployee1095C))
+            if (!HasAccessTo1095C(personId))
                 throw new PermissionsException("Insufficient access to 1095-C data.");
 
             try
             {
-				// Call the repository to get all the data to print in the pdf.
-				var taxFormPdfData = await this.taxFormPdfDataRepository.Get1095cPdfAsync(personId, recordId);
-				return taxFormPdfData;
-			}
-			catch (Exception e)
-			{
-				// Log the error and throw the exception that was given
-				logger.Error(e.Message);
-				throw;
-			}
-		}
+                // Call the repository to get all the data to print in the pdf.
+                var taxFormPdfData = await this.taxFormPdfDataRepository.Get1095cPdfAsync(personId, recordId);
+
+                // Validate that the domain entity employee ID is the same as the person ID requested.
+                if (personId != taxFormPdfData.EmployeeId)
+                {
+                    throw new PermissionsException("Insufficient access to 1095-C data.");
+                }
+
+                return taxFormPdfData;
+            }
+            catch (Exception e)
+            {
+                // Log the error and throw the exception that was given
+                logger.Error(e.Message);
+                throw;
+            }
+        }
 
         /// <summary>
         /// Populates the 1095-C PDF with the supplied data using an RDLC report.
@@ -421,7 +747,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                     parameters.Add(utility.BuildReportParameter("LowestCostAmountNovember", ConvertDecimalToUsString(pdfData.LowestCostAmountNovember)));
                     parameters.Add(utility.BuildReportParameter("LowestCostAmountDecember", ConvertDecimalToUsString(pdfData.LowestCostAmountDecember)));
                 }
-                
+
 
                 parameters.Add(utility.BuildReportParameter("SafeHarborCode12Month", pdfData.SafeHarborCode12Month));
                 parameters.Add(utility.BuildReportParameter("SafeHarborCodeJanuary", pdfData.SafeHarborCodeJanuary));
@@ -516,7 +842,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <param name="personId">ID of the person assigned to and requesting the T4.</param>
         /// <param name="recordId">The record ID where the T-4 pdf data is stored</param>
         /// <returns>FormT4PdfData domain entity</returns>
-        public async Task<FormT4PdfData> GetT4TaxFormData(string personId, string recordId)
+        public async Task<FormT4PdfData> GetT4TaxFormDataAsync(string personId, string recordId)
         {
             if (string.IsNullOrEmpty(personId))
                 throw new ArgumentNullException("personId", "Person ID must be specified.");
@@ -530,6 +856,13 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             try
             {
                 var taxFormPdfData = await this.taxFormPdfDataRepository.GetT4PdfAsync(personId, recordId);
+
+                // Validate that the domain entity employee ID is the same as the person ID requested.
+                if (personId != taxFormPdfData.EmployeeId)
+                {
+                    throw new PermissionsException("Insufficient access to T4 data.");
+                }
+
                 return taxFormPdfData;
             }
             catch (Exception e)
@@ -572,28 +905,28 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 var parameters = new List<ReportParameter>();
 
                 // Box Data
-                parameters.Add(utility.BuildReportParameter("SocialInsuranceNumber",        pdfData.SocialInsuranceNumber));
-                parameters.Add(utility.BuildReportParameter("EmploymentIncome",             pdfData.EmploymentIncome));
-                parameters.Add(utility.BuildReportParameter("EmployeesCPPContributions",    pdfData.EmployeesCPPContributions));
-                parameters.Add(utility.BuildReportParameter("EmployeesQPPContributions",    pdfData.EmployeesQPPContributions));
-                parameters.Add(utility.BuildReportParameter("EmployeesEIPremiums",          pdfData.EmployeesEIPremiums));
-                parameters.Add(utility.BuildReportParameter("RPPContributions",             pdfData.RPPContributions));
-                parameters.Add(utility.BuildReportParameter("IncomeTaxDeducted",            pdfData.IncomeTaxDeducted));
-                parameters.Add(utility.BuildReportParameter("EIInsurableEarnings",          pdfData.EIInsurableEarnings));
-                parameters.Add(utility.BuildReportParameter("CPPQPPPensionableEarnings",    pdfData.CPPQPPPensionableEarnings));
-                parameters.Add(utility.BuildReportParameter("UnionDues",                    pdfData.UnionDues));
-                parameters.Add(utility.BuildReportParameter("CharitableDonations",          pdfData.CharitableDonations));
-                parameters.Add(utility.BuildReportParameter("RPPorDPSPRegistrationNumber",  pdfData.RPPorDPSPRegistrationNumber));
-                parameters.Add(utility.BuildReportParameter("PensionAdjustment",            pdfData.PensionAdjustment));
-                parameters.Add(utility.BuildReportParameter("EmployeesPPIPPremiums",        pdfData.EmployeesPPIPPremiums));
-                parameters.Add(utility.BuildReportParameter("PPIPInsurableEarnings",        pdfData.PPIPInsurableEarnings));
+                parameters.Add(utility.BuildReportParameter("SocialInsuranceNumber", pdfData.SocialInsuranceNumber));
+                parameters.Add(utility.BuildReportParameter("EmploymentIncome", pdfData.EmploymentIncome));
+                parameters.Add(utility.BuildReportParameter("EmployeesCPPContributions", pdfData.EmployeesCPPContributions));
+                parameters.Add(utility.BuildReportParameter("EmployeesQPPContributions", pdfData.EmployeesQPPContributions));
+                parameters.Add(utility.BuildReportParameter("EmployeesEIPremiums", pdfData.EmployeesEIPremiums));
+                parameters.Add(utility.BuildReportParameter("RPPContributions", pdfData.RPPContributions));
+                parameters.Add(utility.BuildReportParameter("IncomeTaxDeducted", pdfData.IncomeTaxDeducted));
+                parameters.Add(utility.BuildReportParameter("EIInsurableEarnings", pdfData.EIInsurableEarnings));
+                parameters.Add(utility.BuildReportParameter("CPPQPPPensionableEarnings", pdfData.CPPQPPPensionableEarnings));
+                parameters.Add(utility.BuildReportParameter("UnionDues", pdfData.UnionDues));
+                parameters.Add(utility.BuildReportParameter("CharitableDonations", pdfData.CharitableDonations));
+                parameters.Add(utility.BuildReportParameter("RPPorDPSPRegistrationNumber", pdfData.RPPorDPSPRegistrationNumber));
+                parameters.Add(utility.BuildReportParameter("PensionAdjustment", pdfData.PensionAdjustment));
+                parameters.Add(utility.BuildReportParameter("EmployeesPPIPPremiums", pdfData.EmployeesPPIPPremiums));
+                parameters.Add(utility.BuildReportParameter("PPIPInsurableEarnings", pdfData.PPIPInsurableEarnings));
 
                 // Other boxes
-                for(var i = 0; i < 6; i++)
+                for (var i = 0; i < 6; i++)
                 {
                     var box = i + 1;
                     var boxData = pdfData.OtherBoxes.ElementAtOrDefault(i);
-                    if(boxData != null)
+                    if (boxData != null)
                     {
                         parameters.Add(utility.BuildReportParameter("OtherBox" + box + "Code", boxData.Code));
                         parameters.Add(utility.BuildReportParameter("OtherBox" + box + "Amount", boxData.Amount));
@@ -605,33 +938,33 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                     }
 
                 }
-                
+
                 // Employee Info
-                parameters.Add(utility.BuildReportParameter("EmployeeFirstName",            pdfData.EmployeeFirstName));
-                parameters.Add(utility.BuildReportParameter("EmployeeMiddleName",           pdfData.EmployeeMiddleName));
-                parameters.Add(utility.BuildReportParameter("EmployeeLastName",             pdfData.EmployeeLastName));
-                parameters.Add(utility.BuildReportParameter("EmployeeAddressLine1",         pdfData.EmployeeAddressLine1));
-                parameters.Add(utility.BuildReportParameter("EmployeeAddressLine2",         pdfData.EmployeeAddressLine2));
-                parameters.Add(utility.BuildReportParameter("EmployeeAddressLine3",         pdfData.EmployeeAddressLine3));
-                parameters.Add(utility.BuildReportParameter("EmployeeAddressLine4",         pdfData.EmployeeAddressLine4));
-                parameters.Add(utility.BuildReportParameter("ProvinceOfEmployment",         pdfData.ProvinceOfEmployment));
-                parameters.Add(utility.BuildReportParameter("ExemptCPPQPP",                 pdfData.ExemptCPPQPP));
-                parameters.Add(utility.BuildReportParameter("ExemptEI",                     pdfData.ExemptEI));
-                parameters.Add(utility.BuildReportParameter("ExemptPPIP",                   pdfData.ExemptPPIP));
-                parameters.Add(utility.BuildReportParameter("EmploymentCode",               pdfData.EmploymentCode));
+                parameters.Add(utility.BuildReportParameter("EmployeeFirstName", pdfData.EmployeeFirstName));
+                parameters.Add(utility.BuildReportParameter("EmployeeMiddleName", pdfData.EmployeeMiddleName));
+                parameters.Add(utility.BuildReportParameter("EmployeeLastName", pdfData.EmployeeLastName));
+                parameters.Add(utility.BuildReportParameter("EmployeeAddressLine1", pdfData.EmployeeAddressLine1));
+                parameters.Add(utility.BuildReportParameter("EmployeeAddressLine2", pdfData.EmployeeAddressLine2));
+                parameters.Add(utility.BuildReportParameter("EmployeeAddressLine3", pdfData.EmployeeAddressLine3));
+                parameters.Add(utility.BuildReportParameter("EmployeeAddressLine4", pdfData.EmployeeAddressLine4));
+                parameters.Add(utility.BuildReportParameter("ProvinceOfEmployment", pdfData.ProvinceOfEmployment));
+                parameters.Add(utility.BuildReportParameter("ExemptCPPQPP", pdfData.ExemptCPPQPP));
+                parameters.Add(utility.BuildReportParameter("ExemptEI", pdfData.ExemptEI));
+                parameters.Add(utility.BuildReportParameter("ExemptPPIP", pdfData.ExemptPPIP));
+                parameters.Add(utility.BuildReportParameter("EmploymentCode", pdfData.EmploymentCode));
 
                 // Employer Info
-                parameters.Add(utility.BuildReportParameter("EmployerAddressLine1",         pdfData.EmployerAddressLine1));
-                parameters.Add(utility.BuildReportParameter("EmployerAddressLine2",         pdfData.EmployerAddressLine2));
-                parameters.Add(utility.BuildReportParameter("EmployerAddressLine3",         pdfData.EmployerAddressLine3));
-                parameters.Add(utility.BuildReportParameter("EmployerAddressLine4",         pdfData.EmployerAddressLine4));
-                parameters.Add(utility.BuildReportParameter("EmployerAddressLine5",         pdfData.EmployerAddressLine5));
+                parameters.Add(utility.BuildReportParameter("EmployerAddressLine1", pdfData.EmployerAddressLine1));
+                parameters.Add(utility.BuildReportParameter("EmployerAddressLine2", pdfData.EmployerAddressLine2));
+                parameters.Add(utility.BuildReportParameter("EmployerAddressLine3", pdfData.EmployerAddressLine3));
+                parameters.Add(utility.BuildReportParameter("EmployerAddressLine4", pdfData.EmployerAddressLine4));
+                parameters.Add(utility.BuildReportParameter("EmployerAddressLine5", pdfData.EmployerAddressLine5));
 
-                parameters.Add(utility.BuildReportParameter("TaxYear",                      pdfData.TaxYear));
+                parameters.Add(utility.BuildReportParameter("TaxYear", pdfData.TaxYear));
 
                 // Set the report parameters
                 report.SetParameters(parameters);
-                
+
                 // Render the report as a byte array
                 reportBytes = report.Render(
                     ReportType,
@@ -648,24 +981,24 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 throw;
             }
         }
-        
+
         /// <summary>
         /// Convert the input decimal value into a string without the '$'.
         /// </summary>
         /// <param name="amount">Input amount</param>
         /// <returns>String representation of input value.</returns>
         private string ConvertDecimalToUsString(decimal? amount)
-		{
-		   if (amount.HasValue)
-		   {
+        {
+            if (amount.HasValue)
+            {
                 var amt = amount.Value;
                 return amt.ToString("C", CultureInfo.GetCultureInfo("en-US")).Replace("$", "");
-		   }
-		   else
-           {
+            }
+            else
+            {
                 return "";
-           }
-		}
+            }
+        }
 
         /// <summary>
         /// Convert the input decimal value into a string with the '$'.
@@ -682,6 +1015,44 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             else
             {
                 return "";
+            }
+        }
+
+        /// <summary>
+        /// Verifies if the user is permitted to view another person's W-2 tax form.
+        /// A person can only view a W-2 form for:
+        /// 1. Himself/herself with VIEW.W2 permission
+        /// 2. Someone who currently has permission to proxy for the user with VIEW.W2 permission
+        /// 3. Someone (Tax form admin) who currently has permission to view all users' W-2 forms with VIEW.EMPLOYEE.W2 permission
+        /// </summary>
+        private bool HasAccessToW2(string personId)
+        {
+            if (!CurrentUser.IsPerson(personId) && !HasProxyAccessForPerson(personId))
+            {
+                return HasPermission(HumanResourcesPermissionCodes.ViewEmployeeW2);
+            }
+            else
+            {
+                return HasPermission(HumanResourcesPermissionCodes.ViewW2);
+            }
+        }
+
+        /// <summary>
+        /// Verifies if the user is permitted to view another person's 1095-C tax form.
+        /// A person can only view a 1095-C form for:
+        /// 1. Himself/herself with VIEW.1095C permission
+        /// 2. Someone who currently has permission to proxy for the user with VIEW.1095C permission
+        /// 3. Someone (Tax form admin) who currently has permission to view all users' 1095-C forms with VIEW.EMPLOYEE.1095C permission
+        /// </summary>
+        private bool HasAccessTo1095C(string personId)
+        {
+            if (!CurrentUser.IsPerson(personId) && !HasProxyAccessForPerson(personId))
+            {
+                return HasPermission(HumanResourcesPermissionCodes.ViewEmployee1095C);
+            }
+            else
+            {
+                return HasPermission(HumanResourcesPermissionCodes.View1095C);
             }
         }
 

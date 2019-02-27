@@ -21,5 +21,6 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         Task<StudentProgram> GetAsync(string studentid, string programid);
         Task<IEnumerable<EvaluationNotice>> GetStudentProgramEvaluationNoticesAsync(string studentId, string programCode);
         Task<IEnumerable<StudentProgram>> GetStudentProgramsByIdsAsync(IEnumerable<string> studentIds, bool includeInactivePrograms = false, Term term = null, bool includeHistory = false);
+        Task<List<StudentProgram>> GetStudentAcademicPeriodProfileStudentProgramInfoAsync(List<string> stuProgIds);
     }
 }

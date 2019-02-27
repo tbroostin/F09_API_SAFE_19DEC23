@@ -64,11 +64,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 logger.Error(cex.Message);
                 throw CreateHttpResponseException("Unable to create draft budget adjustment - configuration exception.", HttpStatusCode.NotFound);
             }
-            catch (ApplicationException aex)
-            {
-                logger.Error(aex.Message);
-                throw CreateHttpResponseException("Unable to create draft budget adjustment - application exception.", HttpStatusCode.BadRequest);
-            }
+            // Application exceptions will be caught below.
             catch (Exception ex)
             {
                 logger.Error(ex.Message);
@@ -159,11 +155,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 logger.Error(argex.Message);
                 throw CreateHttpResponseException("Unable to get the draft budget adjustment.", HttpStatusCode.BadRequest);
             }
-            catch (ApplicationException aex)
-            {
-                logger.Error(aex.Message);
-                throw CreateHttpResponseException("Unable to get the draft budget adjustment - application exception.", HttpStatusCode.BadRequest);
-            }
+            // Application exceptions will be caught below.
             catch (Exception ex)
             {
                 logger.Error(ex.Message);
@@ -211,7 +203,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
             catch (Exception ex)
             {
-                logger.Error(ex.Message);
+                logger.Error(ex, ex.Message);
                 throw CreateHttpResponseException("Unable to delete the draft budget adjustment.", HttpStatusCode.BadRequest);
             }
         }

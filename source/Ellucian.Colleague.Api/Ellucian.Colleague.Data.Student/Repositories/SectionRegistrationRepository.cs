@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Transactions;
@@ -10,9 +10,11 @@ using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Configuration;
 using slf4net;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -122,7 +124,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                     null : 
                                     new TermGrade(studentAcadCred.StcFinalGrade, finalGradeDate, studentAcadCred.StudentAcadCredChgopr);
 
-            var sectionRegistrationResponse = new SectionRegistrationResponse(guid, studentId, sectionId, statusCode, gradeScheme, passAudit, new List<RegistrationMessage>());
+            var sectionRegistrationResponse = new SectionRegistrationResponse(studentAcadCred.RecordGuid, studentId, sectionId, statusCode, gradeScheme, passAudit, new List<RegistrationMessage>());
             sectionRegistrationResponse.MidTermGrades = midTermGrades;
             sectionRegistrationResponse.FinalTermGrade = finalGrade;
             sectionRegistrationResponse.VerifiedTermGrade = verifiedGrade;
@@ -137,7 +139,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             sectionRegistrationResponse.CreditType = studentAcadCred.StcCredType;
             sectionRegistrationResponse.AcademicLevel = studentAcadCred.StcAcadLevel;
             sectionRegistrationResponse.Ceus = studentAcadCred.StcAttCeus.HasValue || !string.IsNullOrEmpty(studentAcadCred.StcVerifiedGrade) ? studentAcadCred.StcAttCeus : studentAcadCred.StcCeus;
-            sectionRegistrationResponse.EarnedCeus = studentAcadCred.StcCmplCeus; ;
+            sectionRegistrationResponse.EarnedCeus = studentAcadCred.StcCmplCeus;
             sectionRegistrationResponse.Credit = studentAcadCred.StcAttCred.HasValue || !string.IsNullOrEmpty(studentAcadCred.StcVerifiedGrade) ? studentAcadCred.StcAttCred : studentAcadCred.StcCred;
             sectionRegistrationResponse.EarnedCredit = studentAcadCred.StcCmplCred;
             sectionRegistrationResponse.GradePoint = studentAcadCred.StcGradePts;
@@ -160,40 +162,129 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         public async Task<Tuple<IEnumerable<SectionRegistrationResponse>, int>> GetSectionRegistrationsAsync(int offset,
             int limit, string sectionId, string personId)
         {
+            SectionRegistrationResponse sectReg = new SectionRegistrationResponse(string.Empty, personId, sectionId, string.Empty, new List<RegistrationMessage>());
+
+            var results = await this.GetSectionRegistrations2Async(offset, limit, sectReg, string.Empty, string.Empty);
+            return results;
+        }
+
+        #region V16.0.0
+        /// <summary>
+        /// Section registration with paging and filters.
+        /// </summary>
+        /// <param name="offset"></param>
+        /// <param name="limit"></param>
+        /// <param name="sectionId"></param>
+        /// <param name="personId"></param>
+        /// <param name="acadPeriod"></param>
+        /// <param name="sectionInstructor"></param>
+        /// <returns></returns>
+        public async Task<Tuple<IEnumerable<SectionRegistrationResponse>, int>> GetSectionRegistrations2Async(int offset,
+            int limit, SectionRegistrationResponse sectReg, string acadPeriod, string sectionInstructor)
+        {
             var sectionRegistrations = new List<SectionRegistrationResponse>();
             var totalCount = 0;
+            string[] limitingKeys = null;
             var criteria = string.Empty;
 
-            if (!string.IsNullOrEmpty(sectionId))
+            //STC.PERSON.ID (criteria)
+            if (sectReg != null && !string.IsNullOrEmpty(sectReg.StudentId))
             {
-                criteria += "WITH SCS.COURSE.SECTION EQ '" + sectionId + "'";
-            }
-            if (!string.IsNullOrEmpty(personId))
-            {
-                if (criteria != "")
+                criteria = "WITH PST.STUDENT.ACAD.CRED BY.EXP PST.STUDENT.ACAD.CRED SAVING PST.STUDENT.ACAD.CRED";
+                var acadCredIds = await DataReader.SelectAsync("PERSON.ST", new string[] { sectReg.StudentId }, criteria);
+                limitingKeys = await DataReader.SelectAsync("STUDENT.ACAD.CRED", acadCredIds, "WITH STC.STUDENT.COURSE.SEC NE ''");
+                if (limitingKeys == null || !limitingKeys.Any())
                 {
-                    criteria += " AND ";
+                    return new Tuple<IEnumerable<SectionRegistrationResponse>, int>(new List<SectionRegistrationResponse>(), 0);
                 }
-                criteria += "WITH STC.PERSON.ID EQ '" + personId + "'";
             }
 
-            if (!string.IsNullOrEmpty(sectionId) || !string.IsNullOrEmpty(personId))
+            //STC.TERM (named query)
+            if (!string.IsNullOrWhiteSpace(acadPeriod))
             {
-                criteria += " AND WITH STC.STUDENT.COURSE.SEC NE ''";
+                criteria = string.Format("WITH STC.TERM EQ '{0}' AND WITH STC.STUDENT.COURSE.SEC NE ''", acadPeriod);
+                limitingKeys = await DataReader.SelectAsync("STUDENT.ACAD.CRED", limitingKeys, criteria);
+                if (limitingKeys == null || !limitingKeys.Any())
+                {
+                    return new Tuple<IEnumerable<SectionRegistrationResponse>, int>(new List<SectionRegistrationResponse>(), 0);
+                }
             }
-            else
+
+            //SCS.COURSE.SECTION (criteria)
+            if (sectReg != null && !string.IsNullOrEmpty(sectReg.SectionId))
             {
-                criteria = "WITH STC.STUDENT.COURSE.SEC NE ''";
+                if (limitingKeys == null || !limitingKeys.Any())
+                {
+                    criteria = string.Format("WITH SCS.COURSE.SECTION EQ '{0}' SAVING UNIQUE SCS.STUDENT.ACAD.CRED", 
+                        sectReg.SectionId);
+                    limitingKeys = await DataReader.SelectAsync("STUDENT.COURSE.SEC", criteria);
+                    if (limitingKeys == null || !limitingKeys.Any())
+                    {
+                        return new Tuple<IEnumerable<SectionRegistrationResponse>, int>(new List<SectionRegistrationResponse>(), 0);
+                    }
+                }
+                else
+                {
+                    criteria = string.Format("WITH STC.STUDENT.COURSE.SEC NE '' AND WITH SCS.COURSE.SECTION EQ '{0}'", sectReg.SectionId);
+                    limitingKeys = await DataReader.SelectAsync("STUDENT.ACAD.CRED", limitingKeys, criteria);
+                    if (limitingKeys == null || !limitingKeys.Any())
+                    {
+                        return new Tuple<IEnumerable<SectionRegistrationResponse>, int>(new List<SectionRegistrationResponse>(), 0);
+                    }
+                }                
             }
 
-            var studentAcadCreds = await DataReader.SelectAsync("STUDENT.ACAD.CRED", criteria);
-            totalCount = studentAcadCreds.Count();
+            //COURSE.SECTIONS (named query)
+            if (!string.IsNullOrWhiteSpace(sectionInstructor))
+            {
+                //get all the ids COURSE.SEC.FACULTY...
+                criteria = string.Format("WITH CSF.FACULTY EQ '{0}'", sectionInstructor);
+                var csfId = await DataReader.SelectAsync("COURSE.SEC.FACULTY", criteria);
+                if (csfId == null || !csfId.Any())
+                {
+                    return new Tuple<IEnumerable<SectionRegistrationResponse>, int>(new List<SectionRegistrationResponse>(), 0);
+                }
 
-            if (totalCount == 0)
-                return new Tuple<IEnumerable<SectionRegistrationResponse>, int>(sectionRegistrations, totalCount);
+                var instructorCriteria = "SAVING UNIQUE CSF.COURSE.SECTION";
+                var courseSecIds = await DataReader.SelectAsync("COURSE.SEC.FACULTY", csfId, instructorCriteria);
+                if (courseSecIds == null || !courseSecIds.Any())
+                {
+                    return new Tuple<IEnumerable<SectionRegistrationResponse>, int>(new List<SectionRegistrationResponse>(), 0);
+                }
+                criteria = "WITH SCS.COURSE.SECTION EQ '?'";
+                var stCourseSecIds = await DataReader.SelectAsync("STUDENT.COURSE.SEC", criteria, courseSecIds.Distinct().ToArray());
 
-            Array.Sort(studentAcadCreds);
-            var sublist = studentAcadCreds.Skip(offset).Take(limit).ToArray();
+                var stAcadCredLimitingKeys = await DataReader.SelectAsync("STUDENT.COURSE.SEC", stCourseSecIds, "SAVING UNIQUE SCS.STUDENT.ACAD.CRED");
+                if (stAcadCredLimitingKeys == null || !stAcadCredLimitingKeys.Any())
+                {
+                    return new Tuple<IEnumerable<SectionRegistrationResponse>, int>(new List<SectionRegistrationResponse>(), 0);
+                }
+                if(limitingKeys == null)
+                {
+                    limitingKeys = stAcadCredLimitingKeys;
+                }
+                else
+                {
+                    limitingKeys = limitingKeys.Intersect(stAcadCredLimitingKeys).ToArray();
+                }
+            }
+
+            //This is for GET ALL
+            if (string.IsNullOrEmpty(criteria))
+            {
+                //May be here get all the id's from PERSON.ST
+                limitingKeys = await DataReader.SelectAsync("STUDENT.ACAD.CRED", "WITH STC.STUDENT.COURSE.SEC NE ''");
+            }
+
+            if (limitingKeys == null || !limitingKeys.Any())
+            {
+                return new Tuple<IEnumerable<SectionRegistrationResponse>, int>(new List<SectionRegistrationResponse>(), 0);
+            }
+
+            totalCount = limitingKeys.Count();
+
+            Array.Sort(limitingKeys);
+            var sublist = limitingKeys.Skip(offset).Take(limit).ToArray();
 
             var studentAcadCredsPage =
                 await DataReader.BulkReadRecordAsync<StudentAcadCred>("STUDENT.ACAD.CRED", sublist);
@@ -203,77 +294,212 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             if (studentCourseSecs.Count() != sublist.Count())
             {
-                throw new ArgumentOutOfRangeException("academicCreditIds",
-                    "Failed to retrieve all credits from the database.");
+                var courseSecIds = studentCourseSecs.Select(scs => scs.Recordkey);
+                var missingIds = scsKey.Except(courseSecIds);
+                StringBuilder sb = new StringBuilder();
+                sb.Append("Unable to provide all section registrations.  Entity: 'STUDENT.ACAD.CRED' referencing an invalid STC.STUDENT.COURSE.SEC record");
+                sb.Append(", ");
+                missingIds.ToList().ForEach(id => 
+                {
+                    var stcRec = studentAcadCredsPage.Where(sc => sc.StcStudentCourseSec == id).FirstOrDefault();
+                    sb.Append(string.Format("Entity 'STUDENT.ACAD.CRED', ID: '{0}', Guid '{1}' references invalid data. ", stcRec.Recordkey, stcRec.RecordGuid));
+                    sb.Append(string.Concat("Record not found, Entity: ‘STUDENT.COURSE.SEC’, ID: '", id, "'"));
+                    sb.Append(" ");
+                });
+                var repositoryError = new RepositoryException("Error(s) reading data from STUDENT.ACAD.CRED");
+                repositoryError.AddError(new RepositoryError("sectionRegistrations.Id", sb.ToString()));
+                throw repositoryError;
             }
 
+            var crsSecIds = studentCourseSecs.Select(i => i.ScsCourseSection);
+
+            var courseSections = await DataReader.BulkReadRecordAsync<CourseSections>(crsSecIds.Distinct().ToArray());
+
+            RepositoryException exception = null;
             foreach (var studentAcadCred in studentAcadCredsPage)
             {
-                var studentId = studentAcadCred.StcPersonId;
-                var studentCourseSec =
-                    studentCourseSecs.FirstOrDefault(sc => sc.Recordkey == studentAcadCred.StcStudentCourseSec);
-                var sectId = string.Empty;
-                var passAudit = string.Empty;
-                if (studentCourseSec != null)
+                try
                 {
-                    sectId = studentCourseSec.ScsCourseSection;
-                    passAudit = studentCourseSec.ScsPassAudit;
+                    SectionRegistrationResponse sectionRegistrationResponse = BuildSectionRegistrationResponse(studentAcadCred, studentCourseSecs, courseSections);
+                    sectionRegistrations.Add(sectionRegistrationResponse);
                 }
-                var statusCode = string.Empty;
-                if (studentAcadCred.StcStatus != null && studentAcadCred.StcStatus.Any())
-                    statusCode = studentAcadCred.StcStatus.ElementAt(0);
-                var gradeScheme = studentAcadCred.StcGradeScheme;
-
-                //Get all grades, midterm, final & verified
-                var midTermGrades = GetMidTermGrades(studentCourseSec);
-
-                var verifiedGrade = string.IsNullOrEmpty(studentAcadCred.StcVerifiedGrade)
-                    ? null
-                    : new VerifiedTermGrade(studentAcadCred.StcVerifiedGrade, studentAcadCred.StcVerifiedGradeDate,
-                        studentAcadCred.StcVerifiedGradeChgopr);
-
-                var finalGradeDate = studentAcadCred.StcVerifiedGradeDate ?? studentAcadCred.StudentAcadCredChgdate;
-
-                var finalGrade = string.IsNullOrEmpty(studentAcadCred.StcFinalGrade)
-                    ? null
-                    : new TermGrade(studentAcadCred.StcFinalGrade, finalGradeDate,
-                        studentAcadCred.StudentAcadCredChgopr);
-
-                var sectionRegistrationResponse = new SectionRegistrationResponse(studentAcadCred.RecordGuid,
-                    studentId, sectId, statusCode, gradeScheme, passAudit, new List<RegistrationMessage>());
-                sectionRegistrationResponse.MidTermGrades = midTermGrades;
-                sectionRegistrationResponse.FinalTermGrade = finalGrade;
-                sectionRegistrationResponse.VerifiedTermGrade = verifiedGrade;
-                sectionRegistrationResponse.InvolvementStartOn = studentAcadCred.StcStartDate;
-                sectionRegistrationResponse.InvolvementEndOn = studentAcadCred.StcEndDate;
-                if (studentCourseSec != null)
+                catch (Exception ex)
                 {
-                    sectionRegistrationResponse.ReportingStatus = studentCourseSec.ScsNeverAttendedFlag;
-                    sectionRegistrationResponse.ReportingLastDayOdAttendance =
-                        studentCourseSec.ScsLastAttendDate;
+                    if (exception == null)
+                        exception = new RepositoryException("Unexpected repository error");
+                    exception.AddError(new RepositoryError("sectionRegistrations.id", string.Format("Error(s) processing STUDENT.ACAD.CRED record '{0}' with guid '{1}'.  Error: {2}", studentAcadCred.Recordkey, studentAcadCred.RecordGuid, ex.Message)));
                 }
-                sectionRegistrationResponse.GradeExtentionExpDate = studentAcadCred.StcGradeExpireDate;
-                sectionRegistrationResponse.TranscriptVerifiedGradeDate = studentAcadCred.StcVerifiedGradeDate;
-                sectionRegistrationResponse.TranscriptVerifiedBy = studentAcadCred.StcVerifiedGradeChgopr;
-                //V7 changes
-                sectionRegistrationResponse.CreditType = studentAcadCred.StcCredType;
-                sectionRegistrationResponse.AcademicLevel = studentAcadCred.StcAcadLevel;
-                sectionRegistrationResponse.Ceus = studentAcadCred.StcAttCeus.HasValue || !string.IsNullOrEmpty(studentAcadCred.StcVerifiedGrade) ? studentAcadCred.StcAttCeus : studentAcadCred.StcCeus;
-                sectionRegistrationResponse.EarnedCeus = studentAcadCred.StcCmplCeus; ;
-                sectionRegistrationResponse.Credit = studentAcadCred.StcAttCred.HasValue || !string.IsNullOrEmpty(studentAcadCred.StcVerifiedGrade) ? studentAcadCred.StcAttCred : studentAcadCred.StcCred;
-                sectionRegistrationResponse.EarnedCredit = studentAcadCred.StcCmplCred;
-                sectionRegistrationResponse.GradePoint = studentAcadCred.StcGradePts;
-                sectionRegistrationResponse.ReplCode = studentAcadCred.StcReplCode;
-                sectionRegistrationResponse.RepeatedAcadCreds = studentAcadCred.StcRepeatedAcadCred;
-                sectionRegistrationResponse.AltcumContribCmplCred = studentAcadCred.StcAltcumContribCmplCred;
-                sectionRegistrationResponse.AltcumContribGpaCred = studentAcadCred.StcAltcumContribGpaCred;
-
-                sectionRegistrations.Add(sectionRegistrationResponse);
+            }
+            if (exception != null && exception.Errors.Any())
+            {
+                throw exception;
             }
 
-            return new Tuple<IEnumerable<SectionRegistrationResponse>, int>(sectionRegistrations, totalCount);
+            return sectionRegistrations.Any() ? new Tuple<IEnumerable<SectionRegistrationResponse>, int>(sectionRegistrations, totalCount) :
+                new Tuple<IEnumerable<SectionRegistrationResponse>, int>(new List<SectionRegistrationResponse>(), 0);
         }
 
+
+        /// <summary>
+        /// Gets section registration response by id for V16.0.0
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        public async Task<SectionRegistrationResponse> GetSectionRegistrationByIdAsync(string id)
+        {
+            // Read original STUDENT.ACAD.CRED to get the actual Status Code for the section.
+            var studentAcadCred = await DataReader.ReadRecordAsync<StudentAcadCred>("STUDENT.ACAD.CRED", id);
+            if (studentAcadCred == null)
+            {
+                throw new KeyNotFoundException(string.Concat("Record not found, Entity: ‘STUDENT.ACAD.CRED’, Record ID: '", id, "'"));
+            }
+            // Read original STUDENT.COURSE.SEC to get the registration mode for the student in this section.
+            var scsKey = studentAcadCred.StcStudentCourseSec;
+            if (string.IsNullOrEmpty(scsKey))
+            {
+                // No STC.STUDENT.COURSE.SEC record associated to this STUDENT.ACAD.CRED.  This is not valid.
+                throw new KeyNotFoundException(string.Format("Record not found, Entity: STUDENT.COURSE.SEC, STUDENT.ACAD.CRED Record ID: '{0}'", id));
+            }
+            var studentCourseSec = await DataReader.ReadRecordAsync<StudentCourseSec>("STUDENT.COURSE.SEC", scsKey);
+            if (studentCourseSec == null)
+            {
+                throw new KeyNotFoundException(string.Concat("Record not found, Entity: ‘STUDENT.COURSE.SEC’, Record ID: '", scsKey, "'"));
+            }
+            Collection<StudentCourseSec> studentCourseSecs = new Collection<StudentCourseSec>() { studentCourseSec };
+            var courseSections = await DataReader.BulkReadRecordAsync<CourseSections>(new string[] { studentCourseSec.ScsCourseSection });
+            try
+            {
+                SectionRegistrationResponse sectionRegistrationResponse = BuildSectionRegistrationResponse(studentAcadCred, studentCourseSecs, courseSections);
+                return sectionRegistrationResponse;
+            }
+            catch (Exception ex)
+            {
+                var exception = new RepositoryException("Unexpected repository error");
+                exception.AddError(new RepositoryError("sectionRegistrations.id", string.Format("Error(s) processing STUDENT.ACAD.CRED record '{0}' with guid '{1}'.  Error: {2}", studentAcadCred.Recordkey, studentAcadCred.RecordGuid, ex.Message)));
+                throw exception;
+            }
+        }
+
+        /// <summary>
+        /// Builds section registration response entity.
+        /// </summary>
+        /// <param name="studentAcadCred"></param>
+        /// <param name="studentCourseSecs"></param>
+        /// <param name="courseSections"></param>
+        /// <returns></returns>
+        private SectionRegistrationResponse BuildSectionRegistrationResponse(StudentAcadCred studentAcadCred, Collection<StudentCourseSec> studentCourseSecs, 
+            Collection<CourseSections> courseSections)
+        {
+            var studentId = studentAcadCred.StcPersonId;
+            var studentCourseSec =
+                studentCourseSecs.FirstOrDefault(sc => sc.Recordkey == studentAcadCred.StcStudentCourseSec);
+
+            CourseSections courseSec = null;
+            if (courseSections != null && courseSections.Any())
+            {
+                courseSec = courseSections.FirstOrDefault(i => i.Recordkey.Equals(studentCourseSec.ScsCourseSection, StringComparison.OrdinalIgnoreCase));
+            }
+
+            var sectId = string.Empty;
+            var passAudit = string.Empty;
+            if (studentCourseSec != null)
+            {
+                sectId = studentCourseSec.ScsCourseSection;
+                passAudit = studentCourseSec.ScsPassAudit;
+            }
+            var statusCode = string.Empty;
+            DateTime? statusDate = null;
+            if (studentAcadCred.StcStatus != null && studentAcadCred.StcStatus.Any())
+            {
+                statusCode = studentAcadCred.StcStatus.ElementAt(0);
+            }
+
+            if(studentAcadCred.StcStatusDate != null && studentAcadCred.StcStatusDate.Any())
+            {
+                statusDate = studentAcadCred.StcStatusDate.ElementAt(0);
+            }
+
+
+            var gradeScheme = studentAcadCred.StcGradeScheme;
+
+            //Get all grades, midterm, final & verified
+            var midTermGrades = GetMidTermGrades(studentCourseSec);
+
+            var verifiedGrade = string.IsNullOrEmpty(studentAcadCred.StcVerifiedGrade)
+                ? null
+                : new VerifiedTermGrade(studentAcadCred.StcVerifiedGrade, studentAcadCred.StcVerifiedGradeDate,
+                    studentAcadCred.StcVerifiedGradeChgopr);
+
+            var finalGradeDate = studentAcadCred.StcVerifiedGradeDate != null ? studentAcadCred.StcVerifiedGradeDate : studentAcadCred.StudentAcadCredChgdate;
+            var finalGrade = string.IsNullOrEmpty(studentAcadCred.StcFinalGrade) ?
+                                    null :
+                                    new TermGrade(studentAcadCred.StcFinalGrade, finalGradeDate, studentAcadCred.StudentAcadCredChgopr);
+
+            var sectionRegistrationResponse = new SectionRegistrationResponse(studentAcadCred.RecordGuid,
+                studentId, sectId, statusCode, gradeScheme, passAudit, new List<RegistrationMessage>());
+
+            sectionRegistrationResponse.StudentAcadCredKey = studentAcadCred.Recordkey;
+            sectionRegistrationResponse.StudentCourseSecKey = studentCourseSec.Recordkey;
+            sectionRegistrationResponse.MidTermGrades = midTermGrades;
+            sectionRegistrationResponse.FinalTermGrade = finalGrade;
+            sectionRegistrationResponse.VerifiedTermGrade = verifiedGrade;
+            sectionRegistrationResponse.InvolvementStartOn = studentAcadCred.StcStartDate;
+            sectionRegistrationResponse.InvolvementEndOn = studentAcadCred.StcEndDate;
+            if (studentCourseSec != null)
+            {
+                sectionRegistrationResponse.ReportingStatus = studentCourseSec.ScsNeverAttendedFlag;
+                sectionRegistrationResponse.ReportingLastDayOdAttendance = studentCourseSec.ScsLastAttendDate;
+            }
+            sectionRegistrationResponse.GradeExtentionExpDate = studentAcadCred.StcGradeExpireDate;
+            sectionRegistrationResponse.TranscriptVerifiedGradeDate = studentAcadCred.StcVerifiedGradeDate;
+            sectionRegistrationResponse.TranscriptVerifiedBy = studentAcadCred.StcVerifiedGradeChgopr;
+            //V7 changes
+            sectionRegistrationResponse.CreditType = studentAcadCred.StcCredType;
+            sectionRegistrationResponse.AcademicLevel = studentAcadCred.StcAcadLevel;
+            sectionRegistrationResponse.Ceus = studentAcadCred.StcAttCeus.HasValue || !string.IsNullOrEmpty(studentAcadCred.StcVerifiedGrade) ?
+                studentAcadCred.StcAttCeus : studentAcadCred.StcCeus;
+            sectionRegistrationResponse.EarnedCeus = studentAcadCred.StcCmplCeus; ;
+            sectionRegistrationResponse.Credit = studentAcadCred.StcAttCred.HasValue || !string.IsNullOrEmpty(studentAcadCred.StcVerifiedGrade) ?
+                studentAcadCred.StcAttCred : studentAcadCred.StcCred;
+            sectionRegistrationResponse.EarnedCredit = studentAcadCred.StcCmplCred;
+            sectionRegistrationResponse.GradePoint = studentAcadCred.StcGradePts;
+            sectionRegistrationResponse.ReplCode = studentAcadCred.StcReplCode;
+            sectionRegistrationResponse.RepeatedAcadCreds = studentAcadCred.StcRepeatedAcadCred;
+            sectionRegistrationResponse.AltcumContribCmplCred = studentAcadCred.StcAltcumContribCmplCred;
+            sectionRegistrationResponse.AltcumContribGpaCred = studentAcadCred.StcAltcumContribGpaCred;
+            //V16.0.0
+            if (studentAcadCred.StcStatusesEntityAssociation != null && studentAcadCred.StcStatusesEntityAssociation.Any())
+            {
+                var statusDateList = new List<Tuple<string, DateTime?>>();
+                studentAcadCred.StcStatusesEntityAssociation.ToList().ForEach(i =>
+                {
+                   if (i.StcStatusDateAssocMember != null && i.StcStatusDateAssocMember.HasValue)
+                    {
+                        Tuple<string, DateTime?> statusDateTuple = new Tuple<string, DateTime?>(i.StcStatusAssocMember, i.StcStatusDateAssocMember.Value);
+                        statusDateList.Add(statusDateTuple);
+                    }
+                });
+                sectionRegistrationResponse.StatusDateTuple = statusDateList;
+            }
+            sectionRegistrationResponse.StatusDate = statusDate;
+            if (courseSec != null && !courseSec.SecTerm.Equals(studentAcadCred.StcTerm, StringComparison.OrdinalIgnoreCase))
+            {
+                sectionRegistrationResponse.OverrideAcadPeriod = studentAcadCred.StcTerm;
+            }
+            else
+            {
+                sectionRegistrationResponse.OverrideAcadPeriod = null;
+            }
+
+            if (courseSec != null && !courseSec.SecLocation.Equals(studentCourseSec.ScsLocation, StringComparison.OrdinalIgnoreCase))
+            {
+                sectionRegistrationResponse.OverrideSite = studentCourseSec.ScsLocation;
+            }
+
+            return sectionRegistrationResponse;
+        }
+
+        #endregion
         /// <summary>
         /// Gets midterm grades
         /// </summary>
@@ -690,7 +916,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             updateRequest.CreateStudentFlag = request.CreateStudentFlag;
 
             ////Guid reqdness HEDM-2628, since transaction doesn't support 00000000-0000-0000-0000-000000000000, we have to assign empty string
-            if (guid.Equals(Guid.Empty.ToString(), StringComparison.OrdinalIgnoreCase))
+            if (guid.Equals(Guid.Empty.ToString(), StringComparison.OrdinalIgnoreCase) || string.IsNullOrEmpty(guid))
             {
                 updateRequest.SecRegGuid = string.Empty;
             }
@@ -698,16 +924,29 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 updateRequest.SecRegGuid = guid;
             }
-
-            updateRequest.RegSections.Add(new RegSections() 
+            if (string.IsNullOrEmpty(request.StudentAcadCredId))
             { 
-                SectionIds = request.Section.SectionId, 
-                SectionAction = request.Section.Action.ToString(), 
+                await CheckForExistingRegistration(studentId, sectionId);
+            }
+            var requestedSection = new RegSections()
+            {
+                SectionIds = request.Section.SectionId,
+                SectionAction = request.Section.Action.ToString(),
                 SectionCredits = request.Section.Credits,
                 SectionCeus = request.Section.Ceus,
                 SectionDate = request.Section.RegistrationDate,
                 SectionAcadLevel = request.Section.AcademicLevelCode
-            });
+            };
+            if (request.InvolvementStartOn != null && request.InvolvementStartOn.HasValue)
+            {
+                requestedSection.InvolvementStartOn = request.InvolvementStartOn.Value.Date;
+            }
+            if (request.InvolvementEndOn != null && request.InvolvementEndOn.HasValue)
+            {
+                requestedSection.InvolvementEndOn = request.InvolvementEndOn.Value.Date;
+            }
+
+            updateRequest.RegSections.Add(requestedSection);
 
             var extendedDataTuple = GetEthosExtendedDataLists();
             if (extendedDataTuple != null && extendedDataTuple.Item1 != null && extendedDataTuple.Item2 != null)
@@ -723,9 +962,18 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             if (updateResponse.ErrorOccurred)
             {
                 var errorMessage = string.Format("Error(s) occurred updating section-registrations for Student: '{0}' and Section: '{1}': ", request.StudentId, request.Section.SectionId);
+                var exception = new RepositoryException(errorMessage);
+
+                exception.AddError(new RepositoryError("sectionRegistrations", updateResponse.ErrorMessage)
+                {
+                    SourceId = request.StudentAcadCredId,
+                    Id = updateRequest.SecRegGuid
+                });
+
                 errorMessage += string.Join(Environment.NewLine, updateResponse.ErrorMessage);
                 logger.Error(errorMessage.ToString());
-                throw new InvalidOperationException(updateResponse.ErrorMessage);
+                // throw new InvalidOperationException(updateResponse.ErrorMessage);
+                throw exception;
             }
 
             // Process the messages returned by colleague registration 
@@ -764,61 +1012,22 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
             }
 
-            var academicCreditIds = new List<string>() { stcKey };
-
-            // Read the updated STUDENT.ACAD.CRED to get the actual Status Code for the section.
-            var studentAcadCred = await DataReader.ReadRecordAsync<StudentAcadCred>("STUDENT.ACAD.CRED", stcKey);
-            if (studentAcadCred != null)
+            if (!string.IsNullOrEmpty(stcKey))
             {
-
-
-                var scsKey = studentAcadCred.StcStudentCourseSec;
-                statusCode = studentAcadCred.StcStatus.ElementAt(0);
-
-                // Read the updated STUDENT.COURSE.SEC to get the section and registration mode for the student in this section.
-                var studentCourseSec = await DataReader.ReadRecordAsync<StudentCourseSec>("STUDENT.COURSE.SEC", scsKey);
-                if (studentCourseSec == null)
-                {
-                    throw new ArgumentOutOfRangeException("studentCourseSecIds", "Failed to retrieve all credits from the database.");
-                }
-
-                studentId = studentAcadCred.StcPersonId;
-                sectionId = studentCourseSec.ScsCourseSection;
-                statusCode = studentAcadCred.StcStatus.ElementAt(0);
-                var gradeScheme = studentAcadCred.StcGradeScheme;
-                var passAudit = studentCourseSec.ScsPassAudit;
-
-                var sectionRegistrationResponse = new SectionRegistrationResponse(guid, studentId, sectionId, statusCode,
-                    gradeScheme, passAudit, outputMessages)
-                {
-                    ErrorOccured = updateResponse.ErrorOccurred,
-                    InvolvementStartOn = studentAcadCred.StcStartDate,
-                    InvolvementEndOn = studentAcadCred.StcEndDate,
-                    ReportingStatus = studentCourseSec.ScsNeverAttendedFlag,
-                    ReportingLastDayOdAttendance = studentCourseSec.ScsLastAttendDate,
-                    GradeExtentionExpDate = studentAcadCred.StcGradeExpireDate,
-                    TranscriptVerifiedGradeDate = studentAcadCred.StcVerifiedGradeDate,
-                    TranscriptVerifiedBy = studentAcadCred.StcVerifiedGradeChgopr
-                };
-                //V7 changes
-                sectionRegistrationResponse.CreditType = studentAcadCred.StcCredType;
-                sectionRegistrationResponse.AcademicLevel = studentAcadCred.StcAcadLevel;
-                sectionRegistrationResponse.Ceus = studentAcadCred.StcAttCeus.HasValue || !string.IsNullOrEmpty(studentAcadCred.StcVerifiedGrade) ? studentAcadCred.StcAttCeus : studentAcadCred.StcCeus;
-                sectionRegistrationResponse.EarnedCeus = studentAcadCred.StcCmplCeus; ;
-                sectionRegistrationResponse.Credit = studentAcadCred.StcAttCred.HasValue || !string.IsNullOrEmpty(studentAcadCred.StcVerifiedGrade) ? studentAcadCred.StcAttCred : studentAcadCred.StcCred;
-                sectionRegistrationResponse.EarnedCredit = studentAcadCred.StcCmplCred;
-                sectionRegistrationResponse.GradePoint = studentAcadCred.StcGradePts;
-                sectionRegistrationResponse.ReplCode = studentAcadCred.StcReplCode;
-                sectionRegistrationResponse.RepeatedAcadCreds = studentAcadCred.StcRepeatedAcadCred;
-                sectionRegistrationResponse.AltcumContribCmplCred = studentAcadCred.StcAltcumContribCmplCred;
-                sectionRegistrationResponse.AltcumContribGpaCred = studentAcadCred.StcAltcumContribGpaCred;
-
-                return sectionRegistrationResponse;
+                // Read the updated STUDENT.ACAD.CRED to get the actual Status Code for the section.
+                var studentAcadCred = await DataReader.ReadRecordAsync<StudentAcadCred>("STUDENT.ACAD.CRED", stcKey);
+                if (studentAcadCred != null)
+                    return await GetSectionRegistrationByIdAsync(stcKey);
             }
-            else
+            return new SectionRegistrationResponse(guid, studentId, sectionId, statusCode, outputMessages)
             {
-                return new SectionRegistrationResponse(guid, studentId, sectionId, statusCode, outputMessages);
-            }
+                InvolvementStartOn = request.InvolvementStartOn,
+                InvolvementEndOn = request.InvolvementEndOn,
+                AcademicLevel =request.Section.AcademicLevelCode,
+                Credit = request.Section.Credits,
+                Ceus = request.Section.Ceus,
+                StatusDate = request.Section.RegistrationDate
+            };
         }
 
 
@@ -846,9 +1055,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 throw new KeyNotFoundException("SectionRegistration GUID " + guid + " lookup failed.");
             }
 
-            if (foundEntry.Value.Entity != "STUDENT.ACAD.CRED")
+            if (foundEntry.Value.Entity != "STUDENT.ACAD.CRED" || !string.IsNullOrEmpty(foundEntry.Value.SecondaryKey))
             {
-                throw new RepositoryException("GUID " + guid + " has different entity, " + foundEntry.Value.Entity + ", than expected, STUDENT.ACAD.CRED");
+                throw new RepositoryException("GUID '" + guid + "' is not valid for section-registrations.");
             }
 
             return foundEntry.Value.PrimaryKey;
@@ -876,6 +1085,37 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
         }
 
+        private async Task CheckForExistingRegistration(string studentId, string sectionId)
+        {
+            var personST = await DataReader.ReadRecordAsync<Base.DataContracts.PersonSt>("PERSON.ST", studentId);
+            if (personST != null)
+            {
+                var scsKeys = personST.PstStudentCourseSec.ToArray();
+                var studentCourseSec = await DataReader.BulkReadRecordAsync<StudentCourseSec>(scsKeys);
+                if (studentCourseSec != null && studentCourseSec.Any())
+                {
+                    var existing = studentCourseSec.Where(sc => sc.ScsCourseSection == sectionId).FirstOrDefault();
+                    if (existing != null)
+                    {
+                        var exception = new RepositoryException();
+                        var studentAcadCred = await DataReader.ReadRecordAsync<StudentAcadCred>("STUDENT.ACAD.CRED", existing.ScsStudentAcadCred);
+                        if (studentAcadCred != null && !string.IsNullOrEmpty(studentAcadCred.RecordGuid) && !string.IsNullOrEmpty(studentAcadCred.Recordkey))
+                        {
+                            exception.AddError(new RepositoryError(studentAcadCred.RecordGuid, existing.ScsStudentAcadCred, "sectionRegistration",
+                                string.Format("Student '{0}' already has registration activity related to section '{1}' associated with guid '{2}'.",
+                                studentId, studentAcadCred.StcCourseName, studentAcadCred.RecordGuid)));
+                        }
+                        else
+                        {
+                            exception.AddError(new RepositoryError("sectionRegistration",
+                                string.Format("Student '{0}' already has registration activity related to section '{1}'.",
+                                studentId, sectionId)));
+                        }
+                        throw exception;
+                    }
+                }
+            }
+        }
 
         /// <summary>
         /// Get the GUID for a grade using its ID
@@ -910,5 +1150,168 @@ namespace Ellucian.Colleague.Data.Student.Repositories
            
         }
 
+        #region Section Registrations Grade Options
+
+        /// <summary>
+        /// Gets section registration grade options.
+        /// </summary>
+        /// <param name="offset"></param>
+        /// <param name="limit"></param>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        public async Task<Tuple<IEnumerable<StudentAcadCredCourseSecInfo>, int>> GetSectionRegistrationGradeOptionsAsync(int offset, int limit, StudentAcadCredCourseSecInfo request)
+        {
+            List<StudentAcadCredCourseSecInfo> entities = new List<StudentAcadCredCourseSecInfo>();
+            int totalCount = 0;
+            string[] limitingKeys = null;
+            string criteria = string.Empty;
+
+            if(request != null && !string.IsNullOrEmpty(request.SectionId))
+            {
+                criteria = string.Format("WITH SCS.COURSE.SECTION EQ '{0}' SAVING UNIQUE SCS.STUDENT.ACAD.CRED",
+                        request.SectionId);
+                limitingKeys = await DataReader.SelectAsync("STUDENT.COURSE.SEC", criteria);
+                if (limitingKeys == null || !limitingKeys.Any())
+                {
+                    return new Tuple<IEnumerable<StudentAcadCredCourseSecInfo>, int>(new List<StudentAcadCredCourseSecInfo>(), 0);
+                }
+            }
+
+            //This is for GET ALL
+            if (string.IsNullOrEmpty(criteria))
+            {
+                //May be here get all the id's from PERSON.ST?
+                limitingKeys = await DataReader.SelectAsync("STUDENT.ACAD.CRED", "WITH STC.STUDENT.COURSE.SEC NE ''");
+            }
+
+            if (limitingKeys == null || !limitingKeys.Any())
+            {
+                return new Tuple<IEnumerable<StudentAcadCredCourseSecInfo>, int>(new List<StudentAcadCredCourseSecInfo>(), 0);
+            }
+
+            totalCount = limitingKeys.Count();
+
+            Array.Sort(limitingKeys);
+            var sublist = limitingKeys.Skip(offset).Take(limit).ToArray();
+
+            var studentAcadCredsPage =
+                await DataReader.BulkReadRecordAsync<StudentAcadCred>("STUDENT.ACAD.CRED", sublist);
+
+            var scsKey = studentAcadCredsPage.Select(s => s.StcStudentCourseSec).Distinct().ToList();
+            var studentCourseSecs = await DataReader.BulkReadRecordAsync<StudentCourseSec>(scsKey.ToArray());
+
+            if (studentCourseSecs.Count() != sublist.Count())
+            {
+                var courseSecIds = studentCourseSecs.Select(scs => scs.Recordkey).ToList();
+                var missingIds = scsKey.Except(courseSecIds);
+                var repositoryException = new RepositoryException();
+                missingIds.ToList().ForEach(id =>
+                {
+                    var stcRec = studentAcadCredsPage.Where(sc => sc.StcStudentCourseSec == id).FirstOrDefault();
+                    var repoError = new RepositoryError("sectionRegistration")
+                    {
+                        Id = stcRec.RecordGuid,
+                        SourceId = string.IsNullOrEmpty(stcRec.Recordkey)? stcRec.Recordkey : string.Empty,
+                        Message = string.Format("Record not found, Entity 'STUDENT.COURSE.SEC', ID: '{0}', Guid '{1}' references invalid data. ",
+                                                stcRec.Recordkey, stcRec.RecordGuid)
+                    };
+                    repositoryException.AddError(repoError);
+                });
+                throw repositoryException;
+            }
+
+            RepositoryException repException = null;
+            foreach (var studentAcadCred in studentAcadCredsPage)
+            {
+                try
+                {
+                    StudentAcadCredCourseSecInfo entity = BuildSectionRegistrationGradeOptionsResponse(studentAcadCred, studentCourseSecs);
+                    entities.Add(entity);
+                }
+                catch (Exception ex)
+                {
+                    if (repException == null)
+                    {
+                        repException = new RepositoryException();
+                    }
+
+                    var repoError = new RepositoryError("Invalid.StudentAcadCred", ex.Message);
+                    repException.AddError(repoError);
+                }
+            }
+            if (repException != null && repException.Errors.Any())
+            {
+                throw repException;
+            }
+
+            return entities.Any() ? new Tuple<IEnumerable<StudentAcadCredCourseSecInfo>, int>(entities, totalCount) :
+                new Tuple<IEnumerable<StudentAcadCredCourseSecInfo>, int>(new List<StudentAcadCredCourseSecInfo>(), 0);
+        }
+
+        /// <summary>
+        /// Get section registrations grade option by id.
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        public async Task<StudentAcadCredCourseSecInfo> GetSectionRegistrationGradeOptionsByIdAsync(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new ArgumentNullException("id", "ID is required.");
+            }
+
+            // Read original STUDENT.ACAD.CRED to get the actual Status Code for the section.
+            var studentAcadCred = await DataReader.ReadRecordAsync<StudentAcadCred>("STUDENT.ACAD.CRED", id);
+            if (studentAcadCred == null)
+            {
+                throw new KeyNotFoundException(string.Concat("Record not found, Entity: ‘STUDENT.ACAD.CRED’, Record ID: '", id, "'"));
+            }
+            // Read original STUDENT.COURSE.SEC to get the registration mode for the student in this section.
+            var scsKey = studentAcadCred.StcStudentCourseSec;
+            if (string.IsNullOrEmpty(scsKey))
+            {
+                // No STC.STUDENT.COURSE.SEC record associated to this STUDENT.ACAD.CRED.  This is not valid.
+                throw new KeyNotFoundException(string.Format("Record not found, Entity: STUDENT.COURSE.SEC, STUDENT.ACAD.CRED Record ID: '{0}'", id));
+            }
+            var studentCourseSec = await DataReader.ReadRecordAsync<StudentCourseSec>("STUDENT.COURSE.SEC", scsKey);
+            if (studentCourseSec == null)
+            {
+                throw new KeyNotFoundException(string.Concat("Record not found, Entity: ‘STUDENT.COURSE.SEC’, Record ID: '", scsKey, "'"));
+            }
+            try
+            {
+                Collection<StudentCourseSec> studentCourseSecs = new Collection<StudentCourseSec>() { studentCourseSec };
+                StudentAcadCredCourseSecInfo sectionRegistrationResponse = BuildSectionRegistrationGradeOptionsResponse(studentAcadCred, studentCourseSecs);
+                return sectionRegistrationResponse;
+            }
+            catch (Exception ex)
+            {
+                var exception = new RepositoryException("Unexpected repository error");
+                exception.AddError(new RepositoryError(studentAcadCred.RecordGuid, studentAcadCred.Recordkey, string.Format("Error(s) processing STUDENT.ACAD.CRED record '{0}' with guid '{1}'.  Error: {2}", 
+                    studentAcadCred.Recordkey, studentAcadCred.RecordGuid, ex.Message)));
+                throw exception;
+            }
+        }
+
+        private StudentAcadCredCourseSecInfo BuildSectionRegistrationGradeOptionsResponse(StudentAcadCred studentAcadCred, Collection<StudentCourseSec> studentCourseSecs)
+        {
+            var studentCourseSec = studentCourseSecs.FirstOrDefault(sc => sc.Recordkey == studentAcadCred.StcStudentCourseSec);
+            var sectionId = string.Empty;
+            if (studentCourseSec != null)
+            {
+                sectionId = studentCourseSec.ScsCourseSection;
+            }
+
+            StudentAcadCredCourseSecInfo response = new StudentAcadCredCourseSecInfo(studentAcadCred.RecordGuid, studentAcadCred.Recordkey, sectionId);
+            response.GradeScheme = studentAcadCred.StcGradeScheme;
+            response.Term = studentAcadCred.StcTerm;
+            response.StartDate = studentAcadCred.StcStartDate;
+            response.EndDate = studentAcadCred.StcEndDate;
+            response.VerifiedGrade = studentAcadCred.StcVerifiedGrade;
+            response.FinalGrade = studentAcadCred.StcFinalGrade;
+            return response;
+        }
+
+        #endregion
     }
 }

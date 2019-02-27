@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -55,6 +55,56 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 case TaxForms.FormW2:
 
+                    // W2C read
+                    var criteriaW2C = "WW2CO.EMPLOYEE.ID EQ '" + personId + "' AND WITH WW2CO.CORRECTION.YEAR GE '2010'";
+                     var w2CStatementRecords = await DataReader.BulkReadRecordAsync<WebW2cOnline>(criteriaW2C);
+
+                    if (w2CStatementRecords != null)
+                    {
+                        var criteriaTaxW2C = "WITH TW2C.EMPLOYEE.ID EQ '" + personId + "' AND WITH TW2C.STATUS EQ 'EXPORTED'";
+                        var exportedTaxW2Ckeys = await DataReader.SelectAsync("TAX.W2C", criteriaTaxW2C);
+
+                        //sets empty array if the DataReader returns a null array
+                        if (exportedTaxW2Ckeys == null)
+                        {
+                            exportedTaxW2Ckeys = new string[0];
+                        }
+
+                        // Filters w2c statement records by whether or not they have been exported
+                        var filteredW2CStatementRecords = w2CStatementRecords.Where(x => exportedTaxW2Ckeys.ToList().Contains(x.Ww2coSourceTaxW2cId)).ToList();
+
+                        // Gets the shared Ww2coSourceTaxW2cIds between multiform records
+                        var multipleFormW2cRecordKeys = filteredW2CStatementRecords.GroupBy(x => x.Ww2coSourceTaxW2cId).Where(group => group.Count() > 1).Select(group => group.Key).ToList();
+
+                        foreach (var contract in filteredW2CStatementRecords)
+                        {
+                            if (contract != null && !string.IsNullOrEmpty(contract.Ww2coEmployeeId) && !string.IsNullOrEmpty(contract.Ww2coCorrectionYear))
+                            {
+                                try
+                                {
+                                    //If it is in the multipleFormW2cRecordKey list, it is a multiple form w2c - otherwise, it receives a type of correction
+                                    if (!string.IsNullOrEmpty(contract.Ww2coSourceTaxW2cId) && multipleFormW2cRecordKeys.Contains(contract.Ww2coSourceTaxW2cId))
+                                    {
+                                        var correctionStatement = new TaxFormStatement2(contract.Ww2coEmployeeId, contract.Ww2coCorrectionYear, TaxForms.FormW2C, contract.Recordkey, contract.WebW2cOnlineAdddate);
+                                        correctionStatement.Notation = TaxFormNotations.MultipleForms;
+                                        statements.Add(correctionStatement);
+                                    }
+                                    else
+                                    {
+                                        var correctionStatement = new TaxFormStatement2(contract.Ww2coEmployeeId, contract.Ww2coCorrectionYear, TaxForms.FormW2C, contract.Recordkey, contract.WebW2cOnlineAdddate);
+                                        correctionStatement.Notation = TaxFormNotations.Correction;
+                                        statements.Add(correctionStatement);
+                                    }
+                                }
+                                catch (Exception e)
+                                {
+                                    LogDataError("TaxFormStatement", personId, new Object(), e, e.Message);
+                                }
+                            }
+                        }
+                    }
+
+                    // W2 read
                     var criteria = "WW2O.EMPLOYEE.ID EQ '" + personId + "' AND WITH WW2O.YEAR GE '2010'";
                     var w2StatementRecords = await DataReader.BulkReadRecordAsync<WebW2Online>(criteria);
 
@@ -66,10 +116,12 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                             {
                                 try
                                 {
-                                    // If the record we're processing is a correction then remove all forms for the same year
+                                    // If the record we're processing is a correction and has no W2c record then remove all forms for the same year
                                     // from the statements list then add the correction. Otherwise, only insert the non-correction
                                     // record if no corrections exist for the given year.
-                                    if (!string.IsNullOrEmpty(contract.Ww2oW2cFlag))
+                                    if (!string.IsNullOrEmpty(contract.Ww2oW2cFlag)
+                                        && contract.Ww2oW2cFlag == "Y"
+                                        && statements.Where(x => x.TaxYear == contract.Ww2oYear && x.TaxForm == TaxForms.FormW2C).ToList().Count == 0)
                                     {
                                         // W-2's can only have a single correction.
                                         statements.RemoveAll(x => x.TaxYear == contract.Ww2oYear);
@@ -79,7 +131,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                                     }
                                     else
                                     {
-                                        if (statements.Where(x => x.Notation == TaxFormNotations.Correction
+                                        if (statements.Where(x => (x.TaxForm == TaxForms.FormW2 && x.Notation == TaxFormNotations.Correction)
                                             && x.TaxYear == contract.Ww2oYear).ToList().Count == 0)
                                         {
                                             // Add two statements if this record has overflow data. Otherwise just add
@@ -112,18 +164,17 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                                 }
                             }
                         }
-
-                        // Lastly, search for years that have multiple statements and mark those statements as such.
-                        var statementYears = statements.Select(x => x.TaxYear).Distinct();
-                        foreach (var year in statementYears)
+                  }
+                    // Lastly, search for years that have multiple statements and mark those statements as such.
+                    var statementYears = statements.Select(x => x.TaxYear).Distinct();
+                    foreach (var year in statementYears)
+                    {
+                        var multipleStatements = statements.Where(x => x.TaxYear == year && x.Notation == TaxFormNotations.None).ToList();
+                        if (multipleStatements.Count > 1)
                         {
-                            var multipleStatements = statements.Where(x => x.TaxYear == year && x.Notation == TaxFormNotations.None).ToList();
-                            if (multipleStatements.Count > 1)
+                            foreach (var statementToUpdate in multipleStatements)
                             {
-                                foreach (var statementToUpdate in multipleStatements)
-                                {
-                                    statementToUpdate.Notation = TaxFormNotations.MultipleForms;
-                                }
+                                statementToUpdate.Notation = TaxFormNotations.MultipleForms;
                             }
                         }
                     }
@@ -176,7 +227,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     var formT4Criteria = "WT4O.EMPLOYEE.ID EQ '" + personId + "' AND WITH WT4O.YEAR GE '2010'";
                     var formT4StatementRecords = await DataReader.BulkReadRecordAsync<WebT4Online>(formT4Criteria);
 
-                    if(formT4StatementRecords != null)
+                    if (formT4StatementRecords != null)
                     {
                         var formT4StatementRecordsList = formT4StatementRecords.Where(v => v != null).OrderByDescending(w => w.Wt4oYear).ThenByDescending(x => x.WebT4OnlineAdddate).ThenByDescending(y => y.WebT4OnlineAddtime).ThenByDescending(z => z.Recordkey).ToList();
                         foreach (var statement in formT4StatementRecordsList)
@@ -186,7 +237,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                                 var firstStatement = new TaxFormStatement2(statement.Wt4oEmployeeId, statement.Wt4oYear, TaxForms.FormT4, statement.Recordkey);
                                 var numberOfSlips = 0;
                                 if (statement.Wt4oOtherInfoFlags != null)
-                                { 
+                                {
                                     var numberOfBoxes = statement.Wt4oOtherInfoFlags.Where(x => x.ToUpper() == "Y").Count();
                                     numberOfSlips = numberOfBoxes / 6;
 
@@ -196,7 +247,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                                     }
                                 }
                                 statements.Add(firstStatement);
-                                for(var i = 0; i < numberOfSlips; i++)
+                                for (var i = 0; i < numberOfSlips; i++)
                                 {
                                     statements.Add(new TaxFormStatement2(statement.Wt4oEmployeeId, statement.Wt4oYear, TaxForms.FormT4, statement.Recordkey) { Notation = TaxFormNotations.IsOverflow });
                                 }
@@ -208,8 +259,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                         }
                         statements = statements.OrderByDescending(x => x.TaxYear).ToList();
                     }
-                    
-                    
+
+
                     break;
             }
 

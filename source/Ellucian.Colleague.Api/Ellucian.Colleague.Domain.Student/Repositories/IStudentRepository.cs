@@ -42,11 +42,26 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         Task<IEnumerable<ResidencyStatus>> GetResidencyStatusesAsync(bool ignoreCache);
 
         Task<Entities.Student> GetDataModelStudentFromGuidAsync(string guid);
+        Task<Entities.Student> GetDataModelStudentFromGuid2Async(string guid);
         Task<Tuple<IEnumerable<Entities.Student>, int>> GetDataModelStudentsAsync(int offset, int limit, bool bypassCache, string person = "", string type = "", string cohort = "", string residency = "");
+        Task<Tuple<IEnumerable<Entities.Student>, int>> GetDataModelStudents2Async(int offset, int limit, bool bypassCache, string personFilter = "", string person = "", List<string> types = null, List<string> cohorts = null, List<string> residencies = null);
         /// <summary>
         /// Returns detailed students information for search by ID or Name
         /// </summary>
         Task<IEnumerable<Entities.Student>> GetStudentsSearchAsync(IEnumerable<string> ids);
         Task<IEnumerable<Entities.Student>> GetStudentSearchByNameAsync(string lastName, string firstName = null, string middleName = null, int pageSize = int.MaxValue, int pageIndex = 1);
+        /// <summary>
+        /// Reads the student information from Colleague and returns an IEnumerable of Students Entity models with type and residency statuses information to be used by student-academic-period-profiles API
+        /// </summary>
+        /// <param name="ids">Required to include at least 1 Id. These are Colleague Person (student) ids.</param>
+        /// <returns>An IEnumerable list of Student Entities found in Colleague, or an empty list if none are found.</returns>
+        Task<IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Student>> GetStudentAcademicPeriodProfileStudentInfoAsync(IEnumerable<string> ids);
+
+        // <summary>
+        /// Get guid for ResidencyStatus code
+        /// </summary>
+        /// <param name="code">ResidencyStatus code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetResidencyStatusGuidAsync(string code);
     }
 }

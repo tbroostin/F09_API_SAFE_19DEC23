@@ -28,6 +28,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
         public string earningsTypeDescription;
         public int planYearStartMonth;
         public int planYearStartDay;
+        public IEnumerable<string> earningTypeIDList;
 
         public List<EmployeeLeaveTransaction> employeeLeaveTransactions;
 
@@ -50,6 +51,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
                     priorPayPeriodBalance,
                     planYearStartMonth,
                     planYearStartDay,
+                    earningTypeIDList,
                     allowNegativeBalance);
 
 
@@ -76,6 +78,8 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             planYearStartMonth = 1;
             planYearStartDay = 1;
 
+            earningTypeIDList = new List<string> { "VAC", "CMTH" };
+       
             var lastYear = DateTime.Today.AddYears(-1).Year;
             employeeLeaveTransactions = new List<EmployeeLeaveTransaction>()
             {
@@ -298,6 +302,46 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             {
                 Assert.IsFalse(employeeLeavePlan.SortedLeaveTransactions.Any());
             }
+
+           
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public void EarningTypeIDList_IsNullTest()
+            {
+                earningTypeIDList = null;
+                var fail = employeeLeavePlan;
+            }
+
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public void EarningTypeIDList_IsEmptyTest()
+            {
+                earningTypeIDList = new List<string>();
+                var fail = employeeLeavePlan;
+            }
+
+            [TestMethod]
+            public void EarningTypeIdList_TypeEqualTest()
+            {
+                Assert.AreEqual<IEnumerable<string>>(earningTypeIDList, employeeLeavePlan.EarningTypeIDList);
+            }
+
+            [TestMethod]
+            public void EarningTypeIdList_ItemsSequenceTest()
+            {
+                IEnumerable<string> expectedEarningTypeIDs = new List<string> { "VAC", "CMTH" };
+                Assert.IsTrue(expectedEarningTypeIDs.SequenceEqual(employeeLeavePlan.EarningTypeIDList));
+            }
+
+            [TestMethod]
+            public void EarningTypeIdList_ContainsTest()
+            {
+                string earningTypeID = "CMTH";
+                var actual = employeeLeavePlan.EarningTypeIDList.Where(t => t.Equals(earningTypeID)).ToList()[0];
+                Assert.AreEqual(earningTypeID, actual);
+            }
+
         }
 
         [TestClass]
@@ -413,6 +457,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             //when planYearStartMonth and Day are not Jan1, then we compare the default plan year start date to today
             //if today is before the default start date, then the plan year start date is year - 1, month, day
             [TestMethod]
+            [Ignore]
             public void TodayIsBeforeTheDefaultPlanYearStartDateTest()
             {
                 planYearStartMonth = DateTime.Today.AddMonths(1).Month;

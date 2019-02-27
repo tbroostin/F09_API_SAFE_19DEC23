@@ -5,6 +5,7 @@ using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Domain.Student.Tests
@@ -37,14 +38,43 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                 });
         }
 
+        public Task<string> GetAcademicLevelsGuidAsync(string code)
+        {
+            List<Student.Entities.AcademicLevel> acadlevels = new List<Student.Entities.AcademicLevel>()
+                {
+                    new Domain.Student.Entities.AcademicLevel("884a59d1-20e5-43af-94e3-f1504230bbbc", "GR", "Graduate"),
+            new Domain.Student.Entities.AcademicLevel("bb336acf-1926-4b12-8daf-d8720280498f", "JD", "Law"),
+            new Domain.Student.Entities.AcademicLevel("d118f007-c914-465e-80dc-49d39209b24f", "UG", "Undergraduate")
+                };
+            return Task.FromResult(acadlevels.FirstOrDefault(c => c.Code == code).Guid);
+        }
+
+
         public Task<IEnumerable<Student.Entities.AcademicProgram>> GetAcademicProgramsAsync(bool ignoreCache)
         {
-            throw new NotImplementedException();
+            return Task.FromResult<IEnumerable<Student.Entities.AcademicProgram>>(new List<Student.Entities.AcademicProgram>()
+                {
+                    new Domain.Student.Entities.AcademicProgram("884a59d1-20e5-43af-94e3-f1504230bbbd", "MATH.AA", "Mathematics"),
+            new Domain.Student.Entities.AcademicProgram("bb336acf-1926-4b12-8daf-d8720280498e", "CHEM.BA", "Chemistry"),
+            new Domain.Student.Entities.AcademicProgram("d118f007-c914-465e-80dc-49d39209b24k", "ENG.BA", "English")
+                });
+
         }
 
         public Task<Student.Entities.AcademicProgram> GetAcademicProgramByGuidAsync(string guid)
         {
             throw new NotImplementedException();
+        }
+
+        public Task<string> GetAcademicProgramsGuidAsync(string code)
+        {
+            var progs = (new List<Student.Entities.AcademicProgram>()
+                {
+                    new Domain.Student.Entities.AcademicProgram("884a59d1-20e5-43af-94e3-f1504230bbbd", "MATH.AA", "Mathematics"),
+            new Domain.Student.Entities.AcademicProgram("bb336acf-1926-4b12-8daf-d8720280498e", "CHEM.BA", "Chemistry"),
+            new Domain.Student.Entities.AcademicProgram("d118f007-c914-465e-80dc-49d39209b24k", "ENG.BA", "English")
+                });
+            return Task.FromResult(progs.FirstOrDefault(c => c.Code == code).Guid);
         }
 
         public Task<IEnumerable<Student.Entities.AdvisorType>> GetAdvisorTypesAsync(bool ignoreCache = false)
@@ -56,7 +86,6 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                     new Domain.Student.Entities.AdvisorType("1df164eb-8178-4321-a9f7-24f12d3991d8", "GEN", "General", "3")
                 });
         }
-
         public Task<IEnumerable<Student.Entities.AcademicStanding>> GetAcademicStandingsAsync()
         {
             return Task.FromResult<IEnumerable<Student.Entities.AcademicStanding>>(new List<Student.Entities.AcademicStanding>()
@@ -169,6 +198,19 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                     new Student.Entities.AssessmentSpecialCircumstance("27178aab-a6e8-4d1e-ae27-eca1f7b33363", "CODE3", "DESC3")
                 });
         }
+
+
+        public Task<string> GetAssessmentSpecialCircumstancesGuidAsync(string code)
+        {
+            var assessmentSpecialCircumstances = (new List<Student.Entities.AssessmentSpecialCircumstance>()
+                {
+                    new Student.Entities.AssessmentSpecialCircumstance("bb66b971-3ee0-4477-9bb7-539721f93434", "CODE1", "DESC1"),
+                    new Student.Entities.AssessmentSpecialCircumstance("5aeebc5c-c973-4f83-be4b-f64c95002124", "CODE2", "DESC2"),
+                    new Student.Entities.AssessmentSpecialCircumstance("27178aab-a6e8-4d1e-ae27-eca1f7b33363", "CODE3", "DESC3")
+                });
+            return Task.FromResult(assessmentSpecialCircumstances.FirstOrDefault(c => c.Code == code).Guid);
+        }
+
         public Task<IEnumerable<BookOption>> GetBookOptionsAsync()
         {
             return Task.FromResult<IEnumerable<BookOption>>(new List<BookOption>()
@@ -233,7 +275,24 @@ namespace Ellucian.Colleague.Domain.Student.Tests
 
         public Task<IEnumerable<Student.Entities.CourseLevel>> GetCourseLevelsAsync(bool ignoreCache)
         {
-            throw new NotImplementedException();
+            return Task.FromResult<IEnumerable<Student.Entities.CourseLevel>>(new List<Student.Entities.CourseLevel>()
+                {
+                    new Student.Entities.CourseLevel("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "100", "1st Year"),
+                    new Student.Entities.CourseLevel("849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "200", "2nd Year"),
+                    new Student.Entities.CourseLevel("d2253ac7-9931-4560-b42f-1fccd43c952e", "300", "3rd Year")
+                });
+        }
+
+
+        public Task<string> GetCourseLevelGuidAsync(string code)
+        {
+            var courseLevel = (new List<Student.Entities.CourseLevel>()
+            {
+                    new Student.Entities.CourseLevel("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "100", "1st Year"),
+                    new Student.Entities.CourseLevel("849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "200", "2nd Year"),
+                    new Student.Entities.CourseLevel("d2253ac7-9931-4560-b42f-1fccd43c952e", "300", "3rd Year")
+            });
+            return Task.FromResult(courseLevel.FirstOrDefault(c => c.Code == code).Guid);
         }
 
         public Task<IEnumerable<Student.Entities.CourseStatuses>> GetCourseStatusesAsync()
@@ -253,6 +312,20 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                 });
         }
 
+        public Task<string> GetCourseStatusGuidAsync(string code)
+        {
+            var courseStatuses = (new List<Student.Entities.CourseStatuses>()
+                {
+                   new Student.Entities.CourseStatuses("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "A", "Active")    { Status =  CourseStatus.Active },
+                    new Student.Entities.CourseStatuses("849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "I", "Inactive")  { Status =  CourseStatus.Active },
+                    new Student.Entities.CourseStatuses("d2253ac7-9931-4560-b42f-1fccd43c952e", "P", "Pending")   { Status =  CourseStatus.Active },
+                    new Student.Entities.CourseStatuses("c04c8158-9ce0-4dd7-bce5-5e7c3e14161c", "O", "Obsolete")  { Status =  CourseStatus.Terminated },
+                    new Student.Entities.CourseStatuses("dbd214f8-7dfe-4f8d-bd31-77e8e217f33c", "C", "Cancelled") { Status =  CourseStatus.Unknown }
+                });
+            return Task.FromResult(courseStatuses.FirstOrDefault(c => c.Code == code).Guid);
+
+        }
+
         public Task<IEnumerable<Student.Entities.CourseTitleType>> GetCourseTitleTypesAsync(bool ignoreCache)
         {
             return Task.FromResult<IEnumerable<Student.Entities.CourseTitleType>>(new List<Student.Entities.CourseTitleType>()
@@ -260,6 +333,17 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                     new Student.Entities.CourseTitleType("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "LONG", "Long Title"),
                     new Student.Entities.CourseTitleType("849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "SHORT", "Short Title")
                 });
+        }
+
+        public Task<string> GetCourseTitleTypeGuidAsync(string code)
+        {
+            var courseTitleType = (new List<Student.Entities.CourseTitleType>()
+                {
+                   new Student.Entities.CourseTitleType("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "LONG", "Long Title"),
+                    new Student.Entities.CourseTitleType("849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "SHORT", "Short Title")
+                });
+            return Task.FromResult(courseTitleType.FirstOrDefault(c => c.Code == code).Guid);
+
         }
 
         public Task<IEnumerable<Student.Entities.CourseTopic>> GetCourseTopicsAsync(bool ignoreCache)
@@ -291,6 +375,17 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                     new CreditCategory("e986b8a5-25f3-4aa0-bd0e-90982865e749", "D", "Institutional", CreditType.Institutional),
                     new CreditCategory("b5cc288b-8692-474e-91be-bdc55778e2f5", "TR", "Transfer", CreditType.Transfer)
                 });
+        }
+
+        public Task<string> GetCreditCategoriesGuidAsync(string code)
+        {
+            var creditCategories = (new List<Student.Entities.CreditCategory>()
+                {
+                    new CreditCategory("840e72f0-57b9-42a2-ae88-df3c2262fbbc", "CE", "Continuing Education", CreditType.ContinuingEducation),
+                    new CreditCategory("e986b8a5-25f3-4aa0-bd0e-90982865e749", "D", "Institutional", CreditType.Institutional),
+                    new CreditCategory("b5cc288b-8692-474e-91be-bdc55778e2f5", "TR", "Transfer", CreditType.Transfer)
+                });
+            return Task.FromResult(creditCategories.FirstOrDefault(c => c.Code == code).Guid);
         }
 
         public Task<IEnumerable<Student.Entities.Degree>> GetDegreesAsync()
@@ -343,8 +438,27 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                     new Student.Entities.GradeScheme("5aeebc5c-c973-4f83-be4b-f64c95002124", "GR", "Graduate")
                     { EffectiveStartDate = DateTime.Today.AddDays(-30) },
                     new Student.Entities.GradeScheme("27178aab-a6e8-4d1e-ae27-eca1f7b33363", "UG", "Undergraduate")
+                    { EffectiveStartDate = DateTime.Today },
+                    new Student.Entities.GradeScheme("37178aab-a6e8-4d1e-ae27-eca1f7b33363", "TR", "Transfer")
                     { EffectiveStartDate = DateTime.Today }
                 });
+        }
+
+        public Task<string> GetGradeSchemeGuidAsync(string code)
+        {
+            var gradeSchemes = (new List<Student.Entities.GradeScheme>()
+                {
+                    new Student.Entities.GradeScheme("bb66b971-3ee0-4477-9bb7-539721f93434" ,"CE", "Continuing Education")
+                    { EffectiveStartDate = DateTime.Today.AddDays(-30), EffectiveEndDate = DateTime.Today.AddDays(30) },
+                    new Student.Entities.GradeScheme("5aeebc5c-c973-4f83-be4b-f64c95002124", "GR", "Graduate")
+                    { EffectiveStartDate = DateTime.Today.AddDays(-30) },
+                    new Student.Entities.GradeScheme("27178aab-a6e8-4d1e-ae27-eca1f7b33363", "UG", "Undergraduate")
+                    { EffectiveStartDate = DateTime.Today },
+                    new Student.Entities.GradeScheme("37178aab-a6e8-4d1e-ae27-eca1f7b33363", "TR", "Transfer")
+                    { EffectiveStartDate = DateTime.Today }
+                });
+            return Task.FromResult(gradeSchemes.FirstOrDefault(c => c.Code == code).Guid);
+
         }
 
         public Task<IEnumerable<Student.Entities.InstructionalMethod>> GetInstructionalMethodsAsync()
@@ -359,7 +473,23 @@ namespace Ellucian.Colleague.Domain.Student.Tests
 
         public Task<IEnumerable<Student.Entities.InstructionalMethod>> GetInstructionalMethodsAsync(bool ignoreCache)
         {
-            throw new NotImplementedException();
+            return Task.FromResult<IEnumerable<Student.Entities.InstructionalMethod>>(new List<Student.Entities.InstructionalMethod>()
+                {
+                    new Student.Entities.InstructionalMethod("bb66b971-3ee0-4477-9bb7-539721f93434" ,"02", "Lecture And/Or Discussion", false),
+                    new Student.Entities.InstructionalMethod("5aeebc5c-c973-4f83-be4b-f64c95002124", "10", "Learning Laboratory", false),
+                    new Student.Entities.InstructionalMethod("27178aab-a6e8-4d1e-ae27-eca1f7b33363", "70", "Radio Course", false)
+                });
+        }
+
+        public Task<string> GetInstructionalMethodGuidAsync(string code)
+        {
+            var instructionalMethod = (new List<Student.Entities.InstructionalMethod>()
+            {
+                    new Student.Entities.InstructionalMethod("bb66b971-3ee0-4477-9bb7-539721f93434" ,"02", "Lecture And/Or Discussion", false),
+                    new Student.Entities.InstructionalMethod("5aeebc5c-c973-4f83-be4b-f64c95002124", "10", "Learning Laboratory", false),
+                    new Student.Entities.InstructionalMethod("27178aab-a6e8-4d1e-ae27-eca1f7b33363", "70", "Radio Course", false)
+            });
+            return Task.FromResult(instructionalMethod.FirstOrDefault(c => c.Code == code).Guid);
         }
 
         public Task<IEnumerable<Student.Entities.AdministrativeInstructionalMethod>> GetAdministrativeInstructionalMethodsAsync(bool ignoreCache)
@@ -372,6 +502,18 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                 });
         }
 
+        public Task<string> GetAdministrativeInstructionalMethodGuidAsync(string code)
+        {
+            var instrMethods = (new List<Student.Entities.AdministrativeInstructionalMethod>()
+                {
+                    new Student.Entities.AdministrativeInstructionalMethod("bb66b971-3ee0-4477-9bb7-539721f93434" ,"02", "Lecture And/Or Discussion", "D8CED21A-F220-4F79-9544-706E13B51972"),
+                    new Student.Entities.AdministrativeInstructionalMethod("5aeebc5c-c973-4f83-be4b-f64c95002124", "10", "Learning Laboratory", "705F052C-7B63-492D-A7CA-5769CE003274"),
+                    new Student.Entities.AdministrativeInstructionalMethod("27178aab-a6e8-4d1e-ae27-eca1f7b33363", "70", "Radio Course", "67B0664B-0650-4C88-ACC6-FB0C689CB519")
+                });
+            return Task.FromResult(instrMethods.FirstOrDefault(c => c.Code == code).Guid);
+        }
+    
+
         public Task<IEnumerable<IntgTestPercentileType>> GetIntgTestPercentileTypesAsync(bool ignoreCache)
         {
             return Task.FromResult<IEnumerable<Student.Entities.IntgTestPercentileType>>(new List<Student.Entities.IntgTestPercentileType>()
@@ -379,6 +521,16 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                 new IntgTestPercentileType("792b6834-2f9c-409c-8afa-e0081972adb4", "1", "1st percentile"),
                 new IntgTestPercentileType("ab8395f3-663d-4d09-b3f6-af28668dc362", "2", "2nd percentile")
             });
+        }
+
+        public Task<string> GetIntgTestPercentileTypesGuidAsync(string code)
+        {
+            var IntgTestPercentileTypes =  (new List<Student.Entities.IntgTestPercentileType>()
+            {
+                new IntgTestPercentileType("792b6834-2f9c-409c-8afa-e0081972adb4", "1", "1st percentile"),
+                new IntgTestPercentileType("ab8395f3-663d-4d09-b3f6-af28668dc362", "2", "2nd percentile")
+            });
+            return Task.FromResult(IntgTestPercentileTypes.FirstOrDefault(c => c.Code == code).Guid);
         }
 
         public async Task<IEnumerable<Student.Entities.Major>> GetMajorsAsync(bool bypassCache = false)
@@ -595,6 +747,18 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                 });
         }
 
+        public Task<string> GetStudentStatusesGuidAsync(string code)
+        {
+            List<Student.Entities.StudentStatus> studentStatuses = new List<Student.Entities.StudentStatus>()
+                {
+                    new Student.Entities.StudentStatus("b4bcb3a0-2e8d-4643-bd17-ba93f36e8f09", "code1", "title1"),
+                    new Student.Entities.StudentStatus("bd54668d-50d9-416c-81e9-2318e88571a1", "code2", "title2"),
+                    new Student.Entities.StudentStatus("5eed2bea-8948-439b-b5c5-779d84724a38", "code3", "title3"),
+                    new Student.Entities.StudentStatus("82f74c63-df5b-4e56-8ef0-e871ccc789e8", "code4", "title4")
+                };
+            return Task.FromResult(studentStatuses.FirstOrDefault(c => c.Code == code).Guid);
+        }
+
         public Task<IEnumerable<Student.Entities.StudentType>> GetStudentTypesAsync(bool ignoreCache = false)
         {
             return Task.FromResult<IEnumerable<Student.Entities.StudentType>>(new List<Student.Entities.StudentType>()
@@ -604,6 +768,18 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                     new Student.Entities.StudentType("5eed2bea-8948-439b-b5c5-779d84724a38", "code3", "title3"),
                     new Student.Entities.StudentType("82f74c63-df5b-4e56-8ef0-e871ccc789e8", "code4", "title4")
                 });
+        }
+
+        public Task<string> GetStudentTypesGuidAsync(string code)
+        {
+            List<Student.Entities.StudentType> studentTypes = new List<Student.Entities.StudentType>()
+                {
+                    new Student.Entities.StudentType("b4bcb3a0-2e8d-4643-bd17-ba93f36e8f09", "code1", "title1"),
+                    new Student.Entities.StudentType("bd54668d-50d9-416c-81e9-2318e88571a1", "code2", "title2"),
+                    new Student.Entities.StudentType("5eed2bea-8948-439b-b5c5-779d84724a38", "code3", "title3"),
+                    new Student.Entities.StudentType("82f74c63-df5b-4e56-8ef0-e871ccc789e8", "code4", "title4")
+                };
+            return Task.FromResult(studentTypes.FirstOrDefault(c => c.Code == code).Guid);
         }
 
         public Task<IEnumerable<Student.Entities.StudentLoad>> GetStudentLoadsAsync()
@@ -643,10 +819,43 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                 });
         }
 
+        public Task<string> GetSubjectGuidAsync(string code)
+        {
+            var subjects = (new List<Student.Entities.Subject>()
+                {
+                    new Student.Entities.Subject("b4bcb3a0-2e8d-4643-bd17-ba93f36e8f09", "AAA", "Hello World", true),
+                    new Student.Entities.Subject("bd54668d-50d9-416c-81e9-2318e88571a1", "ACCT", "Accounting", false),
+                    new Student.Entities.Subject("5eed2bea-8948-439b-b5c5-779d84724a38", "AGBU", "Agriculture Business", true),
+                    new Student.Entities.Subject("82f74c63-df5b-4e56-8ef0-e871ccc789e8", "AGME", "Agriculture Mechanics", false)
+                });
+            return Task.FromResult(subjects.FirstOrDefault(c => c.Code == code).Guid);
+        }
+
+
+
         public Task<IEnumerable<Student.Entities.TopicCode>> GetTopicCodesAsync(bool ignoreCache)
         {
-            throw new NotImplementedException();
+            return Task.FromResult<IEnumerable<Student.Entities.TopicCode>>(new List<Student.Entities.TopicCode>()
+                {
+                    new Student.Entities.TopicCode("b4bcb3a0-2e8d-4643-bd17-ba93f36e8f09", "REL", "Religion"),
+                    new Student.Entities.TopicCode("bd54668d-50d9-416c-81e9-2318e88571a1", "ACCT", "Accounting"),
+                    new Student.Entities.TopicCode("5eed2bea-8948-439b-b5c5-779d84724a38", "AGBU", "Agriculture Business"),
+                    new Student.Entities.TopicCode("82f74c63-df5b-4e56-8ef0-e871ccc789e8", "AGME", "Agriculture Mechanics")
+                });
         }
+
+        public Task<string> GetTopicCodeGuidAsync(string code)
+        {
+            var topicCode = (new List<Student.Entities.TopicCode>()
+                {
+                    new Student.Entities.TopicCode("b4bcb3a0-2e8d-4643-bd17-ba93f36e8f09", "REL", "Religion"),
+                    new Student.Entities.TopicCode("bd54668d-50d9-416c-81e9-2318e88571a1", "ACCT", "Accounting"),
+                    new Student.Entities.TopicCode("5eed2bea-8948-439b-b5c5-779d84724a38", "AGBU", "Agriculture Business"),
+                    new Student.Entities.TopicCode("82f74c63-df5b-4e56-8ef0-e871ccc789e8", "AGME", "Agriculture Mechanics")
+                });
+            return Task.FromResult(topicCode.FirstOrDefault(c => c.Code == code).Guid);
+        }
+
 
         public Task<IEnumerable<Student.Entities.TranscriptCategory>> GetTranscriptCategoriesAsync()
         {
@@ -671,6 +880,18 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                     new Student.Entities.TestSource("3fgd2bea-8948-439b-b5c5-779d84724a38", "LSAT", "LSAT"),
                     new Student.Entities.TestSource("22f74c63-df5b-4e56-8ef0-e871ccc789e8", "ACT", "ACT")
                 });
+        }
+
+        public Task<string> GetTestSourcesGuidAsync(string code)
+        {
+            var testSource = (new List<Student.Entities.TestSource>()
+                {
+                    new Student.Entities.TestSource("c5bcb3a0-2e8d-4643-bd17-ba93f36e8f09", "HS", "High School Transcript"),
+                    new Student.Entities.TestSource("eh54668d-50d9-416c-81e9-2318e88571a1", "SF", "Self Reported"),
+                    new Student.Entities.TestSource("3fgd2bea-8948-439b-b5c5-779d84724a38", "LSAT", "LSAT"),
+                    new Student.Entities.TestSource("22f74c63-df5b-4e56-8ef0-e871ccc789e8", "ACT", "ACT")
+                });
+            return Task.FromResult(testSource.FirstOrDefault(c => c.Code == code).Guid);
         }
 
 
@@ -781,7 +1002,25 @@ namespace Ellucian.Colleague.Domain.Student.Tests
 
         public Task<IEnumerable<StudentClassification>> GetAllStudentClassificationAsync(bool bypassCache)
         {
-            throw new NotImplementedException();
+            return Task.FromResult<IEnumerable<Student.Entities.StudentClassification>>(new List<Student.Entities.StudentClassification>()
+                {
+                    new Student.Entities.StudentClassification("b4bcb3a0-2e8d-4643-bd17-ba93f36e8f09", "code1", "title1"),
+                    new Student.Entities.StudentClassification("bd54668d-50d9-416c-81e9-2318e88571a1", "code2", "title2"),
+                    new Student.Entities.StudentClassification("5eed2bea-8948-439b-b5c5-779d84724a38", "code3", "title3"),
+                    new Student.Entities.StudentClassification("82f74c63-df5b-4e56-8ef0-e871ccc789e8", "code4", "title4")
+                });
+        }
+
+        public Task<string> GetStudentClassificationGuidAsync(string code)
+        {
+            List<Student.Entities.StudentClassification> studentClasses = new List<Student.Entities.StudentClassification>()
+                {
+                    new Student.Entities.StudentClassification ("b4bcb3a0-2e8d-4643-bd17-ba93f36e8f09", "code1", "title1"),
+                    new Student.Entities.StudentClassification ("bd54668d-50d9-416c-81e9-2318e88571a1", "code2", "title2"),
+                    new Student.Entities.StudentClassification ("5eed2bea-8948-439b-b5c5-779d84724a38", "code3", "title3"),
+                    new Student.Entities.StudentClassification ("82f74c63-df5b-4e56-8ef0-e871ccc789e8", "code4", "title4")
+                };
+            return Task.FromResult(studentClasses.FirstOrDefault(c => c.Code == code).Guid);
         }
 
         public Task<IEnumerable<ScheduleTerm>> GetAllScheduleTermsAsync(bool bypassCache)
@@ -910,9 +1149,26 @@ namespace Ellucian.Colleague.Domain.Student.Tests
 
         public Task<IEnumerable<CourseType>> GetCourseTypesAsync(bool ignoreCache = false)
         {
-            throw new NotImplementedException();
+            return Task.FromResult<IEnumerable<Student.Entities.CourseType>>(new List<Student.Entities.CourseType>()
+                {
+                    new Student.Entities.CourseType("bb66b971-3ee0-4477-9bb7-539721f93434", "CODE1", "DESC1"),
+                    new Student.Entities.CourseType("5aeebc5c-c973-4f83-be4b-f64c95002124", "CODE2", "DESC2"),
+                    new Student.Entities.CourseType("27178aab-a6e8-4d1e-ae27-eca1f7b33363", "CODE3", " "),
+                    new Student.Entities.CourseType("27178aab-a6e8-4d1e-ae27-eca1f7b33363", "CODE4", "Desc 4")
+                });
         }
 
+        public Task<string> GetCourseTypeGuidAsync(string code)
+        {
+            var courseType = (new List<Student.Entities.CourseType>()
+            {
+                    new Student.Entities.CourseType("bb66b971-3ee0-4477-9bb7-539721f93434", "CODE1", "DESC1"),
+                    new Student.Entities.CourseType("5aeebc5c-c973-4f83-be4b-f64c95002124", "CODE2", "DESC2"),
+                    new Student.Entities.CourseType("27178aab-a6e8-4d1e-ae27-eca1f7b33363", "CODE3", " "),
+                    new Student.Entities.CourseType("27178aab-a6e8-4d1e-ae27-eca1f7b33363", "CODE4", "Desc 4")
+            });
+            return Task.FromResult(courseType.FirstOrDefault(c => c.Code == code).Guid);
+        }
 
         public Task<IEnumerable<SectionStatuses>> GetSectionStatusesAsync(bool ignoreCache)
         {
@@ -1057,6 +1313,51 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         }
 
         public Task<IEnumerable<AwardStatus>> AwardStatusesAsync(bool bypassCache = false)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> GetAdmissionResidencyTypesGuidAsync(string code)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> GetAdmissionApplicationTypesGuidAsync(string code)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> GetAdmissionApplicationStatusTypesGuidAsync(string code)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> GetAdmissionPopulationsGuidAsync(string code)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> GetWithdrawReasonsGuidAsync(string code)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> GetAdmissionDecisionTypesGuidAsync(string code)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> GetAdmissionDecisionTypesSPCodeAsync(string code)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> GetApplicationSourcesGuidAsync(string code)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<GradingTerm>> GetGradingTermsAsync(bool bypassCache = false)
         {
             throw new NotImplementedException();
         }

@@ -2,9 +2,12 @@
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
+using Ellucian.Colleague.Data.Base.Repositories;
+using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.Attributes;
 using Ellucian.Web.Cache;
+using Ellucian.Web.Http.Configuration;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.Filters;
 using Ellucian.Web.License;
@@ -67,10 +70,10 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="httpRoutes"></param>
         public List<ApiResources> GetResources(List<IHttpRoute> httpRoutes, string mediaFormat, string httpMethodConstraintName, string headerVersionConstraintName)
         {
-           
+
             List<ApiResources> resourcesList = new List<ApiResources>();
 
-            
+
             if (_cacheProvider != null && _cacheProvider.Contains(EEDM_WEBAPI_RESOURCES_CACHE_KEY))
             {
                 resourcesList = _cacheProvider[EEDM_WEBAPI_RESOURCES_CACHE_KEY] as List<ApiResources>;
@@ -80,8 +83,8 @@ namespace Ellucian.Colleague.Api.Controllers
             ValidateQueryStringFilter validateQueryStringFilter = new ValidateQueryStringFilter();
             var keywords = validateQueryStringFilter.ValidQueryParameters.ToList();
             string[] headerVersionConstraintValue = null;
-       
-            string appJsonContentType = "application/json";           
+
+            string appJsonContentType = "application/json";
             Assembly asm = Assembly.GetExecutingAssembly();
 
             var controlleractionlist = asm.GetTypes()
@@ -96,7 +99,10 @@ namespace Ellucian.Colleague.Api.Controllers
                         })
                         .OrderBy(x => x.Controller).ThenBy(x => x.Action).ToList();
 
-            //httpRoutes = httpRoutes.Where(x => x.RouteTemplate.StartsWith("courses")).ToList();
+            
+            var deprecatedResources = new DeprecatedResourcesRepository().Get();
+
+            //httpRoutes = httpRoutes.Where(x => x.RouteTemplate.StartsWith("student-transcript-grades")).ToList();
             foreach (IHttpRoute httpRoute in httpRoutes)
             {
                 try
@@ -110,7 +116,11 @@ namespace Ellucian.Colleague.Api.Controllers
                     apiName = GetApiName(routeTemplate);
 
                     ApiResources resourceDto = null;
-                    Representation representationDto = null;
+                    Dtos.Representation representationDto = null;
+
+                    DeprecatedResources deprecatedResource = null;
+                    if (deprecatedResources != null)
+                        deprecatedResource = deprecatedResources.FirstOrDefault(x => x.Name == apiName);
 
                     //Allowed http method
                     var allowedMethod = string.Empty;
@@ -130,6 +140,26 @@ namespace Ellucian.Colleague.Api.Controllers
                         continue;
                     }
 
+                    if (allowedMethod.ToLower().Equals("delete"))
+                    {
+                        resourceDto = resourcesList.FirstOrDefault(res => res.Name.Equals(apiName, StringComparison.OrdinalIgnoreCase));
+
+                        if (resourceDto != null)
+                        {
+                            if (resourceDto.Representations == null) resourceDto.Representations = new List<Dtos.Representation>();
+
+                            resourceDto.Representations.Add(new Dtos.Representation()
+                            {
+                                XMediaType = appJsonContentType,
+                                Methods = new List<string>()
+                                {
+                                    allowedMethod.ToLower()
+                                }
+                            });
+                            continue;
+                        }
+                    }
+
                     var headerVersionConstraint = ((Web.Http.Routes.HeaderVersionConstraint)constraints[headerVersionConstraintName])
                                       .GetType();
 
@@ -137,20 +167,53 @@ namespace Ellucian.Colleague.Api.Controllers
                                       .GetField("_customMediaTypes", BindingFlags.NonPublic | BindingFlags.Instance);
                     headerVersionConstraintValue = (string[])pField.GetValue(((Web.Http.Routes.HeaderVersionConstraint)constraints[headerVersionConstraintName]));
 
-                  
+
+                    if ((allowedMethod.ToLower().Equals("put")) || (allowedMethod.ToLower().Equals("post")))
+                    {
+                        try
+                        {
+                            var contentTypeConstraint = ((Web.Http.Routes.ContentTypeConstraint)constraints["contentType"])
+                                            .GetType();
+
+                            var pField2 = contentTypeConstraint
+                                              .GetField("contentType", BindingFlags.NonPublic | BindingFlags.Instance);
+                            var contentType = (string)pField2.GetValue(((Web.Http.Routes.ContentTypeConstraint)constraints["contentType"]));
+                            headerVersionConstraintValue = new string[] { contentType  };
+                        }
+                        catch (Exception ex) { //do not throw 
+                        }
+                    }
+
                     var satisfyVersionlessRequest = headerVersionConstraint
                                       .GetField("_satisfyVersionlessRequest", BindingFlags.NonPublic | BindingFlags.Instance);
                     versionless = (bool)satisfyVersionlessRequest.GetValue(((Web.Http.Routes.HeaderVersionConstraint)constraints[headerVersionConstraintName]));
-              
+
                     var eedmResponseFilterAttr = string.Empty;
                     List<string> filters = new List<string>();
                     List<NamedQuery> namedQueries = new List<NamedQuery>();
+
+                    Dtos.DeprecationNotice deprecationNotice = null;
+
+                    if ((deprecatedResource != null) && (headerVersionConstraintValue != null) && (headerVersionConstraintValue.Any()))
+                    {
+                        var deprecatedResourceRepresentation = deprecatedResource.Representations.FirstOrDefault(x => x.XMediaType == headerVersionConstraintValue[0]);
+                        if ((deprecatedResourceRepresentation != null) && (deprecatedResourceRepresentation.DeprecationNotice != null))
+                        {
+                            deprecationNotice = new Dtos.DeprecationNotice()
+                            {
+                                DeprecatedOn = (DateTime)deprecatedResourceRepresentation.DeprecationNotice.DeprecatedOn,
+                                SunsetOn = (DateTime)deprecatedResourceRepresentation.DeprecationNotice.SunsetOn,
+                                Description = deprecatedResourceRepresentation.DeprecationNotice.Description
+                            };
+                        }
+                    }
 
                     if (allowedMethod.ToLower().Equals("get"))
                     {
                         object controller = string.Empty;
                         object action = string.Empty;
                         object requestedContentType = string.Empty;
+
 
                         httpRoute.Defaults.TryGetValue("action", out action);
                         httpRoute.Defaults.TryGetValue("controller", out controller);
@@ -179,27 +242,9 @@ namespace Ellucian.Colleague.Api.Controllers
                             }
                         }
                     }
-                  
-                    if (allowedMethod.ToLower().Equals("delete"))
-                    {
-                        resourceDto = resourcesList.FirstOrDefault(res => res.Name.Equals(apiName, StringComparison.OrdinalIgnoreCase));
 
-                        if (resourceDto != null)
-                        {
-                            if (resourceDto.Representations == null) resourceDto.Representations = new List<Representation>();
 
-                            resourceDto.Representations.Add(new Representation()
-                            {
-                                XMediaType = appJsonContentType,
-                                Methods = new List<string>()
-                                {
-                                    allowedMethod.ToLower()
-                                },
-                            });
-                            continue;
-                        }
-                    }
-             
+
                     //Check to see if resource list has the resource
                     if (!resourcesList.Any(res => res.Name.Equals(apiName, StringComparison.OrdinalIgnoreCase)))
                     {
@@ -217,14 +262,14 @@ namespace Ellucian.Colleague.Api.Controllers
 
                         if (resourceDto.Representations == null)
                         {
-                            resourceDto.Representations = new List<Representation>();
+                            resourceDto.Representations = new List<Dtos.Representation>();
                         }
 
                         representationDto = resourceDto.Representations.FirstOrDefault(r => r.XMediaType.Equals(tempXMediaType, StringComparison.OrdinalIgnoreCase));
 
                         if (representationDto == null)
                         {
-                            resourceDto.Representations.Add(new Representation()
+                            resourceDto.Representations.Add(new Dtos.Representation()
                             {
                                 XMediaType = tempXMediaType,
                                 Methods = new List<string>()
@@ -232,8 +277,9 @@ namespace Ellucian.Colleague.Api.Controllers
                                     allowedMethod.ToLower()
                                 },
                                 Filters = filters.Any() ? filters : null,
-                                NamedQueries = namedQueries.Any() ? namedQueries : null
-                               
+                                NamedQueries = namedQueries.Any() ? namedQueries : null,
+                                DeprecationNotice = deprecationNotice != null ? deprecationNotice : null
+
                             });
                         }
                         else if (!representationDto.Methods.Contains(allowedMethod.ToLower()))
@@ -245,22 +291,22 @@ namespace Ellucian.Colleague.Api.Controllers
                         }
                         else if ((representationDto.Methods.Contains(allowedMethod.ToLower())) && (filters.Any()))
                         {
-                                representationDto.Filters = filters;
+                            representationDto.Filters = filters;
                         }
                     }
                     //else default route of application/json content type
-                    if (( versionless) || ((headerVersionConstraintValue != null && headerVersionConstraintValue.Any() && !headerVersionConstraintValue[0].Contains(mediaFormat))))
+                    if ((versionless) || ((headerVersionConstraintValue != null && headerVersionConstraintValue.Any() && !headerVersionConstraintValue[0].Contains(mediaFormat))))
                     {
                         resourceDto = resourcesList.FirstOrDefault(res => res.Name.Equals(apiName, StringComparison.OrdinalIgnoreCase));
 
                         if (resourceDto != null)
                         {
-                            if (resourceDto.Representations == null) resourceDto.Representations = new List<Representation>();
+                            if (resourceDto.Representations == null) resourceDto.Representations = new List<Dtos.Representation>();
 
                             var represDto = resourceDto.Representations.FirstOrDefault(repr => repr.XMediaType.Contains(appJsonContentType));
                             if (represDto == null)
                             {
-                                resourceDto.Representations.Add(new Representation()
+                                resourceDto.Representations.Add(new Dtos.Representation()
                                 {
                                     XMediaType = appJsonContentType,
                                     Methods = new List<string>()
@@ -268,7 +314,8 @@ namespace Ellucian.Colleague.Api.Controllers
                                         allowedMethod.ToLower()
                                     },
                                     Filters = filters.Any() ? filters : null,
-                                    NamedQueries = namedQueries.Any() ? namedQueries : null
+                                    NamedQueries = namedQueries.Any() ? namedQueries : null,
+                                    DeprecationNotice = deprecationNotice != null ? deprecationNotice : null
                                 });
                             }
                         }
@@ -330,7 +377,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <returns>boolean</returns>
         private bool IsParent(Type type)
         {
-            return  
+            return
                    (type.GetCustomAttributes(typeof(DataContractAttribute), true).Any()
                     || type.GetCustomAttributes(typeof(JsonObjectAttribute), true).Any());
         }
@@ -420,7 +467,7 @@ namespace Ellucian.Colleague.Api.Controllers
                 }
             }
         }
-      
+
         /// <summary>
         /// Get the generic type for a list
         /// </summary>
@@ -430,10 +477,10 @@ namespace Ellucian.Colleague.Api.Controllers
         {
             if (!T.IsGenericType)
                 return T;
-            
+
             return T.GetGenericArguments()[0];
         }
-    
+
         /// <summary>
         /// Get filters used for versions 6 and 7
         /// </summary>
@@ -451,7 +498,7 @@ namespace Ellucian.Colleague.Api.Controllers
                 foreach (var attr in attrs)
                 {
                     var queryParameters = attr.ValidQueryParameters.Where(q => !(string.IsNullOrEmpty(q)) && !keywords.Contains(q));
-                    foreach (var queryParameter in queryParameters) 
+                    foreach (var queryParameter in queryParameters)
                     {
                         if (!(string.IsNullOrEmpty(queryParameter)))
                             filters.Add(queryParameter);

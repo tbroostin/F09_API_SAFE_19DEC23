@@ -1,21 +1,17 @@
-﻿// Copyright 2012-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Colleague.Domain.Student;
+using Ellucian.Colleague.Domain.Student.Entities;
+using Ellucian.Colleague.Domain.Student.Repositories;
+using Ellucian.Web.Adapters;
+using Ellucian.Web.Dependency;
+using Ellucian.Web.Security;
+using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
-using Ellucian.Colleague.Domain.Repositories;
-using Ellucian.Colleague.Domain.Student.Entities;
-using Ellucian.Colleague.Domain.Student.Repositories;
-using slf4net;
-using Ellucian.Colleague.Domain.Student;
-using Ellucian.Web.Dependency;
-using Ellucian.Web.Adapters;
-using Ellucian.Web.Security;
 using System.Threading.Tasks;
-using Ellucian.Web.Http.Exceptions;
-using Ellucian.Colleague.Domain.Base.Repositories;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
@@ -39,19 +35,37 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             _configurationRepository = configurationRepository;
         }
 
+        /// <summary>
+        /// Retrieves <see cref="Dtos.Student.StudentProgram2">student programs</see> for the specified student IDs
+        /// </summary>
+        /// <param name="studentIds">List of student IDs</param>
+        /// <param name="includeInactivePrograms">Flag indicating whether or not to include inactive programs</param>
+        /// <param name="term">Optional code filtering student programs for a specific academic term</param>
+        /// <param name="includeHistory">Flag indicating whether or not to include historical data</param>
+        /// <returns>List of <see cref="Dtos.Student.StudentProgram2">student programs</see></returns>
         public async Task<IEnumerable<Dtos.Student.StudentProgram2>> GetStudentProgramsByIdsAsync(IEnumerable<string> studentIds, bool includeInactivePrograms = false, string term = null, bool includeHistory = false)
         {
+            if (studentIds == null || !studentIds.Any())
+            {
+                throw new ArgumentNullException("At least one student ID must be specified when retrieving student program data.");
+            }
+
             ICollection<Dtos.Student.StudentProgram2> studentProgramDto = new List<Dtos.Student.StudentProgram2>();
 
-            if (HasPermission(StudentPermissionCodes.ViewStudentInformation))
-            {
-                Term termDomain = null;
-                if (!string.IsNullOrWhiteSpace(term))
-                    termDomain = await _termRepository.GetAsync(term);
-                IEnumerable<Ellucian.Colleague.Domain.Student.Entities.StudentProgram> studentPrograms = await _studentProgramRepository.GetStudentProgramsByIdsAsync(studentIds, includeInactivePrograms, termDomain, includeHistory);
+            Term termDomain = null;
+            if (!string.IsNullOrWhiteSpace(term))
+                termDomain = await _termRepository.GetAsync(term);
+            IEnumerable<Ellucian.Colleague.Domain.Student.Entities.StudentProgram> studentPrograms = await _studentProgramRepository.GetStudentProgramsByIdsAsync(studentIds, includeInactivePrograms, termDomain, includeHistory);
 
-                foreach (var studentProgram in studentPrograms)
+            foreach (var studentProgram in studentPrograms)
+            {
+                try
                 {
+                    if (!HasPermission(StudentPermissionCodes.ViewStudentInformation) && !(await UserIsAdvisorAsync(studentProgram.StudentId)))
+                    {
+                        throw new PermissionsException(string.Format("User does not have permissions to access student program for student {0}.", studentProgram.StudentId));
+                    }
+
                     // If we are asking for a specific term, and this doesn't match, skip it.
                     if (!string.IsNullOrEmpty(term) && !includeHistory) // Except if we're returning historical data.
                     {
@@ -72,11 +86,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
                     studentProgramDto.Add(programDto);
                 }
-            }
-            else
-            {
-                // Person asking isn't student and isn't a valid advisor. Throw Permission exception.
-                throw new PermissionsException("User does not have permissions to access these student programs.");
+                catch (Exception ex)
+                {
+                    _logger.Info(ex, "Unable to retrieve student academic program data.");
+                }
             }
             return studentProgramDto;
         }

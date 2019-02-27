@@ -161,8 +161,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
                 if ((!string.IsNullOrEmpty(studentNonCourse.StncPersonId)) && (!string.IsNullOrEmpty(studentNonCourse.StncNonCourse)) && (!string.IsNullOrEmpty(studentNonCourse.StncTitle)))
                 {
-                    //rather than using the STNC.CATEGORY, we will use the category from the NON Course itself
-                    var nonCourse = (await GetNonCourses()).FirstOrDefault(cat => cat.Recordkey == studentNonCourse.StncNonCourse);
+                    //rather than reading all the non courses, get read one that is needed.
+                    //var nonCourse = (await GetNonCourses()).FirstOrDefault(cat => cat.Recordkey == studentNonCourse.StncNonCourse);
+                    var nonCourse = await DataReader.ReadRecordAsync < DataContracts.NonCourses > (studentNonCourse.StncNonCourse);
                     if (nonCourse == null)
                     {
                         var errorMessage = string.Format("Student Non Courses record with ID : '{0}' has an invalid non course '{1}'", studentNonCourse.RecordGuid, studentNonCourse.StncNonCourse);
@@ -375,7 +376,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 {
                     var errorMessage = string.Format("Error(s) occurred updating studentTestScores '{0}':", studentTestScoresEntity.Guid);
                     var exception = new RepositoryException(errorMessage);
-                    updateResponse.UpdateStudentAptitudeAsessmentErrors.ForEach(e => exception.AddError(new RepositoryError("studentTestScores", e.ErrorMessages)));
+                    updateResponse.UpdateStudentAptitudeAsessmentErrors.ForEach(e => exception.AddError(new RepositoryError(e.ErrorCodes, e.ErrorMessages)));
 
                     logger.Error(errorMessage);
                     throw exception;

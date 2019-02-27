@@ -15,12 +15,12 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
     public enum FundsAvailableStatus
     {
         /// <summary>
-        /// Availbale
+        /// Available
         /// </summary>
-        Availbale,
+        Available,
 
         /// <summary>
-        /// NotAvailabl
+        /// NotAvailable
         /// </summary>
         NotAvailable,
 
@@ -28,6 +28,11 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// Override
         /// </summary>
         Override,
+
+        /// <summary>
+        /// Invalid accounting string
+        /// </summary>
+        Invalid,
 
         /// <summary>
         /// notApplicable

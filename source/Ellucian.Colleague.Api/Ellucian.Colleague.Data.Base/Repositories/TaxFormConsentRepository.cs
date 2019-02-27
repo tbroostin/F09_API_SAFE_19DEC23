@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
@@ -62,8 +62,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             Status = x.W2chNewStatus,
                             PersonId = personId,
                             TaxForm = TaxForms.FormW2,
-                            AddDate = x.W2ConsentHistoryAdddate,
-                            AddTime = x.W2ConsentHistoryAddtime
+                            AddDate = x.W2chStatusDate,
+                            AddTime = x.W2chStatusTime
                         }).ToList();
                     taxFormConsentEntities = BuildConsentEntities(genericW2Consents);
 
@@ -107,8 +107,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             Status = x.T4chNewStatus,
                             PersonId = personId,
                             TaxForm = TaxForms.FormT4,
-                            AddDate = x.T4ConsentHistoryAdddate,
-                            AddTime = x.T4ConsentHistoryAddtime
+                            AddDate = x.T4chStatusDate,
+                            AddTime = x.T4chStatusTime
                         }).ToList();
                     taxFormConsentEntities = BuildConsentEntities(genericT4Consents);
 
@@ -122,8 +122,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             Status = x.T4achNewStatus,
                             PersonId = personId,
                             TaxForm = TaxForms.FormT4A,
-                            AddDate = x.T4aConsentHistoryAdddate,
-                            AddTime = x.T4aConsentHistoryAddtime
+                            AddDate = x.T4achStatusDate,
+                            AddTime = x.T4achStatusTime
                         }).ToList();
                     taxFormConsentEntities = BuildConsentEntities(genericT4aConsents);
 

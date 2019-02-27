@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -335,6 +335,79 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
         }
 
+        /// <summary>
+        /// Determines a student's eligibility to apply for graduation in the requested programs
+        /// </summary>
+        /// <param name="studentId">Id of student to determine eligibility</param>
+        /// <param name="programCodes">Programs for which the eligibility is requested</param>
+        /// <returns>List of Graduation Application Program Eligibility entities.</returns>
+        public async Task<IEnumerable<GraduationApplicationProgramEligibility>> GetGraduationApplicationEligibilityAsync(string studentId, IEnumerable<string> programCodes)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("studentId", "Invalid Student Id");
+            }
+            if (programCodes == null || !programCodes.Any())
+            {
+                throw new ArgumentNullException("programCodes", "Must provide at least one program code to evaluate eligibility.");
+            }
+
+            GetGradApplEligibilityRequest graduationApplicationEligibilityRequest = new GetGradApplEligibilityRequest();
+            graduationApplicationEligibilityRequest.StudentId = studentId;
+            graduationApplicationEligibilityRequest.ProgramCodes = programCodes.ToList();
+            GetGradApplEligibilityResponse graduationApplicationEligibilityResponse = null;
+            try
+            {
+                graduationApplicationEligibilityResponse = await transactionInvoker.ExecuteAsync<GetGradApplEligibilityRequest, GetGradApplEligibilityResponse>(graduationApplicationEligibilityRequest);
+            }
+            catch (Exception ex)
+            {
+                var errorMessage = string.Format("Unable to determine graduation application eligibility for student Id {0} and programs {1} ", studentId, string.Join(", ", programCodes));
+                logger.Error(ex, errorMessage);
+                throw;
+            }
+
+            // Build the Graduation Application Program Eligibility entities to return
+            List<GraduationApplicationProgramEligibility> gradAppEligibilityEntities = new List<GraduationApplicationProgramEligibility>();
+            if (graduationApplicationEligibilityResponse == null)
+            {
+                var message = string.Format("CTX returned null graduation application eligibility response for student Id " + studentId);
+                logger.Info(message);
+            }
+            else
+            {
+                if (graduationApplicationEligibilityResponse.EligibilityResults != null && graduationApplicationEligibilityResponse.EligibilityResults.Any())
+                {
+                    foreach (var programResult in graduationApplicationEligibilityResponse.EligibilityResults)
+                    {
+                        if (programResult != null && !string.IsNullOrEmpty(programResult.ProgramCode))
+                        {
+                            var gradAppProgramEligibility = new GraduationApplicationProgramEligibility(studentId, programResult.ProgramCode, programResult.IsEligible);
+
+                            if (!string.IsNullOrEmpty(programResult.FailureReasons))
+                            {
+                                // Reasons could be returned subvalued because more than 1 rule may have failed for a program so change those to commas
+                                // Using Regex because a subvalue is a string not a char.
+                                string[] failureReasons = Regex.Split(programResult.FailureReasons, DmiString.sSM);
+                                foreach (var reason in failureReasons)
+                                {
+                                    if (!string.IsNullOrEmpty(reason))
+                                    {
+                                        gradAppProgramEligibility.AddIneligibleMessage(reason);
+                                    }
+
+                                }
+                            }
+
+                            gradAppEligibilityEntities.Add(gradAppProgramEligibility);
+                        }
+
+                    }
+                }
+            }
+            return gradAppEligibilityEntities;
+        }
+
         #region private methods
         private GraduationApplication BuildGraduationApplication(Ellucian.Colleague.Data.Student.DataContracts.Graduates graduate)
         {
@@ -395,7 +468,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     }
                 }
                 graduationApplication.InvoiceNumber = graduate.GradInvoice;
-                graduationApplication.PrimaryLocation = graduate.GradPrimaryLocation;                
+                graduationApplication.PrimaryLocation = graduate.GradPrimaryLocation;
                 graduationApplication.AcadCredentialsUpdated = !string.IsNullOrEmpty(graduate.GradAcadCredentialsUpdted) ? (graduate.GradAcadCredentialsUpdted.Equals("Y", StringComparison.OrdinalIgnoreCase) ? true : false) : false;
                 return graduationApplication;
 

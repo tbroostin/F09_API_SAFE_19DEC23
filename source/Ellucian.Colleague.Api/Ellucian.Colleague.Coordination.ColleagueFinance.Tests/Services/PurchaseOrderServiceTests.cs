@@ -1488,21 +1488,21 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
                 buyerRepositoryMock.Setup(p => p.GetBuyerIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
 
-                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetShipToDestinationsAsync(true)).ReturnsAsync(shipToDestination);
+                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetShipToDestinationsAsync(It.IsAny<bool>())).ReturnsAsync(shipToDestination);
 
-                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetFreeOnBoardTypesAsync(true)).ReturnsAsync(freeOnBoardType);
+                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetFreeOnBoardTypesAsync(It.IsAny<bool>())).ReturnsAsync(freeOnBoardType);
 
-                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetAccountsPayableSourcesAsync(true)).ReturnsAsync(paymentSource);
+                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetAccountsPayableSourcesAsync(It.IsAny<bool>())).ReturnsAsync(paymentSource);
 
-                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetVendorTermsAsync(true)).ReturnsAsync(vendorTerms);
+                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetVendorTermsAsync(It.IsAny<bool>())).ReturnsAsync(vendorTerms);
 
-                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetCommodityCodesAsync(true)).ReturnsAsync(commodityCodes);
+                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetCommodityCodesAsync(It.IsAny<bool>())).ReturnsAsync(commodityCodes);
 
-                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetCommodityUnitTypesAsync(true)).ReturnsAsync(commodityUnitTypes);
+                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetCommodityUnitTypesAsync(It.IsAny<bool>())).ReturnsAsync(commodityUnitTypes);
 
-                referenceDataRepositoryMock.Setup(r => r.GetCountryCodesAsync(true)).ReturnsAsync(countries);
+                referenceDataRepositoryMock.Setup(r => r.GetCountryCodesAsync(It.IsAny<bool>())).ReturnsAsync(countries);
 
-                referenceDataRepositoryMock.Setup(r => r.GetStateCodesAsync(true)).ReturnsAsync(states);
+                referenceDataRepositoryMock.Setup(r => r.GetStateCodesAsync(It.IsAny<bool>())).ReturnsAsync(states);
 
                
             }
@@ -1625,7 +1625,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 createPurchaseOrder.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(ColleagueFinancePermissionCodes.UpdatePurchaseOrders));
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPurchaseOrder });
 
-                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetShipToDestinationsAsync(true)).ReturnsAsync(null);
+                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetShipToDestinationsAsync(It.IsAny<bool>())).ReturnsAsync(null);
 
                 await purchaseOrderService.PostPurchaseOrdersAsync2(purchaseOrder);
             }
@@ -1655,7 +1655,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 createPurchaseOrder.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(ColleagueFinancePermissionCodes.UpdatePurchaseOrders));
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPurchaseOrder });
 
-                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetFreeOnBoardTypesAsync(true)).ReturnsAsync(null);
+                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetFreeOnBoardTypesAsync(It.IsAny<bool>())).ReturnsAsync(null);
 
                 await purchaseOrderService.PostPurchaseOrdersAsync2(purchaseOrder);
             }
@@ -1785,7 +1785,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
                 purchaseOrderRepositoryMock.Setup(r => r.GetPurchaseOrdersIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
 
-                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetCommodityCodesAsync(true)).ReturnsAsync(null);
+                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetCommodityCodesAsync(It.IsAny<bool>())).ReturnsAsync(null);
 
                 await purchaseOrderService.PostPurchaseOrdersAsync2(purchaseOrder);
             }
@@ -1802,7 +1802,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
                 purchaseOrderRepositoryMock.Setup(r => r.GetPurchaseOrdersIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
 
-                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetCommodityUnitTypesAsync(true)).ReturnsAsync(null);
+                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetCommodityUnitTypesAsync(It.IsAny<bool>())).ReturnsAsync(null);
 
                 await purchaseOrderService.PostPurchaseOrdersAsync2(purchaseOrder);
             }
@@ -1853,7 +1853,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
                 purchaseOrderRepositoryMock.Setup(r => r.GetPurchaseOrdersIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
 
-                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(true)).ReturnsAsync(taxCodes);
+                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxCodes);
 
                 purchaseOrderRepositoryMock.Setup(r => r.UpdatePurchaseOrdersAsync(It.IsAny<PurchaseOrder>())).ThrowsAsync(new RepositoryException());
 
@@ -1874,7 +1874,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
                 purchaseOrderRepositoryMock.Setup(r => r.UpdatePurchaseOrdersAsync(It.IsAny<PurchaseOrder>())).ReturnsAsync(null);
 
-                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(true)).ReturnsAsync(taxCodes);
+                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxCodes);
 
                 await purchaseOrderService.PostPurchaseOrdersAsync2(purchaseOrder);
             }
@@ -1938,7 +1938,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 domainPurchaseOrder.HostCountry = "CAN";
                 domainPurchaseOrder.Type = "Eprocurement";
 
-                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(true)).ReturnsAsync(taxCodes);
+                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxCodes);
 
                 purchaseOrderRepositoryMock.Setup(r => r.UpdatePurchaseOrdersAsync(It.IsAny<PurchaseOrder>())).ReturnsAsync(domainPurchaseOrder);
 
@@ -1966,7 +1966,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 domainPurchaseOrder.Type = "";
                 domainPurchaseOrder.ShipToCode = "2";
 
-                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(true)).ReturnsAsync(taxCodes);
+                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxCodes);
 
                 purchaseOrderRepositoryMock.Setup(r => r.UpdatePurchaseOrdersAsync(It.IsAny<PurchaseOrder>())).ReturnsAsync(domainPurchaseOrder);
 
@@ -1990,7 +1990,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 domainPurchaseOrder.CurrencyCode = "USD1";
                 domainPurchaseOrder.Fob = "2";
 
-                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(true)).ReturnsAsync(taxCodes);
+                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxCodes);
 
                 purchaseOrderRepositoryMock.Setup(r => r.UpdatePurchaseOrdersAsync(It.IsAny<PurchaseOrder>())).ReturnsAsync(domainPurchaseOrder);
 
@@ -2015,7 +2015,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 domainPurchaseOrder.AltShippingCountry = "";
                 domainPurchaseOrder.HostCountry = "";
 
-                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(true)).ReturnsAsync(taxCodes);
+                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxCodes);
 
                 purchaseOrderRepositoryMock.Setup(r => r.UpdatePurchaseOrdersAsync(It.IsAny<PurchaseOrder>())).ReturnsAsync(domainPurchaseOrder);
 
@@ -2036,7 +2036,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
                 purchaseOrderRepositoryMock.Setup(r => r.GetPurchaseOrdersIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
 
-                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(true)).ReturnsAsync(taxCodes);
+                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxCodes);
 
                 domainPurchaseOrder.AltShippingState = "AL";
 
@@ -2084,7 +2084,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
                 purchaseOrderRepositoryMock.Setup(r => r.UpdatePurchaseOrdersAsync(It.IsAny<PurchaseOrder>())).ReturnsAsync(domainPurchaseOrder);
 
-                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(true)).ReturnsAsync(taxCodes);
+                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxCodes);
 
                 buyerRepositoryMock.Setup(r => r.GetBuyerGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(guid);
 
@@ -2107,7 +2107,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 purchaseOrderRepositoryMock.Setup(r => r.GetGuidFromIdAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync("001");
                 domainPurchaseOrder.ApType = "2";
 
-                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(true)).ReturnsAsync(taxCodes);
+                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxCodes);
 
                 purchaseOrderRepositoryMock.Setup(r => r.UpdatePurchaseOrdersAsync(It.IsAny<PurchaseOrder>())).ReturnsAsync(domainPurchaseOrder);
 
@@ -2132,7 +2132,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 purchaseOrderRepositoryMock.Setup(r => r.GetGuidFromIdAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync("001");
                 domainLineItems.FirstOrDefault().CommodityCode = "2";
 
-                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(true)).ReturnsAsync(taxCodes);
+                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxCodes);
 
                 domainPurchaseOrder.AddLineItem(domainLineItems.FirstOrDefault());
 
@@ -2163,7 +2163,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
                 purchaseOrderRepositoryMock.Setup(r => r.UpdatePurchaseOrdersAsync(It.IsAny<PurchaseOrder>())).ReturnsAsync(domainPurchaseOrder);
 
-                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(true)).ReturnsAsync(taxCodes);
+                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxCodes);
 
                 buyerRepositoryMock.Setup(r => r.GetBuyerGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(guid);
 
@@ -2192,7 +2192,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
                 vendorsRepositoryMock.Setup(r => r.GetVendorGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(guid);
 
-                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(true)).ReturnsAsync(null);
+                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(null);
 
                 await purchaseOrderService.PostPurchaseOrdersAsync2(purchaseOrder);
             }
@@ -2217,7 +2217,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
                 vendorsRepositoryMock.Setup(r => r.GetVendorGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(guid);
 
-                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(true)).ReturnsAsync(taxCodes);
+                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxCodes);
 
                 var result = await purchaseOrderService.PostPurchaseOrdersAsync2(purchaseOrder);
 
@@ -2547,21 +2547,21 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 personRepositoryMock.Setup(p => p.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(guid);
 
 
-                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetShipToDestinationsAsync(true)).ReturnsAsync(shipToDestination);
+                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetShipToDestinationsAsync(It.IsAny<bool>())).ReturnsAsync(shipToDestination);
 
-                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetFreeOnBoardTypesAsync(true)).ReturnsAsync(freeOnBoardType);
+                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetFreeOnBoardTypesAsync(It.IsAny<bool>())).ReturnsAsync(freeOnBoardType);
 
-                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetAccountsPayableSourcesAsync(true)).ReturnsAsync(paymentSource);
+                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetAccountsPayableSourcesAsync(It.IsAny<bool>())).ReturnsAsync(paymentSource);
 
-                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetVendorTermsAsync(true)).ReturnsAsync(vendorTerms);
+                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetVendorTermsAsync(It.IsAny<bool>())).ReturnsAsync(vendorTerms);
 
-                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetCommodityCodesAsync(true)).ReturnsAsync(commodityCodes);
+                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetCommodityCodesAsync(It.IsAny<bool>())).ReturnsAsync(commodityCodes);
 
-                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetCommodityUnitTypesAsync(true)).ReturnsAsync(commodityUnitTypes);
+                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetCommodityUnitTypesAsync(It.IsAny<bool>())).ReturnsAsync(commodityUnitTypes);
 
-                referenceDataRepositoryMock.Setup(r => r.GetCountryCodesAsync(true)).ReturnsAsync(countries);
+                referenceDataRepositoryMock.Setup(r => r.GetCountryCodesAsync(It.IsAny<bool>())).ReturnsAsync(countries);
 
-                referenceDataRepositoryMock.Setup(r => r.GetStateCodesAsync(true)).ReturnsAsync(states);
+                referenceDataRepositoryMock.Setup(r => r.GetStateCodesAsync(It.IsAny<bool>())).ReturnsAsync(states);
             }
 
             #endregion
@@ -2662,7 +2662,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 createPurchaseOrder.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(ColleagueFinancePermissionCodes.UpdatePurchaseOrders));
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPurchaseOrder });
 
-                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetShipToDestinationsAsync(true)).ReturnsAsync(null);
+                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetShipToDestinationsAsync(It.IsAny<bool>())).ReturnsAsync(null);
 
                 purchaseOrder.Status = Dtos.EnumProperties.PurchaseOrdersStatus.Reconciled;
 
@@ -2695,7 +2695,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 createPurchaseOrder.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(ColleagueFinancePermissionCodes.UpdatePurchaseOrders));
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPurchaseOrder });
 
-                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetFreeOnBoardTypesAsync(true)).ReturnsAsync(null);
+                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetFreeOnBoardTypesAsync(It.IsAny<bool>())).ReturnsAsync(null);
 
                 await purchaseOrderService.PutPurchaseOrdersAsync2(purchaseOrder.Id, purchaseOrder);
             }
@@ -2831,7 +2831,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 createPurchaseOrder.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(ColleagueFinancePermissionCodes.UpdatePurchaseOrders));
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPurchaseOrder });
 
-                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetCommodityCodesAsync(true)).ReturnsAsync(null);
+                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetCommodityCodesAsync(It.IsAny<bool>())).ReturnsAsync(null);
 
                 await purchaseOrderService.PutPurchaseOrdersAsync2(purchaseOrder.Id, purchaseOrder);
             }
@@ -2846,7 +2846,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 createPurchaseOrder.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(ColleagueFinancePermissionCodes.UpdatePurchaseOrders));
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPurchaseOrder });
 
-                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetCommodityUnitTypesAsync(true)).ReturnsAsync(null);
+                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetCommodityUnitTypesAsync(It.IsAny<bool>())).ReturnsAsync(null);
 
                 await purchaseOrderService.PutPurchaseOrdersAsync2(purchaseOrder.Id, purchaseOrder);
             }
@@ -2875,7 +2875,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
                 createPurchaseOrder.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(ColleagueFinancePermissionCodes.UpdatePurchaseOrders));
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPurchaseOrder });
-                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(true)).ReturnsAsync(taxCodes);
+                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxCodes);
                 purchaseOrder.LineItems.FirstOrDefault().UnitOfMeasure.Id = "1";
 
                 await purchaseOrderService.PutPurchaseOrdersAsync2(purchaseOrder.Id, purchaseOrder);
@@ -2893,7 +2893,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
                 purchaseOrder.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().Status = Dtos.EnumProperties.PurchaseOrdersStatus.Accepted;
 
-                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(true)).ReturnsAsync(taxCodes);
+                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxCodes);
 
                 purchaseOrderRepositoryMock.Setup(r => r.UpdatePurchaseOrdersAsync(It.IsAny<PurchaseOrder>())).ThrowsAsync(new RepositoryException());
 
@@ -2911,7 +2911,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPurchaseOrder });
 
                 purchaseOrder.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().Status = Dtos.EnumProperties.PurchaseOrdersStatus.Backordered;
-                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(true)).ReturnsAsync(taxCodes);
+                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxCodes);
                 purchaseOrderRepositoryMock.Setup(r => r.UpdatePurchaseOrdersAsync(It.IsAny<PurchaseOrder>())).ReturnsAsync(null);
 
                 await purchaseOrderService.PutPurchaseOrdersAsync2(purchaseOrder.Id, purchaseOrder);
@@ -2953,7 +2953,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
                 purchaseOrderRepositoryMock.Setup(r => r.UpdatePurchaseOrdersAsync(It.IsAny<PurchaseOrder>())).ReturnsAsync(domainPurchaseOrder);
 
-                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(true)).ReturnsAsync(taxCodes);
+                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxCodes);
 
                 buyerRepositoryMock.Setup(r => r.GetBuyerGuidFromIdAsync(It.IsAny<string>()))
                                    .ReturnsAsync(guid);
@@ -2979,7 +2979,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 domainPurchaseOrder.CurrencyCode = null;
                 domainPurchaseOrder.HostCountry = "CAN";
                 domainPurchaseOrder.Type = "Eprocurement";
-                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(true)).ReturnsAsync(taxCodes);
+                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxCodes);
                 purchaseOrderRepositoryMock.Setup(r => r.UpdatePurchaseOrdersAsync(It.IsAny<PurchaseOrder>())).ReturnsAsync(domainPurchaseOrder);
 
                 buyerRepositoryMock.SetupSequence(r => r.GetBuyerGuidFromIdAsync(It.IsAny<string>()))
@@ -3007,7 +3007,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 domainPurchaseOrder.ShipToCode = "2";
 
                 purchaseOrderRepositoryMock.Setup(r => r.UpdatePurchaseOrdersAsync(It.IsAny<PurchaseOrder>())).ReturnsAsync(domainPurchaseOrder);
-                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(true)).ReturnsAsync(taxCodes);
+                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxCodes);
 
                 buyerRepositoryMock.Setup(r => r.GetBuyerGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(guid);
 
@@ -3030,7 +3030,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 domainPurchaseOrder.Fob = "2";
                 domainPurchaseOrder.AltShippingCountry = "";
                 domainPurchaseOrder.HostCountry = "";
-                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(true)).ReturnsAsync(taxCodes);
+                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxCodes);
 
                 purchaseOrderRepositoryMock.Setup(r => r.UpdatePurchaseOrdersAsync(It.IsAny<PurchaseOrder>())).ReturnsAsync(domainPurchaseOrder);
 
@@ -3053,7 +3053,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 domainPurchaseOrder.MiscCountry = "AUS";
                 domainPurchaseOrder.AltShippingCountry = "";
                 domainPurchaseOrder.HostCountry = "";
-                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(true)).ReturnsAsync(taxCodes);
+                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxCodes);
 
                 purchaseOrderRepositoryMock.Setup(r => r.UpdatePurchaseOrdersAsync(It.IsAny<PurchaseOrder>())).ReturnsAsync(domainPurchaseOrder);
 
@@ -3080,7 +3080,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 domainPurchaseOrder.HostCountry = "";
                 purchaseOrderRepositoryMock.Setup(r => r.UpdatePurchaseOrdersAsync(It.IsAny<PurchaseOrder>())).ReturnsAsync(domainPurchaseOrder);
 
-                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(true)).ReturnsAsync(taxCodes);
+                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxCodes);
 
                 buyerRepositoryMock.Setup(r => r.GetBuyerGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(guid);
 
@@ -3101,7 +3101,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 domainPurchaseOrder.AltShippingCountry = "";
                 domainPurchaseOrder.HostCountry = "";
                 countries.FirstOrDefault().IsoAlpha3Code = "CAN";
-                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(true)).ReturnsAsync(taxCodes);
+                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxCodes);
                 purchaseOrderRepositoryMock.Setup(r => r.UpdatePurchaseOrdersAsync(It.IsAny<PurchaseOrder>())).ReturnsAsync(domainPurchaseOrder);
 
                 buyerRepositoryMock.Setup(r => r.GetBuyerGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(guid);
@@ -3123,7 +3123,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 domainPurchaseOrder.AltShippingCountry = "";
                 domainPurchaseOrder.HostCountry = "";
                 purchaseOrderRepositoryMock.Setup(r => r.UpdatePurchaseOrdersAsync(It.IsAny<PurchaseOrder>())).ReturnsAsync(domainPurchaseOrder);
-                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(true)).ReturnsAsync(taxCodes);
+                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxCodes);
                 buyerRepositoryMock.Setup(r => r.GetBuyerGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(guid);
 
                 vendorsRepositoryMock.Setup(r => r.GetVendorGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(null);
@@ -3147,7 +3147,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
                 purchaseOrderRepositoryMock.Setup(r => r.GetGuidFromIdAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync("00011");
 
-                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(true)).ReturnsAsync(taxCodes);
+                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxCodes);
 
                 purchaseOrderRepositoryMock.Setup(r => r.UpdatePurchaseOrdersAsync(It.IsAny<PurchaseOrder>())).ReturnsAsync(domainPurchaseOrder);
 
@@ -3172,7 +3172,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
                 domainPurchaseOrder.ApType = "2";
 
-                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(true)).ReturnsAsync(taxCodes);
+                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxCodes);
 
                 purchaseOrderRepositoryMock.Setup(r => r.GetGuidFromIdAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync("00011");
 
@@ -3204,7 +3204,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 purchaseOrderRepositoryMock.Setup(r => r.GetGuidFromIdAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync("00011");
 
                 domainPurchaseOrder.AddLineItem(domainLineItems.FirstOrDefault());
-                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(true)).ReturnsAsync(taxCodes);
+                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxCodes);
                 purchaseOrderRepositoryMock.Setup(r => r.UpdatePurchaseOrdersAsync(It.IsAny<PurchaseOrder>())).ReturnsAsync(domainPurchaseOrder);
 
                 buyerRepositoryMock.Setup(r => r.GetBuyerGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(guid);
@@ -3232,7 +3232,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 domainLineItems.FirstOrDefault().UnitOfIssue = "2";
 
                 domainPurchaseOrder.AddLineItem(domainLineItems.FirstOrDefault());
-                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(true)).ReturnsAsync(taxCodes);
+                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxCodes);
                 purchaseOrderRepositoryMock.Setup(r => r.UpdatePurchaseOrdersAsync(It.IsAny<PurchaseOrder>())).ReturnsAsync(domainPurchaseOrder);
 
                 buyerRepositoryMock.Setup(r => r.GetBuyerGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(guid);
@@ -3265,7 +3265,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
                 vendorsRepositoryMock.Setup(r => r.GetVendorGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(guid);
 
-                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(true)).ReturnsAsync(null);
+                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(null);
 
                 await purchaseOrderService.PutPurchaseOrdersAsync2(purchaseOrder.Id, purchaseOrder);
             }
@@ -3293,7 +3293,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
                 taxCodes = new List<CommerceTaxCode>() { new CommerceTaxCode("1l49eed8-5fe7-4120-b1cf-f23266b9e874", "1", "Desc") { AppurEntryFlag = false } };
 
-                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(true)).ReturnsAsync(taxCodes);
+                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxCodes);
 
                 var result = await purchaseOrderService.PutPurchaseOrdersAsync2(purchaseOrder.Id, purchaseOrder);
 
@@ -3320,9 +3320,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
                 vendorsRepositoryMock.Setup(r => r.GetVendorGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(guid);
 
-                taxCodes = new List<CommerceTaxCode>() { new CommerceTaxCode("1l49eed8-5fe7-4120-b1cf-f23266b9e874", "1", "Desc") { UseTaxFlag = true } };
+                taxCodes = new List<CommerceTaxCode>() { new CommerceTaxCode("1l49eed8-5fe7-4120-b1cf-f23266b9e874", "1", "Desc") { UseTaxFlag = It.IsAny<bool>() } };
 
-                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(true)).ReturnsAsync(taxCodes);
+                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxCodes);
 
                 var result = await purchaseOrderService.PutPurchaseOrdersAsync2(purchaseOrder.Id, purchaseOrder);
 
@@ -3348,7 +3348,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
                 vendorsRepositoryMock.Setup(r => r.GetVendorGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(guid);
 
-                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(true)).ReturnsAsync(taxCodes);
+                referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxCodes);
 
                 var result = await purchaseOrderService.PutPurchaseOrdersAsync2(purchaseOrder.Id, purchaseOrder);
 

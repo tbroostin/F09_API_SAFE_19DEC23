@@ -6183,4 +6183,124 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             Assert.AreEqual(section2, result.ToList()[1]);
         }
     }
+
+    [TestClass]
+    public class SectionsControllerTests_QuerySectionEventsICalAsync
+    {
+        #region Test Context
+
+        private TestContext testContextInstance;
+
+        /// <summary>
+        ///Gets or sets the test context which provides
+        ///information about and functionality for the current test run.
+        ///</summary>
+        public TestContext TestContext
+        {
+            get
+            {
+                return testContextInstance;
+            }
+            set
+            {
+                testContextInstance = value;
+            }
+        }
+
+        #endregion
+
+        private SectionsController sectionsController;
+        private Mock<ISectionCoordinationService> sectionCoordinationServiceMock;
+        private ISectionCoordinationService sectionCoordinationService;
+        private ILogger logger;
+        private HttpResponse response;
+        Ellucian.Colleague.Dtos.Base.EventsICal iCalResult = new Dtos.Base.EventsICal("raw iCal");
+
+
+        [TestInitialize]
+        public async void Initialize()
+        {
+            LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+            EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+            logger = new Mock<ILogger>().Object;
+            sectionCoordinationServiceMock = new Mock<ISectionCoordinationService>();
+            sectionCoordinationService = sectionCoordinationServiceMock.Object;
+            sectionCoordinationServiceMock.Setup(svc => svc.GetSectionEventsICalAsync(null, It.IsAny<DateTime?>(), It.IsAny<DateTime?>())).ThrowsAsync(new ArgumentNullException());
+            sectionCoordinationServiceMock.Setup(svc => svc.GetSectionEventsICalAsync(new List<string>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>())).ThrowsAsync(new ArgumentNullException());
+            sectionCoordinationServiceMock.Setup(svc => svc.GetSectionEventsICalAsync(new List<string>() { "SEC1", "SEC2" }, null, null)).ReturnsAsync(iCalResult);
+
+            // mock controller
+            sectionsController = new SectionsController(sectionCoordinationService, null, null, logger)
+            {
+                Request = new HttpRequestMessage()
+            };
+
+            sectionsController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
+
+
+        }
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            sectionsController = null;
+            sectionCoordinationService = null;
+        }
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task QuerySectionEventsICalAsync_Criteria_Is_Null()
+        {
+            await sectionsController.QuerySectionEventsICalAsync(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task QuerySectionEventsICalAsync_Criteria_Does_Not_have_SectionIds()
+
+        {
+            SectionEventsICalQueryCriteria criteria = new SectionEventsICalQueryCriteria();
+            // Set up an Http Context
+            response = new HttpResponse(new StringWriter());
+            HttpContext.Current = new HttpContext(new HttpRequest("", "http://doesntMatter.com", ""), response);
+
+            var result = await sectionsController.QuerySectionEventsICalAsync(criteria);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task QuerySectionEventsICalAsync_Criteria_SectionIds_AreEmpty()
+
+        {
+            SectionEventsICalQueryCriteria criteria = new SectionEventsICalQueryCriteria();
+            criteria.SectionIds = new List<string>();
+            // Set up an Http Context
+            response = new HttpResponse(new StringWriter());
+            HttpContext.Current = new HttpContext(new HttpRequest("", "http://doesntMatter.com", ""), response);
+
+            var result = await sectionsController.QuerySectionEventsICalAsync(criteria);
+        }
+
+
+        [TestMethod]
+        public async Task QuerySectionEventsICalAsync_Criteria_Have_SectionId()
+
+        {
+
+            SectionEventsICalQueryCriteria criteria = new SectionEventsICalQueryCriteria();
+            criteria.SectionIds = new List<string>() { "SEC1", "SEC2" }; ;
+
+            sectionsController.Request.Headers.CacheControl =
+                    new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+
+            // Set up an Http Context
+            response = new HttpResponse(new StringWriter());
+            HttpContext.Current = new HttpContext(new HttpRequest("", "http://doesntMatter.com", ""), response);
+
+            var result = await sectionsController.QuerySectionEventsICalAsync(criteria);
+            Assert.IsNotNull(result);
+            Assert.AreEqual(iCalResult, result);
+            Assert.AreEqual("raw iCal", result.iCal);
+        }
+    }
 }

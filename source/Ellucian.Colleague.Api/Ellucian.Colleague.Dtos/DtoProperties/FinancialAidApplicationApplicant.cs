@@ -5,6 +5,7 @@ using System.Runtime.Serialization;
 using Ellucian.Colleague.Dtos.Converters;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using Newtonsoft.Json;
+using Ellucian.Colleague.Dtos.Attributes;
 
 namespace Ellucian.Colleague.Dtos.DtoProperties
 {
@@ -18,6 +19,7 @@ namespace Ellucian.Colleague.Dtos.DtoProperties
         /// The person associated with the financial aid application.
         /// </summary>
         [JsonProperty("person", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        [FilterProperty("criteria")]
         public GuidObject2 Person { get; set; }
 
         /// <summary>

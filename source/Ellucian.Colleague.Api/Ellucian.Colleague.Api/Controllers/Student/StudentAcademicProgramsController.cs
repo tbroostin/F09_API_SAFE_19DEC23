@@ -182,6 +182,68 @@ namespace Ellucian.Colleague.Api.Controllers
         }
 
         /// <summary>
+        /// Retrieves an Student Academic Program by ID.
+        /// </summary>
+        /// <returns>An <see cref="Dtos.StudentAcademicPrograms3">StudentAcademicPrograms</see>object.</returns>
+        [HttpGet, EedmResponseFilter]
+        public async Task<Dtos.StudentAcademicPrograms3> GetStudentAcademicProgramsByGuid3Async(string id)
+        {
+            bool bypassCache = false;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
+
+            try
+            {
+                var studentAcademicProgram = await _studentAcademicProgramService.GetStudentAcademicProgramByGuid3Async(id);
+
+                if (studentAcademicProgram != null)
+                {
+
+                    AddEthosContextProperties(await _studentAcademicProgramService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                              await _studentAcademicProgramService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              new List<string>() { studentAcademicProgram.Id }));
+                }
+                return studentAcademicProgram;
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (ArgumentNullException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
+
+
+        /// <summary>
         /// Return a list of StudentAcademicPrograms objects based on selection criteria.
         /// </summary>
         ///  <param name="page">page</param>
@@ -460,6 +522,84 @@ namespace Ellucian.Colleague.Api.Controllers
         }
 
         /// <summary>
+        /// Return a list of StudentAcademicPrograms objects based on selection criteria.
+        /// </summary>
+        ///  <param name="page">page</param>
+        /// <param name="criteria">filter criteria</param>
+        /// <returns>List of StudentAcademicPrograms <see cref="Dtos.StudentAcademicPrograms2"/> objects representing matching Student Academic Programs</returns>
+        [HttpGet]
+        [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
+        [QueryStringFilterFilter("criteria", typeof(Dtos.StudentAcademicPrograms3))]
+        [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
+        public async Task<IHttpActionResult> GetStudentAcademicPrograms3Async(Paging page, QueryStringFilter criteria = null)
+        {
+            bool bypassCache = false;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
+            //do the filters
+            string program = string.Empty, student = string.Empty, site = string.Empty, academicLevel = string.Empty, startOn = string.Empty, endOn = string.Empty,
+                enrollmentStatus = string.Empty, graduatedAcademicPeriod = string.Empty, graduatedOn = string.Empty;
+            List<string> credentials = new List<string>();
+
+            var criteriaObj = GetFilterObject<Dtos.StudentAcademicPrograms3>(_logger, "criteria");
+
+            if (CheckForEmptyFilterParameters())
+                return new PagedHttpActionResult<IEnumerable<Dtos.StudentAcademicPrograms3>>(new List<Dtos.StudentAcademicPrograms3>(), page, 0, this.Request);            
+            try
+            {
+                if (page == null)
+                {
+                    page = new Paging(100, 0);
+                }
+
+                var pageOfItems = await _studentAcademicProgramService.GetStudentAcademicPrograms3Async(page.Offset, page.Limit, criteriaObj, bypassCache);
+
+                AddEthosContextProperties(await _studentAcademicProgramService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                              await _studentAcademicProgramService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              pageOfItems.Item1.Select(a => a.Id).ToList()));
+
+                return new PagedHttpActionResult<IEnumerable<Dtos.StudentAcademicPrograms3>>(pageOfItems.Item1, page, pageOfItems.Item2, this.Request);
+
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+            }
+            catch (InvalidOperationException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
+
+
+        /// <summary>
         /// Creates an Student Academic Program.
         /// </summary>
         /// <param name="StudentAcademicPrograms"><see cref="Dtos.StudentAcademicPrograms">StudentAcademicPrograms</see> to create</param>
@@ -467,6 +607,15 @@ namespace Ellucian.Colleague.Api.Controllers
         [HttpPost, EedmResponseFilter]
         public async Task<Dtos.StudentAcademicPrograms> CreateStudentAcademicProgramsAsync([ModelBinder(typeof(EedmModelBinder))] Dtos.StudentAcademicPrograms StudentAcademicPrograms)
         {
+            bool bypassCache = false;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
+
             if (StudentAcademicPrograms == null)
             {
                 throw CreateHttpResponseException(new IntegrationApiException("Null StudentAcademicPrograms argument",
@@ -489,7 +638,7 @@ namespace Ellucian.Colleague.Api.Controllers
                 await _studentAcademicProgramService.ImportExtendedEthosData(await ExtractExtendedData(await _studentAcademicProgramService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
 
                 //create the student academic programs
-                var studentAcademicProgram = await _studentAcademicProgramService.CreateStudentAcademicProgramAsync(StudentAcademicPrograms);
+                var studentAcademicProgram = await _studentAcademicProgramService.CreateStudentAcademicProgramAsync(StudentAcademicPrograms, bypassCache);
 
                 //store dataprivacy list and get the extended data to store 
                 AddEthosContextProperties(await _studentAcademicProgramService.GetDataPrivacyListByApi(GetRouteResourceName(), true),
@@ -532,6 +681,14 @@ namespace Ellucian.Colleague.Api.Controllers
         [HttpPost, EedmResponseFilter]
         public async Task<Dtos.StudentAcademicPrograms2> CreateStudentAcademicPrograms2Async([ModelBinder(typeof(EedmModelBinder))]  Dtos.StudentAcademicPrograms2 StudentAcademicPrograms)
         {
+            bool bypassCache = false;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
             if (StudentAcademicPrograms == null)
             {
                 throw CreateHttpResponseException(new IntegrationApiException("Null StudentAcademicPrograms argument",
@@ -559,7 +716,7 @@ namespace Ellucian.Colleague.Api.Controllers
                 await _studentAcademicProgramService.ImportExtendedEthosData(await ExtractExtendedData(await _studentAcademicProgramService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
 
                 //create the student academic programs
-                var studentAcademicProgram = await _studentAcademicProgramService.CreateStudentAcademicProgram2Async(StudentAcademicPrograms);
+                var studentAcademicProgram = await _studentAcademicProgramService.CreateStudentAcademicProgram2Async(StudentAcademicPrograms, bypassCache);
 
                 //store dataprivacy list and get the extended data to store 
                 AddEthosContextProperties(await _studentAcademicProgramService.GetDataPrivacyListByApi(GetRouteResourceName(), true),
@@ -604,6 +761,14 @@ namespace Ellucian.Colleague.Api.Controllers
         public async Task<Dtos.StudentAcademicPrograms> UpdateStudentAcademicProgramsAsync([FromUri] string id, [ModelBinder(typeof(EedmModelBinder))] Dtos.StudentAcademicPrograms studentAcademicPrograms)
         {
 
+            bool bypassCache = false;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
             if (string.IsNullOrEmpty(id))
             {
                 throw CreateHttpResponseException(new IntegrationApiException("Null id argument",
@@ -642,7 +807,7 @@ namespace Ellucian.Colleague.Api.Controllers
                 var mergedStudentAcadProgram = await PerformPartialPayloadMerge(studentAcademicPrograms, async () => await _studentAcademicProgramService.GetStudentAcademicProgramByGuidAsync(id),
                     dpList, _logger);
                     await ValidateStudentAcademicPrograms(mergedStudentAcadProgram);
-                var studentAcademicProgramReturn = await _studentAcademicProgramService.UpdateStudentAcademicProgramAsync(mergedStudentAcadProgram);
+                var studentAcademicProgramReturn = await _studentAcademicProgramService.UpdateStudentAcademicProgramAsync(mergedStudentAcadProgram, bypassCache);
 
                 //store dataprivacy list and get the extended data to store 
                 AddEthosContextProperties(dpList,
@@ -697,6 +862,14 @@ namespace Ellucian.Colleague.Api.Controllers
         public async Task<Dtos.StudentAcademicPrograms2> UpdateStudentAcademicPrograms2Async([FromUri] string id, [ModelBinder(typeof(EedmModelBinder))] Dtos.StudentAcademicPrograms2 studentAcademicPrograms)
         {
 
+            bool bypassCache = false;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
             if (string.IsNullOrEmpty(id))
             {
                 throw CreateHttpResponseException(new IntegrationApiException("Null id argument",
@@ -734,7 +907,7 @@ namespace Ellucian.Colleague.Api.Controllers
                 var mergedStudentAcadProgram = await PerformPartialPayloadMerge(studentAcademicPrograms, async () => await _studentAcademicProgramService.GetStudentAcademicProgramByGuid2Async(id),
                         dpList, _logger);
                 await ValidateStudentAcademicPrograms2(mergedStudentAcadProgram);
-                var studentAcademicProgramReturn = await _studentAcademicProgramService.UpdateStudentAcademicProgram2Async(mergedStudentAcadProgram);
+                var studentAcademicProgramReturn = await _studentAcademicProgramService.UpdateStudentAcademicProgram2Async(mergedStudentAcadProgram, bypassCache);
 
                 //store dataprivacy list and get the extended data to store 
                 AddEthosContextProperties(dpList,

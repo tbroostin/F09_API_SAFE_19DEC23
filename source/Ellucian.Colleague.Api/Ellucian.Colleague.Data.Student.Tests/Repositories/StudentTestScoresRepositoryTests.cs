@@ -190,6 +190,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 }
                 return Task.FromResult(LkupResult);
             });
+            dataReaderMock.Setup(acc => acc.ReadRecordAsync<NonCourses>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
 
             dataReaderMock.Setup(acc => acc.ReadRecordAsync<StudentNonCourses>(key, true)).ReturnsAsync(record);
            await _studentAptitudeAssessmentsRepository.GetStudentTestScoresByGuidAsync(id);
@@ -214,7 +215,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 }
                 return Task.FromResult(LkupResult);
             });
-
+            dataReaderMock.Setup(acc => acc.ReadRecordAsync<NonCourses>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(_nonCourseDataContracts[3]);
             dataReaderMock.Setup(acc => acc.ReadRecordAsync<StudentNonCourses>(key, true)).ReturnsAsync(record);
             await _studentAptitudeAssessmentsRepository.GetStudentTestScoresByGuidAsync(id);
         }
@@ -404,6 +405,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             dataReaderMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.StudentNonCourses>(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(records);
             dataReaderMock.Setup(acc => acc.ReadRecordAsync<DataContracts.StudentNonCourses>(It.IsAny<string>(), true)).ReturnsAsync(records[0]);
             dataReaderMock.Setup(acc => acc.BulkReadRecordAsync<NonCourses>("", true)).ReturnsAsync(_nonCourseDataContracts);
+            dataReaderMock.Setup(acc => acc.ReadRecordAsync<NonCourses>(It.IsAny<string>(),It.IsAny<bool>())).ReturnsAsync(_nonCourseDataContracts.FirstOrDefault());
             dataReaderMock.Setup(acc => acc.ReadRecord<ApplValcodes>("ST.VALCODES", "NON.COURSE.CATEGORIES", true)).Returns(_nonCourseCats);
             dataReaderMock.Setup(acc => acc.ReadRecord<ApplValcodes>("ST.VALCODES", "STUDENT.NON.COURSE.STATUSES", true)).Returns(_nonCourseStats);
             dataReaderMock.Setup(acc => acc.ReadRecord<ApplValcodes>("ST.VALCODES", "APPL.TEST.SOURCES", true)).Returns(_nonAplicationTestSources);
@@ -550,7 +552,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         {
             var studentTestScore = _studentTestScoresEntities.FirstOrDefault(x => x.Guid == guid);
             response.UpdateStudentAptitudeAsessmentErrors = new List<UpdateStudentAptitudeAsessmentErrors>()
-            {  new UpdateStudentAptitudeAsessmentErrors() { ErrorMessages = "Error" }};
+            {  new UpdateStudentAptitudeAsessmentErrors() { ErrorMessages = "Error", ErrorCodes = "StudentAptitudeAssessments" }};
             await _studentAptitudeAssessmentsRepository.UpdateStudentTestScoresAsync(studentTestScore);
         }
 

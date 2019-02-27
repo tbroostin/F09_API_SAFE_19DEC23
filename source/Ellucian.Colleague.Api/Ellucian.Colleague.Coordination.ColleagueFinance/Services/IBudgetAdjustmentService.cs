@@ -34,6 +34,21 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         Task<BudgetAdjustment> GetBudgetAdjustmentAsync(string id);
 
         /// <summary>
+        /// Gets a budget adjustment that is awaiting approval by its id.
+        /// </summary>
+        /// <param name="id">The ID of the budget adjustment to retrieve.</param>
+        /// <returns>A budget adjustment DTO.</returns>
+        Task<BudgetAdjustment> GetBudgetAdjustmentPendingApprovalDetailAsync(string id);
+
+        /// <summary>
+        /// The current user approves a budget adjustment.
+        /// </summary>
+        /// <param name="id">The ID of the budget adjustment to approve.</param>
+        /// <param name="budgetAdjustmentApprovalDto">The budget adjustment approval data.</param>
+        /// <returns>Budget adjustment DTO with the current user's approval.</returns>
+        Task<BudgetAdjustmentApproval> PostBudgetAdjustmentApprovalAsync(string id, BudgetAdjustmentApproval budgetAdjustmentApprovalDto);
+
+        /// <summary>
         /// Get the list of budget adjustments summary for the user logged in.
         /// </summary>
         /// <returns>List of budget adjustment summary DTOs.</returns>

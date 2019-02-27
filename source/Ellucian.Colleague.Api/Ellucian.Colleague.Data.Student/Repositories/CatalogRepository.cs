@@ -13,6 +13,7 @@ using Ellucian.Web.Dependency;
 using Ellucian.Web.Utility;
 using slf4net;
 using System.Threading.Tasks;
+using Ellucian.Colleague.Domain.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -68,6 +69,53 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
         }
 
+        /// <summary>
+        /// Build Catalog entities
+        /// </summary>
+        /// <param name="catalogData"></param>
+        /// <returns>Colleaction of Catalog</returns>
+        /// <summary>
+        /// Get guid for Catalog code
+        /// </summary>
+        /// <param name="code">AcademicLevels code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetCatalogGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetAsync(false);
+            Catalog codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetAsync(true);
+                if (allCodesCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'CATALOGS', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'CATALOGS', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'CATALOGS', Record ID:'", code, "'"));
+            }
+            return guid;
+
+        }
+
         private ICollection<Catalog> BuildCatalogs(Collection<Catalogs> catalogData)
         {
             var catalogs = new List<Catalog>();
@@ -77,7 +125,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 {
                     try
                     {
-                        Catalog newCatalog = new Catalog(catalog.RecordGuid, catalog.Recordkey, catalog.CatDesc, catalog.CatStartDate.GetValueOrDefault());
+                        Catalog newCatalog = new Catalog(catalog.RecordGuid, catalog.Recordkey, catalog.CatDesc, catalog.CatStartDate.GetValueOrDefault(), catalog.CatHideInSsWhatIf);
                         if (catalog.CatEndDate != null)
                         {
                             newCatalog.EndDate = catalog.CatEndDate.GetValueOrDefault(DateTime.MinValue);

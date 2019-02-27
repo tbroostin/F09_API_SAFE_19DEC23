@@ -580,7 +580,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 _remarkRepositoryMock.Setup(x => x.UpdateRemarkAsync(It.IsAny<Remark>())).ReturnsAsync(remark);
                 _personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(subjectMatterPersonId);
                 _personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("0011905");
-
+                _remarkRepositoryMock.Setup(x => x.GetRemarkByGuidAsync(remark.Guid)).ReturnsAsync(remark);
                 await _commentsService.DeleteCommentByIdAsync(comment.Id);
             }
             #endregion

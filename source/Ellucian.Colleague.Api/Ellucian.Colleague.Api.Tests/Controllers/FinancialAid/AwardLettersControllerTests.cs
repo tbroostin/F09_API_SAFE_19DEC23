@@ -6,7 +6,6 @@ using System.Linq;
 using Ellucian.Colleague.Api.Controllers.FinancialAid;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.FinancialAid.Services;
-using Ellucian.Colleague.Domain.FinancialAid.Tests;
 using Ellucian.Colleague.Dtos.FinancialAid;
 using Ellucian.Web.Adapters;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -17,15 +16,9 @@ using Ellucian.Web.Security;
 using Ellucian.Web.Http.Configuration;
 using System.Web;
 using System.IO;
-using System.Web.Http.Controllers;
-using System.Web.Http.Routing;
-using System.Net.Http;
-using System.Web.Http.Hosting;
-using Newtonsoft.Json;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Net;
 using System.Net.Http.Headers;
-using Ellucian.Web.Http.Routes;
 using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.FinancialAid
@@ -34,6 +27,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.FinancialAid
     [TestClass]
     public class AwardLettersControllerTests
     {
+        #region Obsolete methods tests
         [TestClass]
         public class UpdateAwardLetterTests
         {
@@ -2158,6 +2152,870 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.FinancialAid
                 
                 await AwardLettersController.GetAwardLetterReport3Async(studentId, awardLetterId);
                 
+            }
+        }
+
+        #endregion
+
+        [TestClass]
+        public class UpdateAwardLetter3AsyncTests
+        {
+            #region Test Context
+            private TestContext testContextInstance;
+
+            /// <summary>
+            ///Gets or sets the test context which provides
+            ///information about and functionality for the current test run.
+            ///</summary>
+            public TestContext TestContext
+            {
+                get
+                {
+                    return testContextInstance;
+                }
+                set
+                {
+                    testContextInstance = value;
+                }
+            }
+            #endregion
+
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private Mock<ILogger> loggerMock;
+            private Mock<IAwardLetterService> awardLetterServiceMock;
+            private ApiSettings apiSettings;
+
+            private string studentId;
+            private string awardYear;
+
+            private AwardLetter3 inputAwardLetter;
+            private AwardLetter3 expectedUpdatedAwardLetter;
+            private AwardLetter3 actualUpdatedAwardLetter;
+
+            private AwardLettersController AwardLettersController;
+
+            [TestInitialize]
+            public async void Initialize()
+            {
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                loggerMock = new Mock<ILogger>();
+                awardLetterServiceMock = new Mock<IAwardLetterService>();
+                apiSettings = new ApiSettings("TEST");
+
+
+                studentId = "0003914";
+                awardYear = "2014";
+
+                inputAwardLetter = new AwardLetter3()
+                {
+                    AwardLetterYear = awardYear,
+                    StudentId = studentId,
+                    AcceptedDate = DateTime.Today,
+                };
+
+                expectedUpdatedAwardLetter = new AwardLetter3()
+                {
+                    AwardLetterYear = awardYear,
+                    StudentId = studentId,
+                    AcceptedDate = DateTime.Today,
+                };
+
+                awardLetterServiceMock.Setup(l => l.UpdateAwardLetter3Async(inputAwardLetter)).ReturnsAsync(inputAwardLetter);
+
+                AwardLettersController = new AwardLettersController(adapterRegistryMock.Object, awardLetterServiceMock.Object, loggerMock.Object, apiSettings);
+
+                actualUpdatedAwardLetter = await AwardLettersController.UpdateAwardLetter3Async(studentId, awardYear, inputAwardLetter);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                adapterRegistryMock = null;
+                loggerMock = null;
+                awardLetterServiceMock = null;
+                studentId = null;
+                expectedUpdatedAwardLetter = null;
+                inputAwardLetter = null;
+                actualUpdatedAwardLetter = null;
+                AwardLettersController = null;
+            }
+
+            [TestMethod]
+            public void TypeTest()
+            {
+                Assert.AreEqual(expectedUpdatedAwardLetter.GetType(), actualUpdatedAwardLetter.GetType());
+            }
+
+            [TestMethod]
+            public void EqualAttributesTest()
+            {
+                Assert.AreEqual(expectedUpdatedAwardLetter.StudentId, actualUpdatedAwardLetter.StudentId);
+                Assert.AreEqual(expectedUpdatedAwardLetter.AwardLetterYear, actualUpdatedAwardLetter.AwardLetterYear);
+                Assert.AreEqual(expectedUpdatedAwardLetter.AcceptedDate, actualUpdatedAwardLetter.AcceptedDate);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentIdArgumentRequiredTest()
+            {
+                await AwardLettersController.UpdateAwardLetter3Async(null, awardYear, inputAwardLetter);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task AwardYearArgumentRequiredTest()
+            {
+                await AwardLettersController.UpdateAwardLetter3Async(studentId, null, inputAwardLetter);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task AwardLetterArgumentRequiredTest()
+            {
+                await AwardLettersController.UpdateAwardLetter3Async(studentId, awardYear, null);
+            }
+
+            [TestMethod]
+            public async Task AwardYearArgumentMustMatchAwardLetterAwardYearTest()
+            {
+                awardYear = "foobar";
+                var exceptionCaught = false;
+                try
+                {
+                    await AwardLettersController.UpdateAwardLetter3Async(studentId, awardYear, inputAwardLetter);
+                }
+                catch (HttpResponseException hre)
+                {
+                    exceptionCaught = true;
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, hre.Response.StatusCode);
+                }
+
+                Assert.IsTrue(exceptionCaught);
+                loggerMock.Verify(l => l.Error(string.Format("AwardYear {0} in URI does not match AwardYear {1} of awardLetter in request body", awardYear, inputAwardLetter.AwardLetterYear)));
+            }
+
+            [TestMethod]
+            public async Task CatchArgumentExceptionTest()
+            {
+                awardLetterServiceMock.Setup(s => s.UpdateAwardLetter3Async(inputAwardLetter)).Throws(new ArgumentException("Argument Exception message"));
+
+                var exceptionCaught = false;
+                try
+                {
+                    await AwardLettersController.UpdateAwardLetter3Async(studentId, awardYear, inputAwardLetter);
+                }
+                catch (HttpResponseException hre)
+                {
+                    exceptionCaught = true;
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, hre.Response.StatusCode);
+                }
+
+                Assert.IsTrue(exceptionCaught);
+                loggerMock.Verify(l => l.Error(It.IsAny<ArgumentException>(), It.IsAny<string>()));
+            }
+
+            [TestMethod]
+            public async Task CatchPermissionsExceptionTest()
+            {
+                awardLetterServiceMock.Setup(s => s.UpdateAwardLetter3Async(inputAwardLetter)).Throws(new PermissionsException("Permission Exception message"));
+
+                var exceptionCaught = false;
+                try
+                {
+                    await AwardLettersController.UpdateAwardLetter3Async(studentId, awardYear, inputAwardLetter);
+                }
+                catch (HttpResponseException hre)
+                {
+                    exceptionCaught = true;
+                    Assert.AreEqual(System.Net.HttpStatusCode.Forbidden, hre.Response.StatusCode);
+                }
+
+                Assert.IsTrue(exceptionCaught);
+                loggerMock.Verify(l => l.Error(It.IsAny<PermissionsException>(), It.IsAny<string>()));
+            }
+
+            [TestMethod]
+            public async Task CatchKeyNotFoundExceptionTest()
+            {
+                awardLetterServiceMock.Setup(s => s.UpdateAwardLetter3Async(inputAwardLetter)).Throws(new KeyNotFoundException("Not Found Exception message"));
+
+                var exceptionCaught = false;
+                try
+                {
+                    await AwardLettersController.UpdateAwardLetter3Async(studentId, awardYear, inputAwardLetter);
+                }
+                catch (HttpResponseException hre)
+                {
+                    exceptionCaught = true;
+                    Assert.AreEqual(System.Net.HttpStatusCode.NotFound, hre.Response.StatusCode);
+                }
+
+                Assert.IsTrue(exceptionCaught);
+                loggerMock.Verify(l => l.Error(It.IsAny<KeyNotFoundException>(), It.IsAny<string>()));
+            }
+
+            [TestMethod]
+            public async Task CatchUnknownExceptionTest()
+            {
+                awardLetterServiceMock.Setup(s => s.UpdateAwardLetter3Async(inputAwardLetter)).Throws(new Exception("Unknown Exception message"));
+
+                var exceptionCaught = false;
+                try
+                {
+                    await AwardLettersController.UpdateAwardLetter3Async(studentId, awardYear, inputAwardLetter);
+                }
+                catch (HttpResponseException hre)
+                {
+                    exceptionCaught = true;
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, hre.Response.StatusCode);
+                }
+
+                Assert.IsTrue(exceptionCaught);
+                loggerMock.Verify(l => l.Error(It.IsAny<Exception>(), It.IsAny<string>()));
+            }
+
+        }
+
+        [TestClass]
+        public class GetAwardLetterReport4AsyncTests
+        {
+            #region Test Context
+            private TestContext testContextInstance;
+
+            /// <summary>
+            ///Gets or sets the test context which provides
+            ///information about and functionality for the current test run.
+            ///</summary>
+            public TestContext TestContext
+            {
+                get
+                {
+                    return testContextInstance;
+                }
+                set
+                {
+                    testContextInstance = value;
+                }
+            }
+            #endregion
+
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private Mock<ILogger> loggerMock;
+            private Mock<IAwardLetterService> awardLetterServiceMock;
+            private ApiSettings apiSettings;
+
+            private string studentId;
+            private string awardLetterId;
+
+            private byte[] expectedAwardLetterByteArray;
+            private AwardLetter3 expectedAwardLetter;
+
+            private AwardLettersController AwardLettersController;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                loggerMock = new Mock<ILogger>();
+                awardLetterServiceMock = new Mock<IAwardLetterService>();
+                apiSettings = new ApiSettings("TEST");
+
+                studentId = "0004791";
+                awardLetterId = "56";
+
+                expectedAwardLetter = new AwardLetter3()
+                {
+                    AcceptedDate = DateTime.Today,
+                    BudgetAmount = 1000,
+                    ClosingParagraph = "This is the closing paragraph",
+                    ContactAddress = new List<AwardLetterAddress>() { new AwardLetterAddress() { AddressLine = "AddressLine1" } },
+                    EstimatedFamilyContributionAmount = 500,
+                    NeedAmount = 500,
+                    OpeningParagraph = "This is the opening paragraph",
+                    StudentAddress = new List<AwardLetterAddress>() { new AwardLetterAddress() { AddressLine = "AddressLine1" } },
+                    StudentId = studentId,
+                    StudentName = "Preferred Name",
+                    AwardLetterParameterId = "ALTR2",
+                    AwardLetterYear = "2015",
+                    AwardYearDescription = "2015 description",
+                    CreatedDate = DateTime.Today,
+                    Id = "56",
+                    StudentOfficeCode = "LAW",
+                    HousingCode = HousingCode.OffCampus,
+                    AwardLetterAnnualAwards = new List<AwardLetterAnnualAward>(){
+                        new AwardLetterAnnualAward(){
+                            AnnualAwardAmount = 1000,
+                            AwardDescription = "Award 1 description",
+                            AwardId = "AWARD1",
+                            AwardLetterAwardPeriods = new List<AwardLetterAwardPeriod>(){
+                                new AwardLetterAwardPeriod(){
+                                    AwardDescription = "Award 1 description",
+                                    AwardId = "AWARD1",
+                                    AwardPeriodAmount = 1000,
+                                    ColumnName = "Fall 2015",
+                                    ColumnNumber = 1,
+                                    GroupName = "Awards",
+                                    GroupNumber = 1
+                                }
+                            },
+                            GroupName = "Awards",
+                            GroupNumber = 1
+                        }
+                    }
+                };
+
+                awardLetterServiceMock.Setup(l => l.GetAwardLetterById2Async(studentId, awardLetterId)).Returns(Task.FromResult(expectedAwardLetter));
+
+                var binaryFormatter = new BinaryFormatter();
+                var memoryStream = new MemoryStream();
+                binaryFormatter.Serialize(memoryStream, "This is the awardLetter report pdf");
+                expectedAwardLetterByteArray = memoryStream.ToArray();
+
+                awardLetterServiceMock.Setup(l => l.GetAwardLetterReport4Async(It.IsAny<AwardLetter3>(), It.IsAny<string>(), It.IsAny<string>())).Returns(Task.FromResult(expectedAwardLetterByteArray));
+
+                var httpResponse = new HttpResponse(new StringWriter());
+                HttpContext.Current = new HttpContext(new HttpRequest("", "http://doesntMatter.com", ""), httpResponse);
+
+                AwardLettersController = new AwardLettersController(adapterRegistryMock.Object, awardLetterServiceMock.Object, loggerMock.Object, apiSettings);
+            }
+
+            [TestMethod]
+            public async Task PdfReportAsByteArrayTest()
+            {
+                var response = await AwardLettersController.GetAwardLetterReport4Async(studentId, awardLetterId);
+                var byteArray = response.Content.ReadAsByteArrayAsync().Result;
+
+                CollectionAssert.AreEqual(expectedAwardLetterByteArray, byteArray);
+            }
+
+            [TestMethod]
+            public async Task PdfResponseContentHeadersTest()
+            {
+
+                var response = await AwardLettersController.GetAwardLetterReport4Async(studentId, awardLetterId);
+
+                var expectedContentType = new MediaTypeHeaderValue("application/pdf");
+                var expectedContentLength = expectedAwardLetterByteArray.Length;
+                var expectedContentDisposition = new ContentDispositionHeaderValue("attachment");
+                var expectedStartOfFileName = "AwardLetter_" + studentId + "_" + expectedAwardLetter.AwardLetterYear + "_";
+
+                Assert.AreEqual(expectedContentType, response.Content.Headers.ContentType);
+                Assert.AreEqual(expectedContentLength, response.Content.Headers.ContentLength);
+                Assert.AreEqual(expectedContentDisposition.DispositionType, response.Content.Headers.ContentDisposition.DispositionType);
+                Assert.AreEqual(expectedStartOfFileName, response.Content.Headers.ContentDisposition.FileName.Substring(0, expectedStartOfFileName.Length));
+            }
+
+            [TestMethod]
+            public async Task EmptyReportLogoPathTest()
+            {
+                apiSettings.ReportLogoPath = string.Empty;
+                var actualLogoPath = string.Empty;
+                awardLetterServiceMock.Setup(l => l.GetAwardLetterReport4Async(It.IsAny<AwardLetter3>(), It.IsAny<string>(), It.IsAny<string>()))
+                    .Returns(Task.FromResult(expectedAwardLetterByteArray))
+                    .Callback<AwardLetter3, string, string>((l, p, i) => actualLogoPath = i);
+
+                var response = await AwardLettersController.GetAwardLetterReport4Async(studentId, awardLetterId);
+
+                Assert.AreEqual(apiSettings.ReportLogoPath, actualLogoPath);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task NullStudentId_ThrowsExceptionTest()
+            {
+                await AwardLettersController.GetAwardLetterReport4Async(null, awardLetterId);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task NullAwardLetterId_ThrowsExceptionTest()
+            {
+                await AwardLettersController.GetAwardLetterReport4Async(studentId, null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task NoAwardLetterDtoReturned_ThrowsExceptionTest()
+            {
+                awardLetterServiceMock.Setup(s => s.GetAwardLetterById2Async(studentId, awardLetterId)).ReturnsAsync(null);
+                try
+                {
+                    await AwardLettersController.GetAwardLetterReport4Async(studentId, awardLetterId);
+                }
+                catch (HttpResponseException hre)
+                {
+                    Assert.AreEqual(HttpStatusCode.NotFound, hre.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task UserDoesNotHavePermissions_ThrowsExceptionTest()
+            {
+                awardLetterServiceMock.Setup(s => s.GetAwardLetterById2Async(studentId, awardLetterId)).Throws(new PermissionsException());
+                try
+                {
+                    await AwardLettersController.GetAwardLetterReport4Async(studentId, awardLetterId);
+                }
+                catch (HttpResponseException hre)
+                {
+                    Assert.AreEqual(HttpStatusCode.Forbidden, hre.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PersonNotStudentOrApplicant_ThrowsExceptionTest()
+            {
+                awardLetterServiceMock.Setup(s => s.GetAwardLetterById2Async(studentId, awardLetterId)).Throws(new InvalidOperationException());
+                try
+                {
+                    await AwardLettersController.GetAwardLetterReport4Async(studentId, awardLetterId);
+                }
+                catch (HttpResponseException hre)
+                {
+                    Assert.AreEqual(HttpStatusCode.BadRequest, hre.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GenericExceptionThrownByService_ThrowsExceptionTest()
+            {
+                awardLetterServiceMock.Setup(s => s.GetAwardLetterById2Async(studentId, awardLetterId)).Throws(new Exception());
+
+                await AwardLettersController.GetAwardLetterReport4Async(studentId, awardLetterId);
+
+            }
+        }
+
+        [TestClass]
+        public class GetAwardLetters4AsyncTests
+        {
+
+            #region Test Context
+            private TestContext testContextInstance;
+
+            /// <summary>
+            ///Gets or sets the test context which provides
+            ///information about and functionality for the current test run.
+            ///</summary>
+            public TestContext TestContext
+            {
+                get
+                {
+                    return testContextInstance;
+                }
+                set
+                {
+                    testContextInstance = value;
+                }
+            }
+            #endregion
+
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private Mock<ILogger> loggerMock;
+            private Mock<IAwardLetterService> awardLetterServiceMock;
+            private ApiSettings apiSettings;
+
+            private string studentId;
+
+            private IEnumerable<AwardLetter3> expectedAwardLetters;
+            private List<AwardLetter3> testAwardLetters;
+            private IEnumerable<AwardLetter3> actualAwardLetters;
+
+            private AwardLettersController AwardLettersController;
+
+
+            [TestInitialize]
+            public async void Initialize()
+            {
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                loggerMock = new Mock<ILogger>();
+                awardLetterServiceMock = new Mock<IAwardLetterService>();
+                apiSettings = new ApiSettings("TEST");
+
+                studentId = "0003914";
+                expectedAwardLetters = new List<AwardLetter3>()
+                {
+                    new AwardLetter3()
+                    {
+                        AcceptedDate = DateTime.Today,
+                        AwardLetterYear = "2014",
+                        BudgetAmount = 1000,
+                        ClosingParagraph = "This is the closing paragraph",
+                        ContactAddress = new List<AwardLetterAddress>() { new AwardLetterAddress() { AddressLine = "AddressLine1" } },
+                        CreatedDate = DateTime.Today,
+                        EstimatedFamilyContributionAmount = 500,
+                        NeedAmount = 500,
+                        OpeningParagraph = "This is the opening paragraph",
+                        StudentAddress = new List<AwardLetterAddress>() { new AwardLetterAddress() { AddressLine = "AddressLine1" } },
+                        StudentId = studentId,
+                        StudentName = "Preferred Name",
+                        AwardYearDescription = "2014 Award Year",
+                        StudentOfficeCode = "MAIN"
+                    },
+                    new AwardLetter3()
+                    {
+                        AcceptedDate = DateTime.Today,
+                        AwardLetterYear = "2015",
+                        BudgetAmount = 1000,
+                        ClosingParagraph = "This is the closing paragraph",
+                        ContactAddress = new List<AwardLetterAddress>() { new AwardLetterAddress() { AddressLine = "AddressLine1" } },
+                        CreatedDate = DateTime.Today,
+                        EstimatedFamilyContributionAmount = 500,
+                        NeedAmount = 500,
+                        OpeningParagraph = "This is the opening paragraph",
+                        StudentAddress = new List<AwardLetterAddress>() { new AwardLetterAddress() { AddressLine = "AddressLine1" } },
+                        StudentId = studentId,
+                        StudentName = "Preferred Name",
+                        AwardYearDescription = "2014 Award Year",
+                        StudentOfficeCode = "MAIN"
+                    }
+                };
+
+                testAwardLetters = new List<AwardLetter3>();
+                foreach (var letter in expectedAwardLetters)
+                {
+                    var testLetter = new AwardLetter3();
+                    foreach (var property in typeof(AwardLetter3).GetProperties(BindingFlags.Public | BindingFlags.Instance))
+                    {
+                        property.SetValue(testLetter, property.GetValue(letter, null), null);
+                    }
+                    testAwardLetters.Add(testLetter);
+                }
+                awardLetterServiceMock.Setup(l => l.GetAwardLetters4Async(studentId)).Returns(Task.FromResult(testAwardLetters.AsEnumerable()));
+
+                AwardLettersController = new AwardLettersController(adapterRegistryMock.Object, awardLetterServiceMock.Object, loggerMock.Object, apiSettings);
+
+                actualAwardLetters = await AwardLettersController.GetAwardLetters4Async(studentId);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                adapterRegistryMock = null;
+                loggerMock = null;
+                awardLetterServiceMock = null;
+                studentId = null;
+                expectedAwardLetters = null;
+                testAwardLetters = null;
+                actualAwardLetters = null;
+                AwardLettersController = null;
+            }
+
+            [TestMethod]
+            public void AwardLetterTypeTest()
+            {
+                Assert.AreEqual(expectedAwardLetters.GetType(), actualAwardLetters.GetType());
+                foreach (var actualLetter in actualAwardLetters)
+                {
+                    Assert.AreEqual(typeof(AwardLetter3), actualLetter.GetType());
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentIdRequired_BadRequestResponseTest()
+            {
+                try
+                {
+                    await AwardLettersController.GetAwardLetters4Async(null);
+                }
+                catch (HttpResponseException hre)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, hre.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task AwardYearRequiredTest()
+            {
+                try
+                {
+                    await AwardLettersController.GetAwardLetter4Async(studentId, null);
+                }
+                catch (HttpResponseException hre)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, hre.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PermissionsExceptionThrowsForbiddenResponseTest()
+            {
+                awardLetterServiceMock.Setup(s => s.GetAwardLetters4Async(studentId)).Throws(new PermissionsException("PermissionsException Message"));
+                try
+                {
+                    await AwardLettersController.GetAwardLetters4Async(studentId);
+                }
+                catch (HttpResponseException hre)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Forbidden, hre.Response.StatusCode);
+                    loggerMock.Verify(l => l.Error(It.IsAny<PermissionsException>(), It.IsAny<string>()));
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task KeyNotFoundExceptionThrowsNotFoundResponseTest()
+            {
+                awardLetterServiceMock.Setup(s => s.GetAwardLetters4Async(studentId)).Throws(new KeyNotFoundException("KeyNotFoundException Message"));
+                try
+                {
+                    await AwardLettersController.GetAwardLetters4Async(studentId);
+                }
+                catch (HttpResponseException hre)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.NotFound, hre.Response.StatusCode);
+                    loggerMock.Verify(l => l.Error(It.IsAny<KeyNotFoundException>(), It.IsAny<string>()));
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task InvalidOperationExceptionThrowsBadRequestResponseTest()
+            {
+                awardLetterServiceMock.Setup(s => s.GetAwardLetters4Async(studentId)).Throws(new InvalidOperationException("ioe Message"));
+                try
+                {
+                    await AwardLettersController.GetAwardLetters4Async(studentId);
+                }
+                catch (HttpResponseException hre)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, hre.Response.StatusCode);
+                    loggerMock.Verify(l => l.Error(It.IsAny<InvalidOperationException>(), It.IsAny<string>()));
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task UnknownExceptionThrowsBadRequestResponseTest()
+            {
+                awardLetterServiceMock.Setup(s => s.GetAwardLetters4Async(studentId)).Throws(new Exception("Exception Message"));
+                try
+                {
+                    await AwardLettersController.GetAwardLetters4Async(studentId);
+                }
+                catch (HttpResponseException hre)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, hre.Response.StatusCode);
+                    loggerMock.Verify(l => l.Error(It.IsAny<Exception>(), It.IsAny<string>()));
+                    throw;
+                }
+            }
+        }
+
+        [TestClass]
+        public class GetAwardLetter4AsyncTests
+        {
+            #region Test Context
+            private TestContext testContextInstance;
+
+            /// <summary>
+            ///Gets or sets the test context which provides
+            ///information about and functionality for the current test run.
+            ///</summary>
+            public TestContext TestContext
+            {
+                get
+                {
+                    return testContextInstance;
+                }
+                set
+                {
+                    testContextInstance = value;
+                }
+            }
+            #endregion
+
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private Mock<ILogger> loggerMock;
+            private Mock<IAwardLetterService> awardLetterServiceMock;
+            private ApiSettings apiSettings;
+
+            private string studentId;
+            private string awardYear;
+
+            private AwardLetter3 expectedAwardLetter;
+            private AwardLetter3 actualAwardLetter;
+
+            private AwardLettersController AwardLettersController;
+
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                loggerMock = new Mock<ILogger>();
+                awardLetterServiceMock = new Mock<IAwardLetterService>();
+                apiSettings = new ApiSettings("TEST");
+
+                studentId = "0003914";
+                awardYear = "2014";
+
+                expectedAwardLetter = new AwardLetter3()
+                {
+                    AcceptedDate = DateTime.Today,
+                    AwardLetterYear = awardYear,
+                    BudgetAmount = 1000,
+                    ClosingParagraph = "This is the closing paragraph",
+                    ContactAddress = new List<AwardLetterAddress>() { new AwardLetterAddress() { AddressLine = "AddressLine1" } },
+                    CreatedDate = DateTime.Today,
+                    EstimatedFamilyContributionAmount = 500,
+                    NeedAmount = 500,
+                    OpeningParagraph = "This is the opening paragraph",
+                    StudentAddress = new List<AwardLetterAddress>() { new AwardLetterAddress() { AddressLine = "AddressLine1" } },
+                    StudentId = studentId,
+                    StudentName = "Preferred Name",
+                    AwardYearDescription = "2014 Award Year",
+                    StudentOfficeCode = "MAIN"
+                };
+
+                awardLetterServiceMock.Setup(l => l.GetAwardLetter4Async(studentId, awardYear)).Returns(Task.FromResult(expectedAwardLetter));
+
+                AwardLettersController = new AwardLettersController(adapterRegistryMock.Object, awardLetterServiceMock.Object, loggerMock.Object, apiSettings);
+
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                adapterRegistryMock = null;
+                loggerMock = null;
+                awardLetterServiceMock = null;
+                studentId = null;
+                expectedAwardLetter = null;
+                actualAwardLetter = null;
+                AwardLettersController = null;
+            }
+
+            [TestMethod]
+            public async Task AwardLetterDtoTest()
+            {
+                actualAwardLetter = await AwardLettersController.GetAwardLetter4Async(studentId, awardYear);
+
+                Assert.IsNotNull(actualAwardLetter);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentIdRequired_BadRequestResponseTest()
+            {
+                try
+                {
+                    await AwardLettersController.GetAwardLetter4Async(null, awardYear);
+                }
+                catch (HttpResponseException hre)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, hre.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task AwardYearRequiredTest()
+            {
+                try
+                {
+                    await AwardLettersController.GetAwardLetter4Async(studentId, null);
+                }
+                catch (HttpResponseException hre)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, hre.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PermissionsExceptionThrowsForbiddenResponseTest()
+            {
+                awardLetterServiceMock.Setup(s => s.GetAwardLetter4Async(studentId, awardYear)).Throws(new PermissionsException("PermissionsException Message"));
+                try
+                {
+                    await AwardLettersController.GetAwardLetter4Async(studentId, awardYear);
+                }
+                catch (HttpResponseException hre)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Forbidden, hre.Response.StatusCode);
+                    loggerMock.Verify(l => l.Error(It.IsAny<PermissionsException>(), It.IsAny<string>()));
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task KeyNotFoundExceptionThrowsNotFoundResponseTest()
+            {
+                awardLetterServiceMock.Setup(s => s.GetAwardLetter4Async(studentId, awardYear)).Throws(new KeyNotFoundException("KeyNotFoundException Message"));
+                try
+                {
+                    await AwardLettersController.GetAwardLetter4Async(studentId, awardYear);
+                }
+                catch (HttpResponseException hre)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.NotFound, hre.Response.StatusCode);
+                    loggerMock.Verify(l => l.Error(It.IsAny<KeyNotFoundException>(), It.IsAny<string>()));
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task InvalidOperationExceptionThrowsBadRequestResponseTest()
+            {
+                awardLetterServiceMock.Setup(s => s.GetAwardLetter4Async(studentId, awardYear)).Throws(new InvalidOperationException("ioe Message"));
+                try
+                {
+                    await AwardLettersController.GetAwardLetter4Async(studentId, awardYear);
+                }
+                catch (HttpResponseException hre)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, hre.Response.StatusCode);
+                    loggerMock.Verify(l => l.Error(It.IsAny<InvalidOperationException>(), It.IsAny<string>()));
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task UnknownExceptionThrowsBadRequestResponseTest()
+            {
+                awardLetterServiceMock.Setup(s => s.GetAwardLetter4Async(studentId, awardYear)).Throws(new Exception("Exception Message"));
+                try
+                {
+                    await AwardLettersController.GetAwardLetter4Async(studentId, awardYear);
+                }
+                catch (HttpResponseException hre)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, hre.Response.StatusCode);
+                    loggerMock.Verify(l => l.Error(It.IsAny<Exception>(), It.IsAny<string>()));
+                    throw;
+                }
             }
         }
     }

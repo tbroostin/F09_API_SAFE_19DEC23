@@ -155,7 +155,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         [ExpectedException(typeof(HttpResponseException))]
         public async Task RestrictionTypeController_GetByIdThrowsIntAppiExc()
         {
-            personHoldTypeServiceMock.Setup(gc => gc.GetPersonHoldTypeByGuid2Async(It.IsAny<string>())).Throws<Exception>();
+            personHoldTypeServiceMock.Setup(gc => gc.GetPersonHoldTypeByGuid2Async(It.IsAny<string>(), It.IsAny<bool>())).Throws<Exception>();
 
             await personHoldTypesController.GetPersonHoldTypeByIdAsync("sdjfh");
         }

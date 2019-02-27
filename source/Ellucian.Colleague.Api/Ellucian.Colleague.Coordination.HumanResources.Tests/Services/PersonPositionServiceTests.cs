@@ -1,4 +1,4 @@
-﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2018 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Colleague.Domain.HumanResources.Tests;
@@ -49,7 +49,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                         SessionFixationId = "abc123",
                         ProxySubjectClaims = new ProxySubjectClaims()
                         {
-                            PersonId = "0000001"
+                            PersonId = "0000001",
+                            Permissions = new List<string> { Domain.Base.Entities.ProxyWorkflowConstants.TimeManagementTimeApproval.Value }
                         }
                     });
                 }

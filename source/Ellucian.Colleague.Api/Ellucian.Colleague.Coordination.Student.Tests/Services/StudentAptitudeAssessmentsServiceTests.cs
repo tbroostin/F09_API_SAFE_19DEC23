@@ -268,9 +268,25 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 _personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("1df164eb-8178-4321-a9f7-24f27f3991d8");
 
                 _aptitudeAssessmentsRepositoryMock.Setup(i => i.GetAptitudeAssessmentsAsync(It.IsAny<bool>())).ReturnsAsync(_aptitudeAssementEntities);
+                foreach (var entity in _aptitudeAssementEntities)
+                {
+                    _aptitudeAssessmentsRepositoryMock.Setup(i => i.GetAptitudeAssessmentsGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
+                }
                 _studentReferenceRepositoryMock.Setup(i => i.GetAssessmentSpecialCircumstancesAsync(It.IsAny<bool>())).ReturnsAsync(_assessmentSpecialCircumstances);
+                foreach (var entity in _assessmentSpecialCircumstances)
+                {
+                    _studentReferenceRepositoryMock.Setup(i => i.GetAssessmentSpecialCircumstancesGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
+                }
                 _studentReferenceRepositoryMock.Setup(i => i.GetIntgTestPercentileTypesAsync(It.IsAny<bool>())).ReturnsAsync(_assesmentPercentileTypes);
+                foreach (var entity in _assesmentPercentileTypes)
+                {
+                    _studentReferenceRepositoryMock.Setup(i => i.GetIntgTestPercentileTypesGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
+                }
                 _studentReferenceRepositoryMock.Setup(i => i.GetTestSourcesAsync(It.IsAny<bool>())).ReturnsAsync(_testSource);
+                foreach (var entity in _testSource)
+                {
+                    _studentReferenceRepositoryMock.Setup(i => i.GetTestSourcesGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
+                }
             }
 
             [TestCleanup]
@@ -612,9 +628,25 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 _personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("1df164eb-8178-4321-a9f7-24f27f3991d8");
 
                 _aptitudeAssessmentsRepositoryMock.Setup(i => i.GetAptitudeAssessmentsAsync(It.IsAny<bool>())).ReturnsAsync(_aptitudeAssementEntities);
+                foreach (var entity in _aptitudeAssementEntities)
+                {
+                    _aptitudeAssessmentsRepositoryMock.Setup(i => i.GetAptitudeAssessmentsGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
+                }
                 _studentReferenceRepositoryMock.Setup(i => i.GetAssessmentSpecialCircumstancesAsync(It.IsAny<bool>())).ReturnsAsync(_assessmentSpecialCircumstances);
+                foreach (var entity in _assessmentSpecialCircumstances)
+                {
+                    _studentReferenceRepositoryMock.Setup(i => i.GetAssessmentSpecialCircumstancesGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
+                }
                 _studentReferenceRepositoryMock.Setup(i => i.GetIntgTestPercentileTypesAsync(It.IsAny<bool>())).ReturnsAsync(_assesmentPercentileTypes);
+                foreach (var entity in _assesmentPercentileTypes)
+                {
+                    _studentReferenceRepositoryMock.Setup(i => i.GetIntgTestPercentileTypesGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
+                }
                 _studentReferenceRepositoryMock.Setup(i => i.GetTestSourcesAsync(It.IsAny<bool>())).ReturnsAsync(_testSource);
+                foreach (var entity in _testSource)
+                {
+                    _studentReferenceRepositoryMock.Setup(i => i.GetTestSourcesGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
+                }
             }
 
             [TestCleanup]

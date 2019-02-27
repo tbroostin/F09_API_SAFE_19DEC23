@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
@@ -117,6 +117,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             domainEntityW2.EmployerAddressLine4 = dataContractW2.Ww2oEmplyrAddrLine4;
 
             // Get the employee information
+            domainEntityW2.EmployeeId = dataContractW2.Ww2oEmployeeId;
             domainEntityW2.EmployeeFirstName = dataContractW2.Ww2oFirstName;
             domainEntityW2.EmployeeLastName = dataContractW2.Ww2oLastName;
             domainEntityW2.EmployeeMiddleName = dataContractW2.Ww2oMiddleName;
@@ -326,12 +327,545 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 domainEntityW2.Box20Line2 = dataContractW2.Ww2oLocalNameB;
             }
 
-            // Call the PDF accessed CTX to trigger an email notification
-            TxUpdtW2AccessTriggerRequest request = new TxUpdtW2AccessTriggerRequest();
-            request.TaxFormPdfId = recordId;
-            var response = await transactionInvoker.ExecuteAsync<TxUpdtW2AccessTriggerRequest, TxUpdtW2AccessTriggerResponse>(request);
+            // Call the PDF accessed CTX to send an email notification
+            TxNotifyHrPdfAccessRequest pdfRequest = new TxNotifyHrPdfAccessRequest();            
+            pdfRequest.AFormType = "W2";
+            pdfRequest.APersonId = dataContractW2.Ww2oEmployeeId;
+            pdfRequest.ARecordId = dataContractW2.Recordkey;
+
+            var pdfResponse = await transactionInvoker.ExecuteAsync<TxNotifyHrPdfAccessRequest, TxNotifyHrPdfAccessResponse>(pdfRequest);
+
 
             return domainEntityW2;
+        }
+
+        /// <summary>
+        /// Get the pdf data for tax form W-2C
+        /// </summary>
+        /// <param name="personId">ID of the person assigned to and requesting the W-2C.</param>
+        /// <param name="recordId">ID of the record containing the pdf data for a W-2C tax form</param>
+        /// <returns>The pdf data for tax form W-2C</returns>
+        public async Task<FormW2cPdfData> GetW2cPdfAsync(string personId, string recordId)
+        {
+            // Throw an exception if there is no record id to get the W-2 tax form data
+            if (string.IsNullOrEmpty(recordId))
+                throw new ArgumentNullException("recordId", "The record ID is required.");
+
+            if (string.IsNullOrEmpty(personId))
+                throw new ArgumentNullException("personId", "The person ID is required.");
+
+            // Read the record where the W-2C tax form data is stored
+            string criteria = "WITH WEB.W2C.ONLINE.ID EQ '" + recordId + "'" + " AND WITH WW2CO.EMPLOYEE.ID EQ '" + personId + "'";
+            var w2CIds = await DataReader.SelectAsync("WEB.W2C.ONLINE", criteria);
+
+            if (w2CIds == null)
+                throw new ApplicationException("One WEB.W2C.ONLINE ID expected but null returned for record ID: " + recordId);
+
+            if (w2CIds.Count() == 0)
+                throw new ApplicationException("One WEB.W2C.ONLINE ID expected but zero returned for record ID: " + recordId);
+
+            if (w2CIds.Count() > 1)
+                throw new ApplicationException("One WEB.W2C.ONLINE ID expected but more than one returned for record ID: " + recordId);
+
+            var dataContractW2c = await DataReader.ReadRecordAsync<WebW2cOnline>(w2CIds.FirstOrDefault());
+
+            // Validate that we found the record and that it contains required fields for the constructor
+            if (dataContractW2c == null)
+                throw new ApplicationException("WebW2cOnline record " + recordId + " does not exist.");
+
+            if (string.IsNullOrEmpty(dataContractW2c.Ww2coCorrectionYear))
+                throw new ApplicationException("WebW2cOnline record " + dataContractW2c.Recordkey + "must have a tax year.");
+
+            if (string.IsNullOrEmpty(dataContractW2c.Ww2coEmplyrId))
+                throw new ApplicationException("WebW2cOnline record " + dataContractW2c.Recordkey + "must have an employer tax ID (EIN).");
+
+            // Initialize the SSN
+            string ssn = "";
+            if (dataContractW2c != null && !string.IsNullOrEmpty(dataContractW2c.Ww2coSsn))
+            {
+                ssn = dataContractW2c.Ww2coSsn;
+            }
+
+            var hrWebDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.HumanResources.DataContracts.HrwebDefaults>("HR.PARMS", "HRWEB.DEFAULTS");
+            if (hrWebDefaults != null)
+            {
+                // Mask the SSN if necessary.
+                if (!string.IsNullOrEmpty(hrWebDefaults.HrwebW2oMaskSsn) && hrWebDefaults.HrwebW2oMaskSsn.ToUpper() == "Y")
+                {
+                    if (!string.IsNullOrEmpty(ssn))
+                    {
+                        // Mask SSN
+                        if (ssn.Length >= 4)
+                        {
+                            ssn = "XXX-XX-" + ssn.Substring(ssn.Length - 4);
+                        }
+                        else
+                        {
+                            ssn = "XXX-XX-" + ssn;
+                        }
+                    }
+                }
+            }
+
+            // Instantiate a W-2c domain entity
+            var domainEntityW2c = new FormW2cPdfData(dataContractW2c.Ww2coCorrectionYear, dataContractW2c.Ww2coEmplyrId, ssn);
+
+            // Get the employer information
+            domainEntityW2c.EmployerName = dataContractW2c.Ww2coEmplyrName;
+            domainEntityW2c.EmployerAddressLine1 = dataContractW2c.Ww2coEmplyrAddrLine1;
+            domainEntityW2c.EmployerAddressLine2 = dataContractW2c.Ww2coEmplyrAddrLine2;
+            domainEntityW2c.EmployerAddressLine3 = dataContractW2c.Ww2coEmplyrAddrLine3;
+            domainEntityW2c.EmployerAddressLine4 = dataContractW2c.Ww2coEmplyrAddrLine4;
+
+            // Get the employee information
+            domainEntityW2c.EmployeeId = dataContractW2c.Ww2coEmployeeId;
+            domainEntityW2c.EmployeeFirstName = dataContractW2c.Ww2coFirstName;
+            domainEntityW2c.EmployeeLastName = dataContractW2c.Ww2coLastName;
+            domainEntityW2c.EmployeeMiddleName = dataContractW2c.Ww2coMiddleName;
+            domainEntityW2c.EmployeeSuffix = dataContractW2c.Ww2coSuffix;
+            domainEntityW2c.EmployeeAddressLine1 = dataContractW2c.Ww2coEmplyeAddrLine1;
+            domainEntityW2c.EmployeeAddressLine2 = dataContractW2c.Ww2coEmplyeAddrLine2;
+            domainEntityW2c.EmployeeAddressLine3 = dataContractW2c.Ww2coEmplyeAddrLine3;
+            domainEntityW2c.EmployeeAddressLine4 = dataContractW2c.Ww2coEmplyeAddrLine4;
+
+            domainEntityW2c.FederalWages = W2cAmountStringToDecimal(dataContractW2c.Ww2coFederalWages, recordId, dataContractW2c);
+            domainEntityW2c.FederalWithholding = W2cAmountStringToDecimal(dataContractW2c.Ww2coFederalWithholding, recordId, dataContractW2c);
+            domainEntityW2c.SocialSecurityWages = W2cAmountStringToDecimal(dataContractW2c.Ww2coSocSecWages, recordId, dataContractW2c);
+            domainEntityW2c.SocialSecurityWithholding = W2cAmountStringToDecimal(dataContractW2c.Ww2coSocSecWithholding, recordId, dataContractW2c);
+            domainEntityW2c.MedicareWages = W2cAmountStringToDecimal(dataContractW2c.Ww2coMedicareWages, recordId, dataContractW2c);
+            domainEntityW2c.MedicareWithholding = W2cAmountStringToDecimal(dataContractW2c.Ww2coMedicareWithholding, recordId, dataContractW2c);
+            domainEntityW2c.SocialSecurityTips = W2cAmountStringToDecimal(dataContractW2c.Ww2coSocSecTips, recordId, dataContractW2c);
+            domainEntityW2c.AllocatedTips = W2cAmountStringToDecimal(dataContractW2c.Ww2coAllocatedTips, recordId, dataContractW2c);
+
+            if (dataContractW2c.Ww2coCorrectionYear == "2010")
+            {
+                domainEntityW2c.AdvancedEic = W2cAmountStringToDecimal(dataContractW2c.Ww2coAdvanceEic, recordId, dataContractW2c);
+            }
+            domainEntityW2c.DependentCare = W2cAmountStringToDecimal(dataContractW2c.Ww2coDependentCare, recordId, dataContractW2c);
+            domainEntityW2c.NonqualifiedTotal = W2cAmountStringToDecimal(dataContractW2c.Ww2coNonqualTotal, recordId, dataContractW2c);
+
+            // Populate the data for the appropriate boxes on the W-2c pdf
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coCodeBoxCodeE))
+            {
+                domainEntityW2c.Box12aCode = dataContractW2c.Ww2coCodeBoxCodeE;
+                domainEntityW2c.Box12aAmount = W2cAmountStringToDecimal(dataContractW2c.Ww2coCodeBoxAmountE, recordId, dataContractW2c);
+            }
+            else
+            {
+                domainEntityW2c.Box12aCode = dataContractW2c.Ww2coCodeBoxCodeA;
+                domainEntityW2c.Box12aAmount = W2cAmountStringToDecimal(dataContractW2c.Ww2coCodeBoxAmountA, recordId, dataContractW2c);
+            }
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coCodeBoxCodeF))
+            {
+                domainEntityW2c.Box12bCode = dataContractW2c.Ww2coCodeBoxCodeF;
+                domainEntityW2c.Box12bAmount = W2cAmountStringToDecimal(dataContractW2c.Ww2coCodeBoxAmountF, recordId, dataContractW2c);
+            }
+            else
+            {
+                domainEntityW2c.Box12bCode = dataContractW2c.Ww2coCodeBoxCodeB;
+                domainEntityW2c.Box12bAmount = W2cAmountStringToDecimal(dataContractW2c.Ww2coCodeBoxAmountB, recordId, dataContractW2c);
+            }
+
+            domainEntityW2c.Box12cCode = dataContractW2c.Ww2coCodeBoxCodeC;
+            domainEntityW2c.Box12cAmount = W2cAmountStringToDecimal(dataContractW2c.Ww2coCodeBoxAmountC, recordId, dataContractW2c);
+            domainEntityW2c.Box12dCode = dataContractW2c.Ww2coCodeBoxCodeD;
+            domainEntityW2c.Box12dAmount = W2cAmountStringToDecimal(dataContractW2c.Ww2coCodeBoxAmountD, recordId, dataContractW2c);
+
+            domainEntityW2c.Box13CheckBox1 = dataContractW2c.Ww2coCheckBox1 == "A" ? "x" : null;
+            domainEntityW2c.Box13CheckBox2 = dataContractW2c.Ww2coCheckBox3 == "A" ? "x" : null;
+            domainEntityW2c.Box13CheckBox3 = dataContractW2c.Ww2coCheckBox6 == "A" ? "x" : null;
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coOtherBoxCodeE))
+            {
+                domainEntityW2c.Box14Line1 = dataContractW2c.Ww2coOtherBoxCodeE + " - " + W2cAmountStringToDecimal(dataContractW2c.Ww2coOtherBoxAmountE, recordId, dataContractW2c);
+            }
+            else if (!string.IsNullOrEmpty(dataContractW2c.Ww2coOtherBoxCodeA))
+            {
+                domainEntityW2c.Box14Line1 = dataContractW2c.Ww2coOtherBoxCodeA + " - " + W2cAmountStringToDecimal(dataContractW2c.Ww2coOtherBoxAmountA, recordId, dataContractW2c);
+            }
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coOtherBoxCodeF))
+            {
+                domainEntityW2c.Box14Line2 = dataContractW2c.Ww2coOtherBoxCodeF + " - " + W2cAmountStringToDecimal(dataContractW2c.Ww2coOtherBoxAmountF, recordId, dataContractW2c);
+            }
+            else if (!string.IsNullOrEmpty(dataContractW2c.Ww2coOtherBoxCodeB))
+            {
+                domainEntityW2c.Box14Line2 = dataContractW2c.Ww2coOtherBoxCodeB + " - " + W2cAmountStringToDecimal(dataContractW2c.Ww2coOtherBoxAmountB, recordId, dataContractW2c);
+            }
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coOtherBoxCodeC))
+                domainEntityW2c.Box14Line3 = dataContractW2c.Ww2coOtherBoxCodeC + " - " + W2cAmountStringToDecimal(dataContractW2c.Ww2coOtherBoxAmountC, recordId, dataContractW2c);
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coOtherBoxCodeD))
+                domainEntityW2c.Box14Line4 = dataContractW2c.Ww2coOtherBoxCodeD + " - " + W2cAmountStringToDecimal(dataContractW2c.Ww2coOtherBoxAmountD, recordId, dataContractW2c);
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coStateCodeC))
+            {
+                domainEntityW2c.Box15Line1Section1 = dataContractW2c.Ww2coStateCodeC;
+            }
+            else if (!string.IsNullOrEmpty(dataContractW2c.Ww2coStateCodeA))
+            {
+                domainEntityW2c.Box15Line1Section1 = dataContractW2c.Ww2coStateCodeA;
+            }
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coStateCodeD))
+            {
+                domainEntityW2c.Box15Line2Section1 = dataContractW2c.Ww2coStateCodeD;
+            }
+            else if (!string.IsNullOrEmpty(dataContractW2c.Ww2coStateCodeB))
+            {
+                domainEntityW2c.Box15Line2Section1 = dataContractW2c.Ww2coStateCodeB;
+            }
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coStateIdC))
+            {
+                domainEntityW2c.Box15Line1Section2 = dataContractW2c.Ww2coStateIdC;
+            }
+            else if (!string.IsNullOrEmpty(dataContractW2c.Ww2coStateIdA))
+            {
+                domainEntityW2c.Box15Line1Section2 = dataContractW2c.Ww2coStateIdA;
+            }
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coStateIdD))
+            {
+                domainEntityW2c.Box15Line2Section2 = dataContractW2c.Ww2coStateIdD;
+            }
+            else if (!string.IsNullOrEmpty(dataContractW2c.Ww2coStateIdB))
+            {
+                domainEntityW2c.Box15Line2Section2 = dataContractW2c.Ww2coStateIdB;
+            }
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coStateWagesC))
+            {
+                domainEntityW2c.Box16Line1 = W2cAmountStringToDecimal(dataContractW2c.Ww2coStateWagesC, recordId, dataContractW2c);
+            }
+            else if (!string.IsNullOrEmpty(dataContractW2c.Ww2coStateWagesA))
+            {
+                domainEntityW2c.Box16Line1 = W2cAmountStringToDecimal(dataContractW2c.Ww2coStateWagesA, recordId, dataContractW2c);
+            }
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coStateWagesD))
+            {
+                domainEntityW2c.Box16Line2 = W2cAmountStringToDecimal(dataContractW2c.Ww2coStateWagesD, recordId, dataContractW2c);
+            }
+            else if (!string.IsNullOrEmpty(dataContractW2c.Ww2coStateWagesB))
+            {
+                domainEntityW2c.Box16Line2 = W2cAmountStringToDecimal(dataContractW2c.Ww2coStateWagesB, recordId, dataContractW2c);
+            }
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coStateWithheldC))
+            {
+                domainEntityW2c.Box17Line1 = W2cAmountStringToDecimal(dataContractW2c.Ww2coStateWithheldC, recordId, dataContractW2c);
+            }
+            else if (!string.IsNullOrEmpty(dataContractW2c.Ww2coStateWithheldA))
+            {
+                domainEntityW2c.Box17Line1 = W2cAmountStringToDecimal(dataContractW2c.Ww2coStateWithheldA, recordId, dataContractW2c);
+            }
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coStateWithheldD))
+            {
+                domainEntityW2c.Box17Line2 = W2cAmountStringToDecimal(dataContractW2c.Ww2coStateWithheldD, recordId, dataContractW2c);
+            }
+            else if (!string.IsNullOrEmpty(dataContractW2c.Ww2coStateWithheldB))
+            {
+                domainEntityW2c.Box17Line2 = W2cAmountStringToDecimal(dataContractW2c.Ww2coStateWithheldB, recordId, dataContractW2c);
+            }
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coLocalWagesC))
+            {
+                domainEntityW2c.Box18Line1 = W2cAmountStringToDecimal(dataContractW2c.Ww2coLocalWagesC, recordId, dataContractW2c);
+            }
+            else if (!string.IsNullOrEmpty(dataContractW2c.Ww2coLocalWagesA))
+            {
+                domainEntityW2c.Box18Line1 = W2cAmountStringToDecimal(dataContractW2c.Ww2coLocalWagesA, recordId, dataContractW2c);
+            }
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coLocalWagesD))
+            {
+                domainEntityW2c.Box18Line2 = W2cAmountStringToDecimal(dataContractW2c.Ww2coLocalWagesD, recordId, dataContractW2c);
+            }
+            else if (!string.IsNullOrEmpty(dataContractW2c.Ww2coLocalWagesB))
+            {
+                domainEntityW2c.Box18Line2 = W2cAmountStringToDecimal(dataContractW2c.Ww2coLocalWagesB, recordId, dataContractW2c);
+            }
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coLocalWithheldC))
+            {
+                domainEntityW2c.Box19Line1 = W2cAmountStringToDecimal(dataContractW2c.Ww2coLocalWithheldC, recordId, dataContractW2c);
+            }
+            else if (!string.IsNullOrEmpty(dataContractW2c.Ww2coLocalWithheldA))
+            {
+                domainEntityW2c.Box19Line1 = W2cAmountStringToDecimal(dataContractW2c.Ww2coLocalWithheldA, recordId, dataContractW2c);
+            }
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coLocalWithheldD))
+            {
+                domainEntityW2c.Box19Line2 = W2cAmountStringToDecimal(dataContractW2c.Ww2coLocalWithheldD, recordId, dataContractW2c);
+            }
+            else if (!string.IsNullOrEmpty(dataContractW2c.Ww2coLocalWithheldB))
+            {
+                domainEntityW2c.Box19Line2 = W2cAmountStringToDecimal(dataContractW2c.Ww2coLocalWithheldB, recordId, dataContractW2c);
+            }
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coLocalNameC))
+            {
+                domainEntityW2c.Box20Line1 = dataContractW2c.Ww2coLocalNameC;
+            }
+            else if (!string.IsNullOrEmpty(dataContractW2c.Ww2coLocalNameA))
+            {
+                domainEntityW2c.Box20Line1 = dataContractW2c.Ww2coLocalNameA;
+            }
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coLocalNameD))
+            {
+                domainEntityW2c.Box20Line2 = dataContractW2c.Ww2coLocalNameD;
+            }
+            else if (!string.IsNullOrEmpty(dataContractW2c.Ww2coLocalNameB))
+            {
+                domainEntityW2c.Box20Line2 = dataContractW2c.Ww2coLocalNameB;
+            }
+
+            // Assign the previous W2 values
+            if (dataContractW2c.Ww2coChangedSsnOrName == "Y")
+            {
+                dataContractW2c.Ww2coChangedSsnOrName = "x";
+                string ssnPrev = "";
+                if (dataContractW2c != null && !string.IsNullOrEmpty(dataContractW2c.Ww2coSsnPrev))
+                {
+                    ssnPrev = dataContractW2c.Ww2coSsnPrev;
+                }
+
+                if (hrWebDefaults != null)
+                {
+                    // Mask the SSN if necessary.
+                    if (!string.IsNullOrEmpty(hrWebDefaults.HrwebW2oMaskSsn) && hrWebDefaults.HrwebW2oMaskSsn.ToUpper() == "Y")
+                    {
+                        if (!string.IsNullOrEmpty(ssnPrev))
+                        {
+                            // Mask SSN
+                            if (ssnPrev.Length >= 4)
+                            {
+                                ssnPrev = "XXX-XX-" + ssnPrev.Substring(ssnPrev.Length - 4);
+                            }
+                            else
+                            {
+                                ssnPrev = "XXX-XX-" + ssnPrev;
+                            }
+                        }
+                    }
+                }
+                domainEntityW2c.EmployeeSsnPrev = ssnPrev;
+                domainEntityW2c.EmployeeNamePrev = dataContractW2c.Ww2coEmployeeNamePrev;
+            }
+            domainEntityW2c.FederalWagesPrev = W2cAmountStringToDecimal(dataContractW2c.Ww2coFederalWagesPrev, recordId, dataContractW2c);
+            domainEntityW2c.FederalWithholdingPrev = W2cAmountStringToDecimal(dataContractW2c.Ww2coFederalWthPrev, recordId, dataContractW2c);
+            domainEntityW2c.SocialSecurityWagesPrev = W2cAmountStringToDecimal(dataContractW2c.Ww2coSocSecWagesPrev, recordId, dataContractW2c);
+            domainEntityW2c.SocialSecurityWithholdingPrev = W2cAmountStringToDecimal(dataContractW2c.Ww2coSocSecWthPrev, recordId, dataContractW2c);
+            domainEntityW2c.MedicareWagesPrev = W2cAmountStringToDecimal(dataContractW2c.Ww2coMedicareWagesPrev, recordId, dataContractW2c);
+            domainEntityW2c.MedicareWithholdingPrev = W2cAmountStringToDecimal(dataContractW2c.Ww2coMedicareWthPrev, recordId, dataContractW2c);
+            domainEntityW2c.SocialSecurityTipsPrev = W2cAmountStringToDecimal(dataContractW2c.Ww2coSocSecTipsPrev, recordId, dataContractW2c);
+            domainEntityW2c.AllocatedTipsPrev = W2cAmountStringToDecimal(dataContractW2c.Ww2coAllocatedTipsPrev, recordId, dataContractW2c);
+            if (dataContractW2c.Ww2coCorrectionYear == "2010")
+            {
+                domainEntityW2c.AdvancedEicPrev = W2cAmountStringToDecimal(dataContractW2c.Ww2coAdvanceEicPrev, recordId, dataContractW2c);
+            }
+            domainEntityW2c.DependentCarePrev = W2cAmountStringToDecimal(dataContractW2c.Ww2coDependentCarePrev, recordId, dataContractW2c);
+            domainEntityW2c.NonqualifiedTotalPrev = W2cAmountStringToDecimal(dataContractW2c.Ww2coNonqualTotalPrev, recordId, dataContractW2c);
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coCodeBoxCodeEPrev))
+            {
+                domainEntityW2c.Box12aCodePrev = dataContractW2c.Ww2coCodeBoxCodeEPrev;
+                domainEntityW2c.Box12aAmountPrev = W2cAmountStringToDecimal(dataContractW2c.Ww2coCodeBoxAmntEPrev, recordId, dataContractW2c);
+            }
+            else
+            {
+                domainEntityW2c.Box12aCodePrev = dataContractW2c.Ww2coCodeBoxCodeAPrev;
+                domainEntityW2c.Box12aAmountPrev = W2cAmountStringToDecimal(dataContractW2c.Ww2coCodeBoxAmntAPrev, recordId, dataContractW2c);
+            }
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coCodeBoxCodeFPrev))
+            {
+                domainEntityW2c.Box12bCodePrev = dataContractW2c.Ww2coCodeBoxCodeFPrev;
+                domainEntityW2c.Box12bAmountPrev = W2cAmountStringToDecimal(dataContractW2c.Ww2coCodeBoxAmntFPrev, recordId, dataContractW2c);
+            }
+            else
+            {
+                domainEntityW2c.Box12bCodePrev = dataContractW2c.Ww2coCodeBoxCodeBPrev;
+                domainEntityW2c.Box12bAmountPrev = W2cAmountStringToDecimal(dataContractW2c.Ww2coCodeBoxAmntBPrev, recordId, dataContractW2c);
+            }
+
+
+            domainEntityW2c.Box12cCodePrev = dataContractW2c.Ww2coCodeBoxCodeCPrev;
+            domainEntityW2c.Box12cAmountPrev = W2cAmountStringToDecimal(dataContractW2c.Ww2coCodeBoxAmntCPrev, recordId, dataContractW2c);
+            domainEntityW2c.Box12dCodePrev = dataContractW2c.Ww2coCodeBoxCodeDPrev;
+            domainEntityW2c.Box12dAmountPrev = W2cAmountStringToDecimal(dataContractW2c.Ww2coCodeBoxAmntDPrev, recordId, dataContractW2c);
+
+            domainEntityW2c.Box13CheckBox1Prev = dataContractW2c.Ww2coCheckBox1Prev == "A" ? "x" : null;
+            domainEntityW2c.Box13CheckBox2Prev = dataContractW2c.Ww2coCheckBox3Prev == "A" ? "x" : null;
+            domainEntityW2c.Box13CheckBox3Prev = dataContractW2c.Ww2coCheckBox6Prev == "A" ? "x" : null;
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coOtherBoxCodeEPrev))
+            {
+                domainEntityW2c.Box14Line1Prev = dataContractW2c.Ww2coOtherBoxCodeEPrev + " - " + W2cAmountStringToDecimal(dataContractW2c.Ww2coOtherBoxAmntEPrev, recordId, dataContractW2c);
+            }
+            else if (!string.IsNullOrEmpty(dataContractW2c.Ww2coOtherBoxCodeAPrev))
+            {
+                domainEntityW2c.Box14Line1Prev = dataContractW2c.Ww2coOtherBoxCodeAPrev + " - " + W2cAmountStringToDecimal(dataContractW2c.Ww2coOtherBoxAmntAPrev, recordId, dataContractW2c);
+            }
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coOtherBoxCodeFPrev))
+            {
+                domainEntityW2c.Box14Line2Prev = dataContractW2c.Ww2coOtherBoxCodeFPrev + " - " + W2cAmountStringToDecimal(dataContractW2c.Ww2coOtherBoxAmntFPrev, recordId, dataContractW2c);
+            }
+            else if (!string.IsNullOrEmpty(dataContractW2c.Ww2coOtherBoxCodeBPrev))
+            {
+                domainEntityW2c.Box14Line2Prev = dataContractW2c.Ww2coOtherBoxCodeBPrev + " - " + W2cAmountStringToDecimal(dataContractW2c.Ww2coOtherBoxAmntBPrev, recordId, dataContractW2c);
+            }
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coOtherBoxCodeCPrev))
+                domainEntityW2c.Box14Line3Prev = dataContractW2c.Ww2coOtherBoxCodeCPrev + " - " + W2cAmountStringToDecimal(dataContractW2c.Ww2coOtherBoxAmntCPrev, recordId, dataContractW2c);
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coOtherBoxCodeDPrev))
+                domainEntityW2c.Box14Line4Prev = dataContractW2c.Ww2coOtherBoxCodeDPrev + " - " + W2cAmountStringToDecimal(dataContractW2c.Ww2coOtherBoxAmntDPrev, recordId, dataContractW2c);
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coStateCodeCPrev))
+            {
+                domainEntityW2c.Box15Line1Section1Prev = dataContractW2c.Ww2coStateCodeCPrev;
+            }
+            else if (!string.IsNullOrEmpty(dataContractW2c.Ww2coStateCodeAPrev))
+            {
+                domainEntityW2c.Box15Line1Section1Prev = dataContractW2c.Ww2coStateCodeAPrev;
+            }
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coStateCodeDPrev))
+            {
+                domainEntityW2c.Box15Line2Section1Prev = dataContractW2c.Ww2coStateCodeDPrev;
+            }
+            else if (!string.IsNullOrEmpty(dataContractW2c.Ww2coStateCodeBPrev))
+            {
+                domainEntityW2c.Box15Line2Section1Prev = dataContractW2c.Ww2coStateCodeBPrev;
+            }
+            
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coStateIdCPrev))
+            {
+                domainEntityW2c.Box15Line1Section2Prev = dataContractW2c.Ww2coStateIdCPrev;
+            }
+            else if (!string.IsNullOrEmpty(dataContractW2c.Ww2coStateIdAPrev))
+            {
+                domainEntityW2c.Box15Line1Section2Prev = dataContractW2c.Ww2coStateIdAPrev;
+            }
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coStateIdDPrev))
+            {
+                domainEntityW2c.Box15Line2Section2Prev = dataContractW2c.Ww2coStateIdDPrev;
+            }
+            else if (!string.IsNullOrEmpty(dataContractW2c.Ww2coStateIdBPrev))
+            {
+                domainEntityW2c.Box15Line2Section2Prev = dataContractW2c.Ww2coStateIdBPrev;
+            }
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coStateWagesCPrev))
+            {
+                domainEntityW2c.Box16Line1Prev = W2cAmountStringToDecimal(dataContractW2c.Ww2coStateWagesCPrev, recordId, dataContractW2c);
+            }
+            else if (!string.IsNullOrEmpty(dataContractW2c.Ww2coStateWagesAPrev))
+            {
+                domainEntityW2c.Box16Line1Prev = W2cAmountStringToDecimal(dataContractW2c.Ww2coStateWagesAPrev, recordId, dataContractW2c);
+            }
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coStateWagesDPrev))
+            {
+                domainEntityW2c.Box16Line2Prev = W2cAmountStringToDecimal(dataContractW2c.Ww2coStateWagesDPrev, recordId, dataContractW2c);
+            }
+            else if (!string.IsNullOrEmpty(dataContractW2c.Ww2coStateWagesBPrev))
+            {
+                domainEntityW2c.Box16Line2Prev = W2cAmountStringToDecimal(dataContractW2c.Ww2coStateWagesBPrev, recordId, dataContractW2c);
+            }
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coStateWithheldCPrev))
+            {
+                domainEntityW2c.Box17Line1Prev = W2cAmountStringToDecimal(dataContractW2c.Ww2coStateWithheldCPrev, recordId, dataContractW2c);
+            }
+            else if (!string.IsNullOrEmpty(dataContractW2c.Ww2coStateWithheldAPrev))
+            {
+                domainEntityW2c.Box17Line1Prev = W2cAmountStringToDecimal(dataContractW2c.Ww2coStateWithheldAPrev, recordId, dataContractW2c);
+            }
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coStateWithheldDPrev))
+            {
+                domainEntityW2c.Box17Line2Prev = W2cAmountStringToDecimal(dataContractW2c.Ww2coStateWithheldDPrev, recordId, dataContractW2c);
+            }
+            else if (!string.IsNullOrEmpty(dataContractW2c.Ww2coStateWithheldBPrev))
+            {
+                domainEntityW2c.Box17Line2Prev = W2cAmountStringToDecimal(dataContractW2c.Ww2coStateWithheldBPrev, recordId, dataContractW2c);
+            }
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coLocalWagesCPrev))
+            {
+                domainEntityW2c.Box18Line1Prev = W2cAmountStringToDecimal(dataContractW2c.Ww2coLocalWagesCPrev, recordId, dataContractW2c);
+            }
+            else if (!string.IsNullOrEmpty(dataContractW2c.Ww2coLocalWagesAPrev))
+            {
+                domainEntityW2c.Box18Line1Prev = W2cAmountStringToDecimal(dataContractW2c.Ww2coLocalWagesAPrev, recordId, dataContractW2c);
+            }
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coLocalWagesDPrev))
+            {
+                domainEntityW2c.Box18Line2Prev = W2cAmountStringToDecimal(dataContractW2c.Ww2coLocalWagesDPrev, recordId, dataContractW2c);
+            }
+            else if (!string.IsNullOrEmpty(dataContractW2c.Ww2coLocalWagesBPrev))
+            {
+                domainEntityW2c.Box18Line2Prev = W2cAmountStringToDecimal(dataContractW2c.Ww2coLocalWagesBPrev, recordId, dataContractW2c);
+            }
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coLocalWithheldCPrev))
+            {
+                domainEntityW2c.Box19Line1Prev = W2cAmountStringToDecimal(dataContractW2c.Ww2coLocalWithheldCPrev, recordId, dataContractW2c);
+            }
+            else if (!string.IsNullOrEmpty(dataContractW2c.Ww2coLocalWithheldAPrev))
+            {
+                domainEntityW2c.Box19Line1Prev = W2cAmountStringToDecimal(dataContractW2c.Ww2coLocalWithheldAPrev, recordId, dataContractW2c);
+            }
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coLocalWithheldDPrev))
+            {
+                domainEntityW2c.Box19Line2Prev = W2cAmountStringToDecimal(dataContractW2c.Ww2coLocalWithheldDPrev, recordId, dataContractW2c);
+            }
+            else if (!string.IsNullOrEmpty(dataContractW2c.Ww2coLocalWithheldBPrev))
+            {
+                domainEntityW2c.Box19Line2Prev = W2cAmountStringToDecimal(dataContractW2c.Ww2coLocalWithheldBPrev, recordId, dataContractW2c);
+            }
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coLocalNameCPrev))
+            {
+                domainEntityW2c.Box20Line1Prev = dataContractW2c.Ww2coLocalNameCPrev;
+            }
+            else if (!string.IsNullOrEmpty(dataContractW2c.Ww2coLocalNameAPrev))
+            {
+                domainEntityW2c.Box20Line1Prev = dataContractW2c.Ww2coLocalNameAPrev;
+            }
+
+            if (!string.IsNullOrEmpty(dataContractW2c.Ww2coLocalNameDPrev))
+            {
+                domainEntityW2c.Box20Line2Prev = dataContractW2c.Ww2coLocalNameDPrev;
+            }
+            else if (!string.IsNullOrEmpty(dataContractW2c.Ww2coLocalNameBPrev))
+            {
+                domainEntityW2c.Box20Line2Prev = dataContractW2c.Ww2coLocalNameBPrev;
+            }
+            domainEntityW2c.CorrectionYear = dataContractW2c.Ww2coCorrectionYear;
+            // Call the PDF accessed CTX to send an email notification
+            TxNotifyHrPdfAccessRequest pdfRequest = new TxNotifyHrPdfAccessRequest();
+            pdfRequest.AFormType = "W2C";
+            pdfRequest.APersonId = dataContractW2c.Ww2coEmployeeId;
+            pdfRequest.ARecordId = dataContractW2c.Recordkey;
+
+            var pdfResponse = await transactionInvoker.ExecuteAsync<TxNotifyHrPdfAccessRequest, TxNotifyHrPdfAccessResponse>(pdfRequest);
+
+
+            return domainEntityW2c;
         }
 
         /// <summary>
@@ -572,6 +1106,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             domainEntity1095c.IsVoided = dataContract1095cWhist.TfcwhVoidInd == "Y";
 
             // Assign the employee demographic data
+            domainEntity1095c.EmployeeId = dataContract1095cWhist.TfcwhHrperId;
             domainEntity1095c.EmployeeFirstName = dataContract1095cWhist.TfcwhFirstName;
             domainEntity1095c.EmployeeLastName = dataContract1095cWhist.TfcwhLastName;
             domainEntity1095c.EmployeeMiddleName = dataContract1095cWhist.TfcwhMiddleName;
@@ -800,6 +1335,14 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             request.TaxFormPdfId = recordId;
             var response = await transactionInvoker.ExecuteAsync<TxUpdt1095cAccessTriggerRequest, TxUpdt1095cAccessTriggerResponse>(request);
 
+            // Call the PDF accessed CTX to send an email notification
+            TxNotifyHrPdfAccessRequest pdfRequest = new TxNotifyHrPdfAccessRequest();
+            pdfRequest.AFormType = "1095C";
+            pdfRequest.APersonId = dataContract1095cWhist.TfcwhHrperId;
+            pdfRequest.ARecordId = dataContract1095cWhist.Recordkey;
+
+            var pdfResponse = await transactionInvoker.ExecuteAsync<TxNotifyHrPdfAccessRequest, TxNotifyHrPdfAccessResponse>(pdfRequest);
+
             return domainEntity1095c;
         }
 
@@ -852,6 +1395,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
 
             // Employee info
+            t4DomainEntity.EmployeeId = dataContractT4.Wt4oEmployeeId;
             t4DomainEntity.EmployeeFirstName = dataContractT4.Wt4oFirstName;
             t4DomainEntity.EmployeeMiddleName = !string.IsNullOrEmpty(dataContractT4.Wt4oInitial) ? dataContractT4.Wt4oInitial.Substring(0, 1) : string.Empty;
             t4DomainEntity.EmployeeLastName = dataContractT4.Wt4oSurname.ToUpper();
@@ -866,7 +1410,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 t4DomainEntity.RPPorDPSPRegistrationNumber = dataContractT4.Wt4oPensionRgstNo.FirstOrDefault();
             }
-            
+
             t4DomainEntity.EmployeeAddressLine1 = dataContractT4.Wt4oAddr1;
             if(string.IsNullOrWhiteSpace(dataContractT4.Wt4oAddr2))
             {
@@ -1084,6 +1628,34 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             catch (System.OverflowException se)
             {
                 LogDataError("WebW2Online", recordId, dataContract, se, se.Message);
+            }
+            return newAmount;
+        }
+
+        /// <summary>
+        /// Converts a numeric string into a string with two decimals
+        /// </summary>
+        /// <param name="amount">String containing numbers</param>
+        /// <param name="recordId">W2c record key</param>
+        /// <param name="dataContract">W2c data contract</param>
+        /// <returns>String that represents an amount with dollars and cents or the original string.</returns>
+        private string W2cAmountStringToDecimal(string amount, string recordId, WebW2cOnline dataContract)
+        {
+            // Convert the string amount into a decimal, divide by 100, and then convert back into a
+            // string that always has two decimal digits. If the incoming string cannot be converted into
+            // a decimal, catch the exception and log it in the logfile and return the original string.
+            string newAmount = amount;
+            try
+            {
+                newAmount = (Convert.ToDecimal(amount) / 100).ToString("N2", CultureInfo.InvariantCulture);
+            }
+            catch (System.FormatException fe)
+            {
+                LogDataError("WebW2cOnline", recordId, dataContract, fe, fe.Message);
+            }
+            catch (System.OverflowException se)
+            {
+                LogDataError("WebW2cOnline", recordId, dataContract, se, se.Message);
             }
             return newAmount;
         }

@@ -15,7 +15,13 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             this.Form1099MiPdfDataObjects = new List<Form1099MIPdfData>()
             {
                 CreateForm1099MIPdfData("2017","1"),
-                new Form1099MIPdfData("2016", "2")
+                CreateForm1099MIPdfData("2016", "2"),
+                CreateForm1099MIPdfData("2015","3"),
+                CreateForm1099MIPdfData("2011","4"),
+                CreateForm1099MIPdfData("2010","5"),
+                CreateForm1099MIPdfData("2012","6"),
+                CreateForm1099MIPdfData("2013","7"),
+                CreateForm1099MIPdfData("2009","8")
             };
         }
 
@@ -26,7 +32,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
 
         private Form1099MIPdfData CreateForm1099MIPdfData(string year, string payerName)
         {
-            var formData = new Form1099MIPdfData(year, payerName);
+            var formData = new Form1099MIPdfData(year, payerName) { RecipientId = "000001" };
             return formData;
         }
 

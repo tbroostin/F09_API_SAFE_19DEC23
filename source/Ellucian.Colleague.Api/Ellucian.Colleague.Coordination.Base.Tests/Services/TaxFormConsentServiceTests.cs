@@ -26,10 +26,20 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         private TestTaxFormConsentRepository testRepository;
         private ICurrentUserFactory currentUserFactory;
         private string personId = "000001";
+        DateTimeOffset timeStamp;
+        Dtos.Base.TaxForms taxFormDto;
+        Domain.Base.Entities.TaxForms taxFormEntity;
+        bool hasConsented;
+
+
 
         [TestInitialize]
         public void Initialize()
         {
+            timeStamp = new DateTimeOffset(new DateTime(2015, 7, 10, 9, 47, 13));
+            taxFormDto = Dtos.Base.TaxForms.FormW2;
+            taxFormEntity = Domain.Base.Entities.TaxForms.FormW2;
+            hasConsented = true;
             // Initialize the mock repository
             this.mockTaxFormStatementRepository = new Mock<ITaxFormConsentRepository>();
 
@@ -217,17 +227,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         [TestMethod]
         public async Task PostAsync_Success()
         {
-            bool hasConsented = true;
-            DateTimeOffset timeStamp = new DateTimeOffset(new DateTime(2015, 7, 10, 9, 47, 13));
-            Dtos.Base.TaxForms taxFormDto = Dtos.Base.TaxForms.FormW2;
-            Domain.Base.Entities.TaxForms taxFormEntity = Domain.Base.Entities.TaxForms.FormW2;
-            var incomingConsentDto = new Dtos.Base.TaxFormConsent()
-            {
-                HasConsented = hasConsented,
-                PersonId = personId,
-                TimeStamp = timeStamp,
-                TaxForm = taxFormDto
-            };
+            var incomingConsentDto = BuildTaxFormConsent();
             var incomingConsentEntity = new Domain.Base.Entities.TaxFormConsent(personId, taxFormEntity, hasConsented, timeStamp);
             var expectedConsent = await this.testRepository.PostAsync(incomingConsentEntity);
             var actualConsent = await this.service.PostAsync(incomingConsentDto);
@@ -249,17 +249,57 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         [ExpectedException(typeof(PermissionsException))]
         public async Task PostAsync_CurrentUserDifferentFromRequest()
         {
-            bool hasConsented = true;
-            DateTimeOffset timeStamp = new DateTimeOffset(new DateTime(2015, 7, 10, 9, 47, 13));
-            Dtos.Base.TaxForms taxFormDto = Dtos.Base.TaxForms.FormW2;
-            Domain.Base.Entities.TaxForms taxFormEntity = Domain.Base.Entities.TaxForms.FormW2;
-            var incomingConsentDto = new Dtos.Base.TaxFormConsent()
-            {
-                HasConsented = hasConsented,
-                PersonId = "0000002",
-                TimeStamp = timeStamp,
-                TaxForm = taxFormDto
-            };
+            var incomingConsentDto = BuildTaxFormConsent(personId: "0000002");
+            var incomingConsentEntity = new Domain.Base.Entities.TaxFormConsent(personId, taxFormEntity, hasConsented, timeStamp);
+            var expectedConsent = await this.testRepository.PostAsync(incomingConsentEntity);
+            var actualConsent = await this.service.PostAsync(incomingConsentDto);
+
+            Assert.AreEqual(expectedConsent.HasConsented, actualConsent.HasConsented);
+            Assert.AreEqual(expectedConsent.PersonId, actualConsent.PersonId);
+            Assert.AreEqual(expectedConsent.TaxForm.ToString(), actualConsent.TaxForm.ToString());
+            Assert.AreEqual(expectedConsent.TimeStamp, actualConsent.TimeStamp);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task PostAsync_MissingW2Permission()
+        {
+            BuildTaxFormConsentService(isW2RoleRequired: false);
+            var incomingConsentDto = BuildTaxFormConsent();
+            var incomingConsentEntity = new Domain.Base.Entities.TaxFormConsent(personId, taxFormEntity, hasConsented, timeStamp);
+            var expectedConsent = await this.testRepository.PostAsync(incomingConsentEntity);
+            var actualConsent = await this.service.PostAsync(incomingConsentDto);
+
+            Assert.AreEqual(expectedConsent.HasConsented, actualConsent.HasConsented);
+            Assert.AreEqual(expectedConsent.PersonId, actualConsent.PersonId);
+            Assert.AreEqual(expectedConsent.TaxForm.ToString(), actualConsent.TaxForm.ToString());
+            Assert.AreEqual(expectedConsent.TimeStamp, actualConsent.TimeStamp);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task PostAsync_Missing1095CPermission()
+        {
+            taxFormEntity = Domain.Base.Entities.TaxForms.Form1095C;
+            BuildTaxFormConsentService(is1095CRoleRequired: false);
+            var incomingConsentDto = BuildTaxFormConsent(taxFormDtoParam: Dtos.Base.TaxForms.Form1095C);
+            var incomingConsentEntity = new Domain.Base.Entities.TaxFormConsent(personId, taxFormEntity, hasConsented, timeStamp);
+            var expectedConsent = await this.testRepository.PostAsync(incomingConsentEntity);
+            var actualConsent = await this.service.PostAsync(incomingConsentDto);
+
+            Assert.AreEqual(expectedConsent.HasConsented, actualConsent.HasConsented);
+            Assert.AreEqual(expectedConsent.PersonId, actualConsent.PersonId);
+            Assert.AreEqual(expectedConsent.TaxForm.ToString(), actualConsent.TaxForm.ToString());
+            Assert.AreEqual(expectedConsent.TimeStamp, actualConsent.TimeStamp);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task PostAsync_Missing1099MiscPermission()
+        {
+            taxFormEntity = Domain.Base.Entities.TaxForms.Form1099MI;
+            BuildTaxFormConsentService(is1099MiscRoleRequired: false);
+            var incomingConsentDto = BuildTaxFormConsent(taxFormDtoParam: Dtos.Base.TaxForms.Form1099MI);
             var incomingConsentEntity = new Domain.Base.Entities.TaxFormConsent(personId, taxFormEntity, hasConsented, timeStamp);
             var expectedConsent = await this.testRepository.PostAsync(incomingConsentEntity);
             var actualConsent = await this.service.PostAsync(incomingConsentDto);
@@ -272,51 +312,72 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
         #endregion
 
-        public void BuildTaxFormConsentService()
+        public void BuildTaxFormConsentService(bool isW2RoleRequired = true, bool is1095CRoleRequired = true, bool isT4RoleRequired = true, bool isT4ARoleRequired = true, bool isT2202ARoleRequired = true, bool is1098RoleRequired = true, bool is1099MiscRoleRequired = true)
         {
             // We need the unit tests to be independent of "real" implementations of these classes,
             // so we use Moq to create mock implementations that are based on the same interfaces
             var roleRepositoryMock = new Mock<IRoleRepository>();
             var loggerObject = new Mock<ILogger>().Object;
-           
+
             // Set up current user
             currentUserFactory = new GenericUserFactory.TaxInformationUserFactory();
 
             var roles = new List<Domain.Entities.Role>();
 
-            var role = new Domain.Entities.Role(1, "VIEW.W2");
-            role.AddPermission(new Domain.Entities.Permission("VIEW.W2"));
-            role.AddPermission(new Domain.Entities.Permission("VIEW.EMPLOYEE.W2"));
-            roles.Add(role);
+            if (isW2RoleRequired)
+            {
+                var role = new Domain.Entities.Role(1, "VIEW.W2");
+                role.AddPermission(new Domain.Entities.Permission("VIEW.W2"));
+                role.AddPermission(new Domain.Entities.Permission("VIEW.EMPLOYEE.W2"));
+                roles.Add(role);
+            }
 
-            role = new Domain.Entities.Role(2, "VIEW.1095C");
-            role.AddPermission(new Domain.Entities.Permission("VIEW.1095C"));
-            role.AddPermission(new Domain.Entities.Permission("VIEW.EMPLOYEE.1095C"));
-            roles.Add(role);
+            if (is1095CRoleRequired)
+            {
+                var role = new Domain.Entities.Role(2, "VIEW.1095C");
+                role.AddPermission(new Domain.Entities.Permission("VIEW.1095C"));
+                role.AddPermission(new Domain.Entities.Permission("VIEW.EMPLOYEE.1095C"));
+                roles.Add(role);
+            }
 
-            role = new Domain.Entities.Role(3, "VIEW.T4");
-            role.AddPermission(new Domain.Entities.Permission("VIEW.T4"));
-            role.AddPermission(new Domain.Entities.Permission("VIEW.EMPLOYEE.T4"));
-            roles.Add(role);
+            if (isT4RoleRequired)
+            {
+                var role = new Domain.Entities.Role(3, "VIEW.T4");
+                role.AddPermission(new Domain.Entities.Permission("VIEW.T4"));
+                role.AddPermission(new Domain.Entities.Permission("VIEW.EMPLOYEE.T4"));
+                roles.Add(role);
+            }
 
-            role = new Domain.Entities.Role(1, "VIEW.T4A");
-            role.AddPermission(new Domain.Entities.Permission("VIEW.T4A"));
-            role.AddPermission(new Domain.Entities.Permission("VIEW.RECIPIENT.T4A"));
-            roles.Add(role);
+            if (isT4ARoleRequired)
+            {
+                var role = new Domain.Entities.Role(1, "VIEW.T4A");
+                role.AddPermission(new Domain.Entities.Permission("VIEW.T4A"));
+                role.AddPermission(new Domain.Entities.Permission("VIEW.RECIPIENT.T4A"));
+                roles.Add(role);
+            }
 
-            role = new Domain.Entities.Role(1, "VIEW.1098");
-            role.AddPermission(new Domain.Entities.Permission("VIEW.1098"));
-            role.AddPermission(new Domain.Entities.Permission("VIEW.STUDENT.1098"));
-            roles.Add(role);
+            if (is1098RoleRequired)
+            {
+                var role = new Domain.Entities.Role(1, "VIEW.1098");
+                role.AddPermission(new Domain.Entities.Permission("VIEW.1098"));
+                role.AddPermission(new Domain.Entities.Permission("VIEW.STUDENT.1098"));
+                roles.Add(role);
+            }
 
-            role = new Domain.Entities.Role(1, "VIEW.T2202A");
-            role.AddPermission(new Domain.Entities.Permission("VIEW.T2202A"));
-            role.AddPermission(new Domain.Entities.Permission("VIEW.STUDENT.T2202A"));
-            roles.Add(role);
+            if (isT2202ARoleRequired)
+            {
+                var role = new Domain.Entities.Role(1, "VIEW.T2202A");
+                role.AddPermission(new Domain.Entities.Permission("VIEW.T2202A"));
+                role.AddPermission(new Domain.Entities.Permission("VIEW.STUDENT.T2202A"));
+                roles.Add(role);
+            }
 
-            role = new Domain.Entities.Role(1, "VIEW.1099MISC");
-            role.AddPermission(new Domain.Entities.Permission("VIEW.1099MISC"));
-            roles.Add(role);
+            if (is1099MiscRoleRequired)
+            {
+                var role = new Domain.Entities.Role(1, "VIEW.1099MISC");
+                role.AddPermission(new Domain.Entities.Permission("VIEW.1099MISC"));
+                roles.Add(role);
+            }
 
             roleRepositoryMock.Setup(r => r.Roles).Returns(roles);
 
@@ -335,6 +396,20 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             // Set up the current user with a subset of projects and set up the service.
             service = new TaxFormConsentService(testRepository, adapterRegistry.Object, currentUserFactory, roleRepositoryMock.Object, loggerObject);
+        }
+
+        private Dtos.Base.TaxFormConsent BuildTaxFormConsent(string personId = "000001", bool hasConsentedParam = true, Dtos.Base.TaxForms taxFormDtoParam = Dtos.Base.TaxForms.FormW2)
+        {
+            DateTimeOffset timeStamp = new DateTimeOffset(new DateTime(2015, 7, 10, 9, 47, 13));
+            Dtos.Base.TaxForms taxFormDto = taxFormDtoParam;
+            var incomingConsentDto = new Dtos.Base.TaxFormConsent()
+            {
+                HasConsented = hasConsentedParam,
+                PersonId = personId,
+                TimeStamp = timeStamp,
+                TaxForm = taxFormDto
+            };
+            return incomingConsentDto;
         }
     }
 }

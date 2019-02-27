@@ -100,6 +100,11 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         public string AmountsBilledForTuitionAndExpenses { get; set; }
 
         /// <summary>
+        /// Amount paid to the student for tuition and expenses.
+        /// </summary>
+        public string AmountsPaidForTuitionAndExpenses { get; set; }
+
+        /// <summary>
         /// Has the institution changed it's reporting method since becoming an Ellucian client?
         /// </summary>
         public bool ReportingMethodHasBeenChanged { get; set; }

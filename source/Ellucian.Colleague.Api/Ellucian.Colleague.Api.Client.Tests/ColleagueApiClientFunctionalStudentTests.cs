@@ -79,30 +79,6 @@ namespace Ellucian.Colleague.Api.Client.Tests
         }
 
         [TestMethod]
-        public void TestQueryStudentsById()
-        {
-            List<string> studentIds = new List<string>() { "0000252", "0003977", "0004241", "0010697"};
-            
-            var result = client.QueryStudentsById(studentIds);
-
-            Assert.IsNotNull(result);
-            Assert.IsInstanceOfType(result, typeof(IEnumerable<Dtos.Student.StudentBatch>));
-            Assert.AreEqual(studentIds.Count, result.Count());
-        }
-
-        [TestMethod]
-        public void TestQueryStudentsByIdEmptyIds()
-        {
-            List<string> studentIds = new List<string>();
-
-            var result = client.QueryStudentsById(studentIds);
-
-            Assert.IsNotNull(result);
-            Assert.IsInstanceOfType(result, typeof(IEnumerable<Dtos.Student.StudentBatch>));
-            Assert.AreEqual(0, result.Count()); // Result should be an empty IEnumerable<StudentBatch>
-        }
-
-        [TestMethod]
         public void TestGetAffiliations()
         {
             var result = client.GetAffiliations();
@@ -211,18 +187,7 @@ namespace Ellucian.Colleague.Api.Client.Tests
             Assert.IsInstanceOfType(result, typeof(IEnumerable<PilotStudentTermLevelGpa>));
             Assert.AreEqual(3, result.Count());
         }
-        [TestMethod]
-        public void TestQueryStudents3ById()
-        {
-            // Set up parameters we're going to call these functions with.
-            List<string> studentIds = new List<string>() { "0003977", "0004241" };
-            string term = "2015/FA";
-            var result = client.QueryStudents3ById(studentIds, term);
 
-            Assert.IsNotNull(result);
-            Assert.IsInstanceOfType(result, typeof(IEnumerable<StudentBatch3>));
-            Assert.AreEqual(2, result.Count());
-        }
         #endregion
     }
 }

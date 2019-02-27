@@ -77,6 +77,15 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             if (taxFormEntities == null)
                 throw new ApplicationException("taxFormEntities cannot be null.");
 
+            foreach (var taxFormEntity in taxFormEntities)
+            {
+                // Validate that the domain entity recipient ID is the same as the person ID requested.
+                if (taxFormEntity.PersonId != personId)
+                {
+                    throw new PermissionsException("Insufficient access to tax form statements data.");
+                }
+            }
+
             var adapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.TaxFormStatement2, Dtos.Base.TaxFormStatement2>();
 
             var statementDtos = new List<Dtos.Base.TaxFormStatement2>();

@@ -65,6 +65,12 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 // Call the repository to get all the data to print in the pdf.
                 var taxFormPdfData = await this.taxFormPdfDataRepository.GetFormT4aPdfDataAsync(personId, recordId);
 
+                // Validate that the domain entity recipient ID is the same as the person ID requested.
+                if (taxFormPdfData.RecipientId != personId)
+                {
+                    throw new PermissionsException("Insufficient access to T4A data.");
+                }
+
                 return taxFormPdfData;
             }
             catch (Exception e)
@@ -99,10 +105,12 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 // Call the repository to get all the data to print in the pdf.
                 var taxFormPdfData = await this.taxFormPdfDataRepository.GetForm1099MiPdfDataAsync(personId, recordId);
 
-                if (!string.IsNullOrEmpty(taxFormPdfData.RecipientAccountNumber) && taxFormPdfData.RecipientAccountNumber != personId)
+                // Validate that the domain entity recipient ID is the same as the person ID requested.
+                if (personId != taxFormPdfData.RecipientId)
                 {
-                    throw new ApplicationException("Person ID from request is not the same as the Person ID of the current user.");
+                    throw new PermissionsException("Insufficient access to 1099-MISC data.");
                 }
+
                 return taxFormPdfData;
             }
             catch (Exception e)
@@ -256,10 +264,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 parameters.Add(utility.BuildReportParameter("Box6Amt", GetAmountFromBoxList(taxFormBoxesList, "6")));
                 parameters.Add(utility.BuildReportParameter("Box7Amt", GetAmountFromBoxList(taxFormBoxesList, "7")));
                 parameters.Add(utility.BuildReportParameter("Box8Amt", GetAmountFromBoxList(taxFormBoxesList, "8")));
-                parameters.Add(utility.BuildReportParameter("Box9", pdfData.IsDirectResale == null ? "" : pdfData.IsDirectResale));
+                parameters.Add(utility.BuildReportParameter("Box9", pdfData.IsDirectResale ? "X" : ""));
                 parameters.Add(utility.BuildReportParameter("Box10Amt", GetAmountFromBoxList(taxFormBoxesList, "10")));
-                parameters.Add(utility.BuildReportParameter("Box11Amt", ""));
-                parameters.Add(utility.BuildReportParameter("Box12Amt", ""));
+                parameters.Add(utility.BuildReportParameter("Box11Amt", pdfData.ForeignTaxPaid ?? ""));
+                parameters.Add(utility.BuildReportParameter("Box12Amt", pdfData.BoxCountry ?? ""));
                 parameters.Add(utility.BuildReportParameter("Box13Amt", GetAmountFromBoxList(taxFormBoxesList, "13")));
                 parameters.Add(utility.BuildReportParameter("Box14Amt", GetAmountFromBoxList(taxFormBoxesList, "14")));
                 parameters.Add(utility.BuildReportParameter("Box15aAmt", GetAmountFromBoxList(taxFormBoxesList, "15A")));
@@ -268,7 +276,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 parameters.Add(utility.BuildReportParameter("Box16bAmt", ""));
                 parameters.Add(utility.BuildReportParameter("Box17", pdfData.StatePayerNumber == null ? "" : pdfData.StatePayerNumber));
                 parameters.Add(utility.BuildReportParameter("Box17b", ""));
-                parameters.Add(utility.BuildReportParameter("Box18Amt", ""));
+                parameters.Add(utility.BuildReportParameter("Box18Amt", GetAmountFromBoxList(taxFormBoxesList, "18")));
                 parameters.Add(utility.BuildReportParameter("Box18bAmt", ""));
 
 
@@ -358,6 +366,5 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 return HasPermission(ColleagueFinancePermissionCodes.ViewT4A);
             }
         }
-
     }
 }

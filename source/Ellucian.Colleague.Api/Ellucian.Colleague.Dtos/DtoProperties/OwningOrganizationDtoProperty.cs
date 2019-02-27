@@ -1,6 +1,7 @@
 ﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Dtos.Attributes;
+using Ellucian.Colleague.Dtos.EnumProperties;
 using Newtonsoft.Json;
 
 namespace Ellucian.Colleague.Dtos.DtoProperties
@@ -18,20 +19,26 @@ namespace Ellucian.Colleague.Dtos.DtoProperties
         public decimal? OwnershipPercentage { get; set; }
 
         /// <summary>
-        /// Id of the InstructionalPlatform
+        /// Id of the owningInstitutionUnits code (department)
         /// </summary>
         [JsonProperty("institutionUnit", DefaultValueHandling = DefaultValueHandling.Ignore)]
         [FilterProperty("criteria")]
         public GuidObject2 Detail { get; set; }
 
         /// <summary>
-        /// Code of the InstructionalPlatform
+        /// Type of owningInstitutionUnits (department)
+        /// </summary>
+        [JsonProperty("type", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public EducationalInstitutionUnitType Type { get; set; }
+
+        /// <summary>
+        /// Code of the owningInstitutionUnits
         /// </summary>
         [JsonProperty("code", DefaultValueHandling = DefaultValueHandling.Ignore)]
         public string Code { get; set; }
 
         /// <summary>
-        /// Title of the InstructionalPlatform
+        /// Title of the owningInstitutionUnits
         /// </summary>
         [JsonProperty("title", DefaultValueHandling = DefaultValueHandling.Ignore)]
         public string Title { get; set; }

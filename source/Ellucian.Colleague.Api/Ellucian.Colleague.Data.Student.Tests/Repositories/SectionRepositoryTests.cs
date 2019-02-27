@@ -26,6 +26,8 @@ using Moq;
 using slf4net;
 using Ellucian.Colleague.Data.Base.Tests;
 using System.Reflection;
+using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Colleague.Domain.Base.Tests;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {
@@ -1238,6 +1240,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 // return null for request, so that if we have a result, it wasn't the data accessor that returned it.
                 dataReaderMock.Setup(acc => acc.SelectAsync("COURSE.SECTIONS", "")).Returns(Task.FromResult(new string[] { "1", "2" }));
+
                 dataReaderMock.Setup<Task<Collection<CourseSections>>>(acc => acc.BulkReadRecordAsync<CourseSections>("COURSE.SECTIONS", It.IsAny<string>(), true)).Returns(Task.FromResult<Collection<CourseSections>>(new Collection<CourseSections>()));
 
                 // Assert that proper course was returned
@@ -1863,11 +1866,11 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataReaderMock.Setup<Task<CourseSecXlists>>(acc => acc.ReadRecordAsync<CourseSecXlists>("COURSE.SEC.XLISTS", It.IsAny<string>(), true)).Returns(Task.FromResult(csxl));
 
                 // Set up repo response for filters on section or term
-                dataReaderMock.Setup(acc => acc.SelectAsync("COURSE.SECTIONS", It.IsAny<string[]>(), "SAVING UNIQUE SEC.MEETING")).ReturnsAsync(sectionMeetingResponseData.Select(c => c.Recordkey).ToArray());
-                dataReaderMock.Setup(acc => acc.SelectAsync("COURSE.SECTIONS", "WITH TERM = '2012/FA' SAVING UNIQUE SEC.MEETING")).ReturnsAsync(sectionMeetingResponseData.Select(c => c.Recordkey).ToArray());
-                dataReaderMock.Setup(acc => acc.SelectAsync("COURSE.SECTIONS", "WITH TERM = '2013/SP' SAVING UNIQUE SEC.MEETING")).ReturnsAsync(sectionMeetingResponseData.Select(c => c.Recordkey).ToArray());
-                dataReaderMock.Setup(acc => acc.SelectAsync("COURSE.SECTIONS", "WITH TERM = '2014/FA' SAVING UNIQUE SEC.MEETING")).ReturnsAsync(sectionMeetingResponseData.Select(c => c.Recordkey).ToArray());
-                dataReaderMock.Setup(acc => acc.SelectAsync("COURSE.SECTIONS", "WITH TERM = '2017/FA' SAVING UNIQUE SEC.MEETING")).ReturnsAsync(sectionMeetingResponseData.Select(c => c.Recordkey).ToArray());
+                dataReaderMock.Setup(acc => acc.SelectAsync("COURSE.SECTIONS", It.IsAny<string[]>(), "WITH SEC.MEETING BY.EXP SEC.MEETING SAVING SEC.MEETING")).ReturnsAsync(sectionMeetingResponseData.Select(c => c.Recordkey).ToArray());
+                dataReaderMock.Setup(acc => acc.SelectAsync("COURSE.SECTIONS", "WITH TERM = '2012/FA' WITH SEC.MEETING BY.EXP SEC.MEETING SAVING SEC.MEETING")).ReturnsAsync(sectionMeetingResponseData.Select(c => c.Recordkey).ToArray());
+                dataReaderMock.Setup(acc => acc.SelectAsync("COURSE.SECTIONS", "WITH TERM = '2013/SP' WITH SEC.MEETING BY.EXP SEC.MEETING SAVING SEC.MEETING")).ReturnsAsync(sectionMeetingResponseData.Select(c => c.Recordkey).ToArray());
+                dataReaderMock.Setup(acc => acc.SelectAsync("COURSE.SECTIONS", "WITH TERM = '2014/FA' WITH SEC.MEETING BY.EXP SEC.MEETING SAVING SEC.MEETING")).ReturnsAsync(sectionMeetingResponseData.Select(c => c.Recordkey).ToArray());
+                dataReaderMock.Setup(acc => acc.SelectAsync("COURSE.SECTIONS", "WITH TERM = '2017/FA' WITH SEC.MEETING BY.EXP SEC.MEETING SAVING SEC.MEETING")).ReturnsAsync(sectionMeetingResponseData.Select(c => c.Recordkey).ToArray());
 
                 // Set up repo response for "all" meeting requests
                 dataReaderMock.Setup(acc => acc.SelectAsync("COURSE.SEC.MEETING", It.IsAny<string>())).Returns(Task.FromResult(sectionMeetingResponseData.Select(c => c.Recordkey).ToArray()));
@@ -2861,6 +2864,228 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 IEnumerable<Section> sections = await sectionRepo.GetNonCachedSectionsAsync(sectionIds);
                 Section sec = sections.Where(s => s.Id == "6").FirstOrDefault();
                 Assert.AreEqual("http://blueridge.bncollege.com/webapp/wcs/stores/servlet/TBListView?catalogId=10001&storeId=66236&termMapping=Y&courseXml=<?xml version=\"1.0\" encoding=\"UTF - 8\" ?> <textbookorder><campus name=\"MAIN\"><courses><course dept=\"ART\" num=\"2233\" sect=\"03\" term=\"2012%2fFA\"/></courses></campus></textbookorder>", sec.BookstoreURL);
+            }
+
+            [TestMethod]
+            public async Task Validate_PrimarySectionMeetings_WithDefaultFlagY_CrossListedMeetingEmpty_PrimarySectionHaveMeetings()
+            {
+                //global parameter is Y and cross-listed paramter is empty
+                StwebDefaults stwebDefaults = new StwebDefaults();
+                stwebDefaults.StwebUsePrimSecMtgFlag = "y";
+                dataReaderMock.Setup<Task<StwebDefaults>>(ps => ps.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS", false)).Returns(Task.FromResult(stwebDefaults));
+                //crosslist repsonse data is for section id =1 with recordkey=232 that is crosslisted to 1,5 sections
+                crosslistResponseData[0].CsxlPrimSecMngOvrdeFlag = string.Empty;
+                //primary section is 1-> crosslisted to 1 and 5 sectionIds
+                //course.section have crosslisted id ="232" for section id = 1
+                //primary section have meeting ids 1 & 2
+                var primarySectionData = sectionsResponseData.Where(s => s.Recordkey == "1").First();
+                primarySectionData.SecXlist = "232";
+                //make a section that is cross-listed section and do not have meetings
+                var crosslistedSectionData = sectionsResponseData.Where(s => s.Recordkey == "5").First();
+                crosslistedSectionData.SecMeeting = null;
+                //modifying the reference of meetings to have primary section id. such as primary section =1 have two meeting data
+                var meetingData = sectionMeetingResponseData.Where(s => s.CsmCourseSection == "5").First();
+                meetingData.CsmCourseSection = "1";
+                var meetingData1 = sectionMeetingResponseData.Where(s => s.CsmCourseSection == "4").First();
+                meetingData1.CsmCourseSection = "1";
+
+
+                List<string> sectionIds = new List<string>() { "1", "2", "3" ,"5"};
+                IEnumerable<Section> sections = await sectionRepo.GetNonCachedSectionsAsync(sectionIds);
+                Section primarySection = sections.Where(s => s.Id == "1").FirstOrDefault();
+                Section crosslistedSection = sections.Where(s => s.Id == "5").FirstOrDefault();
+                Assert.AreEqual("1", primarySection.Id);
+                Assert.AreEqual(2, primarySection.Meetings.Count());
+                Assert.AreEqual(0, primarySection.PrimarySectionMeetings.Count());
+
+                Assert.AreEqual("5", crosslistedSection.Id);
+                Assert.AreEqual(0, crosslistedSection.Meetings.Count());
+                Assert.AreEqual(2, crosslistedSection.PrimarySectionMeetings.Count());
+
+                Assert.AreEqual(primarySection.Meetings[0].Id, crosslistedSection.PrimarySectionMeetings[0].Id);
+                Assert.AreEqual(primarySection.Meetings[0].Days, crosslistedSection.PrimarySectionMeetings[0].Days);
+                Assert.AreEqual(primarySection.Meetings[0].StartDate, crosslistedSection.PrimarySectionMeetings[0].StartDate);
+                Assert.AreEqual(primarySection.Meetings[0].StartTime, crosslistedSection.PrimarySectionMeetings[0].StartTime);
+                Assert.AreEqual(primarySection.Meetings[0].EndDate, crosslistedSection.PrimarySectionMeetings[0].EndDate);
+                Assert.AreEqual(primarySection.Meetings[0].EndTime, crosslistedSection.PrimarySectionMeetings[0].EndTime);
+                Assert.AreEqual(primarySection.Meetings[0].InstructionalMethodCode, crosslistedSection.PrimarySectionMeetings[0].InstructionalMethodCode);
+                Assert.AreEqual(primarySection.Meetings[0].Room, crosslistedSection.PrimarySectionMeetings[0].Room);
+
+
+                Assert.AreEqual(primarySection.Meetings[1].Id, crosslistedSection.PrimarySectionMeetings[1].Id);
+                Assert.AreEqual(primarySection.Meetings[1].Days, crosslistedSection.PrimarySectionMeetings[1].Days);
+                Assert.AreEqual(primarySection.Meetings[1].StartDate, crosslistedSection.PrimarySectionMeetings[1].StartDate);
+                Assert.AreEqual(primarySection.Meetings[1].StartTime, crosslistedSection.PrimarySectionMeetings[1].StartTime);
+                Assert.AreEqual(primarySection.Meetings[1].EndDate, crosslistedSection.PrimarySectionMeetings[1].EndDate);
+                Assert.AreEqual(primarySection.Meetings[1].EndTime, crosslistedSection.PrimarySectionMeetings[1].EndTime);
+                Assert.AreEqual(primarySection.Meetings[1].InstructionalMethodCode, crosslistedSection.PrimarySectionMeetings[1].InstructionalMethodCode);
+                Assert.AreEqual(primarySection.Meetings[1].Room, crosslistedSection.PrimarySectionMeetings[1].Room);
+
+
+            }
+
+            [TestMethod]
+            public async Task Validate_PrimarySectionMeetings_WithDefaultFlagY_CrossListedHaveMeeting_PrimarySectionHaveMeetings()
+            {
+                //global parameter is N and cross-listed paramter is empty
+                StwebDefaults stwebDefaults = new StwebDefaults();
+                stwebDefaults.StwebUsePrimSecMtgFlag = "y";
+                dataReaderMock.Setup<Task<StwebDefaults>>(ps => ps.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS", false)).Returns(Task.FromResult(stwebDefaults));
+                //crosslist repsonse data is for section id =1 with recordkey=232 that is crosslisted to 1,5 sections
+                crosslistResponseData[0].CsxlPrimSecMngOvrdeFlag = string.Empty;
+                //primary section is 1-> crosslisted to 1 and 5 sectionIds
+                //course.section have crosslisted id ="232" for section id = 1
+                //primary section have meeting ids 1 & 2
+                var primarySectionData = sectionsResponseData.Where(s => s.Recordkey == "1").First();
+                primarySectionData.SecXlist = "232";
+                var meetingData1 = sectionMeetingResponseData.Where(s => s.CsmCourseSection == "4").First();
+                meetingData1.CsmCourseSection = "1";
+
+
+                List<string> sectionIds = new List<string>() { "1", "2", "3", "5" };
+                IEnumerable<Section> sections = await sectionRepo.GetNonCachedSectionsAsync(sectionIds);
+                Section primarySection = sections.Where(s => s.Id == "1").FirstOrDefault();
+                Section crosslistedSection = sections.Where(s => s.Id == "5").FirstOrDefault();
+                Assert.AreEqual("1", primarySection.Id);
+                Assert.AreEqual(1, primarySection.Meetings.Count());
+                Assert.AreEqual(0, primarySection.PrimarySectionMeetings.Count());
+
+                Assert.AreEqual("5", crosslistedSection.Id);
+                Assert.AreEqual(1, crosslistedSection.Meetings.Count());
+                Assert.AreEqual(0, crosslistedSection.PrimarySectionMeetings.Count());
+
+            }
+
+            [TestMethod]
+            public async Task Validate_PrimarySectionMeetings_WithOverrideFlagY_CrossListedMeetingEmpty_PrimarySectionHaveMeetings()
+            {
+                //global parameter is Y and cross-listed paramter is empty
+                StwebDefaults stwebDefaults = new StwebDefaults();
+                stwebDefaults.StwebUsePrimSecMtgFlag = "n";
+                dataReaderMock.Setup<Task<StwebDefaults>>(ps => ps.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS", false)).Returns(Task.FromResult(stwebDefaults));
+                //crosslist repsonse data is for section id =1 with recordkey=232 that is crosslisted to 1,5 sections
+                crosslistResponseData[0].CsxlPrimSecMngOvrdeFlag = "y";
+                //primary section is 1-> crosslisted to 1 and 5 sectionIds
+                //course.section have crosslisted id ="232" for section id = 1
+                //primary section have meeting ids 1 & 2
+                var primarySectionData = sectionsResponseData.Where(s => s.Recordkey == "1").First();
+                primarySectionData.SecXlist = "232";
+                //make a section that is cross-listed section and do not have meetings
+                var crosslistedSectionData = sectionsResponseData.Where(s => s.Recordkey == "5").First();
+                crosslistedSectionData.SecMeeting = null;
+                //modifying the reference of meetings to have primary section id. such as primary section =1 have two meeting data
+                var meetingData = sectionMeetingResponseData.Where(s => s.CsmCourseSection == "5").First();
+                meetingData.CsmCourseSection = "1";
+                var meetingData1 = sectionMeetingResponseData.Where(s => s.CsmCourseSection == "4").First();
+                meetingData1.CsmCourseSection = "1";
+
+
+                List<string> sectionIds = new List<string>() { "1", "2", "3", "5" };
+                IEnumerable<Section> sections = await sectionRepo.GetNonCachedSectionsAsync(sectionIds);
+                Section primarySection = sections.Where(s => s.Id == "1").FirstOrDefault();
+                Section crosslistedSection = sections.Where(s => s.Id == "5").FirstOrDefault();
+                Assert.AreEqual("1", primarySection.Id);
+                Assert.AreEqual(2, primarySection.Meetings.Count());
+                Assert.AreEqual(0, primarySection.PrimarySectionMeetings.Count());
+
+                Assert.AreEqual("5", crosslistedSection.Id);
+                Assert.AreEqual(0, crosslistedSection.Meetings.Count());
+                Assert.AreEqual(2, crosslistedSection.PrimarySectionMeetings.Count());
+
+                Assert.AreEqual(primarySection.Meetings[0].Id, crosslistedSection.PrimarySectionMeetings[0].Id);
+                Assert.AreEqual(primarySection.Meetings[0].Days, crosslistedSection.PrimarySectionMeetings[0].Days);
+                Assert.AreEqual(primarySection.Meetings[0].StartDate, crosslistedSection.PrimarySectionMeetings[0].StartDate);
+                Assert.AreEqual(primarySection.Meetings[0].StartTime, crosslistedSection.PrimarySectionMeetings[0].StartTime);
+                Assert.AreEqual(primarySection.Meetings[0].EndDate, crosslistedSection.PrimarySectionMeetings[0].EndDate);
+                Assert.AreEqual(primarySection.Meetings[0].EndTime, crosslistedSection.PrimarySectionMeetings[0].EndTime);
+                Assert.AreEqual(primarySection.Meetings[0].InstructionalMethodCode, crosslistedSection.PrimarySectionMeetings[0].InstructionalMethodCode);
+                Assert.AreEqual(primarySection.Meetings[0].Room, crosslistedSection.PrimarySectionMeetings[0].Room);
+
+
+                Assert.AreEqual(primarySection.Meetings[1].Id, crosslistedSection.PrimarySectionMeetings[1].Id);
+                Assert.AreEqual(primarySection.Meetings[1].Days, crosslistedSection.PrimarySectionMeetings[1].Days);
+                Assert.AreEqual(primarySection.Meetings[1].StartDate, crosslistedSection.PrimarySectionMeetings[1].StartDate);
+                Assert.AreEqual(primarySection.Meetings[1].StartTime, crosslistedSection.PrimarySectionMeetings[1].StartTime);
+                Assert.AreEqual(primarySection.Meetings[1].EndDate, crosslistedSection.PrimarySectionMeetings[1].EndDate);
+                Assert.AreEqual(primarySection.Meetings[1].EndTime, crosslistedSection.PrimarySectionMeetings[1].EndTime);
+                Assert.AreEqual(primarySection.Meetings[1].InstructionalMethodCode, crosslistedSection.PrimarySectionMeetings[1].InstructionalMethodCode);
+                Assert.AreEqual(primarySection.Meetings[1].Room, crosslistedSection.PrimarySectionMeetings[1].Room);
+
+
+            }
+
+            [TestMethod]
+            public async Task Validate_PrimarySectionMeetings_WithOverrideN_CrossListedMeetingEmtpy_PrimarySectionHaveMeetings()
+            {
+                //global parameter is N and cross-listed paramter is empty
+                StwebDefaults stwebDefaults = new StwebDefaults();
+                stwebDefaults.StwebUsePrimSecMtgFlag = "y";
+                dataReaderMock.Setup<Task<StwebDefaults>>(ps => ps.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS", false)).Returns(Task.FromResult(stwebDefaults));
+                //crosslist repsonse data is for section id =1 with recordkey=232 that is crosslisted to 1,5 sections
+                crosslistResponseData[0].CsxlPrimSecMngOvrdeFlag = "n";
+                //primary section is 1-> crosslisted to 1 and 5 sectionIds
+                //course.section have crosslisted id ="232" for section id = 1
+                //primary section have meeting ids 1 & 2
+                var crosslistedSectionData = sectionsResponseData.Where(s => s.Recordkey == "5").First();
+                crosslistedSectionData.SecMeeting = null;
+
+                var primarySectionData = sectionsResponseData.Where(s => s.Recordkey == "1").First();
+                primarySectionData.SecXlist = "232";
+                var meetingData = sectionMeetingResponseData.Where(s => s.CsmCourseSection == "5").First();
+                meetingData.CsmCourseSection = "1";
+                var meetingData1 = sectionMeetingResponseData.Where(s => s.CsmCourseSection == "4").First();
+                meetingData1.CsmCourseSection = "1";
+
+
+                List<string> sectionIds = new List<string>() { "1", "2", "3", "5" };
+                IEnumerable<Section> sections = await sectionRepo.GetNonCachedSectionsAsync(sectionIds);
+                Section primarySection = sections.Where(s => s.Id == "1").FirstOrDefault();
+                Section crosslistedSection = sections.Where(s => s.Id == "5").FirstOrDefault();
+                Assert.AreEqual("1", primarySection.Id);
+                Assert.AreEqual(2, primarySection.Meetings.Count());
+                Assert.AreEqual(0, primarySection.PrimarySectionMeetings.Count());
+
+                Assert.AreEqual("5", crosslistedSection.Id);
+                Assert.AreEqual(0, crosslistedSection.Meetings.Count());
+                Assert.AreEqual(0, crosslistedSection.PrimarySectionMeetings.Count());
+
+            }
+
+            [TestMethod]
+            public async Task Validate_PrimarySectionMeetings_WithNoFlags_CrossListedMeetingEmtpy_PrimarySectionHaveMeetings()
+            {
+                //global parameter is N and cross-listed paramter is empty
+                StwebDefaults stwebDefaults = new StwebDefaults();
+                stwebDefaults.StwebUsePrimSecMtgFlag = string.Empty;
+                dataReaderMock.Setup<Task<StwebDefaults>>(ps => ps.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS", false)).Returns(Task.FromResult(stwebDefaults));
+                //crosslist repsonse data is for section id =1 with recordkey=232 that is crosslisted to 1,5 sections
+                crosslistResponseData[0].CsxlPrimSecMngOvrdeFlag = string.Empty;
+                //primary section is 1-> crosslisted to 1 and 5 sectionIds
+                //course.section have crosslisted id ="232" for section id = 1
+                //primary section have meeting ids 1 & 2
+                var crosslistedSectionData = sectionsResponseData.Where(s => s.Recordkey == "5").First();
+                crosslistedSectionData.SecMeeting = null;
+
+                var primarySectionData = sectionsResponseData.Where(s => s.Recordkey == "1").First();
+                primarySectionData.SecXlist = "232";
+                var meetingData = sectionMeetingResponseData.Where(s => s.CsmCourseSection == "5").First();
+                meetingData.CsmCourseSection = "1";
+                var meetingData1 = sectionMeetingResponseData.Where(s => s.CsmCourseSection == "4").First();
+                meetingData1.CsmCourseSection = "1";
+
+
+                List<string> sectionIds = new List<string>() { "1", "2", "3", "5" };
+                IEnumerable<Section> sections = await sectionRepo.GetNonCachedSectionsAsync(sectionIds);
+                Section primarySection = sections.Where(s => s.Id == "1").FirstOrDefault();
+                Section crosslistedSection = sections.Where(s => s.Id == "5").FirstOrDefault();
+                Assert.AreEqual("1", primarySection.Id);
+                Assert.AreEqual(2, primarySection.Meetings.Count());
+                Assert.AreEqual(0, primarySection.PrimarySectionMeetings.Count());
+
+                Assert.AreEqual("5", crosslistedSection.Id);
+                Assert.AreEqual(0, crosslistedSection.Meetings.Count());
+                Assert.AreEqual(0, crosslistedSection.PrimarySectionMeetings.Count());
+
             }
             private SectionRepository BuildValidSectionRepository()
             {
@@ -8099,11 +8324,11 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 };
                 studentCourseSecs = new Collection<StudentCourseSec>()
                 {
-                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[0], ScsCourseSection = sectionId, ScsStudent = "0001234" },
-                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[1], ScsCourseSection = sectionId, ScsStudent = "0001235" },
-                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[2], ScsCourseSection = sectionId, ScsStudent = "0001236" },
-                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[3], ScsCourseSection = sectionId, ScsStudent = "0001237" },
-                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[4], ScsCourseSection = sectionId, ScsStudent = "0001238" },
+                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[0], ScsCourseSection = sectionId, ScsStudent = "0001234", RecordGuid = "3bf856dd-44a6-40f8-95fc-65916611aa87" },
+                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[1], ScsCourseSection = sectionId, ScsStudent = "0001235", RecordGuid = "f7665fc1-a206-40bb-be27-eedcce762945" },
+                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[2], ScsCourseSection = sectionId, ScsStudent = "0001236", RecordGuid = "7461344d-d7ea-4bc5-a864-a3f971cd64d0" },
+                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[3], ScsCourseSection = sectionId, ScsStudent = "0001237", RecordGuid = "ca2384b2-a541-421d-be8b-2045f993f752" },
+                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[4], ScsCourseSection = sectionId, ScsStudent = "0001238", RecordGuid = "fa313328-abaf-44c6-855c-ca07c31ecc94" },
                 };
                 courseSecFacultys = new Collection<CourseSecFaculty>()
                 {
@@ -8174,11 +8399,11 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 };
                 studentCourseSecs = new Collection<StudentCourseSec>()
                 {
-                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[1], ScsCourseSection = sectionId, ScsStudent = "0001234" },
-                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[2], ScsCourseSection = sectionId, ScsStudent = "0001235" },
-                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[3], ScsCourseSection = sectionId, ScsStudent = "0001236" },
-                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[4], ScsCourseSection = sectionId, ScsStudent = "0001237" },
-                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[5], ScsCourseSection = sectionId, ScsStudent = "0001238" },
+                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[1], ScsCourseSection = sectionId, ScsStudent = "0001234", RecordGuid = "b0d591b7-910d-4cf1-a5f1-ae94ea828844" },
+                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[2], ScsCourseSection = sectionId, ScsStudent = "0001235", RecordGuid = "192b593c-abbe-41f0-b094-5c68aa4c143d" },
+                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[3], ScsCourseSection = sectionId, ScsStudent = "0001236", RecordGuid = "4e523bc4-10ba-4f01-8ccc-e6a22ca101d3" },
+                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[4], ScsCourseSection = sectionId, ScsStudent = "0001237", RecordGuid = "65a061fa-44d6-4717-b631-3954a9a1e307" },
+                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[5], ScsCourseSection = sectionId, ScsStudent = "0001238", RecordGuid = "9ca48250-e199-4b95-bab3-03e4c74fdfcf" },
                 };
                 MockRecordAsync<CourseSections>("COURSE.SECTIONS", courseSection);
                 MockRecordsAsync<StudentCourseSec>("STUDENT.COURSE.SEC", studentCourseSecs);
@@ -8281,11 +8506,11 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 };
                 studentCourseSecs = new Collection<StudentCourseSec>()
                 {
-                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[0], ScsCourseSection = sectionId, ScsStudent = "0001234" },
-                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[1], ScsCourseSection = sectionId, ScsStudent = "0001235" },
-                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[2], ScsCourseSection = sectionId, ScsStudent = "0001236" },
-                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[3], ScsCourseSection = sectionId, ScsStudent = "0001237" },
-                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[4], ScsCourseSection = sectionId, ScsStudent = null },
+                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[0], ScsCourseSection = sectionId, ScsStudent = "0001234", RecordGuid = "e44e11c3-4010-49bd-9a57-e533f17962fb" },
+                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[1], ScsCourseSection = sectionId, ScsStudent = "0001235", RecordGuid = "93fbd484-dd0e-4435-904f-9681a8b07585" },
+                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[2], ScsCourseSection = sectionId, ScsStudent = "0001236", RecordGuid = "235ce315-22d4-48e8-b14f-d28dd2401dc0" },
+                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[3], ScsCourseSection = sectionId, ScsStudent = "0001237", RecordGuid = "1c856468-cb3d-49fc-a95d-545e81fc53a5" },
+                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[4], ScsCourseSection = sectionId, ScsStudent = null, RecordGuid = "b076b2b7-530e-41cf-9323-9515fd7ff5cd" },
                 };
                 MockRecordAsync<CourseSections>("COURSE.SECTIONS", courseSection);
                 MockRecordsAsync<StudentCourseSec>("STUDENT.COURSE.SEC", studentCourseSecs);
@@ -8340,10 +8565,10 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 };
                 studentCourseSecs = new Collection<StudentCourseSec>()
                 {
-                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[0], ScsCourseSection = sectionId, ScsStudent = "0001234" },
-                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[1], ScsCourseSection = sectionId, ScsStudent = "0001235" },
-                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[2], ScsCourseSection = sectionId, ScsStudent = "0001236" },
-                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[3], ScsCourseSection = sectionId, ScsStudent = "0001237" }
+                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[0], ScsCourseSection = sectionId, ScsStudent = "0001234", RecordGuid = "b717abc7-dbf0-460e-888a-5162ff4f53e5"},
+                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[1], ScsCourseSection = sectionId, ScsStudent = "0001235", RecordGuid = "011f87f4-67c5-419b-9516-e13214a0a79c" },
+                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[2], ScsCourseSection = sectionId, ScsStudent = "0001236", RecordGuid = "49595e8e-3a9e-4213-b82a-07a9bd4660a9" },
+                    new StudentCourseSec() { Recordkey = courseSection.SecActiveStudents[3], ScsCourseSection = sectionId, ScsStudent = "0001237", RecordGuid = "d87f8d2f-8e60-453d-b681-82201fbbce4b" }
                 };
                 MockRecordAsync<CourseSections>("COURSE.SECTIONS", courseSection);
                 MockRecordsAsync<StudentCourseSec>("STUDENT.COURSE.SEC", studentCourseSecs);
@@ -8409,6 +8634,304 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
         }
 
+
+        [TestClass]
+        public class SectionRepository_GetSectionEventsICalAsync : SectionRepositoryTests
+        {
+            Dictionary<string, Section> regSectionsDict;
+            IEnumerable<Event> allCals;
+            SectionRepository sectionRepo;
+            List<Section> sections;
+            Section section1;
+            Section section2;
+            string cacheKey = "";
+
+            Collection <CalendarSchedules> section1first5Data;
+            Collection<CalendarSchedules> section2first3Data;
+            private List<OfferingDepartment> dpts = new List<OfferingDepartment>() { new OfferingDepartment("ART", 100m) };
+            private List<string> levels = new List<string>() { "Whatever" };
+            private List<SectionStatusItem> statuses = new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddDays(-60)) };
+
+
+
+            [TestInitialize]
+            public  void Initialize()
+            {
+                MainInitialize();
+                sections = new List<Section>();
+                section1 = new Ellucian.Colleague.Domain.Student.Entities.Section("1111111", "1119", "01", new DateTime(2012, 09, 01), 3.0m, 0, "Introduction to Art", "IN", dpts, levels, "UG", statuses, true);
+                section1.Name = "Section 1";
+                section1.TermId = "2012/FA";
+                section1.EndDate = new DateTime(2012, 12, 21);
+                section1.Guid = Guid.NewGuid().ToString();
+                section1.AddSectionMeeting(new SectionMeeting("s1", "1111111", "lec", null, null, "daily"));
+                section1.AddSectionMeeting(new SectionMeeting("s2", "1111111", "lab", null, null, "daily"));
+                sections.Add(section1);
+
+                //section 2 with primary section meetings
+                section2 = new Ellucian.Colleague.Domain.Student.Entities.Section("2222222", "1119", "01", new DateTime(2012, 09, 01), 3.0m, 0, "Introduction to Art", "IN", dpts, levels, "UG", statuses, true);
+                section2.Name = "Section 2";
+                section2.TermId = "2012/FA";
+                section2.PrimarySectionId = "1111111";
+                section2.EndDate = new DateTime(2012, 12, 21);
+                section2.Guid = Guid.NewGuid().ToString();
+                section2.UpdatePrimarySectionMeetings(new List<SectionMeeting>() {
+                    new SectionMeeting("s1", "1111111", "lec", null, null, "daily"),
+                     new SectionMeeting("s2", "1111111", "lab", null, null, "daily")
+                });
+                sections.Add(section2);
+
+                allCals = new TestEventRepository().Get();
+                regSectionsDict = new Dictionary<string, Section>();
+               
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                cacheKey = sectionRepo.BuildFullCacheKey("AllRegistrationSections");
+                cacheProviderMock.Setup(x => x.Contains(cacheKey, null)).Returns(true);
+                cacheProviderMock.Setup(x => x.Get(cacheKey, null)).Returns(regSectionsDict).Verifiable();
+
+           
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task SectionRepository_GetSectionEventsICalAsync_CalendarscheduleType_Is_Null()
+            {
+                List<string> secs = new List<string>();
+                secs.Add("1111111");
+                IEnumerable<Event> cals = await sectionRepo.GetSectionEventsICalAsync(null, secs, null, null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task SectionRepository_GetSectionEventsICalAsync_Sections_Is_Null()
+            {
+                List<string> secs = new List<string>();
+                IEnumerable<Event> cals = await sectionRepo.GetSectionEventsICalAsync("CS", null, null, null);
+            }
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task SectionRepository_GetSectionEventsICalAsync_Sections_Are_Empty()
+            {
+                List<string> secs = new List<string>();
+                IEnumerable<Event> cals = await sectionRepo.GetSectionEventsICalAsync("CS", secs, null, null);
+            }
+
+            [TestMethod]
+            public async Task SectionRepository_GetSectionEventsICalAsync_CannotRetrieveCachedSections()
+            {
+                regSectionsDict = new Dictionary<string, Section>();
+                List<string> secs = new List<string>();
+                secs.Add("1111111");
+
+
+                dataReaderMock.Setup(acc => acc.BulkReadRecordAsync<CourseSections>("COURSE.SECTIONS", It.IsAny<string[]>(), true)).Returns(Task.FromResult(new Collection<CourseSections>()));
+                string message = "Following calendarSchedulePointers have no corresponding Section information in a cache, their calendar schedules will not be retrieved. " + "1111111";
+                loggerMock.Setup(x => x.Info(It.Is<string>(y => y == message))).Verifiable();
+                cacheProviderMock.Setup(x => x.Get(cacheKey, null)).Returns(regSectionsDict).Verifiable();
+                IEnumerable<Event> cals = await sectionRepo.GetSectionEventsICalAsync("CS", secs, null, null);
+                loggerMock.Verify();
+
+                Assert.IsNotNull(cals);
+                Assert.AreEqual(0, cals.Count());
+
+            }
+            [TestMethod]
+            public async Task SectionRepository_GetSectionEventsICalAsyncGet_OneSectionwith5Days()
+            {
+               
+                    regSectionsDict["1111111"] = section1;
+
+
+                List <string> secs = new List<string>();
+                secs.Add("1111111");
+                IEnumerable<Event> s1f5days = allCals.Where(cs => cs.Type == "CS" && cs.Pointer == "1111111" ).AsEnumerable();
+                section1first5Data = BuildCalendarSchedulesResponse(s1f5days);
+
+                dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<CalendarSchedules>("CALENDAR.SCHEDULES", It.IsAny<string>(),true)).ReturnsAsync(section1first5Data);
+                IEnumerable<Event> cals = await sectionRepo.GetSectionEventsICalAsync("CS", secs, null, null);
+                // make sure the setup is correct
+                Assert.AreEqual(5, section1first5Data.Count());
+                // make sure we return the correct cals count
+                Assert.AreEqual(section1first5Data.Count(), cals.Count());
+            }
+
+            [TestMethod]
+            public async Task SectionRepository_GetSectionEventsICalAsync_TwoSections_WithPrimaryMeetings()
+            {
+
+                regSectionsDict.Add("1111111", section1);
+                regSectionsDict.Add("2222222", section2);
+
+                List<string> secs = new List<string>();
+                secs.Add("1111111");
+                secs.Add("2222222");
+                IEnumerable<Event> s1f5days = allCals.Where(cs => cs.Type == "CS" && cs.Pointer == "1111111").AsEnumerable();
+                section1first5Data = BuildCalendarSchedulesResponse(s1f5days);
+                string criteria1 = "WITH CALS.TYPE = 'CS' AND WITH CALS.POINTER = '1111111'   BY CALS.DATE BY CALS.START.TIME";
+                dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<CalendarSchedules>("CALENDAR.SCHEDULES", criteria1, true)).ReturnsAsync(section1first5Data);
+
+                IEnumerable<Event> cals = await sectionRepo.GetSectionEventsICalAsync("CS", secs, null, null);
+                // cross-listed sections will have same section meetings as of primary
+                Assert.AreEqual(10, section1first5Data.Count()*2);
+                // make sure we return the correct cals count
+                Assert.AreEqual(section1first5Data.Count() *2, cals.Count());
+                //validate description of first section events. same as CalsDescription
+                Assert.AreEqual(section1first5Data[0].CalsDescription, cals.ToList()[0].Description);
+
+                //validate description of 2nd section events. It is cross-listed section with primary meetings therefore will have description of its own rather than primary scetion
+                Assert.AreEqual(string.Join(" ",section2.Name,section2.Title), cals.ToList()[5].Description);
+                Assert.AreEqual("Section 2 Introduction to Art", cals.ToList()[6].Description);
+
+            }
+
+            [TestMethod]
+            public async Task SectionRepository_GetSectionEventsICalAsync_CannotRetrieveCalendarSchedules_ForCachedSections()
+            {
+                regSectionsDict["1111111"] = section1;
+                List<string> secs = new List<string>();
+                secs.Add("1111111");
+                string criteria1 = "WITH CALS.TYPE = 'CS' AND WITH CALS.POINTER = '1111111'   BY CALS.DATE BY CALS.START.TIME";
+                dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<CalendarSchedules>("CALENDAR.SCHEDULES", criteria1, true)).ReturnsAsync(new Collection<CalendarSchedules>());
+                IEnumerable<Event> cals = await sectionRepo.GetSectionEventsICalAsync("CS", secs, null, null);
+                Assert.IsNotNull(cals);
+                Assert.AreEqual(0, cals.Count());
+
+            }
+
+            [TestMethod]
+            public async Task SectionRepository_GetSectionEventsICalAsync_TwoSections()
+            {
+
+                regSectionsDict.Add("1111111", section1);
+                regSectionsDict.Add("2222222", section2);
+
+                section2.UpdatePrimarySectionMeetings(new List<SectionMeeting>());
+                section2.PrimarySectionId = "2222222";
+
+                List<string> secs = new List<string>();
+                secs.Add("1111111");
+                secs.Add("2222222");
+                IEnumerable<Event> s1f5days = allCals.Where(cs => cs.Type == "CS" && cs.Pointer == "1111111").AsEnumerable();
+                 IEnumerable<Event> s2f3days = allCals.Where(cs => cs.Type == "CS" && cs.Pointer == "2222222").AsEnumerable();
+                section1first5Data = BuildCalendarSchedulesResponse(s1f5days);
+                section2first3Data = BuildCalendarSchedulesResponse(s2f3days);
+                string criteria1 = "WITH CALS.TYPE = 'CS' AND WITH CALS.POINTER = '1111111'   BY CALS.DATE BY CALS.START.TIME";
+                string criteria2 = "WITH CALS.TYPE = 'CS' AND WITH CALS.POINTER = '2222222'   BY CALS.DATE BY CALS.START.TIME";
+                dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<CalendarSchedules>("CALENDAR.SCHEDULES", criteria1, true)).ReturnsAsync(section1first5Data);
+                dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<CalendarSchedules>("CALENDAR.SCHEDULES", criteria2, true)).ReturnsAsync(section2first3Data);
+
+                IEnumerable<Event> cals = await sectionRepo.GetSectionEventsICalAsync("CS", secs, null, null);
+                // cross-listed sections will have same section meetings as of primary
+                Assert.AreEqual(8, section1first5Data.Count() + section2first3Data.Count());
+                // make sure we return the correct cals count
+                Assert.AreEqual(section1first5Data.Count() + section2first3Data.Count(), cals.Count());
+                //validate description of first section events. same as CalsDescription
+                Assert.AreEqual(section1first5Data[0].CalsDescription, cals.ToList()[0].Description);
+                Assert.AreEqual(section2first3Data[0].CalsDescription, cals.ToList()[6].Description);
+            }
+
+            [TestMethod]
+            public async Task SectionRepository_GetSectionEventsICalAsync_TwoSections_WithSectionsRepeated()
+            {
+
+                regSectionsDict.Add("1111111", section1);
+                regSectionsDict.Add("2222222", section2);
+
+                section2.UpdatePrimarySectionMeetings(new List<SectionMeeting>());
+                section2.PrimarySectionId = "2222222";
+
+                List<string> secs = new List<string>();
+                secs.Add("1111111");
+                secs.Add("2222222");
+                secs.Add("1111111");
+                string message = "Section with id 1111111 is already in dictionary with its calendar schedules";
+                loggerMock.Setup(x => x.Info(It.Is<string>(y => y == message))).Verifiable();
+
+
+                IEnumerable<Event> s1f5days = allCals.Where(cs => cs.Type == "CS" && cs.Pointer == "1111111").AsEnumerable();
+                IEnumerable<Event> s2f3days = allCals.Where(cs => cs.Type == "CS" && cs.Pointer == "2222222").AsEnumerable();
+                section1first5Data = BuildCalendarSchedulesResponse(s1f5days);
+                section2first3Data = BuildCalendarSchedulesResponse(s2f3days);
+                string criteria1 = "WITH CALS.TYPE = 'CS' AND WITH CALS.POINTER = '1111111'   BY CALS.DATE BY CALS.START.TIME";
+                string criteria2 = "WITH CALS.TYPE = 'CS' AND WITH CALS.POINTER = '2222222'   BY CALS.DATE BY CALS.START.TIME";
+                dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<CalendarSchedules>("CALENDAR.SCHEDULES", criteria1, true)).ReturnsAsync(section1first5Data);
+                dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<CalendarSchedules>("CALENDAR.SCHEDULES", criteria2, true)).ReturnsAsync(section2first3Data);
+
+                IEnumerable<Event> cals = await sectionRepo.GetSectionEventsICalAsync("CS", secs, null, null);
+                loggerMock.Verify();
+                // cross-listed sections will have same section meetings as of primary
+                Assert.AreEqual(8, section1first5Data.Count() + section2first3Data.Count());
+                // make sure we return the correct cals count
+                Assert.AreEqual(section1first5Data.Count() + section2first3Data.Count(), cals.Count());
+                //validate description of first section events. same as CalsDescription
+                Assert.AreEqual(section1first5Data[0].CalsDescription, cals.ToList()[0].Description);
+                Assert.AreEqual(section2first3Data[0].CalsDescription, cals.ToList()[6].Description);
+            }
+
+            [TestMethod]
+            public async Task SectionRepository_GetSectionEventsICalAsync_DataReaderForCalendarScheduled_Returns_Exception()
+            {
+
+                regSectionsDict.Add("1111111", section1);
+                regSectionsDict.Add("2222222", section2);
+
+                section2.UpdatePrimarySectionMeetings(new List<SectionMeeting>());
+                section2.PrimarySectionId = "2222222";
+
+                List<string> secs = new List<string>();
+                secs.Add("1111111");
+                secs.Add("2222222");
+                IEnumerable<Event> s1f5days = allCals.Where(cs => cs.Type == "CS" && cs.Pointer == "1111111").AsEnumerable();
+                IEnumerable<Event> s2f3days = allCals.Where(cs => cs.Type == "CS" && cs.Pointer == "2222222").AsEnumerable();
+                section1first5Data = BuildCalendarSchedulesResponse(s1f5days);
+                section2first3Data = BuildCalendarSchedulesResponse(s2f3days);
+                string criteria1 = "WITH CALS.TYPE = 'CS' AND WITH CALS.POINTER = '1111111'   BY CALS.DATE BY CALS.START.TIME";
+                string criteria2 = "WITH CALS.TYPE = 'CS' AND WITH CALS.POINTER = '2222222'   BY CALS.DATE BY CALS.START.TIME";
+                dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<CalendarSchedules>("CALENDAR.SCHEDULES", criteria1, true)).ReturnsAsync(section1first5Data);
+                dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<CalendarSchedules>("CALENDAR.SCHEDULES", criteria2, true)).Throws(new Exception());
+
+                IEnumerable<Event> cals = await sectionRepo.GetSectionEventsICalAsync("CS", secs, null, null);
+                // cross-listed sections will have same section meetings as of primary
+                Assert.AreEqual(5, section1first5Data.Count() );
+                // make sure we return the correct cals count
+                Assert.AreEqual(section1first5Data.Count() , cals.Count());
+                //validate description of first section events. same as CalsDescription
+                Assert.AreEqual(section1first5Data[0].CalsDescription, cals.ToList()[0].Description);
+            }
+
+
+            private Collection<CalendarSchedules> BuildCalendarSchedulesResponse(IEnumerable<Event> events)
+            {
+                Collection<CalendarSchedules> repoCalendarSchedules = new Collection<CalendarSchedules>();
+                foreach (var calEvent in events)
+                {
+                    var repoCal = new CalendarSchedules();
+                    repoCal.CalsBuildings = calEvent.Buildings.ToList();
+                    repoCal.CalsRooms = calEvent.Rooms.ToList();
+                    repoCal.Recordkey = calEvent.Id.ToString();
+                    repoCal.CalsDate = new DateTime(calEvent.Start.Year, calEvent.Start.Month, calEvent.Start.Day, 0, 0, 0);
+                    repoCal.CalsDescription = calEvent.Description;
+                    repoCal.CalsLocation = calEvent.LocationCode;
+                    repoCal.CalsStartTime = calEvent.Start;
+                    repoCal.CalsEndTime = calEvent.End;
+                    repoCal.CalsPointer = calEvent.Pointer;
+                    repoCal.CalsType = calEvent.Type;
+                    repoCalendarSchedules.Add(repoCal);
+                    repoCal.CalsBldgRoomEntityAssociation = new List<CalendarSchedulesCalsBldgRoom>();
+                    for (int roomIdx = 0; roomIdx < repoCal.CalsRooms.Count(); roomIdx++)
+                    {
+                        var assocMember = new CalendarSchedulesCalsBldgRoom()
+                        {
+                            CalsBuildingsAssocMember = repoCal.CalsBuildings[roomIdx],
+                            CalsRoomsAssocMember = repoCal.CalsRooms[roomIdx]
+                        };
+                        repoCal.CalsBldgRoomEntityAssociation.Add(assocMember);
+                    }
+                }
+
+                return repoCalendarSchedules;
+            }
+        }
 
 
         [TestClass]

@@ -843,6 +843,70 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                         return await BuildTestProgramRequirementsAsync(reqname, requirementNames, SubrequirementNames, groupNames);
                     }
 
+                case "REPEAT.BB":
+                    {
+                        /* 
+                         -----------------------------------------------------------------
+                        Reqmt 1: REPEAT-REQ-1 (Repeat-req-1)
+                           Type: MAJ (priority 2)
+                           Scheme: GR
+ 
+                           Complete 3 of 3 subrequirements
+                           ..............................................................
+                           Subreqmt 1) sreq-1
+                              > take 3 courses from math;
+ 
+                              Complete 1 of 1 groups
+                              - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                              Group 1 of 1
+                                 Block ID: "76161"
+                                 Block Type: 33
+ 
+                                 Take 3 courses
+                                 From department MATH
+                           ..............................................................
+                           Subreqmt 2) sreq2
+                              > Take Math-300BB
+ 
+                              Complete 1 of 1 groups
+                              - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                              Group 1 of 1
+                                 Block ID: "76163"
+                                 Block Type: 30
+ 
+                                 Take MATH-300BB
+                           ..............................................................
+                           Subreqmt 3) sreq3
+                              > take 30 courses;
+ 
+                              Complete 1 of 1 groups
+                              - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                              Group 1 of 1
+                                 Block ID: "76537"
+                                 Block Type: 33
+ 
+                                 Take 30 courses
+                         
+                         */
+                        string reqname = id;
+                        List<string> reqnames = new List<string>();
+                        Dictionary<string, List<string>> Subreq = new Dictionary<string, List<string>>();
+                        Dictionary<string, List<string>> groups = new Dictionary<string, List<string>>();
+
+                        reqnames.Add("REPEAT-REQ-1");
+                        //one sub-requirment for requirment 1 that have 2 groups
+                        Subreq.Add("REPEAT-REQ-1", new List<string>() { "REQ-1-SUBREQ-1", "REQ-1-SUBREQ-2", "REQ-1-SUBREQ-3" });
+                        groups.Add(Subreq["REPEAT-REQ-1"][0], new List<string>() { "GROUP-1-REPEAT" });
+                        groups.Add(Subreq["REPEAT-REQ-1"][1], new List<string>() { "GROUP-2-REPEAT" });
+                        groups.Add(Subreq["REPEAT-REQ-1"][2], new List<string>() { "GROUP-3-REPEAT" });
+
+                       
+
+                        ProgramRequirements pr = await BuildTestProgramRequirementsAsync(reqname + "*" + cat, reqnames, Subreq, groups);
+                       
+                        return pr;
+                    }
+
                 default:
                     {
                         string reqname = id;
@@ -1672,7 +1736,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests
 
                 case "Test60":
                     {
-                        // TAKE 2 COURSES
+                        // TAKE 2 COURSES FROM SUBJECTS MATH, DANC
                         group1.Id = "10060";
                         group1.MinCourses = 2;
                         group1.FromSubjects.Add("MATH");
@@ -2228,6 +2292,33 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                         group1.GroupType = GroupType.TakeCredits;
                         break;
                     }
+                case "GROUP-1-REPEAT":
+                    {
+                        //TAKE 3 COURSE FROM MATH (33)
+                        group1.Id = "GROUP-1-REPEAT";
+                        group1.FromDepartments.Add("MATH");
+                        group1.MinCourses = 3;
+                        group1.GroupType = GroupType.TakeCourses;
+                        break;
+                    }
+                case "GROUP-2-REPEAT":
+                    {
+                        //TAKE MATH-300BB (TYPE 30)
+                        group1.Id = "GROUP-2-REPEAT";
+                        group1.Courses.Add(courses["MATH-300BB"].Id);
+                        group1.GroupType = GroupType.TakeAll;
+                        break;
+
+                    }
+                case "GROUP-3-REPEAT":
+                    {
+                        //TAKE 30 COURSES;
+                        group1.Id = "GROUP-3-REPEAT";
+                        group1.MinCourses = 30;
+                        group1.GroupType = GroupType.TakeCourses;
+                        break;
+                    }
+
                 default:
                     {
                         // oh come now

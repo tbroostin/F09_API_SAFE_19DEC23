@@ -51,13 +51,14 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
             switch (taxForm)
             {
+                case Dtos.Base.TaxForms.FormW2C:
                 case Dtos.Base.TaxForms.FormW2:
                     taxFormDomain = TaxForms.FormW2;
                     if (!(HasPermission(BasePermissionCodes.ViewW2) && CurrentUser.IsPerson(personId)) && !HasPermission(BasePermissionCodes.ViewEmployeeW2))
                     {
                         throw new PermissionsException("Insufficient access to W2 data.");
                     }
-                    break;
+                    break;       
                 case Dtos.Base.TaxForms.Form1095C:
                     taxFormDomain = TaxForms.Form1095C;
                     if (!(HasPermission(BasePermissionCodes.View1095C) && CurrentUser.IsPerson(personId)) && !HasPermission(BasePermissionCodes.ViewEmployee1095C))
@@ -126,6 +127,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             switch (taxForm)
             {
                 case Dtos.Base.TaxForms.FormW2:
+                    canView = HasPermission(BasePermissionCodes.ViewEmployeeW2);
+                    break;
+                case Dtos.Base.TaxForms.FormW2C:
                     canView = HasPermission(BasePermissionCodes.ViewEmployeeW2);
                     break;
                 case Dtos.Base.TaxForms.Form1095C:

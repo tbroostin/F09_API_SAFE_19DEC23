@@ -90,7 +90,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         [ExpectedException(typeof(HttpResponseException))]
         public async Task PersonHoldsController_GetPersonsActiveHoldsAsync_Exception()
         {
-            personHoldsServiceMock.Setup(s => s.GetPersonHoldsAsync(It.IsAny<int>(), It.IsAny<int>())).ThrowsAsync(new Exception());
+            personHoldsServiceMock.Setup(s => s.GetPersonHoldsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ThrowsAsync(new Exception());
 
             await personHoldsController.GetPersonsActiveHoldsAsync(new Paging(10,10));
         }
@@ -99,7 +99,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         [ExpectedException(typeof(HttpResponseException))]
         public async Task PersonHoldsController_GetPersonsActiveHoldAsync_ArgumentNullException()
         {
-            personHoldsServiceMock.Setup(s => s.GetPersonHoldAsync(It.IsAny<string>())).ThrowsAsync(new ArgumentNullException());
+            personHoldsServiceMock.Setup(s => s.GetPersonHoldAsync(It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new ArgumentNullException());
 
             await personHoldsController.GetPersonsActiveHoldAsync(It.IsAny<string>());
         }
@@ -108,7 +108,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         [ExpectedException(typeof(HttpResponseException))]
         public async Task PersonHoldsController_GetPersonsActiveHoldAsync_Exception()
         {
-            personHoldsServiceMock.Setup(s => s.GetPersonHoldAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
+            personHoldsServiceMock.Setup(s => s.GetPersonHoldAsync(It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new Exception());
 
             await personHoldsController.GetPersonsActiveHoldAsync(It.IsAny<string>());
         }
@@ -302,7 +302,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             
             var tuple = new Tuple<IEnumerable<Dtos.PersonHold>, int>(personHoldDtoList, 5);
             
-            personHoldsServiceMock.Setup(s => s.GetPersonHoldsAsync(It.IsAny<int>(), It.IsAny<int>())).ReturnsAsync(tuple);
+            personHoldsServiceMock.Setup(s => s.GetPersonHoldsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(tuple);
             var personHolds = await personHoldsController.GetPersonsActiveHoldsAsync(new Paging(10,0));
            
             var cancelToken = new System.Threading.CancellationToken(false);
@@ -334,7 +334,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         {
             var id = "65747675-f4ca-4e8b-91aa-d37c3449a82c";
             var personHold = personHoldDtoList.FirstOrDefault(i => i.Id == id);
-            personHoldsServiceMock.Setup(s => s.GetPersonHoldAsync(id)).ReturnsAsync(personHold);
+            personHoldsServiceMock.Setup(s => s.GetPersonHoldAsync(id, It.IsAny<bool>())).ReturnsAsync(personHold);
             var result = await personHoldsController.GetPersonsActiveHoldAsync(id);
 
             Assert.AreEqual(personHold.Id, result.Id);
@@ -351,7 +351,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         {
             var personId = "895cebf0-e6e8-4169-aac6-e0e14dfefdd4";
             var personHoldsByPersId = personHoldDtoList.Where(i => i.Person.Id.Equals(personId));
-            personHoldsServiceMock.Setup(s => s.GetPersonHoldsAsync(personId)).ReturnsAsync(personHoldsByPersId);
+            personHoldsServiceMock.Setup(s => s.GetPersonHoldsAsync(personId, It.IsAny<bool>())).ReturnsAsync(personHoldsByPersId);
             var result = await personHoldsController.GetPersonsActiveHoldsByPersonIdAsync(personId);
 
             Assert.AreEqual(personHoldsByPersId.Count(), result.Count());
@@ -377,7 +377,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             var id = "65747675-f4ca-4e8b-91aa-d37c3449a82c";
             var personHold = personHoldDtoList.FirstOrDefault(i => i.Id == id);
             personHoldsServiceMock.Setup(s => s.UpdatePersonHoldAsync(id, It.IsAny<Dtos.PersonHold>())).ReturnsAsync(personHold);
-            personHoldsServiceMock.Setup(s => s.GetPersonHoldAsync(id)).ReturnsAsync(personHold);
+            personHoldsServiceMock.Setup(s => s.GetPersonHoldAsync(id, It.IsAny<bool>())).ReturnsAsync(personHold);
             var result = await personHoldsController.PutPersonHoldAsync(id, personHold);
 
             Assert.AreEqual(personHold.Id, result.Id);

@@ -219,7 +219,7 @@ namespace Ellucian.Colleague.Api.Controllers
         }
 
         /// <summary>
-        /// Creates a Person record for the purposes of becoming a proxy user
+        /// Creates a Person record for the purposes of becoming a proxy user.  The Proxy Parameters (PRXP) form Allow Addition of New Users field must be turned on.
         /// </summary>
         /// <param name="user">Information about the <see cref="PersonProxyUser">proxy user</see> to create</param>
         /// <returns>The created <see cref="PersonProxyUser">proxy user</see></returns>

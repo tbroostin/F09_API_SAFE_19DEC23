@@ -172,7 +172,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <summary>
         /// Gets a subset of person credentials.
         /// </summary>
-        /// <returns>The requested <see cref="Dtos.PersonCredential">PersonsCredentials</see></returns>
+        /// <returns>The requested <see cref="Dtos.PersonCredential2">PersonsCredentials</see></returns>
         [HttpGet]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 200), EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
@@ -238,6 +238,106 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
                 return new PagedHttpActionResult<IEnumerable<Dtos.PersonCredential2>>(pageOfItems.Item1, page, pageOfItems.Item2, this.Request);
 
+            }
+            catch (ArgumentNullException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (RepositoryException rex)
+            {
+                _logger.Error(rex.Message);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(rex));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
+
+        /// <summary>
+        /// Gets a subset of person credentials.
+        /// </summary>
+        /// <returns>The requested <see cref="Dtos.PersonCredential3">PersonsCredentials</see></returns>
+        [HttpGet]
+        [PagingFilter(IgnorePaging = true, DefaultLimit = 200), EedmResponseFilter]
+        [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
+        [QueryStringFilterFilter("criteria", typeof(Dtos.PersonCredential3))]
+        //public async Task<IHttpActionResult> GetPersonCredentials4Async(Paging page, [FromUri] string criteria = "")
+        public async Task<IHttpActionResult> GetPersonCredentials4Async(Paging page, QueryStringFilter criteria)
+        {
+            try
+            {
+                bool bypassCache = false;
+                if (Request.Headers.CacheControl != null)
+                {
+                    if (Request.Headers.CacheControl.NoCache)
+                    {
+                        bypassCache = true;
+                    }
+                }
+                if (page == null)
+                {
+                    page = new Paging(200, 0);
+                }
+
+                var criteriaObject = GetFilterObject<Dtos.PersonCredential3>(_logger, "criteria");
+
+                //we need to validate the credentials
+                if (criteriaObject.Credentials != null && criteriaObject.Credentials.Any())
+                {
+                    foreach (var cred in criteriaObject.Credentials)
+                    {
+                        switch (cred.Type)
+                        {
+                            case Credential3Type.BannerId:
+                                throw new ArgumentException("credentialType", string.Concat("credentials.type filter of 'bannerId' is not supported."));
+                            case Credential3Type.BannerSourcedId:
+                                throw new ArgumentException("credentialType", string.Concat("credentials.type filter of 'bannerSourcedId' is not supported."));
+                            case Credential3Type.BannerUdcId:
+                                throw new ArgumentException("credentialType", string.Concat("credentials.type filter of 'bannerUdcId' is not supported."));
+                            case Credential3Type.BannerUserName:
+                                throw new ArgumentException("credentialType", string.Concat("credentials.type filter of 'bannerUserName' is not supported."));
+                            case Credential3Type.Ssn:
+                                throw new ArgumentException("credentialType", string.Concat("credentials.type filter of 'ssn' is not supported."));
+                            case Credential3Type.Sin:
+                                throw new ArgumentException("credentialType", string.Concat("credentials.type filter of 'sin' is not supported."));
+                        }
+                    }
+                }
+                //we need to validate the alternative credentials
+                if (criteriaObject.AlternativeCredentials != null && criteriaObject.AlternativeCredentials.Any())
+                {
+                    foreach (var cred in criteriaObject.AlternativeCredentials)
+                    {
+                        if (cred.Type != null && string.IsNullOrEmpty(cred.Value))
+                        {
+                            throw new ArgumentException("alternativeCredentials.type", string.Concat("alternativeCredentials.type.id filter requires alternativeCredentials.value filter."));
+                        }
+                    }
+                }
+
+                if (CheckForEmptyFilterParameters())
+                    return new PagedHttpActionResult<IEnumerable<Dtos.PersonCredential3>>(new List<Dtos.PersonCredential3>(), page, 0, this.Request);
+
+                var pageOfItems = await _personService.GetAllPersonCredentials4Async(page.Offset, page.Limit, criteriaObject, bypassCache);
+
+                AddEthosContextProperties(await _personService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                              await _personService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              pageOfItems.Item1.Select(a => a.Id).ToList()));
+
+                return new PagedHttpActionResult<IEnumerable<Dtos.PersonCredential3>>(pageOfItems.Item1, page, pageOfItems.Item2, this.Request);
+
+            }
+            catch (PermissionsException e)
+            {
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentNullException e)
             {
@@ -403,6 +503,58 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
         }
 
+        #region persons credentials v11.1.10
+        /// <summary>
+        /// Get a subset of person's data, including only their credentials.
+        /// </summary>
+        /// <param name="id">A global identifier of a person.</param>
+        /// <returns>The requested <see cref="Dtos.PersonCredential3">PersonsCredentials</see></returns>
+        [EedmResponseFilter]
+        public async Task<Dtos.PersonCredential3> GetPersonCredential4ByGuidAsync(string id)
+        {
+            var bypassCache = false;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
+
+            try
+            {
+                var credential = await _personService.GetPersonCredential4ByGuidAsync(id);
+
+                if (credential != null)
+                {
+
+                    AddEthosContextProperties(await _personService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                              await _personService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              new List<string>() { credential.Id }));
+                }
+
+
+                return credential;
+
+            }
+            catch (PermissionsException e)
+            {
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.ToString());
+                throw CreateNotFoundException("person", id);
+            }
+        }
+
+        #endregion
+
         /// <remarks>FOR USE WITH ELLUCIAN CDM</remarks>
         /// <summary>
         /// Retrieves all active person restriction types for a student
@@ -457,6 +609,36 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             {
                 _logger.Error(ex.ToString());
                 throw CreateNotFoundException("person", personId);
+            }
+        }
+
+        /// <summary>
+        /// Get only the information required to create a proxy
+        /// </summary>
+        /// <param name="personId">Id of the person to get</param>
+        /// <returns>The requested <see cref="Dtos.Base.PersonProxyDetails"/> information </returns>
+        /// <accessComments>
+        /// Only the current user can access the proxy's details
+        /// </accessComments>
+        public async Task<Dtos.Base.PersonProxyDetails> GetPersonProxyDetailsAsync(string personId)
+        {
+            try
+            {
+                return await _personService.GetPersonProxyDetailsAsync(personId);
+            }
+             catch (ArgumentNullException anex)
+            {
+                _logger.Error(anex.ToString());
+                throw CreateHttpResponseException("Person ID cannot be null", HttpStatusCode.BadRequest);
+            }
+            catch (PermissionsException pex)
+            {
+                throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.ToString());
+                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
             }
         }
 
@@ -645,7 +827,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 }
                 if (credentialTypeValue == Dtos.EnumProperties.CredentialType.Sin || credentialTypeValue == Dtos.EnumProperties.CredentialType.Ssn || credentialTypeValue == Dtos.EnumProperties.CredentialType.BannerId
                             || credentialTypeValue == Dtos.EnumProperties.CredentialType.BannerSourcedId || credentialTypeValue == Dtos.EnumProperties.CredentialType.BannerUdcId || credentialTypeValue == Dtos.EnumProperties.CredentialType.BannerSourcedId ||
-                            credentialTypeValue == Dtos.EnumProperties.CredentialType.BannerUserName )
+                            credentialTypeValue == Dtos.EnumProperties.CredentialType.BannerUserName)
                 {
                     throw new ArgumentException("credentialType", string.Concat("Credential Type filter of '", credentialTypeValue, "' is not supported."));
                 }
@@ -944,7 +1126,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
         #endregion
 
-        #region METHODS for EEDM V12
+        #region GET METHODS for EEDM V12
 
         /// <summary>
         /// Get a person.
@@ -1105,6 +1287,205 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+            }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
+
+        #endregion
+
+        #region GET METHODS for EEDM V12.1.0
+
+        /// <summary>
+        /// Get a person.
+        ///  If the request header "Cache-Control" attribute is set to "no-cache" the data returned will be pulled fresh from the database, otherwise cached data is returned.
+        /// </summary>
+        /// <param name="guid">Guid of the person to get</param>
+        /// <returns>The requested <see cref="Person4">Person</see></returns>
+        [EedmResponseFilter]
+        public async Task<Dtos.Person5> GetPerson5ByIdAsync(string guid)
+        {
+            var bypassCache = false;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
+            try
+            {
+                AddEthosContextProperties(
+                    await _personService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                    await _personService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                        new List<string>() { guid }));
+
+                return await _personService.GetPerson5ByGuidAsync(guid, bypassCache);
+            }
+            catch (PermissionsException e)
+            {
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (KeyNotFoundException e)
+            {
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
+
+        /// <summary>
+        /// Return a list of Person objects based on selection criteria.
+        /// </summary>
+        /// <param name="page">Person page to retrieve</param>
+        /// <param name="personFilter">Person filter search criteria</param>
+        /// <param name="criteria">Person search criteria in JSON format
+        /// Can contain:
+        /// title - Person title equal to
+        /// firstName - Person First Name equal to
+        /// middleName - Person Middle Name equal to
+        /// lastNamePrefix - Person Last Name begins with 'code...'
+        /// lastName- -Person Last Name equal to
+        /// role - Person Role equal to (guid)
+        /// credentialType - Person Credential Type (colleagueId - SSN/SIN not supported here)
+        /// credentialValue - Person Credential equal to
+        /// alternativeCredentialsType - alternativeCredentials Type 
+        /// alternativeCredentialsValue -alternativeCredentials equal to
+        /// personFilter - Selection from SaveListParms definition or person-filters</param>
+        /// <returns>List of Person3 <see cref="Dtos.Person3"/> objects representing matching persons</returns>
+        [HttpGet]
+        [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
+        [QueryStringFilterFilter("criteria", typeof(Dtos.Person5))]
+        [QueryStringFilterFilter("personFilter", typeof(Dtos.Filters.PersonFilterFilter))]
+        [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
+        public async Task<IHttpActionResult> GetPerson5Async(Paging page, QueryStringFilter personFilter, QueryStringFilter criteria)
+        {
+            var bypassCache = false;
+
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
+            try
+            {
+                if (page == null)
+                {
+                    page = new Paging(100, 0);
+                }
+                string personFilterValue = string.Empty;
+                var personFilterObj = GetFilterObject<Dtos.Filters.PersonFilterFilter>(_logger, "personFilter");
+                if (personFilterObj != null)
+                {
+                    personFilterValue = personFilterObj.personFilterId != null ? personFilterObj.personFilterId : null;
+                }
+                var criteriaObject = GetFilterObject<Dtos.Person5>(_logger, "criteria");
+                if (CheckForEmptyFilterParameters())
+                    return new PagedHttpActionResult<IEnumerable<Dtos.Person5>>(new List<Dtos.Person5>(), page, 0, this.Request);
+                //we need to validate the credentials
+                if (criteriaObject.Credentials != null && criteriaObject.Credentials.Any())
+                {
+                    foreach (var cred in criteriaObject.Credentials)
+                    {
+                        switch (cred.Type)
+                        {
+                            case Credential3Type.BannerId:
+                                throw new ArgumentException("credentialType", string.Concat("credentials.type filter of 'bannerId' is not supported."));
+                            case Credential3Type.BannerSourcedId:
+                                throw new ArgumentException("credentialType", string.Concat("credentials.type filter of 'bannerSourcedId' is not supported."));
+                            case Credential3Type.BannerUdcId:
+                                throw new ArgumentException("credentialType", string.Concat("credentials.type filter of 'bannerUdcId' is not supported."));
+                            case Credential3Type.BannerUserName:
+                                throw new ArgumentException("credentialType", string.Concat("credentials.type filter of 'bannerUserName' is not supported."));
+                            case Credential3Type.Ssn:
+                                throw new ArgumentException("credentialType", string.Concat("credentials.type filter of 'ssn' is not supported."));
+                            case Credential3Type.Sin:
+                                throw new ArgumentException("credentialType", string.Concat("credentials.type filter of 'sin' is not supported."));
+                        }
+                    }
+                }
+                //we need to validate the alternative credentials
+                if (criteriaObject.AlternativeCredentials != null && criteriaObject.AlternativeCredentials.Any())
+                {
+                    foreach (var cred in criteriaObject.AlternativeCredentials)
+                    {
+                        if (cred.Type != null && string.IsNullOrEmpty(cred.Value))
+                        {
+                            throw new ArgumentException("alternativeCredentials.type", string.Concat("alternativeCredentials.type.id filter requires alternativeCredentials.value filter."));
+                        }
+                    }
+                }
+
+                var pageOfItems = await _personService.GetPerson5NonCachedAsync(page.Offset, page.Limit, bypassCache, criteriaObject, personFilterValue);
+                AddEthosContextProperties(
+                    await _personService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                    await _personService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                        pageOfItems.Item1.Select(i => i.Id).ToList()));
+
+                return new PagedHttpActionResult<IEnumerable<Dtos.Person5>>(pageOfItems.Item1, page, pageOfItems.Item2, this.Request);
+
+            }
+            catch (JsonSerializationException e)
+            {
+                _logger.Error(e.ToString());
+
+                throw CreateHttpResponseException(new IntegrationApiException("Deserialization Error",
+                   IntegrationApiUtility.GetDefaultApiError("Error parsing JSON person search request.")));
+            }
+            catch (JsonReaderException e)
+            {
+                _logger.Error(e.ToString());
+
+                throw CreateHttpResponseException(new IntegrationApiException("Deserialization Error",
+                   IntegrationApiUtility.GetDefaultApiError("Error parsing JSON person search request.")));
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -1308,6 +1689,82 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
                 //create the person
                 var personReturn = await _personService.CreatePerson4Async(person);
+
+                //store dataprivacy list and get the extended data to store 
+                AddEthosContextProperties(await _personService.GetDataPrivacyListByApi(GetRouteResourceName(), true),
+                   await _personService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(), new List<string>() { personReturn.Id }));
+
+                return personReturn;
+            }
+            catch (ApplicationException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.BadRequest);
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+            }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (ConfigurationException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
+
+        /// <summary>
+        /// Create (POST) a new person for v12.1.0
+        /// </summary>
+        /// <param name="person">DTO of the new person</param>
+        /// <returns>A person object <see cref="Person5"/> in HeDM format</returns>
+        [HttpPost, EedmResponseFilter]
+        public async Task<Person5> PostPerson5Async([ModelBinder(typeof(EedmModelBinder))] Person5 person)
+        {
+            if (person == null)
+            {
+                throw CreateHttpResponseException("Request body must contain a valid Person.", HttpStatusCode.BadRequest);
+            }
+            if (string.IsNullOrEmpty(person.Id))
+            {
+                throw CreateHttpResponseException(new IntegrationApiException("Null person id",
+                    IntegrationApiUtility.GetDefaultApiError("Id is a required property.")));
+            }
+            if (person.Id != Guid.Empty.ToString())
+            {
+                throw new ArgumentNullException("person", "Nil GUID must be used in POST operation.");
+            }
+
+            try
+            {
+                // Check citizenship fields
+                var xx = await _personService.CheckCitizenshipfields(person.CitizenshipStatus, person.CitizenshipCountry, null, null);
+
+                //call import extend method that needs the extracted extension data and the config
+                await _personService.ImportExtendedEthosData(await ExtractExtendedData(await _personService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
+
+                //create the person
+                var personReturn = await _personService.CreatePerson5Async(person);
 
                 //store dataprivacy list and get the extended data to store 
                 AddEthosContextProperties(await _personService.GetDataPrivacyListByApi(GetRouteResourceName(), true),
@@ -1714,6 +2171,131 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
         }
+
+        /// <summary>
+        /// Update (PUT) an existing person for v12.1.0
+        /// </summary>
+        /// <param name="guid">GUID of the person to update</param>
+        /// <param name="person">DTO of the updated person</param>
+        /// <returns>A Person2 object <see cref="Dtos.Person5"/> in HeDM format</returns>
+        [HttpPut, EedmResponseFilter]
+        public async Task<Dtos.Person5> PutPerson5Async([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.Person5 person)
+        {
+            if (string.IsNullOrEmpty(guid))
+            {
+                throw CreateHttpResponseException(new IntegrationApiException("Null guid argument",
+                    IntegrationApiUtility.GetDefaultApiError("The GUID must be specified in the request URL.")));
+            }
+            if (person == null)
+            {
+                throw CreateHttpResponseException(new IntegrationApiException("Null person argument",
+                    IntegrationApiUtility.GetDefaultApiError("The request body is required.")));
+            }
+            if (guid.Equals(Guid.Empty.ToString(), StringComparison.OrdinalIgnoreCase))
+            {
+                throw CreateHttpResponseException("Nil GUID cannot be used in PUT operation.", HttpStatusCode.BadRequest);
+            }
+            if (string.IsNullOrEmpty(person.Id))
+            {
+                person.Id = guid.ToLowerInvariant();
+            }
+            else if (!string.Equals(guid, person.Id, StringComparison.InvariantCultureIgnoreCase))
+            {
+                throw CreateHttpResponseException(new IntegrationApiException("GUID mismatch",
+                    IntegrationApiUtility.GetDefaultApiError("GUID not the same as in request body.")));
+            }
+
+            try
+            {
+                //get Data Privacy List
+                var dpList = await _personService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
+
+                //call import extend method that needs the extracted extension dataa and the config
+                await _personService.ImportExtendedEthosData(await ExtractExtendedData(await _personService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
+
+
+                // Check for {} sent in for Citizenship Status
+                if (person.CitizenshipStatus != null)
+                {
+                    if (person.CitizenshipStatus.Category == null && (person.CitizenshipStatus.Detail == null || string.IsNullOrEmpty(person.CitizenshipStatus.Detail.Id)))
+                    {
+                        person.CitizenshipStatus = null;
+                    }
+                }
+                if (string.IsNullOrEmpty(person.CitizenshipCountry)) person.CitizenshipCountry = null;
+
+                // do partial merge
+                var originalPerson = new Dtos.Person5();
+                try
+                {
+                    originalPerson = await _personService.GetPerson5ByGuidAsync(guid, true);
+                }
+                catch (KeyNotFoundException)
+                {
+                    originalPerson = null;
+                }
+
+                var mergedPerson = await PerformPartialPayloadMerge(person, originalPerson, dpList, _logger);
+
+                PersonCitizenshipDtoProperty originalPersonCitizenshipStatus = null;
+                string originalPersonCitizenshipCountry = null;
+                if (originalPerson != null)
+                {
+                    originalPersonCitizenshipStatus = originalPerson.CitizenshipStatus;
+                    originalPersonCitizenshipCountry = originalPerson.CitizenshipCountry;
+                }
+
+                // Check citizenship fields
+                var xx = await _personService.CheckCitizenshipfields(mergedPerson.CitizenshipStatus, mergedPerson.CitizenshipCountry, originalPersonCitizenshipStatus, originalPersonCitizenshipCountry);
+
+
+                //do update with partial logic
+                var personReturn = await _personService.UpdatePerson5Async(mergedPerson);
+
+                //store dataprivacy list and get the extended data to store 
+                AddEthosContextProperties(dpList,
+                    await _personService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(), new List<string>() { guid }));
+
+                return personReturn;
+            }
+            catch (ApplicationException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.BadRequest);
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+            }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (ConfigurationException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
+
+
         /// <summary>
         /// Updates certain person profile information: AddressConfirmationDateTime, EmailAddressConfirmationDateTime,
         /// PhoneConfirmationDateTime, EmailAddresses, Personal Phones and Addresses. LastChangedDateTime must match the last changed timestamp on the database
@@ -1977,6 +2559,45 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             try
             {
                 var personDtos = await _personService.QueryPerson4ByPostAsync(person, bypassCache);
+
+                AddEthosContextProperties(await _personService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                              await _personService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              personDtos.Select(a => a.Id).ToList()));
+
+                return personDtos;
+            }
+            catch (PermissionsException pex)
+            {
+                throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.ToString());
+                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Queries a person by post.
+        /// </summary>
+        /// <param name="person"><see cref="Person4">Person</see> to use for querying</param>
+        /// <returns>List of matching <see cref="Person4">persons</see></returns>
+        [HttpPost, EedmResponseFilter]
+        public async Task<IEnumerable<Person5>> QueryPerson5ByPostAsync([FromBody] Person5 person)
+        {
+            var bypassCache = false;
+
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
+
+            try
+            {
+                var personDtos = await _personService.QueryPerson5ByPostAsync(person, bypassCache);
 
                 AddEthosContextProperties(await _personService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                               await _personService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),

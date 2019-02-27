@@ -31,7 +31,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         private Mock<IPdfSharpRepository> mockPdfSharpRepository;
         private Mock<IPersonRepository> mockPersonRepository;
         private ICurrentUserFactory currentUserFactory;
-        private string personId = "0000001";
+        private string personId = "000001";
         private string fakePdfPath = "fakePath";
         private string exceptionString = "exception";
         private List<string> institutionAddressLines;
@@ -47,6 +47,11 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 return Task.FromResult(TestPdfDataRepository.Get1098PdfAsync(personId, recordId));
             });
 
+            mockTaxFormPdfDataRepository.Setup<Task<Form1098PdfData>>(rep => rep.Get1098PdfAsync("000002", "2015")).Returns<string, string>((personId, recordId) =>
+            {
+                return Task.FromResult(new Form1098PdfData("2015", "98-7654321") { StudentId = "0000003" });
+            });
+
             // Mock to throw exception
             mockTaxFormPdfDataRepository.Setup<Task<Form1098PdfData>>(rep => rep.Get1098PdfAsync(It.IsAny<string>(), exceptionString)).Returns<string, string>((personId, recordId) =>
             {
@@ -57,6 +62,11 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             mockTaxFormPdfDataRepository.Setup<Task<FormT2202aPdfData>>(rep => rep.GetT2202aPdfAsync(It.IsAny<string>(), It.IsAny<string>())).Returns<string, string>((personId, recordId) =>
             {
                 return Task.FromResult(TestPdfDataRepository.GetFormT2202aPdfDataAsync(personId, recordId));
+            });
+
+            mockTaxFormPdfDataRepository.Setup<Task<FormT2202aPdfData>>(rep => rep.GetT2202aPdfAsync("000002", "2")).Returns<string, string>((personId, recordId) =>
+            {
+                return Task.FromResult(new FormT2202aPdfData("2015", "0000003"));
             });
 
             // Mock to throw exception
@@ -157,12 +167,25 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             BuildTaxFormPdfService(false);
             var pdfData = await service.Get1098TaxFormData("2", "1");
         }
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task Get1098TaxFormData_PersonId_DoesNotMatch_CurrentUser()
+        {
+            var pdfData = await service.Get1098TaxFormData("000002", "2015");
+        }
 
         [TestMethod]
         [ExpectedException(typeof(Exception))]
         public async Task Get1098TaxFormData_RepositoryThrowsException()
         {
             var pdfData = await service.Get1098TaxFormData(personId, exceptionString);
+        }
+
+        [TestMethod]
+        public async Task Get1098TaxFormData_Success_2018()
+        {
+            var pdfData = await service.Get1098TaxFormData(personId, "2018");
+            Assert.IsTrue(pdfData is Form1098PdfData);
         }
 
         [TestMethod]
@@ -305,56 +328,6 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         }
         #endregion
 
-        #region Private methods and helper classes
-        private void BuildTaxFormPdfService(bool isPermissionsRequired = true)
-        {
-            // Set up the current user
-            currentUserFactory = new GenericUserFactory.TaxInformationUserFactory();
-
-            var roles = new List<Domain.Entities.Role>();
-
-            var role = new Domain.Entities.Role(1, "VIEW.1098");
-            if (isPermissionsRequired)
-            {
-                role.AddPermission(new Domain.Entities.Permission("VIEW.1098"));
-                role.AddPermission(new Domain.Entities.Permission("VIEW.STUDENT.1098"));
-            }
-
-            roles.Add(role);
-
-            role = new Domain.Entities.Role(2, "VIEW.T2202A");
-            if (isPermissionsRequired)
-            {
-                role.AddPermission(new Domain.Entities.Permission("VIEW.T2202A"));
-                role.AddPermission(new Domain.Entities.Permission("VIEW.STUDENT.T2202A"));
-            }
-
-            roles.Add(role);
-
-            // We need the unit tests to be independent of "real" implementations of these classes,
-            // so we use Moq to create mock implementations that are based on the same interfaces.
-            var roleRepository = new Mock<IRoleRepository>();
-            roleRepository.Setup(r => r.Roles).Returns(roles);
-
-            var loggerObject = new Mock<ILogger>().Object;
-
-            // Set up and mock the adapter, and setup the GetAdapter method.
-            var adapterRegistry = new Mock<IAdapterRegistry>();
-            var taxFormStatementDtoAdapter = new AutoMapperAdapter<Domain.Base.Entities.TaxFormStatement2, Dtos.Base.TaxFormStatement2>(adapterRegistry.Object, loggerObject);
-            adapterRegistry.Setup(x => x.GetAdapter<Domain.Base.Entities.TaxFormStatement2, Dtos.Base.TaxFormStatement2>()).Returns(taxFormStatementDtoAdapter);
-
-            // Set up the current user with a subset of tax form statements and set up the service.
-            service = new StudentTaxFormPdfService(this.mockTaxFormPdfDataRepository.Object,
-                this.mockPdfSharpRepository.Object,
-                this.mockPersonRepository.Object,
-                adapterRegistry.Object,
-                currentUserFactory,
-                roleRepository.Object,
-                loggerObject);
-        }
-        
-        #endregion
-
         #region GetT2202aTaxFormData tests
 
         [TestMethod]
@@ -391,6 +364,13 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         {
             BuildTaxFormPdfService(false);
             var pdfData = await service.GetT2202aTaxFormData("2", "1");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task GetT2202aTaxFormData_PersonId_DoesNotMatch_CurrentUser()
+        {
+            var pdfData = await service.GetT2202aTaxFormData("000002", "2");
         }
 
         [TestMethod]
@@ -440,6 +420,57 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         {
             var pdfData = await service.GetT2202aTaxFormData(personId, "2010");
             Assert.IsTrue(pdfData is FormT2202aPdfData);
+        }
+
+        #endregion
+
+        #region Private methods and helper classes
+
+        private void BuildTaxFormPdfService(bool isPermissionsRequired = true)
+        {
+            // Set up the current user
+            currentUserFactory = new GenericUserFactory.TaxInformationUserFactory();
+
+            var roles = new List<Domain.Entities.Role>();
+
+            var role = new Domain.Entities.Role(1, "VIEW.1098");
+            if (isPermissionsRequired)
+            {
+                role.AddPermission(new Domain.Entities.Permission("VIEW.1098"));
+                role.AddPermission(new Domain.Entities.Permission("VIEW.STUDENT.1098"));
+            }
+
+            roles.Add(role);
+
+            role = new Domain.Entities.Role(2, "VIEW.T2202A");
+            if (isPermissionsRequired)
+            {
+                role.AddPermission(new Domain.Entities.Permission("VIEW.T2202A"));
+                role.AddPermission(new Domain.Entities.Permission("VIEW.STUDENT.T2202A"));
+            }
+
+            roles.Add(role);
+
+            // We need the unit tests to be independent of "real" implementations of these classes,
+            // so we use Moq to create mock implementations that are based on the same interfaces.
+            var roleRepository = new Mock<IRoleRepository>();
+            roleRepository.Setup(r => r.Roles).Returns(roles);
+
+            var loggerObject = new Mock<ILogger>().Object;
+
+            // Set up and mock the adapter, and setup the GetAdapter method.
+            var adapterRegistry = new Mock<IAdapterRegistry>();
+            var taxFormStatementDtoAdapter = new AutoMapperAdapter<Domain.Base.Entities.TaxFormStatement2, Dtos.Base.TaxFormStatement2>(adapterRegistry.Object, loggerObject);
+            adapterRegistry.Setup(x => x.GetAdapter<Domain.Base.Entities.TaxFormStatement2, Dtos.Base.TaxFormStatement2>()).Returns(taxFormStatementDtoAdapter);
+
+            // Set up the current user with a subset of tax form statements and set up the service.
+            service = new StudentTaxFormPdfService(this.mockTaxFormPdfDataRepository.Object,
+                this.mockPdfSharpRepository.Object,
+                this.mockPersonRepository.Object,
+                adapterRegistry.Object,
+                currentUserFactory,
+                roleRepository.Object,
+                loggerObject);
         }
 
         #endregion

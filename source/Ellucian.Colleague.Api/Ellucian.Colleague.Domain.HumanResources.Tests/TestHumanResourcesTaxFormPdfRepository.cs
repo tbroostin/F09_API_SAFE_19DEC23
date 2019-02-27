@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using System.Linq;
@@ -14,13 +14,13 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
         {
             this.Form1098PdfDataObjects = new List<FormT4PdfData>()
             {
-                new FormT4PdfData() { TaxYear = "2016" },
-                new FormT4PdfData() { TaxYear = "2015" },
-                new FormT4PdfData() { TaxYear = "2014" },
-                new FormT4PdfData() { TaxYear = "2013" },
-                new FormT4PdfData() { TaxYear = "2012" },
-                new FormT4PdfData() { TaxYear = "2011" },
-                new FormT4PdfData() { TaxYear = "2010" },
+                new FormT4PdfData() { TaxYear = "2016", EmployeeId = "000001" },
+                new FormT4PdfData() { TaxYear = "2015", EmployeeId = "000001" },
+                new FormT4PdfData() { TaxYear = "2014", EmployeeId = "000001" },
+                new FormT4PdfData() { TaxYear = "2013", EmployeeId = "000001" },
+                new FormT4PdfData() { TaxYear = "2012", EmployeeId = "000001" },
+                new FormT4PdfData() { TaxYear = "2011", EmployeeId = "000001" },
+                new FormT4PdfData() { TaxYear = "2010", EmployeeId = "000001" },
             };
         }
 

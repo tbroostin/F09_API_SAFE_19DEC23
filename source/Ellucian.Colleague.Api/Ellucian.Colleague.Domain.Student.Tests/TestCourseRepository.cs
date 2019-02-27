@@ -160,6 +160,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                 {"93","7433","COMM-1315","COMM","Communications", "100","UG", "Communications part 1315","" },
                 // Added for testing sections' attendance tracking type 
                 {"94","7434","COMM-123","COMM","Communications", "100","UG", "Communications 123","" },
+                //test data for retake and replace testing
+                {"95","7435","MATH-300BB","MATH","Mathematics","300","GR","Calculus AP","" }
                 };
 
         public TestCourseRepository(ICacheProvider cacheProvider = null, IColleagueTransactionFactory transactionFactory = null, ILogger logger = null) : base(new Mock<ICacheProvider>().Object, new Mock<IColleagueTransactionFactory>().Object, logger)
@@ -257,6 +259,9 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                             cEndDate = new DateTime(2035, 12, 31);
                             approvals.Add(new CourseApproval("T", cStartDate.Value, "0000043", "0003315", cStartDate.Value) { Status = CourseStatus.Terminated });
                             break;
+
+                        
+
                         default:
                             // Current: status active, current date after start date
                             cStatus = CourseStatus.Active;
@@ -279,6 +284,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                                 ExternalSource = "EXT"
                             };
                             break;
+
+                        
                         default:
                             c = new Course(cId, cTitle, cLongTitle, cDepts, cSubject, cNumber, cAcadLevel, cLevels, 3.0m, 1.0m, approvals);
                             break;
@@ -372,6 +379,12 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                         c.AddLocationCycleRestriction(new LocationCycleRestriction("LOC3", "", ""));
                     }
 
+                    if (c.Id == "7435")//MATH.BB COURSE for retake/ replace tests
+                    {
+                        c.AllowToCountCourseRetakeCredits = false;
+
+                    }
+                           
                     // Add course types
                     c.AddType("TYPEA");
 

@@ -62,7 +62,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (PermissionsException peex)
             {
                 logger.Error(peex, peex.Message);
-                throw CreateHttpResponseException("Insufficient permissions to access tax form statements.", HttpStatusCode.Forbidden);
+                throw CreateHttpResponseException("Insufficient permissions to access W-2 tax form statements.", HttpStatusCode.Forbidden);
             }
             catch (ArgumentOutOfRangeException arex)
             {
@@ -104,7 +104,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (PermissionsException peex)
             {
                 logger.Error(peex, peex.Message);
-                throw CreateHttpResponseException("Insufficient permissions to access tax form statements.", HttpStatusCode.Forbidden);
+                throw CreateHttpResponseException("Insufficient permissions to access 1095C tax form statements.", HttpStatusCode.Forbidden);
             }
             catch (ArgumentOutOfRangeException arex)
             {
@@ -147,7 +147,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (PermissionsException peex)
             {
                 logger.Error(peex, peex.Message);
-                throw CreateHttpResponseException("Insufficient permissions to access tax form statements.", HttpStatusCode.Forbidden);
+                throw CreateHttpResponseException("Insufficient permissions to access T4 tax form statements.", HttpStatusCode.Forbidden);
             }
             catch (ArgumentOutOfRangeException arex)
             {

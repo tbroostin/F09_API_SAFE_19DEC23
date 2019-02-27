@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -21,12 +21,11 @@ using slf4net;
 using CreditOrDebit = Ellucian.Colleague.Domain.ColleagueFinance.Entities.CreditOrDebit;
 using CurrencyCodes = Ellucian.Colleague.Domain.ColleagueFinance.Entities.CurrencyCodes;
 using GeneralLedgerTransaction = Ellucian.Colleague.Domain.ColleagueFinance.Entities.GeneralLedgerTransaction;
-using Ellucian.Colleague.Data.ColleagueFinance.Repositories;
 using Ellucian.Web.Security;
 
 namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 {
-   
+
     [TestClass]
     public class GeneralLedgerTransactionServiceTests : GeneralLedgerCurrentUser
     {
@@ -1207,9 +1206,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     new GeneralLedgerTransaction() { Id = "", Comment = "comment1", SubmittedBy = "Vaidya", GeneralLedgerTransactions = new List<GenLedgrTransaction>() { new GenLedgrTransaction("source_1", DateTime.Now) { BudgetPeriodDate = DateTime.Now, ReferencePersonId = "000011", TransactionNumber = "Tran_1", TransactionTypeReferenceDate = DateTimeOffset.Now, TransactionDetailLines = new List<GenLedgrTransactionDetail>() { new GenLedgrTransactionDetail("000123", "Proj1_001", "desc", type: new CreditOrDebit(), amount: new AmountAndCurrency(10, CurrencyCodes.USD)) } } } } };
 
                 fiscalPeriodsIntg = new List<FiscalPeriodsIntg>() { new FiscalPeriodsIntg("0ca1a878-3555-4a3f-a17b-20d054d5e469", "0001") { FiscalYear = DateTime.Now.Year, Month = DateTime.Now.Month, Year = DateTime.Now.Year } };
-                fiscalYears = new List<FiscalYear>() { new FiscalYear("0ca1a878-3555-4a3f-a17b-20d054d5e000", (DateTime.Now.Year+1).ToString()) { CurrentFiscalYear = DateTime.Now.Year, FiscalStartMonth = 7 },
-                                                       new FiscalYear("0ca1a878-3555-4a3f-a17b-20d054d5e001", (DateTime.Now.Year).ToString()) { CurrentFiscalYear = DateTime.Now.Year, FiscalStartMonth = 7 },
-                                                       new FiscalYear("0ca1a878-3555-4a3f-a17b-20d054d5e002", (DateTime.Now.Year+1).ToString()) { CurrentFiscalYear = DateTime.Now.Year, FiscalStartMonth = 1 }
+                fiscalYears = new List<FiscalYear>() { new FiscalYear("0ca1a878-3555-4a3f-a17b-20d054d5e000", "2019") { CurrentFiscalYear = 2018, FiscalStartMonth = 7 },
+                                                      new FiscalYear("0ca1a878-3555-4a3f-a17b-20d054d5e001", "2018") { CurrentFiscalYear = 2018, FiscalStartMonth = 7 },
+                                                      new FiscalYear("0ca1a878-3555-4a3f-a17b-20d054d5e002", "2019") { CurrentFiscalYear = 2018, FiscalStartMonth = 1 }
                 };
 
                 generalLedgerTransactionDto = new GeneralLedgerTransaction3() { Comment="comment_1", Id= "0ca1a878-3555-4a3f-a17b-20d054d5e469", ProcessMode= ProcessMode2.UpdateImmediate,SubmittedBy= new GuidObject2("0ca1a878-3555-4a3f-a17b-20d054d5e460"), Transactions = new List<GeneralLedgerTransactionDtoProperty3>() { new GeneralLedgerTransactionDtoProperty3()

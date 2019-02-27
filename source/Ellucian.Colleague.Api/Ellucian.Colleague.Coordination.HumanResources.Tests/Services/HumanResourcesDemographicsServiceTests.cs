@@ -1,4 +1,4 @@
-﻿/*Copyright 2017 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2017-2018 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -62,7 +62,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                         SessionFixationId = "abc123",
                         ProxySubjectClaims = new ProxySubjectClaims()
                         {
-                            PersonId = "0000001"
+                            PersonId = "0000001",
+                            Permissions = new List<string> { Domain.Base.Entities.ProxyWorkflowConstants.TimeManagementTimeApproval.Value }
                         }
                     });
                 }
@@ -172,14 +173,14 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             proxyAdapterRegistryMock.Setup(x => x.GetAdapter<Domain.Base.Entities.PersonBase, Dtos.HumanResources.HumanResourceDemographics>()).Returns(proxyPersonBaseEntityToHumanResourceDemographicsDtoAdapter);
 
             humanResourceDemographicsService = new HumanResourceDemographicsService(
-                personBaseRepositoryMock.Object, 
-                supervisorsRepositoryMock.Object, 
+                personBaseRepositoryMock.Object,
+                supervisorsRepositoryMock.Object,
                 employeeRepositoryMock.Object,
                 adapterRegistryMock.Object,
-                currentUserFactory, 
-                roleRepositoryMock.Object, 
+                currentUserFactory,
+                roleRepositoryMock.Object,
                 loggerMock.Object);
-            
+
             //Service for proxy, the proxyCurrentUserFactory has a proxy subject claim with an id
             proxyHumanResourceDemographicsService = new HumanResourceDemographicsService(
                 proxyPersonBaseRepositoryMock.Object,
@@ -219,7 +220,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             {
                 string inputPersonId = currentUserFactory.CurrentUser.PersonId;
                 var personRec = personBaseEntityList[0];
-                personBaseRepositoryMock.Setup(repo => repo.GetPersonBaseAsync(It.IsAny<string>(),It.IsAny<bool>())).Returns(Task.FromResult(personRec));
+                personBaseRepositoryMock.Setup(repo => repo.GetPersonBaseAsync(It.IsAny<string>(), It.IsAny<bool>())).Returns(Task.FromResult(personRec));
                 var actuals = await humanResourceDemographicsService.GetSpecificHumanResourceDemographicsAsync(inputPersonId);
                 Assert.AreEqual(personRec.LastName, actuals.LastName);
                 Assert.AreEqual(personRec.FirstName, actuals.FirstName);
@@ -278,7 +279,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 var actuals = await humanResourceDemographicsService.GetHumanResourceDemographicsAsync();
                 Assert.AreEqual(personRec.LastName, actuals.FirstOrDefault(a => a.Id == "0003914").LastName);
             }
-            
+
             [TestMethod]
             public async Task ReturnsCorrectProxyDataTest()
             {
@@ -314,7 +315,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 MiddleName = "G",
                 PreferredName = "Willy"
             });
-            
+
             proxyPersonBaseEntityList.Add(new Domain.Base.Entities.PersonBase("0000001", "Jessica"));
             proxyPersonBaseEntityList.Add(new Domain.Base.Entities.PersonBase("0000002", "Billy"));
 

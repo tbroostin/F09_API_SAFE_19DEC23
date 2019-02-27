@@ -263,6 +263,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     StudentAcademicCredentials = studentTerms.SttrStudentAcadCred
                 };
             }
+            else
+            {
+                throw new RepositoryException(string.Concat("Invalid record, Entity:'STUDENT.TERMS', Record ID:'", studentTerms.Recordkey, "'"));
+            }
             if (studentTerm != null)
             {
                 var studentTermStatuses = new List<StudentTermStatus>();

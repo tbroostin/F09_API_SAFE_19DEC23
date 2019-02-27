@@ -166,7 +166,12 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             {
                 vendorsIds = await DataReader.SelectAsync("VENDORS", criteria);
             }
-            
+
+            if ((vendorsIds == null) || (!vendorsIds.Any()))
+            {
+                return new Tuple<IEnumerable<Vendors>, int>(new List<Vendors>(), 0);
+            }
+
             var totalCount = vendorsIds.Count();
             Array.Sort(vendorsIds);
             var subList = vendorsIds.Skip(offset).Take(limit).ToArray();

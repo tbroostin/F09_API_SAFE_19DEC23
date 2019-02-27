@@ -127,6 +127,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             CourseLevelCodes = _CourseLevelCodes.AsReadOnly();
             Statuses = _Statuses.AsReadOnly();
             Meetings = _SectionMeetings.AsReadOnly();
+            PrimarySectionMeetings = _PrimarySectionMeetings.AsReadOnly();
             Faculty = _SectionFaculty.AsReadOnly();
             FacultyIds = _FacultyIds.AsReadOnly();
             Books = _Books.AsReadOnly();
@@ -418,11 +419,23 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// </summary>
         public ReadOnlyCollection<string> FacultyIds { get; private set; }
 
+            
         private readonly List<SectionMeeting> _SectionMeetings = new List<SectionMeeting>();
+
+        private readonly List<SectionMeeting> _PrimarySectionMeetings = new List<SectionMeeting>();
         /// <summary>
         /// List of the meetings for this section
         /// </summary>
+
         public ReadOnlyCollection<SectionMeeting> Meetings { get; private set; }
+        /// <summary>
+        /// List of meetings for primary section.
+        /// This is only populated when there is a flag that allows to override cross-listed section meetings with primary section meetings
+        /// when cross-listed section does not have its own meetings defined.
+        /// For all other conditions, this field will be empty list.
+        /// </summary>
+        public ReadOnlyCollection<SectionMeeting> PrimarySectionMeetings { get; private set; }
+  
 
         private readonly List<SectionFaculty> _SectionFaculty = new List<SectionFaculty>();
         /// <summary>
@@ -970,6 +983,32 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             }
             _SectionMeetings.Add(sectionMeeting);
         }
+
+
+        
+
+        /// <summary>
+        /// This method will update meetings for primary section in PrimarySectionMeetings collection
+        /// </summary>
+        /// <param name="meetings"></param>
+        public void UpdatePrimarySectionMeetings(IEnumerable<SectionMeeting> meetings)
+        {
+           if(meetings!=null)
+            {
+                
+                    _PrimarySectionMeetings.Clear();
+               
+                foreach (var meeting in meetings)
+                {
+                    if (meeting != null)
+                    {
+                        _PrimarySectionMeetings.Add(meeting);
+                    }
+                }
+            }
+        }
+
+
 
         /// <summary>
         /// Remove a section meeting from this section

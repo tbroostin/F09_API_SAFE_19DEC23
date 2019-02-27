@@ -1,2 +1,2 @@
-Copyright 2013-2018 Ellucian Company L.P. and its affiliates. All Rights Reserved.
+Copyright 2013-2019 Ellucian Company L.P. and its affiliates. All Rights Reserved.
 Use of this material is subject to the terms and conditions of a software license agreement between Ellucian and client.

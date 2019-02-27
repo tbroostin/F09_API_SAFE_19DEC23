@@ -77,14 +77,10 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 logger.Error(knfex, knfex.Message);
                 throw CreateHttpResponseException("Record not found.", HttpStatusCode.NotFound);
             }
-            catch (ApplicationException aex)
-            {
-                logger.Error(aex, aex.Message);
-                throw CreateHttpResponseException("Invalid data in record.", HttpStatusCode.BadRequest);
-            }
+            // Application exceptions will be caught below.
             catch (Exception ex)
             {
-                logger.Error(ex.ToString());
+                logger.Error(ex, ex.Message);
                 throw CreateHttpResponseException("Unable to get the journal entry.", HttpStatusCode.BadRequest);
             }
         }

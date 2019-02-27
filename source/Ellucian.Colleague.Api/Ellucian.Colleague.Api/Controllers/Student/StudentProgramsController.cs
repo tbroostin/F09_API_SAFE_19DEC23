@@ -1,22 +1,18 @@
-﻿// Copyright 2012-2013 Ellucian Company L.P. and its affiliates.
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Net;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using Ellucian.Web.Http.Controllers;
-using Ellucian.Colleague.Dtos.Student;
-using Ellucian.Colleague.Coordination.Student.Services;
-using Ellucian.Web.Http.Filters;
-using System.Web.Http;
-using System.ComponentModel;
+﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
-using slf4net;
 using Ellucian.Colleague.Configuration.Licensing;
+using Ellucian.Colleague.Coordination.Student.Services;
+using Ellucian.Colleague.Dtos.Student;
+using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using Ellucian.Web.Security;
+using slf4net;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Net;
 using System.Threading.Tasks;
+using System.Web.Http;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -43,10 +39,26 @@ namespace Ellucian.Colleague.Api.Controllers
         }
 
         /// <summary>
-        /// get student programs from a list of Ids
+        /// Retrieves <see cref="Dtos.Student.StudentProgram2">student programs</see> for the specified student IDs
         /// </summary>
-        /// <param name="criteria">Criteria Object containing Student IDs and term</param>
-        /// <returns>Student Programs DTO Objects</returns>
+        /// <param name="criteria">Criteria for retrieving student program information</param>
+        /// <returns>List of <see cref="Dtos.Student.StudentProgram2">student programs</see></returns>
+        /// <accessComments>
+        /// An authenticated user (advisor) with any of the following permission codes may view student program information for any student:
+        /// 
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEES
+        /// UPDATE.ANY.ADVISEES
+        /// ALL.ACCESS.ANY.ADVISEES
+        /// VIEW.STUDENT.INFORMATION
+        /// 
+        /// An authenticated user with any of the following permission codes who does not have one of the permission codes above may view student program information for assigned advisees only:
+        /// 
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// </accessComments>
         [HttpPost]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.Student.StudentProgram2>> QueryStudentProgramsAsync([FromBody] StudentProgramsQueryCriteria criteria)
         {

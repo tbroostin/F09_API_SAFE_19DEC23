@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Data.Colleague;
@@ -469,6 +470,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 personBasedObject.DeceasedDate = record.DeceasedDate;
                 personBasedObject.IsDeceased = await IsDeceasedAsync(record.PersonStatus);
                 personBasedObject.Gender = record.Gender;
+                personBasedObject.GenderIdentityCode = record.GenderIdentity;
+                personBasedObject.PersonalPronounCode = record.PersonalPronoun;
                 personBasedObject.PersonCorpIndicator = record.PersonCorpIndicator;
                 personBasedObject.ChosenLastName = record.PersonChosenLastName;
                 personBasedObject.ChosenFirstName = record.PersonChosenFirstName;
@@ -786,6 +789,90 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         #endregion
 
         #region Get Person/Org Guids
+
+        /// <summary>
+        /// Returns collection of opers ids with person id & guid.
+        /// </summary>
+        /// <param name="operKeys"></param>
+        /// <returns></returns>
+        public async Task<Dictionary<string, KeyValuePair<string, string>>> GetPersonGuidsFromOperKeysAsync(IEnumerable<string> operKeys)
+        {
+            Dictionary<string, KeyValuePair<string, string>> operIdsWithGuidsDict = new Dictionary<string, KeyValuePair<string, string>>();
+
+            if (operKeys == null || !operKeys.Any())
+            {
+                return null;
+            }
+            try
+            {
+                var operRecords = await DataReader.BulkReadRecordAsync<Opers>("UT.OPERS", operKeys.ToArray());
+                var staffIds = await DataReader.SelectAsync("STAFF", "WITH STAFF.INITIALS EQ '?'", operKeys.ToArray());
+                var staffRecords = await DataReader.BulkReadRecordAsync<DataContracts.Staff>(staffIds);
+
+                if (operRecords == null || !operRecords.Any())
+                {
+                    return null;
+                }
+
+                var sysPersonIds = operRecords.Where(rec => !string.IsNullOrWhiteSpace(rec.SysPersonId)).Select(i => i.SysPersonId).ToList();
+                var tempStaffIds = staffRecords.Where(rec => !string.IsNullOrWhiteSpace(rec.Recordkey)).Select(i => i.Recordkey).ToList();
+                var personIds = sysPersonIds.Union(tempStaffIds).Distinct();
+
+                if(personIds == null || !personIds.Any())
+                {
+                    return null;
+                }
+
+                string criteria = "WITH PERSON.CORP.INDICATOR NE 'Y'";
+                var ids = await DataReader.SelectAsync("PERSON", personIds.ToArray(), criteria);
+
+                var personGuidLookup = ids
+                                        .Where(s => !string.IsNullOrWhiteSpace(s))
+                                        .Distinct().ToList()
+                                        .ConvertAll(p => new RecordKeyLookup("PERSON", p, false)).ToArray();
+                var recordKeyLookupResults = await DataReader.SelectAsync(personGuidLookup);
+                if (recordKeyLookupResults != null && recordKeyLookupResults.Any())
+                {
+                    foreach (var recordKeyLookupResult in recordKeyLookupResults)
+                    {
+                        var splitKeys = recordKeyLookupResult.Key.Split(new[] { "+" }, StringSplitOptions.RemoveEmptyEntries);
+                        var splitKey = splitKeys[1];
+
+                        var operRecord = operRecords.FirstOrDefault(i => i.SysPersonId.Equals(splitKey, StringComparison.OrdinalIgnoreCase));
+                        var staffRecord = staffRecords.FirstOrDefault(i => i.Recordkey.Equals(splitKey, StringComparison.OrdinalIgnoreCase));
+                        if (operRecord != null)
+                        {
+                            if (recordKeyLookupResult.Value != null && !string.IsNullOrWhiteSpace(recordKeyLookupResult.Value.Guid))
+                            {
+                                if (!operIdsWithGuidsDict.ContainsKey(operRecord.Recordkey))
+                                {
+                                    KeyValuePair<string, string> tuple = new KeyValuePair<string, string>(splitKey, recordKeyLookupResult.Value.Guid);
+                                    operIdsWithGuidsDict.Add(operRecord.Recordkey, tuple);
+                                }
+                            }
+                        }
+                        else if (staffRecord != null && operRecord == null)
+                        {
+                            if (recordKeyLookupResult.Value != null && !string.IsNullOrWhiteSpace(recordKeyLookupResult.Value.Guid))
+                            {
+                                if (!string.IsNullOrEmpty(staffRecord.StaffInitials) && !operIdsWithGuidsDict.ContainsKey(staffRecord.StaffInitials))
+                                {
+                                    KeyValuePair<string, string> tuple = new KeyValuePair<string, string>(splitKey, recordKeyLookupResult.Value.Guid);
+                                    operIdsWithGuidsDict.Add(staffRecord.StaffInitials, tuple);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                logger.Error(e.ToString());
+                throw e;
+            }
+            return operIdsWithGuidsDict;
+        }
+
         /// <summary>
         /// Gets person guid from opers
         /// </summary>
@@ -921,6 +1008,46 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             try
             {
                 var personGuidLookup = personIds
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .Distinct().ToList()
+                    .ConvertAll(p => new RecordKeyLookup("PERSON", p, false)).ToArray();
+                var recordKeyLookupResults = await DataReader.SelectAsync(personGuidLookup);
+                foreach (var recordKeyLookupResult in recordKeyLookupResults)
+                {
+                    var splitKeys = recordKeyLookupResult.Key.Split(new[] { "+" }, StringSplitOptions.RemoveEmptyEntries);
+                    if (!personGuidCollection.ContainsKey(splitKeys[1]))
+                    {
+                        personGuidCollection.Add(splitKeys[1], recordKeyLookupResult.Value.Guid);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error occured while getting person guids.", ex); ;
+            }
+
+            return personGuidCollection;
+        }
+
+        /// <summary>
+        /// Using a collection of person ids, get a dictionary collection of associated guids for person who are not orgs or institutions.
+        /// </summary>
+        /// <param name="personIds">collection of person ids</param>
+        /// <returns>Dictionary consisting of a personId (key) and guid (value)</returns>
+        public async Task<Dictionary<string, string>> GetPersonGuidsWithNoCorpCollectionAsync(IEnumerable<string> personIds)
+        {
+            if ((personIds == null) || (personIds != null && !personIds.Any()))
+            {
+                return new Dictionary<string, string>();
+            }
+            var personGuidCollection = new Dictionary<string, string>();
+            try
+            {
+                //Dont return Orgs & Institutions
+                string criteria = "WITH PERSON.CORP.INDICATOR NE 'Y'";
+                var ids = await DataReader.SelectAsync("PERSON", personIds.ToArray(), criteria);
+
+                var personGuidLookup = ids
                     .Where(s => !string.IsNullOrWhiteSpace(s))
                     .Distinct().ToList()
                     .ConvertAll(p => new RecordKeyLookup("PERSON", p, false)).ToArray();
@@ -1252,7 +1379,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                     {
                                         var personAltEntityAssociations = elevatePerson.PersonAltEntityAssociation;
                                         if ((personAltEntityAssociations != null) && (personAltEntityAssociations.Any())
-                                            && (personAltEntityAssociations.Any(x => x.PersonAltIdTypesAssocMember == "ELEV")))
+                                            && (personAltEntityAssociations.Any(x => x.PersonAltIdTypesAssocMember == "ELEV" && x.PersonAltIdsAssocMember == cred.Item2)))
                                         {
                                             elevatePersonIds.Add(elevatePerson.Recordkey);
                                         }
@@ -1320,6 +1447,54 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                 {
                                     outIds.AddRange(ids);
                                 }
+                            }
+                        }
+                    }
+                }
+                #endregion
+
+                #region AlternativeCredentials
+                if (personFilterCriteria != null && personFilterCriteria.AlternativeCredentials != null && personFilterCriteria.AlternativeCredentials.Any())
+                {
+                    foreach (var cred in personFilterCriteria.AlternativeCredentials)
+                    {
+                        //there is index in alternate Ids so we can use first and then filter the rest. 
+                        var altIds = await DataReader.SelectAsync("PERSON", outIds != null && outIds.Any() ? outIds.ToArray() : null,
+                                                 string.Format("WITH PERSON.ALT.IDS EQ '{0}'", cred.Item2));
+                        if (altIds == null || !altIds.Any())
+                        {
+                            return new Tuple<IEnumerable<string>, int>(new List<string>(), 0);
+                        }
+                        else
+                        {
+                            if (string.IsNullOrEmpty(cred.Item1))
+                            {
+                                outIds.AddRange(altIds);
+                            }
+                            else
+                            {
+                                //apply the check for alternate Id type here
+                                var alternatePersonIds = new List<string>();
+                                var alternatePersons = await DataReader.BulkReadRecordAsync<DataContracts.Person>("PERSON", altIds.ToArray());
+
+                                if ((alternatePersons != null) && (alternatePersons.Any()))
+                                {
+                                    foreach (var alternatePerson in alternatePersons)
+                                    {
+                                        var personAltEntityAssociations = alternatePerson.PersonAltEntityAssociation;
+                                        if ((personAltEntityAssociations != null) && (personAltEntityAssociations.Any())
+                                            && (personAltEntityAssociations.Any(x => x.PersonAltIdTypesAssocMember == cred.Item1.ToUpperInvariant() && x.PersonAltIdsAssocMember == cred.Item2)))
+                                        {
+                                            alternatePersonIds.Add(alternatePerson.Recordkey);
+                                        }
+                                    }
+                                }
+
+                                if (alternatePersonIds == null || !alternatePersonIds.Any())
+                                {
+                                    return new Tuple<IEnumerable<string>, int>(new List<string>(), 0);
+                                }
+                                outIds.AddRange(alternatePersonIds);
                             }
                         }
                     }
@@ -1762,7 +1937,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
                     #endregion
 
-                    if (outIds != null && !outIds.Any())
+                    if (outIds == null || !outIds.Any())
                     {
                         return new Tuple<IEnumerable<string>, int>(new List<string>(), 0);
                     }
@@ -1813,6 +1988,19 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             creds.Add(cred);
                         });
                     }
+                    List<GetPersonFilterResultsV2AlternateCredentials> altCreds = new List<GetPersonFilterResultsV2AlternateCredentials>();
+                    if (personFilterCriteria != null && personFilterCriteria.AlternativeCredentials != null && personFilterCriteria.AlternativeCredentials.Any())
+                    {
+                        personFilterCriteria.AlternativeCredentials.ForEach(i =>
+                        {
+                            GetPersonFilterResultsV2AlternateCredentials cred = new GetPersonFilterResultsV2AlternateCredentials()
+                            {
+                                AltCredentialType = i.Item1,
+                                AltCredentialValue = i.Item2
+                            };
+                            altCreds.Add(cred);
+                        });
+                    }
                     var request = new GetPersonFillterResultsV2Request()
                     {
                         PersonIds = outIds,
@@ -1821,6 +2009,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         Role = personFilterCriteria != null && personFilterCriteria.Roles != null ? personFilterCriteria.Roles : null,
                         GetPersonFilterResultsV2Names = names,
                         GetPersonFilterResultsV2Credentials = creds,
+                        GetPersonFilterResultsV2AlternateCredentials = altCreds,
                         //we do not need to send the Guid again.
                         //Guid = personFilter,
                         Offset = offset,
@@ -2767,6 +2956,39 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Gets Configuration
+        /// </summary>
+        /// <returns></returns>
+        protected async Task<Data.Base.DataContracts.Dflts> GetConfigurationAsync()
+        {
+            var defaults = await GetOrAddToCacheAsync<Data.Base.DataContracts.Dflts>("Dflts",
+                    async () =>
+                    {
+                        var dflts = await DataReader.ReadRecordAsync<Data.Base.DataContracts.Dflts>("CORE.PARMS", "DEFAULTS");
+                        if (dflts == null)
+                        {
+                            throw new ConfigurationException("Default configuration setup not complete.");
+                        }
+                        return dflts;
+                    }
+                );
+            return defaults;            
+        }
+
+        /// <summary>
+        /// Prepends Zero to AdviseeID and makes the length equals to DefaultFixedPersonLength
+        /// </summary>
+        protected string PadPersonIdWithZeroes(string personId, string defaultFixedPersonLength)
+        {
+            int personIdMaxLength = Int32.Parse(defaultFixedPersonLength);
+            if (personId.Length < personIdMaxLength)
+            {
+                personId = personId.PadLeft(personIdMaxLength, '0');
+            }
+            return personId;
         }
     }
 }

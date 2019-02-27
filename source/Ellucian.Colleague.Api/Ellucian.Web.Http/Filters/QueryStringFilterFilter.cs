@@ -9,6 +9,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Dtos.Converters;
 using Ellucian.Web.Http.Models;
+using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Controllers;
 
 namespace Ellucian.Web.Http.Filters
 {
@@ -74,7 +76,7 @@ namespace Ellucian.Web.Http.Filters
 
                     if ((queryStringFilter != null) && (!string.IsNullOrEmpty(queryStringFilter.JsonQuery)))
                     {
-                       
+
                         //Create JsonConverter to control how query string segment will be deserialized
                         // this will also determine if invalid filter properties are received  
                         try
@@ -86,7 +88,7 @@ namespace Ellucian.Web.Http.Filters
                                filterConverter);
 
                             if (filterConverter.ContainsInvalidFilterProperties())
-                            {                   
+                            {
                                 throw new Exception(filterConverter.GetInvalidFilterErrorMessage());
                             }
 
@@ -106,9 +108,27 @@ namespace Ellucian.Web.Http.Filters
                         }
                         catch (Exception ex)
                         {
+                            bool customMediaTypeAttributeFilter = false;
+
+                            var customAttributes = actionExecutedContext
+                                .ActionDescriptor.GetCustomAttributes<CustomMediaTypeAttributeFilter>();
+
+                            if ((customAttributes != null) && (customAttributes.Any()))
+                            {
+                                customMediaTypeAttributeFilter = customAttributes.Any(x => x.ErrorContentType == BaseCompressedApiController.IntegrationErrors2);
+                            }
+                            if (customMediaTypeAttributeFilter)
+                            {
+                                var exceptionObject = new IntegrationApiException();
+                                exceptionObject.AddError(new IntegrationApiError("Global.Internal.Error",
+                                    ex.Message.Replace(Environment.NewLine, " ").Replace("\n", " ")));
+                                var serialized = JsonConvert.SerializeObject(exceptionObject);
+                                actionExecutedContext.Response = new HttpResponseMessage(System.Net.HttpStatusCode.BadRequest) { Content = new StringContent(serialized) };
+                                return base.OnActionExecutingAsync(actionExecutedContext, cancellationToken);
+                            }
                             throw new Exception(ex.Message, ex.InnerException);
                         }
-                    }
+                    }                  
                 }
             }
 

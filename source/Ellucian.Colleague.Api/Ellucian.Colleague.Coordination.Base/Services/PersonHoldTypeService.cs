@@ -54,7 +54,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// Get a restriction type from its GUID
         /// </summary>
         /// <returns>PersonHoldType DTO object</returns>
-        public async Task<Ellucian.Colleague.Dtos.PersonHoldType> GetPersonHoldTypeByGuid2Async(string id)
+        public async Task<Ellucian.Colleague.Dtos.PersonHoldType> GetPersonHoldTypeByGuid2Async(string id, bool bypassCache = false)
         {
             if (string.IsNullOrEmpty(id))
             {
@@ -62,7 +62,8 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
             try
             {
-                return ConvertRestrictionEntityToPersonHoldTypeDto((await _referenceDataRepository.GetRestrictionsWithCategoryAsync(true)).FirstOrDefault(rt => rt.Guid == id));
+                return ConvertRestrictionEntityToPersonHoldTypeDto((await _referenceDataRepository.GetRestrictionsWithCategoryAsync(bypassCache))
+                    .FirstOrDefault(rt => rt.Guid.Equals(id, StringComparison.OrdinalIgnoreCase)));
             }
             catch (InvalidOperationException ex)
             {

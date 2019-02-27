@@ -50,6 +50,11 @@ namespace Ellucian.Colleague.Dtos.Base
         /// <summary>
         /// This represents form 1099 Misc.
         /// </summary>
-        Form1099MI
+        Form1099MI,
+
+        /// <summary>
+        /// This represents form W2C.
+        /// </summary>
+        FormW2C,
     }
 }

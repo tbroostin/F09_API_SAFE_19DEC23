@@ -154,7 +154,6 @@ namespace Ellucian.Colleague.Dtos.Filters
         /// </summary>
         [DataMember(Name = "status", EmitDefaultValue = false)]
         [JsonProperty("status", NullValueHandling = NullValueHandling.Ignore)]
-        [FilterProperty("criteria")]
         [JsonConverter(typeof(StatusCategoryFilterConverter))]
         public SectionStatusDtoProperty Status { get; set; }
 
@@ -177,7 +176,6 @@ namespace Ellucian.Colleague.Dtos.Filters
         /// </summary>
         [DataMember(Name = "owningInstitutionUnits", EmitDefaultValue = false)]
         [JsonProperty("owningInstitutionUnits", NullValueHandling = NullValueHandling.Ignore)]
-        [FilterProperty("criteria")]
         [JsonConverter(typeof(ArrayOwningInstitutionFilterConverter))]
         public List<OwningInstitutionUnit> OwningInstitutionUnits { get; set; }
 

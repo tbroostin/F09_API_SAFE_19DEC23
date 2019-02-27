@@ -109,10 +109,10 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
         {
             get
             {
-                //if awarding is not active for the year, return false
+                //1. if awarding is not active for the year, return false
                 if (StudentAwardYear.CurrentConfiguration == null || !StudentAwardYear.IsAwardingActive || !StudentAwardYear.CurrentConfiguration.AreAwardChangesAllowed) return false;
 
-                //if the award category is contained in the list of award categories to exclude from change, return false
+                //2. if the award category is contained in the list of award categories to exclude from change, return false
                 if (StudentAwardYear.CurrentConfiguration.ExcludeAwardCategoriesFromChange != null &&
                     Award.AwardCategory != null &&
                     StudentAwardYear.CurrentConfiguration.ExcludeAwardCategoriesFromChange.Contains(Award.AwardCategory.Code))
@@ -120,21 +120,34 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
                     return false;
                 }
 
-                //if the award code is contained in the list of award codes to exclude from change, return false
+                //3. if the award code is contained in the list of award codes to exclude from change, return false
                 if (StudentAwardYear.CurrentConfiguration.ExcludeAwardsFromChange != null &&
                     StudentAwardYear.CurrentConfiguration.ExcludeAwardsFromChange.Contains(Award.Code))
                 {
                     return false;
                 }
 
-                //If I have a loan that has been transmitted set the status to false
-                if((Award.LoanType.HasValue) && (IsTransmitted))
+                //4. If the Award Status is contained in the list of award statuses to exclude from change, return false
+                if (StudentAwardYear.CurrentConfiguration.ExcludeAwardStatusesFromChange != null &&
+                    StudentAwardYear.CurrentConfiguration.ExcludeAwardStatusesFromChange.Contains(AwardStatus.Code))
+                {
+                    return false;
+                }
+
+                //5. If StudentAward is in the holding bin then set to not modifiable
+                if (!string.IsNullOrEmpty(StudentAward.PendingChangeRequestId))
+                {
+                    return false;
+                }
+
+                //6. If I have a loan that has been transmitted set the status to false
+                if ((Award.LoanType.HasValue) && (IsTransmitted))
                 {
                     return false;
                 }
 
 
-                //If I have a Direct Loan that is Accepted, Check flag to see if it can be modified
+                //7. If I have a Direct Loan that is Accepted, Check flag to see if it can be modified
                 if ((Award.LoanType.HasValue) && (Award.LoanType.Value != LoanType.OtherLoan) && (Award.IsFederalDirectLoan) &&
                     (AwardStatus.Category == AwardStatusCategory.Accepted) &&
                     (StudentAwardYear.CurrentConfiguration.AllowDeclineZeroOfAcceptedLoans))
@@ -142,27 +155,14 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
                     return true;
                 }
 
-                // If an Award Status is not Pending or Estimated then set to not modifiable
+                //8. If an Award Status is not Pending or Estimated then set to not modifiable
                 if (AwardStatus.Category == AwardStatusCategory.Accepted ||
                     AwardStatus.Category == AwardStatusCategory.Denied ||
                     AwardStatus.Category == AwardStatusCategory.Rejected)
                 {
                     return false;
                 }
-
-                // If the Award Status is contained in the list of award statuses to exclude from change, return false
-                if (StudentAwardYear.CurrentConfiguration.ExcludeAwardStatusesFromChange != null &&
-                    StudentAwardYear.CurrentConfiguration.ExcludeAwardStatusesFromChange.Contains(AwardStatus.Code))
-                {
-                    return false;
-                }
-
-                //If StudentAward is in the holding bin then set to not modifiable
-                if (!string.IsNullOrEmpty(StudentAward.PendingChangeRequestId))
-                {
-                    return false;
-                }
-
+                
                 return true;
             }
         }

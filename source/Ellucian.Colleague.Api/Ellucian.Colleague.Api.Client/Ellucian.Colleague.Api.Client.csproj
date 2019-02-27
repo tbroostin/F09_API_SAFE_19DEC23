@@ -73,7 +73,6 @@
     <Compile Include="ColleagueApiClient.Base.cs" />
     <Compile Include="ColleagueApiClient.ColleagueFinance.cs" />
     <Compile Include="ColleagueApiClient.cs" />
-    <Compile Include="ColleagueApiClient.F09.Custom.cs" />
     <Compile Include="ColleagueApiClient.Finance.cs" />
     <Compile Include="ColleagueApiClient.FinancialAid.cs" />
     <Compile Include="ColleagueApiClient.Student.cs" />
@@ -93,7 +92,6 @@
       <SubType>Designer</SubType>
     </None>
     <Compile Include="ColleagueApiClient.HumanResources.cs" />
-    <Compile Include="ColleagueApiClient.F09.cs" />
     <None Include="packages.config">
       <SubType>Designer</SubType>
     </None>
@@ -109,10 +107,6 @@
     <ProjectReference Include="..\Ellucian.Colleague.Dtos.ColleagueFinance\Ellucian.Colleague.Dtos.ColleagueFinance.csproj">
       <Project>{ca034d7a-0963-4463-b974-bef18be515ae}</Project>
       <Name>Ellucian.Colleague.Dtos.ColleagueFinance</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Ellucian.Colleague.Dtos.F09\Ellucian.Colleague.Dtos.F09.csproj">
-      <Project>{a6cd3ada-1605-48b1-a41c-9989b42c3eda}</Project>
-      <Name>Ellucian.Colleague.Dtos.F09</Name>
     </ProjectReference>
     <ProjectReference Include="..\Ellucian.Colleague.Dtos.Finance\Ellucian.Colleague.Dtos.Finance.csproj">
       <Project>{F2409F02-791E-43B3-85E3-B577226FCF55}</Project>

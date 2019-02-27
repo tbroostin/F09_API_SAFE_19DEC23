@@ -1,9 +1,8 @@
 ﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base.Services;
-using Ellucian.Colleague.Domain.Base.Repositories;
-using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using slf4net;
@@ -12,8 +11,13 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Web;
 using System.Web.Http;
+using Ellucian.Colleague.Api.Utility;
+using Ellucian.Web.Security;
+using Ellucian.Web.Http.Exceptions;
+using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Web.Http.Filters;
+using System.Net;
 
 namespace Ellucian.Colleague.Api.Controllers.Base
 {
@@ -63,6 +67,165 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 _logger.Error(ex.ToString());
                 throw CreateHttpResponseException(ex.Message);
             }
+        }
+
+        /// <summary>
+        /// Return all personalPronouns
+        /// </summary>
+        /// <returns>List of PersonalPronouns <see cref="Dtos.PersonalPronouns"/> objects representing matching personalPronouns</returns>
+        [HttpGet, EedmResponseFilter]
+        [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.PersonalPronouns>> GetPersonalPronounsAsync()
+        {
+            var bypassCache = false;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
+            try
+            {
+                var personalPronouns = await _personalPronounTypeService.GetPersonalPronounsAsync(bypassCache);
+
+                if (personalPronouns != null && personalPronouns.Any())
+                {
+                    AddEthosContextProperties(await _personalPronounTypeService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _personalPronounTypeService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              personalPronouns.Select(a => a.Id).ToList()));
+                }
+                return personalPronouns;
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+            }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
+
+        /// <summary>
+        /// Read (GET) a personalPronouns using a GUID
+        /// </summary>
+        /// <param name="guid">GUID to desired personalPronouns</param>
+        /// <returns>A personalPronouns object <see cref="Dtos.PersonalPronouns"/> in EEDM format</returns>
+        [HttpGet, EedmResponseFilter]
+        public async Task<Dtos.PersonalPronouns> GetPersonalPronounsByGuidAsync(string guid)
+        {
+            var bypassCache = false;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
+            if (string.IsNullOrEmpty(guid))
+            {
+                throw CreateHttpResponseException(new IntegrationApiException("Null id argument",
+                    IntegrationApiUtility.GetDefaultApiError("The GUID must be specified in the request URL.")));
+            }
+            try
+            {
+                AddEthosContextProperties(
+                   await _personalPronounTypeService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                   await _personalPronounTypeService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                       new List<string>() { guid }));
+                return await _personalPronounTypeService.GetPersonalPronounsByGuidAsync(guid);
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+            }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
+
+        /// <summary>
+        /// Create (POST) a new personalPronouns
+        /// </summary>
+        /// <param name="personalPronouns">DTO of the new personalPronouns</param>
+        /// <returns>A personalPronouns object <see cref="Dtos.PersonalPronouns"/> in EEDM format</returns>
+        [HttpPost]
+        public async Task<Dtos.PersonalPronouns> PostPersonalPronounsAsync([FromBody] Dtos.PersonalPronouns personalPronouns)
+        {
+            //Update is not supported for Colleague but HeDM requires full crud support.
+            throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
+
+        }
+
+        /// <summary>
+        /// Update (PUT) an existing personalPronouns
+        /// </summary>
+        /// <param name="guid">GUID of the personalPronouns to update</param>
+        /// <param name="personalPronouns">DTO of the updated personalPronouns</param>
+        /// <returns>A personalPronouns object <see cref="Dtos.PersonalPronouns"/> in EEDM format</returns>
+        [HttpPut]
+        public async Task<Dtos.PersonalPronouns> PutPersonalPronounsAsync([FromUri] string guid, [FromBody] Dtos.PersonalPronouns personalPronouns)
+        {
+            //Update is not supported for Colleague but HeDM requires full crud support.
+            throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
+
+        }
+
+        /// <summary>
+        /// Delete (DELETE) a personalPronouns
+        /// </summary>
+        /// <param name="guid">GUID to desired personalPronouns</param>
+        [HttpDelete]
+        public async Task DeletePersonalPronounsAsync(string guid)
+        {
+            //Update is not supported for Colleague but HeDM requires full crud support.
+            throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
         }
     }
 }

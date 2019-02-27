@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2017 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2018 Ellucian Company L.P. and its affiliates. */
 
 using System;
 using System.Collections.Generic;
@@ -80,7 +80,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             {
                 throw new ArgumentNullException(string.Concat("EmployeeLeaveTransactions Leave Id can not be null or empty. Entity: ‘PERLVDTL’, Record ID: '", id, "'"));
             }
-            if ((tranDate == null) || (tranDate == new DateTime(1968,1,1)))
+            if ((tranDate == null) || (!tranDate.HasValue))
             {
                 throw new ArgumentNullException(string.Concat("EmployeeLeaveTransactions Transaction Date can not be null or empty. Entity: ‘PERLVDTL’, Record ID: '", id, "'"));
             }

@@ -1,5 +1,6 @@
 ﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student;
@@ -124,7 +125,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var proxySubject = CurrentUser.ProxySubjects.FirstOrDefault();
 
             // Allowed access to restrictions if the user is a proxy for the student or has the view person restriction permission
-            if (CurrentUser.IsPerson(studentId) || HasPermission(Domain.Base.BasePermissionCodes.ViewPersonRestrictions) || HasProxyAccessForPerson(studentId))
+            if (CurrentUser.IsPerson(studentId) || HasPermission(Domain.Base.BasePermissionCodes.ViewPersonRestrictions) || HasProxyAccessForPerson(studentId, ProxyWorkflowConstants.CoreNotifications))
             {
                 return;
             }

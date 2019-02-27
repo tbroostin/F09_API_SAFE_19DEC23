@@ -203,7 +203,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
     [TestClass]
     public class AcademicCatalogController_AcademicCatalog2
     {
-        
+
         public TestContext TestContext { get; set; }
 
         private AcademicCatalogController _academicCatalogController;
@@ -244,7 +244,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 AcademicCatalog2 target = ConvertCatalogEntitytoAcademicCatalog2Dto(academicCatalog);
                 if (target != null)
                 {
-                _allAcademicCatalogsDtos.Add(target);
+                    _allAcademicCatalogsDtos.Add(target);
                 }
             }
 
@@ -265,7 +265,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         public async Task AcademicCatalogController_ReturnsAllAcademicCatalogs2()
         {
             var academicCatalogs = await _academicCatalogController.GetAcademicCatalogs2Async() as List<AcademicCatalog2>;
-             Assert.AreEqual(academicCatalogs.Count, _allAcademicCatalogsEntities.Count);
+            Assert.AreEqual(academicCatalogs.Count, _allAcademicCatalogsEntities.Count);
         }
 
         [TestMethod]
@@ -307,6 +307,100 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             acadedmicCatalog.Code = source.Code;
             acadedmicCatalog.Title = source.Description;
             acadedmicCatalog.status = source.IsActive ? LifeCycleStatus.Active : LifeCycleStatus.Inactive;
+            return acadedmicCatalog;
+        }
+    }
+    
+    [TestClass]
+    public class AcademicCatalogController_AllAcademicCatalog
+    {
+        public TestContext TestContext { get; set; }
+
+        private AcademicCatalogController _academicCatalogController;
+        private Mock<IAcademicCatalogService> _academicCatalogServiceMock;
+        private IAcademicCatalogService _academicCatalogService;
+        private List<Catalog> _allAcademicCatalogsEntities;
+        private List<Dtos.Student.Catalog> _allCatalogsEntities;
+        private readonly ILogger _logger = new Mock<ILogger>().Object;
+
+        [TestInitialize]
+        public void Initialize()
+        {
+            LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+            EllucianLicenseProvider.RefreshLicense(Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+            _academicCatalogServiceMock = new Mock<IAcademicCatalogService>();
+            _academicCatalogService = _academicCatalogServiceMock.Object;
+
+            _allAcademicCatalogsEntities = new TestCatalogRepository().GetAsync().Result as List<Catalog>;
+            _allCatalogsEntities = new List<Dtos.Student.Catalog>();
+
+            _academicCatalogController = new AcademicCatalogController(_academicCatalogService, _logger)
+            {
+                Request = new HttpRequestMessage()
+            };
+            _academicCatalogController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey,
+                new HttpConfiguration());
+            _academicCatalogController.Request.Headers.CacheControl = new CacheControlHeaderValue
+            {
+                NoCache = true,
+                Public = true
+            };
+
+            Debug.Assert(_allAcademicCatalogsEntities != null, "allAcademicCatalogsEntities != null");           
+            
+
+            foreach (var academicCatalog in _allAcademicCatalogsEntities)
+            {
+                Dtos.Student.Catalog target = ConvertCatalogEntitytoCatalogDto(academicCatalog);
+                if (target != null)
+                {
+                    _allCatalogsEntities.Add(target);
+                }
+            }
+            _academicCatalogServiceMock.Setup(s => s.GetAllAcademicCatalogsAsync(It.IsAny<bool>()))
+                .ReturnsAsync(_allCatalogsEntities);
+        }
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            _academicCatalogController = null;
+            _academicCatalogService = null;
+            _allAcademicCatalogsEntities = null;
+            _allCatalogsEntities = null;
+        }
+
+        [TestMethod]
+        public async Task AcademicCatalogController_ReturnsAllAcademicCatalogs3()
+        {
+            var academicCatalogs = await _academicCatalogController.GetAllAcademicCatalogsAsync() as List<Dtos.Student.Catalog>;
+            Assert.AreEqual(academicCatalogs.Count, _allCatalogsEntities.Count);
+        }
+        
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task AcademicCatalogController_ReturnsAllAcademicCatalogs3_Exception()
+        {
+            _academicCatalogServiceMock.Setup(s => s.GetAllAcademicCatalogsAsync(It.IsAny<bool>())).Throws<Exception>();
+            await _academicCatalogController.GetAllAcademicCatalogsAsync();
+        }
+        
+        [TestMethod]
+        public async Task AcademicCatalogController_GetAllAcademicCatalogs3_CatalogProperties()
+        {
+            var academicCatalogs = await _academicCatalogController.GetAllAcademicCatalogsAsync() as List<Dtos.Student.Catalog>;
+
+            var al = academicCatalogs.FirstOrDefault(a => a.HideInWhatIf == false);
+            var alt = _allAcademicCatalogsEntities.FirstOrDefault(a => a.HideInWhatIf == false);
+
+            Assert.AreEqual(alt.HideInWhatIf, al.HideInWhatIf);
+            Assert.AreEqual(alt.Code, al.CatalogYear);
+        }
+        private Dtos.Student.Catalog ConvertCatalogEntitytoCatalogDto(Domain.Student.Entities.Requirements.Catalog source)
+        {
+            var acadedmicCatalog = new Dtos.Student.Catalog();
+            acadedmicCatalog.CatalogYear = source.Code; acadedmicCatalog.HideInWhatIf = source.HideInWhatIf;
+            acadedmicCatalog.CatalogStartDate = source.StartDate.ToString();
             return acadedmicCatalog;
         }
     }

@@ -82,7 +82,8 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
         InCoursesListButAlreadyApplied,
         
         ReplacedWithGPAValues,
-        Replaced
+        Replaced,
+        ReplaceInProgress
     }
     /// <summary>
     /// This is to specify explanation associated with AcadResult. By default this will be 'None'. 

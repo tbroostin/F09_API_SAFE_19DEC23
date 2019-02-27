@@ -24,6 +24,7 @@ using Ellucian.Web.Http;
 using Ellucian.Web.Http.ModelBinding;
 using System.Web.Http.ModelBinding;
 using System.Net;
+using Ellucian.Colleague.Domain.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -56,6 +57,177 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         }
 
         #region Get Methods
+
+        #region section-registrations V16.0.0
+
+        /// <summary>
+        /// Get section registration get by guid.
+        /// </summary>
+        /// <param name="guid">Id of the SectionRegistration</param>
+        /// <returns>A SectionRegistration <see cref="Dtos.SectionRegistration2"/> object</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, EedmResponseFilter]
+        public async Task<Dtos.SectionRegistration4> GetSectionRegistrationByGuid3Async([FromUri] string guid)
+        {
+            var bypassCache = false;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
+
+            try
+            {
+                var sectionRegistration = await _sectionRegistrationService.GetSectionRegistrationByGuid3Async(guid);
+
+                if (sectionRegistration != null)
+                {
+
+                    AddEthosContextProperties(await _sectionRegistrationService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                              await _sectionRegistrationService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              new List<string>() { sectionRegistration.Id }));
+                }
+
+                return sectionRegistration;
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (ArgumentNullException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (ConfigurationException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (ArgumentOutOfRangeException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
+
+        /// <summary>
+        /// Gets section registrations with filter V16.0.0.
+        /// </summary>
+        /// <param name="page"></param>
+        /// <param name="criteria"></param>
+        /// <param name="academicPeriod"></param>
+        /// <param name="sectionInstructor"></param>
+        /// <returns></returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, EedmResponseFilter]
+        [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
+        [QueryStringFilterFilter("criteria", typeof(Dtos.SectionRegistration4))]
+        [QueryStringFilterFilter("academicPeriod", typeof(Dtos.Filters.AcademicPeriodNamedQueryFilter))]
+        [QueryStringFilterFilter("sectionInstructor", typeof(Dtos.Filters.SectionInstructorQueryFilter))]
+        [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
+        public async Task<IHttpActionResult> GetSectionRegistrations3Async(Paging page, QueryStringFilter criteria, QueryStringFilter academicPeriod, 
+            QueryStringFilter sectionInstructor)
+        {
+            var bypassCache = false;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
+
+            try
+            {
+                if (page == null)
+                {
+                    page = new Paging(100, 0);
+                }
+
+                //Criteria
+                var criteriaObj = GetFilterObject<Dtos.SectionRegistration4>(_logger, "criteria");
+
+                //academicPeriod
+                string academicPeriodFilterValue = string.Empty;
+                var academicPeriodFilterObj = GetFilterObject<Dtos.Filters.AcademicPeriodNamedQueryFilter>(_logger, "academicPeriod");
+                if (academicPeriodFilterObj != null && academicPeriodFilterObj.AcademicPeriod != null && !string.IsNullOrEmpty(academicPeriodFilterObj.AcademicPeriod.Id))
+                {
+                    academicPeriodFilterValue = academicPeriodFilterObj.AcademicPeriod.Id != null ? academicPeriodFilterObj.AcademicPeriod.Id : null;
+                }
+
+                //sectionInstructor
+                string sectionInstructorFilterValue = string.Empty;
+                var sectionInstructorFilterObj = GetFilterObject<Dtos.Filters.SectionInstructorQueryFilter>(_logger, "sectionInstructor");
+                if (sectionInstructorFilterObj != null && sectionInstructorFilterObj.SectionInstructorId != null && !string.IsNullOrEmpty(sectionInstructorFilterObj.SectionInstructorId.Id))
+                {
+                    sectionInstructorFilterValue = sectionInstructorFilterObj.SectionInstructorId.Id != null ? sectionInstructorFilterObj.SectionInstructorId.Id : null;
+                }
+
+                if (CheckForEmptyFilterParameters())
+                    return new PagedHttpActionResult<IEnumerable<Dtos.SectionRegistration4>>(new List<Dtos.SectionRegistration4>(), page, 0, this.Request);
+
+                var pageOfItems = await _sectionRegistrationService.GetSectionRegistrations3Async(page.Offset, page.Limit, criteriaObj, academicPeriodFilterValue, 
+                                        sectionInstructorFilterValue, bypassCache);
+
+                AddEthosContextProperties(await _sectionRegistrationService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                                  await _sectionRegistrationService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                                  pageOfItems.Item1.Select(a => a.Id).ToList()));
+
+                return new PagedHttpActionResult<IEnumerable<Dtos.SectionRegistration4>>(pageOfItems.Item1, page, pageOfItems.Item2, Request);
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentNullException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+
+        }
+
+        #endregion section-registrations V16.0.0
 
         /// <summary>
         /// Get section registration
@@ -92,7 +264,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
@@ -115,6 +287,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (ArgumentOutOfRangeException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
@@ -161,7 +338,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
@@ -184,6 +361,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (ArgumentOutOfRangeException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
@@ -236,9 +418,19 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentNullException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
@@ -292,9 +484,19 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentNullException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
@@ -361,7 +563,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
@@ -389,6 +591,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (ArgumentOutOfRangeException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
@@ -425,7 +632,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 }
                 if (!guid.Equals(sectionRegistration.Id, StringComparison.OrdinalIgnoreCase))
                 {
-                    throw CreateHttpResponseException(new IntegrationApiException("GUID mismatch", IntegrationApiUtility.GetDefaultApiError("GUID not the same as in request body.")));
+                    throw new InvalidOperationException("GUID not the same as in request body.");
                 }
                 if (string.IsNullOrEmpty(sectionRegistration.Id))
                 {
@@ -453,7 +660,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
@@ -481,6 +688,109 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (ArgumentOutOfRangeException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
+
+        /// <summary>
+        /// Update (PUT) section registrations
+        /// </summary>
+        /// <param name="guid">Id of the SectionRegistration</param>
+        /// <param name="sectionRegistration">DTO of the SectionRegistration</param>
+        /// <returns>A SectionRegistration <see cref="Dtos.SectionRegistration4"/> object</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpPut, EedmResponseFilter]
+        public async Task<Dtos.SectionRegistration4> PutSectionRegistrations3Async([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.SectionRegistration4 sectionRegistration)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(guid))
+                {
+                    throw new ArgumentNullException("Null sectionRegistration guid", "guid is a required property.");
+                }
+                if (sectionRegistration == null)
+                {
+                    throw new ArgumentNullException("Null sectionRegistration argument", "The request body is required.");
+                }
+                if (guid.Equals(Guid.Empty.ToString(), StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException("Nil GUID cannot be used in PUT operation.");
+                }
+                if (!guid.Equals(sectionRegistration.Id, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException("GUID not the same as in request body.");
+                }
+                if (string.IsNullOrEmpty(sectionRegistration.Id))
+                {
+                    sectionRegistration.Id = guid.ToUpperInvariant();
+                }
+
+                //get Data Privacy List
+                var dpList = await _sectionRegistrationService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
+
+                //call import extend method that needs the extracted extension dataa and the config
+                await _sectionRegistrationService.ImportExtendedEthosData(await ExtractExtendedData(await _sectionRegistrationService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
+
+                //do update with partial logic
+                var sectionRegistrationReturn = await _sectionRegistrationService.UpdateSectionRegistration3Async(guid,
+                    await PerformPartialPayloadMerge(sectionRegistration, async () => await _sectionRegistrationService.GetSectionRegistrationByGuid3Async(guid),
+                        dpList, _logger));
+
+                //store dataprivacy list and get the extended data to store 
+                AddEthosContextProperties(dpList,
+                    await _sectionRegistrationService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(), new List<string>() { guid }));
+
+                return sectionRegistrationReturn;
+
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (ArgumentNullException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (ConfigurationException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (InvalidOperationException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (ArgumentOutOfRangeException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
@@ -530,7 +840,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
@@ -568,6 +878,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (FormatException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
@@ -613,7 +928,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
@@ -655,6 +970,99 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
+
+        /// <summary>
+        /// Create (POST) section registrations
+        /// </summary>
+        /// <param name="sectionRegistration">A SectionRegistration <see cref="Dtos.SectionRegistration4"/> object</param>
+        /// <returns>A SectionRegistration <see cref="Dtos.SectionRegistration4"/> object</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpPost, EedmResponseFilter]
+        public async Task<Dtos.SectionRegistration4> PostSectionRegistrations3Async([ModelBinder(typeof(EedmModelBinder))] Dtos.SectionRegistration4 sectionRegistration)
+        {
+            try
+            {
+                if (sectionRegistration == null)
+                {
+                    throw new ArgumentNullException("Null sectionRegistration argument", "The request body is required.");
+                }
+                if (string.IsNullOrEmpty(sectionRegistration.Id))
+                {
+                    throw new ArgumentNullException("Null sectionRegistration id", "Id is a required property.");
+                }
+                //call import extend method that needs the extracted extension data and the config
+                await _sectionRegistrationService.ImportExtendedEthosData(await ExtractExtendedData(await _sectionRegistrationService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
+
+                //create the section registration
+                var sectionRegistrationReturn = await _sectionRegistrationService.CreateSectionRegistration3Async(sectionRegistration);
+
+                //store dataprivacy list and get the extended data to store 
+                AddEthosContextProperties(await _sectionRegistrationService.GetDataPrivacyListByApi(GetRouteResourceName(), true),
+                   await _sectionRegistrationService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(), new List<string>() { sectionRegistrationReturn.Id }));
+
+                return sectionRegistrationReturn;
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (ArgumentNullException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (ConfigurationException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (ArgumentOutOfRangeException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (InvalidOperationException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (FormatException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
             catch (Exception e)
             {
                 _logger.Error(e.ToString());
@@ -665,7 +1073,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         #endregion
 
         #region Delete Methods
-      
+
         /// <summary>
         /// Delete (DELETE) an existing section-registrations
         /// </summary>

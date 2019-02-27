@@ -130,6 +130,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests
             programs.Add("EXP.Ccd", new Program("EXP.Ccd", "Expired Program Ccd", new List<string> { "ENGL" }, false, acadLevelCode, cf, false, "Expired Ccd"));
             programs.Add("ALMOSTEXP.Ccd", new Program("ALMOSTEXP.Ccd", "Almost Expired Program Ccd", new List<string> { "ENGL" }, false, acadLevelCode, cf, true, "Almost Expired Ccd"));
             programs.Add("SIMPLE", new Program("SIMPLE", "Simple Program", new List<string> { "ENGL" }, true, acadLevelCode, cf, false, "Master of Science") { Catalogs = catalogs });
+            programs.Add("REPEAT.BB", new Program("REPEAT.BB", "To test repeates and retakes", new List<string> { "MATH" }, true, gradAcadLevel, gcf, false, "Master of Math") { Catalogs = catalogs });
 
             // Set flag to make all programs available for selection with one exception, for testing
             foreach (var pgm in programs)

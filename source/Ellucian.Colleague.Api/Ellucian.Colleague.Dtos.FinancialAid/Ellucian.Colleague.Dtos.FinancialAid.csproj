@@ -109,6 +109,7 @@
     <Compile Include="AwardCategory2.cs" />
     <Compile Include="AwardLetter.cs" />
     <Compile Include="AwardLetter2.cs" />
+    <Compile Include="AwardLetter3.cs" />
     <Compile Include="AwardLetterAddress.cs" />
     <Compile Include="AwardLetterAnnualAward.cs" />
     <Compile Include="AwardLetterAward.cs" />

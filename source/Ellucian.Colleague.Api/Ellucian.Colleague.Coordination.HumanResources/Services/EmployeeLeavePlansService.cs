@@ -188,7 +188,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 effectivePersonId = CurrentUser.PersonId;
             }
-            else if (!CurrentUser.IsPerson(effectivePersonId) && !HasProxyAccessForPerson(effectivePersonId))
+            else if (!CurrentUser.IsPerson(effectivePersonId) && !HasProxyAccessForPerson(effectivePersonId, Domain.Base.Entities.ProxyWorkflowConstants.TimeManagementTimeApproval))
             {
                 throw new PermissionsException(string.Format("User {0} does not have permission to view employee leave plan information for person {1}", CurrentUser.PersonId, effectivePersonId));
             }
@@ -287,6 +287,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view employee leave plans.");
             }
-        }       
+        }
     }
 }

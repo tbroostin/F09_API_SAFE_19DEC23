@@ -39,7 +39,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
         };
 
         // Create a list of next approver validation response domain entities.
-        public List<ApproverValidationResponse> nextApproverValidationResponses = new List<ApproverValidationResponse>()
+        public List<ApproverValidationResponse> approverValidationResponses = new List<ApproverValidationResponse>()
         {
             new ApproverValidationResponse("BOB1")
             {
@@ -59,7 +59,15 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
         {
             return await Task.Run(() =>
             {
-                return nextApproverValidationResponses.Where(x => x.Id == nextApproverId).FirstOrDefault();
+                return approverValidationResponses.Where(x => x.Id == nextApproverId).FirstOrDefault();
+            });
+        }
+
+        public async Task<string> GetApproverNameForIdAsync(string approverId)
+        {
+            return await Task.Run(() =>
+            {
+                return approverValidationResponses.Where(x => x.Id == approverId).FirstOrDefault().ApproverName;
             });
         }
     }

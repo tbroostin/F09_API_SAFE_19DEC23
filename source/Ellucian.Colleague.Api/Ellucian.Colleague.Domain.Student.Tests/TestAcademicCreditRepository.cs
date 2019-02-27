@@ -119,8 +119,14 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         {"106","COMM-100","comm 100",                    "N","3.00", "I","2017/SP", "A", "4", "12",   "7431", "8037","0.00","3.00","A","B","C","A","B","C","UG",   "001",""},
        {"107","MATH-1004","math 1004",                   "N","1.00", "I", "2017/SP",  "",  "",  "0",  "7432", "8038","0.00","1.00", "", "", "", "", "", "","UG",   "001",""},// Institutional, in progress
        {"108","COMM-100","comm 100",                     "N",null,   "I","2017/SP", "A", "4", "4",  "7431", "8037","0.00","3.00","A","B","C","A","B","C","UG",   "001",""},//GPACredit is null
-       {"109","MATH-1004-G","math 1004-G",               "N","1.00", "I","2017/SP",  "",  "",  "0",  "7432", "8038","0.00",  "",  "",  "", "", "", "", "","UG",   "001",""} //CompletedCredit is NULL
-
+       {"109","MATH-1004-G","math 1004-G",               "N","1.00", "I","2017/SP",  "",  "",  "0",  "7432", "8038","0.00",  "",  "",  "", "", "", "", "","UG",   "001",""}, //CompletedCredit is NULL
+            //List of credits used for replace/ retakes tests
+            {"110","MATH-300BB","Calculus AP","N","3.00","I","2009/SP","",  "",  "0",  "7435", "9000","0.00","0.00", "", "", "", "", "", "","G",   "001","" }, //INPROGRESS course for 2009/SP
+             {"111","MATH-300BB","Calculus AP","N","3.00","I","2010/SP","",  "",  "0",  "7435", "9001","0.00","0.00", "", "", "", "", "", "","G",   "001","" }, //INPROGRESS course for 2010/SP
+            {"112","MATH-300BB","Calculus AP","N","3.00","I","2018/SP","",  "",  "0",  "7435", "9002","0.00","0.00", "", "", "", "", "", "","G",   "001","" }, //INPROGRESS course for 2017/SP
+             {"113","MATH-300BB","Calculus AP","N","3.00","I","2009/SP","A",  "4",  "12",  "7435", "9000","0.00","3.00", "", "", "", "", "", "","G",   "001","" }, //COMPLETED course for 2009/SP
+            {"114","MATH-300BB","Calculus AP","N","3.00","I","2010/SP","B",  "3",  "10",  "7435", "9001","0.00","3.00", "", "", "", "", "", "","G",   "001","" }, //COMPLETED course for 2010/SP
+           {"115","MATH-300BB","Calculus AP","N","3.00","I","2018/SP","C",  "2",  "8",  "7435", "9002","0.00","3.00", "", "", "", "", "", "","G",   "001","" }, //COMPLETED course for 2017/SP
         };
         public async Task<IEnumerable<AcademicCredit>> GetAsync(ICollection<string> ids, bool bestFit = false, bool filter = true, bool includeDrops = false)
         {
@@ -153,7 +159,10 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                     {
                         AcademicCredits.Add(acadcredsbyid[id]);
                     }
+                    
                 }
+
+
                 catch (KeyNotFoundException)
                 {
                     throw new KeyNotFoundException("Academic Credit for Course " + id + " not found.");
@@ -411,7 +420,10 @@ namespace Ellucian.Colleague.Domain.Student.Tests
 
                 // This one can be replaced, replacement is in progress (but the academichistory class figures that out)
                 if (ac.CourseName == "MUSC*211")
+                {
                     ac.CanBeReplaced = true;
+                    ac.RepeatAcademicCreditIds = new List<string> { "67", "68" };
+                }
                 // Also mark MATH-460 as a course that can be replaced.  In this case it won't be replaced because the only possibility is a credit that is incomplete and has been dropped.
                 if (ac.CourseName == "MATH*460")
                     ac.CanBeReplaced = true;

@@ -15,6 +15,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance
         /// <summary>
         /// The IncludedYearsFor1099mi indicates the comma seperated years for which 1099MI form can be generated
         /// </summary>
-        public const string IncludedYearsFor1099mi = "2017";
+        public const string IncludedYearsFor1099mi = "2017, 2016, 2015, 2011, 2010, 2012, 2014, 2013, 2018, 2009";
     }
 }

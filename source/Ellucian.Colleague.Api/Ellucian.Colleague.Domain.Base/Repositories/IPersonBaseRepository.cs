@@ -1,5 +1,6 @@
 ﻿// Copyright 2015-2017 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Base.Entities;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -36,7 +37,7 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
           /// </summary>
           /// <param name="opersKey">opersKey</param>
           /// <returns></returns>
-          Task<string> GetPersonIdFromOpersAsync(string opersKey);
+          Task<string> GetPersonIdFromOpersAsync(string opersKey);        
 
         /// <summary>
         /// Retrieves the information for PersonBase for ids provided,

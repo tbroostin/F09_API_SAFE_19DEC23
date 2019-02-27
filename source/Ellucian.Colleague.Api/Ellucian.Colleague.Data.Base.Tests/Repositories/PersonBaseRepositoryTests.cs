@@ -1,19 +1,20 @@
 ﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.Caching;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
+
+using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Data.Colleague;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using Ellucian.Data.Colleague;
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using Ellucian.Colleague.Domain.Exceptions;
+using System.Linq;
+using System.Runtime.Caching;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 {
@@ -1280,7 +1281,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 PersonSetupInitialize();
 
                 // setup person object
-                addresses = new List<Address>();
+                addresses = new List<Domain.Base.Entities.Address>();
                 phones = new List<Phone>();
                 personBase = GetTestPersonDataEntities(out addresses, out phones);
 
@@ -1627,8 +1628,82 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     Assert.AreEqual(result.Value, recordKeyLookupResult.Guid);
                 }
             }
-            #endregion
+
+            [TestMethod]
+            public async Task GetPersonGuidsWithNoCorpCollectionAsync()
+            {
+                IEnumerable<string> sublist = new List<string>() { "1", "2", "3" };
+                Dictionary<string, RecordKeyLookupResult> recordKeyLookupResults = new Dictionary<string, RecordKeyLookupResult>();
+                recordKeyLookupResults.Add("PERSON+1", new RecordKeyLookupResult() { Guid = "854da721-4191-4875-bf58-7d6c00ffea8f", ModelName = "persons" });
+                recordKeyLookupResults.Add("PERSON+2", new RecordKeyLookupResult() { Guid = "71e1a806-24a8-4d93-91a2-02d86056b63c", ModelName = "persons" });
+                recordKeyLookupResults.Add("PERSON+3", new RecordKeyLookupResult() { Guid = "61e1a806-24a8-4d93-91a2-02d86056b63c", ModelName = "persons" });
+                List<KeyValuePair<string, RecordKeyLookupResult>> list = recordKeyLookupResults.ToList();
+
+                dataReaderMock.Setup(i => i.SelectAsync("PERSON", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(new[] { "1", "2", "3" });
+                dataReaderMock.Setup(i => i.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(recordKeyLookupResults);
+
+                var results = await repository.GetPersonGuidsWithNoCorpCollectionAsync(sublist);
+                Assert.IsNotNull(results);
+                Assert.AreEqual(3, results.Count());
+                foreach (var result in results)
+                {
+                    RecordKeyLookupResult recordKeyLookupResult = null;
+                    recordKeyLookupResults.TryGetValue(string.Concat("PERSON+", result.Key), out recordKeyLookupResult);
+
+                    Assert.AreEqual(result.Value, recordKeyLookupResult.Guid);
+                }
+            }
+
+            [TestMethod]
+            public async Task GetPersonGuidsWithNoCorpCollectionAsync_ZeroResults()
+            {
+                var results = await repository.GetPersonGuidsWithNoCorpCollectionAsync(new string[] { });
+                Assert.IsNotNull(results);
+                Assert.AreEqual(0, results.Count());
+            }
+
+            [TestMethod]
+            public async Task GetPersonGuidsFromOperKeysAsync_Null_Results()
+            {
+                IEnumerable<string> sublist = new List<string>();// { "1", "2" };
+                var results = await repository.GetPersonGuidsFromOperKeysAsync(sublist);
+                Assert.IsNull(results);
+            }
+
+            [TestMethod]
+            public async Task GetPersonGuidsFromOperKeysAsync()
+            {
+                IEnumerable<string> sublist = new List<string>() { "1", "2" };
+                Collection<Opers> opers = new Collection<Opers>()
+                {
+                    new Opers() { Recordkey = "1", SysPersonId = "P1" },
+                    new Opers() { Recordkey = "2", SysPersonId = "P2" },
+                    new Opers() { Recordkey = "3", SysPersonId = "P3" }
+                };
+                Dictionary<string, RecordKeyLookupResult> rklr = new Dictionary<string, RecordKeyLookupResult>();
+                rklr.Add("PERSON+P1", new RecordKeyLookupResult() { Guid = Guid.NewGuid().ToString() });
+                rklr.Add("PERSON+P2", new RecordKeyLookupResult() { Guid = Guid.NewGuid().ToString() });
+                rklr.Add("PERSON+P3", new RecordKeyLookupResult() { Guid = Guid.NewGuid().ToString() });
+                rklr.Add("PERSON+P4", new RecordKeyLookupResult() { Guid = Guid.NewGuid().ToString() });
+
+                dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<Opers>("UT.OPERS", It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(opers);
+                dataReaderMock.Setup(dr => dr.SelectAsync("STAFF", It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>() )).ReturnsAsync(new []{ "3" });
+                dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<DataContracts.Staff>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(new Collection<DataContracts.Staff>() { new DataContracts.Staff() { Recordkey = "P4", StaffInitials = "4" } });
+                dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(rklr);
+
+                var results = await repository.GetPersonGuidsFromOperKeysAsync(sublist);                
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(Exception))]
+            public async Task GetPersonGuidsFromOperKeysAsync_Exception()
+            {
+                dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<Opers>("UT.OPERS", It.IsAny<string[]>(), It.IsAny<bool>())).ThrowsAsync(new Exception());
+                var results = await repository.GetPersonGuidsFromOperKeysAsync(new[] { "1" });
+            }
+            
         }
+        #endregion
     }
 
 }

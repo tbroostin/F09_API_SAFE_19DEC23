@@ -170,6 +170,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
                 fiscalYears = new List<Domain.ColleagueFinance.Entities.FiscalYear>()
                 {
+                    new Domain.ColleagueFinance.Entities.FiscalYear(guid, "2014") { CurrentFiscalYear = 2014, FiscalStartMonth = 7 },
                     new Domain.ColleagueFinance.Entities.FiscalYear(guid, "2015") { CurrentFiscalYear = 2015, FiscalStartMonth = 7 },
                     new Domain.ColleagueFinance.Entities.FiscalYear(guid, "2017") { CurrentFiscalYear = 2017, FiscalStartMonth = 7 }
                 };
@@ -178,7 +179,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 {
                     new Domain.ColleagueFinance.Entities.FiscalPeriodsIntg(guid, "1") { },
                     new Domain.ColleagueFinance.Entities.FiscalPeriodsIntg("1a59eed8-5fe7-4120-b1cf-f23266b9e876", "2") { FiscalYear = 2016, Year = 2016, Month = 8 },
-                    new Domain.ColleagueFinance.Entities.FiscalPeriodsIntg("1a59eed8-5fe7-4120-b1cf-f23266b9e877", "3") { FiscalYear = 2015, Year = 2015, Month = 9 }
+                    new Domain.ColleagueFinance.Entities.FiscalPeriodsIntg("1a59eed8-5fe7-4120-b1cf-f23266b9e877", "3") { FiscalYear = 2015, Year = 2015, Month = 9 },
+                    new Domain.ColleagueFinance.Entities.FiscalPeriodsIntg("1a59eed8-5fe7-4120-b1cf-f23266b9e877", "4") { FiscalYear = 2014, Year = 2014, Month = 9 }
                 };
             }
 

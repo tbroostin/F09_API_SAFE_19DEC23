@@ -857,11 +857,11 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 P1098TRefundBoxCode = "TUI",
                 P1098TInstPhone = "703-259-9000",
                 P1098TInstPhoneExt = "1009",
-                P1098TFaBoxCode = "",
-                P1098TLoadBoxCode = "",
+                P1098TFaBoxCode = "BOX5",
+                P1098TLoadBoxCode = "BOX8",
                 P1098TGradBoxCode = "",
-                P1098TFaRefBoxCode = "",
-                P1098TNewYrBoxCode = "",
+                P1098TFaRefBoxCode = "BOX6",
+                P1098TNewYrBoxCode = "BOX7",
                 P1098TYears = new List<int?>() { 2016, 2015 },
                 P1098TYrChgRptMeths = new List<string>() { "N", "Y" },
                 P1098ETaxForm = "1098E",
@@ -896,33 +896,120 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             taxForm1098Boxes.Add(new TaxForm1098Boxes()
             {
                 Recordkey = "4",
+                Tf98bAmt = 150,
+                Tf98bBoxCode = "LOD",
+                Tf98bValue = ""
+            });
+
+            taxForm1098Boxes.Add(new TaxForm1098Boxes()
+            {
+                Recordkey = "5",
                 Tf98bAmt = 275,
-                Tf98bBoxCode = "GRD",
+                Tf98bBoxCode = "BOX4",
+                Tf98bValue = ""
+            });
+
+            taxForm1098Boxes.Add(new TaxForm1098Boxes()
+            {
+                Recordkey = "6",
+                Tf98bAmt = 275,
+                Tf98bBoxCode = "BOX5",
+                Tf98bValue = ""
+            });
+
+            taxForm1098Boxes.Add(new TaxForm1098Boxes()
+            {
+                Recordkey = "7",
+                Tf98bAmt = 275,
+                Tf98bBoxCode = "BOX6",
+                Tf98bValue = ""
+            });
+
+            taxForm1098Boxes.Add(new TaxForm1098Boxes()
+            {
+                Recordkey = "8",
+                Tf98bAmt = 275,
+                Tf98bBoxCode = "BOX7",
+                Tf98bValue = ""
+            });
+
+            taxForm1098Boxes.Add(new TaxForm1098Boxes()
+            {
+                Recordkey = "9",
+                Tf98bAmt = 275,
+                Tf98bBoxCode = "BOX8",
+                Tf98bValue = ""
+            });
+
+            taxForm1098Boxes.Add(new TaxForm1098Boxes()
+            {
+                Recordkey = "10",
+                Tf98bAmt = 275,
+                Tf98bBoxCode = "BOX9",
                 Tf98bValue = ""
             });
 
             boxCodes.Add(new BoxCodes()
             {
+                BxcBoxNumber = "6",
+                BxcTaxForm = "1098T",
+                Recordkey = "BOX6"
+            });
+
+            boxCodes.Add(new BoxCodes()
+            {
+                BxcBoxNumber = "5",
+                BxcTaxForm = "1098T",
+                Recordkey = "BOX5"
+            });
+
+            boxCodes.Add(new BoxCodes()
+            {
+                BxcBoxNumber = "4",
+                BxcTaxForm = "1098T",
+                Recordkey = "TUI"
+            });
+
+            boxCodes.Add(new BoxCodes()
+            {
                 BxcBoxNumber = "2",
+                BxcTaxForm = "1098T",
                 Recordkey = "TUI"
             });
 
             boxCodes.Add(new BoxCodes()
             {
                 BxcBoxNumber = "7",
+                BxcTaxForm = "1098T",
                 Recordkey = "CNY"
             });
 
             boxCodes.Add(new BoxCodes()
             {
                 BxcBoxNumber = "8",
+                BxcTaxForm = "1098T",
                 Recordkey = "LOD"
             });
 
             boxCodes.Add(new BoxCodes()
             {
                 BxcBoxNumber = "9",
+                BxcTaxForm = "1098T",
                 Recordkey = "GRD"
+            });
+
+            boxCodes.Add(new BoxCodes()
+            {
+                BxcBoxNumber = "1",
+                BxcTaxForm = "1098T",
+                Recordkey = "PAY"
+            });
+
+            boxCodes.Add(new BoxCodes()
+            {
+                BxcBoxNumber = "1",
+                BxcTaxForm = "1098E",
+                Recordkey = "IN1"
             });
 
             coreDefaults = new Defaults()

@@ -1,20 +1,14 @@
-﻿using Ellucian.Colleague.Data.Base.DataContracts;
-// Copyright 2012-2014 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Repositories;
 using Ellucian.Colleague.Data.Student.Transactions;
-using Ellucian.Colleague.Domain.Base.Tests;
 using Ellucian.Colleague.Domain.Student.Entities;
-using Ellucian.Colleague.Domain.Student.Repositories;
+using Ellucian.Colleague.Domain.Student.Entities.Requirements.Modifications;
 using Ellucian.Colleague.Domain.Student.Tests;
-using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.DataContracts;
-using Ellucian.Web.Cache;
-using Ellucian.Web.Http.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -53,6 +47,72 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.IsTrue(studentProgram.Overrides.First(so => so.GroupId == "100").DeniesCredit("3"));
                 Assert.IsTrue(studentProgram.Overrides.First(so => so.GroupId == "100").DeniesCredit("4"));
                 Assert.IsTrue(studentProgram.Overrides.First(so => so.GroupId == "200").AllowsCredit("5"));
+
+            }
+
+            [TestMethod]
+            public async Task Get_ReturnStudentProgramsFailedRequirementModifications()
+            {
+                // Set up response for the exceptions request
+                var StudentDaExcptsResponseData = BuildStudentDaExcptsResponse();
+                dataReaderMock.Setup<Task<Collection<StudentDaExcpts>>>(acc => acc.BulkReadRecordAsync<StudentDaExcpts>("STUDENT.DA.EXCPTS", It.IsAny<string[]>(), true)).ReturnsAsync(null);
+
+
+                var studentProgram = await studentProgramRepo.GetAsync("0000894", "MATH.BS");
+                Assert.IsTrue(studentProgram != null);
+                Assert.AreEqual(0, studentProgram.RequirementModifications.Count());
+
+            }
+
+            [TestMethod]
+            public async Task Get_ReturnStudentProgramsWithRequirementModifications()
+            {
+                // Set up response for the exceptions request
+                var StudentDaExcptsResponseData = BuildStudentDaExcptsResponse();
+                dataReaderMock.Setup<Task<Collection<StudentDaExcpts>>>(acc => acc.BulkReadRecordAsync<StudentDaExcpts>("STUDENT.DA.EXCPTS", It.IsAny<string[]>(), true)).ReturnsAsync(StudentDaExcptsResponseData);
+
+
+                var studentProgram = await studentProgramRepo.GetAsync("0000894", "MATH.BS");
+                Assert.IsTrue(studentProgram != null);
+                Assert.AreEqual(4, studentProgram.RequirementModifications.Count());
+
+                // First Modification should be one with Additional Course
+                var mod1 = studentProgram.RequirementModifications.Where(rm => rm.blockId == "10000").FirstOrDefault();
+                var expectedMod1 = StudentDaExcptsResponseData.Where(erm => erm.StexAcadReqmtBlock == "10000").FirstOrDefault();
+                Assert.IsNotNull(mod1);
+                Assert.AreEqual(expectedMod1.StexPrintedSpec, mod1.modificationMessage);
+                Assert.IsInstanceOfType(mod1, typeof(CoursesAddition));
+                CoursesAddition ca = (CoursesAddition)mod1;
+                Assert.AreEqual(2, ca.AdditionalCourses.Count());
+
+                // Second Modification should be a replacement block
+                var mod2 = studentProgram.RequirementModifications.Where(rm => rm.blockId == "20000").FirstOrDefault();
+                var expectedMod2 = StudentDaExcptsResponseData.Where(erm => erm.StexAcadReqmtBlock == "20000").FirstOrDefault();
+                Assert.IsNotNull(mod2);
+                Assert.AreEqual(expectedMod2.StexPrintedSpec, mod2.modificationMessage);
+                Assert.IsInstanceOfType(mod2, typeof(BlockReplacement));
+                BlockReplacement br = (BlockReplacement)mod2;
+                Assert.IsNotNull(br.NewRequirement);
+                Assert.IsNotNull(br.NewRequirement.SubRequirements);
+                Assert.IsTrue(br.NewRequirement.SubRequirements.First().IsBlockReplacement);
+                Assert.AreEqual(2, br.NewRequirement.SubRequirements.First().MinGroups);
+                Assert.IsTrue(br.NewRequirement.SubRequirements.First().Groups.First().IsBlockReplacement);
+
+                // Third Modification should be a waiver
+                var mod3 = studentProgram.RequirementModifications.Where(rm => rm.blockId == "30000").FirstOrDefault();
+                var expectedMod3 = StudentDaExcptsResponseData.Where(erm => erm.StexAcadReqmtBlock == "30000").FirstOrDefault();
+                Assert.IsNotNull(mod3);
+                Assert.AreEqual(expectedMod3.StexPrintedSpec, mod3.modificationMessage);
+                Assert.IsInstanceOfType(mod3, typeof(BlockReplacement));
+                BlockReplacement br2 = (BlockReplacement)mod3;
+                Assert.IsNull(br2.NewRequirement);
+
+                // Fourth Modification should be a GPA waiver
+                var mod4 = studentProgram.RequirementModifications.Where(rm => rm.blockId == "40000").FirstOrDefault();
+                var expectedMod4 = StudentDaExcptsResponseData.Where(erm => erm.StexAcadReqmtBlock == "40000").FirstOrDefault();
+                Assert.IsNotNull(mod4);
+                Assert.AreEqual(expectedMod4.StexPrintedSpec, mod4.modificationMessage);
+                Assert.IsInstanceOfType(mod4, typeof(GpaModification));
 
             }
 
@@ -204,7 +264,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataReaderMock.Setup<Task<Collection<StudentDaOverrides>>>(acc => acc.BulkReadRecordAsync<StudentDaOverrides>("STUDENT.DA.OVERRIDES", new string[] { "99991", "99992" }, true)).ReturnsAsync(StudentDaOverridesResponseData);
 
                 // Set up response for the exceptions request
-                var StudentDaExcptsResponseData = BuildStudentDaExcptsResponse(studentPrograms);
+                var StudentDaExcptsResponseData = BuildStudentDaExcptsResponse();
                 dataReaderMock.Setup<Task<Collection<StudentDaExcpts>>>(acc => acc.BulkReadRecordAsync<StudentDaExcpts>("STUDENT.DA.EXCPTS", new string[] { }, true)).ReturnsAsync(StudentDaExcptsResponseData);
 
                 // mock data accessor STUDENT.PROGRAM.STATUSES
@@ -313,6 +373,16 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                         // here and used to select the data.  These are set to match the mocked data.
                         studentProgramData.StprDaOverrides = new List<string>() { "99991", "99992" };
                     }
+                    // Used for testing Program exceptions
+                    if (studentProgramData.Recordkey == "0000894*MATH.BS")
+                    {
+                        studentProgramData.StprDaExcpts = new List<string>() { "E1", "E2", "E3", "E4" };
+                    } else
+                    {
+                        studentProgramData.StprDaExcpts = new List<string>();
+                    }
+                        
+
 
                     repoStudentPrograms.Add(studentProgramData);
                 }
@@ -471,20 +541,44 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 return overrides;
             }
 
-            private Collection<StudentDaExcpts> BuildStudentDaExcptsResponse(IEnumerable<StudentProgram> studentPrograms)
+            private Collection<StudentDaExcpts> BuildStudentDaExcptsResponse()
             {
                 Collection<StudentDaExcpts> exceptions = new Collection<StudentDaExcpts>();
+                // First is Additional Courses
+                var exception1 = new StudentDaExcpts() { Recordkey = "E1", StexStudentProgram = "0000894*MATH.BS",  StexAcadReqmtBlock = "10000", StexType = "E", StexElement = "ADEL", StexAddnlCourses = new List<string>() { "100", "200" }, StexPrintedSpec = "Exception: Allowing Courses 100 and 200"};
+                exceptions.Add(exception1);
 
-                //foreach (var sp in studentPrograms)
-                //{
-                //    foreach (var e in sp.RequirementModifications)
-                //    {
-                //        StudentDaExcpts excp = new StudentDaExcpts();
-                //        // get data from the exception
-                //        exceptions.Add(excp);
-                //    }
+                // Second is a Replacement Block - without min grades 
+                var courseAssociation = new List<StudentDaExcptsBlockRepl>();
+                var ca1 = new StudentDaExcptsBlockRepl() { StexBlockReplCoursesAssocMember = "87" };
+                courseAssociation.Add(ca1);
+                var ca2 = new StudentDaExcptsBlockRepl() { StexBlockReplCoursesAssocMember = "139" };
+                courseAssociation.Add(ca2);
+                var ca3 = new StudentDaExcptsBlockRepl();
+                courseAssociation.Add(ca3);
+                var exception2 = new StudentDaExcpts() { Recordkey = "E2", StexStudentProgram = "0000894*MATH.BS", StexAcadReqmtBlock = "20000", StexType = "R", StexElement = "BLK", StexPrintedSpec = "BlockReplacement: Take Courses 87 - min B and 139 no min grade", BlockReplEntityAssociation = courseAssociation};
+                exceptions.Add(exception2);
 
-                //}
+                // Third is a Block Waiver
+                var exception3 = new StudentDaExcpts() { Recordkey = "E3", StexStudentProgram = "0000894*MATH.BS", StexAcadReqmtBlock = "30000", StexType = "W", StexElement = "BLK", StexPrintedSpec = "BlockReplacement Waiver: Waiving this requirement" };
+                exceptions.Add(exception3);
+
+                // Fourth is invalid because it does not have StexElement so it will be skipped.
+                var exception4 = new StudentDaExcpts() { Recordkey = "E99", StexStudentProgram = "0000894*MATH.BS", StexAcadReqmtBlock = "99000", StexType = "W", StexPrintedSpec = "Invalid Waiver: StexElement is null" };
+                exceptions.Add(exception4);
+
+                // Fifth is a GPA 
+                var exception5 = new StudentDaExcpts() { Recordkey = "E4", StexStudentProgram = "0000894*MATH.BS", StexAcadReqmtBlock = "40000", StexType = "W", StexElement = "GPA", StexPrintedSpec = "GPA Waiver: Waiving GPA for this requirement" };
+                exceptions.Add(exception5);
+
+                // Sixth is an invalid element type
+                var exception6 = new StudentDaExcpts() { Recordkey = "E98", StexStudentProgram = "0000894*MATH.BS", StexAcadReqmtBlock = "98000", StexType = "R", StexElement = "XXX", StexPrintedSpec = "Invalid element type" };
+                exceptions.Add(exception6);
+
+                // Seventh is an invalid block replacement because it has no block Id
+                var exception7 = new StudentDaExcpts() { Recordkey = "E97", StexStudentProgram = "0000894*MATH.BS", StexType = "R", StexElement = "BLK", StexPrintedSpec = "Invalid block: No block Id.", BlockReplEntityAssociation = courseAssociation };
+                exceptions.Add(exception7);
+
 
                 //453               group change take 4 courses to 3
                 //449               pr    change overall program inst cred requirement from 90 to 89

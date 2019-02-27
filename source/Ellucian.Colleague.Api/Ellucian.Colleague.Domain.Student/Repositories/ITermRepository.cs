@@ -30,5 +30,12 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         IEnumerable<Term> Get();
 
         IEnumerable<AcademicPeriod> GetAcademicPeriods(IEnumerable<Term> termEntities);
+
+        /// <summary>
+        /// Get guid for AcademicPeriods code
+        /// </summary>
+        /// <param name="code">AcademicPeriods code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetAcademicPeriodsGuidAsync(string code);
     }
 }

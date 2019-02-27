@@ -1,12 +1,10 @@
-﻿// Copyright 2012-2014 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using Ellucian.Colleague.Domain.Student.Entities.Requirements.Modifications;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
-using Ellucian.Colleague.Domain.Student.Entities.Requirements;
 using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Domain.Student.Tests
@@ -16,8 +14,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests
 
         private string[,] StudentAcademicPrograms = {
                                             //person id","program","guid","catalog","person id
-                                                {"12345678","BA-MATH","bfde7c40-f27b-4747-bbd1-aab4b3b77bb9","2012","A","MC", "MATH", "HIST", "CERT", "BA", "ELE", "2000RSU", "01/01/2001","MATH","UG","3.4","CL","05/15/2014","06/15/2014","THESIS","100", "12/31/2001"},
-                                                {"12345678","AA-NURS","45d8557f-56a9-4abc-8308-ee026983080c","2013", "P", "MC", "ENGL,MATH", "HIST,ACCT", "CERT,SCIE", "BA", "ELE,DI", "2000/S1", "01/01/2001", "MATH", "GR","2.0", "FE","12/31/2015","06/15/2015","THESIS1","200", ""},
+                                                {"12345678","BA-MATH","bfde7c40-f27b-4747-bbd1-aab4b3b77bb9","2012","A","MC", "MATH", "HIST", "CERT", "BA", "ELE", "2000RSU", "01/01/2001","ENG","UG","3.4","CL","05/15/2014","06/15/2014","THESIS","100", "12/31/2001"},
+                                                {"12345678","AA-NURS","45d8557f-56a9-4abc-8308-ee026983080c","2013", "P", "MC", "ENGL", "HIST", "CERT", "BA", "ELE", "2000/S1", "01/01/2001", "MATH", "GR","2.0", "FE","12/31/2015","06/15/2015","THESIS1","200", ""},
                                                 {"12345678","MA-LAW","688583fc-6499-4a05-90b0-685745d6b465","2014", "G", "SBCD", "MATH", "HIST", "CERT",  "BA", "ELE", "2000CS1", "01/01/2001", "ART", "GR","","","","","","", ""},
                                                 {"12345678","MS-SCI","6ceb37da-b617-4b4c-8737-a9cec24a548f","2012" , "P", "SBCD", "", "", "" , "", "", "2000CS1", "01/01/2001", "ART", "UG","","","","","","", ""}
                                                 
@@ -41,6 +39,14 @@ namespace Ellucian.Colleague.Domain.Student.Tests
 
         // First student's program is MATH.BS, Second student's program returned as ECON.BA
         public async Task<StudentAcademicProgram> GetStudentAcademicProgramByGuidAsync(string id, string defaultInstitutionId)
+        {
+            var stuProgs = await GetStudentAcademicProgramsAsync(false);
+            var stuProg = studentProgEntities.FirstOrDefault(g => g.Guid == id);
+            return await Task.FromResult<StudentAcademicProgram>(stuProg);
+        }
+
+        // First student's program is MATH.BS, Second student's program returned as ECON.BA
+        public async Task<StudentAcademicProgram> GetStudentAcademicProgramByGuid2Async(string id, string defaultInstitutionId)
         {
             var stuProgs = await GetStudentAcademicProgramsAsync(false);
             var stuProg = studentProgEntities.FirstOrDefault(g => g.Guid == id);
@@ -120,7 +126,15 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         {
             throw new NotImplementedException();
         }
+
+        public Task<Tuple<IEnumerable<StudentAcademicProgram>, int>> GetStudentAcademicPrograms2Async(string defaultInstitutionId, int offset, int limit, bool bypassCache = false, string Program = "", string StartOn = "", string EndOn = "", string Student = "", string Catalog = "", string Status = "", string programOwner = "", string site = "", string academicLevel = "", string graduatedOn = "", List<string> ccdCredential = null, List<string> degreeCredential = null, string graduatedAcademicPeriod = "", string completeStatus = "", CurriculumObjectiveCategory curriculumObjective = CurriculumObjectiveCategory.NotSet)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Tuple<IEnumerable<StudentAcademicProgram>, int>> GetStudentAcademicPrograms3Async(string defaultInstitutionId, int offset, int limit, bool bypassCache = false, string Program = "", string StartOn = "", string EndOn = "", string Student = "", string Catalog = "", string Status = "", string programOwner = "", string site = "", string academicLevel = "", string graduatedOn = "", List<string> ccdCredential = null, List<string> degreeCredential = null, string graduatedAcademicPeriod = "", string completeStatus = "", CurriculumObjectiveCategory curriculumObjective = CurriculumObjectiveCategory.NotSet)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
-
-

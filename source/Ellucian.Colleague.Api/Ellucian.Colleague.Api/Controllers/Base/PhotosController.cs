@@ -55,7 +55,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             catch (Exception e)
             {
-                logger.Error(e, e.Message);
+                logger.Debug(e, e.Message);
                 throw CreateNotFoundException("Person photo", id);
             }
         }

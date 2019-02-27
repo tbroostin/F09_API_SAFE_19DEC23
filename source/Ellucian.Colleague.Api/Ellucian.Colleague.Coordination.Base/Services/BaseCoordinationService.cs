@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using AutoMapper;
 using Microsoft.Practices.EnterpriseLibrary.Common.Utility;
 using Ellucian.Web.Http.EthosExtend;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Base.Services
 {
@@ -60,6 +61,11 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         public Dictionary<string, string> EthosExtendedDataDictionary { get; set; }
 
         /// <summary>
+        /// IntegrationApiException object for error collection
+        /// </summary>
+        public IntegrationApiException IntegrationApiException { get; set; }
+
+        /// <summary>
         /// Initializes a new instance of the BaseCoordinationService class.
         /// </summary>
         /// <param name="adapterRegistry">adapter registry, must not be null</param>
@@ -96,6 +102,33 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 throw new ArgumentNullException("logger");
             }
             this.logger = logger;
+        }
+
+        /// <summary>
+        /// Populate IntegrationApiException object for error collection
+        /// </summary>
+        /// <param name="message">The detailed actionable error message.</param>
+        /// <param name="code">The error message code used to describe the error details</param>
+        /// <param name="guid">The global identifier of the resource in error.</param>
+        /// <param name="id">The source applications data reference identifier for the primary data entity used to create the resource.</param>
+        /// <param name="httpStatusCode">HTTP Status Code.  Default 400 Bad Request</param>
+        protected void IntegrationApiExceptionAddError(string message, string code = null, string guid = null,
+            string id = null, System.Net.HttpStatusCode httpStatusCode = System.Net.HttpStatusCode.BadRequest)
+        {
+            if (IntegrationApiException == null)
+                IntegrationApiException = new IntegrationApiException();
+
+            if (string.IsNullOrEmpty(code))
+                code = "Global.Internal.Error";
+
+            IntegrationApiException.AddError(new Ellucian.Web.Http.Exceptions.IntegrationApiError()
+            {
+                Code = code,
+                Message = message,
+                Guid = guid,
+                Id = id,
+                StatusCode = httpStatusCode
+            });
         }
 
         /// <summary>
@@ -220,7 +253,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 return null;
             }
 
-            var entity = codeList.FirstOrDefault(c => c.Guid == guid);
+            var entity = codeList.FirstOrDefault(c => c.Guid.Equals(guid, StringComparison.OrdinalIgnoreCase));
             return entity == null ? null : entity.Code;
         }
 
@@ -240,8 +273,8 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 throw new ArgumentException("GUID: " + guid + " is not valid.");
             }
-            var entity = codeList.FirstOrDefault(c => c.Guid == guid);
-            
+            var entity = codeList.FirstOrDefault(c => c.Guid.Equals(guid, StringComparison.OrdinalIgnoreCase));
+
             if (entity == null)
             {
                 throw new ArgumentException("GUID: " + guid + " is not valid.");
@@ -252,13 +285,24 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
         /// <summary>
         /// Confirms that the user is proxying on behalf of the specified person
+        /// and, optionally, has one or more of the specified proxy permissions.
         /// </summary>
-        /// <param name="personId"></param>
-        /// <returns></returns>
-        protected bool HasProxyAccessForPerson(string personId)
+        /// <param name="personId">Person ID to check for proxy access</param>
+        /// <param name="proxyPermission">(Optional) Proxy permissions list with which to check the current user has been granted at least one, if present.</param>
+        /// <returns>True if the user has proxy access to the specified person, otherwise false.</returns>
+        protected bool HasProxyAccessForPerson(string personId, params Domain.Base.Entities.ProxyWorkflowConstants[] proxyPermissions)
         {
             var proxySubject = CurrentUser.ProxySubjects.FirstOrDefault();
-            return proxySubject != null && proxySubject.PersonId == personId;
+            var hasProxySubject = proxySubject != null && proxySubject.PersonId == personId;
+            if (hasProxySubject && proxyPermissions != null && proxyPermissions.Any())
+            {
+                var hasProxyPermission = proxySubject.Permissions.Intersect(proxyPermissions.Select(perm => perm.Value)).Any();
+                return hasProxyPermission;
+            }
+            else
+            {
+                return hasProxySubject;
+            }
         }
 
         /// <summary>
@@ -357,7 +401,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                                 return;
                             }
                         }
-                        else if (p.RequiredToViewData) 
+                        else if (p.RequiredToViewData)
                         {
                             //if required to view data is set then they must match either username, role or permission, if any of those match they are allowed to see it
                             bool match = false;
@@ -383,7 +427,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                             }
                         }
                     });
-                    
+
                     return returnList;
                 }
                 else
@@ -458,8 +502,8 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     else if (p.RequiredToViewData)
                     {
                         //if required to view data is set then they must match either username, role or permission, if any of those match they are allowed to see it
-                        bool match = !string.IsNullOrEmpty(p.UserName) && currentUser.UserId.Equals(p.UserName, StringComparison.OrdinalIgnoreCase) 
-                                     || !string.IsNullOrEmpty(p.UserRole) && userRoleIdList.Contains(p.UserRole) 
+                        bool match = !string.IsNullOrEmpty(p.UserName) && currentUser.UserId.Equals(p.UserName, StringComparison.OrdinalIgnoreCase)
+                                     || !string.IsNullOrEmpty(p.UserRole) && userRoleIdList.Contains(p.UserRole)
                                      || !string.IsNullOrEmpty(p.UserPermission) && (userPermissionList.Contains(p.UserPermission));
 
                         if (!match)
@@ -471,11 +515,11 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
                 return returnList;
             }
-            
+
             var noConfigError = new ArgumentNullException(string.Concat("Configuration Repository is not intialized for API ", ethosResourceRouteInfo.ResourceName, "."));
             logger.Error(noConfigError, string.Concat("Configuration Repository is not intialized for API ", ethosResourceRouteInfo.ResourceName, "."));
             throw noConfigError;
-            
+
         }
 
         /// <summary>
@@ -493,7 +537,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
                 return ConvertExtendedDataFromDomainToPlatform(extendDataFromRepo);
             }
-            
+
             var noConfigError = new ArgumentNullException(string.Concat("Configuration Repository is not intialized for API ", ethosResourceRouteInfo.ResourceName, "."));
             logger.Error(noConfigError, string.Concat("Configuration Repository is not intialized for API ", ethosResourceRouteInfo.ResourceName, "."));
             throw noConfigError;
@@ -516,7 +560,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     return null;
                 }
 
-                var extendedConfigList = ConvertExtendedDataFromDomainToPlatform(new List<Domain.Base.Entities.EthosExtensibleData>{ extendDataFromRepo});
+                var extendedConfigList = ConvertExtendedDataFromDomainToPlatform(new List<Domain.Base.Entities.EthosExtensibleData> { extendDataFromRepo });
 
                 return extendedConfigList.Any() ? extendedConfigList.First() : null;
             }
@@ -552,7 +596,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     ColleagueTimeZone = extDataItem.ColleagueTimeZone,
                     ExtendedDataList = new List<EthosExtensibleDataRow>()
                 };
-                
+
                 foreach (var dataRow in extDataItem.ExtendedDataList)
                 {
                     var row = new EthosExtensibleDataRow

@@ -20,7 +20,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                                                 {"12345679","AA-NURS","45d8557f-56a9-4abc-8308-ee026983080c","2013", "P", "MC", "ENGL,MATH", "HIST,ACCT", "CERT,SCIE", "BA", "ELE,DI", "2000/S1" },
                                                 {"12345680","MA-LAW","688583fc-6499-4a05-90b0-685745d6b465","2014", "G", "SBCD", "MATH", "HIST", "CERT",  "BA", "ELE", "2000CS1"},
                                                 {"12345681","MS-SCI","6ceb37da-b617-4b4c-8737-a9cec24a548f","" , "", "SBCD", "", "", "" , "", "", ""}
-                                                
+
                                                 };
 
         private List<StudentProgram> studentProgEntities = new List<StudentProgram>();
@@ -144,7 +144,12 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         {
             throw new NotImplementedException();
         }
-        public async Task<Tuple<IEnumerable<StudentProgram>,int>> GetAcademicProgramEnrollmentsAsync(int offset, int limit, bool bypassCache = false, string Program = "", string StartOn = "", string EndOn = "", string Student = "", string Catalog = "", string Status = "")
+        public async Task<Tuple<IEnumerable<StudentProgram>, int>> GetAcademicProgramEnrollmentsAsync(int offset, int limit, bool bypassCache = false, string Program = "", string StartOn = "", string EndOn = "", string Student = "", string Catalog = "", string Status = "")
+        {
+            throw new NotImplementedException();
+        }
+
+        public async Task<List<StudentProgram>> GetStudentAcademicPeriodProfileStudentProgramInfoAsync(List<string> stuProgIds)
         {
             throw new NotImplementedException();
         }
@@ -175,6 +180,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests
             }
             return Task.FromResult<IEnumerable<Student.Entities.StudentProgram>>(studentProgEntities);
         }
+
+
 
 
     }

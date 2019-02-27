@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -308,13 +308,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             var parm1099MIContract = await DataReader.ReadRecordAsync<Parm1099mi>("CF.PARMS", "PARM.1099MI");
             if (parm1099MIContract == null)
             {
-                throw new NullReferenceException("PARM.1099MI cannot be null.");
-            }
-
-            var taxFormStatus = await DataReader.ReadRecordAsync<TaxFormStatus>("TAX.FORM.STATUS", "1099MI");
-            if (taxFormStatus == null)
-            {
-                throw new NullReferenceException("TAX.FORM.STATUS cannot be null.");
+                throw new ApplicationException("PARM.1099MI cannot be null.");
             }
 
             // Read the tax year records for 1099MI.
@@ -332,13 +326,13 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
             // A temporary filter the recipient detail records to get only those for which we have tax years template is ready in the product
             // This will be removed once all the tax year templates are ready for 1099MI tax forms
-            string[] includedYearsFor1099Mi = ColleagueFinanceConstants.IncludedYearsFor1099mi.Split(',');
-            var filteredTaxFormDetailRepos = taxFormDetailRepos.Where(taxform => includedYearsFor1099Mi.Contains(taxform.TmidtlrYear));
+            string[] includedYearsFor1099Mi = ColleagueFinanceConstants.IncludedYearsFor1099mi.Split(',').Select(s => s.Trim()).ToArray();
+            var filteredTaxFormDetailRepos = taxFormDetailRepos.Where(taxform => taxform != null && includedYearsFor1099Mi.Contains(taxform.TmidtlrYear));
             Tax1099miDetailRepos miLatestRecord = null;
             try
             {
                 // Get a distinct list of tax forms by Year-State-Ein by descending tax year.
-                var list = filteredTaxFormDetailRepos.Select(t => new { t.TmidtlrYear, t.TmidtlrStateId, t.TmidtlrEin }).Distinct().OrderByDescending(x => x.TmidtlrYear);
+                var list = filteredTaxFormDetailRepos.Select(t => new { t.TmidtlrYear, t.TmidtlrStateId, t.TmidtlrEin }).Distinct().OrderByDescending(x => x.TmidtlrYear).ThenBy(x => x.TmidtlrStateId);
 
                 foreach (var taxFormData in list)
                 {
@@ -408,7 +402,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         private static void AddRecordToStatements(List<TaxFormStatement2> statements, Tax1099miDetailRepos miLatestRecord, TaxForm1099miYears miYear)
         {
             var latestStatement = new TaxFormStatement2(miLatestRecord.TmidtlrVendorId,
-               miLatestRecord.TmidtlrYear.ToString(), TaxForms.Form1099MI, miLatestRecord.Recordkey);
+               miLatestRecord.TmidtlrYear.ToString(), TaxForms.Form1099MI, miLatestRecord.Recordkey ,miLatestRecord.TmidtlrStateId);
             //Set the notation for the statement
             latestStatement.Notation = miYear.TfmyWebEnabled == "Y" && miLatestRecord.TmidtlrQualifiedFlag == "Y" ? TaxFormNotations.None : TaxFormNotations.NotAvailable;
             statements.Add(latestStatement);

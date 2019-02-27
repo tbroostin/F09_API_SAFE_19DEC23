@@ -517,5 +517,17 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             var configurationDto = adapter.MapToType(configuration);
             return configurationDto;
         }
+
+        /// <summary>
+        /// Calls configuration repository and returns the Required Document Configuration data transfer object.
+        /// </summary>
+        /// <returns><see cref="Dtos.Base.RequiredDocumentConfiguration">Required Document Configuration</see> data transfer object.</returns>
+        public async Task<Dtos.Base.RequiredDocumentConfiguration> GetRequiredDocumentConfigurationAsync()
+        {
+            var configuration = await configurationRepository.GetRequiredDocumentConfigurationAsync();
+            var adapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.RequiredDocumentConfiguration, Dtos.Base.RequiredDocumentConfiguration>();
+            var configurationDto = adapter.MapToType(configuration);
+            return configurationDto;
+        }
     }
 }

@@ -336,7 +336,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
                 // add the credit/course result to the group's results
                 groupResult.Results.Add(acadresult);
             }
-
+            
             // Go through the filtered list.
             var relatedResults = groupResult.Results.Where(cc => cc.Result == Result.Related).ToList();
             foreach (var acadResult in relatedResults)
@@ -420,13 +420,17 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
                     if (countOfAlreadyAppliedOrPlanned > 0)
                     {
                         //check if has reached limit of counts. This is going to find how many times course is allowed to be retaken.
-                        //example - TAKE CRS1 CRS1 CRS2 - here CRS1 = 2  CRS2 = 1
+                        //example - TAKE CRS1 CRS1 CRS2 - here CRS1 = 2  CRS2 = 1. 
                         int countOfRepititions = Courses.Count(a => a == acadResult.GetCourse().Id);
                         //if limit of counts reached - skip the course otherwise include it
                         if (countOfAlreadyAppliedOrPlanned >= countOfRepititions)
                         {
                             //if min credits is specified with TAKE statements and even if limit of counts have reached, do check
                             //for min credits are met or not. 
+                            //basically if particular course appears twice or thrice then that many times course can be planned or registered or completed.
+                            //If that course goes beyond the range, then it will not be picked.
+                            //also note while the same course is being picked, it needs to calculate if it has already met MinCredits, if met then don't take.
+                            //For example lets suppose statement was TAKE CRS1 CRS1 CRS1 and after taking CRS1 two times minCredits are met then don't pick 3rd time.
 
                             if (!(MinCredits.HasValue))
                             {
@@ -805,6 +809,12 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
 
                 // If this is a planned course, do not apply it on top of 
                 // an applied academic credit if course retake is not allowed
+                //again this is a scenario that won't work when you  have TakeAll statements like Take CRS1 CRS2 
+                //this is beacuse in Take statement CRS1 can occur multiple times and irrespective of retake flag we need
+                //to pick that many times but not more. 
+                //whereas with other Take statements, planned could be picked multiple times when retake is allowed.
+                //if retake is not allowed then planned won't be picked if already have in-progress/completed or registered course
+                
                 bool alreadyapplied = false;
                 if (acadResult.GetAcadCredId() == null && !isCourseRetakeAllowed && (Courses == null || Courses.Count == 0))
                 {
@@ -821,6 +831,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
                     {
                         alreadyapplied = true;
                     }
+
                 }
                 // We need to apply the current course/credit if:
                 //  It's not a specific course that is already applied
@@ -1383,7 +1394,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
         {
             // Check up the tree for rules to evaluate
             List<RequirementRule> EligibilityRules = new List<RequirementRule>();
-            if (this.SubRequirement.AcademicCreditRules.Count > 0) { EligibilityRules.AddRange(this.SubRequirement.AcademicCreditRules); }
+             if (this.SubRequirement.AcademicCreditRules.Count > 0) { EligibilityRules.AddRange(this.SubRequirement.AcademicCreditRules); }
             if (this.SubRequirement.Requirement.AcademicCreditRules.Count > 0) { EligibilityRules.AddRange(this.SubRequirement.Requirement.AcademicCreditRules); }
             if (this.SubRequirement.Requirement.ProgramRequirements != null)
             {
@@ -1393,25 +1404,41 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
                 }
             }
 
-
-            foreach (var rule in EligibilityRules)
+            // If an exception has been made to allow a certain course, then allow that course
+            // and don't worry about the rest of the group criteria - including the eligibility rules.
+            if (FromCoursesException.Count() > 0 && acadResult.GetCourse() != null)
             {
-                if (!rule.Passes(acadResult, true))
+                if ((FromCoursesException.Contains(acadResult.GetCourse().Id)) ||
+                    (FromCoursesException.Intersect(acadResult.GetCourse().EquatedCourseIds).Count() > 0))
                 {
-                    return Result.RuleFailed;
+                    return Result.Related;
+                }
+            }
+
+            // Now that the exceptions adding specific courses have been evaluated,  check any high level eligibility rules to see
+            // if the academic credit qualifies for the rest of the syntax. Groups that are block replacements should not
+            // evaluate the eligibility rules.
+            if (EligibilityRules.Any() && !IsBlockReplacement)
+            {
+
+                foreach (var rule in EligibilityRules)
+                {
+                    if (!rule.Passes(acadResult, true))
+                    {
+                        return Result.RuleFailed;
+                    }
                 }
             }
 
             // If this is a course, evaluate only against courses 
             // Course equivalencies apply to Courses and FromCourses lists only.  EVAL has worked both ways
             // over the years, and half of the clients hate it one way, half the other.  In the opinion
-            // of this coder, equivalencies are specific, targeted to allow one course to substitute for
+            // of this coder, equivalencies are specific, targeted to allow one course to substitute forC:\Ellucian\VS2015\ColleagueWebAPI\Dev_Team_Student\Source\Ellucian.Colleague.Api\Ellucian.Colleague.Api.Client\Exceptions\
             // another, not statements of equivalence on a general level.
 
             // Clients have asked that My Progress replicate the equates as honored by EVAL, which means
             // that the subject, departments and course level of equated courses are also considered here
             // (as crazy as that seems).
-
             if (Courses.Count > 0)
             {
                 if (acadResult.GetCourse() != null)
@@ -1428,16 +1455,6 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
                 }
             }
 
-            // If an exception has been made to allow a certain course, then allow that course
-            // and don't worry about the rest of the group criteria.
-            if (FromCoursesException.Count() > 0 && acadResult.GetCourse() != null)
-            {
-                if ((FromCoursesException.Contains(acadResult.GetCourse().Id)) ||
-                    (FromCoursesException.Intersect(acadResult.GetCourse().EquatedCourseIds).Count() > 0))
-                {
-                    return Result.Related;
-                }
-            }
 
             if (FromCourses.Count > 0)
             {
@@ -1524,6 +1541,14 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
             {
                 return Result.SubjectExcluded;
             }
+
+
+            //BB- Repeat - if credit has replaceInprogress flag then don't count that acad cred record for group evaluation
+            if(acadResult!=null && acadResult.GetAcadCred()!=null && acadResult.GetAcadCred().ReplacedStatus == ReplacedStatus.ReplaceInProgress)
+            {
+                return Result.ReplaceInProgress; 
+            }
+
 
             return Result.Related;
         }

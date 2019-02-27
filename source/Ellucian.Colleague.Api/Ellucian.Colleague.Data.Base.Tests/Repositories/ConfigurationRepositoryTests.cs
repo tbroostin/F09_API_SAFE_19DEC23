@@ -31,13 +31,13 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         static Collection<ElfTranslateTables> elfTranslateTables = TestElfTranslateTablesRepository.ElfTranslateTables;
 
         ApiSettings FakeApiSettingsWithGmtColleagueTimeZone;
-        
+
         BackupConfiguration FakeBackupConfigurationData;
         Dictionary<string, GuidLookupResult> guidLookupResults;
 
         ReadBackupConfigDataResponse FakeBackupConfigReadResponse;
         BackupConfigRecords FakeBackupConfigReadResponseRecord;
-        
+
         private HrwebDefaults expectedHrWebDefaults = new HrwebDefaults()
         {
             HrwebW2oConText = "I consent to receive my W-2 online.",
@@ -249,7 +249,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 
             // Build the test repository
             ConfigRepository = BuildValidRepository();
-            
+
         }
 
         [TestCleanup]
@@ -323,7 +323,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 Assert.AreEqual(cdmIntegrationResponses[0].CintServerHeartbeat, result.AmqpMessageServerHeartbeat);
                 bool? cintUseIntegrationHub = false;
                 cintUseIntegrationHub = cdmIntegrationResponses[0].CintUseIntegrationHub.ToUpper() == "Y";
-                Assert.AreEqual(cintUseIntegrationHub, result.UseIntegrationHub);                
+                Assert.AreEqual(cintUseIntegrationHub, result.UseIntegrationHub);
                 Assert.AreEqual(cdmIntegrationResponses[0].CintHubApiKey, result.ApiKey);
                 Assert.AreEqual(cdmIntegrationResponses[0].CintHubTokenUrl, result.TokenUrl);
                 Assert.AreEqual(cdmIntegrationResponses[0].CintHubSubscribeUrl, result.SubscribeUrl);
@@ -1730,7 +1730,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 cacheProvider, transFactory, FakeApiSettingsWithGmtColleagueTimeZone, logger);
 
             // Act
-            var actualSet = await ConfigRepository.GetBackupConfigurationByIdsAsync( new List<string>() { "56c1fb34-9e3e-49a0-b2b0-60751a877855" });
+            var actualSet = await ConfigRepository.GetBackupConfigurationByIdsAsync(new List<string>() { "56c1fb34-9e3e-49a0-b2b0-60751a877855" });
             var actual = actualSet.FirstOrDefault();
             // Assert            Assert.IsNotNull(actual);
             Assert.AreEqual(FakeBackupConfigurationData.Id, actual.Id);
@@ -1841,5 +1841,65 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             }
         }
         #endregion
+
+        #region Configuration for RequiredDocuments
+        [TestClass]
+        public class ConfigurationRepository_GetRequiredDocumentConfigurationAsync : ConfigurationRepositoryTests
+        {
+            [TestMethod]
+            public async Task GetsRequiredDocumentConfiguration_AllSettingsNullOrBlank()
+            {
+                var corewebDefaultsNull = new CorewebDefaults()
+                {
+                    CorewebSuppressInstance = null,
+                    CorewebDocumentsSort1 = null,
+                    CorewebDocumentsSort2 = null,
+                    CorewebBlankStatusText = "",
+                    CorewebBlankDueDateText = ""
+                };
+
+                // Setup response to phoneType valcode read
+                dataReaderMock.Setup(r => r.ReadRecordAsync<CorewebDefaults>("CORE.PARMS", "COREWEB.DEFAULTS", true))
+                       .ReturnsAsync(corewebDefaultsNull);
+
+                var configuration = await ConfigRepository.GetRequiredDocumentConfigurationAsync();
+                Assert.AreEqual(false, configuration.SuppressInstance);
+                Assert.AreEqual(WebSortField.Status, configuration.PrimarySortField);
+                Assert.AreEqual(WebSortField.OfficeDescription, configuration.SecondarySortField);
+                Assert.AreEqual("", configuration.TextForBlankStatus);
+                Assert.AreEqual("", configuration.TextForBlankDueDate);
+            }
+
+            [TestMethod]
+            public async Task GetsRequiredDocumentConfiguration_AllValuesRetrieved()
+            {
+                var dflts = new Dflts()
+                {
+                    DfltsWebAdrelType = "WB"
+                };
+
+                var corewebDefaults = new CorewebDefaults()
+                {
+                    CorewebSuppressInstance = "Y",
+                    CorewebDocumentsSort1 = "STATDATE",
+                    CorewebDocumentsSort2 = "DESC",
+                    CorewebBlankStatusText = "Asap",
+                    CorewebBlankDueDateText = "Due"
+                };
+
+                dataReaderMock.Setup(r => r.ReadRecordAsync<Dflts>("CORE.PARMS", "DEFAULTS", true));
+                dataReaderMock.Setup(r => r.ReadRecordAsync<CorewebDefaults>("CORE.PARMS", "COREWEB.DEFAULTS", true))
+                       .ReturnsAsync(corewebDefaults);
+
+                var configuration = await ConfigRepository.GetRequiredDocumentConfigurationAsync();
+                Assert.AreEqual(true, configuration.SuppressInstance);
+                Assert.AreEqual(WebSortField.StatusDate, configuration.PrimarySortField);
+                Assert.AreEqual(WebSortField.Description, configuration.SecondarySortField);
+                Assert.AreEqual("Asap", configuration.TextForBlankStatus);
+                Assert.AreEqual("Due", configuration.TextForBlankDueDate);
+            }
+
+            #endregion
+        }
     }
 }

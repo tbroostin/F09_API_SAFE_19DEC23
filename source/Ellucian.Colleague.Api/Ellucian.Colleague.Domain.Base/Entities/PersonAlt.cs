@@ -65,7 +65,7 @@ namespace Ellucian.Colleague.Domain.Base.Entities
             {
                 return false;
             }
-            return Id.Equals(other.Id);
+            return (Id.Equals(other.Id) && Type.Equals(other.Type));
         }
 
         /// <summary>

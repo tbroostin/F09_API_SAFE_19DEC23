@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2014 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -18,6 +18,7 @@ namespace Ellucian.Colleague.Domain.Finance.Entities.AccountActivity
         public ActivityFinancialAidItem()
         {
             AwardTerms = new List<ActivityFinancialAidTerm>();
+            IneligibilityReasons = new List<string>();
         }
 
         /// <summary>
@@ -39,6 +40,11 @@ namespace Ellucian.Colleague.Domain.Finance.Entities.AccountActivity
         /// Amount of the award for which the student is not currently eligible
         /// </summary>
         public decimal? IneligibleAmount { get; set; }
+
+        /// <summary>
+        /// List of reasons this account holder is not eligible for aid
+        /// </summary>
+        public List<string> IneligibilityReasons { get; set; }
 
         /// <summary>
         /// Amount of any loan fee associated with the award

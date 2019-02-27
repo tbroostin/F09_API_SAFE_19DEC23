@@ -71,6 +71,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         private IEnumerable<Domain.ColleagueFinance.Entities.CommodityUnitType> _commodityUnitTypes;
         private IEnumerable<Domain.ColleagueFinance.Entities.VendorTerm> _vendorTerms;
         private Domain.ColleagueFinance.Entities.GeneralLedgerAccountStructure _glAccountStructure;
+        private string _hostCountry;
 
         private IEnumerable<Domain.Base.Entities.Country> _countries = null;
         private async Task<IEnumerable<Domain.Base.Entities.Country>> GetAllCountriesAsync(bool bypassCache)
@@ -135,7 +136,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     //Fund checking.
                     overrideAvailable = await checkFunds2(accountsPayableInvoicesDto);
 
-                    var glConfiguration = await _generalLedgerConfigurationRepository.GetAccountStructureAsync();
+                    var glConfiguration = await GetGeneralLedgerAccountStructure();
+                    if (glConfiguration == null)
+                    {
+                        throw new ArgumentNullException("GL Account Structure is not configured.");
+                    }
 
                     if ((accountsPayableInvoicesDto.LineItems) != null && (accountsPayableInvoicesDto.LineItems.Any()))
                     {
@@ -204,6 +209,14 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 {
                     throw ex;
                 }
+                catch (ArgumentNullException ex)
+                {
+                    throw ex;
+                }
+                catch (ArgumentException ex)
+                {
+                    throw ex;
+                }
                 catch (Exception ex)
                 {
                     throw new Exception(ex.Message, ex.InnerException);
@@ -243,7 +256,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 //Fund checking.
                 overrideAvailable = await checkFunds2(accountsPayableInvoicesDto);
 
-                var glConfiguration = await _generalLedgerConfigurationRepository.GetAccountStructureAsync();
+                var glConfiguration = await GetGeneralLedgerAccountStructure();
+                if (glConfiguration == null)
+                {
+                    throw new ArgumentNullException("GL Account Structure is not configured.");
+                }
 
                 if ((accountsPayableInvoicesDto.LineItems) != null && (accountsPayableInvoicesDto.LineItems.Any()))
                 {
@@ -309,6 +326,14 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             {
                 throw ex;
             }
+            catch (ArgumentNullException ex)
+            {
+                throw ex;
+            }
+            catch (ArgumentException ex)
+            {
+                throw ex;
+            }
             catch (Exception ex)
             {
                 throw new Exception(ex.Message, ex.InnerException);
@@ -335,7 +360,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             var accountsPayableInvoicesEntities = await _accountsPayableInvoicesRepository.GetAccountsPayableInvoices2Async(offset, limit);
             var totalRecords = accountsPayableInvoicesEntities.Item2;
-            var glConfiguration = await _generalLedgerConfigurationRepository.GetAccountStructureAsync();
+            var glConfiguration = await GetGeneralLedgerAccountStructure();
             try
             {
                 var projectIds = accountsPayableInvoicesEntities.Item1
@@ -380,8 +405,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 throw new ArgumentNullException("guid", "A GUID is required to obtain an Accounts Payable Invoice.");
             }
             CheckViewApInvoicesPermission();
-            var glConfiguration = await _generalLedgerConfigurationRepository.GetAccountStructureAsync();
-
+            var glConfiguration = await GetGeneralLedgerAccountStructure();
+            if (glConfiguration == null)
+            {
+                throw new ArgumentNullException("GL Account Structure is not configured.");
+            }
             try
             {
                 var accountsPayableInvoice = await _accountsPayableInvoicesRepository.GetAccountsPayableInvoicesByGuidAsync(guid, true);
@@ -483,6 +511,12 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         // accept any status value since the vaue is ignored and the CTX will determine the status
                         //throw new ApplicationException("Invalid voucher status for voucher: " + accountsPayableInvoices.ProcessState.ToString());
                 }
+                //if the status is void then voidDate is required.
+                    
+                if (voucherStatus == VoucherStatus.Voided && !accountsPayableInvoices.VoidDate.HasValue)
+                {
+                    throw new ArgumentNullException("accountsPayableInvoices", "Must provide void date for the processState of voided.");
+                }
             }
 
             var guid = accountsPayableInvoices.Id;
@@ -502,7 +536,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 {
                     vendorId = await _vendorsRepository.GetVendorIdFromGuidAsync(existingVendor.Vendor.Id);
                 }
-                catch (ArgumentException)
+                catch (Exception)
                 {
                     throw new ArgumentException
                         (string.Concat("The vendor id must correspond with a valid vendor record : ", existingVendor.Vendor.Id));
@@ -793,6 +827,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                                 throw new ArgumentNullException("ReferenceDocument.PurchaseOrder.Id", string.Format("Guid not found for ReferenceDocument.PurchaseOrder.Id: {0}", lineItem.ReferenceDocument.PurchaseOrder.Id));
                             }
                             apLineItem.PurchaseOrderId = poId.PrimaryKey;
+                            //if there is a PO, then there needs to be a line item number
+                            if (string.IsNullOrEmpty(lineItem.ReferenceDocumentLineItemNumber))
+                            {
+                                throw new Exception("referenceDocumentLineItemNumber is required if referenceDocument is in the payload.");
+                            }
                         }
                     }
 
@@ -948,6 +987,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             var accountsPayableInvoices = new Ellucian.Colleague.Dtos.AccountsPayableInvoices2();
             Dtos.EnumProperties.CurrencyIsoCode currency = Dtos.EnumProperties.CurrencyIsoCode.USD;
+            if (GlConfig == null)
+            {
+                throw new ArgumentException("GL Account Structure is not configured.");
+            }
             try
             {
                 if (!(string.IsNullOrEmpty(source.CurrencyCode)))
@@ -1466,7 +1509,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 }
                 if (country == null)
                 {
-                    var hostCountry = await _addressRepository.GetHostCountryAsync();
+                    var hostCountry = await GetHostCountryAsync();
                     if (hostCountry == "USA" || string.IsNullOrEmpty(hostCountry))
                         country = (await GetAllCountriesAsync(bypassCache)).FirstOrDefault(x => x.IsoAlpha3Code == "USA");
                     else
@@ -1479,7 +1522,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 {
                     throw new KeyNotFoundException("Unable to locate ISO country code for " + source.VoucherMiscCountry);
                 }
-                throw new KeyNotFoundException("Unable to locate ISO country code for " + (await _addressRepository.GetHostCountryAsync()));
+                throw new KeyNotFoundException("Unable to locate ISO country code for " + (await GetHostCountryAsync()));
             }
             //need to check to make sure ISO code is there.
             if (string.IsNullOrEmpty(country.IsoAlpha3Code))
@@ -1658,6 +1701,15 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         }
 
         /// <summary>
+        /// Get Host Country
+        /// </summary>
+        /// <returns>HostCountry</returns>
+        private async Task<string> GetHostCountryAsync()
+        {
+            return _hostCountry ?? (_hostCountry = await _addressRepository.GetHostCountryAsync()); 
+        }
+
+        /// <summary>
         /// Check the GL's amounts and make sure they have funds avialable before proceeding.
         /// </summary>
         /// <param name="api"></param>
@@ -1706,6 +1758,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                             CurrencyCode = details.Allocation.Allocated.Amount.Currency.ToString()
                         });
                     }
+                    
 
                     var accountingString = accountingStringList.Find(x => x.Equals(details.AccountingString));
                     if (string.IsNullOrWhiteSpace(accountingString))

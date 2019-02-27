@@ -25,6 +25,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
     public class ColleagueFinanceTaxFormPdfServiceTests
     {
         #region Initialize and Cleanup
+
         private ColleagueFinanceTaxFormPdfService service = null;
         private Mock<IColleagueFinanceTaxFormPdfDataRepository> mockTaxFormPdfDataRepository;
         private TestColleagueFinanceTaxFormPdfDataRepository TestPdfDataRepository;
@@ -37,12 +38,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         private string payerName = "Ellucian University";
         private string fakePdfPath = "fakePath";
 
-
         [TestInitialize]
         public void Initialize()
         {
-            t4aPdfData = new FormT4aPdfData(DateTime.Now.Year.ToString(), payerName);
-            form1099MiPdfData = new Form1099MIPdfData(DateTime.Now.Year.ToString(), payerName);
+            t4aPdfData = new FormT4aPdfData(DateTime.Now.Year.ToString(), payerName) { RecipientId = "000001" };
+            form1099MiPdfData = new Form1099MIPdfData(DateTime.Now.Year.ToString(), payerName) { RecipientId = "000001" };
             TestPdfDataRepository = new TestColleagueFinanceTaxFormPdfDataRepository();
 
 
@@ -50,6 +50,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             mockTaxFormPdfDataRepository.Setup(rep => rep.GetFormT4aPdfDataAsync(It.IsAny<string>(), It.IsAny<string>())).Returns<string, string>((personId, recordId) =>
             {
                 return Task.FromResult(t4aPdfData);
+            });
+
+            mockTaxFormPdfDataRepository.Setup(rep => rep.GetFormT4aPdfDataAsync("000002", "2015")).Returns<string, string>((personId, recordId) =>
+            {
+                return Task.FromResult(new FormT4aPdfData(DateTime.Now.Year.ToString(), payerName) { RecipientId = "000003" });
             });
 
             // Mock to throw exception
@@ -154,6 +159,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task GetFormT4aPdfDataAsyncc_PersonIdNotMatchingException()
+        {
+            var pdfData = await service.GetFormT4aPdfDataAsync("000002", "2015");
+        }
+
+        [TestMethod]
         [ExpectedException(typeof(Exception))]
         public async Task GetFormT4aPdfDataAsync_RepositoryThrowsException()
         {
@@ -169,6 +181,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         #endregion
          
         #region GetForm1099MiscPdfDataAsync
+
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
         public async Task Get1099MiscPdfDataAsync_NullPersonId()
@@ -213,18 +226,68 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ApplicationException))]
+        [ExpectedException(typeof(PermissionsException))]
         public async Task Get1099MiscPdfDataAsync_PersonIdNotMatchingException()
         {
-            form1099MiPdfData.RecipientAccountNumber = "2";
+            form1099MiPdfData.RecipientId = "000003";
             mockTaxFormPdfDataRepository.Setup(rep => rep.GetForm1099MiPdfDataAsync(personId, "1")).ReturnsAsync(form1099MiPdfData);
             var pdfData = await service.Get1099MiscPdfDataAsync(personId, "1");
         }
 
         [TestMethod]
-        public async Task Get1099MiscPdfDataAsync_Success()
+        public async Task Get1099MiscPdfDataAsync_Success_2017()
         {
             var pdfData = await service.Get1099MiscPdfDataAsync(personId, "2017");
+            Assert.IsTrue(pdfData is Form1099MIPdfData);
+        }
+
+        [TestMethod]
+        public async Task Get1099MiscPdfDataAsync_Success_2016()
+        {
+            var pdfData = await service.Get1099MiscPdfDataAsync(personId, "2016");
+            Assert.IsTrue(pdfData is Form1099MIPdfData);
+        }
+
+        [TestMethod]
+        public async Task Get1099MiscPdfDataAsync_Success_2015()
+        {
+            var pdfData = await service.Get1099MiscPdfDataAsync(personId, "2015");
+            Assert.IsTrue(pdfData is Form1099MIPdfData);
+        }
+
+        [TestMethod]
+        public async Task Get1099MiscPdfDataAsync_Success_2011()
+        {
+            var pdfData = await service.Get1099MiscPdfDataAsync(personId, "2011");
+            Assert.IsTrue(pdfData is Form1099MIPdfData);
+        }
+
+        [TestMethod]
+        public async Task Get1099MiscPdfDataAsync_Success_2009()
+        {
+            var pdfData = await service.Get1099MiscPdfDataAsync(personId, "2009");
+            Assert.IsTrue(pdfData is Form1099MIPdfData);
+        }
+
+
+        [TestMethod]
+        public async Task Get1099MiscPdfDataAsync_Success_2010()
+        {
+            var pdfData = await service.Get1099MiscPdfDataAsync(personId, "2010");
+            Assert.IsTrue(pdfData is Form1099MIPdfData);
+        }
+
+        [TestMethod]
+        public async Task Get1099MiscPdfDataAsync_Success_2012()
+        {
+            var pdfData = await service.Get1099MiscPdfDataAsync(personId, "2012");
+            Assert.IsTrue(pdfData is Form1099MIPdfData);
+        }
+
+        [TestMethod]
+        public async Task Get1099MiscPdfDataAsync_Success_2013()
+        {
+            var pdfData = await service.Get1099MiscPdfDataAsync(personId, "2013");
             Assert.IsTrue(pdfData is Form1099MIPdfData);
         }
         #endregion
@@ -297,6 +360,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         #endregion
 
         #region Private methods and helper classes
+
         private void BuildTaxFormPdfService(bool isPermissionsRequired = true)
         {
             // Set up the current user
@@ -304,16 +368,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             var roles = new List<Domain.Entities.Role>();
 
-            var role = new Domain.Entities.Role(1, "VIEW.T4");
-            if (isPermissionsRequired)
-            {
-                role.AddPermission(new Domain.Entities.Permission("VIEW.T4"));
-                role.AddPermission(new Domain.Entities.Permission("VIEW.EMPLOYEE.T4"));
-            }
-
-            roles.Add(role);
-
-            role = new Domain.Entities.Role(2, "VIEW.T4A");
+            var role = new Domain.Entities.Role(2, "VIEW.T4A");
             if (isPermissionsRequired)
             {
                 role.AddPermission(new Domain.Entities.Permission("VIEW.T4A"));

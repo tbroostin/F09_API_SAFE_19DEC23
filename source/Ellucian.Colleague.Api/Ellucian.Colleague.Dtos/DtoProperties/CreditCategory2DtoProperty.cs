@@ -9,7 +9,7 @@ namespace Ellucian.Colleague.Dtos.DtoProperties
     /// AcademicPeriod DTO property
     /// </summary>
     [JsonObject(MemberSerialization.OptIn)]
-    public class CreditCategory2DtoProperty : BaseCodeTitleDetailDtoProperty
+    public class CreditCategory2DtoProperty : BaseCodeTitleDetailDtoProperty2
     {
         /// <summary>
         /// The higher-level category of academic credits

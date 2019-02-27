@@ -4,6 +4,7 @@ using Ellucian.Colleague.Api.Controllers.Student;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Dtos;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Http.Models;
@@ -41,6 +42,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             StudentFinancialAidApplicationsController financialAidApplicationsController;
             List<Dtos.FinancialAidApplication> financialAidApplicationDtos;
+            private Ellucian.Web.Http.Models.QueryStringFilter criteriaFilter = new Web.Http.Models.QueryStringFilter("criteria", "");
             int offset = 0;
             int limit = 200;
 
@@ -107,8 +109,44 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     Public = true
                 };
                 var tuple = new Tuple<IEnumerable<Dtos.FinancialAidApplication>, int>(financialAidApplicationDtos, 4);
-                financialAidApplicationService2Mock.Setup(ci => ci.GetAsync(offset, limit, true)).ReturnsAsync(tuple);
-                var financialAidApplications = await financialAidApplicationsController.GetAsync(new Paging(limit, offset));
+                financialAidApplicationService2Mock.Setup(ci => ci.GetAsync(offset, limit, It.IsAny<FinancialAidApplication>(),true)).ReturnsAsync(tuple);
+                var financialAidApplications = await financialAidApplicationsController.GetAsync(new Paging(limit, offset), criteriaFilter);
+
+                var cancelToken = new System.Threading.CancellationToken(false);
+
+                System.Net.Http.HttpResponseMessage httpResponseMessage = await financialAidApplications.ExecuteAsync(cancelToken);
+
+                IEnumerable<Dtos.FinancialAidApplication> actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>>)httpResponseMessage.Content)
+                                                                .Value as IEnumerable<Dtos.FinancialAidApplication>;
+
+
+                Assert.AreEqual(financialAidApplicationDtos.Count, actuals.Count());
+
+                foreach (var actual in actuals)
+                {
+                    var expected = financialAidApplicationDtos.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+
+                    Assert.IsNotNull(expected);
+                    Assert.AreEqual(expected.Id, actual.Id);
+                    Assert.AreEqual(expected.AidYear, actual.AidYear);
+                }
+            }
+
+            [TestMethod]
+            public async Task FinancialAidApplicationsController_GetAll_AidYearFilter()
+            {
+                financialAidApplicationsController.Request.Headers.CacheControl = new CacheControlHeaderValue
+                {
+                    NoCache = true,
+                    Public = true
+                };
+                var filterGroupName = "criteria";
+                financialAidApplicationsController.Request.Properties.Add(
+                      string.Format("FilterObject{0}", filterGroupName),
+                      new FinancialAidApplication() { AidYear = new GuidObject2("bbd216fb-0fc5-4f44-ae45-42d3cdd1e89a") });
+                var tuple = new Tuple<IEnumerable<Dtos.FinancialAidApplication>, int>(financialAidApplicationDtos, 4);
+                financialAidApplicationService2Mock.Setup(ci => ci.GetAsync(offset, limit, It.IsAny<FinancialAidApplication>(), true)).ReturnsAsync(tuple);
+                var financialAidApplications = await financialAidApplicationsController.GetAsync(new Paging(limit, offset), criteriaFilter);
 
                 var cancelToken = new System.Threading.CancellationToken(false);
 
@@ -139,8 +177,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     Public = true
                 };
                 var tuple = new Tuple<IEnumerable<Dtos.FinancialAidApplication>, int>(financialAidApplicationDtos, 4);
-                financialAidApplicationService2Mock.Setup(ci => ci.GetAsync(offset, limit, false)).ReturnsAsync(tuple);
-                var financialAidApplications = await financialAidApplicationsController.GetAsync(new Paging(limit, offset));
+                financialAidApplicationService2Mock.Setup(ci => ci.GetAsync(offset, limit, It.IsAny<FinancialAidApplication>(), false)).ReturnsAsync(tuple);
+                var financialAidApplications = await financialAidApplicationsController.GetAsync(new Paging(limit, offset), criteriaFilter);
 
                 var cancelToken = new System.Threading.CancellationToken(false);
 
@@ -171,8 +209,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     Public = true
                 };
                 var tuple = new Tuple<IEnumerable<Dtos.FinancialAidApplication>, int>(financialAidApplicationDtos, 4);
-                financialAidApplicationService2Mock.Setup(ci => ci.GetAsync(It.IsAny<int>(), It.IsAny<int>(), true)).ReturnsAsync(tuple);
-                var financialAidApplications = await financialAidApplicationsController.GetAsync(null);
+                financialAidApplicationService2Mock.Setup(ci => ci.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<FinancialAidApplication>(), true)).ReturnsAsync(tuple);
+                var financialAidApplications = await financialAidApplicationsController.GetAsync(null, criteriaFilter);
 
                 var cancelToken = new System.Threading.CancellationToken(false);
 
@@ -203,7 +241,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 };
                 var id = "bbd216fb-0fc5-4f44-ae45-42d3cdd1e89a";
                 var financialAidApplication = financialAidApplicationDtos.FirstOrDefault(i => i.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
-                financialAidApplicationService2Mock.Setup(ci => ci.GetByIdAsync(id)).ReturnsAsync(financialAidApplication);
+                financialAidApplicationService2Mock.Setup(ci => ci.GetByIdAsync(id,It.IsAny<bool>())).ReturnsAsync(financialAidApplication);
 
                 var actual = await financialAidApplicationsController.GetByIdAsync(id);
 
@@ -218,55 +256,55 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             [ExpectedException(typeof(HttpResponseException))]
             public async Task FinancialAidApplicationsController_GetAll_KeyNotFoundException()
             {
-                financialAidApplicationService2Mock.Setup(ci => ci.GetAsync(offset, limit, false)).ThrowsAsync(new KeyNotFoundException());
-                var financialAidApplications = await financialAidApplicationsController.GetAsync(new Paging(limit, offset));
+                financialAidApplicationService2Mock.Setup(ci => ci.GetAsync(offset, limit, It.IsAny<FinancialAidApplication>(), false)).ThrowsAsync(new KeyNotFoundException());
+                var financialAidApplications = await financialAidApplicationsController.GetAsync(new Paging(limit, offset), criteriaFilter);
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
             public async Task FinancialAidApplicationsController_GetAll_PermissionException()
             {
-                financialAidApplicationService2Mock.Setup(ci => ci.GetAsync(offset, limit, false)).ThrowsAsync(new PermissionsException());
-                var financialAidApplications = await financialAidApplicationsController.GetAsync(new Paging(limit, offset));
+                financialAidApplicationService2Mock.Setup(ci => ci.GetAsync(offset, limit, It.IsAny<FinancialAidApplication>(), false)).ThrowsAsync(new PermissionsException());
+                var financialAidApplications = await financialAidApplicationsController.GetAsync(new Paging(limit, offset), criteriaFilter);
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
             public async Task FinancialAidApplicationsController_GetAll_ArgumentException()
             {
-                financialAidApplicationService2Mock.Setup(ci => ci.GetAsync(offset, limit, false)).ThrowsAsync(new ArgumentException());
-                var financialAidApplications = await financialAidApplicationsController.GetAsync(new Paging(limit, offset));
+                financialAidApplicationService2Mock.Setup(ci => ci.GetAsync(offset, limit, It.IsAny<FinancialAidApplication>(), false)).ThrowsAsync(new ArgumentException());
+                var financialAidApplications = await financialAidApplicationsController.GetAsync(new Paging(limit, offset), criteriaFilter);
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
             public async Task FinancialAidApplicationsController_GetAll_RepositoryException()
             {
-                financialAidApplicationService2Mock.Setup(ci => ci.GetAsync(offset, limit, false)).ThrowsAsync(new RepositoryException());
-                var financialAidApplications = await financialAidApplicationsController.GetAsync(new Paging(limit, offset));
+                financialAidApplicationService2Mock.Setup(ci => ci.GetAsync(offset, limit, It.IsAny<FinancialAidApplication>(), false)).ThrowsAsync(new RepositoryException());
+                var financialAidApplications = await financialAidApplicationsController.GetAsync(new Paging(limit, offset), criteriaFilter);
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
             public async Task FinancialAidApplicationsController_GetAll_IntegrationApiException()
             {
-                financialAidApplicationService2Mock.Setup(ci => ci.GetAsync(offset, limit, false)).ThrowsAsync(new IntegrationApiException());
-                var financialAidApplications = await financialAidApplicationsController.GetAsync(new Paging(limit, offset));
+                financialAidApplicationService2Mock.Setup(ci => ci.GetAsync(offset, limit, It.IsAny<FinancialAidApplication>(), false)).ThrowsAsync(new IntegrationApiException());
+                var financialAidApplications = await financialAidApplicationsController.GetAsync(new Paging(limit, offset), criteriaFilter);
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
             public async Task FinancialAidApplicationsController_GetAll_Exception()
             {
-                financialAidApplicationService2Mock.Setup(ci => ci.GetAsync(offset, limit, false)).ThrowsAsync(new Exception());
-                var financialAidApplications = await financialAidApplicationsController.GetAsync(new Paging(limit, offset));
+                financialAidApplicationService2Mock.Setup(ci => ci.GetAsync(offset, limit, It.IsAny<FinancialAidApplication>(), false)).ThrowsAsync(new Exception());
+                var financialAidApplications = await financialAidApplicationsController.GetAsync(new Paging(limit, offset), criteriaFilter);
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
             public async Task FinancialAidApplicationsController_GetById_NullOrEmptyId()
             {
-                financialAidApplicationService2Mock.Setup(ci => ci.GetByIdAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
+                financialAidApplicationService2Mock.Setup(ci => ci.GetByIdAsync(It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new Exception());
 
                 var actual = await financialAidApplicationsController.GetByIdAsync("");
             }
@@ -275,7 +313,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             [ExpectedException(typeof(HttpResponseException))]
             public async Task FinancialAidApplicationsController_GetById_KeyNotFoundException()
             {
-                financialAidApplicationService2Mock.Setup(ci => ci.GetByIdAsync(It.IsAny<string>())).ThrowsAsync(new KeyNotFoundException());
+                financialAidApplicationService2Mock.Setup(ci => ci.GetByIdAsync(It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new KeyNotFoundException());
 
                 var actual = await financialAidApplicationsController.GetByIdAsync("ds");
             }
@@ -284,7 +322,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             [ExpectedException(typeof(HttpResponseException))]
             public async Task FinancialAidApplicationsController_GetById_PermissionsException()
             {
-                financialAidApplicationService2Mock.Setup(ci => ci.GetByIdAsync(It.IsAny<string>())).ThrowsAsync(new PermissionsException());
+                financialAidApplicationService2Mock.Setup(ci => ci.GetByIdAsync(It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
 
                 var actual = await financialAidApplicationsController.GetByIdAsync("ds");
             }
@@ -293,7 +331,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             [ExpectedException(typeof(HttpResponseException))]
             public async Task FinancialAidApplicationsController_GetById_ArgumentException()
             {
-                financialAidApplicationService2Mock.Setup(ci => ci.GetByIdAsync(It.IsAny<string>())).ThrowsAsync(new ArgumentException());
+                financialAidApplicationService2Mock.Setup(ci => ci.GetByIdAsync(It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new ArgumentException());
 
                 var actual = await financialAidApplicationsController.GetByIdAsync("ds");
             }
@@ -302,7 +340,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             [ExpectedException(typeof(HttpResponseException))]
             public async Task FinancialAidApplicationsController_GetById_RepositoryException()
             {
-                financialAidApplicationService2Mock.Setup(ci => ci.GetByIdAsync(It.IsAny<string>())).ThrowsAsync(new RepositoryException());
+                financialAidApplicationService2Mock.Setup(ci => ci.GetByIdAsync(It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new RepositoryException());
 
                 var actual = await financialAidApplicationsController.GetByIdAsync("ds");
             }
@@ -311,7 +349,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             [ExpectedException(typeof(HttpResponseException))]
             public async Task FinancialAidApplicationsController_GetById_IntegrationApiException()
             {
-                financialAidApplicationService2Mock.Setup(ci => ci.GetByIdAsync(It.IsAny<string>())).ThrowsAsync(new IntegrationApiException());
+                financialAidApplicationService2Mock.Setup(ci => ci.GetByIdAsync(It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new IntegrationApiException());
 
                 var actual = await financialAidApplicationsController.GetByIdAsync("ds");
             }
@@ -320,7 +358,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             [ExpectedException(typeof(HttpResponseException))]
             public async Task FinancialAidApplicationsController_GetById_Exception()
             {
-                financialAidApplicationService2Mock.Setup(ci => ci.GetByIdAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
+                financialAidApplicationService2Mock.Setup(ci => ci.GetByIdAsync(It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new Exception());
 
                 var actual = await financialAidApplicationsController.GetByIdAsync("ds");
             }

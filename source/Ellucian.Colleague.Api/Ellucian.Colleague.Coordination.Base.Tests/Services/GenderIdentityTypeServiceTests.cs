@@ -2,6 +2,7 @@
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Base.Tests;
 using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Colleague.Dtos;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -38,9 +39,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         private const string personId = "S001";
 
         private string genderIdentityTypeGuid = "9ae3a175-1dfd-4937-b97b-3c9ad596e023";
+        private string genderIdentityTypeCode = "ALT";
 
         private IEnumerable<Domain.Base.Entities.GenderIdentityType> allGenderIdentityTypes;
-
+       
         [TestInitialize]
         public void Initialize()
         {
@@ -59,7 +61,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             // Set up current user
             _currentUserFactory = new PersonServiceTests.CurrentUserSetup.PersonUserFactory();
-            _genderIdentityTypeService = new GenderIdentityTypeService(_adapterRegistry, _refRepo, _currentUserFactory, _roleRepo, _logger);
+            _genderIdentityTypeService = new GenderIdentityTypeService(_adapterRegistry, _refRepo, _currentUserFactory, _roleRepo, _configurationRepository, _logger);
 
             var genderIdentityDtoAdapter = new AutoMapperAdapter<Domain.Base.Entities.GenderIdentityType, Dtos.Base.GenderIdentityType> (_adapterRegistryMock.Object, _logger);
             _adapterRegistryMock.Setup(reg => reg.GetAdapter<Ellucian.Colleague.Domain.Base.Entities.GenderIdentityType, Dtos.Base.GenderIdentityType>()).Returns(genderIdentityDtoAdapter);
@@ -112,6 +114,93 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             Assert.AreEqual(allGenderIdentityTypes.ElementAt(0).Guid, allGenderIdentityTypes.ElementAt(0).Guid);
             Assert.AreEqual(allGenderIdentityTypes.ElementAt(0).Code, allGenderIdentityTypes.ElementAt(0).Code);
             Assert.AreEqual(allGenderIdentityTypes.ElementAt(0).Description, allGenderIdentityTypes.ElementAt(0).Description);
+        }
+
+        [TestMethod]
+        public async Task GenderIdentitiesService_GetGenderIdentitiesAsync()
+        {
+            var results = await _genderIdentityTypeService.GetGenderIdentitiesAsync(true);
+            Assert.IsTrue(results is IEnumerable<GenderIdentities>);
+            Assert.IsNotNull(results);
+        }
+
+        [TestMethod]
+        public async Task GenderIdentitiesService_GetGenderIdentitiesAsync_Count()
+        {
+            var results = await _genderIdentityTypeService.GetGenderIdentitiesAsync(true);
+            Assert.AreEqual(6, results.Count());
+        }
+
+        [TestMethod]
+        public async Task GenderIdentitiesService_GetGenderIdentitiesAsync_Properties()
+        {
+            var result =
+                (await _genderIdentityTypeService.GetGenderIdentitiesAsync(true)).FirstOrDefault(x => x.Code == genderIdentityTypeCode);
+            Assert.IsNotNull(result.Id);
+            Assert.IsNotNull(result.Code);
+            Assert.IsNull(result.Description);
+
+        }
+
+        [TestMethod]
+        public async Task GenderIdentitiesService_GetGenderIdentitiesAsync_Expected()
+        {
+            var expectedResults = allGenderIdentityTypes.FirstOrDefault(c => c.Guid == genderIdentityTypeGuid);
+            var actualResult =
+                (await _genderIdentityTypeService.GetGenderIdentitiesAsync(true)).FirstOrDefault(x => x.Id == genderIdentityTypeGuid);
+            Assert.AreEqual(expectedResults.Guid, actualResult.Id);
+            Assert.AreEqual(expectedResults.Description, actualResult.Title);
+            Assert.AreEqual(expectedResults.Code, actualResult.Code);
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(KeyNotFoundException))]
+        public async Task GenderIdentitiesService_GetGenderIdentitiesByGuidAsync_Empty()
+        {
+            await _genderIdentityTypeService.GetGenderIdentitiesByGuidAsync("");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(KeyNotFoundException))]
+        public async Task GenderIdentitiesService_GetGenderIdentitiesByGuidAsync_Null()
+        {
+            await _genderIdentityTypeService.GetGenderIdentitiesByGuidAsync(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(KeyNotFoundException))]
+        public async Task GenderIdentitiesService_GetGenderIdentitiesByGuidAsync_InvalidId()
+        {
+            _refRepoMock.Setup(repo => repo.GetGenderIdentityTypesAsync(It.IsAny<bool>()))
+                .Throws<KeyNotFoundException>();
+
+            await _genderIdentityTypeService.GetGenderIdentitiesByGuidAsync("99");
+        }
+
+        [TestMethod]
+        public async Task GenderIdentitiesService_GetGenderIdentitiesByGuidAsync_Expected()
+        {
+            var expectedResults =
+                allGenderIdentityTypes.First(c => c.Guid == genderIdentityTypeGuid);
+            var actualResult =
+                await _genderIdentityTypeService.GetGenderIdentitiesByGuidAsync(genderIdentityTypeGuid);
+            Assert.AreEqual(expectedResults.Guid, actualResult.Id);
+            Assert.AreEqual(expectedResults.Description, actualResult.Title);
+            Assert.AreEqual(expectedResults.Code, actualResult.Code);
+
+        }
+
+        [TestMethod]
+        public async Task GenderIdentitiesService_GetGenderIdentitiesByGuidAsync_Properties()
+        {
+            var result =
+                await _genderIdentityTypeService.GetGenderIdentitiesByGuidAsync(genderIdentityTypeGuid);
+            Assert.IsNotNull(result.Id);
+            Assert.IsNotNull(result.Code);
+            Assert.IsNull(result.Description);
+            Assert.IsNotNull(result.Title);
+
         }
 
         // Fake an ICurrentUserFactory

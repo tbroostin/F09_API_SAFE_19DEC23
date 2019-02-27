@@ -103,5 +103,10 @@ namespace Ellucian.Colleague.Domain.Base.Tests
             return staffEntities;
         }
 
+        public async Task<string> GetStaffLoginIdForPersonAsync(string personId)
+        {
+            return "AJK";
+        }
+
     }
 }

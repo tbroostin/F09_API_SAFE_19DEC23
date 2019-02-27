@@ -436,6 +436,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 Assert.AreEqual(record.PerRaces, result.RaceCodes);
                 Assert.AreEqual(record.PerEthnics, result.EthnicCodes);
                 Assert.AreEqual(record.Gender, result.Gender);
+                Assert.AreEqual(record.GenderIdentity, result.GenderIdentityCode);
+                Assert.AreEqual(record.PersonalPronoun, result.PersonalPronounCode);
                 Assert.AreEqual(record.BirthDate, result.BirthDate);
                 Assert.AreEqual(record.DeceasedDate, result.DeceasedDate);
                 if (record.PeopleEmailEntityAssociation != null && record.PeopleEmailEntityAssociation.Count() > 0)
@@ -1790,11 +1792,26 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             }
         }
 
-        #endregion  
+        #endregion
+
+        #region GetEmailAddressFromHierarchyAsync
+        [TestClass]
+        public class GetEmailAddressFromHierarchyAsync : BaseRepositorySetup
+        {
+            PersonRepository personRepository;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                MockInitialize();
+                personRepository = new PersonRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+            }
+        }
+        #endregion
 
         #region Create Organization
 
-         
+
         [TestClass]
         public class CreateOrganization : BasePersonSetup
         {

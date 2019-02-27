@@ -77,6 +77,17 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             // Get tax form statement entities
             var taxFormEntities = await taxFormStatementRepository.GetAsync(personId, taxFormDomainId);
+            if (taxFormEntities == null)
+                throw new ApplicationException("taxFormEntities cannot be null.");
+
+            foreach (var taxFormEntity in taxFormEntities)
+            {
+                // Validate that the domain entity recipient ID is the same as the person ID requested.
+                if (taxFormEntity.PersonId != personId)
+                {
+                    throw new PermissionsException("Insufficient access to tax form statements data.");
+                }
+            }
 
             TaxFormConfiguration taxFormConfiguration = null;
             TaxFormConfiguration taxFormConfigurationFor1098T = null;
@@ -98,10 +109,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 if (taxFormConfiguration == null)
                     throw new ApplicationException("taxFormConfiguration cannot be null.");
             }
-
-            if (taxFormEntities == null)
-                throw new ApplicationException("taxFormEntities cannot be null.");
-
            
             var adapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.TaxFormStatement2, Dtos.Base.TaxFormStatement2>();
 

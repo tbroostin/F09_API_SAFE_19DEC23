@@ -2,10 +2,13 @@
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Data.ColleagueFinance.Utilities;
+using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.ColleagueFinance;
+using Ellucian.Colleague.Domain.ColleagueFinance.Exceptions;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos.ColleagueFinance;
+using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
@@ -25,22 +28,27 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
     {
         private readonly IBudgetAdjustmentsRepository budgetAdjustmentRepository;
         private readonly IGeneralLedgerConfigurationRepository configurationRepository;
+        private readonly IApproverRepository approverRepository;
+        private readonly IStaffRepository staffRepository;
 
         /// <summary>
         /// Initialize the service.
         /// </summary>
         /// <param name="budgetAdjustmentRepository">Budget adjustment repository.</param>
         /// <param name="configurationRepository">GL configuration repository.</param>
+        /// <param name="approverRepository">Approver repository.</param>
         /// <param name="adapterRegistry">Adapter registry</param>
         /// <param name="currentUserFactory">User factory</param>
         /// <param name="roleRepository">Role repository</param>
         /// <param name="logger">Logger object</param>
         public BudgetAdjustmentService(IBudgetAdjustmentsRepository budgetAdjustmentRepository, IGeneralLedgerConfigurationRepository configurationRepository,
-            IAdapterRegistry adapterRegistry, ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, ILogger logger)
+            IApproverRepository approverRepository, IStaffRepository staffRepository, IAdapterRegistry adapterRegistry, ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, ILogger logger)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger)
         {
             this.budgetAdjustmentRepository = budgetAdjustmentRepository;
             this.configurationRepository = configurationRepository;
+            this.approverRepository = approverRepository;
+            this.staffRepository = staffRepository;
         }
 
         /// <summary>
@@ -342,7 +350,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         }
 
         /// <summary>
-        /// Get a budget adjustment by its id.
+        /// Get a budget adjustment by its id. It is invoked by the initiator 
+        /// when they click to see or update a budget adjustment.
         /// </summary>
         /// <param name="id">The ID of the budget adjustment to retrieve.</param>
         /// <returns>A budget adjustment domain entity.</returns>
@@ -373,9 +382,263 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 // Convert the domain entity into a DTO.
                 var adapter = _adapterRegistry.GetAdapter<Domain.ColleagueFinance.Entities.BudgetAdjustment, Dtos.ColleagueFinance.BudgetAdjustment>();
                 budgetAdjustmentDto = adapter.MapToType(budgetAdjustment);
+
+                // Run validation if it is not a complete budget adjustment (which may return errors in the Validation Results property of the DTO).
+                if (budgetAdjustment.Status != Domain.ColleagueFinance.Entities.BudgetEntryStatus.Complete)
+                {
+                    await ValidateBudgetAdjustmentAsync(budgetAdjustment, budgetAdjustmentDto);
+                }
             }
 
             return budgetAdjustmentDto;
+        }
+
+        /// <summary>
+        /// Gets a budget adjustment that is awaiting approval by its id. It is invoked
+        /// by an approver when they retrieve a budget adjustment to see it or approve it.
+        /// </summary>
+        /// <param name="id">The ID of the budget adjustment to retrieve.</param>
+        /// <returns>A budget adjustment DTO.</returns>
+        public async Task<BudgetAdjustment> GetBudgetAdjustmentPendingApprovalDetailAsync(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new ArgumentNullException("id");
+            }
+
+            // Check the permission code to view pending approval budget adjustments.
+            CheckViewBudgetAdjustmentPendingApprovalPermission();
+
+            // Get the approver/login id for the current user.
+            var currentUserStaffLoginId = string.Empty;
+            try
+            {
+                currentUserStaffLoginId = await staffRepository.GetStaffLoginIdForPersonAsync(CurrentUser.PersonId);
+            }
+            catch (Exception e)
+            {
+                logger.Info(e, "Could not locate Staff Login ID for person ID: " + CurrentUser.PersonId);
+                throw new PermissionsException("Could not find Staff information for the user.");
+            }
+
+            var budgetAdjustment = await budgetAdjustmentRepository.GetBudgetAdjustmentAsync(id);
+            var budgetAdjustmentDto = new BudgetAdjustment();
+
+            if (budgetAdjustment != null)
+            {
+                // Validate that the current user is listed as a "next approver" on the entity obtained from the repository.
+                var nextApproverMatchesCurrentUser = false;
+                if (budgetAdjustment.NextApprovers != null)
+                {
+                    foreach (var nextApprover in budgetAdjustment.NextApprovers)
+                    {
+                        if (currentUserStaffLoginId == nextApprover.NextApproverId)
+                        {
+                            nextApproverMatchesCurrentUser = true;
+                        }
+                    }
+                }
+
+                if (!nextApproverMatchesCurrentUser)
+                {
+                    var message = "The current user " + CurrentUser.PersonId + " is not a next approver for the record returned from the repository";
+                    logger.Error(message);
+                    throw new PermissionsException(message);
+                }
+
+                // Convert the domain entity into a DTO.
+                var adapter = _adapterRegistry.GetAdapter<Domain.ColleagueFinance.Entities.BudgetAdjustment, Dtos.ColleagueFinance.BudgetAdjustment>();
+                budgetAdjustmentDto = adapter.MapToType(budgetAdjustment);
+
+                // Run validation (which will also update the Validation Results property of the DTO).
+                await ValidateBudgetAdjustmentAsync(budgetAdjustment, budgetAdjustmentDto);
+            }
+
+            return budgetAdjustmentDto;
+        }
+
+        /// <summary>
+        /// Approve a budget adjustment by the current user.
+        /// </summary>
+        /// <param name="id">The ID of the budget adjustment to approve.</param>
+        /// <param name="budgetAdjustmentApprovalDto">The budget adjustment approval data.</param>        
+        /// <returns>The same budget adjustment approval DTO passed in.</returns>
+        public async Task<Dtos.ColleagueFinance.BudgetAdjustmentApproval> PostBudgetAdjustmentApprovalAsync(string id, Dtos.ColleagueFinance.BudgetAdjustmentApproval budgetAdjustmentApprovalDto)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new ArgumentNullException("id");
+            }
+
+            if (budgetAdjustmentApprovalDto == null)
+            {
+                throw new ArgumentNullException("budgetAdjustmentApprovalDto", "Budget adjustment approval is required.");
+            }
+
+            // Check the permission code to view pending approval budget adjustments.
+            CheckViewBudgetAdjustmentPendingApprovalPermission();
+
+            // Get the approver/login id for the current user.
+            var currentUserStaffLoginId = string.Empty;
+            try
+            {
+                currentUserStaffLoginId = await staffRepository.GetStaffLoginIdForPersonAsync(CurrentUser.PersonId);
+            }
+            catch (Exception e)
+            {
+                logger.Info(e, "Could not locate Staff Login ID for person ID: " + CurrentUser.PersonId);
+                throw new ApplicationException("Could not find Staff information for the user.");
+            }
+
+            // Get the budget adjustment to approve, add the approval information and post it.
+            var budgetAdjustmentEntity = await budgetAdjustmentRepository.GetBudgetAdjustmentAsync(id);
+
+            // Updates are only permitted for existing budget adjustments that are in "Not Approved" Status.
+            // Check the budget adjustment that was retrieved from the database.
+            if (budgetAdjustmentEntity == null)
+            {
+                logger.Info("Could not retrieve the budget adjustment: " + id);
+                throw new ApplicationException("Could not retrieve the budget adjustment.");
+            }
+
+            if (budgetAdjustmentEntity.Status != Domain.ColleagueFinance.Entities.BudgetEntryStatus.NotApproved)
+            {
+                var message = "The budget adjustment does not have a not approved status.";
+                logger.Error(message);
+                throw new NotApprovedStatusException(message);
+            }
+
+            // Throw an exception is the current user has already approved this budget adjustment.
+            if (budgetAdjustmentEntity.Approvers != null)
+            {
+                if (budgetAdjustmentEntity.Approvers.Any())
+                {
+                    int approverPosition = budgetAdjustmentEntity.Approvers.FindIndex(x => x.ApproverId == currentUserStaffLoginId);
+                    if (approverPosition >= 0)
+                    {
+                        var message = "You have already approved this budget adjustment.";
+                        logger.Error(message);
+                        throw new AlreadyApprovedByUserException(message);
+                    }
+                }
+            }
+
+            // Validate that the current user is still listed as a "next approver" on the entity obtained from the repository.
+            if (budgetAdjustmentEntity.NextApprovers == null || !budgetAdjustmentEntity.NextApprovers.Any())
+            {
+                var message = "You are no longer a next approver in this budget adjustment.";
+                logger.Error(message);
+                throw new PermissionsException(message);
+            }
+            else
+            {
+                int nextApproverPosition = budgetAdjustmentEntity.NextApprovers.FindIndex(x => x.NextApproverId == currentUserStaffLoginId);
+                if (nextApproverPosition < 0)
+                {
+                    var message = "You are no longer a next approver in this budget adjustment.";
+                    logger.Error(message);
+                    throw new PermissionsException(message);
+                }
+            }
+
+            // Validate the budget adjustment before posting it.
+            // If there are any validation errors, throw an exception.
+            var validationMessages = await budgetAdjustmentRepository.ValidateBudgetAdjustmentAsync(budgetAdjustmentEntity);
+            if (validationMessages != null && validationMessages.Any())
+            {
+                var message = "The budget adjustment fails validation before posting.";
+                logger.Error(message);
+                throw new ApplicationException(message);
+            }
+
+            // Update the list of approvers with the current user's approval.
+            var currentApprover = new Domain.ColleagueFinance.Entities.Approver(currentUserStaffLoginId);
+            currentApprover.ApprovalDate = DateTime.Today;
+            if (budgetAdjustmentEntity.Approvers != null)
+            {
+                budgetAdjustmentEntity.Approvers.Add(currentApprover);
+            }
+
+            // Remove the current user's approval from the list of next approvers.
+            int pos = budgetAdjustmentEntity.NextApprovers.FindIndex(x => x.NextApproverId == currentUserStaffLoginId);
+            budgetAdjustmentEntity.NextApprovers.RemoveAt(pos);
+
+            // Append the current user's approval name, date, time and added comments to the previously entered comments.
+            // Insert an empty line to separate the new comments.
+            if (!string.IsNullOrEmpty(budgetAdjustmentEntity.Comments))
+            {
+                budgetAdjustmentEntity.Comments += DmiString._VM;
+            }
+
+            // Get the approver name from the approval ID and append it. 
+            // Otherwise append the approver ID. 
+            // Make sure the approver name is not longer than 30 because otherwise
+            // it will get split when storing in the database.
+            string approverName = await approverRepository.GetApproverNameForIdAsync(currentUserStaffLoginId);
+            string commentsToAdd = "";
+
+            if (!string.IsNullOrEmpty(approverName))
+            {
+                if (approverName.Trim().Length > 30)
+                {
+                    approverName.Substring(0, 30);
+                }
+                commentsToAdd = approverName;
+            }
+            else
+            {
+                commentsToAdd = currentUserStaffLoginId;
+            }
+            // Append the Date and Time. Count the space in betwen name and date.
+            if ((commentsToAdd.Length + DateTime.Now.ToString().Length) > 31)
+            {
+                commentsToAdd += " " + DateTime.Now.ToString();
+            }
+            else
+            {
+                commentsToAdd += DmiString._VM + DateTime.Now.ToString();
+            }
+
+            // The dto comments only contains any comments added by the user in this transaction.
+            if (!string.IsNullOrEmpty(budgetAdjustmentApprovalDto.Comments))
+            {
+                commentsToAdd += DmiString._VM + budgetAdjustmentApprovalDto.Comments;
+            }
+
+            // We may have line break characters in the existing comments. Split them out and add each line separately
+            // to preserve any line-to-line formatting the user entered. Note that these characters could be
+            // \n or \r\n (two variations of a new line character) or \r (a carriage return). We will change
+            // any of the new line or carriage returns to the same thing, and then split the string on that.
+            string _VM = Convert.ToString(DmiString._VM);
+            string alternateNewLineCharacter = "\r\n";
+            string newLineCharacter = "\n";
+            string carriageReturnCharacter = "\r";
+            if (!string.IsNullOrWhiteSpace(budgetAdjustmentEntity.Comments))
+            {
+                budgetAdjustmentEntity.Comments = budgetAdjustmentEntity.Comments.Replace(alternateNewLineCharacter, _VM);
+                budgetAdjustmentEntity.Comments = budgetAdjustmentEntity.Comments.Replace(newLineCharacter, _VM);
+                budgetAdjustmentEntity.Comments = budgetAdjustmentEntity.Comments.Replace(carriageReturnCharacter, _VM);
+
+                budgetAdjustmentEntity.Comments += _VM + commentsToAdd;
+            }
+            else
+            {
+                budgetAdjustmentEntity.Comments = commentsToAdd;
+
+            }
+
+            // Approve the budget adjustment. The current user approval may not be enough to approve 
+            // this budget adjustment, so it may not go to a complete status.
+            var budgetAdjustmentOutputEntity = await budgetAdjustmentRepository.UpdateAsync(id, budgetAdjustmentEntity);
+
+            if (budgetAdjustmentOutputEntity == null)
+            {
+                var message = "Budget adjustment must not be null.";
+                logger.Error(message);
+                throw new ApplicationException(message);
+            }
+
+            return budgetAdjustmentApprovalDto;
         }
 
         /// <summary>
@@ -506,6 +769,25 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 var message = string.Format("{0} does not have permission to view budget adjustments pending approval.", CurrentUser.PersonId);
                 logger.Error(message);
                 throw new PermissionsException(message);
+            }
+        }
+
+        /// <summary>
+        /// Evaluate the budget adjustment and update the Validation Results property on the DTO.
+        /// </summary>
+        /// <param name="budgetAdjustmentDto">The budget adjustment DTO to validate.</param>
+        /// <returns>void - updates the Validation Results property on the DTO.</returns>
+        private async Task ValidateBudgetAdjustmentAsync(Domain.ColleagueFinance.Entities.BudgetAdjustment budgetAdjustmentEntity, BudgetAdjustment budgetAdjustmentDto)
+        {
+            if (budgetAdjustmentDto != null)
+            {
+                budgetAdjustmentDto.ValidationResults = new List<string>();
+
+                var validationMessages = await budgetAdjustmentRepository.ValidateBudgetAdjustmentAsync(budgetAdjustmentEntity);
+                if (validationMessages != null && validationMessages.Any())
+                {
+                    budgetAdjustmentDto.ValidationResults.AddRange(validationMessages);
+                }
             }
         }
     }

@@ -199,6 +199,18 @@ namespace Ellucian.Colleague.Domain.Student
         // Access to view financial aid application outcomes
         public const string ViewFinancialAidApplicationOutcomes = "VIEW.FA.APPLICATION.OUTCOMES";
 
+        // Access to view student unverified grades
+        public const string ViewStudentUnverifiedGrades = "VIEW.STUDENT.UNVERIFIED.GRADES";
+
+        // Enables access to view student transcript grades
+        public const string ViewStudentTranscriptGrades = "VIEW.STUDENT.TRANSCRIPT.GRADES";
+
+        // Enables access to update student transcript grades
+        public const string UpdateStudentTranscriptGradesAdjustments = "UPDATE.STUDENT.TRANSCRIPT.GRADES.ADJUSTMENTS";
+
+        // Access to view student grade point averages
+        public const string ViewStudentGradePointAverages = "VIEW.STUDENT.GRADE.POINT.AVERAGES";
+
         // Access to view student financial aid need summaries
         public const string ViewStudentFinancialAidNeedSummaries = "VIEW.STU.FA.NEED.SUMMARIES";
 
@@ -207,5 +219,8 @@ namespace Ellucian.Colleague.Domain.Student
 
         // Access to view retricted student financial aid awards
         public const string ViewRestrictedStudentFinancialAidAwards = "VIEW.RES.STU.FA.AWARDS";
+
+        //Enables access to update student unverified grades
+        public const string ViewStudentUnverifiedGradesSubmissions = "UPDATE.STUDENT.UNVERIFIED.GRADES.SUBMISSIONS";
     }
 }

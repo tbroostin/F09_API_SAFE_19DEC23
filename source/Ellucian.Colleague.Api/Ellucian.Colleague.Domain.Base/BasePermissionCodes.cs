@@ -202,5 +202,8 @@ namespace Ellucian.Colleague.Domain.Base
 
         // Access to view any educational institutions
         public const string ViewEducationalInstitution = "VIEW.EDUCATIONAL.INSTITUTION";
+
+        // Access to Recruiter operations
+        public const string PerformRecruiterOperations = "PERFORM.RECRUITER.OPERATIONS";
     }
 }

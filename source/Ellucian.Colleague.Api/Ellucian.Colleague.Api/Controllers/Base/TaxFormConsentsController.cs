@@ -59,7 +59,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             try
             {
                 if (string.IsNullOrEmpty(personId))
-                    throw CreateHttpResponseException("Person ID must be specified.", HttpStatusCode.BadRequest);
+                    throw new ArgumentNullException("personId", "Person ID must be specified.");
 
                 var taxFormConsents = await taxFormConsentService.GetAsync(personId, taxFormId);
                 return taxFormConsents;

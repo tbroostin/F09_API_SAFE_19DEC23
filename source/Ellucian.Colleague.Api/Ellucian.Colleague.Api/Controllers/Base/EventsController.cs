@@ -48,6 +48,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <returns>Events as an ICal string</returns>
         /// <exception> <see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.NotFound if a section Id is not specified.</exception>
         [ParameterSubstitutionFilter(ParameterNames = new string[] { "sectionId" })]
+        [Obsolete("Obsolete as of Api version 1.22, use qapi/sections/QuerySectionEventsICal of this API")]
         public EventsICal GetSectionEvents(string sectionId, DateTime? startDate = null, DateTime? endDate = null)
         {
             List<string> sectionList = new List<string>();

@@ -34,7 +34,7 @@ namespace Ellucian.Colleague.Api.Client.Tests
             mockHandler = new MockHandler();
         }
 
-        #region GetAwardLetterTests
+        #region GetAwardLettersTests
 
         [TestMethod]
         public void GetAwardLettersTest()
@@ -122,7 +122,7 @@ namespace Ellucian.Colleague.Api.Client.Tests
             Assert.AreEqual(expectedResult.BudgetAmount, actualResult.BudgetAmount);
             Assert.AreEqual(expectedResult.EstimatedFamilyContributionAmount, actualResult.EstimatedFamilyContributionAmount);
             Assert.AreEqual(expectedResult.NeedAmount, actualResult.NeedAmount);
-        }
+        }        
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
@@ -200,6 +200,288 @@ namespace Ellucian.Colleague.Api.Client.Tests
             Assert.AreEqual(expectedResult.Count(), actualResult.Count());
 
 
+        }
+
+        [TestMethod]
+        public async Task GetAwardLetters4AsyncTest()
+        {
+            var awardLetterResponse = new List<AwardLetter3>()
+            {
+                new AwardLetter3()
+                {
+                    StudentId = _studentId,
+                    AwardLetterYear = "2014",
+                    OpeningParagraph = "This is the opening paragraph",
+                    ClosingParagraph = "This is the closing paragraph",
+
+                    BudgetAmount = 12000,
+                    EstimatedFamilyContributionAmount = 10000,
+                    NeedAmount = 2000
+                }
+            };
+
+            var serializedResponse = JsonConvert.SerializeObject(awardLetterResponse);
+
+            var response = new HttpResponseMessage(HttpStatusCode.OK);
+            response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+            mockHandler.Responses.Enqueue(response);
+
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+            var client = new ColleagueApiClient(testHttpClient, loggerMock.Object);
+
+            //Act
+            var expectedResult = awardLetterResponse.First();
+            var actualResult = (await client.GetAwardLetters4Async(_studentId)).First();
+
+            //Assert
+            Assert.AreEqual(expectedResult.StudentId, actualResult.StudentId);
+            Assert.AreEqual(expectedResult.AwardLetterYear, actualResult.AwardLetterYear);
+            Assert.AreEqual(expectedResult.OpeningParagraph, actualResult.OpeningParagraph);
+            Assert.AreEqual(expectedResult.ClosingParagraph, actualResult.ClosingParagraph);
+
+            Assert.AreEqual(expectedResult.BudgetAmount, actualResult.BudgetAmount);
+            Assert.AreEqual(expectedResult.EstimatedFamilyContributionAmount, actualResult.EstimatedFamilyContributionAmount);
+            Assert.AreEqual(expectedResult.NeedAmount, actualResult.NeedAmount);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetAwardLetters4Async_NullStudentIdTest()
+        {
+            var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
+            response.Content = new StringContent(string.Empty, Encoding.UTF8, _contentType);
+            mockHandler.Responses.Enqueue(response);
+
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+            var client = new ColleagueApiClient(testHttpClient, loggerMock.Object);
+
+            var result = await client.GetAwardLetters4Async(null);
+        }
+
+        [TestMethod]
+        public async Task GetAwardLetters4Async_EmptyResponseTest()
+        {
+            var serializedResponse = JsonConvert.SerializeObject(new List<AwardLetter>());
+
+            var response = new HttpResponseMessage(HttpStatusCode.OK);
+            response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+            mockHandler.Responses.Enqueue(response);
+
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+            var client = new ColleagueApiClient(testHttpClient, loggerMock.Object);
+
+            //Act
+            var expectedResult = new List<AwardLetter>();
+            var actualResult = await client.GetAwardLetters4Async(_studentId);
+
+            //Assert
+            Assert.AreEqual(expectedResult.Count(), actualResult.Count());
+
+
+        }
+
+        #endregion
+
+        #region GetAwardLetter Tests
+        [TestMethod]
+        public async Task GetAwardLetter4AsyncTest()
+        {
+            var awardYear = "2014";
+            var awardLetterResponse = new AwardLetter3()
+            {
+                StudentId = _studentId,
+                AwardLetterYear = "2014",
+                OpeningParagraph = "This is the opening paragraph",
+                ClosingParagraph = "This is the closing paragraph",
+
+                BudgetAmount = 12000,
+                EstimatedFamilyContributionAmount = 10000,
+                NeedAmount = 2000
+
+            };
+
+            var serializedResponse = JsonConvert.SerializeObject(awardLetterResponse);
+
+            var response = new HttpResponseMessage(HttpStatusCode.OK);
+            response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+            mockHandler.Responses.Enqueue(response);
+
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+            var client = new ColleagueApiClient(testHttpClient, loggerMock.Object);
+
+            //Act
+            var expectedResult = awardLetterResponse;
+            var actualResult = (await client.GetAwardLetter4Async(_studentId, awardYear));
+
+            //Assert
+            Assert.AreEqual(expectedResult.StudentId, actualResult.StudentId);
+            Assert.AreEqual(expectedResult.AwardLetterYear, actualResult.AwardLetterYear);
+            Assert.AreEqual(expectedResult.OpeningParagraph, actualResult.OpeningParagraph);
+            Assert.AreEqual(expectedResult.ClosingParagraph, actualResult.ClosingParagraph);
+
+            Assert.AreEqual(expectedResult.BudgetAmount, actualResult.BudgetAmount);
+            Assert.AreEqual(expectedResult.EstimatedFamilyContributionAmount, actualResult.EstimatedFamilyContributionAmount);
+            Assert.AreEqual(expectedResult.NeedAmount, actualResult.NeedAmount);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetAwardLetter4Async_NullStudentIdTest()
+        {
+            var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
+            response.Content = new StringContent(string.Empty, Encoding.UTF8, _contentType);
+            mockHandler.Responses.Enqueue(response);
+
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+            var client = new ColleagueApiClient(testHttpClient, loggerMock.Object);
+
+            var result = await client.GetAwardLetter4Async(null, "2014");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetAwardLetter4Async_NullAwardYearTest()
+        {
+            var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
+            response.Content = new StringContent(string.Empty, Encoding.UTF8, _contentType);
+            mockHandler.Responses.Enqueue(response);
+
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+            var client = new ColleagueApiClient(testHttpClient, loggerMock.Object);
+
+            var result = await client.GetAwardLetter4Async(_studentId, null);
+        }
+
+        [TestMethod]
+        public async Task GetAwardLetter4Async_EmptyResponseTest()
+        {
+            var serializedResponse = JsonConvert.SerializeObject(new List<AwardLetter>());
+
+            var response = new HttpResponseMessage(HttpStatusCode.OK);
+            response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+            mockHandler.Responses.Enqueue(response);
+
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+            var client = new ColleagueApiClient(testHttpClient, loggerMock.Object);
+
+            //Act
+            var expectedResult = new List<AwardLetter>();
+            var actualResult = await client.GetAwardLetters4Async(_studentId);
+
+            //Assert
+            Assert.AreEqual(expectedResult.Count(), actualResult.Count());
+
+
+        }
+        #endregion
+
+        #region UpdateAwardLetter Tests
+
+        [TestMethod]
+        public async Task UpdateAwardLetter3AsyncTest()
+        {
+
+            var awardYear = "2014";
+            var awardLetterDto = new AwardLetter3()
+            {
+                StudentId = _studentId,
+                AwardLetterYear = "2014",
+                OpeningParagraph = "This is the opening paragraph",
+                ClosingParagraph = "This is the closing paragraph",
+
+                BudgetAmount = 12000,
+                EstimatedFamilyContributionAmount = 10000,
+                NeedAmount = 2000,
+                AcceptedDate = new DateTime()
+            };
+
+            var serializedResponse = JsonConvert.SerializeObject(awardLetterDto);
+
+            var response = new HttpResponseMessage(HttpStatusCode.OK);
+            response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+            mockHandler.Responses.Enqueue(response);
+
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+            var client = new ColleagueApiClient(testHttpClient, loggerMock.Object);
+
+            //Act
+            var expectedResult = awardLetterDto;
+            var actualResult = (await client.UpdateAwardLetter3Async(_studentId, awardYear, awardLetterDto));
+
+            //Assert
+            Assert.AreEqual(expectedResult.StudentId, actualResult.StudentId);
+            Assert.AreEqual(expectedResult.AwardLetterYear, actualResult.AwardLetterYear);
+            Assert.AreEqual(expectedResult.OpeningParagraph, actualResult.OpeningParagraph);
+            Assert.AreEqual(expectedResult.ClosingParagraph, actualResult.ClosingParagraph);
+
+            Assert.AreEqual(expectedResult.BudgetAmount, actualResult.BudgetAmount);
+            Assert.AreEqual(expectedResult.EstimatedFamilyContributionAmount, actualResult.EstimatedFamilyContributionAmount);
+            Assert.AreEqual(expectedResult.NeedAmount, actualResult.NeedAmount);
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task UpdateAwardLetter3Async_NullStudentIdTest()
+        {
+            var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
+            response.Content = new StringContent(string.Empty, Encoding.UTF8, _contentType);
+            mockHandler.Responses.Enqueue(response);
+
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+            var client = new ColleagueApiClient(testHttpClient, loggerMock.Object);
+
+            var result = await client.UpdateAwardLetter3Async(null, "2014", new AwardLetter3() { StudentId = _studentId });
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task UpdateAwardLetter3Async_NullAwardYearTest()
+        {
+            var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
+            response.Content = new StringContent(string.Empty, Encoding.UTF8, _contentType);
+            mockHandler.Responses.Enqueue(response);
+
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+            var client = new ColleagueApiClient(testHttpClient, loggerMock.Object);
+
+            var result = await client.UpdateAwardLetter3Async(_studentId, null, new AwardLetter3() { StudentId = _studentId });
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task UpdateAwardLetter3Async_NullAwardLetterDtoTest()
+        {
+            var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
+            response.Content = new StringContent(string.Empty, Encoding.UTF8, _contentType);
+            mockHandler.Responses.Enqueue(response);
+
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+            var client = new ColleagueApiClient(testHttpClient, loggerMock.Object);
+
+            var result = await client.UpdateAwardLetter3Async(_studentId, "2014", null);
         }
 
         #endregion

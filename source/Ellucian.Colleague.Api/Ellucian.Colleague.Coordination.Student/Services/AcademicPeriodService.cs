@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -447,6 +447,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
             var category = new Dtos.AcademicPeriodCategory3();
+            category.Parent = new Dtos.AcademicPeriodCategoryParent();
             switch (source.Category)
             {
                 case "year":
@@ -469,6 +470,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     category.Type = AcademicTimePeriod2.Subterm;
                     if (!string.IsNullOrEmpty(source.ParentId))
                     {
+                        category.Parent.AcademicPeriod = new GuidObject2(source.ParentId);
                         category.Parent = new Dtos.AcademicPeriodCategoryParent();
                         category.Parent.Id = source.ParentId;
                     }

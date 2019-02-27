@@ -55,6 +55,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BudgetAdjustmentPendingApprovalSummary.cs" />
+    <Compile Include="BudgetAdjustmentApproval.cs" />
     <Compile Include="NextApprover.cs" />
     <Compile Include="Approver.cs" />
     <Compile Include="AccountsPayableType.cs" />

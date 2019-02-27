@@ -17,6 +17,7 @@ using Ellucian.Web.Utility;
 using slf4net;
 using Ellucian.Colleague.Data.Base.DataContracts;
 using System.Threading.Tasks;
+using Ellucian.Colleague.Domain.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -379,6 +380,49 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         }
 
         /// <summary>
+        /// Get guid for AcademicPeriods code
+        /// </summary>
+        /// <param name="code">AcademicPeriods code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetAcademicPeriodsGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetAsync(false);
+            Term codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
+            
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetAsync(true);
+                if (allCodesCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'TERMS', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.RecordGuid))
+                    guid = codeNoCache.RecordGuid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'TERMS', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.RecordGuid))
+                    guid = codeCache.RecordGuid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'TERMS', Record ID:'", code, "'"));
+            }
+            return guid;
+
+        }
+
+        /// <summary>
         /// Retrieve all Academic Periods
         /// </summary>
         /// <returns>All Academic Periods</returns>
@@ -449,21 +493,27 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     var preceedingYearID = preceedingYear == null ? null : preceedingYear.RecordGuid;
                     var preceedingSubtermID = preceedingSubterm == null ? null : preceedingSubterm.RecordGuid;
                     var preceedingTermID = preceedingTerm == null ? null : preceedingTerm.RecordGuid;
-
-                    var academicPeriod = new Ellucian.Colleague.Domain.Student.Entities.AcademicPeriod(period.RecordGuid,
-                        period.Code, period.Description, period.StartDate, period.EndDate, period.ReportingYear, period.Sequence,
-                        period.ReportingTerm, period.Category == "year" ? preceedingYearID : (period.Category == "term" ? preceedingTermID : preceedingSubtermID),
-                        parentId, period.RegistrationDates)
+                    try
                     {
-                        SessionId = period.SessionId,
-                        Category = period.Category
-                    };
+                        var academicPeriod = new Ellucian.Colleague.Domain.Student.Entities.AcademicPeriod(period.RecordGuid,
+                            period.Code, period.Description, period.StartDate, period.EndDate, period.ReportingYear, period.Sequence,
+                            period.ReportingTerm, period.Category == "year" ? preceedingYearID : (period.Category == "term" ? preceedingTermID : preceedingSubtermID),
+                            parentId, period.RegistrationDates)
+                        {
+                            SessionId = period.SessionId,
+                            Category = period.Category
+                        };
 
-                    academicPeriods.Add(academicPeriod);
+                        academicPeriods.Add(academicPeriod);
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new ArgumentException(string.Format("Academic Period: '{0}' missing required data.  {1}", period.Code, ex.Message));
+                    }
                 }
             }
 
             return academicPeriods;
         }
-    }
+    }   
 }

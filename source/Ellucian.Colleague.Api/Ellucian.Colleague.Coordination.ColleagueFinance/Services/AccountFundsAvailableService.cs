@@ -93,7 +93,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 
                 switch (availablefund.AvailableStatus)
                 {
-                    case FundsAvailableStatus.Availbale:
+                    case FundsAvailableStatus.Available:
                         fundsAvailableDto.FundsAvailable = Dtos.EnumProperties.FundsAvailable.Available;
                         break;
                     case FundsAvailableStatus.NotAvailable:
@@ -104,6 +104,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         break;
                     case FundsAvailableStatus.NotApplicable:
                         fundsAvailableDto.FundsAvailable = Dtos.EnumProperties.FundsAvailable.NotApplicable;
+                        break;
+                    case FundsAvailableStatus.Invalid:
+                        fundsAvailableDto.FundsAvailable = Dtos.EnumProperties.FundsAvailable.InvalidAccountingString;
                         break;
                     default:
                         fundsAvailableDto.FundsAvailable = Dtos.EnumProperties.FundsAvailable.NotAvailable;
@@ -344,7 +347,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                                 var status = Dtos.EnumProperties.FundsAvailable.NotSet;
                                 switch (inAccountingString.AvailableStatus)
                                 {
-                                    case FundsAvailableStatus.Availbale:
+                                    case FundsAvailableStatus.Available:
                                         status = Dtos.EnumProperties.FundsAvailable.Available; break;
                                     case FundsAvailableStatus.NotAvailable:
                                         status = Dtos.EnumProperties.FundsAvailable.NotAvailable; break;
@@ -352,6 +355,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                                         status = Dtos.EnumProperties.FundsAvailable.OverrideAvailable; break;
                                     case FundsAvailableStatus.NotApplicable:
                                         status = Dtos.EnumProperties.FundsAvailable.NotApplicable;
+                                        break;
+                                    case FundsAvailableStatus.Invalid:
+                                        status = Dtos.EnumProperties.FundsAvailable.InvalidAccountingString;
                                         break;
                                     default: break;
                                 }
@@ -591,7 +597,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                                 var status = Dtos.EnumProperties.FundsAvailable.NotSet;
                                 switch (inAccountingString.AvailableStatus)
                                 {
-                                    case FundsAvailableStatus.Availbale:
+                                    case FundsAvailableStatus.Available:
                                         status = Dtos.EnumProperties.FundsAvailable.Available; break;
                                     case FundsAvailableStatus.NotAvailable:
                                         status = Dtos.EnumProperties.FundsAvailable.NotAvailable; break;
@@ -599,6 +605,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                                         status = Dtos.EnumProperties.FundsAvailable.OverrideAvailable; break;
                                     case FundsAvailableStatus.NotApplicable:
                                         status = Dtos.EnumProperties.FundsAvailable.NotApplicable;
+                                        break;
+                                    case FundsAvailableStatus.Invalid:
+                                        status = Dtos.EnumProperties.FundsAvailable.InvalidAccountingString;
                                         break;
                                     default: break;
                                 }

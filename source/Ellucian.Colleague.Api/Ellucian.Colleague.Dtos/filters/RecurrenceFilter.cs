@@ -11,13 +11,13 @@ namespace Ellucian.Colleague.Dtos.Filters
     /// <summary>
     /// Filter on Time Period startOn and endOn
     /// </summary>
+    [DataContract]
     public class RecurrenceFilter
     {
         /// <summary>
         /// Time Period
         /// </summary>
-        [JsonProperty("timePeriod")]
-        [FilterProperty("criteria")]
+        [JsonProperty("timePeriod")]     
         public TimePeriodFilter TimePeriod { get; set; }
     }
     /// <summary>

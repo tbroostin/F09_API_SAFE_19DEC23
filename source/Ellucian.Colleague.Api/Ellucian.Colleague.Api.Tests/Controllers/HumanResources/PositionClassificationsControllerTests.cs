@@ -1,7 +1,8 @@
 //Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
-using Ellucian.Colleague.Api.Controllers.HumanResoures;
+
+using Ellucian.Colleague.Api.Controllers.HumanResources;
 using Ellucian.Colleague.Configuration.Licensing;
-using Ellucian.Colleague.Coordination.HumanResoures.Services;
+using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
@@ -16,7 +17,7 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Hosting;
 
-namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResoures
+namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 {
     [TestClass]
     public class PositionClassificationsControllerTests

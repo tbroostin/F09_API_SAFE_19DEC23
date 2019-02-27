@@ -3,6 +3,7 @@ using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Exceptions;
+using Ellucian.Colleague.Dtos.Student;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.Filters;
 using Ellucian.Web.License;
@@ -43,9 +44,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <summary>
         /// Retrieves a graduation application by student Id and program code asynchronously
         /// </summary>
-        /// <param name="studentId">Id of the student to retrieve</param>
-        /// /// <param name="programCode">Id of the student to retrieve</param>
+        /// <param name="studentId">Id of the student</param>
+        /// <param name="programCode">Graduation Application program code</param>
         /// <returns><see cref="Ellucian.Colleague.Dtos.Student.GraduationApplication">Graduation Application</see> object.</returns>
+        /// <accessComments>
+        /// A single graduation application can only be retrieved by the student who submitted the application.
+        /// </accessComments>
         [ParameterSubstitutionFilter(ParameterNames = new string[] { "programCode" })]
         public async Task<Dtos.Student.GraduationApplication> GetGraduationApplicationAsync(string studentId, string programCode)
         {
@@ -75,7 +79,8 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         }
 
         /// <summary>
-        /// Creates a new Graduation Application asynchronously.
+        /// Creates a new Graduation Application asynchronously. Student must be pass any applicable graduation application eligibility rules and must not
+        /// have previously submitted an application for the same program. 
         /// </summary>
         /// <param name="studentId">Student id passed through url</param>
         /// <param name="programCode">Program Code passed through url</param>
@@ -85,6 +90,9 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// If failure, returns the exception information. If failure due to existing Graduation Application already exists for the given student and program,
         /// it also returns resource locator to use to retrieve the existing item.
         /// </returns>
+        /// <accessComments>
+        /// A graduation application can only be created by the student applying for graduation.
+        /// </accessComments>
         [ParameterSubstitutionFilter(ParameterNames = new string[] { "programCode" })]
         public async Task<HttpResponseMessage> PostGraduationApplicationAsync(string studentId, string programCode, [FromBody]Dtos.Student.GraduationApplication graduationApplication)
         {
@@ -190,6 +198,9 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// If successful, returns the updated Graduation Application in an http response. 
         /// If failure, returns the exception information. 
         /// </returns>
+        /// <accessComments>
+        /// A graduation application can only be updated by the student of the application.
+        /// </accessComments>
         [ParameterSubstitutionFilter(ParameterNames = new string[] { "programCode" })]
         public async Task<HttpResponseMessage> PutGraduationApplicationAsync(string studentId, string programCode, [FromBody]Dtos.Student.GraduationApplication graduationApplication)
         {
@@ -250,6 +261,50 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 _logger.Error(e, e.Message);
                 throw CreateHttpResponseException("Error occurred retrieving the graduation application fee for this program." + System.Net.HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Checks to see if the student is eligible to apply for graduation in specific programs.
+        /// </summary>
+        /// <param name="criteria">Identifies the student and the programs for which eligibility is requested</param>
+        /// <returns>A list of <see cref="GraduationApplicationProgramEligibility">Graduation Application Program Eligibility </see> items</returns>
+        /// <accessComments>
+        /// Graduation Application Eligibility for the student can be retrieved only if:
+        /// 1. A Student is requesting their own eligibility or
+        /// 2. An Advisor with any of the following codes is accessing the student's data if the student is not assigned advisee.
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEES
+        /// UPDATE.ANY.ADVISEES
+        /// ALL.ACCESS.ANY.ADVISEES
+        /// 3. An Advisor with any of the following codes is accessing the student's data if the student is assigned advisee.
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// </accessComments>
+        [HttpPost]
+        public async Task<IEnumerable<GraduationApplicationProgramEligibility>> QueryGraduationApplicationEligibilityAsync(GraduationApplicationEligibilityCriteria criteria)
+        {
+            if (criteria == null)
+            {
+                _logger.Error("Missing graduation application eligibility criteria");
+                throw CreateHttpResponseException("Missing graduation application eligibility criteria", HttpStatusCode.BadRequest);
+            }
+
+            try
+            {
+                return await _graduationApplicationService.GetGraduationApplicationEligibilityAsync(criteria.StudentId, criteria.ProgramCodes);
+            }
+            catch (PermissionsException peex)
+            {
+                _logger.Info(peex.ToString());
+                throw CreateHttpResponseException(peex.Message, HttpStatusCode.Forbidden);
+            }
+            catch (Exception ex)
+            {
+                _logger.Info(ex.ToString());
+                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
             }
         }
     }

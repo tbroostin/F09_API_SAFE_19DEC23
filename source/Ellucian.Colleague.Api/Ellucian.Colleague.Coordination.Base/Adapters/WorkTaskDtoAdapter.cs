@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
 using Ellucian.Web.Adapters;
 using slf4net;
 using System;
@@ -23,7 +23,8 @@ namespace Ellucian.Colleague.Coordination.Base.Adapters
         /// <returns></returns>
         public override Domain.Base.Entities.WorkTask MapToType(Dtos.Base.WorkTask source)
         {
-            var workTaskEntity = new Domain.Base.Entities.WorkTask(source.Id, source.Category, source.Description, MapWorkTaskProcessToProcessCode(source.TaskProcess));
+            var workTaskEntity = new Domain.Base.Entities.WorkTask(source.Id, source.Category, source.Description, MapWorkTaskProcessToProcessCode(source.TaskProcess), source.StartDate, MapExecutionStateToExecutionState(source.ExecState));
+            
             return workTaskEntity;
         }
 
@@ -44,6 +45,29 @@ namespace Ellucian.Colleague.Coordination.Base.Adapters
                     return "SSHRTA";
                 default:
                     return string.Empty;
+            }
+
+        }
+
+        /// <summary>
+        /// Maps the ExecutionState to the correct ExecutionState, if possible
+        /// </summary>
+        /// <param name="executionState"></param>
+        /// <returns></returns>
+        private Domain.Base.Entities.ExecutionState? MapExecutionStateToExecutionState(Dtos.Base.ExecutionState? executionState)
+        {
+            switch (executionState)
+            {
+                case null:
+                    return null;
+                case Dtos.Base.ExecutionState.OpenNotStarted:
+                    return Domain.Base.Entities.ExecutionState.NS;
+                case Dtos.Base.ExecutionState.OpenNotActive:
+                    return Domain.Base.Entities.ExecutionState.ON;
+                case Dtos.Base.ExecutionState.ClosedCompleted:
+                    return Domain.Base.Entities.ExecutionState.C;
+                default:
+                    return null;
             }
 
         }

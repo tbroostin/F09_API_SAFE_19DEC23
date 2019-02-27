@@ -1,8 +1,9 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Dtos.Base;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using System;
 using System.Collections.Generic;
 
 namespace Ellucian.Colleague.Dtos.Base
@@ -28,6 +29,11 @@ namespace Ellucian.Colleague.Dtos.Base
         public string TaxYear { get; set; }
 
         /// <summary>
+        /// Id of state representing the current tax form.
+        /// </summary>
+        public string State { get; set; }
+
+        /// <summary>
         /// Type of tax form.
         /// </summary>
         [JsonConverter(typeof(StringEnumConverter))]
@@ -38,5 +44,10 @@ namespace Ellucian.Colleague.Dtos.Base
         /// </summary>
         [JsonConverter(typeof(StringEnumConverter))]
         public TaxFormNotations2 Notation { get; set; }
+
+        /// <summary>
+        /// Date of when the record was created.
+        /// </summary>
+        public DateTime? AddDate { get; set; }
     }
 }

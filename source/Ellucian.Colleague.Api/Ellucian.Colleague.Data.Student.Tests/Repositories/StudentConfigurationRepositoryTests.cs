@@ -32,16 +32,20 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             Collection<GraduationQuestions> graduationQuestionsResponseData;
             StwebDefaults stwebDefaults;
             Defaults defaults;
+            DaDefaults daDefaults;
             StudentConfigurationRepository studentConfigurationRepository;
 
             [TestInitialize]
             public void Initialize()
             {
+                dataAccessorMock = new Mock<IColleagueDataReader>();
+                dataAccessorMock.Setup<Task<Data.Student.DataContracts.DaDefaults>>(acc => acc.ReadRecordAsync<DaDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(daDefaults));
                 loggerMock = new Mock<ILogger>();
                 // Collection of data accessor responses
                 graduationQuestionsResponseData = BuildGraduationQuestionsResponse();
                 stwebDefaults = BuildStwebDefaultsResponse();
                 defaults = BuildDefaultsResponse();
+                daDefaults = BuildDaDefaultsResponse();
                 studentConfigurationRepository = BuildValidStudentConfigurationRepository();
             }
 
@@ -80,6 +84,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 // Null repo response for graduation questions
                 Collection<GraduationQuestions> nullResponse = null;
                 dataAccessorMock.Setup<Task<Collection<GraduationQuestions>>>(acc => acc.BulkReadRecordAsync<GraduationQuestions>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(nullResponse));
+                dataAccessorMock.Setup<Task<Data.Student.DataContracts.DaDefaults>>(acc => acc.ReadRecordAsync<DaDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(daDefaults));
                 var graduationConfiguration = await studentConfigurationRepository.GetGraduationConfigurationAsync();
                 Assert.AreEqual(0, graduationConfiguration.ApplicationQuestions.Count());
             }
@@ -87,6 +92,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [TestMethod]
             public async Task ReturnsValidConfiguration()
             {
+                dataAccessorMock.Setup<Task<Data.Student.DataContracts.DaDefaults>>(acc => acc.ReadRecordAsync<DaDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(daDefaults));
                 var graduationConfiguration = await studentConfigurationRepository.GetGraduationConfigurationAsync();
                 Assert.AreEqual(12, graduationConfiguration.ApplicationQuestions.Count());
                 Assert.AreEqual(3, graduationConfiguration.GraduationTerms.Count());
@@ -101,6 +107,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [TestMethod]
             public async Task ReturnsExpectedShowCapAndGownFlagValueTest()
             {
+                dataAccessorMock.Setup<Task<Data.Student.DataContracts.DaDefaults>>(acc => acc.ReadRecordAsync<DaDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(daDefaults));
                 var graduationConfiguration = await studentConfigurationRepository.GetGraduationConfigurationAsync();
                 var showCapAndGown = !string.IsNullOrEmpty(stwebDefaults.StwebGradOvrCmcmtCapgown) && stwebDefaults.StwebGradOvrCmcmtCapgown.ToUpper() == "Y";
                 Assert.AreEqual(showCapAndGown, graduationConfiguration.OverrideCapAndGownDisplay);
@@ -110,6 +117,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public async Task ReturnsExpectedShowCapAndGownFlagValueWithLittleyTest()
             {
                 stwebDefaults.StwebGradOvrCmcmtCapgown = "y";
+                dataAccessorMock.Setup<Task<Data.Student.DataContracts.DaDefaults>>(acc => acc.ReadRecordAsync<DaDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(daDefaults));
 
                 var graduationConfiguration = await studentConfigurationRepository.GetGraduationConfigurationAsync();
 
@@ -121,6 +129,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public async Task ReturnsExpectedShowCapAndGownFlagValueWithEmptyTest()
             {
                 stwebDefaults.StwebGradOvrCmcmtCapgown = "";
+                dataAccessorMock.Setup<Task<Data.Student.DataContracts.DaDefaults>>(acc => acc.ReadRecordAsync<DaDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(daDefaults));
 
                 var graduationConfiguration = await studentConfigurationRepository.GetGraduationConfigurationAsync();
 
@@ -132,6 +141,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public async Task ReturnsExpectedShowCapAndGownFlagValueWithLittlenTest()
             {
                 stwebDefaults.StwebGradOvrCmcmtCapgown = "n";
+                dataAccessorMock.Setup<Task<Data.Student.DataContracts.DaDefaults>>(acc => acc.ReadRecordAsync<DaDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(daDefaults));
 
                 var graduationConfiguration = await studentConfigurationRepository.GetGraduationConfigurationAsync();
 
@@ -157,6 +167,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 hiddenQuestions.Add(new GraduationQuestions() { Recordkey = "SPECIAL_ACCOMMODATIONS", GradqHide = "N", GradqIsRequired = "N" });
                 hiddenQuestions.Add(new GraduationQuestions() { Recordkey = "JUNK", GradqHide = "N", GradqIsRequired = "N" });
                 dataAccessorMock.Setup<Task<Collection<GraduationQuestions>>>(acc => acc.BulkReadRecordAsync<GraduationQuestions>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(hiddenQuestions));
+                dataAccessorMock.Setup<Task<Data.Student.DataContracts.DaDefaults>>(acc => acc.ReadRecordAsync<DaDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(daDefaults));
+
                 var graduationConfiguration = await studentConfigurationRepository.GetGraduationConfigurationAsync();
                 Assert.AreEqual(8, graduationConfiguration.ApplicationQuestions.Count());
             }
@@ -175,6 +187,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 stWebDefaultsResponse.StwebGradTerms = new List<string>() { "term1", "term2", "term3" };
                 stWebDefaultsResponse.StwebGradRequirePayment = "N";
                 dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(stWebDefaultsResponse));
+                dataAccessorMock.Setup<Task<Data.Student.DataContracts.DaDefaults>>(acc => acc.ReadRecordAsync<DaDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(daDefaults));
                 var graduationConfiguration = await studentConfigurationRepository.GetGraduationConfigurationAsync();
                 Assert.AreEqual(stwebDefaults.StwebGradCapgownSizesUrl, graduationConfiguration.CapAndGownSizingLink);
                 Assert.AreEqual(stwebDefaults.StwebGradCapgownUrl, graduationConfiguration.CapAndGownLink);
@@ -187,47 +200,48 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [TestMethod]
             public async Task ReturnsLinksWithNoSpaces()
             {
-                 // Set up repo response for stwebDefaults (added spaces that hopefully get stripped)
-                 StwebDefaults stWebDefaultsResponse = new StwebDefaults();
-                 stWebDefaultsResponse.StwebGradCapgownSizesUrl = "https://cap" + " " + "andgownsizes.com/other" + "/stuff&more";
-                 stWebDefaultsResponse.StwebGradCapgownUrl = "www.cap" + " " + "and" + " " +  "gownorders.com";
-                 stWebDefaultsResponse.StwebGradCommencementUrl = "commencement" + "url" + " ";
-                 stWebDefaultsResponse.StwebGradDiffProgramUrl = " " + "gradwithdifferentprogram.com";
-                 stWebDefaultsResponse.StwebGradMaxGuests = 10;
-                 stWebDefaultsResponse.StwebGradPhoneticUrl = "phoneticsUrl.com";
-                 stWebDefaultsResponse.StwebGradTerms = new List<string>() { "term1", "term2", "term3" };
-                 dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(stWebDefaultsResponse));
-                 var graduationConfiguration = await studentConfigurationRepository.GetGraduationConfigurationAsync();
-                 Assert.AreEqual(stwebDefaults.StwebGradCapgownSizesUrl, graduationConfiguration.CapAndGownSizingLink);
-                 Assert.AreEqual(stwebDefaults.StwebGradCapgownUrl, graduationConfiguration.CapAndGownLink);
-                 Assert.AreEqual(stwebDefaults.StwebGradCommencementUrl, graduationConfiguration.CommencementInformationLink);
-                 Assert.AreEqual(stwebDefaults.StwebGradPhoneticUrl, graduationConfiguration.PhoneticSpellingLink);
-                 Assert.AreEqual(stwebDefaults.StwebGradDiffProgramUrl, graduationConfiguration.ApplyForDifferentProgramLink);
-                 Assert.AreEqual(stwebDefaults.StwebGradMaxGuests, graduationConfiguration.MaximumCommencementGuests);
+                // Set up repo response for stwebDefaults (added spaces that hopefully get stripped)
+                StwebDefaults stWebDefaultsResponse = new StwebDefaults();
+                stWebDefaultsResponse.StwebGradCapgownSizesUrl = "https://cap" + " " + "andgownsizes.com/other" + "/stuff&more";
+                stWebDefaultsResponse.StwebGradCapgownUrl = "www.cap" + " " + "and" + " " +  "gownorders.com";
+                stWebDefaultsResponse.StwebGradCommencementUrl = "commencement" + "url" + " ";
+                stWebDefaultsResponse.StwebGradDiffProgramUrl = " " + "gradwithdifferentprogram.com";
+                stWebDefaultsResponse.StwebGradMaxGuests = 10;
+                stWebDefaultsResponse.StwebGradPhoneticUrl = "phoneticsUrl.com";
+                stWebDefaultsResponse.StwebGradTerms = new List<string>() { "term1", "term2", "term3" };
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(stWebDefaultsResponse));
+                dataAccessorMock.Setup<Task<Data.Student.DataContracts.DaDefaults>>(acc => acc.ReadRecordAsync<DaDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(daDefaults));
+                var graduationConfiguration = await studentConfigurationRepository.GetGraduationConfigurationAsync();
+                Assert.AreEqual(stwebDefaults.StwebGradCapgownSizesUrl, graduationConfiguration.CapAndGownSizingLink);
+                Assert.AreEqual(stwebDefaults.StwebGradCapgownUrl, graduationConfiguration.CapAndGownLink);
+                Assert.AreEqual(stwebDefaults.StwebGradCommencementUrl, graduationConfiguration.CommencementInformationLink);
+                Assert.AreEqual(stwebDefaults.StwebGradPhoneticUrl, graduationConfiguration.PhoneticSpellingLink);
+                Assert.AreEqual(stwebDefaults.StwebGradDiffProgramUrl, graduationConfiguration.ApplyForDifferentProgramLink);
+                Assert.AreEqual(stwebDefaults.StwebGradMaxGuests, graduationConfiguration.MaximumCommencementGuests);
             }
 
             [TestMethod]
             public async Task ReturnValidTerms()
             {
-                 // Set up repo response for stwebDefaults
-                 StwebDefaults stWebDefaultsResponse = new StwebDefaults();
-                 stWebDefaultsResponse.StwebGradCapgownSizesUrl = "https://capandgownsizes.com/other/stuff&more";
-                 stWebDefaultsResponse.StwebGradCapgownUrl = "www.capandgownorders.com";
-                 stWebDefaultsResponse.StwebGradCommencementUrl = "commencementurl";
-                 stWebDefaultsResponse.StwebGradDiffProgramUrl = "gradwithdifferentprogram.com";
-                 stWebDefaultsResponse.StwebGradMaxGuests = 10;
-                 stWebDefaultsResponse.StwebGradPhoneticUrl = "phoneticsUrl.com";
-                 stWebDefaultsResponse.StwebGradTerms = new List<string>() { "term1", "term2", "term3", null, "" };
-                 stWebDefaultsResponse.StwebGradRequirePayment = "Y";
-                 dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(stWebDefaultsResponse));
-                 var graduationConfiguration = await studentConfigurationRepository.GetGraduationConfigurationAsync();
-                 Assert.AreEqual(3, graduationConfiguration.GraduationTerms.Count());
-                 foreach (var term in graduationConfiguration.GraduationTerms)
-                 {
-                      Assert.IsNotNull(term);
-                      Assert.AreNotEqual("", term);
-                 }
-                 
+                // Set up repo response for stwebDefaults
+                StwebDefaults stWebDefaultsResponse = new StwebDefaults();
+                stWebDefaultsResponse.StwebGradCapgownSizesUrl = "https://capandgownsizes.com/other/stuff&more";
+                stWebDefaultsResponse.StwebGradCapgownUrl = "www.capandgownorders.com";
+                stWebDefaultsResponse.StwebGradCommencementUrl = "commencementurl";
+                stWebDefaultsResponse.StwebGradDiffProgramUrl = "gradwithdifferentprogram.com";
+                stWebDefaultsResponse.StwebGradMaxGuests = 10;
+                stWebDefaultsResponse.StwebGradPhoneticUrl = "phoneticsUrl.com";
+                stWebDefaultsResponse.StwebGradTerms = new List<string>() { "term1", "term2", "term3", null, "" };
+                stWebDefaultsResponse.StwebGradRequirePayment = "Y";
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(stWebDefaultsResponse));
+                dataAccessorMock.Setup<Task<Data.Student.DataContracts.DaDefaults>>(acc => acc.ReadRecordAsync<DaDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(daDefaults));
+                var graduationConfiguration = await studentConfigurationRepository.GetGraduationConfigurationAsync();
+                Assert.AreEqual(3, graduationConfiguration.GraduationTerms.Count());
+                foreach (var term in graduationConfiguration.GraduationTerms)
+                {
+                    Assert.IsNotNull(term);
+                    Assert.AreNotEqual("", term);
+                }
             }
 
             [TestMethod]
@@ -235,12 +249,14 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public async Task DefaultLookup_ThrowsExceptionForNullReturnedByDefaults()
             {
                 dataAccessorMock.Setup<Task<Data.Base.DataContracts.Defaults>>(acc => acc.ReadRecordAsync<Defaults>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(null);
+                dataAccessorMock.Setup<Task<Data.Student.DataContracts.DaDefaults>>(acc => acc.ReadRecordAsync<DaDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(daDefaults));
                 await studentConfigurationRepository.GetGraduationConfigurationAsync();
             }
 
             [TestMethod]
             public async Task DefaultLookup_EmailAddressTypeReturnedDefaults()
             {
+                dataAccessorMock.Setup<Task<Data.Student.DataContracts.DaDefaults>>(acc => acc.ReadRecordAsync<DaDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(daDefaults));
                 var studentRepositoryDto = await studentConfigurationRepository.GetGraduationConfigurationAsync();
                 Assert.AreEqual(studentRepositoryDto.DefaultWebEmailType, defaults.DefaultWebEmailType);
             }
@@ -250,6 +266,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 defaults.DefaultWebEmailType = string.Empty;
                 dataAccessorMock.Setup<Task<Data.Base.DataContracts.Defaults>>(acc => acc.ReadRecordAsync<Defaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(defaults));
+                dataAccessorMock.Setup<Task<Data.Student.DataContracts.DaDefaults>>(acc => acc.ReadRecordAsync<DaDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(daDefaults));
                 var studentRepositoryDto = await studentConfigurationRepository.GetGraduationConfigurationAsync();
                 Assert.AreEqual(studentRepositoryDto.DefaultWebEmailType, defaults.DefaultWebEmailType);
                 Assert.AreEqual(studentRepositoryDto.DefaultWebEmailType, string.Empty);
@@ -258,6 +275,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [TestMethod]
             public async Task StwebDEfaults_GradNotificationParagraph()
             {
+                dataAccessorMock.Setup<Task<Data.Student.DataContracts.DaDefaults>>(acc => acc.ReadRecordAsync<DaDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(daDefaults));
                 var studentRepositoryDto = await studentConfigurationRepository.GetGraduationConfigurationAsync();
                 Assert.AreEqual(stwebDefaults.StwebGradNotifyPara, studentRepositoryDto.EmailGradNotifyPara);
             }
@@ -265,6 +283,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [TestMethod]
             public async Task StwebDEfaults_Null_GradNotificationParagraph()
             {
+                dataAccessorMock.Setup<Task<Data.Student.DataContracts.DaDefaults>>(acc => acc.ReadRecordAsync<DaDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(daDefaults));
                 stwebDefaults.StwebGradNotifyPara = null;
                 dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(stwebDefaults));
                 var studentRepositoryDto = await studentConfigurationRepository.GetGraduationConfigurationAsync();
@@ -274,6 +293,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [TestMethod]
             public async Task DefaultLookup_NullEmailAddressTypeReturnedDefaults()
             {
+                dataAccessorMock.Setup<Task<Data.Student.DataContracts.DaDefaults>>(acc => acc.ReadRecordAsync<DaDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(daDefaults));
                 defaults.DefaultWebEmailType = null;
                 dataAccessorMock.Setup<Task<Data.Base.DataContracts.Defaults>>(acc => acc.ReadRecordAsync<Defaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(defaults));
                 var studentRepositoryDto = await studentConfigurationRepository.GetGraduationConfigurationAsync();
@@ -344,6 +364,13 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                  var defaults = new Defaults();
                  defaults.DefaultWebEmailType = "PRI";
                  return defaults;
+            }
+
+            private DaDefaults BuildDaDefaultsResponse()
+            {
+                var daDefaults = new DaDefaults();
+                daDefaults.DaHideAntCmplDtInSsMp = "Y";
+                return daDefaults;
             }
 
         }

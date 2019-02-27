@@ -1,4 +1,4 @@
-﻿/*Copyright 2015-2017 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2015-2018 Ellucian Company L.P. and its affiliates.*/
 using System.Collections.Generic;
 using System.Linq;
 using Ellucian.Colleague.Domain.FinancialAid.Entities;
@@ -11,10 +11,13 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
     {
         public static string studentId = "0003914";
 
-        public class CsStudentRecord
+        public class GetStudentBudgetComponentsResponse
         {
-            public string awardYear;
-            public List<StudentBudgetRecord> budgetComponents;
+            public string year;
+            public string studentId;
+            public List<string> StudentBudgetComponents;
+            public List<string> StuBgtComponentOrigAmts;
+            public List<string> StuBgtComponentOvrAmts;
         }
 
         public class StudentBudgetRecord
@@ -24,62 +27,54 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
             public int? campusBasedOverrideAmount;
         }
 
-        public List<CsStudentRecord> csStudentRecords = new List<CsStudentRecord>()
-        {
-            new CsStudentRecord()
-            {
-                awardYear = "2014",
-                budgetComponents = new List<StudentBudgetRecord>()
-                {
-                    new StudentBudgetRecord()
-                    {
-                        budgetComponentCode = "TUITION",
-                        campusBasedOriginalAmount = 12345,
-                        campusBasedOverrideAmount = 54312
-                    },
-                    new StudentBudgetRecord()
-                    {
-                        budgetComponentCode = "WORK",
-                        campusBasedOriginalAmount = 22222,
-                        campusBasedOverrideAmount = null
-                    }
-                }
+        public List<GetStudentBudgetComponentsResponse> responses = new List<GetStudentBudgetComponentsResponse>() {
+            new GetStudentBudgetComponentsResponse() {
+                year = "2018",
+                studentId = "0003914",
+                StudentBudgetComponents = new List<string>() { "Tuition", "Books", "Room", "Dining"},
+                StuBgtComponentOrigAmts = new List<string>() { "40000", "1245", "0" },
+                StuBgtComponentOvrAmts = new List<string>() { "", "1243", "345", "1000"}
             },
-            new CsStudentRecord()
-            {
-                awardYear = "2015",
-                budgetComponents = new List<StudentBudgetRecord>()
-                {
-                    new StudentBudgetRecord()
-                    {
-                        budgetComponentCode = "TUITION",
-                        campusBasedOriginalAmount = 33221,
-                        campusBasedOverrideAmount = null
-                    },
-                    new StudentBudgetRecord()
-                    {
-                        budgetComponentCode = "WORK",
-                        campusBasedOriginalAmount = 98765,
-                        campusBasedOverrideAmount = 56789
-                    }
-                }
+            new GetStudentBudgetComponentsResponse() {
+                year = "2017",
+                studentId = "0003914",
+                StudentBudgetComponents = new List<string>() { "Books", "Room", "Equipment"},
+                StuBgtComponentOrigAmts = new List<string>() { "876", "", "0" },
+                StuBgtComponentOvrAmts = new List<string>() { "4321", ""}
             }
         };
 
         public Task<IEnumerable<StudentBudgetComponent>> GetStudentBudgetComponentsAsync(string studentId, IEnumerable<StudentAwardYear> studentAwardYears)
         {
-            return Task.FromResult(csStudentRecords
-                .Where(csStudentRecord => studentAwardYears.Select(y => y.Code).Contains(csStudentRecord.awardYear))
-                .SelectMany(csStudentRecord => csStudentRecord.budgetComponents
-                    .Select(studentBudget =>
-                        new StudentBudgetComponent(
-                            csStudentRecord.awardYear,
-                            studentId,
-                            studentBudget.budgetComponentCode,
-                            studentBudget.campusBasedOriginalAmount ?? 0)
-                            {
-                                CampusBasedOverrideAmount = studentBudget.campusBasedOverrideAmount
-                            })));
+            var studentBudgetComponents = new List<StudentBudgetComponent>();
+            foreach (var studentAwardYear in studentAwardYears)
+            {
+                var budgetComponents = responses.FirstOrDefault(r => r.year == studentAwardYear.Code && r.studentId == studentId);
+                if (budgetComponents != null && budgetComponents.StudentBudgetComponents.Any())
+                {
+                    for (int i = 0; i < budgetComponents.StudentBudgetComponents.Count; i++)
+                    {
+                        int origAmt = 0, overwriteAmt = 0;
+                        bool origAmtSuccess = false, overwriteAmtSuccess = false;
+
+                        //Sometimes there can be less original or ovewrite amount values in the associated lists than component codes, skip if so
+                        try { origAmtSuccess = int.TryParse(budgetComponents.StuBgtComponentOrigAmts[i], out origAmt); } catch { /*just skip*/ }
+                        try { overwriteAmtSuccess = int.TryParse(budgetComponents.StuBgtComponentOvrAmts[i], out overwriteAmt); } catch { /*just skip*/ }
+
+                        studentBudgetComponents.Add(
+                                new StudentBudgetComponent(
+                                    studentAwardYear.Code,
+                                    studentId,
+                                    budgetComponents.StudentBudgetComponents[i],
+                                    origAmtSuccess ? origAmt : 0)
+                                {
+                                    CampusBasedOverrideAmount = overwriteAmtSuccess ? overwriteAmt : (int?)null
+                                });
+                    }
+                }
+            }
+
+            return Task.FromResult(studentBudgetComponents.AsEnumerable());
         }
     }
 }

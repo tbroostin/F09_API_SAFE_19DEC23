@@ -84,7 +84,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
             catch (Exception ex)
             {
-                logger.Error(ex.ToString());
+                logger.Error(ex.Message);
                 throw CreateHttpResponseException("Unable to get the blanket purchase order.", HttpStatusCode.BadRequest);
             }
         }

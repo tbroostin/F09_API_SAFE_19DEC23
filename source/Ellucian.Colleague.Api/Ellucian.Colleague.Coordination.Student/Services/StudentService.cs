@@ -24,6 +24,7 @@ using StudentClassification = Ellucian.Colleague.Domain.Student.Entities.Student
 using StudentCohort = Ellucian.Colleague.Domain.Student.Entities.StudentCohort;
 using Ellucian.Colleague.Coordination.Base;
 using Ellucian.Colleague.Dtos.Student;
+using Ellucian.Colleague.Coordination.Student.Adapters;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
@@ -111,129 +112,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         #endregion
 
         /// <summary>
-        /// get resources via list of IDs
-        /// </summary>
-        /// <param name="studentIds">List of Student Ids</param>
-        /// <param name="inheritFromPerson">Flag to inherit Name/Address hierarchy from Person (Default to true)</param>
-        /// <param name="getDegreePlan">Flag to get a Degree Plan ID (Default to true)</param>
-        /// <returns>List of Student objects</returns>
-        public async Task<IEnumerable<Dtos.Student.Student>> GetStudentsByIdAsync(IEnumerable<string> studentIds, bool inheritFromPerson = true, bool getDegreePlan = true)
-        {
-            List<Dtos.Student.Student> students = new List<Dtos.Student.Student>();
-            Ellucian.Colleague.Domain.Student.Entities.Term termData = null;
-            IEnumerable<Ellucian.Colleague.Domain.Base.Entities.CitizenshipStatus> citizenshipStatusData = null;
-            var studentEntities = await _studentRepository.GetStudentsByIdAsync(studentIds, termData, citizenshipStatusData, inheritFromPerson, getDegreePlan);
-            if (studentEntities != null && studentEntities.Count() > 0)
-            {
-                var studentDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Student, Dtos.Student.Student>();
-                foreach (var student in studentEntities)
-                {
-                    // Make sure user has access to this student--If not, method throws exception
-                    await CheckUserAccessAsync(student.Id, student.ConvertToStudentAccess());
-
-                    students.Add(studentDtoAdapter.MapToType(student));
-                }
-            }
-            return students;
-
-        }
-
-        /// <summary>
-        /// Get StudentBatch DTO which returns Students without Address and Name Hierarchies
-        /// </summary>
-        /// <param name="studentIds">List of Student Ids</param>
-        /// <param name="inheritFromPerson">Flag to inherit Name/Address Hierarchy from Person (Default to false)</param>
-        /// <param name="getDegreePlan">Flag to get a Degree Plan Id (Default to false)</param>
-        /// <returns>List of StudentBatch objects</returns>
-        public async Task<IEnumerable<Dtos.Student.StudentBatch>> QueryStudentsByIdAsync(IEnumerable<string> studentIds, bool inheritFromPerson=false, bool getDegreePlan=false)
-        {
-            List<Dtos.Student.StudentBatch> students = new List<Dtos.Student.StudentBatch>();
-            if (!HasPermission(StudentPermissionCodes.ViewStudentInformation))
-            {
-                throw new PermissionsException("User does not have permissions to query students");
-            }
-            Ellucian.Colleague.Domain.Student.Entities.Term termData = null;
-            IEnumerable<Ellucian.Colleague.Domain.Base.Entities.CitizenshipStatus> citizenshipStatusData = null;
-            var studentEntities = await _studentRepository.GetStudentsByIdAsync(studentIds, termData, citizenshipStatusData, inheritFromPerson, getDegreePlan);
-            if (studentEntities != null && studentEntities.Count() > 0)
-            {
-                var studentDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Student, Dtos.Student.StudentBatch>();
-                foreach (var student in studentEntities)
-                {
-                    students.Add(studentDtoAdapter.MapToType(student));
-                }
-            }
-            return students;
-        }
-
-        /// <summary>
-        /// Get StudentBatch2 DTO which returns Students without Address and Name Hierarchies and with Academic Level information.
-        /// </summary>
-        /// <param name="studentIds">List of Student Ids</param>
-        /// <param name="inheritFromPerson">Flag to inherit Name/Address Hierarchy from Person (Default to false)</param>
-        /// <param name="getDegreePlan">Flag to get a Degree Plan Id (Default to false)</param>
-        /// <returns>List of StudentBatch2 objects</returns>
-        public async Task<IEnumerable<Dtos.Student.StudentBatch2>> QueryStudentsByIdAsync2(IEnumerable<string> studentIds, bool inheritFromPerson = false, bool getDegreePlan = false, string term = null)
-        {
-            List<Dtos.Student.StudentBatch2> students = new List<Dtos.Student.StudentBatch2>();
-            if (!HasPermission(StudentPermissionCodes.ViewStudentInformation))
-            {
-                throw new PermissionsException("User does not have permissions to query students");
-            }
-            Ellucian.Colleague.Domain.Student.Entities.Term termData = null;
-            if (!string.IsNullOrEmpty(term))
-            {
-                termData = _termRepository.Get(term);
-            }
-            IEnumerable<Ellucian.Colleague.Domain.Base.Entities.CitizenshipStatus> citizenshipStatusData = null;
-            var studentEntities = await _studentRepository.GetStudentsByIdAsync(studentIds, termData, citizenshipStatusData,inheritFromPerson, getDegreePlan);
-            if (studentEntities != null && studentEntities.Count() > 0)
-            {
-                var studentDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Student, Dtos.Student.StudentBatch2>();
-                foreach (var student in studentEntities)
-                {
-                    students.Add(studentDtoAdapter.MapToType(student));
-                }
-            }
-            return students;
-        }
-
-        /// <summary>
-        /// Get StudentBatch3 DTO which returns Students without Address and Name Hierarchies and with Academic Level information
-        /// Allows a null marital status and filters student advisements/advisors by incoming term
-        /// Allows an alien status that indicates citizenship.
-        /// </summary>
-        /// <param name="studentIds">List of Student Ids</param>
-        /// <param name="inheritFromPerson">Flag to inherit Name/Address Hierarchy from Person (Default to false)</param>
-        /// <param name="getDegreePlan">Flag to get a Degree Plan Id (Default to false)</param>
-        /// <returns>List of StudentBatch3 objects</returns>
-        public async Task<IEnumerable<Dtos.Student.StudentBatch3>> QueryStudentsByIdAsync3(IEnumerable<string> studentIds, bool inheritFromPerson = false, bool getDegreePlan = false, string term = null)
-        {
-            List<Dtos.Student.StudentBatch3> students = new List<Dtos.Student.StudentBatch3>();
-            if (!HasPermission(StudentPermissionCodes.ViewStudentInformation))
-            {
-                throw new PermissionsException("User does not have permissions to query students");
-            }
-            Ellucian.Colleague.Domain.Student.Entities.Term termData = null;
-            if (!string.IsNullOrEmpty(term))
-            {
-                termData = _termRepository.Get(term);
-            }
-            bool filterAdvisorsByTerm = true;
-            var citizenshipStatusData = await _referenceDataRepository.GetCitizenshipStatusesAsync(false);
-            var studentEntities = await _studentRepository.GetStudentsByIdAsync(studentIds, termData, citizenshipStatusData, inheritFromPerson, getDegreePlan, filterAdvisorsByTerm);
-            if (studentEntities != null && studentEntities.Count() > 0)
-            {
-                var studentDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Student, Dtos.Student.StudentBatch3>();
-                foreach (var student in studentEntities)
-                {
-                    students.Add(studentDtoAdapter.MapToType(student));
-                }
-            }
-            return students;
-        }
-
-        /// <summary>
         /// Get StudentBatch3 DTO which returns Students without Address and Name Hierarchies and with Academic Level information
         /// Allows a null marital status and filters student advisements/advisors by incoming term
         /// Allows an alien status that indicates citizenship.
@@ -243,13 +121,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="inheritFromPerson">Flag to inherit Name/Address Hierarchy from Person (Default to false)</param>
         /// <param name="getDegreePlan">Flag to get a Degree Plan Id (Default to false)</param>
         /// <returns>List of StudentBatch3 objects</returns>
-        public async Task<IEnumerable<Dtos.Student.StudentBatch3>> QueryStudentsById4Async(IEnumerable<string> studentIds, bool inheritFromPerson = false, bool getDegreePlan = false, string term = null)
+        public async Task<PrivacyWrapper<IEnumerable<Ellucian.Colleague.Dtos.Student.StudentBatch3>>> QueryStudentsById4Async(IEnumerable<string> studentIds, bool inheritFromPerson = false, bool getDegreePlan = false, string term = null)
         {
             List<Dtos.Student.StudentBatch3> students = new List<Dtos.Student.StudentBatch3>();
-            if (!HasPermission(StudentPermissionCodes.ViewStudentInformation))
-            {
-                throw new PermissionsException("User does not have permissions to query students");
-            }
+            CheckGetStudentViewPermission();
             Ellucian.Colleague.Domain.Student.Entities.Term termData = null;
             if (!string.IsNullOrEmpty(term))
             {
@@ -257,35 +132,51 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             bool filterAdvisorsByTerm = true;
             bool filterEndedAdvisements = true;
+            bool hasPrivacyRestriction = false;
             var citizenshipStatusData = await _referenceDataRepository.GetCitizenshipStatusesAsync(false);
             var studentEntities = await _studentRepository.GetStudentsByIdAsync(studentIds, termData, citizenshipStatusData, inheritFromPerson, getDegreePlan, filterAdvisorsByTerm, filterEndedAdvisements);
             if (studentEntities != null && studentEntities.Count() > 0)
             {
-                var studentDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Student, Dtos.Student.StudentBatch3>();
+                var studentDtoAdapter = new StudentEntityToStudentBatch3DtoAdapter(_adapterRegistry, _logger);
                 foreach (var student in studentEntities)
                 {
-                    students.Add(studentDtoAdapter.MapToType(student));
+                    try
+                    {
+                        // Before doing anything, check the current advisor's privacy code settings (on their staff record)
+                        // against any privacy code on the student's record
+                        var studentHasPrivacyRestriction = string.IsNullOrEmpty(student.PrivacyStatusCode) ? false : !HasPrivacyCodeAccess(student.PrivacyStatusCode);
+
+                        Dtos.Student.StudentBatch3 studentDto;
+
+                        // If a privacy restriction exists (staff record doesn't contain student's privacy code)
+                        // then blank out the record, except for name, id, and privacy code
+                        if (studentHasPrivacyRestriction)
+                        {
+                            hasPrivacyRestriction = true;
+                            studentDto = new Dtos.Student.StudentBatch3()
+                            {
+                                LastName = student.LastName,
+                                FirstName = student.FirstName,
+                                MiddleName = student.MiddleName,
+                                Id = student.Id,
+                                PrivacyStatusCode = student.PrivacyStatusCode
+                            };
+                        }
+                        else
+                        {
+                            studentDto = studentDtoAdapter.MapToType(student);
+                        }
+                        students.Add(studentDto);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.Error(ex, string.Format("Failed to build StudentBatch3 DTO for student {0}", student.Id));
+                        logger.Error(ex, ex.Message);
+                    }
                 }
             }
-            return students;
+            return new PrivacyWrapper<IEnumerable<Dtos.Student.StudentBatch3>>(students, hasPrivacyRestriction);
         }
-
-        //public IEnumerable<string> GetRegisteredStudentIdsByTerm(string termId)
-        //{     
-        //    var studentEntity = _studentRepository.Get(id);
-        //    var studentEntity = _studentRepository.GetStudentsByTerm(termId);
-        //    // Throw error if student not found
-        //    if (studentEntity == null)
-        //    {
-        //        throw new ApplicationException("Student not found in repository");
-        //    }
-        //    // Make sure user has access to this student--If not, method throws exception
-        //    CheckUserAccess(studentEntity);
-        //    // Build and return the student dto
-        //    var studentDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Student, Dtos.Student.Student>();
-        //    Dtos.Student.Student student = studentDtoAdapter.MapToType(studentEntity);
-        //    return student;
-        //}
 
         /// <summary>
         /// OBSOLETE as of API 1.3. Please use CheckRegistrationEligibility2
@@ -714,9 +605,21 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>List of students whose search creteria mathces</returns>
         public async Task<PrivacyWrapper<List<Ellucian.Colleague.Dtos.Student.Student>>> Search3Async(StudentSearchCriteria criteria, int pageSize = int.MaxValue, int pageIndex = 1)
         {
-            var hasPrivacyRestriction = false; // Default to false, will be set properly when retreiving advisees
+            if (criteria == null)
+            {
+                throw new ArgumentNullException("criteria", "Student search criteria must be specified when searching for students.");
+            }
 
-            List<Domain.Student.Entities.Student> students = null;
+            // Only users with VIEW.STUDENT.INFORMATION can search for students by name or ID
+            CheckGetStudentViewPermission();
+
+            var watch = new Stopwatch();
+            watch.Start();
+            logger.Info("Begin Search3Async for students...");
+
+            var hasPrivacyRestriction = false; // Default to false, will be set properly when retrieving students
+
+            List<Domain.Student.Entities.Student> students = new List<Domain.Student.Entities.Student>();
 
             string searchString = criteria.StudentKeyword;
 
@@ -728,48 +631,36 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             Regex regEx = new Regex(@"\s+");
             searchString = regEx.Replace(tempString, @" ");
 
-            // If search string is a numeric ID and it is for a particular advisee, return only that
+            // If search string is a numeric ID and it is for a particular student, return only that
             double personId;
             bool isId = double.TryParse(searchString, out personId);
             if (isId && !string.IsNullOrEmpty(criteria.StudentKeyword))
             {
-                await CheckUserAccessAsync(CurrentUser.UserId, null);
-
-                // If the requested ID is not an assigned advisee but the advisor can only view assigned advisees, then return an empty list
-
-                //if (!planningStudents.Select(x => x.Id).Contains(searchString))
-                //{
-                //    return new PrivacyWrapper<List<Dtos.Student.Student>>(new List<Dtos.Student.Student>(), hasPrivacyRestriction);
-                //}
-
                 // Validate the ID - if invalid, error will be thrown
-                //var student1 = await _adviseeRepository.GetAsync(searchString);
-                students = (await _studentRepository.GetStudentsSearchAsync(new List<string>() { searchString })).ToList();
+                var matchingStudents = (await _studentRepository.GetStudentsSearchAsync(new List<string>() { searchString }));
                 // If valid, return the ID. If not found, return null
-                if (students == null)
+                if (matchingStudents == null)
                 {
+                    logger.Info("Call to StudentRepository.GetStudentsSearchAsync with query '" + searchString + "' returned null.");
                     return new PrivacyWrapper<List<Dtos.Student.Student>>(new List<Dtos.Student.Student>(), hasPrivacyRestriction);
                 }
                 else
                 {
-
-                    //var studentList = new List<Domain.Student.Entities.Student>() { student };
-                    //var adviseeDegreePlansList = await _degreePlanRepository.GetAsync(students.Select(s => s.Id));
-
-                    // loop through each advisee id
+                    students = matchingStudents.ToList();
+                    // loop through each student id
                     foreach (var stud in students)
                     {
                         try
                         {
                             // Before doing anything, check the current advisor's privacy code settings (on their staff record)
                             // against any privacy code on the student's record
-                            var adviseeHasPrivacyRestriction = string.IsNullOrEmpty(stud.PrivacyStatusCode) ? false : !HasPrivacyCodeAccess(stud.PrivacyStatusCode);
+                            var studentHasPrivacyRestriction = string.IsNullOrEmpty(stud.PrivacyStatusCode) ? false : !HasPrivacyCodeAccess(stud.PrivacyStatusCode);
 
                             Dtos.Student.Student studentDtoe;
 
                             // If a privacy restriction exists (staff record doesn't contain student's privacy code)
                             // then blank out the record, except for name, id, and privacy code
-                            if (adviseeHasPrivacyRestriction)
+                            if (studentHasPrivacyRestriction)
                             {
                                 hasPrivacyRestriction = true;
                                 studentDtoe = new Dtos.Student.Student()
@@ -794,7 +685,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         }
                         catch (Exception ex)
                         {
-                            logger.Error("Failed to build advisee dto for advisee - " + stud.Id);
+                            logger.Error(ex, string.Format("Failed to build Student DTO for student {0}", stud.Id));
                             logger.Error(ex, ex.Message);
                         }
                     }
@@ -803,10 +694,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
                 }
             }
-            //IEnumerable<Ellucian.Colleague.Domain.Planning.Entities.DegreePlan> adviseeDegreePlans = null;
-            PrivacyWrapper<List<Dtos.Student.Student>> privacyWrapper = null;
 
-            // Otherwise, we are doing a name search of advisees or the advisors - parse the search string into name parts
+            // Otherwise, we are doing a name search of students - parse the search string into name parts
             string lastName = null;
             string firstName = null;
             string middleName = null;
@@ -874,76 +763,63 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
             // Now that the search string is parsed into the appropriate pieces, do the appropriate search based on which keyword was supplied
-
             if (!string.IsNullOrEmpty(criteria.StudentKeyword))
             {
-                await CheckUserAccessAsync(CurrentUser.UserId, null);
-                //// Advisee Name Search: Call repository method to query students based on name strings
-                //// Do the search based on the advisor's permissions
-                students = (await _studentRepository.GetStudentSearchByNameAsync(lastName, firstName, middleName, pageSize, pageIndex)).ToList();
-
+                var matchingStudents = await _studentRepository.GetStudentSearchByNameAsync(lastName, firstName, middleName, pageSize, pageIndex);
+                if (matchingStudents == null)
+                {
+                    logger.Info("Call to StudentRepository.GetStudentSearchByNameAsync with lastName'" + lastName + "', firstName '" + firstName + "', middleName '" + middleName + " returned null.");
+                }
+                else
+                {
+                    students = matchingStudents.ToList();
+                }
             }
 
-            var watch = new Stopwatch();
-            watch.Start();
-
-            //adviseeDegreePlans = await _degreePlanRepository.GetAsync(students.Select(s => s.Id));
-
-            //===================================================
-            watch.Stop();
-            logger.Info("Get Advisee Plans... completed in " + watch.ElapsedMilliseconds.ToString());
-
-            watch.Restart();
-            //var studentNamesList = new List<Domain.Student.Entities.Student>() { students };
-            // loop through each advisee id
-            foreach (var studente in students)
+            // loop through each student
+            foreach (var student in students)
             {
                 try
                 {
                     // Before doing anything, check the current advisor's privacy code settings (on their staff record)
                     // against any privacy code on the student's record
-                    var adviseeHasPrivacyRestriction = string.IsNullOrEmpty(studente.PrivacyStatusCode) ? false : !HasPrivacyCodeAccess(studente.PrivacyStatusCode);
+                    var studentHasPrivacyRestriction = string.IsNullOrEmpty(student.PrivacyStatusCode) ? false : !HasPrivacyCodeAccess(student.PrivacyStatusCode);
 
                     Dtos.Student.Student studentDtoe;
 
                     // If a privacy restriction exists (staff record doesn't contain student's privacy code)
                     // then blank out the record, except for name, id, and privacy code
-                    if (adviseeHasPrivacyRestriction)
+                    if (studentHasPrivacyRestriction)
                     {
                         hasPrivacyRestriction = true;
                         studentDtoe = new Dtos.Student.Student()
                         {
-                            LastName = studente.LastName,
-                            FirstName = studente.FirstName,
-                            MiddleName = studente.MiddleName,
-                            Id = studente.Id,
-                            PrivacyStatusCode = studente.PrivacyStatusCode
+                            LastName = student.LastName,
+                            FirstName = student.FirstName,
+                            MiddleName = student.MiddleName,
+                            Id = student.Id,
+                            PrivacyStatusCode = student.PrivacyStatusCode
                         };
                     }
                     else
                     {
-                        studentDtoe = studentAdapter.MapToType(studente);
+                        studentDtoe = studentAdapter.MapToType(student);
                         studentDtoe.DegreePlanId = null;
-                        if (studente.PreferredEmailAddress != null)
+                        if (student.PreferredEmailAddress != null)
                         {
-                            studentDtoe.PreferredEmailAddress = studente.PreferredEmailAddress.Value;
+                            studentDtoe.PreferredEmailAddress = student.PreferredEmailAddress.Value;
                         }
                     }
                     studentDtos.Add(studentDtoe);
                 }
                 catch (Exception ex)
                 {
-                    logger.Error("Failed to build advisee dto for advisee - " + studente.Id);
-                    logger.Error(ex, ex.Message);
+                    logger.Error(ex, string.Format("Failed to build Student DTO for student {0}", student.Id));
                 }
             }
-
-            //===================================================
-            watch.Stop();
-            logger.Info("Build Advisee DTOs... completed in " + watch.ElapsedMilliseconds.ToString());
+            logger.Info(string.Format("Search3Async for students completed in {0}", watch.ElapsedMilliseconds.ToString()));
 
             return new PrivacyWrapper<List<Dtos.Student.Student>>(studentDtos, hasPrivacyRestriction);
-
         }
 
 
@@ -1231,6 +1107,61 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         }
 
         /// <summary>
+        /// Get an Student from its GUID
+        /// </summary>
+        /// <returns>A Student DTO <see cref="Ellucian.Colleague.Dtos.Students">object</see></returns>
+        public async Task<Ellucian.Colleague.Dtos.Students2> GetStudentsByGuid2Async(string guid, bool bypassCache = true)
+        {
+            if (string.IsNullOrEmpty(guid))
+            {
+                throw new ArgumentNullException("guid", "GUID is required to get an Student.");
+            }
+
+            CheckGetStudentViewPermission();
+            Stopwatch watch = null;
+            if (logger.IsInfoEnabled)
+            {
+                watch = new Stopwatch();
+                logger.Info("StudentService Timing: (GetStudentsByGuidAsync) GetStudentFromGuidAsync " +
+                            "repo lookup started");
+                watch.Restart();
+            }
+
+            var studentEntity = await _studentRepository.GetDataModelStudentFromGuid2Async(guid);
+            if (studentEntity == null)
+            {
+                throw new KeyNotFoundException("Student not found for GUID " + guid);
+
+            }
+
+            if ((logger.IsInfoEnabled) && (watch != null))
+            {
+                watch.Stop();
+                logger.Info("StudentService Timing: (GetStudentsByGuidAsync) repo lookup in " +
+                            watch.ElapsedMilliseconds.ToString() + " ms");
+            }
+
+            if ((logger.IsInfoEnabled) && (watch != null))
+            {
+                logger.Info("StudentService Timing: (GetStudentsByGuidAsync) service conversion started");
+                watch.Restart();
+            }
+
+            var personGuidCollection = await _personRepository.GetPersonGuidsCollectionAsync
+                (new List<string>() { studentEntity.Id });
+            var retval = (await ConvertStudentsEntityToStudents2Dto(studentEntity, personGuidCollection, bypassCache));
+
+            if ((logger.IsInfoEnabled) && (watch != null))
+            {
+                watch.Stop();
+                logger.Info("StudentService Timing: (GetStudentsByGuidAsync) service conversion in " +
+                            watch.ElapsedMilliseconds.ToString() + " ms");
+            }
+
+            return retval;
+        }
+
+        /// <summary>
         /// Get a list of Students
         /// </summary>
         /// <param name="offset"></param>
@@ -1398,6 +1329,193 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         }
 
         /// <summary>
+        /// Get a list of Students
+        /// </summary>
+        /// <param name="offset"></param>
+        /// <param name="limit"></param>
+        /// <param name="criteriaFilter">critera filter for Students2</param>
+        /// <param name="personFilter">Person Saved List selection or list name from person-filters</param>
+        /// <param name="bypassCache"></param>
+        /// <returns>A Student DTO <see cref="Ellucian.Colleague.Dtos.Students">object</see></returns>     
+        public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.Students2>, int>> GetStudents2Async(int offset,
+             int limit, Dtos.Students2 criteriaFilter, string personFilter, bool bypassCache = false)
+        {
+            try
+            {
+                CheckGetStudentViewPermission();
+
+                string person = string.Empty, newPerson = string.Empty;
+                List<string> types = new List<string>(), cohorts = new List<string>(), residencies = new List<string>(),
+                    newTypes = new List<string>(), newCohorts = new List<string>(), newResidencies = new List<string>();
+
+                if (criteriaFilter != null)
+                {
+                    // person criteria filter
+                    person = criteriaFilter.Person != null ? criteriaFilter.Person.Id : string.Empty;                    
+                    if (!string.IsNullOrEmpty(person))
+                    {
+                        try
+                        {
+                            newPerson = await _personRepository.GetPersonIdFromGuidAsync(person);
+                            if (string.IsNullOrEmpty(newPerson))
+                            {
+                                throw new KeyNotFoundException(string.Concat("Person not found for guid:", person));
+                            }
+                        }
+                        catch (KeyNotFoundException e)
+                        {
+                            return new Tuple<IEnumerable<Dtos.Students2>, int>(new List<Dtos.Students2>(), 0);
+                        }
+                    }
+
+                    //// cohorts criteria filter
+                    if ((criteriaFilter.Cohorts != null) && (criteriaFilter.Cohorts.Any()))
+                    {
+                        var studentCohorts = (await GetAllStudentCohortsAsync(bypassCache)).ToList();
+                        if (studentCohorts.Any())
+                        {
+                            // extract GUID object 2 from DTO property
+                            var cohortObjects = new List<GuidObject2>();
+                            foreach (var cohortObject in criteriaFilter.Cohorts)
+                            {
+                                cohortObjects.Add(cohortObject.Cohort);
+                            }
+                            // convert from GUID object2 to string list of GUIDs.
+                            cohorts = ConvertGuidObject2ListToStringList(cohortObjects);
+                            foreach (var cohort in cohorts)
+                            {
+                                // translate list of GUIDs to list of codes
+                                try
+                                {
+                                    var studentType = studentCohorts.FirstOrDefault(st => st.Id == cohort);
+                                    var newType = studentType != null ? studentType.Code : string.Empty;
+                                    if (string.IsNullOrEmpty(newType))
+                                    {
+                                        throw new KeyNotFoundException(string.Concat("Cohort filter GUID not found for:", cohort));
+                                    }
+                                    else
+                                    {
+                                        newCohorts.Add(newType);
+                                    }
+                                }
+                                catch (KeyNotFoundException e)
+                                {
+                                    return new Tuple<IEnumerable<Dtos.Students2>, int>(new List<Dtos.Students2>(), 0);
+                                }
+                            }
+                        }
+                    }
+
+                    // types criteria filter
+                    if ((criteriaFilter.Types != null) && (criteriaFilter.Types.Any()))
+                    {
+                        var studentTypes = (await GetStudentTypesAsync(bypassCache)).ToList();
+                        if (studentTypes.Any())
+                        {
+                            // extract GUID object 2 from DTO property
+                            var typeObjects = new List<GuidObject2>();
+                            foreach (var typeObject in criteriaFilter.Types)
+                            {
+                                typeObjects.Add(typeObject.Type);
+                            }
+                            // convert from GUID object2 to string list of GUIDs.
+                            types = ConvertGuidObject2ListToStringList(typeObjects);
+                            foreach (var type in types)
+                            {
+                                // translate list of GUIDs to list of codes
+                                try
+                                {
+                                    var studentType = studentTypes.FirstOrDefault(st => st.Guid == type);
+                                    var newType = studentType != null ? studentType.Code : string.Empty;
+                                    if (string.IsNullOrEmpty(newType))
+                                    {
+                                        throw new KeyNotFoundException(string.Concat("Student Type filter GUID not found for:", type));
+                                    }
+                                    else
+                                    {
+                                        newTypes.Add(newType);
+                                    }
+                                }
+                                catch (KeyNotFoundException e)
+                                {
+                                    return new Tuple<IEnumerable<Dtos.Students2>, int>(new List<Dtos.Students2>(), 0);
+                                }
+                            }
+                        }
+                    }
+
+                    //residencies criteria filter
+                    if ((criteriaFilter.Residencies != null) && (criteriaFilter.Residencies.Any()))
+                    {
+                        var residencyTypes = (await GetResidentTypesAsync(bypassCache)).ToList();
+                        if (residencyTypes.Any())
+                        {
+                            // extract GUID object 2 from DTO property
+                            var residencyObjects = new List<GuidObject2>();
+                            foreach (var residencyObject in criteriaFilter.Residencies)
+                            {
+                                residencyObjects.Add(residencyObject.Residency);
+                            }
+                            // convert from GUID object2 to string list of GUIDs.
+                            residencies = ConvertGuidObject2ListToStringList(residencyObjects);
+                            foreach (var residency in residencies)
+                            {
+                                // translate list of GUIDs to list of codes
+                                try
+                                {
+                                    var residencyType = residencyTypes.FirstOrDefault(st => st.Id == residency);
+                                    var newResidency = residencyType != null ? residencyType.Code : string.Empty;
+                                    if (string.IsNullOrEmpty(newResidency))
+                                    {
+                                        throw new KeyNotFoundException(string.Concat("Residency type filter GUID not found for:", residency));
+                                    }
+                                    else
+                                    {
+                                        newResidencies.Add(newResidency);
+                                    }
+                                }
+                                catch (KeyNotFoundException e)
+                                {
+                                    return new Tuple<IEnumerable<Dtos.Students2>, int>(new List<Dtos.Students2>(), 0);
+                                }
+                            }
+                        }
+                    }                    
+                }
+
+                var studentsEntitiesTuple = await _studentRepository.GetDataModelStudents2Async(offset, limit, bypassCache, personFilter, newPerson, newTypes, newCohorts, newResidencies);
+
+                if (studentsEntitiesTuple != null)
+                {
+                    var studentsEntities = studentsEntitiesTuple.Item1.ToList();
+                    var totalCount = studentsEntitiesTuple.Item2;
+
+                    if (studentsEntities.Any())
+                    {
+                        var students = new List<Colleague.Dtos.Students2>();
+
+                        var ids = studentsEntities.Where(x => (!string.IsNullOrEmpty(x.Id))).Select(x => x.Id).Distinct().ToList();
+                        var personGuidCollection = await _personRepository.GetPersonGuidsCollectionAsync(ids);
+
+                        foreach (var student in studentsEntities)
+                        {
+                            students.Add(await ConvertStudentsEntityToStudents2Dto(student, personGuidCollection, bypassCache));
+                        }
+                        return new Tuple<IEnumerable<Dtos.Students2>, int>(students, totalCount);
+                    }
+                    // no results
+                    return new Tuple<IEnumerable<Dtos.Students2>, int>(new List<Dtos.Students2>(), totalCount);
+                }
+                //no results
+                return new Tuple<IEnumerable<Dtos.Students2>, int>(new List<Dtos.Students2>(), 0);
+            }
+            catch (Exception e)
+            {
+                throw new ArgumentException(e.Message);
+            }
+        }
+
+        /// <summary>
         /// Converts a Student domain entity to its corresponding Student  DTO
         /// </summary>
         /// <param name="student">A list of <see cref="Dtos.Student">Student</see> domain entity</param>
@@ -1543,6 +1661,188 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         }
 
         /// <summary>
+        /// Converts a Student domain entity to its corresponding Student  DTO
+        /// </summary>
+        /// <param name="student">A list of <see cref="Dtos.Student">Student</see> domain entity</param>
+        /// <param name="bypassCache"></param>
+        /// <returns>A <see cref="Dtos.Students">Students</see> DTO</returns>
+        private async Task<Students2> ConvertStudentsEntityToStudents2Dto(Domain.Student.Entities.Student student,
+            Dictionary<string, string> personGuidCollection, bool bypassCache = false)
+        {
+            if (student == null)
+            {
+                throw new ArgumentNullException("Student is required.");
+            }
+            if (string.IsNullOrEmpty(student.StudentGuid))
+            {
+                throw new ArgumentNullException("Guid for student is required.");
+            }
+            if (string.IsNullOrEmpty(student.Id))
+            {
+                throw new ArgumentNullException("Id for student is required.");
+            }
+
+            var studentDto = new Colleague.Dtos.Students2();
+
+            try
+            {
+                studentDto.Id = student.StudentGuid;
+
+                if (personGuidCollection != null && personGuidCollection.Any())
+                {
+                    var studentGuid = string.Empty;
+                    personGuidCollection.TryGetValue(student.Id, out studentGuid);
+                    if (!string.IsNullOrEmpty(studentGuid))
+                    {
+                        studentDto.Person = new Dtos.GuidObject2(studentGuid);
+                    }
+                }
+
+                if ((student.StudentTypeInfo != null) && (student.StudentTypeInfo.Any()))
+                {
+                    var studentTypesCollection = new List<StudentTypesDtoProperty>();
+                    var studentTypes = student.StudentTypeInfo.OrderByDescending(st => st.TypeDate < DateTime.Now);
+                    if (studentTypes != null)
+                    {
+
+                        var allTypes = await GetStudentTypesAsync(bypassCache);
+                        if (allTypes == null || !allTypes.Any())
+                        {
+                            throw new InvalidOperationException("Student Types are not defined.");
+                        }                        
+                        if ((allTypes != null) && allTypes.Any())
+                        {
+                            foreach (var stuType in studentTypes)
+                            {
+                                var typeObject = allTypes.FirstOrDefault(st => st.Code == stuType.Type);
+                                if (string.IsNullOrEmpty(typeObject.Guid))
+                                {
+                                    throw new InvalidOperationException("No Guid found for student type '" + stuType.Type + "' for student '" + student.Id + "'.");
+                                }
+                                var studentTypeObject = new StudentTypesDtoProperty();
+                                studentTypeObject.Type = new GuidObject2(typeObject.Guid);
+                                studentTypeObject.StartOn = stuType.TypeDate;
+                                studentTypesCollection.Add(studentTypeObject);         
+                            }
+                            studentDto.Types = studentTypesCollection;
+                        }
+                    }
+                }
+
+                if ((student.StudentResidencies != null) && (student.StudentResidencies.Any()))     
+                {
+                    var studentResidenciesCollection = new List<StudentResidenciesDtoProperty>();
+                    if (student.StudentResidencies != null)
+                    {
+                        var allResidencies = await GetResidentTypesAsync(bypassCache);
+                        if (allResidencies == null || !allResidencies.Any())
+                        {
+                            throw new InvalidOperationException("Student residencies are not defined.");
+                        }
+                        if ((allResidencies != null) && (allResidencies.Any()))
+                        {
+                            foreach (var stuResidency in student.StudentResidencies)
+                            {
+                                var residencyObject = allResidencies.FirstOrDefault(st => st.Code == stuResidency.Residency);
+                                if (string.IsNullOrEmpty(residencyObject.Id))
+                                {
+                                    throw new InvalidOperationException("No Guid found for student residency '" + stuResidency.Residency + "' for student '" + student.Id + "'.");
+                                }
+                                var studentResidencyObject = new StudentResidenciesDtoProperty();
+                                studentResidencyObject.Residency = new GuidObject2(residencyObject.Id);
+                                studentResidencyObject.StartOn = stuResidency.Date;
+                                studentResidenciesCollection.Add(studentResidencyObject);
+                            }
+                            studentDto.Residencies = studentResidenciesCollection;
+                        }
+                    }
+                }
+
+
+                if (student.StudentAcademicLevels != null)
+                {
+                    var studentCohortsCollection = new List<StudentCohortsDtoProperty>();
+                    var allCohorts = (await GetAllStudentCohortsAsync(bypassCache)).ToList();
+                    if (allCohorts == null || !allCohorts.Any())
+                    {
+                        throw new InvalidOperationException("Student cohorts are not defined.");
+                    }
+                    if ((allCohorts != null) && (allCohorts.Any()))
+                    {
+                        foreach (var academicLevel in student.StudentAcademicLevels)
+                        {
+                            if ((academicLevel.StudentAcademicLevelCohorts != null) && (academicLevel.StudentAcademicLevelCohorts.Any()))
+                            {
+                                foreach (var academicLevelCohorts in academicLevel.StudentAcademicLevelCohorts)
+                                {
+                                    var cohortObject = allCohorts.FirstOrDefault(sc => sc.Code == academicLevelCohorts.OtherCohortGroup);
+                                    if (string.IsNullOrEmpty(cohortObject.Id))
+                                    {
+                                        throw new InvalidOperationException("No Guid found for other cohort '" + academicLevelCohorts.OtherCohortGroup + "' for student '" + student.Id + "'.");
+                                    }
+                                    var studentCohortsObject = new StudentCohortsDtoProperty();
+                                    studentCohortsObject.Cohort = new GuidObject2(cohortObject.Id);
+                                    studentCohortsObject.StartOn = academicLevelCohorts.OtherCohortStartDate;
+                                    studentCohortsObject.EndOn = academicLevelCohorts.OtherCohortEndDate;
+                                    studentCohortsCollection.Add(studentCohortsObject);
+                                }
+                            }
+                        }
+                    }
+                    if (studentCohortsCollection.Any())
+                    {
+                        studentDto.Cohorts = studentCohortsCollection;
+                    }
+
+                    var levelClassificationsCollection = new List<StudentLevelClassificationsDtoProperty>();
+                    var allLevels = (await GetAcademicLevelsAsync(bypassCache)).ToList();
+                    if (allLevels == null || !allLevels.Any())
+                    {
+                        throw new InvalidOperationException("Academic levels are not defined.");
+                    }
+                    var allClassifications = (await GetAllStudentClassificationAsync(bypassCache)).ToList();
+                    if (allClassifications == null || !allClassifications.Any())
+                    {
+                        throw new InvalidOperationException("Student classifications are not defined.");
+                    }
+                    if ((allClassifications != null) && (allClassifications.Any()) && (allLevels != null) && (allLevels.Any()))
+                    {
+                        foreach (var academicLevel in student.StudentAcademicLevels)
+                        {
+                            if (!string.IsNullOrEmpty(academicLevel.ClassLevel))
+                            {
+                                var leaveClassification = new StudentLevelClassificationsDtoProperty();
+                                var levelObject = allLevels.FirstOrDefault(al => al.Code == academicLevel.AcademicLevel);
+                                if (string.IsNullOrEmpty(levelObject.Guid))
+                                {
+                                    throw new InvalidOperationException("No Guid found for academic level '" + academicLevel.AcademicLevel + "' for student '" + student.Id + "'.");
+                                }
+                                var classificationObject = allClassifications.FirstOrDefault(cl => cl.Code == academicLevel.ClassLevel);
+                                if (string.IsNullOrEmpty(classificationObject.Guid))
+                                {
+                                    throw new InvalidOperationException("No Guid found for classification '" + academicLevel.ClassLevel + "' for student '" + student.Id + "'.");
+                                }
+                                leaveClassification.Level = new GuidObject2(levelObject.Guid);
+                                leaveClassification.LatestClassification = new GuidObject2(classificationObject.Guid);
+                                levelClassificationsCollection.Add(leaveClassification);
+                                studentDto.LevelClassifications = levelClassificationsCollection;
+                            }                           
+                        }
+                    }
+                }          
+                return studentDto;
+            }
+            catch (Exception ex)
+            {
+                if (_logger.IsErrorEnabled)
+                {
+                    _logger.Error(ex, "Student exception occurred: ");
+                }
+                throw new Exception("Student exception occurred: " + ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Helper method to determine if the user has permission to view Students.
         /// </summary>
         /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
@@ -1552,9 +1852,34 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             if (!hasPermission)
             {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view Student.");
+                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view student information.");
             }
         }
+
+        /// <summary>
+        /// Convert list of GUID object Ids to list of strings
+        /// </summary>
+        /// <param name="guidObjectList">Guid Object of Ids</param>
+        /// <returns>List of strings</returns>
+
+        public List<string> ConvertGuidObject2ListToStringList(List<GuidObject2> guidObjectList)
+        {
+            var retval = new List<string>();
+            if (guidObjectList != null & guidObjectList.Any())
+            {
+                foreach (var guidObject in guidObjectList)
+                {
+                    if (!string.IsNullOrEmpty(guidObject.Id))
+                    {
+                        retval.Add(guidObject.Id);
+                    }
+
+                }
+
+            }
+            return retval;
+        }
+
         #endregion
 
 

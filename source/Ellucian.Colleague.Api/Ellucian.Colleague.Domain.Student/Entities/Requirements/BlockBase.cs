@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -47,6 +47,11 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
         /// Set if requirement block is modified by Colleague exception
         /// </summary>
         public bool IsModified { get; set; }
+
+        /// <summary>
+        /// Set if requirement block is modified by Colleague exception
+        /// </summary>
+        public bool IsBlockReplacement { get; set; }
 
         /// <summary>
         /// Set if requirement block is modified by Colleague exception
@@ -122,6 +127,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
             AllowedGrades = new List<Grade>();
             IsWaived = false;
             IsModified = false;
+            IsBlockReplacement = false;
             ModificationMessages = new List<string>();
             IncludeLowGradesInGpa = true;
         }

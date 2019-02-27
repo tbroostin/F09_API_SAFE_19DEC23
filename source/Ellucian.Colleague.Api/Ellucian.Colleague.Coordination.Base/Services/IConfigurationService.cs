@@ -102,5 +102,11 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// </summary>
         /// <returns>A <see cref="SelfServiceConfiguration"/> object</returns>
         Task<SelfServiceConfiguration> GetSelfServiceConfigurationAsync();
+
+        /// <summary>
+        /// Returns the required document configuration
+        /// </summary>
+        /// <returns>Required Document Configuration dto</returns>
+        Task<RequiredDocumentConfiguration> GetRequiredDocumentConfigurationAsync();
     }
 }

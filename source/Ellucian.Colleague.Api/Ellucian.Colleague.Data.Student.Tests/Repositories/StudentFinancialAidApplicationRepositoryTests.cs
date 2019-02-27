@@ -217,7 +217,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
              
                 // var csAcyrIds = await DataReader.SelectAsync("CS." + year, "WITH CS.FED.ISIR.ID NE '' OR WITH CS.INST.ISIR.ID NE ''");
                 var csAcyrIds = new string[] { "2" };
-                dataReaderMock.Setup(i => i.SelectAsync("CS." + year, "WITH CS.FED.ISIR.ID NE '' OR WITH CS.INST.ISIR.ID NE ''")).ReturnsAsync(csAcyrIds);
+                dataReaderMock.Setup(i => i.SelectAsync("CS." + year, It.IsAny<string>())).ReturnsAsync(csAcyrIds);
 
                 //var records = await DataReader.BulkReadRecordAsync<CsAcyr>("CS." + year, subList.ToArray());
                 var csAcyr = new CsAcyr() { Recordkey = studentId, CsFedIsirId = "2", CsInstIsirId = "2", CsInstAdj = 25000};
@@ -225,7 +225,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataReaderMock.Setup(i => i.BulkReadRecordAsync<CsAcyr>("CS." + year, It.IsAny<string[]>(), true)).ReturnsAsync(records);
 
                 var validApplicationIds = new string[] { "2" };
-                dataReaderMock.Setup(i => i.SelectAsync("ISIR.FAFSA", "WITH IFAF.STUDENT.ID NE '' AND WITH IFAF.IMPORT.YEAR NE ''")).ReturnsAsync(validApplicationIds);
+                dataReaderMock.Setup(i => i.SelectAsync("ISIR.FAFSA", It.IsAny<string[]>(), It.IsAny<string>() )).ReturnsAsync(validApplicationIds);
                 // var validApplicationIds = await DataReader.SelectAsync("ISIR.FAFSA", "WITH IFAF.STUDENT.ID NE '' AND WITH IFAF.IMPORT.YEAR NE ''");
 
                 var isirFafsa = new IsirFafsa()
@@ -296,7 +296,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
 
                 var faSuiteYears = new List<string>() { year };
-                var tuple = await actualRepository.GetAsync(0, 1, false, faSuiteYears);
+                var tuple = await actualRepository.GetAsync(0, 1, false, It.IsAny<string>(), It.IsAny<string>(), faSuiteYears);
                 
                 Assert.IsNotNull(tuple);
                 var fafsa = tuple.Item1.ToList();
@@ -340,7 +340,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 // var csAcyrIds = await DataReader.SelectAsync("CS." + year, "WITH CS.FED.ISIR.ID NE '' OR WITH CS.INST.ISIR.ID NE ''");
                 var csAcyrIds = new string[] { "2" };
-                dataReaderMock.Setup(i => i.SelectAsync("CS." + year, "WITH CS.FED.ISIR.ID NE '' OR WITH CS.INST.ISIR.ID NE ''")).ReturnsAsync(csAcyrIds);
+                dataReaderMock.Setup(i => i.SelectAsync("CS." + year, It.IsAny<string>())).ReturnsAsync(csAcyrIds);
 
                 //var records = await DataReader.BulkReadRecordAsync<CsAcyr>("CS." + year, subList.ToArray());
                 var csAcyr = new CsAcyr() { Recordkey = studentId, CsFedIsirId = "2", CsInstIsirId = "2", CsInstAdj = 25000 };
@@ -348,7 +348,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataReaderMock.Setup(i => i.BulkReadRecordAsync<CsAcyr>("CS." + year, It.IsAny<string[]>(), true)).ReturnsAsync(records);
 
                 var validApplicationIds = new string[] { "2" };
-                dataReaderMock.Setup(i => i.SelectAsync("ISIR.FAFSA", "WITH IFAF.STUDENT.ID NE '' AND WITH IFAF.IMPORT.YEAR NE ''")).ReturnsAsync(validApplicationIds);
+                dataReaderMock.Setup(i => i.SelectAsync("ISIR.FAFSA", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(validApplicationIds);
                 // var validApplicationIds = await DataReader.SelectAsync("ISIR.FAFSA", "WITH IFAF.STUDENT.ID NE '' AND WITH IFAF.IMPORT.YEAR NE ''");
 
                 var isirFafsa = new IsirFafsa()
@@ -419,7 +419,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
 
                 var faSuiteYears = new List<string>() { year };
-                var tuple = await actualRepository.GetAsync(0, 1, false, faSuiteYears);
+                var tuple = await actualRepository.GetAsync(0, 1, false, It.IsAny<string>(), It.IsAny<string>(), faSuiteYears);
 
                 Assert.IsNotNull(tuple);
                 var fafsa = tuple.Item1.ToList();
@@ -506,7 +506,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
 
                 var faSuiteYears = new List<string>() { year };
-                await actualRepository.GetAsync(0, 1, false, faSuiteYears);
+                await actualRepository.GetAsync(0, 1, false, It.IsAny<string>(), It.IsAny<string>(), faSuiteYears);
 
             }
 
@@ -531,7 +531,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 // var csAcyrIds = await DataReader.SelectAsync("CS." + year, "WITH CS.FED.ISIR.ID NE '' OR WITH CS.INST.ISIR.ID NE ''");
                 var csAcyrIds = new string[] { "2" };
-                dataReaderMock.Setup(i => i.SelectAsync("CS." + year, "WITH CS.FED.ISIR.ID NE '' OR WITH CS.INST.ISIR.ID NE ''")).ReturnsAsync(null);
+                dataReaderMock.Setup(i => i.SelectAsync("CS." + year, It.IsAny<string>())).ReturnsAsync(null);
 
                 //var records = await DataReader.BulkReadRecordAsync<CsAcyr>("CS." + year, subList.ToArray());
                 var csAcyr = new CsAcyr() { Recordkey = studentId, CsFedIsirId = "2", CsInstIsirId = "2", CsInstAdj = 25000 };
@@ -539,7 +539,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataReaderMock.Setup(i => i.BulkReadRecordAsync<CsAcyr>("CS." + year, It.IsAny<string[]>(), true)).ReturnsAsync(records);
 
                 var validApplicationIds = new string[] { "2" };
-                dataReaderMock.Setup(i => i.SelectAsync("ISIR.FAFSA", "WITH IFAF.STUDENT.ID NE '' AND WITH IFAF.IMPORT.YEAR NE ''")).ReturnsAsync(null);
+                dataReaderMock.Setup(i => i.SelectAsync("ISIR.FAFSA", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(null);
                 // var validApplicationIds = await DataReader.SelectAsync("ISIR.FAFSA", "WITH IFAF.STUDENT.ID NE '' AND WITH IFAF.IMPORT.YEAR NE ''");
 
                 var isirFafsa = new IsirFafsa()
@@ -600,7 +600,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
 
                 var faSuiteYears = new List<string>() { year };
-                var tuple = await actualRepository.GetAsync(0, 1, false, faSuiteYears);
+                var tuple = await actualRepository.GetAsync(0, 1, false, It.IsAny<string>(), It.IsAny<string>(), faSuiteYears);
 
                 Assert.IsNotNull(tuple);
                 var fafsa = tuple.Item1.ToList();

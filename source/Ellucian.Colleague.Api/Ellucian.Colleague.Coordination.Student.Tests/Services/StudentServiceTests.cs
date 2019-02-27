@@ -3148,5 +3148,455 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 var result = await studentService.GetResidentTypeByIdAsync("123");
             }
         }
+
+        [TestClass]
+        public class QueryStudentsById4Async_Tests : CurrentUserSetup
+        {
+            private StudentService studentService;
+            private Mock<IStudentRepository> studentRepoMock;
+            private IStudentRepository studentRepo;
+            private Mock<IPersonRepository> personRepoMock;
+            private IPersonRepository personRepo;
+            private Mock<IAcademicCreditRepository> acadCreditRepoMock;
+            private IAcademicCreditRepository acadCreditRepo;
+            private Mock<IStudentReferenceDataRepository> studentReferenceDataRepoMock;
+            private IStudentReferenceDataRepository studentReferenceDataRepository;
+            private Mock<IReferenceDataRepository> referenceDataRepoMock;
+            private IReferenceDataRepository referenceDataRepository;
+
+            private IAcademicHistoryService academicHistoryService;
+            private Mock<IAcademicHistoryService> academicHistoryServiceMock;
+            private ITermRepository termRepo;
+            private Mock<ITermRepository> termRepoMock;
+            private IRegistrationPriorityRepository regPriorityRepo;
+            private Mock<IRegistrationPriorityRepository> regPriorityRepoMock;
+            private IStudentConfigurationRepository studentConfigurationRepo;
+            private Mock<IStudentConfigurationRepository> studentConfigurationRepoMock;
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private IAdapterRegistry adapterRegistry;
+            private ILogger logger;
+            private Mock<IRoleRepository> roleRepoMock;
+            private IRoleRepository roleRepo;
+            private ICurrentUserFactory currentUserFactory;
+            private IConfigurationRepository baseConfigurationRepository;
+            private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
+            private Mock<IStaffRepository> staffRepoMock;
+            private IStaffRepository staffRepo;
+
+            List<Domain.Student.Entities.Student> students;
+            List<Domain.Student.Entities.Student> restrictedStudents;
+            List<Domain.Student.Entities.Student> privilegedStudents;
+            List<string> studentIds;
+            Role viewStudentInformationRole;
+
+            public class ViewStudentUserFactory : ICurrentUserFactory
+            {
+                public ICurrentUser CurrentUser
+                {
+                    get
+                    {
+                        return new CurrentUser(new Claims()
+                        {
+                            ControlId = "123",
+                            Name = "Johnny",
+                            PersonId = "0000894",
+                            SecurityToken = "321",
+                            SessionTimeout = 30,
+                            UserName = "Student",
+                            Roles = new List<string>() { "ViewStudentInformation" },
+                            SessionFixationId = "abc123"
+                        });
+                    }
+                }
+            }
+
+            [TestInitialize]
+            public void QueryStudentsById4Async_Tests_Initialize()
+            {
+                students = new List<Domain.Student.Entities.Student>() {
+                    new Domain.Student.Entities.Student("0001234", "Smith", null, null, null, null)
+                };
+                restrictedStudents = new List<Domain.Student.Entities.Student>() {
+                    new Domain.Student.Entities.Student("0001234", "Smith", null, null, null, "X")
+                };
+                privilegedStudents = new List<Domain.Student.Entities.Student>() {
+                    new Domain.Student.Entities.Student("0001234", "Smith", null, null, null, "S")
+                };
+                studentRepoMock = new Mock<IStudentRepository>();
+                studentRepoMock.Setup(r => r.GetStudentsByIdAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<Term>(), It.IsAny<IEnumerable<CitizenshipStatus>>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).ReturnsAsync(students);               
+                studentRepo = studentRepoMock.Object;
+                personRepoMock = new Mock<IPersonRepository>();
+                personRepo = personRepoMock.Object;
+                acadCreditRepoMock = new Mock<IAcademicCreditRepository>();
+                acadCreditRepo = acadCreditRepoMock.Object;
+                academicHistoryServiceMock = new Mock<IAcademicHistoryService>();
+                academicHistoryService = academicHistoryServiceMock.Object;
+                referenceDataRepoMock = new Mock<IReferenceDataRepository>();
+                referenceDataRepoMock.Setup(r => r.GetCitizenshipStatusesAsync(false)).ReturnsAsync(new List<CitizenshipStatus>());
+                referenceDataRepository = referenceDataRepoMock.Object;
+                termRepoMock = new Mock<ITermRepository>();
+                termRepoMock.Setup(r => r.Get(It.IsAny<string>())).Returns<string>((termId) => new TestTermRepository().Get(termId));
+                termRepo = termRepoMock.Object;
+                regPriorityRepoMock = new Mock<IRegistrationPriorityRepository>();
+                regPriorityRepo = regPriorityRepoMock.Object;
+                studentConfigurationRepoMock = new Mock<IStudentConfigurationRepository>();
+                studentConfigurationRepo = studentConfigurationRepoMock.Object;
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                adapterRegistry = adapterRegistryMock.Object;
+                roleRepoMock = new Mock<IRoleRepository>();
+                viewStudentInformationRole = new Role(108, "ViewStudentInformation");
+                viewStudentInformationRole.AddPermission(new Permission(StudentPermissionCodes.ViewStudentInformation));
+                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { viewStudentInformationRole });
+                roleRepo = roleRepoMock.Object;
+                logger = new Mock<ILogger>().Object;
+                baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
+                baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
+                staffRepoMock = new Mock<IStaffRepository>();
+                staffRepo = staffRepoMock.Object;
+                var studentBatch3DtoAdapter = new StudentEntityToStudentBatch3DtoAdapter(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Student, Ellucian.Colleague.Dtos.Student.StudentBatch3>()).Returns(studentBatch3DtoAdapter);
+                currentUserFactory = new CurrentUserSetup.StudentUserFactory();
+
+                studentIds = new List<string>() { currentUserFactory.CurrentUser.PersonId };
+
+                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+            }
+
+            [TestCleanup]
+            public void QueryStudentsById4Async_Tests_Cleanup()
+            {
+                studentRepo = null;
+                adapterRegistry = null;
+                currentUserFactory = null;
+                roleRepo = null;
+                logger = null;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task QueryStudentsById4Async_User_without_ViewStudentInformation_Permission_throws_PermissionsException()
+            {
+                var students = await studentService.QueryStudentsById4Async(studentIds);
+            }
+
+            [TestMethod]
+            public async Task QueryStudentsById4Async_Valid()
+            {
+                currentUserFactory = new ViewStudentUserFactory();
+                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                var result = await studentService.QueryStudentsById4Async(studentIds);
+                Assert.AreEqual(students.Count, result.Dto.Count());
+                Assert.AreEqual(students.First().Id, result.Dto.First().Id);
+            }
+
+            [TestMethod]
+            public async Task QueryStudentsById4Async_Valid_StudentRepository_returns_null()
+            {
+                currentUserFactory = new ViewStudentUserFactory();
+                studentRepoMock.Setup(r => r.GetStudentsByIdAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<Term>(), It.IsAny<IEnumerable<CitizenshipStatus>>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).ReturnsAsync(null);
+                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                var result = await studentService.QueryStudentsById4Async(studentIds);
+                Assert.AreEqual(0, result.Dto.Count());
+            }
+
+            [TestMethod]
+            public async Task QueryStudentsById4Async_Valid_StudentRepository_returns_empty_list()
+            {
+                currentUserFactory = new ViewStudentUserFactory();
+                studentRepoMock.Setup(r => r.GetStudentsByIdAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<Term>(), It.IsAny<IEnumerable<CitizenshipStatus>>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).ReturnsAsync(new List<Domain.Student.Entities.Student>());
+                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                var result = await studentService.QueryStudentsById4Async(studentIds);
+                Assert.AreEqual(0, result.Dto.Count());
+            }
+
+
+            [TestMethod]
+            public async Task QueryStudentsById4Async_Valid_student_has_privacy_code_and_user_does_not()
+            {
+                currentUserFactory = new ViewStudentUserFactory();
+                Role viewStudentInformationRole = new Role(108, "ViewStudentInformation");
+                viewStudentInformationRole.AddPermission(new Permission(StudentPermissionCodes.ViewStudentInformation));
+                studentRepoMock.Setup(r => r.GetStudentsByIdAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<Term>(), It.IsAny<IEnumerable<CitizenshipStatus>>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).ReturnsAsync(restrictedStudents);
+                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { viewStudentInformationRole });
+                staffRepoMock.Setup(rpm => rpm.Get(It.IsAny<string>())).Returns(new Staff(currentUserFactory.CurrentUser.PersonId, "Smith") { PrivacyCodes = new List<string>() { "S" } });
+                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                var result = await studentService.QueryStudentsById4Async(studentIds);
+                Assert.AreEqual(1, result.Dto.Count());
+                Assert.IsTrue(result.HasPrivacyRestrictions);
+            }
+
+            [TestMethod]
+            public async Task QueryStudentsById4Async_Valid_student_has_privacy_code_and_user_can_see()
+            {
+                currentUserFactory = new ViewStudentUserFactory();
+                Role viewStudentInformationRole = new Role(108, "ViewStudentInformation");
+                viewStudentInformationRole.AddPermission(new Permission(StudentPermissionCodes.ViewStudentInformation));
+                studentRepoMock.Setup(r => r.GetStudentsByIdAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<Term>(), It.IsAny<IEnumerable<CitizenshipStatus>>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).ReturnsAsync(privilegedStudents);
+                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { viewStudentInformationRole });
+                staffRepoMock.Setup(rpm => rpm.Get(It.IsAny<string>())).Returns(new Staff(currentUserFactory.CurrentUser.PersonId, "Smith") { PrivacyCodes = new List<string>() { "S" } });
+                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                var result = await studentService.QueryStudentsById4Async(studentIds);
+                Assert.AreEqual(1, result.Dto.Count());
+                Assert.IsFalse(result.HasPrivacyRestrictions);
+            }
+        }
+
+        [TestClass]
+        public class Search3Async_Tests : CurrentUserSetup
+        {
+            private StudentService studentService;
+            private Mock<IStudentRepository> studentRepoMock;
+            private IStudentRepository studentRepo;
+            private Mock<IPersonRepository> personRepoMock;
+            private IPersonRepository personRepo;
+            private Mock<IAcademicCreditRepository> acadCreditRepoMock;
+            private IAcademicCreditRepository acadCreditRepo;
+            private Mock<IStudentReferenceDataRepository> studentReferenceDataRepoMock;
+            private IStudentReferenceDataRepository studentReferenceDataRepository;
+            private Mock<IReferenceDataRepository> referenceDataRepoMock;
+            private IReferenceDataRepository referenceDataRepository;
+            private IAcademicHistoryService academicHistoryService;
+            private Mock<IAcademicHistoryService> academicHistoryServiceMock;
+            private ITermRepository termRepo;
+            private Mock<ITermRepository> termRepoMock;
+            private IRegistrationPriorityRepository regPriorityRepo;
+            private Mock<IRegistrationPriorityRepository> regPriorityRepoMock;
+            private IStudentConfigurationRepository studentConfigurationRepo;
+            private Mock<IStudentConfigurationRepository> studentConfigurationRepoMock;
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private IAdapterRegistry adapterRegistry;
+            private ILogger logger;
+            private Mock<IRoleRepository> roleRepoMock;
+            private IRoleRepository roleRepo;
+            private ICurrentUserFactory currentUserFactory;
+            private IConfigurationRepository baseConfigurationRepository;
+            private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
+            private Mock<IStaffRepository> staffRepoMock;
+            private IStaffRepository staffRepo;
+
+            public class ViewStudentUserFactory : ICurrentUserFactory
+            {
+                public ICurrentUser CurrentUser
+                {
+                    get
+                    {
+                        return new CurrentUser(new Claims()
+                        {
+                            ControlId = "123",
+                            Name = "Johnny",
+                            PersonId = "0000894",
+                            SecurityToken = "321",
+                            SessionTimeout = 30,
+                            UserName = "Student",
+                            Roles = new List<string>() { "ViewStudentInformation" },
+                            SessionFixationId = "abc123"
+                        });
+                    }
+                }
+            }
+
+            public class ProxyStudentUserFactory : ICurrentUserFactory
+            {
+                public ICurrentUser CurrentUser
+                {
+                    get
+                    {
+                        return new CurrentUser(new Claims()
+                        {
+                            ControlId = "123",
+                            Name = "Johnny",
+                            PersonId = "0000894",
+                            SecurityToken = "321",
+                            SessionTimeout = 30,
+                            UserName = "Student",
+                            Roles = new List<string>() { "ViewStudentInformation" },
+                            SessionFixationId = "abc123",
+                            ProxySubjectClaims = new ProxySubjectClaims()
+                            {
+                                PersonId = "0001234",
+                            }
+                        });
+                    }
+                }
+            }
+
+            [TestInitialize]
+            public void Search3Async_Tests_Initialize()
+            {
+                studentRepoMock = new Mock<IStudentRepository>();
+                studentRepoMock.Setup(repo => repo.GetStudentsSearchAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(new List<Domain.Student.Entities.Student>()
+                {
+                    new Domain.Student.Entities.Student(null, "0001212", "Smith", null, null, null)
+                });
+                studentRepoMock.Setup(repo => repo.GetStudentSearchByNameAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>())).ReturnsAsync(new List<Domain.Student.Entities.Student>()
+                {
+                    new Domain.Student.Entities.Student(null, "0001212", "Smith", null, null, null)
+                });
+                studentRepo = studentRepoMock.Object;
+                personRepoMock = new Mock<IPersonRepository>();
+                personRepo = personRepoMock.Object;
+                acadCreditRepoMock = new Mock<IAcademicCreditRepository>();
+                acadCreditRepo = acadCreditRepoMock.Object;
+                academicHistoryServiceMock = new Mock<IAcademicHistoryService>();
+                academicHistoryService = academicHistoryServiceMock.Object;
+                referenceDataRepoMock = new Mock<IReferenceDataRepository>();
+                referenceDataRepoMock.Setup(r => r.GetCitizenshipStatusesAsync(false)).ReturnsAsync(new List<CitizenshipStatus>());
+                referenceDataRepository = referenceDataRepoMock.Object;
+                termRepoMock = new Mock<ITermRepository>();
+                termRepoMock.Setup(r => r.Get(It.IsAny<string>())).Returns<string>((termId) => new TestTermRepository().Get(termId));
+                termRepo = termRepoMock.Object;
+                regPriorityRepoMock = new Mock<IRegistrationPriorityRepository>();
+                regPriorityRepo = regPriorityRepoMock.Object;
+                studentConfigurationRepoMock = new Mock<IStudentConfigurationRepository>();
+                studentConfigurationRepo = studentConfigurationRepoMock.Object;
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                adapterRegistry = adapterRegistryMock.Object;
+                var studentDtoAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.Student, Ellucian.Colleague.Dtos.Student.Student>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Student, Ellucian.Colleague.Dtos.Student.Student>()).Returns(studentDtoAdapter);
+
+                roleRepoMock = new Mock<IRoleRepository>();
+                roleRepo = roleRepoMock.Object;
+                logger = new Mock<ILogger>().Object;
+                baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
+                baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
+                staffRepoMock = new Mock<IStaffRepository>();
+                staffRepo = staffRepoMock.Object;
+
+                currentUserFactory = new CurrentUserSetup.StudentUserFactory();
+
+                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+            }
+
+            [TestCleanup]
+            public void Search3Async_Tests_Cleanup()
+            {
+                studentService = null;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task Search3Async_null_criteria_throws_exception()
+            {
+                var student = await studentService.Search3Async(null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task Search3Async_criteria_StudentKeyword_is_Student_ID_invalid_permissions()
+            {
+                currentUserFactory = new CurrentUserSetup.StudentUserFactory();
+                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                var student = await studentService.Search3Async(new Dtos.Student.StudentSearchCriteria() { StudentKeyword = "1234567" });
+            }
+
+            [TestMethod]
+            public async Task Search3Async_criteria_StudentKeyword_is_Student_ID_student_has_privacy_code_and_user_does_not()
+            {
+                currentUserFactory = new ViewStudentUserFactory();
+                Role viewStudentInformationRole = new Role(108, "ViewStudentInformation");
+                viewStudentInformationRole.AddPermission(new Permission(StudentPermissionCodes.ViewStudentInformation));
+                studentRepoMock.Setup(repo => repo.GetStudentsSearchAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(new List<Domain.Student.Entities.Student>()
+                {
+                    new Domain.Student.Entities.Student(null, "0001212", "Smith", null, null, null, "X")
+                });
+                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { viewStudentInformationRole });
+                staffRepoMock.Setup(rpm => rpm.Get(It.IsAny<string>())).Returns(new Staff(currentUserFactory.CurrentUser.PersonId, "Smith") { PrivacyCodes = new List<string>() { "S" } });
+                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                var student = await studentService.Search3Async(new Dtos.Student.StudentSearchCriteria() { StudentKeyword = currentUserFactory.CurrentUser.PersonId });
+                Assert.AreEqual(1, student.Dto.Count);
+                Assert.IsTrue(student.HasPrivacyRestrictions);
+            }
+
+            [TestMethod]
+            public async Task Search3Async_criteria_StudentKeyword_is_Student_ID_student_has_privacy_code_and_user_can_see()
+            {
+                currentUserFactory = new ViewStudentUserFactory();
+                Role viewStudentInformationRole = new Role(108, "ViewStudentInformation");
+                viewStudentInformationRole.AddPermission(new Permission(StudentPermissionCodes.ViewStudentInformation));
+                studentRepoMock.Setup(repo => repo.GetStudentsSearchAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(new List<Domain.Student.Entities.Student>()
+                {
+                    new Domain.Student.Entities.Student(null, "0001212", "Smith", null, null, null, "S")
+                });
+                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { viewStudentInformationRole });
+                staffRepoMock.Setup(rpm => rpm.Get(It.IsAny<string>())).Returns(new Staff(currentUserFactory.CurrentUser.PersonId, "Smith") { PrivacyCodes = new List<string>() { "S" } });
+                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                var student = await studentService.Search3Async(new Dtos.Student.StudentSearchCriteria() { StudentKeyword = currentUserFactory.CurrentUser.PersonId });
+                Assert.AreEqual(1, student.Dto.Count);
+                Assert.IsFalse(student.HasPrivacyRestrictions);
+            }
+
+            [TestMethod]
+            public async Task Search3Async_criteria_StudentKeyword_is_Student_ID_repo_returns_null()
+            {
+                currentUserFactory = new ViewStudentUserFactory();
+                Role viewStudentInformationRole = new Role(108, "ViewStudentInformation");
+                viewStudentInformationRole.AddPermission(new Permission(StudentPermissionCodes.ViewStudentInformation));
+                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { viewStudentInformationRole });
+                studentRepoMock.Setup(repo => repo.GetStudentsSearchAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(null);
+                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                var student = await studentService.Search3Async(new Dtos.Student.StudentSearchCriteria() { StudentKeyword = currentUserFactory.CurrentUser.PersonId });
+                Assert.AreEqual(0, student.Dto.Count);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task Search3Async_criteria_StudentKeyword_is_1_part_name_throws_exception()
+            {
+                currentUserFactory = new ViewStudentUserFactory();
+                Role viewStudentInformationRole = new Role(108, "ViewStudentInformation");
+                viewStudentInformationRole.AddPermission(new Permission(StudentPermissionCodes.ViewStudentInformation));
+                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { viewStudentInformationRole });
+                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                var student = await studentService.Search3Async(new Dtos.Student.StudentSearchCriteria() { StudentKeyword = "John" });
+            }
+
+            [TestMethod]
+            public async Task Search3Async_criteria_StudentKeyword_is_2_part_name()
+            {
+                currentUserFactory = new ViewStudentUserFactory();
+                Role viewStudentInformationRole = new Role(108, "ViewStudentInformation");
+                viewStudentInformationRole.AddPermission(new Permission(StudentPermissionCodes.ViewStudentInformation));
+                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { viewStudentInformationRole });
+                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                var student = await studentService.Search3Async(new Dtos.Student.StudentSearchCriteria() { StudentKeyword = "Smith, John" });
+                Assert.AreEqual(1, student.Dto.Count);
+            }
+
+            [TestMethod]
+            public async Task Search3Async_criteria_StudentKeyword_is_name_student_has_privacy_code_and_user_can_see()
+            {
+                currentUserFactory = new ViewStudentUserFactory();
+                Role viewStudentInformationRole = new Role(108, "ViewStudentInformation");
+                viewStudentInformationRole.AddPermission(new Permission(StudentPermissionCodes.ViewStudentInformation));
+                studentRepoMock.Setup(repo => repo.GetStudentSearchByNameAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>())).ReturnsAsync(new List<Domain.Student.Entities.Student>()
+                {
+                    new Domain.Student.Entities.Student("0001212", "Smith", null, null, null, "S")
+                });
+                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { viewStudentInformationRole });
+                staffRepoMock.Setup(rpm => rpm.Get(It.IsAny<string>())).Returns(new Staff(currentUserFactory.CurrentUser.PersonId, "Smith") { PrivacyCodes = new List<string>() { "S" } });
+                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                var student = await studentService.Search3Async(new Dtos.Student.StudentSearchCriteria() { StudentKeyword = "Smith, John" });
+                Assert.AreEqual(1, student.Dto.Count);
+                Assert.IsFalse(student.HasPrivacyRestrictions);
+            }
+
+            [TestMethod]
+            public async Task Search3Async_criteria_StudentKeyword_is_name_student_has_privacy_code_and_user_does_not()
+            {
+                currentUserFactory = new ViewStudentUserFactory();
+                Role viewStudentInformationRole = new Role(108, "ViewStudentInformation");
+                viewStudentInformationRole.AddPermission(new Permission(StudentPermissionCodes.ViewStudentInformation));
+                studentRepoMock.Setup(repo => repo.GetStudentSearchByNameAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>())).ReturnsAsync(new List<Domain.Student.Entities.Student>()
+                {
+                    new Domain.Student.Entities.Student("0001212", "Smith", null, null, null, "X")
+                });
+                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { viewStudentInformationRole });
+                staffRepoMock.Setup(rpm => rpm.Get(It.IsAny<string>())).Returns(new Staff(currentUserFactory.CurrentUser.PersonId, "Smith") { PrivacyCodes = new List<string>() { "S" } });
+                studentService = new StudentService(adapterRegistry, studentRepo, personRepo, acadCreditRepo, academicHistoryService, termRepo, regPriorityRepo, studentConfigurationRepo, referenceDataRepository, studentReferenceDataRepository, baseConfigurationRepository, currentUserFactory, roleRepo, staffRepo, logger);
+                var student = await studentService.Search3Async(new Dtos.Student.StudentSearchCriteria() { StudentKeyword = "John Michael Smith" });
+                Assert.AreEqual(1, student.Dto.Count);
+                Assert.IsTrue(student.HasPrivacyRestrictions);
+            }
+        }
     }
 }

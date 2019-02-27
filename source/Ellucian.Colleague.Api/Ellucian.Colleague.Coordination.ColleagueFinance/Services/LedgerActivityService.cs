@@ -393,7 +393,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             var month = source.Value.Month;
             var year = source.Value.Year;
 
-            var period = (await FiscalPeriodsAsync(bypassCache)).FirstOrDefault(i => year <= i.Year && month >= i.Month);
+            var period = (await FiscalPeriodsAsync(bypassCache)).FirstOrDefault(i => year == i.Year && month == i.Month);
             if(period == null)
             {
                 throw new KeyNotFoundException(string.Format("Fiscal period not found for {0}.", source.ToString()));

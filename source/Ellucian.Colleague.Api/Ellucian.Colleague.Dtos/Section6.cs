@@ -21,9 +21,9 @@ namespace Ellucian.Colleague.Dtos
         /// </summary>
         [JsonProperty("titles", DefaultValueHandling = DefaultValueHandling.Ignore)]
         public List<CoursesTitlesDtoProperty> Titles { get; set; }
-        
+
         /// <summary>
-        /// The section titles details.
+        /// The section descriptions details.
         /// </summary>
         [JsonProperty("descriptions", DefaultValueHandling = DefaultValueHandling.Ignore)]
         public List<SectionDescriptionDtoProperty> Descriptions { get; set; }

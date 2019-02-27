@@ -301,7 +301,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ApplicationException))]
+        [ExpectedException(typeof(ConfigurationException))]
         public async Task ValidateGlAccountAsync_GlConfigurationRepositoryReturnsNullAccountStructure()
         {
             testGlConfigurationRepository.accountStructure = null;
@@ -312,7 +312,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ApplicationException))]
+        [ExpectedException(typeof(ConfigurationException))]
         public async Task ValidateGlAccountAsync_GlConfigurationRepositoryReturnsNullClassConfigurationStructure()
         {
             // Set up the GL account repository to return null.
@@ -373,6 +373,31 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             Assert.AreEqual(glAccountValidationResponse.Id, glAccountValidationResponseDto.Id);
             Assert.AreEqual("failure", glAccountValidationResponseDto.Status);
             Assert.AreEqual("You do not have access to this GL Account.", glAccountValidationResponseDto.ErrorMessage);
+        }
+
+        [TestMethod]
+        public async Task ValidateGlAccountAsync_GlAccountIsExcluded()
+        {
+            string glAccountId = "11_00_02_01_20601_40000";
+            string fiscalYear = DateTime.Now.Year.ToString();
+            testGlConfigurationRepository.exclusions = new BudgetAdjustmentAccountExclusions()
+            {
+                ExcludedElements = new List<BudgetAdjustmentExcludedElement>() {
+                    new BudgetAdjustmentExcludedElement()
+                        {
+                            ExclusionComponent = new GeneralLedgerComponent("FULLACCOUNT", false, GeneralLedgerComponentType.FullAccount, "1", "18"),
+                            ExclusionRange = new GeneralLedgerComponentRange("110002012060140000", "110002012060140000")
+                    }
+                }
+            };
+            var glAccountValidationResponseDto = await service.ValidateGlAccountAsync(glAccountId, fiscalYear);
+            
+
+            Assert.AreEqual("11_00_02_01_20601_40000", glAccountValidationResponseDto.Id);
+            Assert.AreEqual("failure", glAccountValidationResponseDto.Status);
+            Assert.AreEqual("The account is excluded from online budget adjustments.", glAccountValidationResponseDto.ErrorMessage);
+
+            testGlConfigurationRepository.exclusions = new BudgetAdjustmentAccountExclusions();
         }
 
         [TestMethod]

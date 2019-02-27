@@ -11,6 +11,7 @@ namespace Ellucian.Colleague.Domain.Base.Entities
     public class PersonFilterCriteria
     {
         public List<Tuple<string, string>> Credentials { get; set; }
+        public List<Tuple<string, string>> AlternativeCredentials { get; set; }
         public List<string> Roles { get; set; }
         public List<string> Emails { get; set; }     
         public List<PersonNamesCriteria> Names { get; set; }

@@ -501,23 +501,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests.Entities
             {
                 studentAwardPeriod.AwardStatus = new AwardStatus("A", "A", AwardStatusCategory.Accepted);
                 Assert.IsTrue(studentAwardPeriod.IsAmountModifiable);
-            }
-
-            [TestMethod]
-            public void IsStatusModifiableIfDeclineZeroOfAcceptedLoansTest()
-            {
-                studentAwardPeriod.StudentAwardYear.CurrentConfiguration.AllowDeclineZeroOfAcceptedLoans = false;
-                studentAwardPeriod.AwardStatus = new AwardStatus("A", "A", AwardStatusCategory.Accepted);
-                Assert.IsFalse(studentAwardPeriod.IsStatusModifiable);
-            }
-
-            [TestMethod]
-            public void StatusNotModifableIfLoanTransmittedTest()
-            {
-                studentAward = new StudentAward(studentAwardYear, studentId, award, true);
-                studentAwardPeriod = new StudentAwardPeriod(studentAward, awardPeriodId, awardStatus, isFrozen, true);
-                Assert.IsFalse(studentAwardPeriod.IsStatusModifiable);
-            }
+            }            
 
             [TestMethod]
             public void AmountModifiableIsFalseIfTransmittedTest()
@@ -542,6 +526,196 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests.Entities
                 Assert.IsFalse(studentAwardPeriod.IsAmountModifiable);
             }
 
+        }
+
+        [TestClass]
+        public class StudentAwardPeriodStatusModifiableTests : StudentAwardPeriodTests
+        {
+            [TestInitialize]
+            public void Initialize()
+            {
+
+                BaseInitialize();
+
+                category = new AwardCategory("GSL", "bar", AwardCategoryType.Loan);
+                award = new Award("WOOFY", "desc", category);
+                award.IsFederalDirectLoan = true;
+                isEligible = true;
+                hasLoanDisbursements = false;
+
+                studentAward = new StudentAward(studentAwardYear, studentId, award, isEligible);
+                studentAwardPeriod = new StudentAwardPeriod(studentAward, awardPeriodId, awardStatus, isFrozen, isTransmitted);
+                studentAwardPeriod.HasLoanDisbursement = hasLoanDisbursements;
+
+                //set the configuration so that the StudentAwardPeriod IsStatusModifiable=true by default
+                studentAwardYear.CurrentConfiguration.IsAwardingActive = true;
+                studentAwardYear.CurrentConfiguration.ExcludeAwardCategoriesFromChange = new List<string>();
+                studentAwardYear.CurrentConfiguration.ExcludeAwardsFromChange = new List<string>();
+                studentAwardYear.CurrentConfiguration.ExcludeAwardStatusesFromChange = new List<string>();
+                studentAwardYear.CurrentConfiguration.AllowDeclineZeroOfAcceptedLoans = true;
+                studentAwardYear.CurrentConfiguration.AreAwardChangesAllowed = true;
+            }
+
+            [TestMethod]
+            public void IsStatusModifiable_ReturnsTrueTest()
+            {
+                Assert.IsTrue(studentAwardPeriod.IsStatusModifiable);
+            }
+
+            [TestMethod]
+            public void NotIsAwardingActive_NotIsStatusModifiableTest()
+            {
+                studentAwardYear.CurrentConfiguration.IsAwardingActive = false;
+                studentAward = new StudentAward(studentAwardYear, studentId, award, isEligible);
+                studentAwardPeriod = new StudentAwardPeriod(studentAward, awardPeriodId, awardStatus, isFrozen, isTransmitted);
+                Assert.IsFalse(studentAwardPeriod.IsStatusModifiable);
+            }
+
+            [TestMethod]
+            public void NotAreAwardChangesAllowed_NotIsStatusModifiableTest()
+            {
+                studentAwardYear.CurrentConfiguration.AreAwardChangesAllowed = false;
+                studentAward = new StudentAward(studentAwardYear, studentId, award, isEligible);
+                studentAwardPeriod = new StudentAwardPeriod(studentAward, awardPeriodId, awardStatus, isFrozen, isTransmitted);
+                Assert.IsFalse(studentAwardPeriod.IsStatusModifiable);
+            }
+
+            [TestMethod]
+            public void ExcludedAwardCategory_NotIsStatusModifiableTest()
+            {
+                studentAwardYear.CurrentConfiguration.ExcludeAwardCategoriesFromChange = new List<string>() { award.AwardCategory.Code };
+                studentAward = new StudentAward(studentAwardYear, studentId, award, isEligible);
+                studentAwardPeriod = new StudentAwardPeriod(studentAward, awardPeriodId, awardStatus, isFrozen, isTransmitted);
+                Assert.IsFalse(studentAwardPeriod.IsStatusModifiable);
+            }
+
+            [TestMethod]
+            public void ExcludedDifferentAwardCategory_IsStatusModifiableTest()
+            {
+                studentAwardYear.CurrentConfiguration.ExcludeAwardCategoriesFromChange = new List<string>() { "foo" };
+                studentAward = new StudentAward(studentAwardYear, studentId, award, isEligible);
+                studentAwardPeriod = new StudentAwardPeriod(studentAward, awardPeriodId, awardStatus, isFrozen, isTransmitted);
+                Assert.IsTrue(studentAwardPeriod.IsStatusModifiable);
+            }
+
+            [TestMethod]
+            public void ExcludedAward_NotIsStatusModifiableTest()
+            {
+                studentAwardYear.CurrentConfiguration.ExcludeAwardsFromChange = new List<string>() { award.Code };
+                studentAward = new StudentAward(studentAwardYear, studentId, award, isEligible);
+                studentAwardPeriod = new StudentAwardPeriod(studentAward, awardPeriodId, awardStatus, isFrozen, isTransmitted);
+                Assert.IsFalse(studentAwardPeriod.IsStatusModifiable);
+            }
+
+            [TestMethod]
+            public void ExcludedDifferentAward_IsStatusModifiableTest()
+            {
+                studentAwardYear.CurrentConfiguration.ExcludeAwardsFromChange = new List<string>() { "bar" };
+                studentAward = new StudentAward(studentAwardYear, studentId, award, isEligible);
+                studentAwardPeriod = new StudentAwardPeriod(studentAward, awardPeriodId, awardStatus, isFrozen, isTransmitted);
+                Assert.IsTrue(studentAwardPeriod.IsStatusModifiable);
+            }
+
+            [TestMethod]
+            public void ExcludedAwardStatus_NotIsStatusModifiableTest()
+            {
+                studentAwardYear.CurrentConfiguration.ExcludeAwardStatusesFromChange = new List<string>() { awardStatus.Code };
+                studentAward = new StudentAward(studentAwardYear, studentId, award, isEligible);
+                studentAwardPeriod = new StudentAwardPeriod(studentAward, awardPeriodId, awardStatus, isFrozen, isTransmitted);
+                Assert.IsFalse(studentAwardPeriod.IsStatusModifiable);
+            }
+
+            [TestMethod]
+            public void ExcludedDifferentAwardStatus_IsStatusModifiableTest()
+            {
+                studentAwardYear.CurrentConfiguration.ExcludeAwardStatusesFromChange = new List<string>() { "foobar" };
+                studentAward = new StudentAward(studentAwardYear, studentId, award, isEligible);
+                studentAwardPeriod = new StudentAwardPeriod(studentAward, awardPeriodId, awardStatus, isFrozen, isTransmitted);
+                Assert.IsTrue(studentAwardPeriod.IsStatusModifiable);
+            }
+
+            [TestMethod]
+            public void AwardInHoldingBin_NotIsStatusModifiableTest()
+            {
+                studentAward.PendingChangeRequestId = "89";
+                Assert.IsFalse(studentAwardPeriod.IsStatusModifiable);
+            }
+
+            [TestMethod]
+            public void NotStatusModifableIfLoanTransmittedTest()
+            {
+                studentAward = new StudentAward(studentAwardYear, studentId, award, true);
+                studentAwardPeriod = new StudentAwardPeriod(studentAward, awardPeriodId, awardStatus, isFrozen, true);
+                Assert.IsFalse(studentAwardPeriod.IsStatusModifiable);
+            }
+
+            [TestMethod]
+            public void StatusModifableIfNonLoanTransmittedTest()
+            {
+                category = new AwardCategory("foo", "bar", AwardCategoryType.Grant);
+                award = new Award("WOOFY", "desc", category);
+                studentAward = new StudentAward(studentAwardYear, studentId, award, true);
+                studentAwardPeriod = new StudentAwardPeriod(studentAward, awardPeriodId, awardStatus, isFrozen, true);
+                Assert.IsTrue(studentAwardPeriod.IsStatusModifiable);
+            }
+
+            [TestMethod]
+            public void NotIsStatusModifiableIfDeclineZeroOfAcceptedLoansIsFalseTest()
+            {
+                studentAwardPeriod.StudentAwardYear.CurrentConfiguration.AllowDeclineZeroOfAcceptedLoans = false;
+                studentAwardPeriod.AwardStatus = new AwardStatus("A", "A", AwardStatusCategory.Accepted);
+                Assert.IsFalse(studentAwardPeriod.IsStatusModifiable);
+            }
+
+            [TestMethod]
+            public void AllowdeclineZeroOfAcceptedLoans_OtherLoan_NotIsStatusModifiableTest()
+            {
+                category = new AwardCategory("foo", "bar", AwardCategoryType.Loan);
+                award = new Award("WOOFY", "desc", category);
+                studentAward = new StudentAward(studentAwardYear, studentId, award, true);
+                studentAwardPeriod = new StudentAwardPeriod(studentAward, awardPeriodId, awardStatus, isFrozen, false);
+                studentAwardPeriod.StudentAwardYear.CurrentConfiguration.AllowDeclineZeroOfAcceptedLoans = true;
+                studentAwardPeriod.AwardStatus = new AwardStatus("A", "A", AwardStatusCategory.Accepted);
+                Assert.IsFalse(studentAwardPeriod.IsStatusModifiable);
+            }
+
+            [TestMethod]
+            public void LoanAwardIsAccepted_IsStatusModifiableTest()
+            {
+                studentAwardPeriod.AwardStatus = new AwardStatus("A", "A", AwardStatusCategory.Accepted);
+                Assert.IsTrue(studentAwardPeriod.IsStatusModifiable);
+            }
+
+            [TestMethod]
+            public void NonLoanAwardIsAccepted_NotIsStatusModifiableTest()
+            {
+                award.IsFederalDirectLoan = false;                
+                studentAward = new StudentAward(studentAwardYear, studentId, award, true);
+                studentAwardPeriod = new StudentAwardPeriod(studentAward, awardPeriodId, awardStatus, isFrozen, false);
+                studentAwardPeriod.AwardStatus = new AwardStatus("A", "A", AwardStatusCategory.Accepted);
+                Assert.IsFalse(studentAwardPeriod.IsStatusModifiable);
+            }
+
+            [TestMethod]
+            public void NonLoanAwardIsDenied_NotIsStatusModifiableTest()
+            {
+                award.IsFederalDirectLoan = false;
+                studentAward = new StudentAward(studentAwardYear, studentId, award, true);
+                studentAwardPeriod = new StudentAwardPeriod(studentAward, awardPeriodId, awardStatus, isFrozen, false);
+                studentAwardPeriod.AwardStatus = new AwardStatus("D", "D", AwardStatusCategory.Denied);
+                Assert.IsFalse(studentAwardPeriod.IsStatusModifiable);
+            }
+
+
+                [TestMethod]
+            public void NonLoanAwardIsRejected_NotIsStatusModifiableTest()
+            {
+                award.IsFederalDirectLoan = false;
+                studentAward = new StudentAward(studentAwardYear, studentId, award, true);
+                studentAwardPeriod = new StudentAwardPeriod(studentAward, awardPeriodId, awardStatus, isFrozen, false);
+                studentAwardPeriod.AwardStatus = new AwardStatus("R", "R", AwardStatusCategory.Rejected);
+                Assert.IsFalse(studentAwardPeriod.IsStatusModifiable);
+            }
         }
 
         [TestClass]

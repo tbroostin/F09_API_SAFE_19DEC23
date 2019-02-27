@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
 using Ellucian.Colleague.Domain.Student.Entities;
 using System.Threading.Tasks;
@@ -43,5 +43,13 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// <param name="programCode">Program Code</param>
         /// <returns> <see cref="GraduationApplicationFee"/>The requested graduation application fee information</returns>
         Task<GraduationApplicationFee> GetGraduationApplicationFeeAsync(string studentId, string programCode);
+
+        /// <summary>
+        /// Determines a student's eligibility to apply for graduation in the requested programs
+        /// </summary>
+        /// <param name="studentId">Id of student to determine eligibility</param>
+        /// <param name="programCodes">Programs for which the eligibility is requested</param>
+        /// <returns>List of Graduation Application Program Eligibility items.</returns>
+        Task<IEnumerable<GraduationApplicationProgramEligibility>> GetGraduationApplicationEligibilityAsync(string studentId, IEnumerable<string> programCodes);
     }
 }

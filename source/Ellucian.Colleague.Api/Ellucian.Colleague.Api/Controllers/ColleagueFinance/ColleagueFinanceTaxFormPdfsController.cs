@@ -55,8 +55,14 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// Returns the data to be printed on the pdf for the T4A tax form.
         /// </summary>
         /// <param name="personId">ID of the person assigned to and requesting the T4A.</param>
-        /// <param name="recordId">The record ID where the T4A pdf data is stored</param>         
-        /// <returns>HttpResponseMessage</returns>
+        /// <param name="recordId">The record ID where the T4A pdf data is stored</param>  
+        /// <accessComments>
+        /// Requires permission VIEW.T4A for the recipient.
+        /// Requires permission VIEW.T4A for someone who currently has permission to proxy for the recipient requested.
+        /// Requires permission VIEW.RECIPIENT.T4A for admin view.
+        /// The tax form record requested must belong to the person ID requested.
+        /// </accessComments>        
+        /// <returns>An HttpResponseMessage containing a byte array representing a PDF.</returns>
         public async Task<HttpResponseMessage> GetFormT4aPdfAsync(string personId, string recordId)
         {
             if (string.IsNullOrEmpty(personId))
@@ -84,6 +90,9 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 // Determine which PDF template to use.
                 switch (pdfData.TaxYear)
                 {
+                    case "2018":
+                        pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/ColleagueFinance/2018-T4A.rdlc");
+                        break;
                     case "2017":
                         pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/ColleagueFinance/2017-T4A.rdlc");
                         break;
@@ -129,10 +138,10 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 response.Content.Headers.ContentLength = pdfBytes.Length;
                 return response;
             }
-            catch (PermissionsException pe)
+            catch (PermissionsException peex)
             {
-                logger.Error(pe, pe.Message);
-                throw CreateHttpResponseException(pe.Message, HttpStatusCode.Forbidden);
+                logger.Error(peex, peex.Message);
+                throw CreateHttpResponseException("Insufficient permissions to get the T4A PDF data.", HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {
@@ -146,10 +155,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// </summary>
         /// <param name="personId">ID of the person assigned to and requesting the 1099-MISC.</param>
         /// <param name="recordId">The record ID where the 1099-MISC pdf data is stored</param>         
-        /// <returns>HttpResponseMessage</returns>
         /// <accessComments>
-        /// In order to access 1099-Misc tax form PDF, the user shoud have the View.1099MISC permission and be requesting their own data
+        /// Requires permission VIEW.1099MISC.
+        /// The tax form record requested must belong to the current user.       
         /// </accessComments>
+        /// <returns>An HttpResponseMessage containing a byte array representing a PDF.</returns> 
         public async Task<HttpResponseMessage> Get1099MiscTaxFormPdfAsync(string personId, string recordId)
         {
             if (string.IsNullOrEmpty(personId))
@@ -174,10 +184,24 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 // Determine which PDF template to use.
                 switch (pdfData.TaxYear)
                 {
+                    case "2009":
+                        pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/ColleagueFinance/2009-1099MI.rdlc");
+                        break;
+                    case "2018":
                     case "2017":
+                    case "2016":
+                    case "2015":
+                    case "2011":
+                    case "2010":
+                    case "2012":
                         pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/ColleagueFinance/20XX-1099MI.rdlc");
-                        break;               
-                 
+                        break;
+                    case "2014":
+                        pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/ColleagueFinance/2014-1099MI.rdlc");
+                        break;
+                    case "2013":
+                        pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/ColleagueFinance/2013-1099MI.rdlc");
+                        break;
                     default:
                         var message = string.Format("Incorrect Tax Year {0}", pdfData.TaxYear);
                         logger.Error(message);
@@ -199,14 +223,14 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 response.Content.Headers.ContentLength = pdfBytes.Length;
                 return response;
             }
-            catch (PermissionsException pe)
+            catch (PermissionsException peex)
             {
-                logger.Error(pe, pe.Message);
-                throw CreateHttpResponseException(pe.Message, HttpStatusCode.Forbidden);
+                logger.Error(peex, peex.Message);
+                throw CreateHttpResponseException("Insufficient permissions to get the 1099-MISC PDF data.", HttpStatusCode.Forbidden);
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                logger.Error(e.Message);
+                logger.Error(ex, ex.Message);
                 throw CreateHttpResponseException("Error retrieving 1099-MISC PDF data.", HttpStatusCode.BadRequest);
             }
         }

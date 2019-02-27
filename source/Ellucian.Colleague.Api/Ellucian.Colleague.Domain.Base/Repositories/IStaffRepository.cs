@@ -38,5 +38,12 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <param name="ids">List of identifiers</param>
         /// <returns>List of Staff Entities</returns>
         Task<IEnumerable<Staff>> GetAsync(IEnumerable<string> ids);
+
+        /// <summary>
+        /// Gets the staff login ID for a person.
+        /// </summary>
+        /// <param name="personId">The person ID for whom to retrieve the staff login ID.</param>
+        /// <returns>A string containing the staff login ID.</returns>
+        Task<string> GetStaffLoginIdForPersonAsync(string personId);
     }
 }

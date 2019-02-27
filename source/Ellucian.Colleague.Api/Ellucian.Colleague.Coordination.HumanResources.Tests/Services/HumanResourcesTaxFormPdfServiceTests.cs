@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Tests.UserFactories;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
@@ -28,7 +28,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         private Mock<IHumanResourcesTaxFormPdfDataRepository> mockTaxFormPdfDataRepository;
         private Mock<IPersonRepository> mockPersonRepository;
         private ICurrentUserFactory currentUserFactory;
-        private string personId = "0000001";
+        private string personId = "000001";
         private string fakePdfPath = "fakePath";
         private string exceptionString = "exception";
         private List<string> institutionAddressLines;
@@ -43,6 +43,11 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             mockTaxFormPdfDataRepository.Setup<Task<FormT4PdfData>>(rep => rep.GetT4PdfAsync(It.IsAny<string>(), It.IsAny<string>())).Returns<string, string>((personId, recordId) =>
             {
                 return Task.FromResult(TestPdfDataRepository.GetT4PdfAsync(personId, recordId));
+            });
+
+            mockTaxFormPdfDataRepository.Setup<Task<FormT4PdfData>>(rep => rep.GetT4PdfAsync("000002", "2015")).Returns<string, string>((personId, recordId) =>
+            {
+                return Task.FromResult(new FormT4PdfData() { TaxYear = "2016", EmployeeId = "000003" });
             });
 
             // Mock to throw exception
@@ -78,15 +83,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 
             roles.Add(role);
            
-            role = new Domain.Entities.Role(2, "VIEW.T4A");
-            if (isPermissionsRequired)
-            {
-                role.AddPermission(new Domain.Entities.Permission("VIEW.T4A"));
-                role.AddPermission(new Domain.Entities.Permission("VIEW.RECIPIENT.T4A"));
-            }
-
-            roles.Add(role);
-
             // We need the unit tests to be independent of "real" implementations of these classes,
             // so we use Moq to create mock implementations that are based on the same interfaces.
             var roleRepository = new Mock<IRoleRepository>();
@@ -109,90 +105,97 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 
         #endregion
 
-        #region GetT4TaxFormData tests
+        #region GetT4TaxFormDataAsync tests
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
-        public async Task GetT4TaxFormData_NullPersonId()
+        public async Task GetT4TaxFormDataAsync_NullPersonId()
         {
-            var pdfData = await service.GetT4TaxFormData(null, "1");
+            var pdfData = await service.GetT4TaxFormDataAsync(null, "1");
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
-        public async Task GetT4TaxFormData_EmptyPersonId()
+        public async Task GetT4TaxFormDataAsync_EmptyPersonId()
         {
-            var pdfData = await service.GetT4TaxFormData("", "1");
+            var pdfData = await service.GetT4TaxFormDataAsync("", "1");
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
-        public async Task GetT4TaxFormData_NullRecordId()
+        public async Task GetT4TaxFormDataAsync_NullRecordId()
         {
-            var pdfData = await service.GetT4TaxFormData(personId, null);
+            var pdfData = await service.GetT4TaxFormDataAsync(personId, null);
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
-        public async Task GetT4TaxFormData_EmptyRecordId()
+        public async Task GetT4TaxFormDataAsync_EmptyRecordId()
         {
-            var pdfData = await service.GetT4TaxFormData(personId, "");
+            var pdfData = await service.GetT4TaxFormDataAsync(personId, "");
         }
 
         [TestMethod]
         [ExpectedException(typeof(PermissionsException))]
-        public async Task GetT4TaxFormData_PersonId_PermissionMissing()
+        public async Task GetT4TaxFormDataAsync_PersonId_PermissionMissing()
         {
             BuildTaxFormPdfService(false);
-            var pdfData = await service.GetT4TaxFormData("2", "1");
+            var pdfData = await service.GetT4TaxFormDataAsync("2", "1");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task GetW2TaxFormDataAsync_PersonId_DoesNotMatch_CurrentUser()
+        {
+            var pdfData = await service.GetT4TaxFormDataAsync("000002", "2015");
         }
 
         [TestMethod]
         [ExpectedException(typeof(Exception))]
-        public async Task GetT4TaxFormData_RepositoryThrowsException()
+        public async Task GetT4TaxFormDataAsync_RepositoryThrowsException()
         {
-            var pdfData = await service.GetT4TaxFormData(personId, exceptionString);
+            var pdfData = await service.GetT4TaxFormDataAsync(personId, exceptionString);
         }
 
         [TestMethod]
-        public async Task GetT4TaxFormData_Success_2015()
+        public async Task GetT4TaxFormDataAsync_Success_2015()
         {
-            var pdfData = await service.GetT4TaxFormData(personId, "2015");
+            var pdfData = await service.GetT4TaxFormDataAsync(personId, "2015");
             Assert.IsTrue(pdfData is FormT4PdfData);
         }
 
         [TestMethod]
-        public async Task GetT4TaxFormData_Success_2014()
+        public async Task GetT4TaxFormDataAsync_Success_2014()
         {
-            var pdfData = await service.GetT4TaxFormData(personId, "2014");
+            var pdfData = await service.GetT4TaxFormDataAsync(personId, "2014");
             Assert.IsTrue(pdfData is FormT4PdfData);
         }
 
         [TestMethod]
-        public async Task GetT4TaxFormData_Success_2013()
+        public async Task GetT4TaxFormDataAsync_Success_2013()
         {
-            var pdfData = await service.GetT4TaxFormData(personId, "2013");
+            var pdfData = await service.GetT4TaxFormDataAsync(personId, "2013");
             Assert.IsTrue(pdfData is FormT4PdfData);
         }
 
         [TestMethod]
-        public async Task GetT4TaxFormData_Success_2012()
+        public async Task GetT4TaxFormDataAsync_Success_2012()
         {
-            var pdfData = await service.GetT4TaxFormData(personId, "2012");
+            var pdfData = await service.GetT4TaxFormDataAsync(personId, "2012");
             Assert.IsTrue(pdfData is FormT4PdfData);
         }
 
         [TestMethod]
-        public async Task GetT4TaxFormData_Success_2011()
+        public async Task GetT4TaxFormDataAsync_Success_2011()
         {
-            var pdfData = await service.GetT4TaxFormData(personId, "2011");
+            var pdfData = await service.GetT4TaxFormDataAsync(personId, "2011");
             Assert.IsTrue(pdfData is FormT4PdfData);
         }
 
         [TestMethod]
-        public async Task GetT4TaxFormData_Success_2010()
+        public async Task GetT4TaxFormDataAsync_Success_2010()
         {
-            var pdfData = await service.GetT4TaxFormData(personId, "2010");
+            var pdfData = await service.GetT4TaxFormDataAsync(personId, "2010");
             Assert.IsTrue(pdfData is FormT4PdfData);
         }
 

@@ -1,6 +1,6 @@
-//Copyright 2017 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
 
-using Ellucian.Colleague.Coordination.HumanResoures.Services;
+using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;

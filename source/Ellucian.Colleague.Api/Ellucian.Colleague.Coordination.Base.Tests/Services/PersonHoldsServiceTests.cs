@@ -1,21 +1,22 @@
-﻿using Ellucian.Colleague.Domain.Base.Repositories;
+﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+
+using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Colleague.Data.Base.Transactions;
+using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Base.Tests;
+using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Colleague.Dtos;
+using Ellucian.Data.Colleague;
+using Ellucian.Web.Adapters;
+using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using Ellucian.Colleague.Coordination.Base.Services;
-using Ellucian.Web.Adapters;
-using Ellucian.Web.Security;
-using Ellucian.Colleague.Domain.Repositories;
-using Ellucian.Colleague.Dtos;
-using Ellucian.Colleague.Domain.Base.Tests;
-using Ellucian.Colleague.Domain.Base.Entities;
-using Ellucian.Colleague.Data.Base.Transactions;
-using Ellucian.Data.Colleague;
 
 namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 {
@@ -251,7 +252,9 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     .Returns(Task.FromResult("1"))
                     .Returns(Task.FromResult("2"))
                     .Returns(Task.FromResult("3"));
-                personRepoMock.Setup(i => i.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("29c20aa1-c1f1-4be9-8af9-d63cc92afcee");
+                Dictionary<string, string> personIdDict = new Dictionary<string, string>();
+                personIdDict.Add("S0001", "29c20aa1-c1f1-4be9-8af9-d63cc92afcee");
+                personRepoMock.Setup(i => i.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(personIdDict);
 
                 var results = await personHoldService.GetPersonHoldsAsync("S0001");
 
@@ -270,6 +273,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 };
                 personHoldsRepoMock.Setup(i => i.GetStudentHoldIdFromGuidAsync("23977f85-f200-479f-9eee-3921bb4667d3")).ReturnsAsync("1");
                 personHoldsRepoMock.Setup(i => i.DeletePersonHoldsAsync("1")).ReturnsAsync(resp);
+                string personHoldGuid = "23977f85-f200-479f-9eee-3921bb4667d3";
+                PersonRestriction personRestriction = allPersonRestrictionsEntities.FirstOrDefault(i => i.Id.Equals("2"));
+                var personRestrResult = new PersonRestriction(personHoldGuid, personRestriction.Id, personRestriction.StudentId, personRestriction.RestrictionId, null, null, null, "Y")
+                { Comment = string.Empty };
+                personHoldsRepoMock.Setup(i => i.GetPersonHoldByIdAsync(It.IsAny<string>())).ReturnsAsync(personRestrResult);
+
 
                 await personHoldService.DeletePersonHoldAsync("23977f85-f200-479f-9eee-3921bb4667d3");
             }
@@ -285,6 +294,13 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 {
                     new PersonHoldResponse(){ PersonHoldGuid = "48285630-3f7f-4b16-b73d-1b1a4bdd27ee", PersonHoldId= "123", WarningCode="Error", WarningMessage="Warning Message"}
                 });
+                string personHoldGuid = "23977f85-f200-479f-9eee-3921bb4667d3";
+                PersonRestriction personRestriction = allPersonRestrictionsEntities.FirstOrDefault(i => i.Id.Equals("2"));
+                var personRestrResult = new PersonRestriction(personHoldGuid, personRestriction.Id, personRestriction.StudentId, personRestriction.RestrictionId, null, null, null, "Y")
+                { Comment = string.Empty };
+                personHoldsRepoMock.Setup(i => i.GetPersonHoldByIdAsync(It.IsAny<string>())).ReturnsAsync(personRestrResult);
+                
+              
                 await personHoldService.DeletePersonHoldAsync("48285630-3f7f-4b16-b73d-1b1a4bdd27ee");
             }
 
@@ -295,6 +311,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 string studentGuid = "48285630-3f7f-4b16-b73d-1b1a4bdd27ee";
                 Dtos.PersonHold personHold = personHolds.FirstOrDefault(i => i.Id == personHoldGuid);
                 PersonRestriction personRestriction = allPersonRestrictionsEntities.FirstOrDefault(i => i.Id.Equals("2"));
+                PersonRestriction personRestrResult = new PersonRestriction(personHoldGuid, personRestriction.Id, personRestriction.StudentId, personRestriction.RestrictionId, null, null, null, "Y")
+                { Comment = string.Empty };
                 PersonHoldRequest req = new PersonHoldRequest("1", "1234", "R0004", personHold.StartOn, personHold.EndOn, string.Empty);
                 PersonHoldResponse resp = new PersonHoldResponse() 
                 {
@@ -320,8 +338,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 personRepoMock.Setup(i => i.GetPersonByGuidNonCachedAsync(studentGuid)).ReturnsAsync(new Domain.Base.Entities.Person("1234", "Bhole") { FirstName = "Jon", PersonCorpIndicator = "" });
                 referenceRepositoryMock.Setup(i => i.GetRestrictionsWithCategoryAsync(It.IsAny<bool>())).ReturnsAsync(personHoldsTypeCollection);
                 personHoldsRepoMock.Setup(i => i.UpdatePersonHoldAsync(It.IsAny < PersonHoldRequest>())).ReturnsAsync(resp);
-                personHoldServiceMock.Setup(i => i.GetPersonHoldAsync(It.IsAny<string>())).ReturnsAsync(personHold);
-                personHoldsRepoMock.Setup(i => i.GetPersonHoldByIdAsync(It.IsAny<string>())).ReturnsAsync(personRestriction);
+                personHoldServiceMock.Setup(i => i.GetPersonHoldAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(personHold);
+                personHoldsRepoMock.Setup(i => i.GetPersonHoldByIdAsync(It.IsAny<string>())).ReturnsAsync(personRestrResult);
                 personRepoMock.Setup(i => i.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(studentGuid);
                 personHoldsRepoMock.Setup(i => i.GetStudentHoldGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(personHoldGuid);
                 transManagerMock.Setup(mgr => mgr.ExecuteAsync<UpdateRestrictionRequest, UpdateRestrictionResponse>(updateRequest)).ReturnsAsync(updateResponse);
@@ -331,8 +349,6 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 Assert.AreEqual(personHold.Id, result.Id);
                 Assert.AreEqual(personHold.Comment, result.Comment);
-                Assert.AreEqual(personHold.EndOn.Value.Date, result.EndOn.Value.Date);
-                Assert.AreEqual(personHold.StartOn.Value.Date, result.StartOn.Value.Date);
                 Assert.AreEqual(personHold.NotificationIndicator, result.NotificationIndicator);
                 Assert.AreEqual(personHold.Person.Id, result.Person.Id);
                 Assert.AreEqual(personHold.PersonHoldTypeType.PersonHoldCategory.Value, result.PersonHoldTypeType.PersonHoldCategory.Value);
@@ -346,6 +362,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 string studentGuid = "48285630-3f7f-4b16-b73d-1b1a4bdd27ee";
                 Dtos.PersonHold personHold = personHolds.FirstOrDefault(i => i.Id == personHoldGuid);
                 PersonRestriction personRestriction = allPersonRestrictionsEntities.FirstOrDefault(i => i.Id.Equals("2"));
+                PersonRestriction personRestrResult = new PersonRestriction(newGuid, personRestriction.Id, personRestriction.StudentId, personRestriction.RestrictionId, null, null, null, "Y")
+                {  Comment = string.Empty};
                 PersonHoldRequest req = new PersonHoldRequest("1", "1234", "R0004", personHold.StartOn, personHold.EndOn, string.Empty);
                 PersonHoldResponse resp = new PersonHoldResponse()
                 {
@@ -371,8 +389,9 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 personRepoMock.Setup(i => i.GetPersonByGuidNonCachedAsync(studentGuid)).ReturnsAsync(new Domain.Base.Entities.Person("1234", "Bhole") { FirstName= "Jon", PersonCorpIndicator = "" });
                 referenceRepositoryMock.Setup(i => i.GetRestrictionsWithCategoryAsync(It.IsAny<bool>())).ReturnsAsync(personHoldsTypeCollection);
                 personHoldsRepoMock.Setup(i => i.UpdatePersonHoldAsync(It.IsAny<PersonHoldRequest>())).ReturnsAsync(resp);
-                personHoldServiceMock.Setup(i => i.GetPersonHoldAsync(It.IsAny<string>())).ReturnsAsync(personHold);
-                personHoldsRepoMock.Setup(i => i.GetPersonHoldByIdAsync(It.IsAny<string>())).ReturnsAsync(personRestriction);
+                personHoldServiceMock.Setup(i => i.GetPersonHoldAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(personHold);
+                personHoldsRepoMock.Setup(i => i.GetPersonHoldByIdAsync(It.IsAny<string>())).ReturnsAsync(personRestrResult);
+
                 personRepoMock.Setup(i => i.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(studentGuid);
                 personHoldsRepoMock.Setup(i => i.GetStudentHoldGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(newGuid);
                 transManagerMock.Setup(mgr => mgr.ExecuteAsync<UpdateRestrictionRequest, UpdateRestrictionResponse>(updateRequest)).ReturnsAsync(updateResponse);
@@ -382,8 +401,6 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 Assert.AreEqual(newGuid, result.Id);
                 Assert.AreEqual(personHold.Comment, result.Comment);
-                Assert.AreEqual(personHold.EndOn.Value.Date, result.EndOn.Value.Date);
-                Assert.AreEqual(personHold.StartOn.Value.Date, result.StartOn.Value.Date);
                 Assert.AreEqual(personHold.NotificationIndicator, result.NotificationIndicator);
                 Assert.AreEqual(personHold.Person.Id, result.Person.Id);
                 Assert.AreEqual(personHold.PersonHoldTypeType.PersonHoldCategory.Value, result.PersonHoldTypeType.PersonHoldCategory.Value);
@@ -447,19 +464,17 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 personHoldsRepoMock.Setup(i => i.GetPersonHoldByIdAsync("2")).ReturnsAsync(personRestriction);
                 personRepoMock.Setup(i => i.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("48285630-3f7f-4b16-b73d-1b1a4bdd27ee");
                 personHoldsRepoMock.Setup(i => i.GetStudentHoldGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("");
+                string personHoldGuid = "23977f85-f200-479f-9eee-3921bb4667d3";
+                var personRestrResult = new PersonRestriction(personHoldGuid, personRestriction.Id, personRestriction.StudentId, personRestriction.RestrictionId, null, null, null, "Y")
+                { Comment = string.Empty };
+                personHoldsRepoMock.Setup(i => i.GetPersonHoldByIdAsync(It.IsAny<string>())).ReturnsAsync(personRestrResult);
 
                 var result = await personHoldService.GetPersonHoldAsync("2");
             }
 
-            //[TestMethod]
-            //[ExpectedException(typeof(ArgumentNullException))]
-            //public async Task GetPersonHoldsAsync_NUll_Id_ArgumentNullException()
-            //{
-            //    var result = await personHoldService.GetPersonHoldsAsync("");
-            //}
-
+          
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(KeyNotFoundException))]
             public async Task DeletePersonHoldAsync_PersonHoldId_Null_ArgumentNullException()
             {
                 deleteRegistrationRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Base.PersonHoldsPermissionCodes.DeletePersonHold));

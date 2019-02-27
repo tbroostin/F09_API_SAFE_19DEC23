@@ -30,7 +30,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// <summary>
         /// Academic Program Start Date
         /// </summary>
-        public DateTime StartDate { get; private set; }
+        public DateTime? StartDate { get; private set; }
 
         /// <summary>
         /// Academic Program status
@@ -72,18 +72,40 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// A List of Student Majors coming from the program or from additional requirements.
         /// </summary>
         public List<string> StudentProgramMajors { get; private set; }
+
+        /// A Tuple collection of Student Majors coming from the program or from additional requirements.
+        /// </summary>
+        public List<Tuple<string, DateTime?, DateTime?>> StudentProgramMajorsTuple { get; private set; }
+
         /// <summary>
         /// A List of Student Minors coming from the program or from additional requirements.
         /// </summary>
         public List<string> StudentProgramMinors { get; private set; }
+
+        /// A Tuple collection of Student Minors coming from the program or from additional requirements.
+        /// </summary>
+        public List<Tuple<string, DateTime?, DateTime?>> StudentProgramMinorsTuple { get; private set; }
+
+
         /// A List of Student specializations coming from the program or from additional requirements.
         /// </summary>
         public List<string> StudentProgramSpecializations { get; private set; }
+
+        /// A Tuple collection of Student specializations coming from the program or from additional requirements.
+        /// </summary>
+        public List<Tuple<string, DateTime?, DateTime?>> StudentProgramSpecializationsTuple { get; private set; }
+
         /// <summary>
         /// A List of Student CCDs coming from the program or from additional requirements.
         /// </summary>
         public List<string> StudentProgramCcds { get; private set; }
-         /// <summary>
+
+        /// A Tuple collection of Student CCDs coming from the program or from additional requirements.
+        /// </summary>
+        public List<Tuple<string, DateTime?, DateTime?>> StudentProgramCCDsTuple { get; private set; }
+
+
+        /// <summary>
         /// The start term associated to this program
         /// </summary>
         public string StartTerm { get; set; }
@@ -123,6 +145,8 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// Indicates the primary academic program of the student.  Only one academic program should be set to preferred for a student.
         /// </summary>
         public bool IsPrimary { get; set; }
+        public string AdmitStatus { get; set; }
+        public CurriculumObjectiveCategory CurriculumObjective { get; set; }
 
 
         #endregion
@@ -149,10 +173,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             {
                 throw new ArgumentException(string.Concat("CatalogCode is required. Entity: 'STUDENT.PROGRAMS', Record ID: '", personId,  "*" , programCode, "'"));
             }
-            if (startDate == null || startDate == default(DateTime))
-            {
-                throw new ArgumentException(string.Concat("Start Date is required. Entity: 'STUDENT.PROGRAMS', Record ID: '", personId,  "*" , programCode, "'"));
-            }
+           
             if (string.IsNullOrEmpty(status))
             {
                 throw new ArgumentException(string.Concat("Enrollment status is required. Entity: 'STUDENT.PROGRAMS', Record ID: '", personId,  "*" , programCode, "'"));
@@ -189,7 +210,32 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             {
                    StudentProgramMajors.Add(majors);
             }
-            
+
+        }
+
+        /// <summary>
+        /// Add Student Majors into the Student Program
+        /// </summary>
+        /// <param name="majors">Other Majors Object</param>
+        /// <param name="startOn">Start on date</param>
+        /// <param name="endOn">end on date</param>
+        public void AddMajors(string majors, DateTime? startOn, DateTime? endOn)
+        {
+            if (majors == null)
+            {
+                throw new ArgumentNullException("majors");
+            }
+            var majorTuple = new Tuple<string, DateTime?, DateTime?>(majors, startOn, endOn);
+            if (StudentProgramMajorsTuple == null)
+            {
+                StudentProgramMajorsTuple = new List<Tuple<string, DateTime?, DateTime?>>();
+                StudentProgramMajorsTuple.Add(majorTuple);
+            }
+            else if (!StudentProgramMajorsTuple.Contains(majorTuple))
+            {
+                StudentProgramMajorsTuple.Add(majorTuple);
+            }
+
         }
         /// <summary>
         /// Add Student Minors into the Student Program
@@ -204,6 +250,30 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             else if (!StudentProgramMinors.Contains(minors))
             {
                 StudentProgramMinors.Add(minors);
+            }
+        }
+
+        /// <summary>
+        /// Add Student Minors into the Student Program
+        /// </summary>
+        /// <param name="minors">Other Minors Object</param>
+        /// <param name="startOn">Start on date</param>
+        /// <param name="endOn">end on date</param>
+        public void AddMinors(string minors, DateTime? startOn, DateTime? endOn)
+        {
+            if (minors == null)
+            {
+                throw new ArgumentNullException("minors");
+            }
+            var minorTuple = new Tuple<string, DateTime?, DateTime?>(minors, startOn, endOn);
+            if (StudentProgramMinorsTuple == null)
+            {
+                StudentProgramMinorsTuple = new List<Tuple<string, DateTime?, DateTime?>>();
+                StudentProgramMinorsTuple.Add(minorTuple);
+            }
+            else if (!StudentProgramMinorsTuple.Contains(minorTuple))
+            {
+                StudentProgramMinorsTuple.Add(minorTuple);
             }
 
         }
@@ -223,6 +293,30 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             }
 
         }
+
+        /// <summary>
+        /// Add Student CCDs into the Student Program
+        /// </summary>
+        /// <param name="ccds">CCDs</param>
+        /// <param name="startOn">Start on date</param>
+        /// <param name="endOn">end on date</param>
+        public void AddCcds(string ccds, DateTime? startOn, DateTime? endOn)
+        {
+            if (ccds == null)
+            {
+                throw new ArgumentNullException("ccds");
+            }
+            var ccdTuple = new Tuple<string, DateTime?, DateTime?>(ccds, startOn, endOn);
+            if (StudentProgramCCDsTuple == null)
+            {
+                StudentProgramCCDsTuple = new List<Tuple<string, DateTime?, DateTime?>>();
+                StudentProgramCCDsTuple.Add(ccdTuple);
+            }
+            else if (!StudentProgramCCDsTuple.Contains(ccdTuple))
+                StudentProgramCCDsTuple.Add(ccdTuple);
+
+        }
+
         /// <summary>
         /// Add Student specializations into the Student Program
         /// </summary>
@@ -237,7 +331,30 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             {
                 StudentProgramSpecializations.Add(specialization);
             }
+        }
 
+        /// <summary>
+        /// Add Student Specializations into the Student Program
+        /// </summary>
+        /// <param name="specializations">specializations</param>
+        /// <param name="startOn">Start on date</param>
+        /// <param name="endOn">end on date</param>
+        public void AddSpecializations(string specializations, DateTime? startOn, DateTime? endOn)
+        {
+            if (specializations == null)
+            {
+                throw new ArgumentNullException("specializations");
+            }
+            var specializationTuple = new Tuple<string, DateTime?, DateTime?>(specializations, startOn, endOn);
+            if (StudentProgramSpecializationsTuple == null)
+            {
+                StudentProgramSpecializationsTuple = new List<Tuple<string, DateTime?, DateTime?>>();
+                StudentProgramSpecializationsTuple.Add(specializationTuple);
+            }
+            else if (!StudentProgramSpecializationsTuple.Contains(specializationTuple))
+            {
+                StudentProgramSpecializationsTuple.Add(specializationTuple);
+            }
         }
         /// <summary>
         /// Add Other Honors

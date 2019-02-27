@@ -57,8 +57,9 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <returns>List of FinancialAidApplications <see cref="Dtos.FinancialAidApplication"/> objects representing matching financialAidApplications</returns>
         [HttpGet]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
-        [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
-        public async Task<IHttpActionResult> GetAsync(Paging page)
+        [ValidateQueryStringFilter()]
+        [QueryStringFilterFilter("criteria", typeof(Dtos.FinancialAidApplication)), FilteringFilter(IgnoreFiltering = true)]
+        public async Task<IHttpActionResult> GetAsync(Paging page, QueryStringFilter criteria)
         {
             var bypassCache = false;
             if (Request.Headers.CacheControl != null)
@@ -74,8 +75,10 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
-                var pageOfItems = await studentFinancialAidApplicationService.GetAsync(page.Offset, page.Limit, bypassCache);
-
+                var criteriaObject = GetFilterObject<Dtos.FinancialAidApplication>(logger, "criteria");
+                if (CheckForEmptyFilterParameters())
+                    return new PagedHttpActionResult<IEnumerable<Dtos.FinancialAidApplication>>(new List<Dtos.FinancialAidApplication>(), page, 0, this.Request);
+                var pageOfItems = await studentFinancialAidApplicationService.GetAsync(page.Offset, page.Limit, criteriaObject, bypassCache);
                 AddEthosContextProperties(
                     await studentFinancialAidApplicationService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                     await studentFinancialAidApplicationService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -91,7 +94,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -154,7 +157,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {

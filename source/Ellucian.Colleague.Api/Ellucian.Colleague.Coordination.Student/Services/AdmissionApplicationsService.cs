@@ -1,5 +1,4 @@
-﻿
-//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -83,14 +82,15 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
                 var admissionApplicationsCollection = new List<Ellucian.Colleague.Dtos.AdmissionApplication>();
 
-                Tuple<IEnumerable<Ellucian.Colleague.Domain.Student.Entities.AdmissionApplication>, int> admissionApplicationsEntities = await _admissionApplicationsRepository.GetAdmissionApplicationsAsync(offset, limit, bypassCache);
+                var admissionApplicationsEntities = await _admissionApplicationsRepository.GetAdmissionApplicationsAsync(offset, limit, bypassCache);
                 if (admissionApplicationsEntities != null && admissionApplicationsEntities.Item1.Any())
-                {   
-                    _personIds = await BuildLocalPersonGuids(admissionApplicationsEntities.Item1);
-
+                {
+                    var ownerIds = await GetLocalOwnerIdsAsync(admissionApplicationsEntities.Item1);
+                    var personIds = BuildLocalPersonGuids(admissionApplicationsEntities.Item1, ownerIds);
+                    var personGuidCollection = await _personRepository.GetPersonGuidsCollectionAsync(personIds);
                     foreach (var admissionApplications in admissionApplicationsEntities.Item1)
                     {
-                        admissionApplicationsCollection.Add(await ConvertAdmissionApplicationsEntityToDto(admissionApplications, bypassCache));
+                        admissionApplicationsCollection.Add(await ConvertAdmissionApplicationsEntityToDto(admissionApplications, personGuidCollection, ownerIds, bypassCache));
                     }
                 }
                 return admissionApplicationsCollection.Any() ? new Tuple<IEnumerable<Ellucian.Colleague.Dtos.AdmissionApplication>, int>(admissionApplicationsCollection, admissionApplicationsEntities.Item2) :
@@ -137,14 +137,15 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
                 var admissionApplicationsCollection = new List<Ellucian.Colleague.Dtos.AdmissionApplication2>();
 
-                Tuple<IEnumerable<Ellucian.Colleague.Domain.Student.Entities.AdmissionApplication>, int> admissionApplicationsEntities = await _admissionApplicationsRepository.GetAdmissionApplications2Async(offset, limit, bypassCache);
+                var admissionApplicationsEntities = await _admissionApplicationsRepository.GetAdmissionApplicationsAsync(offset, limit, bypassCache);
                 if (admissionApplicationsEntities != null && admissionApplicationsEntities.Item1.Any())
                 {
-                    _personIds = await BuildLocalPersonGuids(admissionApplicationsEntities.Item1);
-
+                    var ownerIds = await GetLocalOwnerIdsAsync(admissionApplicationsEntities.Item1);
+                    var personIds = BuildLocalPersonGuids(admissionApplicationsEntities.Item1, ownerIds);
+                    var personGuidCollection = await _personRepository.GetPersonGuidsCollectionAsync(personIds);
                     foreach (var admissionApplications in admissionApplicationsEntities.Item1)
                     {
-                        admissionApplicationsCollection.Add(await ConvertAdmissionApplicationsEntityToDto2(admissionApplications, bypassCache));
+                        admissionApplicationsCollection.Add(await ConvertAdmissionApplicationsEntityToDto2Async(admissionApplications, personGuidCollection, ownerIds, bypassCache));
                     }
                 }
                 return admissionApplicationsCollection.Any() ? new Tuple<IEnumerable<Ellucian.Colleague.Dtos.AdmissionApplication2>, int>(admissionApplicationsCollection, admissionApplicationsEntities.Item2) :
@@ -182,15 +183,20 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// Get a AdmissionApplications from its GUID
         /// </summary>
         /// <returns>AdmissionApplications DTO object</returns>
-        public async Task<Ellucian.Colleague.Dtos.AdmissionApplication> GetAdmissionApplicationsByGuidAsync(string guid)
+        public async Task<Dtos.AdmissionApplication> GetAdmissionApplicationsByGuidAsync(string guid)
         {
             try
             {
                 CheckUserAdmissionApplicationsViewPermissions();
 
-                Ellucian.Colleague.Domain.Student.Entities.AdmissionApplication admissionApplication = await _admissionApplicationsRepository.GetAdmissionApplicationByIdAsync(guid);
-                _personIds = await BuildLocalPersonGuids(new List<Ellucian.Colleague.Domain.Student.Entities.AdmissionApplication>() { admissionApplication });
-                return await ConvertAdmissionApplicationsEntityToDto(admissionApplication, true);
+                var admissionApplication = await _admissionApplicationsRepository.GetAdmissionApplicationByIdAsync(guid);
+                var admissionApplications = new List<Domain.Student.Entities.AdmissionApplication>() { admissionApplication };
+
+                var ownerIds = await GetLocalOwnerIdsAsync(admissionApplications);
+                var personIds = BuildLocalPersonGuids(admissionApplications, ownerIds);  
+                var personGuidCollection = await _personRepository.GetPersonGuidsCollectionAsync(personIds);
+
+                return await ConvertAdmissionApplicationsEntityToDto(admissionApplication, personGuidCollection, ownerIds, true);
             }
             catch (ArgumentNullException ex)
             {
@@ -230,13 +236,18 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 CheckUserAdmissionApplicationsViewPermissions();
 
-                Ellucian.Colleague.Domain.Student.Entities.AdmissionApplication admissionApplication = await _admissionApplicationsRepository.GetAdmissionApplicationByIdAsync(guid);
+                var admissionApplication = await _admissionApplicationsRepository.GetAdmissionApplicationByIdAsync(guid);
                 if (admissionApplication == null)
                 {
                     return new AdmissionApplication2();
                 }
-                _personIds = await BuildLocalPersonGuids(new List<Ellucian.Colleague.Domain.Student.Entities.AdmissionApplication>() { admissionApplication });
-                return await ConvertAdmissionApplicationsEntityToDto2(admissionApplication, true);
+                var admissionApplications = new List<Ellucian.Colleague.Domain.Student.Entities.AdmissionApplication>() { admissionApplication };
+
+                var ownerIds = await GetLocalOwnerIdsAsync(admissionApplications);
+                var personIds = BuildLocalPersonGuids(admissionApplications, ownerIds);
+                var personGuidCollection = await _personRepository.GetPersonGuidsCollectionAsync(personIds);
+
+                return await ConvertAdmissionApplicationsEntityToDto2Async(admissionApplication, personGuidCollection, ownerIds, true);
             }
             catch (ArgumentNullException ex)
             {
@@ -287,11 +298,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <param name="source">AdmissionApplications domain entity</param>
         /// <returns>AdmissionApplications DTO</returns>
-        private async Task<Ellucian.Colleague.Dtos.AdmissionApplication> ConvertAdmissionApplicationsEntityToDto(Ellucian.Colleague.Domain.Student.Entities.AdmissionApplication source, bool bypassCache)
+        private async Task<Dtos.AdmissionApplication> ConvertAdmissionApplicationsEntityToDto(Domain.Student.Entities.AdmissionApplication source, 
+            Dictionary<string, string> personGuidCollection, Dictionary<string, string> ownerIdCollection, bool bypassCache)
         {
             try
             {
-                var admissionApplication = new Ellucian.Colleague.Dtos.AdmissionApplication();
+                var admissionApplication = new Dtos.AdmissionApplication();
                 //Required fields
                 admissionApplication.Id = source.Guid;                              
 
@@ -301,7 +313,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     logger.Error(error);
                     throw new InvalidOperationException(error);
                 }
-                admissionApplication.Applicant = await ConvertEntityKeyToPersonGuidObjectAsync(source.ApplicantPersonId);
+                admissionApplication.Applicant = ConvertEntityKeyToPersonGuidObject(source.ApplicantPersonId, personGuidCollection);
 
                 if (source.AdmissionApplicationStatuses == null)
                 {
@@ -329,31 +341,26 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     try
                     {
                         var id = string.Empty;
-                        if (_staffOperIdsDict != null && (!string.IsNullOrEmpty(source.ApplicationAdmissionsRep) || !string.IsNullOrEmpty(admissionApplicationStatus.ApplicationDecisionBy)))
+                        if (ownerIdCollection != null && (!string.IsNullOrEmpty(source.ApplicationAdmissionsRep) || !string.IsNullOrEmpty(admissionApplicationStatus.ApplicationDecisionBy)))
                         {
                             //Check first if admin rep has value
                             if (!string.IsNullOrEmpty(source.ApplicationAdmissionsRep))
                             {
-                                admissionApplication.Owner = await ConvertEntityKeyToPersonGuidObjectAsync(source.ApplicationAdmissionsRep);
+                                admissionApplication.Owner = ConvertEntityKeyToPersonGuidObject(source.ApplicationAdmissionsRep, personGuidCollection);
                             }
-                            else if (_staffOperIdsDict.TryGetValue(source.ApplicationAdmissionsRep, out id))
+                            else if ((ownerIdCollection.TryGetValue(source.ApplicationAdmissionsRep, out id)) && (!string.IsNullOrEmpty(id)))
                             {
-                                if (!string.IsNullOrEmpty(id))
-                                {
-                                    admissionApplication.Owner = await ConvertEntityKeyToPersonGuidObjectAsync(id);
-                                }
+
                             }
                             // else check if _staffOperIdsDict has the value
-                            else if (_staffOperIdsDict.TryGetValue(admissionApplicationStatus.ApplicationDecisionBy, out id))
+                            else if ((ownerIdCollection.TryGetValue(admissionApplicationStatus.ApplicationDecisionBy, out id)) && (!string.IsNullOrEmpty(id)))
                             {
-                                if (!string.IsNullOrEmpty(id))
-                                {
-                                    admissionApplication.Owner = await ConvertEntityKeyToPersonGuidObjectAsync(id);
-                                }
+
+                                admissionApplication.Owner = ConvertEntityKeyToPersonGuidObject(id, personGuidCollection);
                             }
                             else
                             {
-                                admissionApplication.Owner = await ConvertEntityKeyToPersonGuidObjectAsync(admissionApplicationStatus.ApplicationDecisionBy);
+                                admissionApplication.Owner = ConvertEntityKeyToPersonGuidObject(admissionApplicationStatus.ApplicationDecisionBy, personGuidCollection);
                             }
                         }
                     }
@@ -363,19 +370,19 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                 }
 
-                admissionApplication.School = await ConvertEntityToSchoolGuidObjectAsync(source.ApplicationSchool, bypassCache);
+                admissionApplication.School = await ConvertEntityToSchoolGuidObjectAsync(source.ApplicationSchool);
                 admissionApplication.ReferenceID = string.IsNullOrEmpty(source.ApplicationNo) ? null : source.ApplicationNo;
                 admissionApplication.Type = await ConvertEntityToTypeGuidObjectDtoAsync(bypassCache);
-                admissionApplication.AcademicPeriod = await ConvertEntityToAcademicPeriodGuidObjectAsync(source.ApplicationStartTerm, bypassCache);
-                admissionApplication.Source = await ConvertEntityToApplicationSourceGuidObjectDtoAsync(source.ApplicationSource, bypassCache);
-                admissionApplication.AdmissionPopulation = await ConvertEntityToAdmitStatusGuidObjectDtoAsync(source.ApplicationAdmitStatus, bypassCache);
-                admissionApplication.Site = await ConvertEntityToApplLocationGuidObjectDtoAsync(source.ApplicationLocations, bypassCache);
-                admissionApplication.ResidencyType = await ConvertEntityToApplResidencyStatusGuidObjectDtoAsync(source.ApplicationResidencyStatus, bypassCache);
-                admissionApplication.Program = await ConvertEntityToAcadProgGuidObjectDtoAsync(source.ApplicationAcadProgram, bypassCache);
+                admissionApplication.AcademicPeriod = await ConvertEntityToAcademicPeriodGuidObjectAsync(source.ApplicationStartTerm);
+                admissionApplication.Source = await ConvertEntityToApplicationSourceGuidObjectDtoAsync(source.ApplicationSource);
+                admissionApplication.AdmissionPopulation = await ConvertEntityToAdmitStatusGuidObjectDtoAsync(source.ApplicationAdmitStatus);
+                admissionApplication.Site = await ConvertEntityToApplLocationGuidObjectDtoAsync(source.ApplicationLocations);
+                admissionApplication.ResidencyType = await ConvertEntityToApplResidencyStatusGuidObjectDtoAsync(source.ApplicationResidencyStatus);
+                admissionApplication.Program = await ConvertEntityToAcadProgGuidObjectDtoAsync(source.ApplicationAcadProgram);
                 admissionApplication.Level = await ConvertEntityToAcadProgLevelGuidObjectDtoAsync(source.ApplicationAcadProgram, bypassCache);
                 admissionApplication.Disciplines = await ConvertEntityToDisciplinesDtoAsync(source.ApplicationAcadProgram, source.ApplicationStprAcadPrograms, bypassCache);
-                admissionApplication.AcademicLoad = ConvertEntityToAcaDemicLoadTypeDto(source.ApplicationStudentLoadIntent);
-                admissionApplication.Withdrawal = await ConvertEntityToWithdrawlDtoAsync(source.ApplicationAttendedInstead, source.ApplicationWithdrawReason, bypassCache);
+                admissionApplication.AcademicLoad = ConvertEntityToAcademicLoadTypeDto(source.ApplicationStudentLoadIntent);
+                admissionApplication.Withdrawal = await ConvertEntityToWithdrawlDtoAsync(source.ApplicationAttendedInstead, source.ApplicationWithdrawReason, personGuidCollection, bypassCache);
                 admissionApplication.Comment = string.IsNullOrEmpty(source.ApplicationComments) ? null : source.ApplicationComments;
 
                 return admissionApplication;
@@ -405,7 +412,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <param name="source">AdmissionApplications domain entity</param>
         /// <returns>AdmissionApplications DTO</returns>
-        private async Task<Ellucian.Colleague.Dtos.AdmissionApplication2> ConvertAdmissionApplicationsEntityToDto2(Ellucian.Colleague.Domain.Student.Entities.AdmissionApplication source, bool bypassCache)
+        private async Task<Ellucian.Colleague.Dtos.AdmissionApplication2> ConvertAdmissionApplicationsEntityToDto2Async(Domain.Student.Entities.AdmissionApplication source,
+            Dictionary<string, string> personGuidCollection, Dictionary<string, string> ownerIdCollection, bool bypassCache)
         {
             try
             {
@@ -417,17 +425,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     throw new ArgumentNullException("Person key is required. ");
                 }
-                var applicant = (await PersonGuidsAsync()).FirstOrDefault(i => i.Key.Equals(source.ApplicantPersonId, StringComparison.OrdinalIgnoreCase));
-                if (applicant.Equals(default(KeyValuePair<string, string>)))
+               
+                var personGuid = string.Empty;
+                personGuidCollection.TryGetValue(source.ApplicantPersonId, out personGuid);
+                if (string.IsNullOrEmpty(personGuid))
                 {
-                    var error = string.Format("Person not found for key {0}. ", source.ApplicantPersonId);
-                    throw new KeyNotFoundException(error);
+                    throw new KeyNotFoundException(string.Concat("Person guid not found, PersonId: '", source.ApplicantPersonId, "', Record ID: '", source.ApplicationRecordKey, "'"));
                 }
-                admissionApplication.Applicant = new GuidObject2(applicant.Value);
+                admissionApplication.Applicant = new GuidObject2(personGuid);
                 
-                DateTime? appliedOn = null;
-                DateTime? admittedOn = null;
-                DateTime? matriculatedOn = null;
+                
                 DateTime? withdrawnOn = null;
                 var applicationStatuses = await GetApplicationStatusesAsync(bypassCache);
                 var appliedStatuses = applicationStatuses.Where(ap => !ap.SpecialProcessingCode.Equals(string.Empty, StringComparison.OrdinalIgnoreCase))
@@ -446,68 +453,47 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     foreach (var statusEntity in source.AdmissionApplicationStatuses)
                     {
-                        if (appliedStatuses.Count() > 0)
+                        if ((appliedStatuses != null) && (appliedStatuses.Any()) 
+                            && (appliedStatuses.Contains(statusEntity.ApplicationStatus)))
                         {
-                            if (appliedStatuses.Contains(statusEntity.ApplicationStatus))
-                            {
-                                appliedOn = statusEntity.ApplicationStatusDate;
-                            }
-                        }
-                        
-                        if (admittedStatuses.Count() > 0)
-                        {
-                            if (admittedStatuses.Contains(statusEntity.ApplicationStatus))
-                            {
-                                admittedOn = statusEntity.ApplicationStatusDate;
-                            }
+                            admissionApplication.AppliedOn = statusEntity.ApplicationStatusDate;
                         }
 
-                        if (matriculatedStatuses.Count() > 0)
+
+                        if ((admittedStatuses != null) && (admittedStatuses.Any()) 
+                            && (admittedStatuses.Contains(statusEntity.ApplicationStatus)))
                         {
-                            if (matriculatedStatuses.Contains(statusEntity.ApplicationStatus))
-                            {
-                                matriculatedOn = statusEntity.ApplicationStatusDate;
-                            }
+                            admissionApplication.AdmittedOn = statusEntity.ApplicationStatusDate;
                         }
 
-                        if (withdrawnStatuses.Count() > 0)
+                        if ((matriculatedStatuses != null) && (matriculatedStatuses.Any())
+                            && (matriculatedStatuses.Contains(statusEntity.ApplicationStatus)))
                         {
-                            if (withdrawnStatuses.Contains(statusEntity.ApplicationStatus))
-                            {
-                                withdrawnOn = statusEntity.ApplicationStatusDate;
-                            }
+                            admissionApplication.MatriculatedOn = statusEntity.ApplicationStatusDate;
+                        }
+
+                        if ((withdrawnStatuses != null) && (withdrawnStatuses.Any())
+                            && (withdrawnStatuses.Contains(statusEntity.ApplicationStatus)))
+                        {
+                            withdrawnOn = statusEntity.ApplicationStatusDate;
                         }
                     }
-                    if (appliedOn != null)
-                    {
-                        admissionApplication.AppliedOn = appliedOn;
-                    }
-
-                    if (admittedOn != null)
-                    {
-                        admissionApplication.AdmittedOn = admittedOn;
-                    }
-
-                    if (matriculatedOn != null)
-                    {
-                        admissionApplication.MatriculatedOn = matriculatedOn;
-                    }
-
+                                   
                     try
-                    {
-                        var id = string.Empty;
-                        if (_staffOperIdsDict != null && (!string.IsNullOrEmpty(source.ApplicationAdmissionsRep)))
+                    {                      
+                        if (ownerIdCollection != null && (!string.IsNullOrEmpty(source.ApplicationAdmissionsRep)))
                         {
+                            var id = string.Empty;
                             //Check first if admin rep has value
                             if (!string.IsNullOrEmpty(source.ApplicationAdmissionsRep))
                             {
-                                admissionApplication.Owner = await ConvertEntityKeyToPersonGuidObjectAsync(source.ApplicationAdmissionsRep);
+                                admissionApplication.Owner = ConvertEntityKeyToPersonGuidObject(source.ApplicationAdmissionsRep, personGuidCollection);
                             }
-                            else if (_staffOperIdsDict.TryGetValue(source.ApplicationAdmissionsRep, out id))
+                            else if (ownerIdCollection.TryGetValue(source.ApplicationAdmissionsRep, out id))
                             {
                                 if (!string.IsNullOrEmpty(id))
                                 {
-                                    admissionApplication.Owner = await ConvertEntityKeyToPersonGuidObjectAsync(id);
+                                    admissionApplication.Owner = ConvertEntityKeyToPersonGuidObject(id, personGuidCollection);
                                 }
                             }
                         }
@@ -518,18 +504,19 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                 }
 
-                admissionApplication.School = await ConvertEntityToSchoolGuidObjectAsync(source.ApplicationSchool, bypassCache);
+                admissionApplication.School = await ConvertEntityToSchoolGuidObjectAsync(source.ApplicationSchool);
                 admissionApplication.ReferenceID = string.IsNullOrEmpty(source.ApplicationNo) ? null : source.ApplicationNo;
                 admissionApplication.Type = await ConvertEntityToTypeGuidObjectDto2Async(source.ApplicationIntgType, bypassCache);
-                admissionApplication.AcademicPeriod = await ConvertEntityToAcademicPeriodGuidObjectAsync(source.ApplicationStartTerm, bypassCache);
-                admissionApplication.Source = await ConvertEntityToApplicationSourceGuidObjectDtoAsync(source.ApplicationSource, bypassCache);
-                admissionApplication.AdmissionPopulation = await ConvertEntityToAdmitStatusGuidObjectDtoAsync(source.ApplicationAdmitStatus, bypassCache);
-                admissionApplication.Site = await ConvertEntityToApplLocationGuidObjectDtoAsync(source.ApplicationLocations, bypassCache);
-                admissionApplication.ResidencyType = await ConvertEntityToApplResidencyStatusGuidObjectDtoAsync(source.ApplicationResidencyStatus, bypassCache);
-                admissionApplication.Program = await ConvertEntityToAcadProgGuidObjectDtoAsync(source.ApplicationAcadProgram, bypassCache);
+                admissionApplication.AcademicPeriod = await ConvertEntityToAcademicPeriodGuidObjectAsync(source.ApplicationStartTerm);
+                admissionApplication.Source = await ConvertEntityToApplicationSourceGuidObjectDtoAsync(source.ApplicationSource);
+                admissionApplication.AdmissionPopulation = await ConvertEntityToAdmitStatusGuidObjectDtoAsync(source.ApplicationAdmitStatus);
+                admissionApplication.Site = await ConvertEntityToApplLocationGuidObjectDtoAsync(source.ApplicationLocations);
+                admissionApplication.ResidencyType = await ConvertEntityToApplResidencyStatusGuidObjectDtoAsync(source.ApplicationResidencyStatus);
+                admissionApplication.Program = await ConvertEntityToAcadProgGuidObjectDtoAsync(source.ApplicationAcadProgram);
                 admissionApplication.Level = await ConvertEntityToAcadProgLevelGuidObjectDtoAsync(source.ApplicationAcadProgram, bypassCache);
-                admissionApplication.AcademicLoad = ConvertEntityToAcaDemicLoadTypeDto(source.ApplicationStudentLoadIntent);
-                admissionApplication.Withdrawal = await ConvertEntityToWithdrawl2DtoAsync(source.ApplicationAttendedInstead, source.ApplicationWithdrawReason, source.ApplicationWithdrawDate, withdrawnOn, bypassCache);
+                admissionApplication.AcademicLoad = ConvertEntityToAcademicLoadTypeDto(source.ApplicationStudentLoadIntent);
+                admissionApplication.Withdrawal = await ConvertEntityToWithdrawl2DtoAsync(source.ApplicationAttendedInstead, source.ApplicationWithdrawReason, 
+                    source.ApplicationWithdrawDate, withdrawnOn, personGuidCollection, bypassCache);
                 admissionApplication.Comment = string.IsNullOrEmpty(source.ApplicationComments) ? null : source.ApplicationComments;
 
                 return admissionApplication;
@@ -559,41 +546,19 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <param name="personRecordKey"></param>
         /// <returns></returns>
-        private async Task<GuidObject2> ConvertEntityKeyToPersonGuidObjectAsync(string personRecordKey)
+        private GuidObject2 ConvertEntityKeyToPersonGuidObject(string personRecordKey, Dictionary<string, string> personGuidCollection)
         {
             if (string.IsNullOrEmpty(personRecordKey))
             {
                 throw new ArgumentNullException("Person key is required. ");
             }
-
-            var source = (await PersonGuidsAsync()).FirstOrDefault(i => i.Key.Equals(personRecordKey, StringComparison.OrdinalIgnoreCase));
-            if (source.Equals(default(KeyValuePair<string, string>)))
+            var personGuid = string.Empty;
+            personGuidCollection.TryGetValue(personRecordKey, out personGuid);
+            if (string.IsNullOrEmpty(personGuid))
             {
-                var error = string.Format("Person not found for key {0}. ", personRecordKey);
-                throw new KeyNotFoundException(error);
+                throw new KeyNotFoundException(string.Concat("Person guid not found, PersonId: '", personRecordKey));
             }
-            return string.IsNullOrEmpty(source.Value) ? null : new GuidObject2(source.Value);
-        }
-
-        /// <summary>
-        /// Gets person guid object
-        /// </summary>
-        /// <param name="personRecordKey"></param>
-        /// <returns></returns>
-        private async Task<AdmissionApplicationStudentDtoProperty> ConvertEntityKeyToPersonApplicantAsync(string personRecordKey)
-        {
-            if (string.IsNullOrEmpty(personRecordKey))
-            {
-                throw new ArgumentNullException("Person key is required. ");
-            }
-
-            var source = (await PersonGuidsAsync()).FirstOrDefault(i => i.Key.Equals(personRecordKey, StringComparison.OrdinalIgnoreCase));
-            if (source.Equals(default(KeyValuePair<string, string>)))
-            {
-                var error = string.Format("Person not found for key {0}. ", personRecordKey);
-                throw new KeyNotFoundException(error);
-            }
-            return new AdmissionApplicationStudentDtoProperty() { Student = new GuidObject2(source.Value) };
+            return  new GuidObject2(personGuid);
         }
 
         /// <summary>
@@ -608,11 +573,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 throw new ArgumentNullException("Statuses are required. ");
             }
 
-            List<Dtos.DtoProperties.AdmissionApplicationsStatus> statusesList = new List<Dtos.DtoProperties.AdmissionApplicationsStatus>();
+            var statusesList = new List<Dtos.DtoProperties.AdmissionApplicationsStatus>();
 
             foreach (var admissionApplicationStatus in admissionApplicationStatuses)
             {
-                Dtos.DtoProperties.AdmissionApplicationsStatus status = new Dtos.DtoProperties.AdmissionApplicationsStatus()
+                var status = new Dtos.DtoProperties.AdmissionApplicationsStatus()
                 {
                     AdmissionApplicationsStatusDetail = await ConvertEntityToStatusDetailGuidObjectAsync(admissionApplicationStatus.ApplicationStatus, bypassCache),
                     AdmissionApplicationsStatusType = await ConvertEntityToStatusType(admissionApplicationStatus.ApplicationStatus, bypassCache),
@@ -639,7 +604,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             foreach (var admissionApplicationStatus in admissionApplicationStatuses)
             {
-                Dtos.DtoProperties.AdmissionApplicationsStatus2 status = new Dtos.DtoProperties.AdmissionApplicationsStatus2()
+                var status = new Dtos.DtoProperties.AdmissionApplicationsStatus2()
                 {
                     AdmissionApplicationsStatusDetail = await ConvertEntityToStatusDetailGuidObjectAsync(admissionApplicationStatus.ApplicationStatus, bypassCache),
                     AdmissionApplicationsStatusType = await ConvertEntityToStatusType2(admissionApplicationStatus.ApplicationStatus, bypassCache),
@@ -692,20 +657,20 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// Gets admission applications status type
         /// </summary>
         /// <param name="sourceCode"></param>
-        /// <returns></returns>
+        /// <returns>AdmissionApplicationsStatusType enumeration</returns>
         private async Task<AdmissionApplicationsStatusType> ConvertEntityToStatusType(string sourceCode, bool bypassCache)
         {
-            string status = string.Empty;
+            var status = string.Empty;            
             if (!string.IsNullOrEmpty(sourceCode))
             {
-                var statusEntity = (await AdmissionApplicationStatusTypesAsync(bypassCache)).FirstOrDefault(s => s.Code.Equals(sourceCode, StringComparison.OrdinalIgnoreCase));
-
-                if (statusEntity == null)
+                try
                 {
-                    var error = string.Format("Application status not found for code {0}. ", sourceCode);
-                    throw new KeyNotFoundException(error);
+                    status = await _studentReferenceDataRepository.GetAdmissionDecisionTypesSPCodeAsync(sourceCode);
                 }
-                status = statusEntity.SpecialProcessingCode;
+                catch (Exception)
+                {
+                    status = sourceCode;
+                }               
             }
             else
             {
@@ -734,26 +699,26 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// Gets admission applications status type
         /// </summary>
         /// <param name="sourceCode"></param>
-        /// <returns></returns>
+        /// <returns>AdmissionApplicationsStatusType2 enumeration</returns>
         private async Task<AdmissionApplicationsStatusType2> ConvertEntityToStatusType2(string sourceCode, bool bypassCache)
         {
-            string status = string.Empty;
+            var status = string.Empty;
             if (!string.IsNullOrEmpty(sourceCode))
             {
-                var statusEntity = (await AdmissionApplicationStatusTypesAsync(bypassCache)).FirstOrDefault(s => s.Code.Equals(sourceCode, StringComparison.OrdinalIgnoreCase));
-
-                if (statusEntity == null)
+                try
                 {
-                    var error = string.Format("Application status not found for code {0}. ", sourceCode);
-                    throw new KeyNotFoundException(error);
+                    status = await _studentReferenceDataRepository.GetAdmissionDecisionTypesSPCodeAsync(sourceCode);
                 }
-                status = statusEntity.SpecialProcessingCode;
+                catch (Exception)
+                {
+                    status = sourceCode;
+                }
             }
             else
             {
                 status = sourceCode;
             }
-           
+
             switch (status)
             {
                 case "AP":
@@ -779,36 +744,25 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="sourceCode"></param>
         /// <returns></returns>
         private async Task<GuidObject2> ConvertEntityToStatusDetailGuidObjectAsync(string sourceCode, bool bypassCache)
-        {            
-            if (string.IsNullOrEmpty(sourceCode))
-            {
-                return null;
-            }
-            var source = (await AdmissionApplicationStatusTypesAsync(bypassCache)).FirstOrDefault(i => i.Code.Equals(sourceCode, StringComparison.OrdinalIgnoreCase));
-            if (source == null)
-            {
-                return null;
-            }
-            return new GuidObject2(source.Guid);
-        }
-
-        /// <summary>
-        /// Gets status guid object
-        /// </summary>
-        /// <param name="sourceCode"></param>
-        /// <returns></returns>
-        private async Task<GuidObject2> ConvertEntityToStatusDetailGuidObjectOrigAsync(string sourceCode, bool bypassCache)
         {
             if (string.IsNullOrEmpty(sourceCode))
             {
                 return null;
             }
-            var source = (await AdmissionApplicationStatusTypesOrigAsync(bypassCache)).FirstOrDefault(i => i.Code.Equals(sourceCode, StringComparison.OrdinalIgnoreCase));
-            if (source == null)
+            var admissionDecisionTypesGuid = string.Empty;
+            try
+            {
+                admissionDecisionTypesGuid = await _studentReferenceDataRepository.GetAdmissionDecisionTypesGuidAsync(sourceCode);
+            }
+            catch (Exception)
             {
                 return null;
             }
-            return new GuidObject2(source.Guid);
+            if (string.IsNullOrEmpty(admissionDecisionTypesGuid))
+            {
+                return null;
+            }
+            return new GuidObject2(admissionDecisionTypesGuid);
         }
 
         /// <summary>
@@ -816,19 +770,20 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <param name="sourceCode"></param>
         /// <returns></returns>
-        private async Task<GuidObject2> ConvertEntityToAcademicPeriodGuidObjectAsync(string sourceCode, bool bypassCache)
+        private async Task<GuidObject2> ConvertEntityToAcademicPeriodGuidObjectAsync(string sourceCode)
         {
             if (string.IsNullOrEmpty(sourceCode))
             {
                 return null;
             }
-            var source = (await Terms(bypassCache)).FirstOrDefault(i => i.Code.Equals(sourceCode, StringComparison.OrdinalIgnoreCase));
-            if (source == null)
+            //var source = (await Terms(bypassCache)).FirstOrDefault(i => i.Code.Equals(sourceCode, StringComparison.OrdinalIgnoreCase));
+            var termsGuid = await _termRepository.GetAcademicPeriodsGuidAsync(sourceCode);
+            if (string.IsNullOrEmpty(termsGuid))
             {
                 var error = string.Format("Term not found for code {0}. ", sourceCode);
                 throw new KeyNotFoundException(error);
             }
-            return string.IsNullOrEmpty(source.RecordGuid) ? null : new GuidObject2(source.RecordGuid);
+            return new GuidObject2(termsGuid);
         }
 
         /// <summary>
@@ -836,86 +791,83 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <param name="sourceCode"></param>
         /// <returns></returns>
-        private async Task<GuidObject2> ConvertEntityToApplicationSourceGuidObjectDtoAsync(string sourceCode, bool bypassCache)
+        private async Task<GuidObject2> ConvertEntityToApplicationSourceGuidObjectDtoAsync(string sourceCode)
         {
             if (string.IsNullOrEmpty(sourceCode))
             {
                 return null;
             }
-            var source = (await ApplicationSourcesAsync(bypassCache)).FirstOrDefault(i => i.Code.Equals(sourceCode, StringComparison.OrdinalIgnoreCase));
-            if (source == null)
+            var applicationSourcesGuid = await _studentReferenceDataRepository.GetApplicationSourcesGuidAsync(sourceCode);
+            if (string.IsNullOrEmpty(applicationSourcesGuid))
             {
                 var error = string.Format("Application source not found for code {0}. ", sourceCode);
                 throw new KeyNotFoundException(error);
             }
-            return string.IsNullOrEmpty(source.Guid) ? null : new GuidObject2(source.Guid);
+            return new GuidObject2(applicationSourcesGuid);
         }
 
         /// <summary>
         /// Convert code to guid.
         /// </summary>
         /// <param name="sourceCode"></param>
-        /// <returns></returns>
-        private async Task<GuidObject2> ConvertEntityToAdmitStatusGuidObjectDtoAsync(string sourceCode,bool bypassCache)
+        /// <returns>GuidObject2</returns>
+        private async Task<GuidObject2> ConvertEntityToAdmitStatusGuidObjectDtoAsync(string sourceCode)
         {
             if (string.IsNullOrEmpty(sourceCode))
             {
                 return null;
             }
-
-            var source = (await AdmissionPopulationsAsync(bypassCache)).FirstOrDefault(i => i.Code.Equals(sourceCode, StringComparison.OrdinalIgnoreCase));
-            if (source == null)
+            var admissionPopulationsGuid = await _studentReferenceDataRepository.GetAdmissionPopulationsGuidAsync(sourceCode);
+                     
+           if (string.IsNullOrEmpty(admissionPopulationsGuid))
             {
                 var error = string.Format("Application admit status not found for code {0}. ", sourceCode);
                 throw new KeyNotFoundException(error);
             }
-            return string.IsNullOrEmpty(source.Guid) ? null : new GuidObject2(source.Guid);
+            return new GuidObject2(admissionPopulationsGuid);
         }
 
         /// <summary>
-        /// Convert code to guid.
+        /// Convert location code to guid.
         /// </summary>
-        /// <param name="list"></param>
-        /// <returns></returns>
-        private async Task<GuidObject2> ConvertEntityToApplLocationGuidObjectDtoAsync(List<string> list, bool bypassCache)
+        /// <param name="list">list of locations.  Only the first value in the list will be used.</param>
+        /// <returns>GuidObject2</returns>
+        private async Task<GuidObject2> ConvertEntityToApplLocationGuidObjectDtoAsync(List<string> list)
         {
-            if (list == null || (list != null && !list.Any()))
+            if (list == null || (!list.Any()))
             {
                 return null;
             }
-            var guid = string.Empty;
-            if (list != null && list.Any())
+
+            var site = list.FirstOrDefault();
+            var siteGuid = await _referenceDataRepository.GetLocationsGuidAsync(site);
+            if (string.IsNullOrEmpty(siteGuid))
             {
-                var siteList = list.Distinct();
-                var source = (await SitesAsync(bypassCache)).FirstOrDefault(i => siteList.Contains(i.Code));
-                if (source == null)
-                {
-                    throw new KeyNotFoundException("Site not found for code. ");
-                }
-                guid = source.Guid;
+                throw new KeyNotFoundException(string.Format("Site not found for code '{0}'.", site));
             }
-            return string.IsNullOrEmpty(guid) ? null : new GuidObject2(guid);
+            return new GuidObject2(siteGuid);
         }
 
         /// <summary>
         /// Convert code to guid.
         /// </summary>
         /// <param name="sourceCode"></param>
-        /// <returns></returns>
-        private async Task<GuidObject2> ConvertEntityToApplResidencyStatusGuidObjectDtoAsync(string sourceCode, bool bypassCache)
+        /// <returns>GuidObject2</returns>
+        private async Task<GuidObject2> ConvertEntityToApplResidencyStatusGuidObjectDtoAsync(string sourceCode)
         {
             if (string.IsNullOrEmpty(sourceCode))
             {
                 return null;
             }
 
-            var source = (await AdmissionResidencyTypesAsync(bypassCache)).FirstOrDefault(i => i.Code.Equals(sourceCode, StringComparison.OrdinalIgnoreCase));
-            if (source == null)
+            var admissionResidencyTypesGuid = await _studentReferenceDataRepository.GetAdmissionResidencyTypesGuidAsync(sourceCode);
+
+            if (string.IsNullOrEmpty(admissionResidencyTypesGuid))
             {
                 var error = string.Format("Residency type not found for code {0}. ", sourceCode);
                 throw new KeyNotFoundException(error);
             }
-            return string.IsNullOrEmpty(source.Guid) ? null : new GuidObject2(source.Guid);
+            return new GuidObject2(admissionResidencyTypesGuid);
         }
                
         /// <summary>
@@ -930,15 +882,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 return null;
             }
 
-            var source = (await AdmissionResidencyTypesAsync(bypassCache)).FirstOrDefault(i => i.Code.Equals(sourceCode, StringComparison.OrdinalIgnoreCase));
-            if (source == null)
+            var admissionResidencyTypesGuid = await _studentReferenceDataRepository.GetAdmissionResidencyTypesGuidAsync(sourceCode);
+
+            if (string.IsNullOrEmpty(admissionResidencyTypesGuid))
             {
                 var error = string.Format("Residency type not found for code {0}. ", sourceCode);
                 throw new KeyNotFoundException(error);
             }
             return new ResidencyTypeDtoProperty()
             {
-                Student = new GuidObject2(source.Guid)
+                Student = new GuidObject2(admissionResidencyTypesGuid)
             };
         }
 
@@ -947,20 +900,21 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <param name="sourceCode"></param>
         /// <returns></returns>
-        private async Task<GuidObject2> ConvertEntityToAcadProgGuidObjectDtoAsync(string sourceCode, bool bypassCache)
+        private async Task<GuidObject2> ConvertEntityToAcadProgGuidObjectDtoAsync(string sourceCode)
         {
             if (string.IsNullOrEmpty(sourceCode))
             {
                 return null;
             }
 
-            var source = (await AcademicProgramsAsync(bypassCache)).FirstOrDefault(i => i.Code.Equals(sourceCode, StringComparison.OrdinalIgnoreCase));
-            if (source == null)
+            var academicProgramGuid = await _studentReferenceDataRepository.GetAcademicProgramsGuidAsync(sourceCode);
+
+            if (string.IsNullOrEmpty(academicProgramGuid))
             {
                 var error = string.Format("Academic program not found for code {0}. ", sourceCode);
                 throw new KeyNotFoundException(error);
             }
-            return string.IsNullOrEmpty(source.Guid) ? null : new GuidObject2(source.Guid);
+            return new GuidObject2(academicProgramGuid);
         }
 
         /// <summary>
@@ -975,24 +929,22 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 return null;
             }
 
-            var source = (await AcademicProgramsAsync(bypassCache)).FirstOrDefault(i => i.Code.Equals(sourceCode, StringComparison.OrdinalIgnoreCase));
-            if (source == null)
+            var academicProgram = (await AcademicProgramsAsync(bypassCache)).FirstOrDefault(i => i.Code.Equals(sourceCode, StringComparison.OrdinalIgnoreCase));
+            if (academicProgram == null)
             {
                 var error = string.Format("Academic program not found for code {0}. ", sourceCode);
                 throw new KeyNotFoundException(error);
             }
-
-            var level = source.AcadLevelCode;
+          
             var levelSourceGuid = string.Empty;
-            if (!string.IsNullOrEmpty(level))
-            {
-                var acadLevel = (await AcademicLevelsAsync(bypassCache)).FirstOrDefault(i => i.Code.Equals(level, StringComparison.OrdinalIgnoreCase));
-                if (acadLevel == null)
+            if (!string.IsNullOrEmpty(academicProgram.AcadLevelCode))
+            {              
+                levelSourceGuid = await _studentReferenceDataRepository.GetAcademicLevelsGuidAsync(academicProgram.AcadLevelCode);
+                if (string.IsNullOrEmpty(levelSourceGuid))
                 {
-                    var error = string.Format("Academic level not found for code {0}. ", level);
+                    var error = string.Format("Academic level not found for code {0}. ", academicProgram.AcadLevelCode);
                     throw new KeyNotFoundException(error);
                 }
-                levelSourceGuid = acadLevel.Guid;
             }
             return string.IsNullOrEmpty(levelSourceGuid) ? null : new GuidObject2(levelSourceGuid);
         }
@@ -1009,8 +961,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 return null;
             }
 
-            List<AdmissionApplicationDiscipline> academicDisciplineList = new List<AdmissionApplicationDiscipline>();
-            List<string> disciplineCodeList = new List<string>();
+            var academicDisciplineList = new List<AdmissionApplicationDiscipline>();
+            var disciplineCodeList = new List<string>();
 
             disciplineCodeList.AddRange(sourceCodes);
 
@@ -1024,36 +976,27 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             //Major
             source.MajorCodes.ForEach(i =>
             {
-                if (!string.IsNullOrEmpty(i))
+                if ((!string.IsNullOrEmpty(i)) && (!disciplineCodeList.Contains(i)))
                 {
-                    if (!disciplineCodeList.Contains(i))
-                    {
-                        disciplineCodeList.Add(i);
-                    }
+                    disciplineCodeList.Add(i);
                 }
             });
 
             //Minor
             source.MinorCodes.ForEach(i =>
             {
-                if (!string.IsNullOrEmpty(i))
+                if ((!string.IsNullOrEmpty(i)) && (!disciplineCodeList.Contains(i)))
                 {
-                    if (!disciplineCodeList.Contains(i))
-                    {
-                        disciplineCodeList.Add(i);
-                    }
+                    disciplineCodeList.Add(i);
                 }
             });
 
             //Specializations
             source.SpecializationCodes.ForEach(i =>
             {
-                if (!string.IsNullOrEmpty(i))
+                if ((!string.IsNullOrEmpty(i)) && (!disciplineCodeList.Contains(i)))
                 {
-                    if (!disciplineCodeList.Contains(i))
-                    {
-                        disciplineCodeList.Add(i);
-                    }
+                    disciplineCodeList.Add(i);
                 }
             });
 
@@ -1085,25 +1028,33 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="applicationAttendedInstead"></param>
         /// <param name="applicationWithdrawReason"></param>
         /// <returns></returns>
-        private async Task<Dtos.DtoProperties.AdmissionApplicationsWithdrawal> ConvertEntityToWithdrawlDtoAsync(string applicationAttendedInstead, string applicationWithdrawReason, bool bypassCache)
+        private async Task<Dtos.DtoProperties.AdmissionApplicationsWithdrawal> ConvertEntityToWithdrawlDtoAsync(string applicationAttendedInstead, string applicationWithdrawReason,
+            Dictionary<string, string> personGuidCollection, bool bypassCache)
         {
             if (string.IsNullOrEmpty(applicationWithdrawReason))
             {
                 return null;
             }
 
-            Dtos.DtoProperties.AdmissionApplicationsWithdrawal admApplWithdrawReason = new Dtos.DtoProperties.AdmissionApplicationsWithdrawal();
+           var admApplWithdrawReason = new Dtos.DtoProperties.AdmissionApplicationsWithdrawal();
 
-            var source = (await WithdrawReasonsAsync(bypassCache)).FirstOrDefault(i => i.Code.Equals(applicationWithdrawReason, StringComparison.OrdinalIgnoreCase));
-            if (source == null)
+            var applicationWithdrawReasonGuid = await _studentReferenceDataRepository.GetWithdrawReasonsGuidAsync(applicationWithdrawReason);
+            if (string.IsNullOrEmpty(applicationWithdrawReasonGuid))
             {
                 var error = string.Format("Withdraw reason not found for reason {0}. ", applicationWithdrawReason);
                 throw new KeyNotFoundException(error);
             }
-            admApplWithdrawReason.WithdrawalReason = new GuidObject2(source.Guid);
+            admApplWithdrawReason.WithdrawalReason = new GuidObject2(applicationWithdrawReasonGuid);
             if (!string.IsNullOrEmpty(applicationAttendedInstead))
             {
-                var institutionGuid = await _personRepository.GetPersonGuidFromIdAsync(applicationAttendedInstead);
+                if (personGuidCollection == null)
+                {
+                    var error = string.Format("Institution attended guid not found for id {0}. ", applicationAttendedInstead);
+                    throw new KeyNotFoundException(error);
+                }
+                var institutionGuid = string.Empty;
+                personGuidCollection.TryGetValue(applicationAttendedInstead, out institutionGuid);
+                
                 if (string.IsNullOrEmpty(institutionGuid))
                 {
                     var error = string.Format("Institution attended guid not found for id {0}. ", applicationAttendedInstead);
@@ -1122,22 +1073,23 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="applicationAttendedInstead"></param>
         /// <param name="applicationWithdrawReason"></param>
         /// <returns></returns>
-        private async Task<Dtos.DtoProperties.AdmissionApplicationsWithdrawal2> ConvertEntityToWithdrawl2DtoAsync(string applicationAttendedInstead, string applicationWithdrawReason, DateTime? applicationWithdrawDate, DateTime? withdrawnOn , bool bypassCache)
+        private async Task<Dtos.DtoProperties.AdmissionApplicationsWithdrawal2> ConvertEntityToWithdrawl2DtoAsync(string applicationAttendedInstead, string applicationWithdrawReason, 
+            DateTime? applicationWithdrawDate, DateTime? withdrawnOn, Dictionary<string, string> personGuidCollection,  bool bypassCache)
         {
             if (string.IsNullOrWhiteSpace(applicationAttendedInstead + applicationWithdrawReason) && applicationWithdrawDate == null
                   && withdrawnOn == null)
                 return null;
 
-            Dtos.DtoProperties.AdmissionApplicationsWithdrawal2 admApplWithdrawReason = new Dtos.DtoProperties.AdmissionApplicationsWithdrawal2();
+            var admApplWithdrawReason = new Dtos.DtoProperties.AdmissionApplicationsWithdrawal2();
             if (!string.IsNullOrEmpty(applicationWithdrawReason))
             {
-                var source = (await WithdrawReasonsAsync(bypassCache)).FirstOrDefault(i => i.Code.Equals(applicationWithdrawReason, StringComparison.OrdinalIgnoreCase));
-                if (source == null)
+                var applicationWithdrawReasonGuid = await _studentReferenceDataRepository.GetWithdrawReasonsGuidAsync(applicationWithdrawReason);
+                if (string.IsNullOrEmpty(applicationWithdrawReasonGuid))
                 {
                     var error = string.Format("Withdraw reason not found for reason {0}. ", applicationWithdrawReason);
                     throw new KeyNotFoundException(error);
                 }
-                admApplWithdrawReason.WithdrawalReason = new GuidObject2(source.Guid);
+                admApplWithdrawReason.WithdrawalReason = new GuidObject2(applicationWithdrawReasonGuid);
             }
             
             admApplWithdrawReason.WithdrawnOn = applicationWithdrawDate == null ? null : applicationWithdrawDate;
@@ -1146,10 +1098,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 admApplWithdrawReason.WithdrawnOn = withdrawnOn;
             }
 
-
             if (!string.IsNullOrEmpty(applicationAttendedInstead))
             {
-                var institutionGuid = await _personRepository.GetPersonGuidFromIdAsync(applicationAttendedInstead);
+                var institutionGuid = string.Empty;
+                if (personGuidCollection == null)
+                {
+                    var error = string.Format("Institution attended guid not found for id {0}. ", applicationAttendedInstead);
+                    throw new KeyNotFoundException(error);
+                }
+
+                personGuidCollection.TryGetValue(applicationAttendedInstead, out institutionGuid);
                 if (string.IsNullOrEmpty(institutionGuid))
                 {
                     var error = string.Format("Institution attended guid not found for id {0}. ", applicationAttendedInstead);
@@ -1166,27 +1124,25 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         }
 
         /// <summary>
-        /// Gets Contract Type
+        /// Gets AdmissionApplicationsAcademicLoadType enumeration from applicationStudentLoadIntent
         /// </summary>
         /// <param name="applicationStudentLoadIntent"></param>
-        /// <returns></returns>
-        private AdmissionApplicationsAcademicLoadType ConvertEntityToAcaDemicLoadTypeDto(string applicationStudentLoadIntent)
+        /// <returns>AdmissionApplicationsAcademicLoadType enumeration</returns>
+        private AdmissionApplicationsAcademicLoadType ConvertEntityToAcademicLoadTypeDto(string applicationStudentLoadIntent)
         {
-            if (!string.IsNullOrEmpty(applicationStudentLoadIntent))
+            if (string.IsNullOrEmpty(applicationStudentLoadIntent))
             {
-                if (applicationStudentLoadIntent.ToUpperInvariant().Equals("F", StringComparison.OrdinalIgnoreCase) ||
-                    applicationStudentLoadIntent.ToUpperInvariant().Equals("O", StringComparison.OrdinalIgnoreCase))
-                {
-                    return AdmissionApplicationsAcademicLoadType.FullTime;
-                }
-                else if (applicationStudentLoadIntent.ToUpperInvariant().Equals("P", StringComparison.OrdinalIgnoreCase))
-                {
-                    return AdmissionApplicationsAcademicLoadType.PartTime;
-                }
-                else
-                {
-                    return AdmissionApplicationsAcademicLoadType.NotSet;
-                }
+                return AdmissionApplicationsAcademicLoadType.NotSet;
+            }
+
+            if (applicationStudentLoadIntent.ToUpperInvariant().Equals("F", StringComparison.OrdinalIgnoreCase) ||
+                applicationStudentLoadIntent.ToUpperInvariant().Equals("O", StringComparison.OrdinalIgnoreCase))
+            {
+                return AdmissionApplicationsAcademicLoadType.FullTime;
+            }
+            else if (applicationStudentLoadIntent.ToUpperInvariant().Equals("P", StringComparison.OrdinalIgnoreCase))
+            {
+                return AdmissionApplicationsAcademicLoadType.PartTime;
             }
             else
             {
@@ -1205,7 +1161,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         }
 
         /// <summary>
-        /// Gets guid objects
+        /// Gets AdmissionApplicationTypes guid objects
         /// </summary>
         /// <returns></returns>
         private async Task<GuidObject2> ConvertEntityToTypeGuidObjectDto2Async(string intgType, bool bypassCache)
@@ -1217,14 +1173,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             else
             {
-                var source = (await AdmissionApplicationTypesAsync(bypassCache)).FirstOrDefault(i => i.Code.Equals(intgType, StringComparison.OrdinalIgnoreCase));
-                if (source == null)
+                var intgTypeGuid = await _studentReferenceDataRepository.GetAdmissionApplicationTypesGuidAsync(intgType);
+                if (string.IsNullOrEmpty(intgTypeGuid))
                 {
-                    var error = string.Format("Application Intg Type not found for code {0}. ", intgType);
+                    var error = string.Format("Admission application types not found for code {0}. ", intgType);
                     throw new KeyNotFoundException(error);
                 }
-                return string.IsNullOrEmpty(source.Guid) ? null : new GuidObject2(source.Guid);
-            }            
+                return new GuidObject2(intgTypeGuid);
+            }
         }
 
         /// <summary>
@@ -1232,20 +1188,19 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <param name="sourceCode"></param>
         /// <returns></returns>
-        private async Task<GuidObject2> ConvertEntityToSchoolGuidObjectAsync(string sourceCode, bool bypassCache)
+        private async Task<GuidObject2> ConvertEntityToSchoolGuidObjectAsync(string sourceCode)
         {
             if (string.IsNullOrEmpty(sourceCode))
             {
                 return null;
             }
-
-            var source = (await SchoolsAsync(bypassCache)).FirstOrDefault(i => i.Code.Equals(sourceCode, StringComparison.OrdinalIgnoreCase));
-            if (source == null)
+            var schoolsGuid = await _referenceDataRepository.GetSchoolsGuidAsync(sourceCode);
+            if (string.IsNullOrEmpty(schoolsGuid))
             {
                 var error = string.Format("School not found for code {0}. ", sourceCode);
                 throw new KeyNotFoundException(error);
             }
-            return string.IsNullOrEmpty(source.Guid) ? null : new GuidObject2(source.Guid);
+            return new GuidObject2(schoolsGuid);
         }
 
         #endregion
@@ -1253,14 +1208,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         #region Reference Methods
 
         /// <summary>
-        /// Builds person record keys local cache
+        /// Get all person ids associated with a collection of AdmissionApplication domain entities.
+        /// Used to perform a bulk guid lookup
         /// </summary>
-        private IEnumerable<string> _personIds;
-        private IDictionary<string, string> _staffOperIdsDict;
-        private async Task<IEnumerable<string>> BuildLocalPersonGuids(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.AdmissionApplication> admissionApplicationsEntities)
+        private IEnumerable<string> BuildLocalPersonGuids(IEnumerable<Domain.Student.Entities.AdmissionApplication> admissionApplicationsEntities,
+            Dictionary<string, string> staffOperIdsDict)
         {
             var personIds = new List<string>();
-            var ownerIds = new List<string>();
 
             personIds.AddRange(admissionApplicationsEntities
                      .Where(i => !string.IsNullOrEmpty(i.ApplicantPersonId) && !personIds.Contains(i.ApplicantPersonId))
@@ -1268,7 +1222,31 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             personIds.AddRange(admissionApplicationsEntities
                      .Where(i => !string.IsNullOrEmpty(i.ApplicationAdmissionsRep) && !personIds.Contains(i.ApplicationAdmissionsRep))
                      .Select(i => i.ApplicationAdmissionsRep));
+            personIds.AddRange(admissionApplicationsEntities
+                     .Where(i => !string.IsNullOrEmpty(i.ApplicationAttendedInstead) && !personIds.Contains(i.ApplicationAttendedInstead))
+                     .Select(i => i.ApplicationAttendedInstead));
 
+          
+            if (staffOperIdsDict != null)
+            {
+                foreach (var item in staffOperIdsDict)
+                {
+                    if (!personIds.Contains(item.Value))
+                    {
+                        personIds.Add(item.Value);
+                    }
+                }
+            }
+
+            return personIds.Distinct().ToList();
+        }
+
+        private async Task<Dictionary<string, string>> GetLocalOwnerIdsAsync(IEnumerable<Domain.Student.Entities.AdmissionApplication> admissionApplicationsEntities)
+        {
+           
+            var ownerIds = new List<string>();
+
+       
             admissionApplicationsEntities.ToList().ForEach(admissionApplicationsEntity =>
             {
                 if (!string.IsNullOrEmpty(admissionApplicationsEntity.ApplicationAdmissionsRep))
@@ -1292,47 +1270,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
             });
 
-            var staffOperIds = ownerIds.Any() ? await _admissionApplicationsRepository.GetStaffOperIdsAsync(ownerIds) : null;
-            if (staffOperIds != null && staffOperIds.Any())
-            {
-                _staffOperIdsDict = staffOperIds as Dictionary<string, string>;
-                foreach (var item in _staffOperIdsDict)
-                {
-                    if (!personIds.Contains(item.Value))
-                    {
-                        personIds.Add(item.Value);
-                    }
-                }
-            }
-
-            return personIds.Distinct().ToList();
-        }
-
-        /// <summary>
-        /// Person ids, guid key value pairs
-        /// </summary>
-        private IDictionary<string, string> _personGuidsDict;
-        private async Task<IDictionary<string, string>> PersonGuidsAsync()
-        {
-            if (_personIds != null && _personIds.Any())
-            {
-                if (_personGuidsDict == null)
-                {
-                    IDictionary<string, string> dict = await _admissionApplicationsRepository.GetPersonGuidsAsync(_personIds);
-                    if (dict != null && dict.Any())
-                    {
-                        _personGuidsDict = new Dictionary<string, string>();
-                        dict.ToList().ForEach(i =>
-                        {
-                            if (!_personGuidsDict.ContainsKey(i.Key))
-                            {
-                                _personGuidsDict.Add(i.Key, i.Value);
-                            }
-                        });
-                    }
-                }
-            }
-            return _personGuidsDict;
+            return await _admissionApplicationsRepository.GetStaffOperIdsAsync(ownerIds);
+            
         }
 
         /// <summary>
@@ -1372,37 +1311,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         }
 
         /// <summary>
-        /// AdmissionApplicationStatusType
-        /// Get GUIDs from APPLICATION.STATUSES with a secondary key value; used for admission-decision-types        
-        /// </summary>
-        private IEnumerable<Domain.Student.Entities.AdmissionDecisionType> _admissionApplicationStatusTypes;
-        private async Task<IEnumerable<Domain.Student.Entities.AdmissionDecisionType>> AdmissionApplicationStatusTypesAsync(bool bypassCache)
-        
-        {
-            if (_admissionApplicationStatusTypes == null)
-            {
-                _admissionApplicationStatusTypes = await _studentReferenceDataRepository.GetAdmissionDecisionTypesAsync(bypassCache);
-            }
-            return _admissionApplicationStatusTypes;
-        }
-
-        /// <summary>
-        /// AdmissionApplicationStatusTypeOrig  
-        /// Get GUIDs from APPLICATION.STATUSES with no secondary key; used for application-status-types
-        /// </summary>
-        private IEnumerable<Domain.Student.Entities.AdmissionApplicationStatusType> _admissionApplicationStatusTypesOrig;
-        private async Task<IEnumerable<Domain.Student.Entities.AdmissionApplicationStatusType>> AdmissionApplicationStatusTypesOrigAsync(bool bypassCache)
-
-        {
-            if (_admissionApplicationStatusTypesOrig == null)
-            {
-                _admissionApplicationStatusTypesOrig = await _studentReferenceDataRepository.GetAdmissionApplicationStatusTypesAsync(bypassCache);
-            }
-            return _admissionApplicationStatusTypesOrig;
-        }
-
-        /// <summary>
-        /// 
+        /// ApplicationSources
         /// </summary>
         private IEnumerable<Domain.Student.Entities.ApplicationSource> _sources;
         private async Task<IEnumerable<Domain.Student.Entities.ApplicationSource>> ApplicationSourcesAsync(bool bypassCache)
@@ -1425,7 +1334,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 _admissionPopulations = await _studentReferenceDataRepository.GetAdmissionPopulationsAsync(bypassCache);
             }
             return _admissionPopulations;
-        }
+        } 
 
         /// <summary>
         /// Sites
@@ -1538,7 +1447,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="guid"></param>
         /// <param name="admissionApplicationDto"></param>
         /// <returns></returns>
-        public async Task<AdmissionApplication2> UpdateAdmissionApplicationAsync(string guid, AdmissionApplication2 admissionApplicationDto)
+        public async Task<AdmissionApplication2> UpdateAdmissionApplicationAsync(string guid, AdmissionApplication2 admissionApplicationDto, bool bypassCache = true)
         {
             if (admissionApplicationDto == null)
             {
@@ -1549,6 +1458,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 throw new ArgumentNullException("admissionApplication", "Must provide a guid for admission applications update.");
             }
+
+            ValidatePayload(admissionApplicationDto);
 
             if (!await CheckAdmissionApplicationCreateUpdatePermAsync())
             {
@@ -1561,12 +1472,15 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 _admissionApplicationsRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
-                Domain.Student.Entities.AdmissionApplication admissionApplicationEntity = await ConvertDtoToEntityAsync(guid, admissionApplicationDto, true);
+                Domain.Student.Entities.AdmissionApplication admissionApplicationEntity = await ConvertDtoToEntityAsync(guid, admissionApplicationDto, bypassCache);
                 Domain.Student.Entities.AdmissionApplication admApplEntity = await _admissionApplicationsRepository.UpdateAdmissionApplicationAsync(admissionApplicationEntity);
 
-                _personIds = await BuildLocalPersonGuids(new List<Ellucian.Colleague.Domain.Student.Entities.AdmissionApplication>() { admApplEntity });
-                _personGuidsDict = null;
-                return await ConvertAdmissionApplicationsEntityToDto2(admApplEntity, true);
+                var admApplEntities = new List<Domain.Student.Entities.AdmissionApplication>() { admApplEntity };
+                var ownerIds = await GetLocalOwnerIdsAsync(admApplEntities);
+                var personIds = BuildLocalPersonGuids(admApplEntities, ownerIds);
+                var personGuidCollection = await _personRepository.GetPersonGuidsCollectionAsync(personIds);
+
+                return await ConvertAdmissionApplicationsEntityToDto2Async(admApplEntity, personGuidCollection, ownerIds, bypassCache);
             }
             return await CreateAdmissionApplicationAsync(admissionApplicationDto);
         }
@@ -1576,7 +1490,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <param name="admissionApplication"></param>
         /// <returns></returns>
-        public async Task<AdmissionApplication2> CreateAdmissionApplicationAsync(Dtos.AdmissionApplication2 admissionApplication)
+        public async Task<AdmissionApplication2> CreateAdmissionApplicationAsync(Dtos.AdmissionApplication2 admissionApplication, bool bypassCache = true)
         {
             if (admissionApplication == null)
             {
@@ -1588,6 +1502,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 throw new ArgumentNullException("admissionApplication", "Must provide a guid for admission application create.");
             }
 
+            ValidatePayload(admissionApplication);
+
             if (!await CheckAdmissionApplicationCreateUpdatePermAsync())
             {
                 logger.Error(string.Format("User '{0}' is not authorized to create admission-applications.", CurrentUser.UserId));
@@ -1598,20 +1514,24 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 _admissionApplicationsRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
-                Domain.Student.Entities.AdmissionApplication admissionApplicationEntity = await ConvertDtoToEntityAsync(null, admissionApplication, true);
+                Domain.Student.Entities.AdmissionApplication admissionApplicationEntity = await ConvertDtoToEntityAsync(null, admissionApplication, bypassCache);
 
                 Domain.Student.Entities.AdmissionApplication admApplEntity = await _admissionApplicationsRepository.CreateAdmissionApplicationAsync(admissionApplicationEntity);
 
-                _personIds = await BuildLocalPersonGuids(new List<Ellucian.Colleague.Domain.Student.Entities.AdmissionApplication>() { admApplEntity });
-                _personGuidsDict = null;
-                return await ConvertAdmissionApplicationsEntityToDto2(admApplEntity, true);          
+                var admApplEntities = new List<Domain.Student.Entities.AdmissionApplication>() { admApplEntity };
+                var ownerIds = await GetLocalOwnerIdsAsync(admApplEntities);
+                var personIds = BuildLocalPersonGuids(admApplEntities, ownerIds);
+                var personGuidCollection = await _personRepository.GetPersonGuidsCollectionAsync(personIds);
+
+                return await ConvertAdmissionApplicationsEntityToDto2Async(admApplEntity, personGuidCollection, ownerIds, bypassCache);
             }
             catch (Exception e)
             {
                 throw e;
             }
-}
+        }
 
+     
         /// <summary>
         /// Converts dto to an entity.
         /// </summary>
@@ -1619,7 +1539,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="dto"></param>
         /// <param name="bypassCache"></param>
         /// <returns></returns>
-        private async Task<Domain.Student.Entities.AdmissionApplication> ConvertDtoToEntityAsync(string guid, Dtos.AdmissionApplication2 dto, bool bypassCache)
+        private async Task<Domain.Student.Entities.AdmissionApplication> ConvertDtoToEntityAsync(string guid, Dtos.AdmissionApplication2 dto, bool bypassCache = false)
         {
             if (dto == null || string.IsNullOrEmpty(dto.Id))
             {
@@ -1656,7 +1576,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             //type.id
             if(dto.Type != null && !string.IsNullOrEmpty(dto.Type.Id))
             {
-                var typeKey = (await AdmissionApplicationTypesAsync(true)).FirstOrDefault(i => i.Guid.Equals(dto.Type.Id, StringComparison.OrdinalIgnoreCase));
+                var typeKey = (await AdmissionApplicationTypesAsync(bypassCache)).FirstOrDefault(i => i.Guid.Equals(dto.Type.Id, StringComparison.OrdinalIgnoreCase));
                 if (typeKey == null)
                 {
                     throw new KeyNotFoundException(string.Format("Admission application type not found for guid {0}. ", dto.Type.Id));
@@ -1665,7 +1585,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             else
             {
-                var typeKey = (await AdmissionApplicationTypesAsync(true)).FirstOrDefault(i => i.Code.ToUpper().Equals("ST", StringComparison.OrdinalIgnoreCase));
+                var typeKey = (await AdmissionApplicationTypesAsync(bypassCache)).FirstOrDefault(i => i.Code.ToUpper().Equals("ST", StringComparison.OrdinalIgnoreCase));
                 if (typeKey == null)
                 {
                     throw new KeyNotFoundException(string.Format("Admission application type not found for guid {0}. ", dto.Type.Id));
@@ -1676,7 +1596,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             //academicPeriod.id
             if (dto.AcademicPeriod != null && !string.IsNullOrEmpty(dto.AcademicPeriod.Id))
             {
-                var source = (await Terms(true)).FirstOrDefault(i => i.RecordGuid.Equals(dto.AcademicPeriod.Id, StringComparison.OrdinalIgnoreCase));
+                var source = (await Terms(bypassCache)).FirstOrDefault(i => i.RecordGuid.Equals(dto.AcademicPeriod.Id, StringComparison.OrdinalIgnoreCase));
                 if (source == null)
                 {
                     var error = string.Format("Term not found for code {0}. ", dto.AcademicPeriod.Id);
@@ -1713,7 +1633,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             //admissionPopulation.id
             if(dto.AdmissionPopulation != null && !string.IsNullOrEmpty(dto.AdmissionPopulation.Id))
             {
-                var admPopulation = (await AdmissionPopulationsAsync(true)).FirstOrDefault(i => i.Guid.Equals(dto.AdmissionPopulation.Id, StringComparison.OrdinalIgnoreCase));
+                var admPopulation = (await AdmissionPopulationsAsync(bypassCache)).FirstOrDefault(i => i.Guid.Equals(dto.AdmissionPopulation.Id, StringComparison.OrdinalIgnoreCase));
                 if(admPopulation == null)
                 {
                     throw new KeyNotFoundException(string.Format("Application admit status not found for guid {0}. ", dto.AdmissionPopulation.Id));
@@ -1736,7 +1656,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if(dto.ResidencyType != null && !string.IsNullOrEmpty(dto.ResidencyType.Id))
             {
                 //var residencyType = 
-                var residencyType = (await AdmissionResidencyTypesAsync(true)).FirstOrDefault(i => i.Guid.Equals(dto.ResidencyType.Id, StringComparison.OrdinalIgnoreCase));
+                var residencyType = (await AdmissionResidencyTypesAsync(bypassCache)).FirstOrDefault(i => i.Guid.Equals(dto.ResidencyType.Id, StringComparison.OrdinalIgnoreCase));
                 if (residencyType == null)
                 {
                     throw new KeyNotFoundException(string.Format("Residency type not found for guid {0}.", dto.ResidencyType.Id));
@@ -1753,7 +1673,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             //program.id
             if(dto.Program != null && !string.IsNullOrEmpty(dto.Program.Id))
             {
-                var program = (await AcademicProgramsAsync(true)).FirstOrDefault(i => i.Guid.Equals(dto.Program.Id, StringComparison.OrdinalIgnoreCase));
+                var program = (await AcademicProgramsAsync(bypassCache)).FirstOrDefault(i => i.Guid.Equals(dto.Program.Id, StringComparison.OrdinalIgnoreCase));
                 if (program == null)
                 {
                     throw new KeyNotFoundException(string.Format("Academic program not found for guid {0}. ", dto.Program.Id));
@@ -1775,7 +1695,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             //school.id
             if (dto.School != null && !string.IsNullOrEmpty(dto.School.Id))
             {
-                var school = (await SchoolsAsync(true)).FirstOrDefault(s => s.Guid.Equals(dto.School.Id, StringComparison.OrdinalIgnoreCase));
+                var school = (await SchoolsAsync(bypassCache)).FirstOrDefault(s => s.Guid.Equals(dto.School.Id, StringComparison.OrdinalIgnoreCase));
                 if(school == null)
                 {
                     throw new KeyNotFoundException(string.Format("School not found for guid {0}. ", dto.School.Id));
@@ -1804,7 +1724,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             //withdrawal.WithdrawalReason.id
             if (dto.Withdrawal != null && dto.Withdrawal.WithdrawalReason != null && !string.IsNullOrEmpty(dto.Withdrawal.WithdrawalReason.Id))
             {
-                var withdrwlReason = (await WithdrawReasonsAsync(true)).FirstOrDefault(i => i.Guid.Equals(dto.Withdrawal.WithdrawalReason.Id, StringComparison.OrdinalIgnoreCase));
+                var withdrwlReason = (await WithdrawReasonsAsync(bypassCache)).FirstOrDefault(i => i.Guid.Equals(dto.Withdrawal.WithdrawalReason.Id, StringComparison.OrdinalIgnoreCase));
                 if (withdrwlReason == null)
                 {
                     throw new KeyNotFoundException(string.Format("Withdraw reason not found for reason {0}. ", dto.Withdrawal.WithdrawalReason.Id));
@@ -1851,6 +1771,88 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             return false;
         }
+
+        /// <summary>
+        /// Validate AdmissionApplication2 DTO
+        /// </summary>
+        /// <param name="source">AdmissionApplication2 DTO</param>
+        private void ValidatePayload(AdmissionApplication2 source)
+        {
+            if (source.Applicant == null)
+            {
+                throw new ArgumentNullException("applicant", "Applicant is required.");
+            }
+
+            if (source.Applicant != null && string.IsNullOrEmpty(source.Applicant.Id))
+            {
+                throw new ArgumentNullException("applicant.id", "Applicant id is required.");
+            }
+
+            if (source.Type != null && string.IsNullOrEmpty(source.Type.Id))
+            {
+                throw new ArgumentNullException("type.Id", "Type id is required.");
+            }
+
+            if (source.AcademicPeriod != null && string.IsNullOrEmpty(source.AcademicPeriod.Id))
+            {
+                throw new ArgumentNullException("academicPeriod.Id", "Academic period id is required.");
+            }
+
+            if (source.Source != null && string.IsNullOrEmpty(source.Source.Id))
+            {
+                throw new ArgumentNullException("source.Id", "Source id is required.");
+            }
+
+            if (source.Owner != null && string.IsNullOrEmpty(source.Owner.Id))
+            {
+                throw new ArgumentNullException("owner.Id", "Owner id is required.");
+            }
+
+            if (source.AdmissionPopulation != null && string.IsNullOrEmpty(source.AdmissionPopulation.Id))
+            {
+                throw new ArgumentNullException("admissionPopulation.Id", "Admission population id is required.");
+            }
+
+            if (source.Site != null && string.IsNullOrEmpty(source.Site.Id))
+            {
+                throw new ArgumentNullException("site.Id", "Site id is required.");
+            }
+
+            if (source.ResidencyType != null && string.IsNullOrEmpty(source.ResidencyType.Id))
+            {
+                throw new ArgumentNullException("residencyType.Id", "Residency type id is required.");
+            }
+
+            if (source.Program != null && string.IsNullOrEmpty(source.Program.Id))
+            {
+                throw new ArgumentNullException("program.Id", "Program id is required.");
+            }
+
+            if (source.Level != null && string.IsNullOrEmpty(source.Level.Id))
+            {
+                throw new ArgumentNullException("level.Id", "Level id is required.");
+            }
+
+            if (source.School != null && string.IsNullOrEmpty(source.School.Id))
+            {
+                throw new ArgumentNullException("school.Id", "School id is required.");
+            }
+
+            if (source.Withdrawal != null && source.Withdrawal.WithdrawalReason != null && string.IsNullOrEmpty(source.Withdrawal.WithdrawalReason.Id))
+            {
+                throw new ArgumentNullException("withdrawal.withdrawalReason.Id", "Withdrawal reason id is required.");
+            }
+            else if (source.Withdrawal != null && source.Withdrawal.WithdrawnOn.HasValue && source.Withdrawal.WithdrawalReason == null)
+            {
+                throw new ArgumentNullException("withdrawal.withdrawnOn", "Withdrwawl reason must be provided if withdrawl date is provided.");
+            }
+
+            if (source.Withdrawal != null && source.Withdrawal.InstitutionAttended != null && string.IsNullOrEmpty(source.Withdrawal.InstitutionAttended.Id))
+            {
+                throw new ArgumentNullException("withdrawal.institutionAttended.Id", "Institution attended reason id is required.");
+            }
+        }
+
         #endregion
     }
 }

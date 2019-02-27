@@ -10,10 +10,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
     {
         //Task DeletePersonHoldAsync(string id, string personHoldsId);
         //Task<IEnumerable<Dtos.PersonHold>> GetPersonHoldsAsync();
-        Task<Tuple<IEnumerable<Dtos.PersonHold>, int>> GetPersonHoldsAsync(int offset, int limit);
+        Task<Tuple<IEnumerable<Dtos.PersonHold>, int>> GetPersonHoldsAsync(int offset, int limit, bool bypassCache = false);
 
-        Task<Dtos.PersonHold> GetPersonHoldAsync(string id);
-        Task<IEnumerable<Dtos.PersonHold>> GetPersonHoldsAsync(string personId);
+        Task<Dtos.PersonHold> GetPersonHoldAsync(string id, bool bypassCache = false);
+        Task<IEnumerable<Dtos.PersonHold>> GetPersonHoldsAsync(string personId, bool bypassCache = false);
         Task DeletePersonHoldAsync(string personHoldsId);
         Task<Dtos.PersonHold> CreatePersonHoldAsync(Dtos.PersonHold personHold);
         Task<Dtos.PersonHold> UpdatePersonHoldAsync(string id, Dtos.PersonHold personHold);

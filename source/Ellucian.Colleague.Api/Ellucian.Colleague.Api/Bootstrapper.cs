@@ -52,6 +52,8 @@ namespace Ellucian.Colleague.Api
         private static string baseResourcePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "App_GlobalResources");
         private static string resourceCustomizationFilePath = AppDomain.CurrentDomain.GetData("DataDirectory").ToString() + @"\ResourceCustomization.json";
 
+        private const string HedtechIntegrationStudentUnverifiedGradesSubmissionsFormat = "application/vnd.hedtech.integration.student-unverified-grades-submissions.v{0}+json";
+        private const string HedtechIntegrationStudentTranscriptGradesAdjustmentsFormat = "application/vnd.hedtech.integration.student-transcript-grades-adjustments.v{0}+json";
 
         /// <summary>
         /// Initializes the dependency injection container.
@@ -84,6 +86,9 @@ namespace Ellucian.Colleague.Api
             json.SupportedMediaTypes.Add(new MediaTypeHeaderValue("application/vnd.hedtech.integration.v11+json"));
             json.SupportedMediaTypes.Add(new MediaTypeHeaderValue("application/vnd.hedtech.integration.v12+json"));
             json.SupportedMediaTypes.Add(new MediaTypeHeaderValue("application/vnd.hedtech.integration.v13+json"));
+
+            json.SupportedMediaTypes.Add(new MediaTypeHeaderValue(string.Format(HedtechIntegrationStudentUnverifiedGradesSubmissionsFormat, "1.0.0")));
+            json.SupportedMediaTypes.Add(new MediaTypeHeaderValue(string.Format(HedtechIntegrationStudentTranscriptGradesAdjustmentsFormat, "1.0.0")));
 
         }
 

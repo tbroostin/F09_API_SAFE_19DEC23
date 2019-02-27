@@ -374,7 +374,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
         public async Task PayrollDeductionArrangementsController_PutPayrollDeductionArrangementAsync_Exception()
         {
             payrollDeductionArrangementsServiceMock.Setup(i => i.UpdatePayrollDeductionArrangementsAsync(It.IsAny<string>(), It.IsAny<Dtos.PayrollDeductionArrangements>())).ThrowsAsync(new Exception());
-            await payrollDeductionArrangementsController.PutPayrollDeductionArrangementsAsync("id", payrollDeductionArrangementsCollection.FirstOrDefault());
+            await payrollDeductionArrangementsController.PutPayrollDeductionArrangement2Async("id", payrollDeductionArrangementsCollection.FirstOrDefault());
         }
         #endregion
 

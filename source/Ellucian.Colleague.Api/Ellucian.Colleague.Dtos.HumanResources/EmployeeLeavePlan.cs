@@ -114,5 +114,11 @@ namespace Ellucian.Colleague.Dtos.HumanResources
         public decimal CurrentPlanYearBalance { get; set; }
 
 
+        /// <summary>
+        /// List of all Earning Type IDs associated with a Employee Leave Plan
+        /// </summary>
+        public IEnumerable<string> EarningTypeIDList { get; set; }
+
+
     }
 }

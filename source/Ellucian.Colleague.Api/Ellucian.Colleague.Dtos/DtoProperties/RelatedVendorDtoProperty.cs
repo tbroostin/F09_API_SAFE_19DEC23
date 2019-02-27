@@ -1,8 +1,6 @@
-﻿// Copyright 2016-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Dtos.Attributes;
-using Ellucian.Colleague.Dtos.Converters;
-using Newtonsoft.Json;
 using System.Runtime.Serialization;
 
 namespace Ellucian.Colleague.Dtos.DtoProperties
@@ -24,8 +22,8 @@ namespace Ellucian.Colleague.Dtos.DtoProperties
         /// The related vendor
         /// </summary>
         [DataMember(Name = "vendor")]
-        [FilterProperty("criteria")]
-        [JsonConverter(typeof(GuidObject2FilterConverter))]
+        //[FilterProperty("criteria")]
+        //[JsonConverter(typeof(GuidObject2FilterConverter))]
         public GuidObject2 Vendor { get; set; }
     }
 }

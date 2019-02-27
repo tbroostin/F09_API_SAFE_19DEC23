@@ -27,7 +27,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             private Ellucian.Data.Colleague.DataContracts.IntlParams intlParams;
             PersonHoldsRepository personHoldRepository;
             int readSize;
-            
+            string guid = "23977f85-f200-479f-9eee-3921bb4667d3";
+            string guid2 = "13977f85-f200-479f-9eee-3921bb4667d2";
             [TestInitialize]
             public void Initialize()
             {
@@ -65,8 +66,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 string[] personHoldsIds = new []{"1", "2"};
                 Collection<StudentRestrictions> studentHolds = new Collection<StudentRestrictions>() 
                 {
-                    new StudentRestrictions(){ Recordkey = "1", StrStudent = "1", StrComments = "Comment 1", StrEndDate = DateTime.MaxValue, StrRestriction = "Academic", StrStartDate = DateTime.MinValue },
-                    new StudentRestrictions(){ Recordkey = "2", StrStudent = "2", StrComments = "Comment 2", StrEndDate = DateTime.MaxValue, StrRestriction = "Health", StrStartDate = DateTime.MinValue },
+                    new StudentRestrictions(){ RecordGuid = guid,  Recordkey = "1", StrStudent = "1", StrComments = "Comment 1", StrEndDate = DateTime.MaxValue, StrRestriction = "Academic", StrStartDate = DateTime.MinValue },
+                    new StudentRestrictions(){ RecordGuid = guid2, Recordkey = "2", StrStudent = "2", StrComments = "Comment 2", StrEndDate = DateTime.MaxValue, StrRestriction = "Health", StrStartDate = DateTime.MinValue },
                 };
 
                 dataReaderMock.Setup(i => i.SelectAsync("STUDENT.RESTRICTIONS", It.IsAny<string>())).ReturnsAsync(personHoldsIds);
@@ -91,7 +92,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             [TestMethod]
             public async Task PersonHoldsRepo_GetPersonHoldByIdAsync()
             {
-                StudentRestrictions studentRestrictions = new StudentRestrictions() { Recordkey = "1", StrStudent = "1", StrComments = "Comment 1", StrEndDate = DateTime.MaxValue, StrRestriction = "Academic", StrStartDate = DateTime.MinValue };
+                StudentRestrictions studentRestrictions = new StudentRestrictions() { RecordGuid = guid, Recordkey = "1", StrStudent = "1", StrComments = "Comment 1", StrEndDate = DateTime.MaxValue, StrRestriction = "Academic", StrStartDate = DateTime.MinValue };
                 GuidLookupResult res = new GuidLookupResult(){ Entity = "STUDENT.RESTRICTIONS", PrimaryKey = "1", SecondaryKey = ""};
                 Dictionary<string, GuidLookupResult> dict = new Dictionary<string, GuidLookupResult>();
                 dict.Add("1", res);
@@ -119,9 +120,9 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 Collection<StudentRestrictions> studentHolds = new Collection<StudentRestrictions>() 
                 {
                     new StudentRestrictions()
-                        { Recordkey = "1", StrStudent = "1", StrComments = "Comment 1", StrEndDate = DateTime.MaxValue, StrRestriction = "Academic", StrStartDate = DateTime.MinValue },
+                        { RecordGuid = guid, Recordkey = "1", StrStudent = "1", StrComments = "Comment 1", StrEndDate = DateTime.MaxValue, StrRestriction = "Academic", StrStartDate = DateTime.MinValue },
                     new StudentRestrictions()
-                        { Recordkey = "2", StrStudent = "1", StrComments = "Comment 2", StrEndDate = DateTime.MaxValue, StrRestriction = "Health", StrStartDate = DateTime.MinValue },
+                        { RecordGuid = guid2, Recordkey = "2", StrStudent = "1", StrComments = "Comment 2", StrEndDate = DateTime.MaxValue, StrRestriction = "Health", StrStartDate = DateTime.MinValue },
                 };
 
                 GuidLookupResult res = new GuidLookupResult() { Entity = "STUDENT.RESTRICTIONS", PrimaryKey = "1", SecondaryKey = "" };
@@ -169,6 +170,14 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     new List<DeleteRestrictionWarnings>() { new DeleteRestrictionWarnings() { WarningCodes = "1", WarningMessages = "WarningMessage" } };
 
                 transManagerMock.Setup(i => i.ExecuteAsync<DeleteRestrictionRequest, DeleteRestrictionResponse>(It.IsAny <DeleteRestrictionRequest>())).ReturnsAsync(response);
+
+                GuidLookupResult res = new GuidLookupResult() { Entity = "STUDENT.RESTRICTIONS", PrimaryKey = "1", SecondaryKey = "" };
+                Dictionary<string, GuidLookupResult> dict = new Dictionary<string, GuidLookupResult>();
+                dict.Add("1", res);
+                dataReaderMock.Setup(i => i.SelectAsync(It.IsAny<GuidLookup[]>())).Returns<GuidLookup[]>(lookup =>
+                {
+                    return Task.FromResult(dict);
+                });
 
                 var results = await personHoldRepository.DeletePersonHoldsAsync("1");
 
@@ -296,6 +305,14 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     new List<DeleteRestrictionErrors>() { new DeleteRestrictionErrors() { ErrorCodes = "1", ErrorMessages = "ErrorMessages" } };
 
                 transManagerMock.Setup(i => i.ExecuteAsync<DeleteRestrictionRequest, DeleteRestrictionResponse>(It.IsAny<DeleteRestrictionRequest>())).ReturnsAsync(response);
+
+                GuidLookupResult res = new GuidLookupResult() { Entity = "STUDENT.RESTRICTIONS", PrimaryKey = "1", SecondaryKey = "" };
+                Dictionary<string, GuidLookupResult> dict = new Dictionary<string, GuidLookupResult>();
+                dict.Add("1", res);
+                dataReaderMock.Setup(i => i.SelectAsync(It.IsAny<GuidLookup[]>())).Returns<GuidLookup[]>(lookup =>
+                {
+                    return Task.FromResult(dict);
+                });
 
                 var results = await personHoldRepository.DeletePersonHoldsAsync("1");
             }

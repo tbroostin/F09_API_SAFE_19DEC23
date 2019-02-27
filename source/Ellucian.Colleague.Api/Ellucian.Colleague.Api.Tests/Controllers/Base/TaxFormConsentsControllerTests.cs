@@ -1,20 +1,20 @@
 ﻿//Copyright 2018 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Api.Controllers.Base;
+using Ellucian.Colleague.Configuration.Licensing;
+using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Colleague.Dtos.Base;
+using Ellucian.Web.Adapters;
+using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Security;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
+using Newtonsoft.Json;
+using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
-using Ellucian.Web.Adapters;
-using slf4net;
-using Ellucian.Colleague.Coordination.Base.Services;
-using Ellucian.Colleague.Dtos.Base;
-using Ellucian.Colleague.Configuration.Licensing;
-using Ellucian.Colleague.Api.Controllers.Base;
 using System.Web.Http;
-using Ellucian.Web.Security;
-using System.Web.Http.Hosting;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Base
 {
@@ -73,6 +73,63 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         #region POST
 
         [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task TaxFormConsentsController_SubmitConsent_PermissionsException()
+        {
+            taxFormConsentService.Setup(x => x.PostAsync(taxFormConsentCollection.FirstOrDefault())).Throws<PermissionsException>();
+            try
+            {
+                await taxFormConsentsController.PostAsync(taxFormConsentCollection.FirstOrDefault());
+            }
+            catch (HttpResponseException ex)
+            {
+                var exceptionResponse = ex.Response.Content.ReadAsStringAsync().Result;
+                WebApiException responseJson = JsonConvert.DeserializeObject<WebApiException>(exceptionResponse);
+                Assert.IsNotNull(responseJson);
+                Assert.AreEqual("Insufficient permissions to save tax form consents.", responseJson.Message);
+                throw;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task TaxFormConsentsController_SubmitConsent_NullArgumentException()
+        {
+            taxFormConsentService.Setup(x => x.PostAsync(null)).Throws<ArgumentNullException>();
+            try
+            {
+                await taxFormConsentsController.PostAsync(null);
+            }
+            catch (HttpResponseException ex)
+            {
+                var exceptionResponse = ex.Response.Content.ReadAsStringAsync().Result;
+                WebApiException responseJson = JsonConvert.DeserializeObject<WebApiException>(exceptionResponse);
+                Assert.IsNotNull(responseJson);
+                Assert.AreEqual("Invalid argument.", responseJson.Message);
+                throw;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task TaxFormConsentsController_SubmitConsent_CatchAllException()
+        {
+            taxFormConsentService.Setup(x => x.PostAsync(taxFormConsentCollection.FirstOrDefault())).Throws<ApplicationException>();
+            try
+            {
+                await taxFormConsentsController.PostAsync(taxFormConsentCollection.FirstOrDefault());
+            }
+            catch (HttpResponseException ex)
+            {
+                var exceptionResponse = ex.Response.Content.ReadAsStringAsync().Result;
+                WebApiException responseJson = JsonConvert.DeserializeObject<WebApiException>(exceptionResponse);
+                Assert.IsNotNull(responseJson);
+                Assert.AreEqual("Unable to save the tax form consent.", responseJson.Message);
+                throw;
+            }
+        }
+
+        [TestMethod]
         public async Task TaxFormConsentsController_SubmitConsentForT4()
         {
             BuildTaxFormConsentDto(TaxForms.FormT4);
@@ -82,22 +139,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             Assert.AreEqual(result.PersonId, result.PersonId, "PersonId");
             Assert.AreEqual(result.TaxForm, result.TaxForm, "TaxForm");
             Assert.AreEqual(result.TimeStamp, result.TimeStamp, "TimeStamp");
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task TaxFormConsentsController_SubmitConsent_NullArgument()
-        {
-            taxFormConsentService.Setup(x => x.PostAsync(null)).Throws<ArgumentNullException>();
-            await taxFormConsentsController.PostAsync(null);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task TaxFormConsentsController_SubmitConsent_PermissionException()
-        {
-            taxFormConsentService.Setup(x => x.PostAsync(taxFormConsentCollection.FirstOrDefault())).Throws<ApplicationException>();
-            await taxFormConsentsController.PostAsync(taxFormConsentCollection.FirstOrDefault());
         }
 
         [TestMethod]
@@ -140,6 +181,106 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         #region GET
 
         [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task TaxFormConsentsController_GetConsent_PersonIDNullException()
+        {
+            try
+            {
+                var result = await taxFormConsentsController.GetAsync(null, TaxForms.Form1099MI);
+            }
+            catch (HttpResponseException ex)
+            {
+                var exceptionResponse = ex.Response.Content.ReadAsStringAsync().Result;
+                WebApiException responseJson = JsonConvert.DeserializeObject<WebApiException>(exceptionResponse);
+                Assert.IsNotNull(responseJson);
+                Assert.AreEqual("Invalid argument.", responseJson.Message);
+                throw;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task TaxFormConsentsController_GetConsent_PersonIDEmptyException()
+        {
+            try
+            {
+                var result = await taxFormConsentsController.GetAsync("", TaxForms.Form1099MI);
+            }
+            catch (HttpResponseException ex)
+            {
+                var exceptionResponse = ex.Response.Content.ReadAsStringAsync().Result;
+                WebApiException responseJson = JsonConvert.DeserializeObject<WebApiException>(exceptionResponse);
+                Assert.IsNotNull(responseJson);
+                Assert.AreEqual("Invalid argument.", responseJson.Message);
+                throw;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task TaxFormConsentsController_GetConsent_PermissionsException()
+        {
+            BuildTaxFormConsentDto();
+            var currentConsent = taxFormConsentCollection.FirstOrDefault();
+            taxFormConsentService.Setup(x => x.GetAsync(currentConsent.PersonId, currentConsent.TaxForm)).Throws<PermissionsException>();
+            try
+            {
+                var result = await taxFormConsentsController.GetAsync(currentConsent.PersonId, TaxForms.Form1099MI);
+            }
+            catch (HttpResponseException ex)
+            {
+                var exceptionResponse = ex.Response.Content.ReadAsStringAsync().Result;
+                WebApiException responseJson = JsonConvert.DeserializeObject<WebApiException>(exceptionResponse);
+                Assert.IsNotNull(responseJson);
+                Assert.AreEqual("Insufficient permissions to access tax form consents.", responseJson.Message);
+                throw;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task TaxFormConsentsController_GetConsent_ArgumentNullException()
+        {
+            BuildTaxFormConsentDto();
+            var currentConsent = taxFormConsentCollection.FirstOrDefault();
+            taxFormConsentService.Setup(x => x.GetAsync(currentConsent.PersonId, currentConsent.TaxForm)).Throws<ArgumentNullException>();
+            try
+            {
+                var result = await taxFormConsentsController.GetAsync(currentConsent.PersonId, TaxForms.Form1099MI);
+            }
+            catch (HttpResponseException ex)
+            {
+                var exceptionResponse = ex.Response.Content.ReadAsStringAsync().Result;
+                WebApiException responseJson = JsonConvert.DeserializeObject<WebApiException>(exceptionResponse);
+                Assert.IsNotNull(responseJson);
+                Assert.AreEqual("Invalid argument.", responseJson.Message);
+                throw;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task TaxFormConsentsController_GetConsent_Exception()
+        {
+            BuildTaxFormConsentDto();
+            var currentConsent = taxFormConsentCollection.FirstOrDefault();
+            taxFormConsentService.Setup(x => x.GetAsync(currentConsent.PersonId, currentConsent.TaxForm)).Throws<ApplicationException>();
+            try
+            {
+                var result = await taxFormConsentsController.GetAsync(currentConsent.PersonId, TaxForms.Form1099MI);
+            }
+            catch (HttpResponseException ex)
+            {
+                var exceptionResponse = ex.Response.Content.ReadAsStringAsync().Result;
+                WebApiException responseJson = JsonConvert.DeserializeObject<WebApiException>(exceptionResponse);
+                Assert.IsNotNull(responseJson);
+                Assert.AreEqual("Unable to get the tax form consent", responseJson.Message);
+                throw;
+            }
+
+        }
+
+        [TestMethod]
         public async Task TaxFormConsentsController_GetConsentForT4Async()
         {
             BuildTaxFormConsentDto(TaxForms.FormT4);
@@ -163,30 +304,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             Assert.AreEqual(taxFormConsentCollection.FirstOrDefault().PersonId, currentConsent.PersonId, "PersonId");
             Assert.AreEqual(taxFormConsentCollection.FirstOrDefault().TaxForm, currentConsent.TaxForm, "TaxForm");
             Assert.AreEqual(taxFormConsentCollection.FirstOrDefault().TimeStamp, currentConsent.TimeStamp, "TimeStamp");
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task TaxFormConsentsController_GetConsent_PersonIDNullException()
-        {
-            var result = await taxFormConsentsController.GetAsync(null, TaxForms.Form1099MI);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task TaxFormConsentsController_GetConsent_PersonIDEmptyException()
-        {
-            var result = await taxFormConsentsController.GetAsync("", TaxForms.Form1099MI);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task TaxFormConsentsController_GetConsent_PermissionsException()
-        {
-            BuildTaxFormConsentDto();
-            var currentConsent = taxFormConsentCollection.FirstOrDefault();
-            taxFormConsentService.Setup(x => x.GetAsync(currentConsent.PersonId, currentConsent.TaxForm)).Throws<PermissionsException>();
-            var result = await taxFormConsentsController.GetAsync("", TaxForms.Form1099MI);
         }
 
         [TestMethod]

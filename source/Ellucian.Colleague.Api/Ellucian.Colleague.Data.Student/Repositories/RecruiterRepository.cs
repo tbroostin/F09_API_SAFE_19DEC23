@@ -1,5 +1,4 @@
 ﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
-using Ellucian.Colleague.Data.Student.Transactions;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Data.Colleague;
@@ -20,10 +19,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         {
             CacheTimeout = 5; // 5 minutes            
         }
-        //
-        // Update application status
-        //
-        ApplStatusImportRequest applicationStatusRequest = new ApplStatusImportRequest();
+
+        /// <summary>
+        /// Update application status
+        /// </summary>
+        /// <param name="newTranscriptCourse">An <see cref="Application">application</param>
         public async Task UpdateApplicationAsync(Ellucian.Colleague.Domain.Student.Entities.Application newApplication)
         {
             Transactions.ApplStatusImportRequest updateReq = new Transactions.ApplStatusImportRequest();
@@ -47,10 +47,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             return;
         }
-        //
-        // Import application/prospect
-        //
-        ApplicationImportRequest applicationImportRequest = new ApplicationImportRequest();
+
+        /// <summary>
+        /// Import application/prospect
+        /// </summary>
+        /// <param name="newTranscriptCourse">An <see cref="Application">application</param>
         public async Task ImportApplicationAsync(Ellucian.Colleague.Domain.Student.Entities.Application newApplication)
         {
             Transactions.ApplicationImportRequest importReq = new Transactions.ApplicationImportRequest();
@@ -263,11 +264,17 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             importReq.ApplicantUser10 = newApplication.ApplicationUser10;
             var customFieldsXml = "";
             customFieldsXml += "<CustomField>";
-            foreach (var field in newApplication.CustomFields)
+            if (newApplication.CustomFields != null)
             {
-                customFieldsXml += "<EntitySchema>" + field.EntitySchema + "</EntitySchema>";
-                customFieldsXml += "<AttributeSchema>" + field.AttributeSchema + "</AttributeSchema>";
-                customFieldsXml += "<Value>" + field.Value + "</Value>";
+                foreach (var field in newApplication.CustomFields)
+                {
+                    if (field != null)
+                    {
+                        customFieldsXml += "<EntitySchema>" + field.EntitySchema + "</EntitySchema>";
+                        customFieldsXml += "<AttributeSchema>" + field.AttributeSchema + "</AttributeSchema>";
+                        customFieldsXml += "<Value>" + field.Value + "</Value>";
+                    }
+                }
             }
             customFieldsXml += "</CustomField>";
             importReq.CustomFieldsXML = customFieldsXml;    
@@ -308,28 +315,33 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             return;
         }
-        //
-        // Import test scores
-        //
-        TestScoreImportRequest testScoreImportRequest = new TestScoreImportRequest();
+
+        /// <summary>
+        /// Import test scores
+        /// </summary>
+        /// <param name="newTranscriptCourse">A <see cref="TestScore">test score</param>
         public async Task ImportTestScoresAsync(Ellucian.Colleague.Domain.Student.Entities.TestScore newTestScore)
         {
             Transactions.TestScoreImportRequest importReq = new Transactions.TestScoreImportRequest();
-            // fill in all arguments for CRMT12
             importReq.ErpProspectId = newTestScore.ErpProspectId;
             importReq.TestType = newTestScore.TestType;
-            // TODO Not sure if this is right...
-            //importReq.TestDate = newTestScore.TestDate == null ? newTestScore.TestDate.ToString() : "";
             importReq.TestDate = newTestScore.TestDate;
             importReq.Source = newTestScore.Source;
             importReq.SubtestType = newTestScore.SubtestType;
             importReq.Score = newTestScore.Score;
             var customFieldsXml = "";
             customFieldsXml += "<CustomField>";
-            foreach (var field in newTestScore.CustomFields)            {
-                customFieldsXml += "<EntitySchema>" + field.EntitySchema + "</EntitySchema>";
-                customFieldsXml += "<AttributeSchema>" + field.AttributeSchema + "</AttributeSchema>";
-                customFieldsXml += "<Value>" + field.Value + "</Value>";
+            if (newTestScore.CustomFields != null)
+            {
+                foreach (var field in newTestScore.CustomFields)
+                {
+                    if (field != null)
+                    {
+                        customFieldsXml += "<EntitySchema>" + field.EntitySchema + "</EntitySchema>";
+                        customFieldsXml += "<AttributeSchema>" + field.AttributeSchema + "</AttributeSchema>";
+                        customFieldsXml += "<Value>" + field.Value + "</Value>";
+                    }
+                }
             }
             customFieldsXml += "</CustomField>";
             importReq.CustomFieldsXML = customFieldsXml;                        
@@ -349,10 +361,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             return;
         }
-        //
-        // Import transcript courses
-        //
-        TranscriptImportRequest transcriptCourseImportRequest = new TranscriptImportRequest();
+
+        /// <summary>
+        /// Import transcript courses
+        /// </summary>
+        /// <param name="newTranscriptCourse">A <see cref="TranscriptCourse">transcript course</param>
         public async Task ImportTranscriptCoursesAsync(Ellucian.Colleague.Domain.Student.Entities.TranscriptCourse newTranscriptCourse)
         {
             Transactions.TranscriptImportRequest importReq = new Transactions.TranscriptImportRequest();
@@ -373,11 +386,17 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             importReq.Comments = newTranscriptCourse.Comments;
             var customFieldsXml = "";
             customFieldsXml += "<CustomField>";
-            foreach (var field in newTranscriptCourse.CustomFields)
+            if (newTranscriptCourse.CustomFields != null)
             {
-                customFieldsXml += "<EntitySchema>" + field.EntitySchema + "</EntitySchema>";
-                customFieldsXml += "<AttributeSchema>" + field.AttributeSchema + "</AttributeSchema>";
-                customFieldsXml += "<Value>" + field.Value + "</Value>";
+                foreach (var field in newTranscriptCourse.CustomFields)
+                {
+                    if (field != null)
+                    {
+                        customFieldsXml += "<EntitySchema>" + field.EntitySchema + "</EntitySchema>";
+                        customFieldsXml += "<AttributeSchema>" + field.AttributeSchema + "</AttributeSchema>";
+                        customFieldsXml += "<Value>" + field.Value + "</Value>";
+                    }
+                }
             }
             customFieldsXml += "</CustomField>";
             importReq.CustomFieldsXML = customFieldsXml;                        
@@ -398,10 +417,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             return;
         }
-        //
-        // Import communication history
-        //
-        CommCodeImportRequest CommCodeImportRequest = new CommCodeImportRequest();
+
+        /// <summary>
+        /// Import communication history
+        /// </summary>
+        /// <param name="newCommunicationHistory">A <see cref="Domain.Base.Entities.CommunicationHistory">communication history</param>
         public async Task ImportCommunicationHistoryAsync(Ellucian.Colleague.Domain.Base.Entities.CommunicationHistory newCommunicationHistory)
         {
             Transactions.CommCodeImportRequest importReq = new Transactions.CommCodeImportRequest();
@@ -428,10 +448,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             return;
         }
-        //
-        // Request communication history
-        //
-        CommDataRequestRequest CommDataRequestRequest = new CommDataRequestRequest();
+
+        /// <summary>
+        /// Request communication history
+        /// </summary>
+        /// <param name="newCommunicationHistory">A <see cref="Domain.Base.Entities.CommunicationHistory">communication history</param>
         public async Task RequestCommunicationHistoryAsync(Ellucian.Colleague.Domain.Base.Entities.CommunicationHistory newCommunicationHistory)
         {
             Transactions.CommDataRequestRequest requestReq = new Transactions.CommDataRequestRequest();
@@ -453,10 +474,12 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             return;
         }
-        //
-        // Get connection status of Colleague to Recruiter
-        //
-        ConnectionTestRequest connectionTestRequest = new ConnectionTestRequest();
+
+        /// <summary>
+        /// Get connection status of Colleague to Recruiter
+        /// </summary>
+        /// <param name="newConnectionStatus">A <see cref="ConnectionStatus">connection status</see></param>
+        /// <returns>A <see cref="ConnectionStatus">connection status</see></returns>
         public async Task<ConnectionStatus> PostConnectionStatusAsync(Ellucian.Colleague.Domain.Student.Entities.ConnectionStatus newConnectionStatus)
         {
             Transactions.ConnectionTestRequest postReq = new Transactions.ConnectionTestRequest();

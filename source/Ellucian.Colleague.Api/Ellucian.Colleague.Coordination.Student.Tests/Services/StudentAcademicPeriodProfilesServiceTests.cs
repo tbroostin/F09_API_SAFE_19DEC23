@@ -337,7 +337,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 studentProgramStatusEntities = new List<Domain.Student.Entities.StudentProgramStatus>() 
                 {
                     new Domain.Student.Entities.StudentProgramStatus("W", new DateTime(2017, 03, 02)),
-                    new Domain.Student.Entities.StudentProgramStatus("A", new DateTime(2017, 03, 01))
+                    new Domain.Student.Entities.StudentProgramStatus("A", new DateTime(2017, 03, 01)),
+                    new Domain.Student.Entities.StudentProgramStatus("N", new DateTime(2016, 03, 01))
                 };
 
                 studentProgramEntities = new List<StudentProgram>() 
@@ -353,13 +354,18 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 acadProgramEntities = new TestAcademicProgramRepository().GetAsync().Result as List<Domain.Student.Entities.AcademicProgram>;
                 List<string> acadIds = acadProgramEntities.Select(i => i.Code).ToList();
-
-                student = new Domain.Student.Entities.Student("90019376-01a1-4149-89b9-2b755a4afe43", "1", "Bhole", 1, acadIds, new List<string>());
-                student.StudentTypeInfo = studentTypeInfoList;
-                student.ClassLevelCodes = studentClassificationEntities.Select(i => i.Code).ToList();
-                student.StudentAcademicLevels = new List<StudentAcademicLevel>() { new StudentAcademicLevel("UG", "A", "1G", "2016/Spr", null, true) };
-                student.StudentResidencies = new List<StudentResidency>() { new StudentResidency("INST", new DateTime(2016, 01, 01)) };
+                var students = new List<Domain.Student.Entities.Student>();
+                for (int num = 1; num < 5; num++)
+                {
+                    student = new Domain.Student.Entities.Student("90019376-01a1-4149-89b9-2b755a4afe43", num.ToString(), "Bhole", 1, acadIds, new List<string>());
+                    student.StudentTypeInfo = studentTypeInfoList;
+                    student.ClassLevelCodes = studentClassificationEntities.Select(i => i.Code).ToList();
+                    student.StudentAcademicLevels = new List<StudentAcademicLevel>() { new StudentAcademicLevel("UG", "A", "1G", "2016/Spr", null, true) };
+                    student.StudentResidencies = new List<StudentResidency>() { new StudentResidency("INST", new DateTime(2016, 01, 01)) };
+                    students.Add(student);
+                }
                 studentRepositoryMock.Setup(i => i.GetAsync(It.IsAny<string>())).ReturnsAsync(student);
+                studentRepositoryMock.Setup(i => i.GetStudentAcademicPeriodProfileStudentInfoAsync(It.IsAny<List<string>>())).ReturnsAsync(students);
             }
 
             private void BuildMocks()
@@ -369,20 +375,47 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 termRepositoryMock.Setup(i => i.GetAsync(It.IsAny<bool>())).ReturnsAsync(termEntities);
                 termRepositoryMock.Setup(i => i.GetAcademicPeriods(termEntities)).Returns(academicPeriodEntities);
                 studentReferenceDataRepositoryMock.Setup(i => i.GetStudentTypesAsync(It.IsAny<bool>())).ReturnsAsync(studentTypesEntities);
+                foreach (var entity in studentTypesEntities)
+                {
+                    studentReferenceDataRepositoryMock.Setup(i => i.GetStudentTypesGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
+                }
                 studentReferenceDataRepositoryMock.Setup(i => i.GetAcademicLevelsAsync(It.IsAny<bool>())).ReturnsAsync(acadLevelEntities);
+                foreach (var entity in acadLevelEntities)
+                {
+                    studentReferenceDataRepositoryMock.Setup(i => i.GetAcademicLevelsGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
+                }
                 studentReferenceDataRepositoryMock.Setup(i => i.GetStudentStatusesAsync(It.IsAny<bool>())).ReturnsAsync(studentStatuses);
+                foreach (var entity in studentStatuses)
+                {
+                    studentReferenceDataRepositoryMock.Setup(i => i.GetStudentStatusesGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
+                }
                 studentReferenceDataRepositoryMock.Setup(i => i.GetAllStudentClassificationAsync(It.IsAny<bool>())).ReturnsAsync(studentClassificationEntities);
+                foreach (var entity in studentClassificationEntities)
+                {
+                    studentReferenceDataRepositoryMock.Setup(i => i.GetStudentClassificationGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
+                }
                 studentReferenceDataRepositoryMock.Setup(i => i.GetStudentLoadsAsync()).ReturnsAsync(allStudentLoadEntities);
                 studentReferenceDataRepositoryMock.Setup(i => i.GetAcademicProgramsAsync(It.IsAny<bool>())).ReturnsAsync(acadProgramEntities);
+                foreach (var entity in acadProgramEntities)
+                {
+                    studentReferenceDataRepositoryMock.Setup(i => i.GetAcademicProgramsGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
+                }
                 studentReferenceDataRepositoryMock.Setup(i => i.GetEnrollmentStatusesAsync(It.IsAny<bool>())).ReturnsAsync(enrollmentStatusEntities);
 
                 studentRepositoryMock.Setup(i => i.GetResidencyStatusesAsync(It.IsAny<bool>())).ReturnsAsync(residencyStatusEntities);
+                foreach (var entity in residencyStatusEntities)
+                {
+                    studentRepositoryMock.Setup(i => i.GetResidencyStatusGuidAsync(entity.Code)).ReturnsAsync(entity.Guid);
+                }
 
-                studentProgramRepositoryMock.Setup(i => i.GetAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(studentProgramEntities.First());
+                //studentProgramRepositoryMock.Setup(i => i.GetAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(studentProgramEntities.First());
+
+                studentProgramRepositoryMock.Setup(i => i.GetStudentAcademicPeriodProfileStudentProgramInfoAsync(It.IsAny<List<string>>())).ReturnsAsync(studentProgramEntities.ToList());
 
                 IEnumerable<Domain.Student.Entities.AcademicCredit> filteredAcadCredit = acadCredits.Where(i => i.Id.Equals("1") || i.Id.Equals("2"));
                 IEnumerable<Domain.Student.Entities.AcademicCreditMinimum> filteredAcadCredit2 = acadCredits2.Where(i => i.Id.Equals("1") || i.Id.Equals("2"));
                 academicCreditRepositoryMock.Setup(i => i.GetAcademicCreditMinimumAsync(new Collection<string>() { "1", "2" }, It.IsAny<bool>(), It.IsAny<bool>())).ReturnsAsync(filteredAcadCredit2);
+                academicCreditRepositoryMock.Setup(i => i.GetAcademicCreditMinimumAsync(new List<string>() { "1", "2" }, It.IsAny<bool>(), It.IsAny<bool>())).ReturnsAsync(filteredAcadCredit2);
             }
            
             [TestCleanup]
@@ -601,6 +634,61 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
+            public async Task StudentAcademicPeriodProfileService_GetStudentAcademicPerioProfileAsync_PersonFilter()
+            {
+                var personGuid = "ed809943-eb26-42d0-9a95-d8db912a581f";
+                viewStudentAcadPeriodProfileRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.ViewStudentAcademicPeriodProfile));
+                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewStudentAcadPeriodProfileRole });
+                var guids = new[] { "cf4d47eb-f06b-4add-b5bf-d9529742387a", "df4d47eb-f06b-4add-b5bf-d9529742387a" };
+                var tempStudentTermEntities = studentTermEntities.Where(i => guids.Contains(i.Guid));
+
+                stuTermsTuple = new Tuple<IEnumerable<StudentTerm>, int>(tempStudentTermEntities, 2);
+                studentTermRepositoryMock.Setup(i => i.GetStudentTermsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(stuTermsTuple);
+                //personRepositoryMock.SetupSequence(i => i.GetPersonGuidFromIdAsync(It.IsAny<string>()))
+                //    .Returns(Task.FromResult("1f11fcd7-40bf-4c24-8e97-602c363eb8cf"))
+                //    .Returns(Task.FromResult("2f11fcd7-40bf-4c24-8e97-602c363eb8cf"));
+
+                Dictionary<string, string> dict = new Dictionary<string, string>();
+                //dict.Add("1", "ed809943-eb26-42d0-9a95-d8db912a581f");
+                //dict.Add("2", "6f11fcd7-40bf-4c24-8e97-602c363eb8cf");
+                dict.Add("3", "1f11fcd7-40bf-4c24-8e97-602c363eb8cf");
+                dict.Add("4", "2f11fcd7-40bf-4c24-8e97-602c363eb8cf");
+                personRepositoryMock.Setup(i => i.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(dict);
+
+
+                var actuals = await studentAcademicPeriodProfilesService.GetStudentAcademicPeriodProfilesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), personGuid, It.IsAny<string>());
+                Assert.IsNotNull(actuals);
+
+                foreach (var actual in actuals.Item1)
+                {
+                    var expected = stuAcadPeriodProfileDtos.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+                    Assert.IsNotNull(expected);
+
+                    Assert.AreEqual(expected.AcademicLoad, actual.AcademicLoad);
+                    Assert.AreEqual(expected.AcademicPeriod.Id, actual.AcademicPeriod.Id);
+                    //Code commented out
+                    //Assert.AreEqual(expected.AcademicPeriodEnrollmentStatus.Id, result.AcademicPeriodEnrollmentStatus.Id);
+
+                    Assert.AreEqual(expected.Id, actual.Id);
+                    Assert.AreEqual(expected.Person.Id, actual.Person.Id);
+                    Assert.AreEqual(expected.StudentStatus.Id, actual.StudentStatus.Id);
+                    Assert.AreEqual(expected.Type.Id, actual.Type.Id);
+
+                    //Check Collections
+                    Assert.AreEqual(expected.Measures.Count(), actual.Measures.Count());
+                    foreach (var actualMeasure in actual.Measures)
+                    {
+                        var expectedMeasure = expected.Measures.FirstOrDefault(i => i.Level.Id.Equals(actualMeasure.Level.Id, StringComparison.OrdinalIgnoreCase));
+                        Assert.IsNotNull(expectedMeasure);
+
+                        Assert.AreEqual(expectedMeasure.Classification.Id, actualMeasure.Classification.Id);
+                        Assert.AreEqual(expectedMeasure.Level.Id, actualMeasure.Level.Id);
+                        Assert.AreEqual(expectedMeasure.PerformanceMeasure, actualMeasure.PerformanceMeasure);
+                    }
+                }
+            }
+
+            [TestMethod]
             public async Task StudentAcademicPeriodProfileService_GetStudentAcademicPerioProfileAsync_EmptyTuple()
             {
                 var acadPeriodGuid = "8f3aac22-e0b5-4159-b4e2-da158362c41b";
@@ -702,9 +790,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 };
                 studentProgramEntities = new List<StudentProgram>()
                 {
-                    new StudentProgram("1", "BA-MATH", "Code1" ){ StudentProgramStatuses = studentProgramStatusEntities.ToList() }
+                    new StudentProgram("3", "BA-MATH", "Code1" ){ StudentProgramStatuses = studentProgramStatusEntities.ToList() }
                 };
 
+                studentProgramRepositoryMock.Setup(i => i.GetStudentAcademicPeriodProfileStudentProgramInfoAsync(It.IsAny<List<string>>())).ReturnsAsync(studentProgramEntities.ToList());
 
                 viewStudentAcadPeriodProfileRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.ViewStudentAcademicPeriodProfile));
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewStudentAcadPeriodProfileRole });

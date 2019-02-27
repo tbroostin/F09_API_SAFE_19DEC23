@@ -221,5 +221,25 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             return approverValidationResponse;
         }
+
+        /// <summary>
+        /// Get an approver name given an approver ID.
+        /// </summary>
+        /// <param name="approverId">The approver ID.</param>
+        /// <returns>An approver name or empty string.</returns>
+        public async Task<String> GetApproverNameForIdAsync(string approverId)
+        {
+            string approverName = string.Empty;
+            // Obtain the name for the approver ID. In Colleague it comes from OPERS.
+            var opersContract = await DataReader.ReadRecordAsync<Opers>("UT.OPERS", approverId);
+            if (opersContract != null)
+            {
+                if (!string.IsNullOrEmpty(opersContract.SysUserName))
+                {
+                    approverName = opersContract.SysUserName;
+                }
+            }
+            return approverName;
+        }
     }
 }

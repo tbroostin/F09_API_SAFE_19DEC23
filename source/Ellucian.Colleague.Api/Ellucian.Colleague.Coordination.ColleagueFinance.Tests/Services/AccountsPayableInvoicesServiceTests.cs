@@ -20,11 +20,12 @@ using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using System.Collections.ObjectModel;
 using Ellucian.Colleague.Dtos;
+using Ellucian.Data.Colleague;
 
 namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 {
     #region v11 AccountsPayableInvoices
-
+    [TestClass]
     public class AccountsPayableInvoicesServiceTests_GET : GeneralLedgerCurrentUser
     {
         #region Initialize and Cleanup
@@ -89,7 +90,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         #endregion
 
         [TestMethod]
-        public async Task AccountsPayableInvoicesServiceTests_GetAccountsPayableInvoicesByGuidAsync()
+        public async Task AccountsPayableInvoicesServiceTests_GetAccountsPayableInvoices2ByGuidAsync()
         {
             string voucherId = "1";
             var voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(voucherId, "00000001", GlAccessLevel.Full_Access, null, versionNumber);
@@ -225,7 +226,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        public async Task AccountsPayableInvoicesServiceTests_GetAccountsPayableInvoicesAsync()
+        public async Task AccountsPayableInvoicesServiceTests_GetAccountsPayableInvoices2Async()
         {
             for (int x = 0; x < 4; x++)
             {
@@ -343,26 +344,26 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         [TestMethod]
         public async Task AccountsPayableInvoicesServiceTests_GetAccountsPayableInvoicesAsync_MultipleReferenceDocNumbers()
         {
-          
+
             string voucherId = voucherIds[0];
             guid = guids[0];
             var voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(voucherId, "00000001", GlAccessLevel.Full_Access, null, versionNumber);
-            voucherDomainEntity.AddLineItem(new LineItem("10", "test", 1.22m, 1.23m, 1.24m) );
-            AccountsPayableInvoicesEntity = ConvertVoucherEntityToAPI2(voucherDomainEntity);           
+            voucherDomainEntity.AddLineItem(new LineItem("10", "test", 1.22m, 1.23m, 1.24m));
+            AccountsPayableInvoicesEntity = ConvertVoucherEntityToAPI2(voucherDomainEntity);
             accountsPayableInvoicesEntities.Add(AccountsPayableInvoicesEntity);
 
             Tuple<IEnumerable<Ellucian.Colleague.Domain.ColleagueFinance.Entities.AccountsPayableInvoices>, int> GetAPIValues = new Tuple<IEnumerable<Ellucian.Colleague.Domain.ColleagueFinance.Entities.AccountsPayableInvoices>, int>(accountsPayableInvoicesEntities, 4);
-            mockAccountsPayableInvoices.Setup(repo => repo.GetAccountsPayableInvoicesAsync(0, 100)).ReturnsAsync(GetAPIValues);
+            mockAccountsPayableInvoices.Setup(repo => repo.GetAccountsPayableInvoices2Async(0, 100)).ReturnsAsync(GetAPIValues);
             mockvendorsRepository.Setup(repo => repo.GetVendorGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("VendorIDGuid");
             mockaddressRepository.Setup(repo => repo.GetAddressGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("AddressGuid");
 
             var actuals = await AccountsPayableInvoicesService.GetAccountsPayableInvoices2Async(0, 100);
             Assert.IsNotNull(actuals.Item1);
-            
+
 
             foreach (var actual in actuals.Item1)
             {
-                var expected = accountsPayableInvoicesEntities.FirstOrDefault(x => x.Guid == actual.Id);               
+                var expected = accountsPayableInvoicesEntities.FirstOrDefault(x => x.Guid == actual.Id);
                 if (expected.LineItems.Count() > 0)
                 {
                     Assert.AreEqual(expected.LineItems.Count(), actual.LineItems.Count());
@@ -465,6 +466,48 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             AccountsPayableInvoicesEntity = ConvertVoucherEntityToAPI(voucherDomainEntity);
             mockAccountsPayableInvoices.Setup(repo => repo.GetAccountsPayableInvoicesByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new KeyNotFoundException());
+
+            var actual = await AccountsPayableInvoicesService.GetAccountsPayableInvoices2ByGuidAsync(guid);
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(KeyNotFoundException))]
+        public async Task AccountsPayableInvoicesServiceTests_GetAccountsPayableInvoicesByGuidAsync_NoRecordException()
+        {
+            string voucherId = "1";
+            var voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(voucherId, "00000001", GlAccessLevel.Full_Access, null, versionNumber);
+
+            AccountsPayableInvoicesEntity = ConvertVoucherEntityToAPI(voucherDomainEntity);
+            mockAccountsPayableInvoices.Setup(repo => repo.GetAccountsPayableInvoicesByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+
+            var actual = await AccountsPayableInvoicesService.GetAccountsPayableInvoices2ByGuidAsync(guid);
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentException))]
+        public async Task AccountsPayableInvoicesServiceTests_GetAccountsPayableInvoicesByGuidAsync_ArgumentExceptionn()
+        {
+            string voucherId = "1";
+            var voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(voucherId, "00000001", GlAccessLevel.Full_Access, null, versionNumber);
+
+            AccountsPayableInvoicesEntity = ConvertVoucherEntityToAPI(voucherDomainEntity);
+            mockAccountsPayableInvoices.Setup(repo => repo.GetAccountsPayableInvoicesByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new ArgumentException());
+
+            var actual = await AccountsPayableInvoicesService.GetAccountsPayableInvoices2ByGuidAsync(guid);
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task AccountsPayableInvoicesServiceTests_GetAccountsPayableInvoicesByGuidAsync_ApplicationException()
+        {
+            string voucherId = "1";
+            var voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(voucherId, "00000001", GlAccessLevel.Full_Access, null, versionNumber);
+
+            AccountsPayableInvoicesEntity = ConvertVoucherEntityToAPI(voucherDomainEntity);
+            mockAccountsPayableInvoices.Setup(repo => repo.GetAccountsPayableInvoicesByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new ApplicationException());
 
             var actual = await AccountsPayableInvoicesService.GetAccountsPayableInvoices2ByGuidAsync(guid);
 
@@ -635,7 +678,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                                                  Value = 10m,
                                                  Currency = Dtos.EnumProperties.CurrencyIsoCode.USD
                                              },
-                                             
+
                                               Quantity = 2m
                                         }
                                    },
@@ -643,7 +686,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                                    SequenceNumber = 1,
                                    Source = new GuidObject2( "asbc-321"),
                                    SubmittedBy = new GuidObject2("submit-guid"),
-                                   
+
 
                              }
                          },
@@ -676,7 +719,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                              {
                                  Value = 1m,
                                  Currency = Dtos.EnumProperties.CurrencyIsoCode.USD
-                             }                          
+                             }
                          }
                         , PaymentStatus = Dtos.EnumProperties.AccountsPayableInvoicesPaymentStatus.Nohold,
                          Status = AccountsPayableInvoicesStatus.Open
@@ -849,6 +892,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         private AccountsPayableInvoicesLineItem lineItem;
         private List<Domain.ColleagueFinance.Entities.FundsAvailable> fundsAvailable;
         private TestGeneralLedgerConfigurationRepository testGeneralLedgerConfigurationRepository;
+        private GeneralLedgerAccountStructure testGlAccountStructure;
 
         private Collection<Ellucian.Colleague.Domain.ColleagueFinance.Entities.AccountsPayableInvoices> accountsPayableInvoicesEntities = new Collection<Ellucian.Colleague.Domain.ColleagueFinance.Entities.AccountsPayableInvoices>();
 
@@ -906,10 +950,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             accountsPayableInvoicesService = null;
         }
 
-        private void InitializeTestData()
+        private async void InitializeTestData()
         {
             testGeneralLedgerConfigurationRepository = new TestGeneralLedgerConfigurationRepository();
-
+            testGlAccountStructure = await testGeneralLedgerConfigurationRepository.GetAccountStructureAsync();
             fundsAvailable = new List<Domain.ColleagueFinance.Entities.FundsAvailable>()
                 {
                     new Domain.ColleagueFinance.Entities.FundsAvailable("1")
@@ -936,7 +980,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     new Domain.Base.Entities.Country("MEX", "Mexico", "MEX", "MEX"),
                     new Domain.Base.Entities.Country("NLD", "Netherlands", "NLD", "NLD"),
                     new Domain.Base.Entities.Country("GBR", "London", "GBR", "GBR"),
-                    new Domain.Base.Entities.Country("JPN", "Japan", "JPN", "JPN1")
+                    new Domain.Base.Entities.Country("JP", "Japan", "JPN", "JPN"),
+                    new Domain.Base.Entities.Country("JP1", "Japan", "JPN", "JPN")
                 };
 
             addressEntity = new Domain.Base.Entities.Address()
@@ -1026,9 +1071,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                         Source = new GuidObject2(guid),
                         SubmittedBy = new GuidObject2(guid),
                         AccountingString = "1",
-                        BudgetCheck = AccountsPayableInvoicesAccountBudgetCheck.NotRequired,
+                        BudgetCheck = AccountsPayableInvoicesAccountBudgetCheck.Override,
                         SequenceNumber = 1
-                        
+
                     }
                 };
 
@@ -1052,7 +1097,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                         Discount = new Dtos.DtoProperties.AccountsPayableInvoicesDiscountDtoProperty()
                         {
                             Amount = new Dtos.DtoProperties.Amount2DtoProperty() { Value = 120, Currency = CurrencyIsoCode.USD },
-                            
+
                         },
                         ReferenceDocument = new Dtos.DtoProperties.LineItemReferenceDocumentDtoProperty2()
                         {
@@ -1157,6 +1202,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             referenceDataRepositoryMock.Setup(p => p.GetCountryCodesAsync(false)).ReturnsAsync(countries);
             referenceDataRepositoryMock.Setup(p => p.GetStateCodesAsync(false)).ReturnsAsync(states);
             accountsPayableInvoicesMock.Setup(p => p.CreateAccountsPayableInvoicesAsync(It.IsAny<Domain.ColleagueFinance.Entities.AccountsPayableInvoices>())).ReturnsAsync(accountsPayableInvoiceEntity);
+            generalLedgerConfigurationRepositoryMock.Setup(repo => repo.GetAccountStructureAsync()).ReturnsAsync(testGlAccountStructure);
+            accountsPayableInvoicesMock.Setup(p => p.GetIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(new GuidLookupResult() { Entity = "PURCHASE.ORDERS", PrimaryKey = "1" });
         }
 
         #endregion
@@ -1209,9 +1256,34 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         {
             accountsPayableInvoice.Vendor.ExistingVendor = null;
             accountsPayableInvoice.Vendor.ManualVendorDetails = new Dtos.DtoProperties.AccountsPayableInvoicesManualVendorDetailsDtoProperty()
-            { Name = "Acme Tools" , Place = new AddressPlace() { } };
+            { Name = "Acme Tools", Place = new AddressPlace() { } };
             await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
         }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentException))]
+        public async Task ActPayInvService_POST_When_Dto_Vendor_Is_Not_Correct()
+        {
+            vendorsRepositoryMock.Setup(p => p.GetVendorIdFromGuidAsync(It.IsAny<string>())).ThrowsAsync(new KeyNotFoundException());
+            await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task ActPayInvService_POST_When_Dto_Vendor_Id_Is_Null()
+        {
+            vendorsRepositoryMock.Setup(p => p.GetVendorIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+            await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task ActPayInvService_POST_When_Dto_Invalid_Address_Guid()
+        {
+            addressRepositoryMock.Setup(p => p.GetAddressFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+            await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
+        }
+
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
@@ -1220,9 +1292,37 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             accountsPayableInvoice.Vendor.ExistingVendor = null;
             accountsPayableInvoice.Vendor.ManualVendorDetails = new Dtos.DtoProperties.AccountsPayableInvoicesManualVendorDetailsDtoProperty()
             { Name = "Acme Tools",
-            Place = new AddressPlace() { Country = new AddressCountry { Title = "invalid" } } };
+                Place = new AddressPlace() { Country = new AddressCountry { Title = "invalid" } } };
             await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
         }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task ActPayInvService_POST_When_Dto_AllCountires_Is_Null()
+        {
+            accountsPayableInvoice.Vendor.ExistingVendor = null;
+            accountsPayableInvoice.Vendor.ManualVendorDetails = new Dtos.DtoProperties.AccountsPayableInvoicesManualVendorDetailsDtoProperty()
+            {
+                Name = "Acme Tools",
+                Place = new AddressPlace() { Country = new AddressCountry { Title = "invalid" } }
+            };
+            referenceDataRepositoryMock.Setup(p => p.GetCountryCodesAsync(false)).ReturnsAsync(null);
+            await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
+        }
+
+        [TestMethod]
+        public async Task ActPayInvService_POST_When_Dto_ManualVendorCounttryCode_Is_Mapped_two_Contries()
+        {
+            accountsPayableInvoice.Vendor.ExistingVendor = null;
+            accountsPayableInvoice.Vendor.ManualVendorDetails = new Dtos.DtoProperties.AccountsPayableInvoicesManualVendorDetailsDtoProperty()
+            {
+                Name = "Acme Tools",
+                Place = new AddressPlace() { Country = new AddressCountry { Code = IsoCode.JPN } }
+            };
+            await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
+
+        }
+
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
         public async Task ActPayInvService_POST_When_Dto_ProcessState_Is_NotSet()
@@ -1603,7 +1703,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ArgumentException))]
         public async Task ActPayInvService_POST_Dto_LineItem_AccountDetails_BudgetOverride_NoBudgetCheckOverrideFlag()
         {
             accountsPayableInvoice.LineItems.FirstOrDefault().AccountDetails.FirstOrDefault().BudgetCheck = AccountsPayableInvoicesAccountBudgetCheck.NotSet;
@@ -1679,16 +1779,17 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
         }
 
-        [TestMethod]
-        [ExpectedException(typeof(Exception))]
-        public async Task ActPayInvService_POST_DtoToEntity_Invalid_ProcessState()
-        {
-            accountsPayableInvoice.ProcessState = AccountsPayableInvoicesProcessState.Awaitingreceipt;
-            await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
-        }
+        //invalid process state is ignored
+        //[TestMethod]
+        //[ExpectedException(typeof(Exception))]
+        //public async Task ActPayInvService_POST_DtoToEntity_Invalid_ProcessState()
+        //{
+        //    accountsPayableInvoice.ProcessState = AccountsPayableInvoicesProcessState.Awaitingreceipt;
+        //    await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
+        //}
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ArgumentException))]
         public async Task ActPayInvService_POST_DtoToEntity_From_VendorRepository()
         {
             vendorsRepositoryMock.Setup(p => p.GetVendorIdFromGuidAsync(It.IsAny<string>())).ThrowsAsync(new ArgumentException());
@@ -1696,7 +1797,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ArgumentNullException))]
         public async Task ActPayInvService_POST_DtoToEntity_VendorId_NotFound()
         {
             accountsPayableInvoice.ProcessState = AccountsPayableInvoicesProcessState.Notapproved;
@@ -1705,7 +1806,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ArgumentNullException))]
         public async Task ActPayInvService_POST_DtoToEntity_Vendor_AlternateAddress_NotFound()
         {
             accountsPayableInvoice.ProcessState = AccountsPayableInvoicesProcessState.Outstanding;
@@ -1732,7 +1833,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ArgumentNullException))]
         public async Task ActPayInvService_POST_DtoToEntity_SubmittedBy_NotFound()
         {
             accountsPayableInvoice.ProcessState = AccountsPayableInvoicesProcessState.Voided;
@@ -1747,6 +1848,14 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         public async Task ActPayInvService_POST_Dto_LineItem_BlanketPurchaseOrder_Is_NotNull()
         {
             accountsPayableInvoice.LineItems.FirstOrDefault().ReferenceDocument.BlanketPurchaseOrder = new GuidObject2(guid);
+            await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task ActPayInvService_POST_Dto_LineItem_PurchasingArrangemen_Is_NotNull()
+        {
+            accountsPayableInvoice.LineItems.FirstOrDefault().ReferenceDocument.PurchasingArrangement = new GuidObject2(guid);
             await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
         }
 
@@ -1791,7 +1900,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ArgumentException))]
         public async Task ActPayInvService_POST_DtoToEntity_LineItemNumber_NotSameAs_ReferenceLineItemNumber()
         {
             accountsPayableInvoice.LineItems.FirstOrDefault().ReferenceDocumentLineItemNumber = "2";
@@ -1822,7 +1931,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ArgumentException))]
         public async Task ActPayInvService_POST_EntityToDto_Vendor_NotFound()
         {
             vendorsRepositoryMock.Setup(p => p.GetVendorGuidFromIdAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
@@ -1833,7 +1942,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ArgumentException))]
         public async Task ActPayInvService_POST_EntityToDto_VendorId_As_Null()
         {
             accountsPayableInvoiceEntity.CurrencyCode = string.Empty;
@@ -1845,7 +1954,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ArgumentException))]
         public async Task ActPayInvService_POST_EntityToDto_VoucherMiscCountry_NotFound()
         {
             var manualVendorDetails = new Dtos.DtoProperties.AccountsPayableInvoicesManualVendorDetailsDtoProperty()
@@ -1875,7 +1984,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ArgumentException))]
         public async Task ActPayInvService_POST_EntityToDto_StateCode_NotFound()
         {
             var manualVendorDetails = new Dtos.DtoProperties.AccountsPayableInvoicesManualVendorDetailsDtoProperty()
@@ -1905,7 +2014,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ArgumentException))]
         public async Task ActPayInvService_POST_Funds_NotAvailable()
         {
             accountsPayableInvoiceEntity.CurrencyCode = "A12";
@@ -1932,8 +2041,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         [ExpectedException(typeof(RepositoryException))]
         public async Task ActPayInvService_POST_RepositoryException()
         {
-            var testGlAccountStructure = await new TestGeneralLedgerConfigurationRepository().GetAccountStructureAsync();
-            generalLedgerConfigurationRepositoryMock.Setup(repo => repo.GetAccountStructureAsync()).ReturnsAsync(testGlAccountStructure);
+
             accountsPayableInvoice.LineItems.FirstOrDefault().AccountDetails.FirstOrDefault().BudgetCheck = AccountsPayableInvoicesAccountBudgetCheck.Override;
             accountsPayableInvoiceEntity.CurrencyCode = String.Empty;
             accountsPayableInvoiceEntity.HostCountry = "USA";
@@ -1958,7 +2066,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ArgumentException))]
         public async Task ActPayInvService_POST_InvalidTaxCode()
         {
             var taxCodesApPur = new List<Domain.Base.Entities.CommerceTaxCode>()
@@ -2017,6 +2125,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         private AccountsPayableInvoicesLineItem lineItem;
         private List<Domain.ColleagueFinance.Entities.FundsAvailable> fundsAvailable;
         private Dtos.DtoProperties.AccountsPayableInvoicesManualVendorDetailsDtoProperty manualVendorDetails;
+        private GeneralLedgerAccountStructure testGlAccountStructure;
 
         private Collection<Ellucian.Colleague.Domain.ColleagueFinance.Entities.AccountsPayableInvoices> accountsPayableInvoicesEntities = new Collection<Ellucian.Colleague.Domain.ColleagueFinance.Entities.AccountsPayableInvoices>();
 
@@ -2075,10 +2184,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             accountsPayableInvoicesService = null;
         }
 
-        private void InitializeTestData()
+        private async void InitializeTestData()
         {
             testGeneralLedgerConfigurationRepository = new TestGeneralLedgerConfigurationRepository();
-
+            testGlAccountStructure = await testGeneralLedgerConfigurationRepository.GetAccountStructureAsync();
             fundsAvailable = new List<Domain.ColleagueFinance.Entities.FundsAvailable>()
                 {
                     new Domain.ColleagueFinance.Entities.FundsAvailable("1")
@@ -2105,7 +2214,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     new Domain.Base.Entities.Country("MEX", "Mexico", "MX", "MEX"),
                     new Domain.Base.Entities.Country("NLD", "Netherlands", "ND", "NLD"),
                     new Domain.Base.Entities.Country("GBR", "London", "GB", "GBR"),
-                    new Domain.Base.Entities.Country("JPN", "Japan", "JP", "JPN")
+                    new Domain.Base.Entities.Country("JPN", "Japan", "JP", "JPN"),
+                    new Domain.Base.Entities.Country("JPN1", "Japan", "JP", "JPN",true)
                 };
 
             taxCodes = new List<Domain.Base.Entities.CommerceTaxCode>()
@@ -2169,7 +2279,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                             {
                                 Amount = new Dtos.DtoProperties.Amount2DtoProperty() { Value = 100, Currency = CurrencyIsoCode.USD },
                                 Quantity = 10
-                                
+
                             },
                             TaxAmount = new Dtos.DtoProperties.Amount2DtoProperty() { Value = 100, Currency = CurrencyIsoCode.USD },
                             DiscountAmount = new Dtos.DtoProperties.Amount2DtoProperty() { Value = 100, Currency = CurrencyIsoCode.USD },
@@ -2178,7 +2288,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                         Source = new GuidObject2(guid),
                         SubmittedBy = new GuidObject2(guid),
                         AccountingString = "1",
-                        BudgetCheck = AccountsPayableInvoicesAccountBudgetCheck.NotRequired,
+                        BudgetCheck = AccountsPayableInvoicesAccountBudgetCheck.Override,
                         SequenceNumber = 1
                     }
                 };
@@ -2203,7 +2313,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                         Discount = new Dtos.DtoProperties.AccountsPayableInvoicesDiscountDtoProperty()
                         {
                             Amount = new Dtos.DtoProperties.Amount2DtoProperty() { Value = 120, Currency = CurrencyIsoCode.USD },
-                           
+
                         },
                         ReferenceDocument = new Dtos.DtoProperties.LineItemReferenceDocumentDtoProperty2()
                         {
@@ -2263,7 +2373,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 UnitOfIssue = "1",
                 CashDiscountAmount = 10,
                 TradeDiscountAmount = 5,
-                
+
                 Comments = "comments",
 
                 AccountsPayableLineItemTaxes = new List<LineItemTax>()
@@ -2327,6 +2437,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             referenceDataRepositoryMock.Setup(p => p.GetStateCodesAsync(false)).ReturnsAsync(states);
             accountsPayableInvoicesMock.Setup(p => p.UpdateAccountsPayableInvoicesAsync(It.IsAny<Domain.ColleagueFinance.Entities.AccountsPayableInvoices>())).ReturnsAsync(accountsPayableInvoiceEntity);
             accountsPayableInvoicesMock.Setup(p => p.CreateAccountsPayableInvoicesAsync(It.IsAny<Domain.ColleagueFinance.Entities.AccountsPayableInvoices>())).ReturnsAsync(accountsPayableInvoiceEntity);
+            accountsPayableInvoicesMock.Setup(p => p.GetIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(new GuidLookupResult() { Entity = "PURCHASE.ORDERS", PrimaryKey = "1" });
+            generalLedgerConfigurationRepositoryMock.Setup(repo => repo.GetAccountStructureAsync()).ReturnsAsync(testGlAccountStructure);
         }
 
         #endregion
@@ -2370,6 +2482,17 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         {
             accountsPayableInvoice.Vendor.ExistingVendor = null;
             accountsPayableInvoice.Vendor.ManualVendorDetails = new Dtos.DtoProperties.AccountsPayableInvoicesManualVendorDetailsDtoProperty() { Name = null };
+            await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task ActPayInvService_PUT_When_VoidStatus_NoVoidDate()
+        {
+            var testGlAccountStructure = await new TestGeneralLedgerConfigurationRepository().GetAccountStructureAsync();
+            generalLedgerConfigurationRepositoryMock.Setup(repo => repo.GetAccountStructureAsync()).ReturnsAsync(testGlAccountStructure);
+            accountsPayableInvoice.ProcessState = AccountsPayableInvoicesProcessState.Voided;
+            accountsPayableInvoice.VoidDate = null;
             await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
         }
 
@@ -2497,6 +2620,24 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         {
             accountsPayableInvoice.Taxes.FirstOrDefault().TaxCode.Id = null;
 
+            await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(Exception))]
+        public async Task ActPayInvService_PUT_Dto_AllTaxCodeId_Is_Null()
+        {
+            accountsPayableInvoice.Taxes.FirstOrDefault().TaxCode.Id = "123";
+            referenceDataRepositoryMock.Setup(p => p.GetCommerceTaxCodesAsync(true)).ReturnsAsync(null);
+            await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(Exception))]
+        public async Task ActPayInvService_PUT_Dto_TaxCodeId_Is_Invalid()
+        {
+            accountsPayableInvoice.Taxes.FirstOrDefault().TaxCode.Id = "123";
+            referenceDataRepositoryMock.Setup(p => p.GetCommerceTaxCodesAsync(true)).ReturnsAsync(taxCodes);
             await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
         }
 
@@ -2631,6 +2772,15 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
+        public async Task ActPayInvService_PUT_Dto_LineItem_DiscountAmount_Percentage_Is_Null()
+        {
+            accountsPayableInvoice.LineItems.FirstOrDefault().Discount.Amount = null;
+            accountsPayableInvoice.LineItems.FirstOrDefault().Discount.Percent = null;
+            await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
         public async Task ActPayInvService_PUT_Dto_LineItem_DiscountAmount_Currency_Is_Null()
         {
             accountsPayableInvoice.LineItems.FirstOrDefault().Discount.Amount.Currency = null;
@@ -2642,6 +2792,14 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         public async Task ActPayInvService_PUT_Dto_LineItem_AccountDetails_AllocatedAmountValue_Is_Null()
         {
             accountsPayableInvoice.LineItems.FirstOrDefault().AccountDetails.FirstOrDefault().Allocation.Allocated.Amount.Value = null;
+            await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task ActPayInvService_PUT_Dto_LineItem_AccountDetails_Is_Null()
+        {
+            accountsPayableInvoice.LineItems.FirstOrDefault().AccountDetails = null;
             await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
         }
 
@@ -2734,7 +2892,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ArgumentException))]
         public async Task ActPayInvService_PUT_Dto_LineItem_AccountDetails_BudgetOverride_NoBudgetCheckOverride()
         {
             accountsPayableInvoice.LineItems.FirstOrDefault().AccountDetails.FirstOrDefault().BudgetCheck = AccountsPayableInvoicesAccountBudgetCheck.NotSet;
@@ -2779,6 +2937,32 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
+        public async Task ActPayInvService_PUT_Dto_LineItem_Invalid_PO_GUID()
+        {
+            accountsPayableInvoice.LineItems.FirstOrDefault().ReferenceDocument.PurchaseOrder.Id = "123";
+            accountsPayableInvoicesMock.Setup(p => p.GetIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(new GuidLookupResult() { Entity = "VOUCHERS", PrimaryKey = "1" });
+            await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(Exception))]
+        public async Task ActPayInvService_PUT_Dto_LineItem__PO_No_RefLineNumber()
+        {
+            accountsPayableInvoice.LineItems.FirstOrDefault().ReferenceDocumentLineItemNumber = null;
+            await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(Exception))]
+        public async Task ActPayInvService_PUT_Dto_LineItem__FinalPaymentFlag()
+        {
+            accountsPayableInvoice.LineItems.FirstOrDefault().EncumbranceStatus = AccountsPayableInvoicesEncumbranceStatus.FinalPayment;
+            accountsPayableInvoice.LineItems.FirstOrDefault().ReferenceDocument.PurchaseOrder.Id = null;
+            await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
         public async Task ActPayInvService_PUT_Dto_LineItem_PaymentStatus_Is_Null()
         {
             accountsPayableInvoice.LineItems.FirstOrDefault().PaymentStatus = null;
@@ -2794,7 +2978,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ArgumentException))]
         public async Task ActPayInvService_PUT_Funds_NotAvailable()
         {
             accountsPayableInvoiceEntity.CurrencyCode = "A12";
@@ -2828,16 +3012,17 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
         }
 
-        [TestMethod]
-        [ExpectedException(typeof(Exception))]
-        public async Task ActPayInvService_PUT_DtoToEntity_Invalid_ProcessState()
-        {
-            accountsPayableInvoice.ProcessState = AccountsPayableInvoicesProcessState.Awaitingreceipt;
-            await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
-        }
+        //invalid processState is ignored.
+        //[TestMethod]
+        //[ExpectedException(typeof(Exception))]
+        //public async Task ActPayInvService_PUT_DtoToEntity_Invalid_ProcessState()
+        //{
+        //    accountsPayableInvoice.ProcessState = AccountsPayableInvoicesProcessState.Awaitingreceipt;
+        //    await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
+        //}
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ArgumentException))]
         public async Task ActPayInvService_PUT_DtoToEntity_From_VendorRepository()
         {
             vendorsRepositoryMock.Setup(p => p.GetVendorIdFromGuidAsync(It.IsAny<string>())).ThrowsAsync(new ArgumentException());
@@ -2845,7 +3030,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ArgumentNullException))]
         public async Task ActPayInvService_PUT_DtoToEntity_VendorId_NotFound()
         {
             accountsPayableInvoice.ProcessState = AccountsPayableInvoicesProcessState.Notapproved;
@@ -2854,7 +3039,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ArgumentNullException))]
         public async Task ActPayInvService_PUT_DtoToEntity_Vendor_AlternateAddress_NotFound()
         {
             accountsPayableInvoice.ProcessState = AccountsPayableInvoicesProcessState.Outstanding;
@@ -2884,9 +3069,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         [ExpectedException(typeof(Exception))]
         public async Task ActPayInvService_PUT_DtoToEntity_SubmittedBy_NotFound()
         {
-            accountsPayableInvoice.ProcessState = AccountsPayableInvoicesProcessState.Voided;
-            personRepositoryMock.SetupSequence(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).Returns(Task.FromResult<string>("1")).Returns(Task.FromResult<string>(null));
-
+            accountsPayableInvoice.SubmittedBy = new GuidObject2() {Id = "123"};
+            personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
             await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
         }
 
@@ -2923,7 +3107,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ArgumentException))]
         public async Task ActPayInvService_PUT_DtoToEntity_LineItemNumber_NotSameAs_ReferenceLineItemNumber()
         {
             accountsPayableInvoice.LineItems.FirstOrDefault().ReferenceDocumentLineItemNumber = "2";
@@ -2955,7 +3139,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ArgumentException))]
         public async Task ActPayInvService_PUT_EntityToDto_Vendor_NotFound()
         {
             vendorsRepositoryMock.Setup(p => p.GetVendorGuidFromIdAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
@@ -2966,7 +3150,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ArgumentException))]
         public async Task ActPayInvService_PUT_EntityToDto_VendorId_As_Null()
         {
             accountsPayableInvoiceEntity.CurrencyCode = string.Empty;
@@ -2978,7 +3162,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ArgumentException))]
         public async Task ActPayInvService_PUT_EntityToDto_VoucherMiscCountry_NotFound()
         {
             manualVendorDetails.Place.Country.Code = IsoCode.AND;
@@ -2990,7 +3174,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(ArgumentException))]
         public async Task ActPayInvService_PUT_EntityToDto_StateCode_NotFound()
         {
             manualVendorDetails.Place.Country.Code = IsoCode.USA;
@@ -3074,6 +3258,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             Assert.AreEqual(guid, result.Id);
         }
 
+        [TestMethod]
         public async Task ActPayInvService_PUT_Create_NewRecord()
         {
             var testGlAccountStructure = await new TestGeneralLedgerConfigurationRepository().GetAccountStructureAsync();
@@ -3085,6 +3270,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             accountsPayableInvoice.Vendor.ExistingVendor = null;
 
             accountsPayableInvoice.Vendor.ManualVendorDetails = manualVendorDetails;
+
+            accountsPayableInvoice.LineItems.FirstOrDefault().AccountDetails.FirstOrDefault().BudgetCheck = AccountsPayableInvoicesAccountBudgetCheck.Override;
 
             accountsPayableInvoicesMock.Setup(p => p.GetAccountsPayableInvoicesIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
 

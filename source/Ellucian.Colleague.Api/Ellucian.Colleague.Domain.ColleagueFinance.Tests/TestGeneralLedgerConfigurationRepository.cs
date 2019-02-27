@@ -20,6 +20,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
         private CostCenterStructure costCenterStructure;
         private static char _SM = Convert.ToChar(DynamicArray.SM);
         private TestGlAccountRepository testGlAccountRepository;
+        public BudgetAdjustmentAccountExclusions exclusions;
 
         public int StartYear { get { return startYear; } }
         private int startYear;
@@ -40,6 +41,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
         {
             this.ComponentDescriptionBuilder = new GeneralLedgerComponentDescriptionBuilder();
             this.testGlAccountRepository = new TestGlAccountRepository();
+            this.exclusions = new BudgetAdjustmentAccountExclusions();
 
             #region Initialize
 
@@ -392,7 +394,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
 
         public async Task<BudgetAdjustmentAccountExclusions> GetBudgetAdjustmentAccountExclusionsAsync()
         {
-            return await Task.Run(() => { return new BudgetAdjustmentAccountExclusions(); });
+            return await Task.Run(() => { return exclusions; });
         }
 
         public async Task<BudgetAdjustmentParameters> GetBudgetAdjustmentParametersAsync()

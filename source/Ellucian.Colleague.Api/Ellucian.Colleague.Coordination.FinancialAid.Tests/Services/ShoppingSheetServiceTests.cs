@@ -329,7 +329,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
             public async Task NullBudgetAndStudentBudgetComponentsHasNoEffectTest()
             {
                 financialAidReferenceDataRepository.BudgetComponentData = new List<TestFinancialAidReferenceDataRepository.BudgetComponentRecord>();
-                studentBudgetComponentRepository.csStudentRecords = new List<TestStudentBudgetComponentRepository.CsStudentRecord>();
+                studentBudgetComponentRepository.responses = new List<TestStudentBudgetComponentRepository.GetStudentBudgetComponentsResponse>();
 
                 Assert.AreEqual((await expectedShoppingSheets()).Count(), (await actualShoppingSheetsAsync()).Count());
             }

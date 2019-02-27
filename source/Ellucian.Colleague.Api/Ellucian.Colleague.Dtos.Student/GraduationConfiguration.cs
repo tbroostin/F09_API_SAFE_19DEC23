@@ -71,6 +71,11 @@ namespace Ellucian.Colleague.Dtos.Student
         public bool RequireImmediatePayment { get; set; }
 
         /// <summary>
+        /// Hiding parameter for anticipateddate for a program
+        /// </summary>
+        public bool HideAnticipatedCompletionDate { get; set; }
+
+        /// <summary>
         /// Default constructor
         /// </summary>
         public GraduationConfiguration()

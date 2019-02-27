@@ -137,7 +137,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         {
             var request = new DeleteRestrictionRequest()
             {
-                StudentRestrictionsId = personHoldsId
+                StudentRestrictionsId = await GetStudentHoldIdFromGuidAsync(personHoldsId),
+                StrGuid = personHoldsId
             };
             
             //Delete
@@ -248,7 +249,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
                 try
                 {
-                    stuRestriction = new PersonRestriction(studentHold.Recordkey, studentHold.StrStudent, studentHold.StrRestriction, studentHold.StrStartDate, studentHold.StrEndDate, studentHold.StrSeverity, studentHold.StrPrtlDisplayFlag);
+                    stuRestriction = new PersonRestriction(studentHold.RecordGuid, studentHold.Recordkey, studentHold.StrStudent, studentHold.StrRestriction, studentHold.StrStartDate, studentHold.StrEndDate, studentHold.StrSeverity, studentHold.StrPrtlDisplayFlag);
                     stuRestriction.Comment = string.IsNullOrEmpty(studentHold.StrComments) ? string.Empty : studentHold.StrComments;
                     stuRestriction.NotificationIndicator = studentHold.StrPrtlDisplayFlag;
                     return stuRestriction;

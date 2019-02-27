@@ -1,10 +1,7 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+
 using System;
-using System.Text;
-using System.Collections.Generic;
-using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Student.Entities;
 
 namespace Ellucian.Colleague.Domain.Student.Tests.Entities
@@ -182,7 +179,5 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
                 Assert.AreEqual(parentId, academicPeriod.ParentId);
             }
         }
-
-
     }
 }

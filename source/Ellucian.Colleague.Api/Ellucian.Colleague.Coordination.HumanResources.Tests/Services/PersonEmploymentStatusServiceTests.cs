@@ -1,4 +1,4 @@
-﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2018 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Colleague.Domain.HumanResources.Tests;
@@ -61,7 +61,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                         SessionFixationId = "abc123",
                         ProxySubjectClaims = new ProxySubjectClaims()
                         {
-                            PersonId = "0000001"
+                            PersonId = "0000001",
+                            Permissions = new List<string> { Domain.Base.Entities.ProxyWorkflowConstants.TimeManagementTimeApproval.Value }
                         }
                     });
                 }
@@ -140,18 +141,18 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             proxyRoleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { proxyTimeApprovalRole });
 
             personEmploymentStatusDtoComparer = new FunctionEqualityComparer<PersonEmploymentStatus>(
-                (p1, p2) => 
-                    p1.Id == p2.Id && 
-                    p1.PersonId == p2.PersonId && 
-                    p1.PersonPositionId == p2.PersonPositionId && 
-                    p1.PrimaryPositionId == p2.PrimaryPositionId && 
+                (p1, p2) =>
+                    p1.Id == p2.Id &&
+                    p1.PersonId == p2.PersonId &&
+                    p1.PersonPositionId == p2.PersonPositionId &&
+                    p1.PrimaryPositionId == p2.PrimaryPositionId &&
                     p1.StartDate == p2.StartDate &&
                     p1.EndDate == p2.EndDate,
                 (p) => p.Id.GetHashCode());
         }
-        
 
-    [TestClass]
+
+        [TestClass]
         public class GetPersonEmploymentStatussTests : PersonEmploymentStatusServiceTests
         {
             [TestInitialize]

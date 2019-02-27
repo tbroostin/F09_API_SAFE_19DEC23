@@ -634,10 +634,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task SectionInstructorsController_DeleteSectionInstructorsAsync()
             {
                 serviceMock.Setup(s => s.DeleteSectionInstructorsAsync(It.IsAny<string>())).Returns(Task.FromResult(true));
-                var result = await controller.DeleteSectionInstructorsAsync(guid);
+                await controller.DeleteSectionInstructorsAsync(guid);
 
-                Assert.IsNotNull(result);
-                Assert.AreEqual(HttpStatusCode.OK, result.StatusCode);
             }
         }
     }

@@ -197,11 +197,6 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 {
                     throw new ArgumentNullException("accountsPayableInvoicesDto", "Nil GUID must be used in POST operation.");
                 }
-                //if ((accountsPayableInvoices.TransactionDate != DateTime.MinValue) && (DateTime.Compare(accountsPayableInvoices.TransactionDate, DateTime.Now.Date) < 0))
-                //{
-                //    throw new ArgumentNullException("accountsPayableInvoices.TransactionDate", "The transactionDate can not be prior to the current date when submitting an accounts payable invoice. ");
-                //}
-
                 if ((accountsPayableInvoices.TransactionDate == DateTime.MinValue))
                 {
                     throw new ArgumentNullException("accountsPayableInvoices.TransactionDate", "The transactionDate is a required field");
@@ -232,6 +227,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+            }
+            catch (ArgumentNullException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (ArgumentException e)
             {
@@ -327,11 +327,16 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
             }
-            catch (ArgumentException e)
+            catch (ArgumentNullException e)
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }          
             catch (RepositoryException e)
             {
                 _logger.Error(e.ToString());

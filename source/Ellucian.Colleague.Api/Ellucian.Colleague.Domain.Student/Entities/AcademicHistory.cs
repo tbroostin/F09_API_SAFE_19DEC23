@@ -44,40 +44,14 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             {
                 throw new ArgumentNullException("studentGradeRestriction");
             }
-
-            // Flag replacements. Each replaced course has a list of courses involved in its replacement. Any item in the list that
-            // is not "replaced" is a "replacement".
-            foreach (var credit in credits.Where(c=>c.ReplacedStatus == ReplacedStatus.Replaced))
-            {
-                foreach (var repeatCreditId in credit.RepeatAcademicCreditIds)
-                {
-                    var repeatCredit = credits.Where(c => c.Id == repeatCreditId).FirstOrDefault();
-                    if (repeatCredit != null)
-                    {
-                        // If item has not already been marked as replaced, then it's the replacement.
-                        if (repeatCredit.ReplacedStatus != ReplacedStatus.Replaced)
-                            repeatCredit.ReplacementStatus = ReplacementStatus.Replacement;
-                    }
-                }
-            }
-
-            // Flag possible future replaced/replacements. Start with all course-based credits that are not marked replaced and can be replaced and are completed
-            foreach (var credit in credits.Where(c => !(c.ReplacedStatus == ReplacedStatus.Replaced) && c.CanBeReplaced && c.IsCompletedCredit && c.Course != null))
-            {
-                // Find all course-based credits that are not completed and not dropped/withdrawn for that same course or an equated course, and pick the one with the earliest start date
-                var replacementCredit = credits.Where(c => c.Id != credit.Id && !c.IsCompletedCredit && c.Status != CreditStatus.Dropped && c.Status != CreditStatus.Withdrawn && c.Course != null && (c.Course.Id == credit.Course.Id || credit.Course.EquatedCourseIds.Contains(c.Course.Id))).OrderBy(c => c.StartDate).FirstOrDefault();
-                if (replacementCredit != null)
-                {
-                    replacementCredit.ReplacementStatus = ReplacementStatus.PossibleReplacement;
-                    credit.ReplacedStatus = ReplacedStatus.ReplaceInProgress;
-                }
-            }
             // Removed all filtering here because filtering is already done on all the
             // credits coming into this method.
             // SRM - 04/15/2014  ESS Project
-            
+
             if (credits != null && credits.Count() > 0)
             {
+                //call this method to update credits with Replaced and replacement status.
+                UpdateCreditsReplaceStatus(credits);
                 // Added fields to track totals SRM 11/12/2013
                 decimal totalGpaGradePoints = 0;
                 decimal totalGpaCredits = 0;
@@ -116,7 +90,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
                                 cred.GradePoints = 0;
                                 cred.GpaCredit = 0;
                             }
-                            
+
                             _NonTermAcademicCredits.Add(cred);
                             if (string.IsNullOrEmpty(StudentId))
                             {
@@ -125,16 +99,16 @@ namespace Ellucian.Colleague.Domain.Student.Entities
                             // Calcluate Transfer Credits
                             if (cred.IsTransfer == true)
                             {
-                                transferGpaCredits = transferGpaCredits + cred.GpaCredit??0m;
+                                transferGpaCredits = transferGpaCredits + cred.GpaCredit ?? 0m;
                                 transferGpaGradePoints = transferGpaGradePoints + cred.GradePoints;
-                                transferCredits = transferCredits + cred.CompletedCredit??0m;
+                                transferCredits = transferCredits + cred.CompletedCredit ?? 0m;
                             }
                         }
                         // Added Totals for GPA and total completed Credits SRM 11/12/2013
-                        totalGpaCredits = totalGpaCredits + creds.Sum(ac => ac.GpaCredit??0m);
+                        totalGpaCredits = totalGpaCredits + creds.Sum(ac => ac.GpaCredit ?? 0m);
                         totalGpaGradePoints = totalGpaGradePoints + creds.Sum(agp => agp.GradePoints);
                         // Changed to completed credits SRM 04/15/2014
-                        totalCreditsCompleted = totalCreditsCompleted + creds.Sum(tc => tc.CompletedCredit??0m);
+                        totalCreditsCompleted = totalCreditsCompleted + creds.Sum(tc => tc.CompletedCredit ?? 0m);
                         // Update totals for Transfer Credits and GPA
                         totalTransferGpaCredits = totalTransferGpaCredits + transferGpaCredits;
                         totalTransferGpaGradePoints = totalTransferGpaGradePoints + transferGpaGradePoints;
@@ -163,15 +137,15 @@ namespace Ellucian.Colleague.Domain.Student.Entities
                             // Calcluate Transfer Credits
                             if (cred.IsTransfer == true)
                             {
-                                transferGpaCredits = transferGpaCredits + cred.GpaCredit??0m;
+                                transferGpaCredits = transferGpaCredits + cred.GpaCredit ?? 0m;
                                 transferGpaGradePoints = transferGpaGradePoints + cred.GradePoints;
-                                transferCredits = transferCredits + cred.CompletedCredit??0m;
+                                transferCredits = transferCredits + cred.CompletedCredit ?? 0m;
                             }
                         }
-                        termGpaCredits = creds.Sum(ac => ac.GpaCredit??0m);
+                        termGpaCredits = creds.Sum(ac => ac.GpaCredit ?? 0m);
                         termGpaGradePoints = creds.Sum(agp => agp.GradePoints);
                         // Changed to use CompletedCredit SRM 04/15/2014
-                        termCredits = creds.Sum(tc => tc.CompletedCredit??0m);
+                        termCredits = creds.Sum(tc => tc.CompletedCredit ?? 0m);
                         termCeus = creds.Sum(c => c.ContinuingEducationUnits);
                         AcademicTerm tgpa = new AcademicTerm() { GradePointAverage = (termGpaCredits == 0 ? 0 : (termGpaGradePoints / termGpaCredits)), TermId = term, Credits = termCredits, ContinuingEducationUnits = termCeus, AcademicCredits = credList };
                         if (termGpaCredits == 0)
@@ -216,5 +190,127 @@ namespace Ellucian.Colleague.Domain.Student.Entities
                 _AcademicTerms = newAcademicTerms;
             }
         }
+
+        /// <summary>
+        /// This method update credit replaced and replacement status.
+        /// If a course cannot be retaken for credits but same course is taken multiple times then only one credit will be applied and marked as if its possible replacement
+        /// and others credits will be marked as replace in progress.
+        /// There is nothing to do for the credits that are already marked as "replaced" by Collegue on STRP screen. In this case if all the credits are completed then only one credit
+        /// will be marked as "Replacement" and rest of them will remain "Replaced" .
+        /// </summary>
+        /// <param name="allCredits"></param>
+        private void UpdateCreditsReplaceStatus(IEnumerable<AcademicCredit> allCredits)
+        {
+            if (allCredits == null)
+                return;
+            //filter out dropped, deleted, withdrawn, cancelled credits
+           IEnumerable<AcademicCredit>  filteredCredits=allCredits.Where(c => c.Status != CreditStatus.Dropped && c.Status!=CreditStatus.Deleted && c.Status!=CreditStatus.Withdrawn && c.Status!=CreditStatus.Cancelled);
+            if (filteredCredits == null || !filteredCredits.Any())
+            {
+                return;
+            }
+            //group all the credits on course key.
+            //only those credits are needed to be added to group when course does not allow retakes for credits and credits have list of other repeated credit ids and credits are not marked by colleague as replaced
+            ILookup<string, AcademicCredit> groupedCredits = filteredCredits.Where(c => c.RepeatAcademicCreditIds != null && c.RepeatAcademicCreditIds.Any() && c.ReplacedStatus == ReplacedStatus.NotReplaced && c.ReplacementStatus == ReplacementStatus.NotReplacement && c.CanBeReplaced).Where(cr => cr.Course != null && !cr.Course.AllowToCountCourseRetakeCredits).ToLookup(c => c.Course.Id, c => c);
+            if (groupedCredits != null && groupedCredits.Any())
+            {
+                //process each grouped course to mark credits replace/replacement status
+                foreach (var creditsLst in groupedCredits)
+                {
+                        //add equated course credits to above list
+                        //find all the credits that are equated to current course
+                        var equatedCredits = filteredCredits.Where(c => c.Course != null && c.Course.EquatedCourseIds != null && c.Course.EquatedCourseIds.Contains(creditsLst.Key));
+                        var creditsToProcess = groupedCredits[creditsLst.Key].ToList();
+                        if (equatedCredits != null && equatedCredits.Any())
+                        {
+                            creditsToProcess.AddRange(equatedCredits);
+                        }
+                        var orderedCreditsToProcess = creditsToProcess.OrderBy(c => c.StartDate).ToList();
+
+                        if (orderedCreditsToProcess != null && orderedCreditsToProcess.Any())
+                        {
+                            var currentCredit = orderedCreditsToProcess[0];
+
+                            //if only a single credit is present, it means all other were already marked as Replaced by Colleague
+                            if (currentCredit.IsCompletedCredit && orderedCreditsToProcess.Count == 1)
+                            {
+                            //find if all other repeated credits are replaced and completed
+                            List<string> otherRepeatedCredits = currentCredit.RepeatAcademicCreditIds.Where(c => c != currentCredit.Id).ToList();
+                            if (otherRepeatedCredits.Any())
+                            {
+                                int countOfCreditsReplaced = allCredits.Where(c => otherRepeatedCredits.Contains(c.Id) && c.ReplacedStatus == ReplacedStatus.Replaced && c.IsCompletedCredit).Count();
+                                if (countOfCreditsReplaced > 0)
+                                {
+                                    currentCredit.ReplacementStatus = ReplacementStatus.Replacement;
+                                }
+                            }
+
+                        }
+                            else if (orderedCreditsToProcess.Count > 1)
+                            {
+                                var nextCredit = orderedCreditsToProcess[1];
+                                updateReplaceStatus(currentCredit, nextCredit, orderedCreditsToProcess);
+                            }
+                        }
+                }
+            }
+        }
+
+        /// <summary>
+        /// This is recursive method that marks the status of credits on basis of  replace and replacement.
+        /// Comparison happens between current credit and next credit in sequence
+        /// </summary>
+        /// <param name="currentCredit"></param>
+        /// <param name="nextCredit"></param>
+        /// <param name="creditsToProcess"></param>
+        private void updateReplaceStatus(AcademicCredit currentCredit, AcademicCredit nextCredit, List<AcademicCredit> creditsToProcess)
+        {
+            AcademicCredit creditCompared=null;
+            AcademicCredit creditToCompareWith=null;
+            if (nextCredit == null || currentCredit == null || creditsToProcess==null)
+            {
+                return;
+            }
+            if (!nextCredit.IsCompletedCredit)
+            {
+
+                currentCredit.ReplacedStatus = ReplacedStatus.ReplaceInProgress;
+                currentCredit.ReplacementStatus = ReplacementStatus.NotReplacement;
+                currentCredit.AdjustedCredit = 0M;
+                nextCredit.ReplacementStatus = ReplacementStatus.PossibleReplacement;
+                nextCredit.ReplacedStatus = ReplacedStatus.NotReplaced;
+                creditCompared = nextCredit;
+
+            }
+            // If one was complete and the other was in progress, then the in-progress course is the possible replacement.
+            else if (nextCredit.IsCompletedCredit)
+            {
+                currentCredit.ReplacedStatus = ReplacedStatus.NotReplaced;
+                currentCredit.ReplacementStatus = ReplacementStatus.PossibleReplacement;
+                nextCredit.ReplacedStatus = ReplacedStatus.ReplaceInProgress;
+                nextCredit.ReplacementStatus = ReplacementStatus.NotReplacement;
+                nextCredit.AdjustedCredit = 0M;
+                creditCompared = currentCredit;
+
+            }
+            try
+            {
+                //find the next credit in list
+                int index = creditsToProcess.FindLastIndex(a => a.Equals(nextCredit))+1;
+                creditToCompareWith = creditsToProcess.ElementAt(index);
+            }
+            catch(ArgumentOutOfRangeException )
+            {
+                creditToCompareWith = null;
+            }
+            catch(Exception )
+            {
+                creditToCompareWith = null;
+                throw;
+            }
+            updateReplaceStatus(creditCompared, creditToCompareWith, creditsToProcess);
+        }
+
+       
     }
 }

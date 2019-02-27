@@ -10,6 +10,6 @@ namespace Ellucian.Colleague.Coordination.Base.Services
     public interface IPersonHoldTypeService: IBaseService
     {
         Task<IEnumerable<Ellucian.Colleague.Dtos.PersonHoldType>> GetPersonHoldTypesAsync(bool bypassCache = false);
-        Task<Ellucian.Colleague.Dtos.PersonHoldType> GetPersonHoldTypeByGuid2Async(string id);
+        Task<Ellucian.Colleague.Dtos.PersonHoldType> GetPersonHoldTypeByGuid2Async(string id, bool bypassCache = false);
     }
 }

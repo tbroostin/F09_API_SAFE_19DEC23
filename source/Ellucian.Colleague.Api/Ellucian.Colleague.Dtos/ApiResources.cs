@@ -2,6 +2,8 @@
 
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using Ellucian.Colleague.Dtos.Converters;
+using System;
 
 namespace Ellucian.Colleague.Dtos
 {
@@ -41,13 +43,11 @@ namespace Ellucian.Colleague.Dtos
         [JsonProperty("methods")]
         public List<string> Methods { get; set; }
 
-
         /// <summary>
         /// Array of any supported filters by the API in json dot notation. This is not included if no filters are supported
         /// </summary>
         [JsonProperty("filters", NullValueHandling = NullValueHandling.Ignore, DefaultValueHandling = DefaultValueHandling.Ignore)]
         public List<string> Filters { get; set; }
-
 
         /// <summary>
         /// Array of any supported named queries by the API in json dot notation. This is not included if no named queries are supported.
@@ -55,6 +55,11 @@ namespace Ellucian.Colleague.Dtos
         [JsonProperty("namedQueries", NullValueHandling = NullValueHandling.Ignore, DefaultValueHandling = DefaultValueHandling.Ignore)]
         public List<NamedQuery> NamedQueries { get; set; }
 
+        /// <summary>
+        /// Deprecation notice
+        /// </summary>
+        [JsonProperty("deprecationNotice", NullValueHandling = NullValueHandling.Ignore, DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public DeprecationNotice DeprecationNotice { get; set; }
     }
 
     /// <summary>
@@ -73,5 +78,31 @@ namespace Ellucian.Colleague.Dtos
         /// </summary>
         [JsonProperty("filters", NullValueHandling = NullValueHandling.Ignore, DefaultValueHandling = DefaultValueHandling.Ignore)]
         public List<string> Filters { get; set; }
+    }
+
+    /// <summary>
+    /// DeprecationNotice
+    /// </summary>
+    public class DeprecationNotice
+    {
+        /// <summary>
+        /// Deprecated On
+        /// </summary>
+        [JsonConverter(typeof(DateOnlyConverter))]
+        [JsonProperty("deprecatedOn", NullValueHandling = NullValueHandling.Ignore)]
+        public DateTime? DeprecatedOn { get; set; }
+
+        /// <summary>
+        /// Sunset On
+        /// </summary>
+        [JsonConverter(typeof(DateOnlyConverter))]
+        [JsonProperty("sunsetOn", NullValueHandling = NullValueHandling.Ignore)]
+        public DateTime? SunsetOn { get; set; }
+
+        /// <summary>
+        /// Description
+        /// </summary>
+        [JsonProperty("description", NullValueHandling = NullValueHandling.Ignore)]
+        public string Description { get; set; }
     }
 }

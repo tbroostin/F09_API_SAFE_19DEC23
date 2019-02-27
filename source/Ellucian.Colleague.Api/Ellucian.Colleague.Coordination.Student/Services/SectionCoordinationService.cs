@@ -21,8 +21,9 @@ using Ellucian.Web.Security;
 using slf4net;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Dtos;
-using System.Runtime.Serialization;
 using Ellucian.Colleague.Coordination.Base;
+using DDay.iCal;
+using DDay.iCal.Serialization;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
@@ -84,6 +85,19 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             _roomRepository = roomRepository;
             _eventRepository = eventRepository;
             _bookRepository = bookRepository;
+        }
+
+        /// <summary>
+        /// Get all person pins
+        /// </summary>
+        public IEnumerable<Domain.Base.Entities.PersonPin> _personPins { get; set; }
+        private async Task<IEnumerable<Domain.Base.Entities.PersonPin>> GetPersonPinsAsync(string[] guids)
+        {
+            if (_personPins == null)
+            {
+                _personPins = await _personRepository.GetPersonPinsAsync(guids);
+            }
+            return _personPins;
         }
 
         private IEnumerable<Domain.Base.Entities.Department> _departments = null;
@@ -321,6 +335,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             return _curriculumConfiguration2;
         }
 
+        private IEnumerable<Domain.Student.Entities.CourseTitleType> _courseTitleTypes = null;
+        private async Task<IEnumerable<Domain.Student.Entities.CourseTitleType>> CourseTitleTypesAsync(bool bypassCache = false)
+        {
+            if (_courseTitleTypes == null)
+            {
+                _courseTitleTypes = await _studentReferenceDataRepository.GetCourseTitleTypesAsync(bypassCache);
+            }
+            return _courseTitleTypes;
+        }
+
         private IEnumerable<Domain.Student.Entities.SectionTitleType> _sectionTitleTypes = null;
         private async Task<IEnumerable<Domain.Student.Entities.SectionTitleType>> SectionTitleTypesAsync(bool bypassCache = false)
         {
@@ -340,6 +364,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             return _sectionDescriptionTypes;
         }
+        public IEnumerable<Domain.Base.Entities.PersonNameTypeItem> _personNameTypes { get; set; }
+        private async Task<IEnumerable<Domain.Base.Entities.PersonNameTypeItem>> GetPersonNameTypesAsync(bool bypassCache)
+        {
+            if (_personNameTypes == null)
+            {
+                _personNameTypes = await _referenceDataRepository.GetPersonNameTypesAsync(bypassCache);
+            }
+            return _personNameTypes;
+        }
+
 
         /// <summary>
         /// Retrieves roster information for a course section.
@@ -1796,7 +1830,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var sectionEntity = await _sectionRepository.GetSectionByGuidAsync(guid);
             if (sectionEntity == null)
             {
-                throw new KeyNotFoundException(string.Format("GUID '{0}' failed to return a valid section. ", guid));
+                throw new KeyNotFoundException(string.Concat("Section not found or invalid for id '", guid, "'.  See Log for more information."));
             }
             var sectionDto = await ConvertSectionEntityToDto3Async(sectionEntity);
             return sectionDto;
@@ -2011,7 +2045,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var sectionEntity = await _sectionRepository.GetSectionByGuidAsync(guid);
             if (sectionEntity == null)
             {
-                throw new KeyNotFoundException(string.Concat("Section not found for id '", guid, "'."));
+                throw new KeyNotFoundException(string.Concat("Section not found or invalid for id '", guid, "'.  See Log for more information."));
             }
             var sectionDto = await ConvertSectionEntityToSectionMaximum2Async(sectionEntity);
             return sectionDto;
@@ -2031,7 +2065,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var sectionEntity = await _sectionRepository.GetSectionByGuidAsync(guid);
             if (sectionEntity == null)
             {
-                throw new KeyNotFoundException(string.Concat("Section not found for id '", guid, "'."));
+                throw new KeyNotFoundException(string.Concat("Section not found or invalid for id '", guid, "'.  See Log for more information."));
             }
             var sectionDto = await ConvertSectionEntityToSectionMaximum3Async(sectionEntity);
             return sectionDto;
@@ -2124,7 +2158,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 throw new RepositoryException(string.Concat("Course not found for Id : ", courseGuid));
             }
 
-            var credit = new Credit2DtoProperty();
+            var credit = new Dtos.DtoProperties.Credit2DtoProperty();
             var creditTypeItems = await CreditTypesAsync();
             if (creditTypeItems.Any(ct => ct.Code == entity.CreditTypeCode))
             {
@@ -2177,7 +2211,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 credit.Maximum = entity.MaximumCredits;
                 credit.Increment = entity.VariableCreditIncrement;
             }
-            var creditList = new List<Credit2DtoProperty>();
+            var creditList = new List<Dtos.DtoProperties.Credit2DtoProperty>();
             creditList.Add(credit);
             sectionDto.Credits = creditList;
 
@@ -2539,7 +2573,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 throw new RepositoryException(string.Concat("Course not found for Id : ", courseGuid));
             }
 
-            var credit = new Credit2DtoProperty();
+            var credit = new Dtos.DtoProperties.Credit2DtoProperty();
             var creditTypeItems = await CreditTypesAsync();
             if (creditTypeItems.Any(ct => ct.Code == entity.CreditTypeCode))
             {
@@ -2592,7 +2626,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 credit.Maximum = entity.MaximumCredits;
                 credit.Increment = entity.VariableCreditIncrement;
             }
-            var creditList = new List<Credit2DtoProperty>();
+            var creditList = new List<Dtos.DtoProperties.Credit2DtoProperty>();
             creditList.Add(credit);
             sectionDto.Credits = creditList;
 
@@ -2609,13 +2643,17 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
             var acadLevel = new AcademicLevelDtoProperty();
-
+            var acadLevel2 = new AcademicLevel2DtoProperty();
             var level = (await AcademicLevelsAsync()).FirstOrDefault(l => l.Code == entity.AcademicLevelCode);
             if (level != null)
             {
                 acadLevel.Code = level.Code;
                 acadLevel.Title = level.Description;
                 acadLevel.Detail = new GuidObject2(level.Guid);
+
+                acadLevel2.Code = level.Code;
+                acadLevel2.Title = level.Description;
+                acadLevel2.Detail = new GuidObject2(level.Guid);
 
                 sectionDto.AcademicLevels = new List<AcademicLevelDtoProperty>()
                 {
@@ -2635,7 +2673,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 returnGradeScheme.Start = gradeScheme.EffectiveStartDate;
                 returnGradeScheme.End = gradeScheme.EffectiveEndDate;
                 returnGradeScheme.Detail = new GuidObject2(gradeScheme.Guid);
-                returnGradeScheme.AcademicLevel = acadLevel;
+                returnGradeScheme.AcademicLevel = acadLevel2;
 
                 sectionDto.GradeSchemes = new List<GradeSchemeDtoProperty2>()
                 {
@@ -2798,7 +2836,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
                                 instructorName.NameType = new InstructorNameTypeDtoProperty()
                                 {
-                                    NameType = InstructorNameType2.Personal
+                                    Category = InstructorNameType2.Personal
                                 };
 
                                 instructorName.Title = string.IsNullOrEmpty(person.Prefix) ? "" : person.Prefix;
@@ -3726,7 +3764,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var sectionEntity = await _sectionRepository.GetSectionByGuidAsync(guid);
             if (sectionEntity == null)
             {
-                throw new KeyNotFoundException(string.Format("GUID '{0}' failed to return a valid section. ", guid));
+                throw new KeyNotFoundException(string.Concat("Section not found or invalid for id '", guid, "'.  See Log for more information."));
             }
             var sectionDto = await ConvertSectionEntityToDto4Async(sectionEntity);
             return sectionDto;
@@ -4548,7 +4586,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
         private async Task<Dictionary<string, string>> ValidateAndConvertFilterArguments(string startOn,
             string endOn, string instructionalPlatform, string academicPeriod, string course,
-            string site, string status, string instructor, string academicLevel = "", string owningOrganization = "", string subject = "", string reportingAcademicPeriod = "")
+            string site, string status, string instructor, string academicLevel = "", string owningOrganization = "", string subject = "", string reportingAcademicPeriod = "", string scheduleAcademicPeriod = "")
         {
             // Convert and validate all input parameters
             var newStartOn = (startOn == string.Empty ? string.Empty : await ConvertDateArgument(startOn));
@@ -4571,6 +4609,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (!string.IsNullOrEmpty(reportingAcademicPeriod) && string.IsNullOrEmpty(newReportingAcademicPeriod))
             {
                 string errorMessage = string.Format("reporting academic period guid {0} is invalid.", reportingAcademicPeriod);
+                logger.Error(errorMessage);
+                throw new ArgumentException();
+            }
+            var newScheduleAcademicPeriod = (scheduleAcademicPeriod == string.Empty ? string.Empty : ConvertGuidToCodeNoFail(academicPeriods, scheduleAcademicPeriod));
+            if (!string.IsNullOrEmpty(scheduleAcademicPeriod) && string.IsNullOrEmpty(newScheduleAcademicPeriod))
+            {
+                string errorMessage = string.Format("schedule academic period guid {0} is invalid.", scheduleAcademicPeriod);
                 logger.Error(errorMessage);
                 throw new ArgumentException();
             }
@@ -4671,6 +4716,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {"newEndOn", newEndOn},
                 {"newInstructionalPlatform",newInstructionalPlatform},
                 {"newAcademicPeriod",newAcademicPeriod},
+                {"newScheduleAcademicPeriod",newScheduleAcademicPeriod},
                 {"newReportingAcademicPeriod",newReportingAcademicPeriod},
                 {"newCourse",newCourse},
                 {"newSite",newSite},
@@ -4682,7 +4728,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             };
         }
 
-        private async Task<Dictionary<string, List<string>>> ValidateAndConvertFilterArrayArguments(List<string> academicLevels, List<string> owningOrganizations)
+        private async Task<Dictionary<string, List<string>>> ValidateAndConvertFilterArrayArguments(List<string> academicLevels, List<string> owningOrganizations, List<string> instructors = null)
         {
             var retval = new Dictionary<string, List<string>>();
 
@@ -4698,10 +4744,26 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         logger.Error(errorMessage);
                         throw new ArgumentException();
                     }
-                    newAcademicLevels.Add(newAcademicLevel);
+                    if (!newAcademicLevels.Contains(newAcademicLevel))
+                        newAcademicLevels.Add(newAcademicLevel);
                 }
             }
-
+            var newInstructors = new List<string>();
+            if (instructors != null && instructors.Any())
+            {
+                foreach (var instructor in instructors)
+                {
+                    var newInstructor = (instructor == string.Empty ? string.Empty : await _personRepository.GetPersonIdFromGuidAsync(instructor));
+                    if (!string.IsNullOrEmpty(instructor) && string.IsNullOrEmpty(newInstructor))
+                    {
+                        string errorMessage = string.Format("instructor guid {0} is invalid.", instructor);
+                        logger.Error(errorMessage);
+                        throw new ArgumentException();
+                    }
+                    if (!newInstructors.Contains(newInstructor))
+                        newInstructors.Add(newInstructor);
+                }
+            }
 
             var newOwningOrganizations = new List<string>();
             if (owningOrganizations != null && owningOrganizations.Any())
@@ -4715,12 +4777,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         logger.Error(errorMessage);
                         throw new ArgumentException();
                     }
-                    newOwningOrganizations.Add(newOwningOrganization);
+                    if (!newOwningOrganizations.Contains(newOwningOrganization))
+                        newOwningOrganizations.Add(newOwningOrganization);
                 }
             }
 
             retval.Add("newAcademicLevels", newAcademicLevels);
             retval.Add("newOwningOrganizations", newOwningOrganizations);
+            retval.Add("newInstructors", newInstructors);
 
             return retval;
         }
@@ -4836,7 +4900,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var sectionEntity = await _sectionRepository.GetSectionByGuidAsync(guid);
             if (sectionEntity == null)
             {
-                throw new KeyNotFoundException(string.Format("GUID '{0}' failed to return a valid section. ", guid));
+                throw new KeyNotFoundException(string.Concat("Section not found or invalid for id '", guid, "'.  See Log for more information."));
             }
             var sectionDto = await ConvertSectionEntityToDto5Async(sectionEntity);
             return sectionDto;
@@ -5944,7 +6008,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var sectionEntity = await _sectionRepository.GetSectionByGuidAsync(guid);
             if (sectionEntity == null)
             {
-                throw new KeyNotFoundException(string.Format("GUID '{0}' failed to return a valid section. ", guid));
+                throw new KeyNotFoundException(string.Concat("Section not found or invalid for id '", guid, "'.  See Log for more information."));
             }
             return await ConvertSectionEntityToDto6Async(sectionEntity, bypassCache);
         }
@@ -7414,7 +7478,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var sectionEntity = await _sectionRepository.GetSectionByGuidAsync(guid);
             if (sectionEntity == null)
             {
-                throw new KeyNotFoundException(string.Concat("Section not found for id '", guid, "'."));
+                throw new KeyNotFoundException(string.Concat("Section not found or invalid for id '", guid, "'.  See Log for more information."));
             }
             var sectionDto = await ConvertSectionEntityToSectionMaximum4Async(sectionEntity);
             return sectionDto;
@@ -7532,7 +7596,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 throw new ArgumentException(string.Concat("Course not found for Id : ", courseGuid));
             }
 
-            var credit = new Credit2DtoProperty();
+            var credit = new Dtos.DtoProperties.Credit2DtoProperty();
             var creditTypeItems = await CreditTypesAsync();
             if (creditTypeItems.Any(ct => ct.Code == entity.CreditTypeCode))
             {
@@ -7585,7 +7649,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 credit.Maximum = entity.MaximumCredits;
                 credit.Increment = entity.VariableCreditIncrement;
             }
-            var creditList = new List<Credit2DtoProperty>();
+            var creditList = new List<Dtos.DtoProperties.Credit2DtoProperty>();
             creditList.Add(credit);
             sectionDto.Credits = creditList;
 
@@ -7602,13 +7666,17 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
             var acadLevel = new AcademicLevelDtoProperty();
-
+            var acadLevel2 = new AcademicLevel2DtoProperty();
             var level = (await AcademicLevelsAsync()).FirstOrDefault(l => l.Code == entity.AcademicLevelCode);
             if (level != null)
             {
                 acadLevel.Code = level.Code;
                 acadLevel.Title = level.Description;
                 acadLevel.Detail = new GuidObject2(level.Guid);
+
+                acadLevel2.Code = level.Code;
+                acadLevel2.Title = level.Description;
+                acadLevel2.Detail = new GuidObject2(level.Guid);
 
                 sectionDto.AcademicLevels = new List<AcademicLevelDtoProperty>()
                 {
@@ -7628,7 +7696,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 returnGradeScheme.Start = gradeScheme.EffectiveStartDate;
                 returnGradeScheme.End = gradeScheme.EffectiveEndDate;
                 returnGradeScheme.Detail = new GuidObject2(gradeScheme.Guid);
-                returnGradeScheme.AcademicLevel = acadLevel;
+                returnGradeScheme.AcademicLevel = acadLevel2;
 
                 sectionDto.GradeSchemes = new List<GradeSchemeDtoProperty2>()
                 {
@@ -7799,7 +7867,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
                                 instructorName.NameType = new InstructorNameTypeDtoProperty()
                                 {
-                                    NameType = InstructorNameType2.Personal
+                                    Category = InstructorNameType2.Personal
                                 };
 
                                 instructorName.Title = string.IsNullOrEmpty(person.Prefix) ? "" : person.Prefix;
@@ -7860,6 +7928,970 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
         #endregion EEDM sections-maximum Version 11
 
+        #region EEDM sections-maximum Version 16.0.0
+
+
+        /// <summary>
+        /// Get selection criteria, convert it to codes as required and select 
+        /// multiple sections from Colleague.
+        /// </summary>
+        /// <param name="title">Section Title Contains ...title...</param>
+        /// <param name="startOn">Section starts on or after this date</param>
+        /// <param name="endOn">Section ends on or before this date</param>
+        /// <param name="code">Section Name Contains ...code...</param>
+        /// <param name="number">Section Number equal to</param>
+        /// <param name="instructionalPlatform">Learning Platform equal to (guid)</param>
+        /// <param name="academicPeriod">Section Term equal to (guid)</param>
+        /// <param name="academicLevel">Section Academic Level equal to (guid)</param>
+        /// <param name="course">Section Course equal to (guid)</param>
+        /// <param name="site">Section Location equal to (guid)</param>
+        /// <param name="status">Section Status matches closed, open, pending, or cancelled</param>
+        /// <param name="owningOrganization">Section Department equal to (guid)</param>
+        /// <returns>List of SectionMaximum4 <see cref="Dtos.SectionMaximum5"/> objects representing matching sections</returns>
+        public async Task<Tuple<IEnumerable<Dtos.SectionMaximum5>, int>> GetSectionsMaximum5Async(int offset, int limit, string title = "", string startOn = "", string endOn = "",
+            string code = "", string number = "", string instructionalPlatform = "", string academicPeriod = "", string reportingAcademicPeriod = "",
+            List<string> academicLevel = null, string course = "", string site = "", string status = "", List<string> owningOrganization = null, List<string> instructors = null, 
+            string scheduleAcademicPeriod = "", bool bypassCache = false)
+        {
+            //Convert and validate all input parameters
+            IDictionary<string, string> args = new Dictionary<string, string>();
+            try
+            {
+                args = await ValidateAndConvertFilterArguments(startOn, endOn, instructionalPlatform, academicPeriod, course, site, status, "", reportingAcademicPeriod:reportingAcademicPeriod, scheduleAcademicPeriod:scheduleAcademicPeriod);
+            }
+            catch (ArgumentException)
+            {
+                // One or more of the arguments failed to match up to a guid.  Return empty set.
+                return new Tuple<IEnumerable<Dtos.SectionMaximum5>, int>(new List<Dtos.SectionMaximum5>(), 0);
+
+            }
+            var arrayArgs = new Dictionary<string, List<string>>();
+            try
+            {
+                arrayArgs = await ValidateAndConvertFilterArrayArguments(academicLevel, owningOrganization, instructors);
+            }
+            catch (ArgumentException)
+            {
+                // One or more of the arguments failed to match up to a guid.  Return empty set.
+                return new Tuple<IEnumerable<Dtos.SectionMaximum5>, int>(new List<Dtos.SectionMaximum5>(), 0);
+
+            }
+            var newStartOn = args["newStartOn"];
+            var newEndOn = args["newEndOn"];
+            var newInstructionalPlatform = args["newInstructionalPlatform"];
+            var newAcademicPeriod = args["newAcademicPeriod"];
+            var newScheduleAcademicPeriod = args["newScheduleAcademicPeriod"];
+            var newReportingAcademicPeriod = args["newReportingAcademicPeriod"];
+            var instructorId = args["instructorId"];
+            var newCourse = args["newCourse"];
+            var newSite = args["newSite"];
+            var newStatus = args["newStatus"];
+            var newOwningOrganization = arrayArgs["newOwningOrganizations"];
+            var newAcademicLevel = arrayArgs["newAcademicLevels"];
+            var newInstructors = arrayArgs["newInstructors"];
+            var newSubject = args["newSubject"];
+
+            var sectionDtos = new List<Dtos.SectionMaximum5>();
+            var sectionEntities = await _sectionRepository.GetSectionsAsync(offset, limit, title, newStartOn, newEndOn,
+                code, number, newInstructionalPlatform, newAcademicPeriod, newReportingAcademicPeriod,
+                newAcademicLevel, newCourse, newSite, newStatus, newOwningOrganization, "", newInstructors, newScheduleAcademicPeriod);
+
+            var personIds = sectionEntities.Item1
+                            .SelectMany(f => f.Faculty)
+                            .Where(i => !string.IsNullOrWhiteSpace(i.Id))
+                            .Select(fc => fc.FacultyId).ToArray();
+            var personGuidDict = await _personRepository.GetPersonGuidsCollectionAsync(personIds);
+
+            if (personGuidDict != null && personGuidDict.Any())
+            {
+                _personPins = await GetPersonPinsAsync(personGuidDict.Where(v => !string.IsNullOrWhiteSpace(v.Value)).Select(i => i.Value).ToArray());
+            }
+
+            foreach (var sectionEntity in sectionEntities.Item1)
+            {
+                if (sectionEntity.Guid != null)
+                {
+                    var sectionDto = await ConvertSectionEntityToSectionMaximum5Async(sectionEntity);
+                    sectionDtos.Add(sectionDto);
+                }
+            }
+            return new Tuple<IEnumerable<Dtos.SectionMaximum5>, int>(sectionDtos, sectionEntities.Item2);
+        }
+
+        /// <summary>
+        /// Get a HeDM SectionMaximum version 8 by its GUID
+        /// </summary>
+        /// <param name="guid">GUID of section</param>
+        /// <returns>The EEDM SectionMaximum version 16.0.0 DTO</returns>
+        public async Task<Dtos.SectionMaximum5> GetSectionMaximumByGuid5Async(string guid, bool bypassCache = false)
+        {
+            if (string.IsNullOrEmpty(guid))
+            {
+                throw new ArgumentNullException("guid", "GUID is required to get a section.");
+            }
+            var sectionEntity = await _sectionRepository.GetSectionByGuidAsync(guid);
+            if (sectionEntity == null)
+            {
+                throw new KeyNotFoundException(string.Concat("Section not found or invalid for id '", guid, "'.  See Log for more information."));
+            }
+
+            var personIds = sectionEntity.Faculty
+                           .Where(i => !string.IsNullOrWhiteSpace(i.Id))
+                           .Select(fc => fc.FacultyId).ToArray();
+
+            var personGuidDict = await _personRepository.GetPersonGuidsCollectionAsync(personIds);
+
+            if (personGuidDict != null && personGuidDict.Any())
+            {
+                _personPins = await GetPersonPinsAsync(personGuidDict.Where(v => !string.IsNullOrWhiteSpace(v.Value)).Select(i => i.Value).ToArray());
+            }
+            var sectionDto = await ConvertSectionEntityToSectionMaximum5Async(sectionEntity, bypassCache);
+            return sectionDto;
+        }
+
+
+        /// <summary>
+        /// Convert a Section entity into the HeDM SectionMaximum format DTO
+        /// </summary>
+        /// <param name="entity">A Section entity</param>
+        /// <returns>A HeDM-version 4 SectionMaximum</returns>
+        private async Task<Dtos.SectionMaximum5> ConvertSectionEntityToSectionMaximum5Async(Domain.Student.Entities.Section entity, bool bypassCache = false)
+        {
+            if (entity == null)
+            {
+                return null;
+            }
+
+            var sectionDto = new Dtos.SectionMaximum5();
+
+            sectionDto.Id = entity.Guid.ToLowerInvariant();
+            sectionDto.Code = entity.Name;
+            sectionDto.Number = entity.Number;
+            sectionDto.Title = entity.Title;
+            sectionDto.StartOn = entity.StartDate;
+            sectionDto.EndOn = entity.EndDate;
+            if (!string.IsNullOrEmpty(entity.Comments))
+                sectionDto.Description = entity.Comments;
+            if (entity.CensusDates != null && entity.CensusDates.Any())
+                sectionDto.CensusDates = entity.CensusDates;
+
+            if (!string.IsNullOrEmpty(entity.LearningProvider))
+            {
+                var instructionalPlatform = (await InstructionalPlatformsAsync()).FirstOrDefault(i => i.Code == entity.LearningProvider);
+
+                sectionDto.InstructionalPlatform = (instructionalPlatform != null)
+                    ? new InstructionalPlatformDtoProperty()
+                    {
+                        Code = instructionalPlatform.Code,
+                        Title = instructionalPlatform.Description,
+                        Detail = new GuidObject2(instructionalPlatform.Guid)
+                    }
+                    : null;
+            }
+
+            if (!string.IsNullOrEmpty(entity.TermId))
+            {
+                var academicPeriod = academicPeriods.FirstOrDefault(a => a.Code == entity.TermId);
+                if (academicPeriod != null)
+                {
+                    var returnAcadPeriod = new AcademicPeriodDtoProperty3()
+                    {
+                        Detail = new GuidObject2(academicPeriod.Guid),
+                        Code = academicPeriod.Code,
+                        Start = academicPeriod.StartDate,
+                        End = academicPeriod.EndDate,
+                        Title = academicPeriod.Description
+                    };
+
+                    if (academicPeriod.RegistrationDates != null)
+                    {
+                        if (academicPeriod.RegistrationDates.FirstOrDefault().CensusDates.Any())
+                        {
+                            returnAcadPeriod.CensusDates = academicPeriod.RegistrationDates.FirstOrDefault().CensusDates;
+                        }
+                    }
+
+                    var category = new Dtos.AcademicPeriodCategory3();
+                    switch (academicPeriod.Category)
+                    {
+                        case ("year"):
+                            {
+                                category.Type = Dtos.AcademicTimePeriod2.Year;
+                                break;
+                            }
+                        case ("term"):
+                            {
+                                category.Type = Dtos.AcademicTimePeriod2.Term;
+                                if (!string.IsNullOrEmpty(academicPeriod.ParentId))
+                                {
+                                    category.Parent = new AcademicPeriodCategoryParent()
+                                    {
+                                        Id = academicPeriod.ParentId
+                                    };
+                                }
+                                else
+                                {
+                                    if (academicPeriod.ReportingYear > 0)
+                                    {
+                                        category.Parent = new AcademicPeriodCategoryParent()
+                                        {
+                                            Year = academicPeriod.ReportingYear
+                                        };
+                                    }
+                                }
+
+                                if (!string.IsNullOrEmpty(academicPeriod.PrecedingId))
+                                {
+                                    category.PrecedingGuid = new GuidObject2(academicPeriod.PrecedingId);
+                                }
+                                break;
+                            }
+                        case ("subterm"):
+                            {
+                                category.Type = Dtos.AcademicTimePeriod2.Subterm;
+                                if (academicPeriod.ParentId != null)
+                                {
+                                    category.Parent = new AcademicPeriodCategoryParent()
+                                    {
+                                        Id = academicPeriod.ParentId
+                                    };
+                                }
+
+                                if (!string.IsNullOrEmpty(academicPeriod.PrecedingId))
+                                {
+                                    category.PrecedingGuid = new GuidObject2(academicPeriod.PrecedingId);
+                                }
+                                break;
+                            }
+                    }
+
+                    returnAcadPeriod.Category = category;
+
+                    sectionDto.AcademicPeriod = returnAcadPeriod;
+
+                    var returnScheduleAcadPeriod = new AcademicPeriodDtoProperty3()
+                    {
+                        Detail = new GuidObject2(academicPeriod.Guid),
+                        Code = academicPeriod.Code,
+                        Title = academicPeriod.Description
+                    };
+                    sectionDto.ScheduleAcademicPeriod = returnScheduleAcadPeriod;
+
+                    // Update Reporting Academic Period Object
+                    if (!string.IsNullOrEmpty(academicPeriod.ReportingTerm))
+                    {
+                        var reportingTerm = academicPeriods.FirstOrDefault(a => a.Code == academicPeriod.ReportingTerm);
+                        if (reportingTerm != null)
+                        {
+                            sectionDto.ReportingAcademicPeriod = new GuidObject2(reportingTerm.Guid);
+                        }
+                    }
+                }
+            }
+            
+            var courseGuid = await _courseRepository.GetCourseGuidFromIdAsync(entity.CourseId);
+            if (string.IsNullOrEmpty(courseGuid))
+            {
+                throw new ArgumentException(string.Concat("Course guid not found for Colleague Course Id : ", entity.CourseId));
+            }
+
+            var course = await _courseRepository.GetCourseByGuidAsync(courseGuid);
+            if (course != null)
+            {
+                var courseReturn = new CourseDtoProperty2()
+                {
+                    Detail = new GuidObject2(course.Guid),
+                    Number = course.Number
+
+                };
+                courseReturn.Titles = new List<CoursesTitlesDtoProperty2>();
+
+                var shortCourseEntity = (await CourseTitleTypesAsync(bypassCache)).FirstOrDefault(ctt => ctt.Code.ToLower() == "short");
+                if (shortCourseEntity == null || string.IsNullOrEmpty(shortCourseEntity.Guid))
+                {
+                    throw new ArgumentException("Course Title Types 'SHORT' is missing. ", "invalidKey");
+                }
+                var shortCourseTitle = new CoursesTitlesDtoProperty2() { Type = new GuidObject2(shortCourseEntity.Guid), Value = course.Title };
+                courseReturn.Titles.Add(shortCourseTitle);
+
+                var longCourseEntity = (await CourseTitleTypesAsync(bypassCache)).FirstOrDefault(ctt => ctt.Code.ToLower() == "long");
+                if (longCourseEntity == null || string.IsNullOrEmpty(longCourseEntity.Guid))
+                {
+                    throw new ArgumentException("Course Title Types 'LONG' is missing. ", "invalidKey");
+                }
+                var longCourseTitle = new CoursesTitlesDtoProperty2() { Type = new GuidObject2(longCourseEntity.Guid), Value = course.LongTitle };
+                courseReturn.Titles.Add(longCourseTitle);
+
+                var subject = (await _studentReferenceDataRepository.GetSubjectsAsync()).FirstOrDefault(s => s.Code == course.SubjectCode);
+                if (subject != null)
+                {
+                    courseReturn.Subject = new SubjectDtoProperty()
+                    {
+                        Abbreviation = subject.Code,
+                        Title = subject.Description,
+                        Detail = new GuidObject2(subject.Guid)
+                    };
+                }
+                sectionDto.Course = courseReturn;
+            }
+            else
+            {
+                throw new ArgumentException(string.Concat("Course not found or invalid for id '", courseGuid, "'.  See Log for more information."));
+            }
+
+            var credit = new Dtos.DtoProperties.Credit2DtoProperty();
+            var creditTypeItems = await CreditTypesAsync();
+            if (creditTypeItems.Any(ct => ct.Code == entity.CreditTypeCode))
+            {
+                var creditTypeItem = creditTypeItems.First(ct => ct.Code == entity.CreditTypeCode);
+                credit.CreditCategory.Detail.Id = creditTypeItem.Guid;
+                credit.CreditCategory.Code = creditTypeItem.Code;
+                credit.CreditCategory.Title = creditTypeItem.Description;
+                switch (creditTypeItem.CreditType)
+                {
+
+                    case CreditType.ContinuingEducation:
+                        credit.CreditCategory.CreditType = CreditCategoryType3.ContinuingEducation;
+                        break;
+                    case CreditType.Institutional:
+                        credit.CreditCategory.CreditType = CreditCategoryType3.Institutional;
+                        break;
+                    case CreditType.Transfer:
+                        credit.CreditCategory.CreditType = CreditCategoryType3.Transfer;
+                        break;
+                    case CreditType.Exchange:
+                        credit.CreditCategory.CreditType = CreditCategoryType3.Exchange;
+                        break;
+                    case CreditType.Other:
+                        credit.CreditCategory.CreditType = CreditCategoryType3.Other;
+                        break;
+                    case CreditType.None:
+                        credit.CreditCategory.CreditType = CreditCategoryType3.NoCredit;
+                        break;
+                    default:
+                        credit.CreditCategory.CreditType = CreditCategoryType3.ContinuingEducation;
+                        break;
+
+                }
+            }
+            else
+            {
+                //default to CE
+                credit.CreditCategory.CreditType = CreditCategoryType3.ContinuingEducation;
+            }
+
+            if (entity.Ceus.HasValue)
+            {
+                credit.Measure = Dtos.CreditMeasure2.CEU;
+                credit.Minimum = entity.Ceus.Value;
+            }
+            else
+            {
+                credit.Measure = Dtos.CreditMeasure2.Credit;
+                credit.Minimum = entity.MinimumCredits.GetValueOrDefault();
+                credit.Maximum = entity.MaximumCredits;
+                credit.Increment = entity.VariableCreditIncrement;
+            }
+            var creditList = new List<Dtos.DtoProperties.Credit2DtoProperty>();
+            creditList.Add(credit);
+            sectionDto.Credits = creditList;
+
+            var site = new SiteDtoProperty();
+
+            var location = locations.FirstOrDefault(l => l.Code == entity.Location);
+            if (location != null)
+            {
+                site.Code = location.Code;
+                site.Title = location.Description;
+                site.Detail = new GuidObject2(location.Guid);
+
+                sectionDto.Site = site;
+            }
+
+            var acadLevel = new AcademicLevelDtoProperty();
+            var acadLevel2 = new AcademicLevel2DtoProperty();
+            var level = (await AcademicLevelsAsync()).FirstOrDefault(l => l.Code == entity.AcademicLevelCode);
+            if (level != null)
+            {
+                acadLevel.Code = level.Code;
+                acadLevel.Title = level.Description;
+                acadLevel.Detail = new GuidObject2(level.Guid);
+
+                acadLevel2.Code = level.Code;
+                acadLevel2.Title = level.Description;
+                acadLevel2.Detail = new GuidObject2(level.Guid);
+
+                sectionDto.AcademicLevels = new List<AcademicLevelDtoProperty>()
+                {
+                   acadLevel
+                };
+            }
+
+            var gradeScheme = (await GradeSchemesAsync()).FirstOrDefault(g => g.Code == entity.GradeSchemeCode);
+            if (gradeScheme != null)
+            {
+                var returnGradeScheme = new GradeSchemeDtoProperty2();
+
+                returnGradeScheme.Code = gradeScheme.Code;
+                returnGradeScheme.Title = gradeScheme.Description;
+                returnGradeScheme.Start = gradeScheme.EffectiveStartDate;
+                returnGradeScheme.End = gradeScheme.EffectiveEndDate;
+                returnGradeScheme.Detail = new GuidObject2(gradeScheme.Guid);
+                returnGradeScheme.AcademicLevel = acadLevel2;
+
+                sectionDto.GradeSchemes = new List<GradeSchemeDtoProperty2>()
+                {
+                   returnGradeScheme
+                };
+            }
+
+            var courseLevels = await CourseLevelsAsync();
+            if (courseLevels.Any())
+            {
+                var courseLevelList = new List<CourseLevelDtoProperty>();
+                foreach (var code in entity.CourseLevelCodes)
+                {
+                    var cLevel = courseLevels.FirstOrDefault(l => l.Code == code);
+                    if (cLevel != null)
+                    {
+                        var levelReturn = new CourseLevelDtoProperty
+                        {
+                            Code = cLevel.Code,
+                            Title = cLevel.Description,
+                            Detail = new GuidObject2(cLevel.Guid)
+                        };
+                        courseLevelList.Add(levelReturn);
+                    }
+                }
+                sectionDto.CourseLevels = courseLevelList;
+            }
+
+            string status;
+            var currentStatus = ConvertSectionStatusToDto2(entity.Statuses.ElementAt(0).IntegrationStatus, out status);
+            status = entity.Statuses.ElementAt(0).StatusCode;
+            if (currentStatus != SectionStatus2.NotSet)
+            {
+                sectionDto.Status = new SectionStatusDtoProperty();
+                sectionDto.Status.Category = currentStatus;
+                sectionDto.Status.Detail = new GuidObject2(ConvertCodeToGuid((await AllStatusesWithGuidsAsync()), status));
+            }
+
+            sectionDto.MaximumEnrollment = entity.SectionCapacity;
+
+            if (entity.NumberOfWeeks.HasValue && entity.NumberOfWeeks > 0)
+            {
+                sectionDto.Duration = new SectionDuration2()
+                {
+                    Length = entity.NumberOfWeeks.Value,
+                    Unit = DurationUnit2.Weeks
+                };
+            }
+
+            var orgs = await DepartmentsAsync();
+            if (entity.Departments != null && entity.Departments.Any() && orgs != null && orgs.Any())
+            {
+                var orgsList = new List<OwningOrganizationDtoProperty>();
+                foreach (var code in entity.Departments)
+                {
+                    var owningOrg = orgs.FirstOrDefault(o => o.Code == code.AcademicDepartmentCode);
+                    if (owningOrg != null)
+                    {
+                        var orgReturn = new OwningOrganizationDtoProperty();
+                        orgReturn.Code = owningOrg.Code;
+                        orgReturn.Title = owningOrg.Description;
+                        orgReturn.OwnershipPercentage = code.ResponsibilityPercentage;
+                        orgReturn.Detail = new GuidObject2(owningOrg.Guid);
+                        orgReturn.Type = EducationalInstitutionUnitType.Department;
+                        orgsList.Add(orgReturn);
+                    }
+                }
+                sectionDto.OwningOrganizations = orgsList;
+            }
+
+            // New object InstructionalMethods with v16
+
+            if (entity.InstructionalContacts != null && entity.InstructionalContacts.Any())
+            {
+                sectionDto.InstructionalMethods = new List<GuidObject2>();
+                var instructionalMethodDetails = new List<InstructionalMethodDetailsDtoProperty>();
+                var allInstructionalMethods = await InstructionalMethodsAsync(bypassCache);
+                var allContactMeasures = await AllContactMeasuresAsync(bypassCache);
+                foreach (var method in entity.InstructionalContacts)
+                {
+                    ContactHoursPeriod? instrMethodPeriod = ContactHoursPeriod.NotSet;
+                    decimal? instrMethodHours = null;
+
+                    var instructionalMethod = allInstructionalMethods.FirstOrDefault(x => x.Code == method.InstructionalMethodCode);
+                    if (instructionalMethod == null || string.IsNullOrEmpty(instructionalMethod.Guid))
+                    {
+                        throw new ArgumentException(string.Concat("Instructional Method not found for :", method.InstructionalMethodCode));
+                    }
+                    if (!string.IsNullOrEmpty(method.ContactMeasure))
+                    {
+                        var interval = allContactMeasures.FirstOrDefault(x => x.Code == method.ContactMeasure);
+                        if (interval == null)
+                        {
+                            throw new ArgumentException(string.Concat("Contact Measure not found for :", method.ContactMeasure));
+                        }
+                        instrMethodPeriod = ConvertContactPeriodToInterval(interval.ContactPeriod);
+                    }
+                    if ((method.ContactHours.HasValue) || ((instrMethodPeriod != null) || (instrMethodPeriod != ContactHoursPeriod.NotSet)))
+                    {
+                        instrMethodHours = method.ContactHours;
+                    }
+                    if (instrMethodHours != null && instrMethodHours.HasValue)
+                    {
+                        var adminInstructionalMethod = (await AdministrativeInstructionalMethodsAsync(bypassCache)).FirstOrDefault(x => x.Code == method.InstructionalMethodCode);
+                        if (adminInstructionalMethod == null || string.IsNullOrEmpty(adminInstructionalMethod.Guid))
+                        {
+                            throw new ArgumentException(string.Concat("Administrative Instructional Method not found for :", method.InstructionalMethodCode));
+                        }
+                        var instrMethodHoursDetail = new CoursesHoursDtoProperty()
+                        {
+                            AdministrativeInstructionalMethod = new GuidObject2(adminInstructionalMethod.Guid),
+                            Minimum = instrMethodHours
+                        };
+                        if (instrMethodPeriod != ContactHoursPeriod.NotSet)
+                            instrMethodHoursDetail.Interval = instrMethodPeriod;
+                        if (sectionDto.Hours == null)
+                        {
+                            sectionDto.Hours = new List<CoursesHoursDtoProperty>();
+                        }
+                        sectionDto.Hours.Add(instrMethodHoursDetail);
+                    }
+                }
+            }
+            if (entity.InstructionalMethods != null && entity.InstructionalMethods.Any())
+            {
+                var allInstructionalMethods = await this.InstructionalMethodsAsync();
+                foreach (var method in entity.InstructionalMethods)
+                {
+                    var instructionalMethod = allInstructionalMethods.FirstOrDefault(x => x.Code == method);
+                    if (instructionalMethod == null)
+                    {
+                        throw new ArgumentException(string.Concat("Instructional Method not found for :", method));
+                    }
+                    var item = new GuidObject2(instructionalMethod.Guid);
+                    if (!sectionDto.InstructionalMethods.Contains(item))
+                        sectionDto.InstructionalMethods.Add(new GuidObject2(instructionalMethod.Guid));
+                }
+            }
+
+            //ChargeAssessmentMethod
+
+            if (!string.IsNullOrEmpty(entity.BillingMethod))
+            {
+                var allChargeAssessmentMethods = await this.AllChargeAssessmentMethodAsync(bypassCache);
+                if (allChargeAssessmentMethods != null)
+                {
+                    var chargeAssessmentMethod = allChargeAssessmentMethods.FirstOrDefault(x => x.Code == entity.BillingMethod);
+                    if (chargeAssessmentMethod != null)
+                    {
+                        sectionDto.ChargeAssessmentMethod = new GuidObject2(chargeAssessmentMethod.Guid);
+                    }
+                }
+            }
+
+            // New property for alternate Ids
+            sectionDto.AlternateIds = new List<SectionsAlternateIdsDtoProperty>()
+            {
+                new SectionsAlternateIdsDtoProperty()
+                {
+                    Title = "Source Key",
+                    Value = entity.Id
+                }
+            };
+
+            var pageOfItems = await _sectionRepository.GetSectionMeetingAsync(0, 0, entity.Id, string.Empty, string.Empty, string.Empty, string.Empty, new List<string>(), new List<string>(), new List<string>(), string.Empty);
+            var eventEntities = pageOfItems.Item1;
+            
+            if (eventEntities.Any())
+            {
+                var instructionalEventsList = new List<InstructionalEventDtoProperty3>();
+                var instructorRosterList = new List<InstructorRosterDtoProperty2>();
+
+                foreach (var eventInstructional in eventEntities)
+                {
+                    if (eventInstructional.Guid != null)
+                    {
+                        var returnInstructionalEventDto = new InstructionalEventDtoProperty3();
+
+                        var instEventDto = await ConvertSectionMeetingToInstructionalEvent2Async(eventInstructional);
+
+                        returnInstructionalEventDto.Detail = new GuidObject2(instEventDto.Id);
+                        returnInstructionalEventDto.Title = instEventDto.Title;
+                        var instMethod = (await _studentReferenceDataRepository.GetInstructionalMethodsAsync()).FirstOrDefault(im => im.Guid == instEventDto.InstructionalMethod.Id);
+
+                        if (instMethod != null)
+                        {
+                            returnInstructionalEventDto.InstructionalMethod = new InstructionalMethodDtoProperty()
+                            {
+                                Abbreviation = instMethod.Code,
+                                Title = instMethod.Description,
+                                Detail = new GuidObject2(instMethod.Guid)
+                            };
+                        }
+
+                        if (instEventDto.Recurrence != null)
+                        {
+                            returnInstructionalEventDto.Recurrence = instEventDto.Recurrence;
+                        }
+
+                        if ((instEventDto.Locations != null) && (instEventDto.Locations.Any()))
+                        {
+                            var locationsList = new List<LocationDtoProperty>();
+                            var locationDtoProperty = new LocationDtoProperty();
+                            var locationRoom = new LocationRoomDtoProperty();
+                            var room = (await RoomsAsync()).FirstOrDefault(r => r.Id == eventInstructional.Room);
+
+                            if (room != null)
+                            {
+                                locationRoom.LocationType = InstructionalLocationType.InstructionalRoom;
+                                locationRoom.Title = !string.IsNullOrEmpty(room.Name) ? room.Name : null;
+                                locationRoom.Number = !string.IsNullOrEmpty(room.Number) ? room.Number : null;
+                                locationRoom.Floor = !string.IsNullOrEmpty(room.Floor) ? room.Floor : null;
+                                locationRoom.Detail = new GuidObject2(room.Guid);
+
+                                var building = (await _referenceDataRepository.BuildingsAsync()).FirstOrDefault(b => b.Code == room.BuildingCode);
+                                if (building != null)
+                                {
+                                    locationRoom.Building = new BuildingDtoProperty()
+                                    {
+                                        Code = building.Code,
+                                        Title = building.Description,
+                                        Detail = new GuidObject2(building.Guid)
+                                    };
+                                }
+
+                                locationDtoProperty.Location = locationRoom;
+                                locationsList.Add(locationDtoProperty);
+                            }
+                            returnInstructionalEventDto.Locations = locationsList;
+                        }
+
+                        instructionalEventsList.Add(returnInstructionalEventDto);
+                    }
+                }
+                if (instructionalEventsList.Any())
+                {
+                    sectionDto.InstructionalEvents = instructionalEventsList;
+                }
+            }
+
+            var pageOfFacultyItems = await _sectionRepository.GetSectionFacultyAsync(0, 0, entity.Id, string.Empty, new List<string>());
+            var sectionFacultyEntities = pageOfFacultyItems.Item1;
+
+            var instructorList = new List<InstructorRosterDtoProperty3>();
+            if ((sectionFacultyEntities != null) && (sectionFacultyEntities.Any()))
+            {
+                var allInstructionalMethods = await this.InstructionalMethodsAsync();
+                foreach (var sectionFaculty in sectionFacultyEntities)
+                {
+                    var returnInstructorRoster = new InstructorRosterDtoProperty3
+                    {
+                        WorkLoadPercentage = sectionFaculty.LoadFactor,
+                        ResponsibilityPercentage = sectionFaculty.ResponsibilityPercentage,
+                        WorkStartDate = sectionFaculty.StartDate,
+                        WorkEndDate = sectionFaculty.EndDate
+                    };
+                    if (sectionFaculty.PrimaryIndicator)
+                    {
+                        returnInstructorRoster.InstructorRole = SectionInstructorsInstructorRole.Primary;
+                    }
+                    // Update instructional method for instructor and any instructional events
+                    // that match the instructional method.
+                    if (!string.IsNullOrEmpty(sectionFaculty.InstructionalMethodCode))
+                    {
+                        returnInstructorRoster.InstructionalMethods = new List<GuidObject2>();
+                        var instructionalMethod = allInstructionalMethods.FirstOrDefault(x => x.Code == sectionFaculty.InstructionalMethodCode);
+                        if (instructionalMethod == null)
+                        {
+                            throw new ArgumentException(string.Concat("Instructional Method not found for :", sectionFaculty.InstructionalMethodCode));
+                        }
+                        var item = new GuidObject2(instructionalMethod.Guid);
+                        if (!returnInstructorRoster.InstructionalMethods.Contains(item))
+                            returnInstructorRoster.InstructionalMethods.Add(new GuidObject2(instructionalMethod.Guid));
+                        if (sectionDto.InstructionalEvents != null && sectionDto.InstructionalEvents.Any())
+                        {
+                            var instrEvents = sectionDto.InstructionalEvents.Where(ie => ie.InstructionalMethod != null &&
+                                ie.InstructionalMethod.Detail != null && !string.IsNullOrEmpty(ie.InstructionalMethod.Detail.Id) &&
+                                ie.InstructionalMethod.Detail.Id == instructionalMethod.Guid);
+                            if (instrEvents != null && instrEvents.Any())
+                            {
+                                returnInstructorRoster.InstructionalEvents = new List<GuidObject2>();
+                                returnInstructorRoster.InstructionalEvents = instrEvents.Select(ie => ie.Detail).ToList();
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (sectionDto.InstructionalEvents != null && sectionDto.InstructionalEvents.Any())
+                        {
+                            var instrEvents = sectionDto.InstructionalEvents.Where(ie => ie.InstructionalMethod != null &&
+                            ie.InstructionalMethod.Detail != null && !string.IsNullOrEmpty(ie.InstructionalMethod.Detail.Id));
+                            if (instrEvents != null && instrEvents.Any())
+                            {
+                                returnInstructorRoster.InstructionalMethods = new List<GuidObject2>();
+                                returnInstructorRoster.InstructionalEvents = new List<GuidObject2>();
+                                returnInstructorRoster.InstructionalMethods = instrEvents.Select(ie => ie.InstructionalMethod.Detail).ToList();
+                                returnInstructorRoster.InstructionalEvents = instrEvents.Select(ie => ie.Detail).ToList();
+                            }
+                        }
+                    }
+
+                    string personGuid = await _personRepository.GetPersonGuidFromIdAsync(sectionFaculty.FacultyId);
+                    var person = await _personRepository.GetPersonIntegration2ByGuidAsync(personGuid, bypassCache);
+
+                    var returnInstructor = new InstructorDtoProperty3 { Detail = new GuidObject2(personGuid) };
+
+                    returnInstructor.Names = await GetInstructorNames(person, bypassCache);
+
+                    var credentialList = new List<InstructorCredential3DtoProperty>();
+
+                    credentialList.Add(new InstructorCredential3DtoProperty()
+                    {
+                        Type = Dtos.EnumProperties.Credential3Type.ColleaguePersonId,
+                        Value = person.Id
+                    });
+
+                    // Elevate ID
+                    if (person.PersonAltIds != null && person.PersonAltIds.Any())
+                    {
+                        // Allow more than one Elevate ID as of v12.1.0
+                        var elevPersonAltIdList =
+                            person.PersonAltIds.Where(
+                                a => a.Type == Domain.Base.Entities.PersonAlt.ElevatePersonAltType);
+                        if (elevPersonAltIdList != null && elevPersonAltIdList.Any())
+                        {
+                            foreach (var elevPersonAltId in elevPersonAltIdList)
+                            {
+                                if (elevPersonAltId != null && !string.IsNullOrEmpty(elevPersonAltId.Id))
+                                {
+                                    credentialList.Add(new Dtos.DtoProperties.InstructorCredential3DtoProperty()
+                                    {
+                                        Type = Dtos.EnumProperties.Credential3Type.ElevateID,
+                                        Value = elevPersonAltId.Id
+                                    });
+                                }
+                            }
+                        }
+                    }
+                    // SSN
+                    if (!string.IsNullOrEmpty(person.GovernmentId))
+                    {
+                        var type = Dtos.EnumProperties.Credential3Type.TaxIdentificationNumber;
+                        credentialList.Add(new InstructorCredential3DtoProperty()
+                        {
+                            Type = type,
+                            Value = person.GovernmentId
+                        });
+                    }
+                    //PERSON.PIN
+                    if (_personPins != null)
+                    {
+                        var personPinEntity = _personPins.FirstOrDefault(i => i.PersonId.Equals(person.Id, StringComparison.OrdinalIgnoreCase));
+                        if ((personPinEntity != null) && (!string.IsNullOrEmpty(personPinEntity.PersonPinUserId)))
+                        {
+                            credentialList.Add(new InstructorCredential3DtoProperty()
+                            {
+                                Type = Dtos.EnumProperties.Credential3Type.ColleagueUserName,
+                                Value = personPinEntity.PersonPinUserId
+                            });
+                        }
+                    }
+
+                    returnInstructor.Credentials = credentialList;
+                    returnInstructorRoster.Instructor = returnInstructor;
+                    instructorList.Add(returnInstructorRoster);
+                }
+            }
+            if (instructorList.Any())
+            {
+                sectionDto.InstructorRoster = instructorList;
+            }
+
+            return sectionDto;
+        }
+
+        private async Task<List<InstructorNameDtoProperty2>> GetInstructorNames(Domain.Base.Entities.PersonIntegration person, bool bypassCache = false)
+        {
+            List<Dtos.DtoProperties.InstructorNameDtoProperty2> personNames =
+                new List<Dtos.DtoProperties.InstructorNameDtoProperty2>();
+
+            var preferredNameType = person.PreferredNameType;
+
+            // Legal Name for a person
+            var personNameTypeItem = (await GetPersonNameTypesAsync(bypassCache)).FirstOrDefault(
+                pn => pn.Code == "LEGAL");
+            if (personNameTypeItem != null)
+            {
+                var personName = new Dtos.DtoProperties.InstructorNameDtoProperty2()
+                {
+                    NameType = new Dtos.DtoProperties.InstructorNameTypeDtoProperty()
+                    {
+                        Category = Dtos.EnumProperties.InstructorNameType2.Legal,
+                        Detail =
+                            new Dtos.GuidObject2(
+                                    personNameTypeItem.Guid)
+                    },
+                    FullName =
+                        !string.IsNullOrEmpty(preferredNameType) &&
+                            preferredNameType.Equals("LEGAL", StringComparison.CurrentCultureIgnoreCase) &&
+                            !string.IsNullOrEmpty(person.PreferredName) ?
+                            person.PreferredName :
+                        BuildFullName("FM", person.Prefix, person.FirstName, person.MiddleName,
+                            person.LastName, person.Suffix),
+                    Preference = (string.IsNullOrEmpty(preferredNameType) || preferredNameType.Equals("LEGAL", StringComparison.CurrentCultureIgnoreCase)) ?
+                            Dtos.EnumProperties.PersonNamePreference.Preferred : (PersonNamePreference?)null,
+                    Title = string.IsNullOrEmpty(person.Prefix) ? null : person.Prefix,
+                    FirstName = string.IsNullOrEmpty(person.FirstName) ? null : person.FirstName,
+                    MiddleName = string.IsNullOrEmpty(person.MiddleName) ? null : person.MiddleName,
+                    LastName = string.IsNullOrEmpty(person.LastName) ? null : person.LastName,
+                    LastNamePrefix =
+                        person.LastName.Contains(" ")
+                            ? person.LastName.Split(" ".ToCharArray())[0].ToString()
+                            : null,
+                    Pedigree = string.IsNullOrEmpty(person.Suffix) ? null : person.Suffix,
+                    ProfessionalAbbreviation =
+                        person.ProfessionalAbbreviations.Any() ? person.ProfessionalAbbreviations : null
+                };
+                personNames.Add(personName);
+            }
+
+            // Birth Name
+            if (!string.IsNullOrEmpty(person.BirthNameLast) || !string.IsNullOrEmpty(person.BirthNameFirst) ||
+                !string.IsNullOrEmpty(person.BirthNameMiddle))
+            {
+                var birthNameTypeItem = (await GetPersonNameTypesAsync(bypassCache))
+                    .FirstOrDefault(pn => pn.Code == "BIRTH");
+                if (birthNameTypeItem != null)
+                {
+                    var birthName = new Dtos.DtoProperties.InstructorNameDtoProperty2()
+                    {
+                        NameType = new Dtos.DtoProperties.InstructorNameTypeDtoProperty()
+                        {
+                            Category = Dtos.EnumProperties.InstructorNameType2.Birth,
+                            Detail =
+                                new Dtos.GuidObject2(
+                                        birthNameTypeItem.Guid)
+                        },
+                        FullName =
+                            !string.IsNullOrEmpty(preferredNameType) &&
+                            preferredNameType.Equals("BIRTH", StringComparison.CurrentCultureIgnoreCase) &&
+                            !string.IsNullOrEmpty(person.PreferredName) ?
+                            person.PreferredName :
+                            BuildFullName("FM", "", person.BirthNameFirst, person.BirthNameMiddle, person.BirthNameLast, ""),
+                        FirstName = string.IsNullOrEmpty(person.BirthNameFirst) ? null : person.BirthNameFirst,
+                        MiddleName = string.IsNullOrEmpty(person.BirthNameMiddle) ? null : person.BirthNameMiddle,
+                        LastName = string.IsNullOrEmpty(person.BirthNameLast) ? null : person.BirthNameLast,
+                        LastNamePrefix =
+                            person.BirthNameLast.Contains(" ")
+                                ? person.BirthNameLast.Split(" ".ToCharArray())[0].ToString()
+                                    : null,
+                        Preference = !string.IsNullOrEmpty(preferredNameType) && preferredNameType.Equals("BIRTH", StringComparison.CurrentCultureIgnoreCase) ?
+                            Dtos.EnumProperties.PersonNamePreference.Preferred : (PersonNamePreference?)null,
+                    };
+                    personNames.Add(birthName);
+                }
+            }
+
+            // Chosen Name
+            if (!string.IsNullOrEmpty(person.ChosenLastName) || !string.IsNullOrEmpty(person.ChosenFirstName) ||
+                !string.IsNullOrEmpty(person.ChosenMiddleName))
+            {
+                var chosenNameTypeItem = (await GetPersonNameTypesAsync(bypassCache))
+                    .FirstOrDefault(pn => pn.Code == "CHOSEN");
+                if (chosenNameTypeItem != null)
+                {
+                    var chosenName = new Dtos.DtoProperties.InstructorNameDtoProperty2()
+                    {
+                        NameType = new Dtos.DtoProperties.InstructorNameTypeDtoProperty()
+                        {
+                            Category = Dtos.EnumProperties.InstructorNameType2.Favored,
+                            Detail =
+                                new Dtos.GuidObject2(
+                                        chosenNameTypeItem.Guid)
+                        },
+                        FullName =
+                            !string.IsNullOrEmpty(preferredNameType) &&
+                            preferredNameType.Equals("CHOSEN", StringComparison.CurrentCultureIgnoreCase) &&
+                            !string.IsNullOrEmpty(person.PreferredName) ?
+                            person.PreferredName :
+                            BuildFullName("FM", "", person.ChosenFirstName, person.ChosenMiddleName, person.ChosenLastName, ""),
+                        FirstName = string.IsNullOrEmpty(person.ChosenFirstName) ? null : person.ChosenFirstName,
+                        MiddleName = string.IsNullOrEmpty(person.ChosenMiddleName) ? null : person.ChosenMiddleName,
+                        LastName = string.IsNullOrEmpty(person.ChosenLastName) ? null : person.ChosenLastName,
+                        LastNamePrefix =
+                            person.ChosenLastName.Contains(" ")
+                                ? person.ChosenLastName.Split(" ".ToCharArray())[0].ToString()
+                                    : null,
+                        Preference = !string.IsNullOrEmpty(preferredNameType) && preferredNameType.Equals("CHOSEN", StringComparison.CurrentCultureIgnoreCase) ?
+                            Dtos.EnumProperties.PersonNamePreference.Preferred : (PersonNamePreference?)null,
+                    };
+                    personNames.Add(chosenName);
+                }
+            }
+
+            // Nickname
+            if (!string.IsNullOrEmpty(person.Nickname))
+            {
+                var nickNameTypeItem = (await GetPersonNameTypesAsync(false))
+                    .FirstOrDefault(pn => pn.Code == "NICKNAME");
+                if (nickNameTypeItem != null)
+                {
+                    var nickName = new Dtos.DtoProperties.InstructorNameDtoProperty2()
+                    {
+                        NameType = new Dtos.DtoProperties.InstructorNameTypeDtoProperty()
+                        {
+                            Category = Dtos.EnumProperties.InstructorNameType2.Personal,
+                            Detail =
+                                new Dtos.GuidObject2(
+                                        nickNameTypeItem.Guid)
+                        },
+                        FullName = person.Nickname,
+                        Preference = !string.IsNullOrEmpty(preferredNameType) && preferredNameType.Equals("NICKNAME", StringComparison.CurrentCultureIgnoreCase) ?
+                           Dtos.EnumProperties.PersonNamePreference.Preferred : (PersonNamePreference?)null,
+                    };
+
+                    personNames.Add(nickName);
+                }
+            }
+
+            // Name History
+            if ((person.FormerNames != null) && (person.FormerNames.Any()))
+            {
+                var historyNameTypeItem = (await GetPersonNameTypesAsync(false))
+                    .FirstOrDefault(pn => pn.Code == "HISTORY");
+                if (historyNameTypeItem != null)
+                {
+                    foreach (var name in person.FormerNames)
+                    {
+                        var formerName = new Dtos.DtoProperties.InstructorNameDtoProperty2()
+                        {
+                            NameType = new Dtos.DtoProperties.InstructorNameTypeDtoProperty()
+                            {
+                                Category = Dtos.EnumProperties.InstructorNameType2.Personal,
+                                Detail =
+                                    new Dtos.GuidObject2(
+                                            historyNameTypeItem.Guid)
+                            },
+                            FullName = BuildFullName("FM", "", name.GivenName, name.MiddleName, name.FamilyName, ""),
+                            FirstName = string.IsNullOrEmpty(name.GivenName) ? null : name.GivenName,
+                            MiddleName = string.IsNullOrEmpty(name.MiddleName) ? null : name.MiddleName,
+                            LastName = string.IsNullOrEmpty(name.FamilyName) ? null : name.FamilyName,
+                            LastNamePrefix =
+                                name.FamilyName.Contains(" ")
+                                    ? name.FamilyName.Split(" ".ToCharArray())[0].ToString()
+                                    : null
+                        };
+                        personNames.Add(formerName);
+                    }
+                }
+            }
+            return personNames;
+        }
+
+        #endregion EEDM sections-maximum Version 11
 
         /// <summary>
         /// Helper method to determine if integration statuses have been configured
@@ -8470,18 +9502,26 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 throw new ArgumentNullException("guid");
             }
-            var meeting = await _sectionRepository.GetSectionMeetingByGuidAsync(guid);
-            if (meeting == null)
+            try
             {
-                throw new KeyNotFoundException("Invalid Guid for Section Meeting");
-            }
-            var section = await _sectionRepository.GetSectionAsync(meeting.SectionId);
-            // Remove from section any faculty that do not have the same instructional method
-            // as the meeting we are removing.  Then, section.Faculty.ToList() only contains
-            // the faculty objects we wish to delete.
-            SectionProcessor.DeleteSectionFacultyFromSectionMeetings(section, meeting.Id);
+                var meeting = await _sectionRepository.GetSectionMeetingByGuidAsync(guid);
 
-            await _sectionRepository.DeleteSectionMeetingAsync(meeting.Id, section.Faculty.ToList());
+                if (meeting == null)
+                {
+                    throw new KeyNotFoundException();
+                }
+                var section = await _sectionRepository.GetSectionAsync(meeting.SectionId);
+                // Remove from section any faculty that do not have the same instructional method
+                // as the meeting we are removing.  Then, section.Faculty.ToList() only contains
+                // the faculty objects we wish to delete.
+                SectionProcessor.DeleteSectionFacultyFromSectionMeetings(section, meeting.Id);
+
+                await _sectionRepository.DeleteSectionMeetingAsync(meeting.Id, section.Faculty.ToList());
+            }
+            catch (KeyNotFoundException)
+            {
+                throw new KeyNotFoundException(string.Format("Instructional-events not found for guid: '{0}'.", guid));
+            }
         }
 
         /// <summary>
@@ -10531,6 +11571,41 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             return fullName.Trim();
         }
 
+        private string BuildFullName(string preferredName, string prefix, string first, string middle, string last,
+            string suffix)
+        {
+            string fullName = "";
+            if (string.IsNullOrEmpty(preferredName)) preferredName = "FM";
+            if ((first != null) && (first.Length == 1)) first = string.Concat(first, ".");
+            if ((middle != null) && (middle.Length == 1)) middle = string.Concat(middle, ".");
+            var firstInitial = !string.IsNullOrEmpty(first) ? string.Concat(first.Remove(1), ". ") : string.Empty;
+            var middleInitial = !string.IsNullOrEmpty(middle) ? string.Concat(middle.Remove(1), ". ") : string.Empty;
+            if (!string.IsNullOrEmpty(suffix)) suffix = string.Concat(", ", suffix);
+            first = !string.IsNullOrEmpty(first) ? string.Concat(first, " ") : string.Empty;
+            middle = !string.IsNullOrEmpty(middle) ? string.Concat(middle, " ") : string.Empty;
+            prefix = !string.IsNullOrEmpty(prefix) ? string.Concat(prefix, " ") : string.Empty;
+
+            switch (preferredName.ToUpper())
+            {
+                case ("IM"):
+                    fullName = string.Concat(prefix, firstInitial, middle, last, suffix);
+                    break;
+                case ("II"):
+                    fullName = string.Concat(prefix, firstInitial, middleInitial, last, suffix);
+                    break;
+                case ("FM"):
+                    fullName = string.Concat(prefix, first, middle, last, suffix);
+                    break;
+                case ("FI"):
+                    fullName = string.Concat(prefix, first, middleInitial, last, suffix);
+                    break;
+                default:
+                    fullName = preferredName;
+                    break;
+            }
+            return fullName.Trim();
+        }
+
         /// <summary>
         /// Helper method to determine if the user has permission to manage a section's textbook assignments
         /// </summary>
@@ -10791,6 +11866,59 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
             return new PrivacyWrapper<List<Dtos.Student.Section3>>(sectionDtos, hasPrivacyRestriction);
+        }
+
+        /// <summary>
+        /// Retrieve sections events ICal from calendar schedules
+        /// </summary>
+        /// <param name="sectionIds"></param>
+        /// <param name="startDate"></param>
+        /// <param name="endDate"></param>
+        /// <returns></returns>
+        public async Task< Ellucian.Colleague.Dtos.Base.EventsICal> GetSectionEventsICalAsync(IEnumerable<string> sectionIds, DateTime? startDate, DateTime? endDate)
+        {
+            if (sectionIds == null || sectionIds.Count() == 0)
+            {
+                string errorText = "At least one item in list of sectionIds must be provided.";
+                throw new ArgumentNullException(errorText);
+            }
+            var events = await _sectionRepository.GetSectionEventsICalAsync("CS", sectionIds, startDate, endDate);
+            Ellucian.Colleague.Domain.Base.Entities.EventsICal eventsICalEntity = EventListToEventsICal(events);
+            Ellucian.Colleague.Dtos.Base.EventsICal eventsICalDto = new Dtos.Base.EventsICal(eventsICalEntity.iCal);
+            return eventsICalDto;
+        }
+        private Ellucian.Colleague.Domain.Base.Entities.EventsICal EventListToEventsICal(IEnumerable<Ellucian.Colleague.Domain.Base.Entities.Event> events)
+        {
+            if(events==null)
+            {
+                logger.Info("events are null, cannot create ICal");
+                return new Ellucian.Colleague.Domain.Base.Entities.EventsICal(string.Empty);
+            }
+            var iCal = new iCalendar();
+            foreach (var anEvent in events)
+            {
+                DDay.iCal.Event evt = iCal.Create<DDay.iCal.Event>();
+                evt.Name = "VEVENT";
+                evt.Summary = anEvent.Description;
+                evt.Categories = new List<string>() { anEvent.Type };
+                evt.Location = anEvent.Location;
+                evt.DTStart = new iCalDateTime(anEvent.StartTime.UtcDateTime);
+                evt.DTStart.IsUniversalTime = true;
+                evt.DTEnd = new iCalDateTime(anEvent.EndTime.UtcDateTime);
+                evt.DTEnd.IsUniversalTime = true;
+                //Retain the time component of DTStart and DTEnd. Fix bug in iCal which considers midnight UTC as all-day event and drops the time portion
+                evt.DTStart.HasTime = true;
+                evt.DTEnd.HasTime = true;
+            }
+            string result = null;
+            var ctx = new SerializationContext();
+            var factory = new DDay.iCal.Serialization.iCalendar.SerializerFactory();
+            var serializer = factory.Build(iCal.GetType(), ctx) as IStringSerializer;
+            if (serializer != null)
+            {
+                result = serializer.SerializeToString(iCal);
+            }
+            return new Ellucian.Colleague.Domain.Base.Entities.EventsICal(result);
         }
     }
 }

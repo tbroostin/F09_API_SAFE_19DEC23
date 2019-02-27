@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Linq;
@@ -167,21 +167,34 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     }
 
                     // Box 1 - for 1098E
-                    var boxcode = boxCodesDataContracts.FirstOrDefault(x => x.BxcBoxNumber == "1");
-                    if (boxcode != null)
+                    // Get the box codes where the box number is 1 and the box code tax form is the tax form for 1098-Es.
+                    var box1BoxCode1098e = boxCodesDataContracts.FirstOrDefault(x => x.BxcBoxNumber == "1" && x.BxcTaxForm == parm1098Contract.P1098ETaxForm);
+                    if (box1BoxCode1098e != null)
                     {
                         //last value is being taken from the boxes filtered out
-                        var boxData = form1098BoxDataContracts.Where(x => x.Tf98bBoxCode == boxcode.Recordkey).LastOrDefault();
-                        entity.StudentInterestAmount = (boxData.Tf98bAmt.HasValue ? boxData.Tf98bAmt.Value : 0).ToString("N2");
+                        var boxData = form1098BoxDataContracts.Where(x => x.Tf98bBoxCode == box1BoxCode1098e.Recordkey).LastOrDefault();
+                        entity.StudentInterestAmount = (boxData != null && boxData.Tf98bAmt != null && boxData.Tf98bAmt.HasValue ? boxData.Tf98bAmt.Value : 0).ToString("N2");
                     }
 
-
-                    // Box 2
-                    var boxCode = boxCodesDataContracts.FirstOrDefault(x => x.BxcBoxNumber == "2");
-                    if (boxCode != null)
+                    // Box 1 - for 1098T
+                    // Get the box codes where the box number is 1 and the box code tax form is the tax form for 1098-Ts.
+                    var box1BoxCode1098t = boxCodesDataContracts.FirstOrDefault(x => x.BxcBoxNumber == "1" && x.BxcTaxForm == parm1098Contract.P1098TTaxForm);
+                    if (box1BoxCode1098t != null)
                     {
-                        var boxData = form1098BoxDataContracts.Where(x => x.Tf98bBoxCode == boxCode.Recordkey).ToList();
-                        entity.AmountsBilledForTuitionAndExpenses = boxData.Sum(x => x.Tf98bAmt ?? 0).ToString("N2");
+                        //last value is being taken from the boxes filtered out
+                        var boxData = form1098BoxDataContracts.Where(x => x.Tf98bBoxCode == box1BoxCode1098t.Recordkey).LastOrDefault();
+                        entity.AmountsPaidForTuitionAndExpenses = (boxData != null && boxData.Tf98bAmt != null && boxData.Tf98bAmt.HasValue ? boxData.Tf98bAmt.Value : 0).ToString("N2");
+                    }
+
+                    // Box 2 - for 1098T
+                    var box2BoxCode = boxCodesDataContracts.FirstOrDefault(x => x.BxcBoxNumber == "2");
+                    if (box2BoxCode != null)
+                    {
+                        var boxData = form1098BoxDataContracts.Where(x => x.Tf98bBoxCode == box2BoxCode.Recordkey).LastOrDefault();
+                        if (boxData != null)
+                        {
+                            entity.AmountsBilledForTuitionAndExpenses = (boxData.Tf98bAmt ?? 0).ToString("N2");
+                        }
                     }
 
                     // Box 2 - 1098E
@@ -192,7 +205,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         entity.IsPriorInterestOrFeeExcluded = priorInterestOrFeeExcluded.P1098EFeeFlagsAssocMember.ToUpper() == "Y";
                     }
 
-                    // Box 3
+                    // Box 3 - for 1098T
                     entity.ReportingMethodHasBeenChanged = false;
                     var changedReportingMethod = parm1098Contract.P1098TYearInfoEntityAssociation.First(x =>
                         x.P1098TYearsAssocMember.HasValue && x.P1098TYearsAssocMember.ToString() == entity.TaxYear);
@@ -201,60 +214,79 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         entity.ReportingMethodHasBeenChanged = changedReportingMethod.P1098TYrChgRptMethsAssocMember.ToUpper() == "Y";
                     }
 
-                    // Box 4
-                    boxCode = boxCodesDataContracts.FirstOrDefault(x => x.BxcBoxNumber == "4");
-                    if (boxCode != null)
+                    // Box 4 - for 1098T
+                    var box4BoxCode = boxCodesDataContracts.FirstOrDefault(x => x.BxcBoxNumber == "4");
+                    if (box4BoxCode != null)
                     {
-                        var boxData = form1098BoxDataContracts.Where(x => x.Tf98bBoxCode == boxCode.Recordkey
-                            && x.Tf98bBoxCode == parm1098Contract.P1098TRefundBoxCode).ToList();
-                        entity.AdjustmentsForPriorYear = boxData.Sum(x => x.Tf98bAmt ?? 0).ToString("N2");
-                    }
-
-                    // Box 5
-                    boxCode = boxCodesDataContracts.FirstOrDefault(x => x.BxcBoxNumber == "5");
-                    if (boxCode != null)
-                    {
-                        var boxData = form1098BoxDataContracts.Where(x => x.Tf98bBoxCode == boxCode.Recordkey
-                            && x.Tf98bBoxCode == parm1098Contract.P1098TFaBoxCode).ToList();
-                        entity.ScholarshipsOrGrants = boxData.Sum(x => x.Tf98bAmt ?? 0).ToString("N2");
-                    }
-
-                    // Box 6
-                    boxCode = boxCodesDataContracts.FirstOrDefault(x => x.BxcBoxNumber == "6");
-                    if (boxCode != null)
-                    {
-                        var boxData = form1098BoxDataContracts.Where(x => x.Tf98bBoxCode == boxCode.Recordkey
-                            && x.Tf98bBoxCode == parm1098Contract.P1098TFaRefBoxCode).ToList();
-                        entity.AdjustmentsToScholarshipsOrGrantsForPriorYear = boxData.Sum(x => x.Tf98bAmt ?? 0).ToString("N2");
-                    }
-
-                    // Box 7
-                    boxCode = boxCodesDataContracts.FirstOrDefault(x => x.BxcBoxNumber == "7");
-                    if (boxCode != null)
-                    {
-                        var boxData = form1098BoxDataContracts.FirstOrDefault(x => x.Tf98bBoxCode == boxCode.Recordkey);
-                        if (boxData != null && boxData.Tf98bBoxCode == parm1098Contract.P1098TNewYrBoxCode)
+                        var boxData = form1098BoxDataContracts.Where(x => x.Tf98bBoxCode == box4BoxCode.Recordkey
+                            && x.Tf98bBoxCode == parm1098Contract.P1098TRefundBoxCode).LastOrDefault();
+                        if (boxData != null)
                         {
-                            entity.AmountsBilledAndReceivedForQ1Period = boxData.Tf98bValue.ToUpper() == "X";
+                            entity.AdjustmentsForPriorYear = (boxData.Tf98bAmt ?? 0).ToString("N2");
                         }
                     }
 
-                    // Box 8
-                    boxCode = boxCodesDataContracts.FirstOrDefault(x => x.BxcBoxNumber == "8");
-                    if (boxCode != null)
+                    // Box 5 - for 1098T
+                    var box5BoxCode = boxCodesDataContracts.FirstOrDefault(x => x.BxcBoxNumber == "5");
+                    if (box5BoxCode != null)
                     {
-                        var boxData = form1098BoxDataContracts.FirstOrDefault(x => x.Tf98bBoxCode == boxCode.Recordkey);
+                        var boxData = form1098BoxDataContracts.Where(x => x.Tf98bBoxCode == box5BoxCode.Recordkey
+                            && x.Tf98bBoxCode == parm1098Contract.P1098TFaBoxCode).LastOrDefault();
+                        if (boxData != null)
+                        {
+                            entity.ScholarshipsOrGrants = (boxData.Tf98bAmt ?? 0).ToString("N2");
+                        }
+                    }
+
+                    // Box 6 - for 1098T
+                    var box6BoxCode = boxCodesDataContracts.FirstOrDefault(x => x.BxcBoxNumber == "6");
+                    if (box6BoxCode != null)
+                    {
+                        var boxData = form1098BoxDataContracts.Where(x => x.Tf98bBoxCode == box6BoxCode.Recordkey
+                            && x.Tf98bBoxCode == parm1098Contract.P1098TFaRefBoxCode).LastOrDefault();
+                        if (boxData != null)
+                        {
+                            entity.AdjustmentsToScholarshipsOrGrantsForPriorYear = (boxData.Tf98bAmt ?? 0).ToString("N2");
+                        }
+                    }
+
+                    // Box 7 - for 1098T
+                    var box7BoxCode = boxCodesDataContracts.FirstOrDefault(x => x.BxcBoxNumber == "7");
+                    if (box7BoxCode != null)
+                    {
+                        var boxData = form1098BoxDataContracts.LastOrDefault(x => x.Tf98bBoxCode == box7BoxCode.Recordkey);
+                        if (pdfDataContract.Tf98fTaxYear >= 2018)
+                        {
+                            if (boxData != null && boxData.Tf98bBoxCode == parm1098Contract.P1098TNewYrPayBoxCode)
+                            {
+                                entity.AmountsBilledAndReceivedForQ1Period = boxData.Tf98bValue.ToUpper() == "X";
+                            }
+                        }
+                        else
+                        {
+                            if (boxData != null && boxData.Tf98bBoxCode == parm1098Contract.P1098TNewYrBoxCode)
+                            {
+                                entity.AmountsBilledAndReceivedForQ1Period = boxData.Tf98bValue.ToUpper() == "X";
+                            }
+                        }
+                    }
+
+                    // Box 8 - for 1098T
+                    var box8BoxCode = boxCodesDataContracts.FirstOrDefault(x => x.BxcBoxNumber == "8");
+                    if (box8BoxCode != null)
+                    {
+                        var boxData = form1098BoxDataContracts.LastOrDefault(x => x.Tf98bBoxCode == box8BoxCode.Recordkey);
                         if (boxData != null && parm1098Contract.P1098TLoadBoxCode == boxData.Tf98bBoxCode)
                         {
                             entity.AtLeastHalfTime = boxData.Tf98bValue.ToUpper() == "X";
                         }
                     }
 
-                    // Box 9
-                    boxCode = boxCodesDataContracts.FirstOrDefault(x => x.BxcBoxNumber == "9");
-                    if (boxCode != null)
+                    // Box 9 - for 1098T
+                    var box9BoxCode = boxCodesDataContracts.FirstOrDefault(x => x.BxcBoxNumber == "9");
+                    if (box9BoxCode != null)
                     {
-                        var boxData = form1098BoxDataContracts.FirstOrDefault(x => x.Tf98bBoxCode == boxCode.Recordkey);
+                        var boxData = form1098BoxDataContracts.LastOrDefault(x => x.Tf98bBoxCode == box9BoxCode.Recordkey);
                         if (boxData != null && parm1098Contract.P1098TGradBoxCode == boxData.Tf98bBoxCode)
                         {
                             entity.IsGradStudent = boxData.Tf98bValue.ToUpper() == "X";
@@ -263,10 +295,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
 
                 // Call the PDF accessed CTX to trigger an email notification
-                TxUpdate1098AccessTriggerRequest request = new TxUpdate1098AccessTriggerRequest();
+                TxNotifyStPdfAccessRequest request = new TxNotifyStPdfAccessRequest();
                 request.TaxFormPdfId = recordId;
-                var response = await transactionInvoker.ExecuteAsync<TxUpdate1098AccessTriggerRequest, TxUpdate1098AccessTriggerResponse>(request);
-
+                request.PdfPersonId = entity.StudentId;
+                request.TaxForm = "1098";
+                var response = await transactionInvoker.ExecuteAsync<TxNotifyStPdfAccessRequest, TxNotifyStPdfAccessResponse>(request);
                 return entity;
             }
             catch (Exception e)

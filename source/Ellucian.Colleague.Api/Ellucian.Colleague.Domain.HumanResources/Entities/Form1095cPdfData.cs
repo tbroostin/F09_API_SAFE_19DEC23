@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -74,6 +74,11 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         /// Employer's contact phone number extension
         /// </summary>
         public string EmployerContactPhoneExtension { get; set; }
+
+        /// <summary>
+        /// The person ID for the employee.
+        /// </summary>
+        public string EmployeeId { get; set; }
 
         /// <summary>
         /// Employee's first name

@@ -1,26 +1,23 @@
-﻿// Copyright 2015-2016 Ellucian Company L.P. and its affiliates.
-using System;
-using System.Linq;
-using System.Runtime.Caching;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Data.Student.Repositories;
+using Ellucian.Colleague.Data.Student.Transactions;
+using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Colleague.Domain.Base.Exceptions;
+using Ellucian.Colleague.Domain.Student.Entities;
+using Ellucian.Colleague.Domain.Student.Repositories;
+using Ellucian.Data.Colleague;
 using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Http.Configuration;
-using Ellucian.Data.Colleague;
-using Ellucian.Colleague.Data.Student.DataContracts;
-using Ellucian.Colleague.Data.Student.Repositories;
-using Ellucian.Colleague.Data.Student.Transactions;
-using Ellucian.Colleague.Domain.Student.Entities;
-using Ellucian.Colleague.Domain.Student.Exceptions;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
-using System.Threading.Tasks;
-using Ellucian.Colleague.Domain.Student.Repositories;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading;
-using Ellucian.Colleague.Domain.Base.Exceptions;
-using Ellucian.Colleague.Domain.Base.Entities;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {
@@ -1246,6 +1243,175 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                   return response;
               }
           }
+
+        [TestClass]
+        public class GraduationApplicationRepository_GetGraduationApplicationEligibilityAsync
+        {
+            private Mock<IColleagueTransactionFactory> transFactoryMock;
+            private Mock<IColleagueDataReader> dataAccessorMock;
+            private Mock<ICacheProvider> cacheProviderMock;
+            private Mock<ILogger> loggerMock;
+            private ApiSettings apiSettings;
+            private Mock<IColleagueTransactionInvoker> mockManager;
+            private IGraduationApplicationRepository graduationApplicationRepository;
+            private GetGradApplEligibilityRequest getGradAppEligibilityRequest;
+            private List<string> programCodes;
+            private string studentId;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                studentId = "studentId";
+                programCodes = new List<string>() { "PROG1", "PROG2" };
+                loggerMock = new Mock<ILogger>();
+                apiSettings = new ApiSettings("TEST");
+                cacheProviderMock = new Mock<ICacheProvider>();
+                transFactoryMock = new Mock<IColleagueTransactionFactory>();
+                dataAccessorMock = new Mock<IColleagueDataReader>();
+                mockManager = new Mock<IColleagueTransactionInvoker>();
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
+                x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                .Returns(Task.FromResult(new Tuple<object, SemaphoreSlim>(
+                    null,
+                    new SemaphoreSlim(1, 1)
+                    )));
+                // Set up data accessor for the transaction factory 
+                transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
+                // Set up successful response to a transaction request, capturing the completed request for verification
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(mockManager.Object);
+                graduationApplicationRepository = new GraduationApplicationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                transFactoryMock = null;
+                dataAccessorMock = null;
+                cacheProviderMock = null;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetGraduationApplicationEligibilityAsync_NullStudent()
+            {
+                var graduationApplicationEntity = await graduationApplicationRepository.GetGraduationApplicationEligibilityAsync(null, programCodes);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetGraduationApplicationEligibilityAsync_EmptyStudent()
+            {
+                var graduationApplicationEntity = await graduationApplicationRepository.GetGraduationApplicationEligibilityAsync(string.Empty, programCodes);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetGraduationApplicationEligibilityAsyncc_NullProgramCodes()
+            {
+                var graduationApplicationEntity = await graduationApplicationRepository.GetGraduationApplicationEligibilityAsync(studentId, null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetGraduationApplicationEligibilityAsync_EmptyProgramCodes()
+            {
+                var graduationApplicationEntity = await graduationApplicationRepository.GetGraduationApplicationEligibilityAsync(studentId, new List<string>());
+            }
+
+            [TestMethod]
+            public async Task GetGraduationApplicationEligibilityAsync_ReturnsValidItems()
+            {
+                var validResponse = BuildValidGetGraduationApplicationEligResponse();
+                mockManager.Setup(mgr => mgr.ExecuteAsync<GetGradApplEligibilityRequest, GetGradApplEligibilityResponse>(It.IsAny<GetGradApplEligibilityRequest>())).Returns(Task.FromResult(validResponse)).Callback<GetGradApplEligibilityRequest>(req => getGradAppEligibilityRequest = req);
+                var graduationApplicationElig = await graduationApplicationRepository.GetGraduationApplicationEligibilityAsync(studentId, programCodes);
+                //compare transaction request 
+                Assert.AreEqual(2, graduationApplicationElig.Count());
+                var eligibleOne = graduationApplicationElig.ElementAt(0);
+                Assert.AreEqual(studentId, eligibleOne.StudentId);
+                Assert.AreEqual("PROG1", eligibleOne.ProgramCode);
+                Assert.IsTrue(eligibleOne.IsEligible);
+                var notEligible = graduationApplicationElig.ElementAt(1);
+                Assert.AreEqual(studentId, notEligible.StudentId);
+                Assert.AreEqual("PROG2", notEligible.ProgramCode);
+                Assert.IsFalse(notEligible.IsEligible);
+                Assert.AreEqual(2, notEligible.IneligibleMessages.Count());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(Exception))]
+            public async Task GetGraduationApplicationEligibilityAsync_ColleagueTXThrowsException()
+            {
+                mockManager.Setup(mgr => mgr.ExecuteAsync<GetGradApplEligibilityRequest, GetGradApplEligibilityResponse>(It.IsAny<GetGradApplEligibilityRequest>())).Throws(new Exception());
+                var graduationApplicationElig = await graduationApplicationRepository.GetGraduationApplicationEligibilityAsync(studentId, programCodes);
+            }
+
+            [TestMethod]
+            public async Task GetGraduationApplicationEligibilityAsync_ReturnsEmptyResultsList()
+            {
+                var validResponse = BuildInvalidEmptyGraduationApplicationEligResponse();
+                mockManager.Setup(mgr => mgr.ExecuteAsync<GetGradApplEligibilityRequest, GetGradApplEligibilityResponse>(It.IsAny<GetGradApplEligibilityRequest>())).Returns(Task.FromResult(validResponse)).Callback<GetGradApplEligibilityRequest>(req => getGradAppEligibilityRequest = req);
+                var graduationApplicationElig = await graduationApplicationRepository.GetGraduationApplicationEligibilityAsync(studentId, programCodes);
+                //compare transaction request 
+                Assert.AreEqual(0, graduationApplicationElig.Count());
+
+
+            }
+
+            [TestMethod]
+            public async Task GetGraduationApplicationEligibilityAsync_ReturnsErrorInListNoProgram()
+            {
+                var validResponse = BuildErrorGraduationApplicationEligResponse();
+                mockManager.Setup(mgr => mgr.ExecuteAsync<GetGradApplEligibilityRequest, GetGradApplEligibilityResponse>(It.IsAny<GetGradApplEligibilityRequest>())).Returns(Task.FromResult(validResponse)).Callback<GetGradApplEligibilityRequest>(req => getGradAppEligibilityRequest = req);
+                var graduationApplicationElig = await graduationApplicationRepository.GetGraduationApplicationEligibilityAsync(studentId, programCodes);
+                //compare transaction request 
+                Assert.AreEqual(0, graduationApplicationElig.Count());
+
+            }
+
+            [TestMethod]
+            public async Task GetGraduationApplicationEligibilityAsync_CTXReturnsNullResponse()
+            {
+                GetGradApplEligibilityResponse nullResponse = null;
+                mockManager.Setup(mgr => mgr.ExecuteAsync<GetGradApplEligibilityRequest, GetGradApplEligibilityResponse>(It.IsAny<GetGradApplEligibilityRequest>())).Returns(Task.FromResult(nullResponse)).Callback<GetGradApplEligibilityRequest>(req => getGradAppEligibilityRequest = req);
+
+                string message = "CTX returned null graduation application eligibility response for student Id " + studentId;
+                loggerMock.Setup(x => x.Info(It.Is<string>(y => y == message))).Verifiable();
+
+                var graduationApplicationElig = await graduationApplicationRepository.GetGraduationApplicationEligibilityAsync(studentId, programCodes);
+                loggerMock.Verify();
+                Assert.AreEqual(0, graduationApplicationElig.Count());
+            }
+
+
+
+            private GetGradApplEligibilityResponse BuildValidGetGraduationApplicationEligResponse()
+            {
+                GetGradApplEligibilityResponse response = new GetGradApplEligibilityResponse();
+                response.EligibilityResults = new List<EligibilityResults>();
+                var result1 = new EligibilityResults() { ProgramCode = "PROG1", IsEligible = true };
+                response.EligibilityResults.Add(result1);
+                var result2 = new EligibilityResults() { ProgramCode = "PROG2", IsEligible = false, FailureReasons = "Reason1" + DmiString.sSM + "Reason2" };
+                response.EligibilityResults.Add(result2);
+                return response;
+            }
+
+            private GetGradApplEligibilityResponse BuildInvalidEmptyGraduationApplicationEligResponse()
+            {
+                // Really not sure how this could happen.
+                GetGradApplEligibilityResponse response = new GetGradApplEligibilityResponse();
+                response.EligibilityResults = new List<EligibilityResults>();
+                 return response;
+            }
+
+            private GetGradApplEligibilityResponse BuildErrorGraduationApplicationEligResponse()
+            {
+                GetGradApplEligibilityResponse response = new GetGradApplEligibilityResponse();
+                response.EligibilityResults = new List<EligibilityResults>();
+                var result1 = new EligibilityResults() { IsEligible = false, FailureReasons = "Invalid Program" };
+                response.EligibilityResults.Add(result1);
+                return response;
+            }
+        }
     }
 }
 

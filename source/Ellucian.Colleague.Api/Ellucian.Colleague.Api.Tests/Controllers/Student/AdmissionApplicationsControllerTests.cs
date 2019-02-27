@@ -763,8 +763,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 admissionApplicationsController.Request = new HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
 
 
-                admissionApplicationsServiceMock.Setup(x => x.CreateAdmissionApplicationAsync(It.IsAny<AdmissionApplication2>())).ReturnsAsync(admissionApplication2);
-                admissionApplicationsServiceMock.Setup(x => x.UpdateAdmissionApplicationAsync(It.IsAny<string>(), It.IsAny<AdmissionApplication2>())).ReturnsAsync(putadmissionApplication);
+                admissionApplicationsServiceMock.Setup(x => x.CreateAdmissionApplicationAsync(It.IsAny<AdmissionApplication2>(), It.IsAny<bool>())).ReturnsAsync(admissionApplication2);
+                admissionApplicationsServiceMock.Setup(x => x.UpdateAdmissionApplicationAsync(It.IsAny<string>(), It.IsAny<AdmissionApplication2>(), It.IsAny<bool>())).ReturnsAsync(putadmissionApplication);
                 admissionApplicationsServiceMock.Setup(x => x.GetAdmissionApplicationsByGuid2Async(It.IsAny<string>())).ReturnsAsync(putadmissionApplication);
 
                 admissionApplicationsController.Request.Properties.Add("PartialInputJsonObject", JObject.FromObject(putadmissionApplication));
@@ -842,143 +842,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task AdmissionApplicationController_PostAdmissionApplications2Async_Applicant_Null()
-            {
-                admissionApplication2.Applicant = null;
-                
-                await admissionApplicationsController.PostAdmissionApplications2Async(admissionApplication2);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task AdmissionApplicationController_PostAdmissionApplications2Async_Applicant_Id_null()
-            {
-                admissionApplication2.Applicant.Id = null;
-
-                await admissionApplicationsController.PostAdmissionApplications2Async(admissionApplication2);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task AdmissionApplicationController_PostAdmissionApplications2Async_AcademicPeriod_Id_null()
-            {
-                admissionApplication2.AcademicPeriod.Id = null;
-
-                await admissionApplicationsController.PostAdmissionApplications2Async(admissionApplication2);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task AdmissionApplicationController_PostAdmissionApplications2Async_Source_Id_null()
-            {
-                admissionApplication2.Source.Id = null;
-
-                await admissionApplicationsController.PostAdmissionApplications2Async(admissionApplication2);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task AdmissionApplicationController_PostAdmissionApplications2Async_Type_Id_null()
-            {
-                admissionApplication2.Type.Id = null;
-
-                await admissionApplicationsController.PostAdmissionApplications2Async(admissionApplication2);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task AdmissionApplicationController_PostAdmissionApplications2Async_Owner_Id_null()
-            {
-                admissionApplication2.Owner.Id = null;
-
-                await admissionApplicationsController.PostAdmissionApplications2Async(admissionApplication2);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task AdmissionApplicationController_PostAdmissionApplications2Async_AdmissionPopulation_Id_null()
-            {
-                admissionApplication2.AdmissionPopulation.Id = null;
-
-                await admissionApplicationsController.PostAdmissionApplications2Async(admissionApplication2);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task AdmissionApplicationController_PostAdmissionApplications2Async_Site_Id_null()
-            {
-                admissionApplication2.Site.Id = null;
-
-                await admissionApplicationsController.PostAdmissionApplications2Async(admissionApplication2);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task AdmissionApplicationController_PostAdmissionApplications2Async_ResidencyType_Id_null()
-            {
-                admissionApplication2.ResidencyType.Id = null;
-
-                await admissionApplicationsController.PostAdmissionApplications2Async(admissionApplication2);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task AdmissionApplicationController_PostAdmissionApplications2Async_Program_Id_null()
-            {
-                admissionApplication2.Program.Id = null;
-
-                await admissionApplicationsController.PostAdmissionApplications2Async(admissionApplication2);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task AdmissionApplicationController_PostAdmissionApplications2Async_Level_Id_null()
-            {
-                admissionApplication2.Level.Id = null;
-
-                await admissionApplicationsController.PostAdmissionApplications2Async(admissionApplication2);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task AdmissionApplicationController_PostAdmissionApplications2Async_WithdrawalReason_Id_null()
-            {
-                admissionApplication2.Withdrawal.WithdrawalReason.Id = null;
-
-                await admissionApplicationsController.PostAdmissionApplications2Async(admissionApplication2);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task AdmissionApplicationController_PostAdmissionApplications2Async_WithdrawalReason_Null()
-            {
-                admissionApplication2.Withdrawal.WithdrawalReason = null;
-                await admissionApplicationsController.PostAdmissionApplications2Async(admissionApplication2);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task AdmissionApplicationController_PostAdmissionApplications2Async_InstitutionAttended_Id_null()
-            {
-                admissionApplication2.Withdrawal.InstitutionAttended.Id = null;
-
-                await admissionApplicationsController.PostAdmissionApplications2Async(admissionApplication2);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task AdmissionApplicationController_PostAdmissionApplications2Async_School_Id_null()
-            {
-                admissionApplication2.School.Id = null;
-
-                await admissionApplicationsController.PostAdmissionApplications2Async(admissionApplication2);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
             public async Task AdmissionApplicationController_PostAdmissionApplications2Async_KeyNotFoundException()
             {
-                admissionApplicationsServiceMock.Setup(x => x.CreateAdmissionApplicationAsync(It.IsAny<AdmissionApplication2>())).ThrowsAsync(new KeyNotFoundException());
+                admissionApplicationsServiceMock.Setup(x => x.CreateAdmissionApplicationAsync(It.IsAny<AdmissionApplication2>(), It.IsAny<bool>())).ThrowsAsync(new KeyNotFoundException());
                 await admissionApplicationsController.PostAdmissionApplications2Async(admissionApplication2);
             }
 
@@ -986,7 +852,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             [ExpectedException(typeof(HttpResponseException))]
             public async Task AdmissionApplicationController_PostAdmissionApplications2Async_PermissionsException()
             {
-                admissionApplicationsServiceMock.Setup(x => x.CreateAdmissionApplicationAsync(It.IsAny<AdmissionApplication2>())).ThrowsAsync(new PermissionsException());
+                admissionApplicationsServiceMock.Setup(x => x.CreateAdmissionApplicationAsync(It.IsAny<AdmissionApplication2>(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
                 await admissionApplicationsController.PostAdmissionApplications2Async(admissionApplication2);
             }
 
@@ -994,7 +860,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             [ExpectedException(typeof(HttpResponseException))]
             public async Task AdmissionApplicationController_PostAdmissionApplications2Async_ArgumentException()
             {
-                admissionApplicationsServiceMock.Setup(x => x.CreateAdmissionApplicationAsync(It.IsAny<AdmissionApplication2>())).ThrowsAsync(new ArgumentException());
+                admissionApplicationsServiceMock.Setup(x => x.CreateAdmissionApplicationAsync(It.IsAny<AdmissionApplication2>(), It.IsAny<bool>())).ThrowsAsync(new ArgumentException());
                 await admissionApplicationsController.PostAdmissionApplications2Async(admissionApplication2);
             }
 
@@ -1002,7 +868,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             [ExpectedException(typeof(HttpResponseException))]
             public async Task AdmissionApplicationController_PostAdmissionApplications2Async_RepositoryException()
             {
-                admissionApplicationsServiceMock.Setup(x => x.CreateAdmissionApplicationAsync(It.IsAny<AdmissionApplication2>())).ThrowsAsync(new RepositoryException());
+                admissionApplicationsServiceMock.Setup(x => x.CreateAdmissionApplicationAsync(It.IsAny<AdmissionApplication2>(), It.IsAny<bool>())).ThrowsAsync(new RepositoryException());
                 await admissionApplicationsController.PostAdmissionApplications2Async(admissionApplication2);
             }
 
@@ -1010,7 +876,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             [ExpectedException(typeof(HttpResponseException))]
             public async Task AdmissionApplicationController_PostAdmissionApplications2Async_IntegrationApiException()
             {
-                admissionApplicationsServiceMock.Setup(x => x.CreateAdmissionApplicationAsync(It.IsAny<AdmissionApplication2>())).ThrowsAsync(new IntegrationApiException());
+                admissionApplicationsServiceMock.Setup(x => x.CreateAdmissionApplicationAsync(It.IsAny<AdmissionApplication2>(), It.IsAny<bool>())).ThrowsAsync(new IntegrationApiException());
                 await admissionApplicationsController.PostAdmissionApplications2Async(admissionApplication2);
             }
 
@@ -1018,7 +884,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             [ExpectedException(typeof(HttpResponseException))]
             public async Task AdmissionApplicationController_PostAdmissionApplications2Async_ConfigurationException()
             {
-                admissionApplicationsServiceMock.Setup(x => x.CreateAdmissionApplicationAsync(It.IsAny<AdmissionApplication2>())).ThrowsAsync(new ConfigurationException());
+                admissionApplicationsServiceMock.Setup(x => x.CreateAdmissionApplicationAsync(It.IsAny<AdmissionApplication2>(), It.IsAny<bool>())).ThrowsAsync(new ConfigurationException());
                 await admissionApplicationsController.PostAdmissionApplications2Async(admissionApplication2);
             }
 
@@ -1026,7 +892,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             [ExpectedException(typeof(HttpResponseException))]
             public async Task AdmissionApplicationController_PostAdmissionApplications2Async_Exception()
             {
-                admissionApplicationsServiceMock.Setup(x => x.CreateAdmissionApplicationAsync(It.IsAny<AdmissionApplication2>())).ThrowsAsync(new Exception());
+                admissionApplicationsServiceMock.Setup(x => x.CreateAdmissionApplicationAsync(It.IsAny<AdmissionApplication2>(), It.IsAny<bool>())).ThrowsAsync(new Exception());
                 await admissionApplicationsController.PostAdmissionApplications2Async(admissionApplication2);
             }
 
@@ -1076,7 +942,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             [ExpectedException(typeof(HttpResponseException))]
             public async Task AdmissionApplicationController_PutAdmissionApplications2Async_KeyNotFoundException()
             {
-                admissionApplicationsServiceMock.Setup(x => x.UpdateAdmissionApplicationAsync(It.IsAny<string>(), It.IsAny<AdmissionApplication2>())).ThrowsAsync(new KeyNotFoundException());
+                admissionApplicationsServiceMock.Setup(x => x.UpdateAdmissionApplicationAsync(It.IsAny<string>(), It.IsAny<AdmissionApplication2>(), It.IsAny<bool>())).ThrowsAsync(new KeyNotFoundException());
                 await admissionApplicationsController.PutAdmissionApplications2Async(guid, putadmissionApplication);
             }
 
@@ -1084,7 +950,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             [ExpectedException(typeof(HttpResponseException))]
             public async Task AdmissionApplicationController_PutAdmissionApplications2Async_PermissionsException()
             {
-                admissionApplicationsServiceMock.Setup(x => x.UpdateAdmissionApplicationAsync(It.IsAny<string>(), It.IsAny<AdmissionApplication2>())).ThrowsAsync(new PermissionsException());
+                admissionApplicationsServiceMock.Setup(x => x.UpdateAdmissionApplicationAsync(It.IsAny<string>(), It.IsAny<AdmissionApplication2>(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
                 await admissionApplicationsController.PutAdmissionApplications2Async(guid,putadmissionApplication);
             }
 
@@ -1092,7 +958,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             [ExpectedException(typeof(HttpResponseException))]
             public async Task AdmissionApplicationController_PutAdmissionApplications2Async_ArgumentException()
             {
-                admissionApplicationsServiceMock.Setup(x => x.UpdateAdmissionApplicationAsync(It.IsAny<string>(), It.IsAny<AdmissionApplication2>())).ThrowsAsync(new ArgumentException());
+                admissionApplicationsServiceMock.Setup(x => x.UpdateAdmissionApplicationAsync(It.IsAny<string>(), It.IsAny<AdmissionApplication2>(), It.IsAny<bool>())).ThrowsAsync(new ArgumentException());
                 await admissionApplicationsController.PutAdmissionApplications2Async(guid,putadmissionApplication);
             }
 
@@ -1100,7 +966,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             [ExpectedException(typeof(HttpResponseException))]
             public async Task AdmissionApplicationController_PutAdmissionApplications2Async_RepositoryException()
             {
-                admissionApplicationsServiceMock.Setup(x => x.UpdateAdmissionApplicationAsync(It.IsAny<string>(), It.IsAny<AdmissionApplication2>())).ThrowsAsync(new RepositoryException());
+                admissionApplicationsServiceMock.Setup(x => x.UpdateAdmissionApplicationAsync(It.IsAny<string>(), It.IsAny<AdmissionApplication2>(), It.IsAny<bool>())).ThrowsAsync(new RepositoryException());
                 await admissionApplicationsController.PutAdmissionApplications2Async(guid, putadmissionApplication);
             }
 
@@ -1108,7 +974,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             [ExpectedException(typeof(HttpResponseException))]
             public async Task AdmissionApplicationController_putAdmissionApplications2Async_IntegrationApiException()
             {
-                admissionApplicationsServiceMock.Setup(x => x.UpdateAdmissionApplicationAsync(It.IsAny<string>(), It.IsAny<AdmissionApplication2>())).ThrowsAsync(new IntegrationApiException());
+                admissionApplicationsServiceMock.Setup(x => x.UpdateAdmissionApplicationAsync(It.IsAny<string>(), It.IsAny<AdmissionApplication2>(), It.IsAny<bool>())).ThrowsAsync(new IntegrationApiException());
                 await admissionApplicationsController.PutAdmissionApplications2Async(guid, putadmissionApplication);
             }
 
@@ -1116,7 +982,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             [ExpectedException(typeof(HttpResponseException))]
             public async Task AdmissionApplicationController_PutAdmissionApplications2Async_ConfigurationException()
             {
-                admissionApplicationsServiceMock.Setup(x => x.UpdateAdmissionApplicationAsync(It.IsAny<string>(), It.IsAny<AdmissionApplication2>())).ThrowsAsync(new ConfigurationException());
+                admissionApplicationsServiceMock.Setup(x => x.UpdateAdmissionApplicationAsync(It.IsAny<string>(), It.IsAny<AdmissionApplication2>(), It.IsAny<bool>())).ThrowsAsync(new ConfigurationException());
                 await admissionApplicationsController.PutAdmissionApplications2Async(guid, putadmissionApplication);
             }
 
@@ -1125,7 +991,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task AdmissionApplicationController_PutAdmissionApplications2Async_Exception()
             {
                 putadmissionApplication.Id = "";
-                admissionApplicationsServiceMock.Setup(x => x.UpdateAdmissionApplicationAsync(It.IsAny<string>(),It.IsAny<AdmissionApplication2>())).ThrowsAsync(new Exception());
+                admissionApplicationsServiceMock.Setup(x => x.UpdateAdmissionApplicationAsync(It.IsAny<string>(),It.IsAny<AdmissionApplication2>(), It.IsAny<bool>())).ThrowsAsync(new Exception());
                 await admissionApplicationsController.PutAdmissionApplications2Async(guid, putadmissionApplication);
             }
 

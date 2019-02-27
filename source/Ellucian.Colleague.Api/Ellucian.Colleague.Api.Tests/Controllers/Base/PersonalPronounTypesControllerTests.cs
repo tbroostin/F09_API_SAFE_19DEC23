@@ -14,6 +14,10 @@ using Ellucian.Web.Adapters;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
+using Ellucian.Web.Security;
+using Ellucian.Colleague.Domain.Exceptions;
+using System;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Base
 {
@@ -46,6 +50,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         PersonalPronounTypesController personalPronounTypesController;
         IEnumerable<Ellucian.Colleague.Domain.Base.Entities.PersonalPronounType> personalPronounTypeEntityItems;
         List<Ellucian.Colleague.Dtos.Base.PersonalPronounType> personalPronounTypeDtoItems = new List<Ellucian.Colleague.Dtos.Base.PersonalPronounType>();
+        private List<Dtos.PersonalPronouns> personalPronounsCollection;
+        private string expectedGuid = "1";
 
         [TestInitialize]
         public void Initialize()
@@ -69,6 +75,11 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                 personalPronounTypeDtoItems.Add(new Dtos.Base.PersonalPronounType() { Code = personalPronounItem.Code, Description = personalPronounItem.Description });
             }
 
+            personalPronounsCollection = new List<Dtos.PersonalPronouns>();
+            foreach (var personalPronounItem in personalPronounTypeEntityItems)
+            {
+                personalPronounsCollection.Add(new Dtos.PersonalPronouns() { Code = personalPronounItem.Code, Description = personalPronounItem.Description, Id = personalPronounItem.Guid });
+            }
             personalPronounTypesController = new PersonalPronounTypesController(personalPronounTypeServiceMock.Object, loggerMock.Object);
             personalPronounTypesController.Request = new HttpRequestMessage();
             personalPronounTypesController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
@@ -81,6 +92,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             personalPronounTypeEntityItems = null;
             personalPronounTypeDtoItems = null;
             personalPronounTypesController = null;
+            personalPronounsCollection = null;
+            loggerMock = null;
         }
 
         [TestMethod]
@@ -101,6 +114,199 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                 Assert.AreEqual(expected.Description, actual.Description);
             }
         }
+        [TestMethod]
+        public async Task PersonalPronounsController_GetPersonalPronouns_ValidateFields_Nocache()
+        {
+            personalPronounTypesController.Request.Headers.CacheControl =
+                 new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
 
+            personalPronounTypeServiceMock.Setup(x => x.GetPersonalPronounsAsync(false)).ReturnsAsync(personalPronounsCollection);
+
+            var sourceContexts = (await personalPronounTypesController.GetPersonalPronounsAsync()).ToList();
+            Assert.AreEqual(personalPronounsCollection.Count, sourceContexts.Count);
+            for (var i = 0; i < sourceContexts.Count; i++)
+            {
+                var expected = personalPronounsCollection[i];
+                var actual = sourceContexts[i];
+                Assert.AreEqual(expected.Id, actual.Id, "Id, Index=" + i.ToString());
+                Assert.AreEqual(expected.Title, actual.Title, "Title, Index=" + i.ToString());
+                Assert.AreEqual(expected.Code, actual.Code, "Code, Index=" + i.ToString());
+            }
+        }
+
+        [TestMethod]
+        public async Task PersonalPronounsController_GetPersonalPronouns_ValidateFields_Cache()
+        {
+            personalPronounTypesController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+
+            personalPronounTypeServiceMock.Setup(x => x.GetPersonalPronounsAsync(true)).ReturnsAsync(personalPronounsCollection);
+
+            var sourceContexts = (await personalPronounTypesController.GetPersonalPronounsAsync()).ToList();
+            Assert.AreEqual(personalPronounsCollection.Count, sourceContexts.Count);
+            for (var i = 0; i < sourceContexts.Count; i++)
+            {
+                var expected = personalPronounsCollection[i];
+                var actual = sourceContexts[i];
+                Assert.AreEqual(expected.Id, actual.Id, "Id, Index=" + i.ToString());
+                Assert.AreEqual(expected.Title, actual.Title, "Title, Index=" + i.ToString());
+                Assert.AreEqual(expected.Code, actual.Code, "Code, Index=" + i.ToString());
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalPronounsController_GetPersonalPronouns_KeyNotFoundException()
+        {
+            //
+            personalPronounTypeServiceMock.Setup(x => x.GetPersonalPronounsAsync(It.IsAny<bool>()))
+                .Throws<KeyNotFoundException>();
+            await personalPronounTypesController.GetPersonalPronounsAsync();
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalPronounsController_GetPersonalPronouns_PermissionsException()
+        {
+
+            personalPronounTypeServiceMock.Setup(x => x.GetPersonalPronounsAsync(It.IsAny<bool>()))
+                .Throws<PermissionsException>();
+            await personalPronounTypesController.GetPersonalPronounsAsync();
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalPronounsController_GetPersonalPronouns_ArgumentException()
+        {
+
+            personalPronounTypeServiceMock.Setup(x => x.GetPersonalPronounsAsync(It.IsAny<bool>()))
+                .Throws<ArgumentException>();
+            await personalPronounTypesController.GetPersonalPronounsAsync();
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalPronounsController_GetPersonalPronouns_RepositoryException()
+        {
+
+            personalPronounTypeServiceMock.Setup(x => x.GetPersonalPronounsAsync(It.IsAny<bool>()))
+                .Throws<RepositoryException>();
+            await personalPronounTypesController.GetPersonalPronounsAsync();
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalPronounsController_GetPersonalPronouns_IntegrationApiException()
+        {
+
+            personalPronounTypeServiceMock.Setup(x => x.GetPersonalPronounsAsync(It.IsAny<bool>()))
+                .Throws<IntegrationApiException>();
+            await personalPronounTypesController.GetPersonalPronounsAsync();
+        }
+
+        [TestMethod]
+        public async Task PersonalPronounsController_GetPersonalPronounsByGuidAsync_ValidateFields()
+        {
+            var expected = personalPronounsCollection.FirstOrDefault();
+            personalPronounTypeServiceMock.Setup(x => x.GetPersonalPronounsByGuidAsync(expected.Id, It.IsAny<bool>())).ReturnsAsync(expected);
+
+            var actual = await personalPronounTypesController.GetPersonalPronounsByGuidAsync(expected.Id);
+
+            Assert.AreEqual(expected.Id, actual.Id, "Id");
+            Assert.AreEqual(expected.Title, actual.Title, "Title");
+            Assert.AreEqual(expected.Code, actual.Code, "Code");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalPronounsController_GetPersonalPronouns_Exception()
+        {
+            personalPronounTypeServiceMock.Setup(x => x.GetPersonalPronounsAsync(It.IsAny<bool>())).Throws<Exception>();
+            await personalPronounTypesController.GetPersonalPronounsAsync();
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalPronounsController_GetPersonalPronounsByGuidAsync_Exception()
+        {
+            personalPronounTypeServiceMock.Setup(x => x.GetPersonalPronounsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<Exception>();
+            await personalPronounTypesController.GetPersonalPronounsByGuidAsync(string.Empty);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalPronounsController_GetPersonalPronounsByGuid_KeyNotFoundException()
+        {
+            personalPronounTypeServiceMock.Setup(x => x.GetPersonalPronounsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>()))
+                .Throws<KeyNotFoundException>();
+            await personalPronounTypesController.GetPersonalPronounsByGuidAsync(expectedGuid);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalPronounsController_GetPersonalPronounsByGuid_PermissionsException()
+        {
+            personalPronounTypeServiceMock.Setup(x => x.GetPersonalPronounsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>()))
+                .Throws<PermissionsException>();
+            await personalPronounTypesController.GetPersonalPronounsByGuidAsync(expectedGuid);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalPronounsController_GetPersonalPronounsByGuid_ArgumentException()
+        {
+            personalPronounTypeServiceMock.Setup(x => x.GetPersonalPronounsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>()))
+                .Throws<ArgumentException>();
+            await personalPronounTypesController.GetPersonalPronounsByGuidAsync(expectedGuid);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalPronounsController_GetPersonalPronounsByGuid_RepositoryException()
+        {
+            personalPronounTypeServiceMock.Setup(x => x.GetPersonalPronounsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>()))
+                .Throws<RepositoryException>();
+            await personalPronounTypesController.GetPersonalPronounsByGuidAsync(expectedGuid);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalPronounsController_GetPersonalPronounsByGuid_IntegrationApiException()
+        {
+            personalPronounTypeServiceMock.Setup(x => x.GetPersonalPronounsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>()))
+                .Throws<IntegrationApiException>();
+            await personalPronounTypesController.GetPersonalPronounsByGuidAsync(expectedGuid);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalPronounsController_GetPersonalPronounsByGuid_Exception()
+        {
+            personalPronounTypeServiceMock.Setup(x => x.GetPersonalPronounsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>()))
+                .Throws<Exception>();
+            await personalPronounTypesController.GetPersonalPronounsByGuidAsync(expectedGuid);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalPronounsController_PostPersonalPronounsAsync_Exception()
+        {
+            await personalPronounTypesController.PostPersonalPronounsAsync(personalPronounsCollection.FirstOrDefault());
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalPronounsController_PutPersonalPronounsAsync_Exception()
+        {
+            var sourceContext = personalPronounsCollection.FirstOrDefault();
+            await personalPronounTypesController.PutPersonalPronounsAsync(sourceContext.Id, sourceContext);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalPronounsController_DeletePersonalPronounsAsync_Exception()
+        {
+            await personalPronounTypesController.DeletePersonalPronounsAsync(personalPronounsCollection.FirstOrDefault().Id);
+        }
     }
 }

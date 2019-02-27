@@ -26,6 +26,12 @@ namespace Ellucian.Colleague.Domain.Student.Tests
             return await Task.FromResult(Catalogs);
         }
 
+        public async Task<string> GetCatalogGuidAsync(string code)
+        {
+            Populate();
+            return await Task.FromResult(Catalogs.FirstOrDefault(c=>c.Code == code).Guid);
+        }
+
         private void Populate()
         {
             Catalogs.Add(new Catalog("9C3B805D-CFE6-483B-86C3-4C20562F8C15", "2010", new DateTime(2010, 1, 1)) { AcadPrograms = new List<string>() { "BA.MATH" } });

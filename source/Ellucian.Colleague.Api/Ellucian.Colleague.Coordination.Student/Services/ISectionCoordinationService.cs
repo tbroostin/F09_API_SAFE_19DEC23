@@ -119,6 +119,27 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             List<string> academicLevel = null, string course = "", string site = "", string status = "", List<string> owningOrganization = null);
 
         /// <summary>
+        /// Get selection criteria, convert it to codes as required and select 
+        /// multiple sections from Colleague.
+        /// </summary>
+        /// <param name="titles">Section Title Contains ...title...</param>
+        /// <param name="startOn">Section starts on or after this date</param>
+        /// <param name="endOn">Section ends on or before this date</param>
+        /// <param name="code">Section Name Contains ...code...</param>
+        /// <param name="number">Section Number equal to</param>
+        /// <param name="instructionalPlatform">Learning Platform equal to (guid)</param>
+        /// <param name="academicPeriod">Section Term equal to (guid)</param>
+        /// <param name="academicLevel">Section Academic Level equal to (guid)</param>
+        /// <param name="course">Section Course equal to (guid)</param>
+        /// <param name="site">Section Location equal to (guid)</param>
+        /// <param name="status">Section Status matches closed, open, pending, or cancelled</param>
+        /// <param name="owningOrganization">Section Department equal to (guid)</param>
+        /// <returns>List of SectionMaximum4 <see cref="Dtos.SectionMaximum5"/> objects representing matching sections</returns>
+        Task<Tuple<IEnumerable<Dtos.SectionMaximum5>, int>> GetSectionsMaximum5Async(int offset, int limit, string title = "", string startOn = "", string endOn = "",
+            string code = "", string number = "", string instructionalPlatform = "", string academicPeriod = "", string reportingAcademicPeriod = "",
+            List<string> academicLevel = null, string course = "", string site = "", string status = "", List<string> owningOrganization = null, List<string> instructors = null, string scheduleAcademicPeriod = "", bool bypassCache = false);
+
+        /// <summary>
         /// Get a SectionMaximum using its GUID
         /// </summary>
         /// <param name="guid">The section's GUID</param>
@@ -138,6 +159,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="guid">The section's GUID</param>
         /// <returns>A HEDM-format SectionMaximum DTO</returns>
         Task<SectionMaximum4> GetSectionMaximumByGuid4Async(string guid);
+
+        /// <summary>
+        /// Get a SectionMaximum using its GUID
+        /// </summary>
+        /// <param name="guid">The section's GUID</param>
+        /// <returns>A HEDM-format SectionMaximum DTO</returns>
+        Task<SectionMaximum5> GetSectionMaximumByGuid5Async(string guid, bool bypassCache);
 
         /// <summary>
         /// Get all with filter parameters
@@ -460,6 +488,15 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="useCache"></param>
         /// <returns></returns>
         Task<PrivacyWrapper<List<Dtos.Student.Section3>>> GetSections3Async(IEnumerable<string> sectionIds, bool useCache = true, bool bestFit = false);
-        
+        /// <summary>
+        /// Retrieve sections events iCal from calendar schedules
+        /// </summary>
+        /// <param name="sectionIds"></param>
+        /// <param name="startDate"></param>
+        /// <param name="endDate"></param>
+        /// <returns></returns>
+        Task<Ellucian.Colleague.Dtos.Base.EventsICal> GetSectionEventsICalAsync(IEnumerable<string> sectionIds, DateTime? startDate, DateTime? endDate);
+
+
     }
 }

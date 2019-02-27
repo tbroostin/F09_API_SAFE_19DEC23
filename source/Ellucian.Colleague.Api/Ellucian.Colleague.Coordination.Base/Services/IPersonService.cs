@@ -72,6 +72,13 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         Task<Person4> CreatePerson4Async(Person4 person);
 
         /// <summary>
+        /// Create a person for v12.1.10.
+        /// </summary>
+        /// <param name="person">The <see cref="Person5">person</see> entity to create in the database.</param>
+        /// <returns>The newly created <see cref="Person5">person</see></returns>
+        Task<Person5> CreatePerson5Async(Person5 person);
+
+        /// <summary>
         /// Update a person.
         /// </summary>
         /// <param name="person">The <see cref="Person2">person</see> entity to update in the database.</param>
@@ -91,6 +98,13 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <param name="person">The <see cref="Person4">person</see> entity to update in the database.</param>
         /// <returns>The newly updated <see cref="Person4">person</see></returns>
         Task<Person4> UpdatePerson4Async(Person4 person);
+
+        /// <summary>
+        /// Update a person for v12.1.0
+        /// </summary>
+        /// <param name="person">The <see cref="Person5">person</see> entity to update in the database.</param>
+        /// <returns>The newly updated <see cref="Person5">person</see></returns>
+        Task<Person5> UpdatePerson5Async(Person5 person);
 
         /// <summary>
         /// Query person by person DTO.
@@ -113,6 +127,14 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <param name="bypassCache">flag to bypass cache for reads.</param>
         /// <returns>List of matching <see cref="Person4">persons</see></returns>
         Task<IEnumerable<Person4>> QueryPerson4ByPostAsync(Person4 person, bool bypassCache = false);
+
+        /// <summary>
+        /// Query person by person DTO.
+        /// </summary>
+        /// <param name="person">The <see cref="Person5">person</see> entity to query by.</param>
+        /// <param name="bypassCache">flag to bypass cache for reads.</param>
+        /// <returns>List of matching <see cref="Person5">persons</see></returns>
+        Task<IEnumerable<Person5>> QueryPerson5ByPostAsync(Person5 person, bool bypassCache = false);
 
         /// <summary>
         /// Query person by criteria and return the results of the matching algorithm
@@ -228,6 +250,17 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             PersonCredential2 credentials, bool bypassCache);
 
         /// <summary>
+        /// Gets all persons credentials
+        /// </summary>
+        /// <param name="offset"></param>
+        /// <param name="limit"></param>
+        /// <param name="credentials"></param>
+        /// <param name="bypassCache"></param>
+        /// <returns></returns>
+        Task<Tuple<IEnumerable<Dtos.PersonCredential3>, int>> GetAllPersonCredentials4Async(int offset, int limit,
+            PersonCredential3 credentials, bool bypassCache);
+
+        /// <summary>
         /// Get a person credentials by guid.
         /// </summary>
         /// <param name="guid">Guid of the person in Colleague.</param>
@@ -240,6 +273,13 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <param name="guid">Guid of the person in Colleague.</param>
         /// <returns>The <see cref="Dtos.PersonCredential">person credential</see></returns>
         Task<Dtos.PersonCredential2> GetPersonCredential3ByGuidAsync(string guid);
+
+        /// <summary>
+        /// Get a person credentials by guid.
+        /// </summary>
+        /// <param name="guid">Guid of the person in Colleague.</param>
+        /// <returns>The <see cref="Dtos.PersonCredential">person credential</see></returns>
+        Task<Dtos.PersonCredential3> GetPersonCredential4ByGuidAsync(string guid);
 
         /// <summary>
         /// Get a HEDM V8 person by guid.
@@ -256,7 +296,15 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <param name="bypassCache"></param>
         /// <returns></returns>
         Task<Person4> GetPerson4ByGuidAsync(string guid, bool bypassCache);
-        
+
+        /// <summary>
+        /// Gets person by id V12.1.0.
+        /// </summary>
+        /// <param name="guid"></param>
+        /// <param name="bypassCache"></param>
+        /// <returns></returns>
+        Task<Person5> GetPerson5ByGuidAsync(string guid, bool bypassCache);
+
         /// <summary>
         /// Get HEDM V8 person data associated to the specified filters
         /// </summary>
@@ -279,6 +327,17 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <param name="preferredNameFilter">preferred Name filter</param>
         /// 
         Task<Tuple<IEnumerable<Dtos.Person4>, int>> GetPerson4NonCachedAsync(int offset, int limit, bool bypassCache, Person4 person, string personFilter);
+
+        /// <summary>
+        /// Get HEDM V12.1.0 person data associated to the specified filters
+        /// </summary>
+        /// <param name="Offset">Paging offset</param>
+        /// <param name="Limit">Paging limit</param>
+        /// <param name="bypassCache">Flag to bypass Cache</param>
+        /// <param name="person">person DTO filters</param>
+        /// <param name="personFilter">person Filter Filter</param>
+        /// 
+        Task<Tuple<IEnumerable<Dtos.Person5>, int>> GetPerson5NonCachedAsync(int offset, int limit, bool bypassCache, Person5 person, string personFilter);
 
         /// <summary>
         /// Retrieves the matching Persons for the ids provided or searches keyword
@@ -306,6 +365,15 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <param name="status"></param>
         /// <param name="country"></param>
         Task<string> CheckCitizenshipfields(Dtos.DtoProperties.PersonCitizenshipDtoProperty newStatus, string newCountry, Dtos.DtoProperties.PersonCitizenshipDtoProperty oldStatus, string oldCountry);
+
+        /// <summary>
+        /// A method that returns first name, last name and an email address based on the current hierarchy
+        /// </summary>
+        /// <param name="personId"></param>
+        /// <param name="useCache"></param>
+        /// <returns></returns>
+        Task<Dtos.Base.PersonProxyDetails> GetPersonProxyDetailsAsync(string personId);
+
 
     }
 }

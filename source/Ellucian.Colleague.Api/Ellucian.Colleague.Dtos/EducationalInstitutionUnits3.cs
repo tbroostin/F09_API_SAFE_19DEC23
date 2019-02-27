@@ -46,7 +46,7 @@ namespace Ellucian.Colleague.Dtos
         /// The email addresses at which the unit can be contacted
         /// </summary>
         [JsonProperty("emails", DefaultValueHandling = DefaultValueHandling.Ignore)]
-        public List<PersonEmailDtoProperty> Email { get; set; }
+        public List<PersonEmail2DtoProperty> Email { get; set; }
 
         /// <summary>
         /// The social media account at which the unit can be contacted.

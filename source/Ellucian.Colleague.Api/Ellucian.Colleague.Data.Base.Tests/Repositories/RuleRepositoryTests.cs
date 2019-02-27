@@ -190,6 +190,76 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 Assert.IsTrue(results.First(rr => rr.RuleId == rule3.Id && rr.Context == biol).Passed);
             }
 
+
+            [TestMethod]
+            public async Task PassingNullRequests()
+            {
+                var cacheProvider = new MemoryCacheProvider();
+                var txFactoryMock = new Mock<IColleagueTransactionFactory>();
+                var ctxMock = new Mock<IColleagueTransactionInvoker>();
+
+                var dataReaderMock = new Mock<IColleagueDataReader>();
+                dataReaderMock.Setup(acc => acc.ReadRecordAsync<Data.Base.DataContracts.IntlParams>("INTL.PARAMS", "INTERNATIONAL", true)).ReturnsAsync(new DataContracts.IntlParams() { HostDateDelimiter = "/", HostShortDateFormat = "MDY" });
+
+                txFactoryMock.Setup(tf => tf.GetTransactionInvoker()).Returns(ctxMock.Object);
+                var logger = new Mock<ILogger>().Object;
+                var registry = new RuleAdapterRegistry();
+                registry.Register<Department>("DEPTS", new TestRuleAdapter());
+                var config = new RuleConfiguration();
+                var repo = new RuleRepository(cacheProvider, txFactoryMock.Object, logger, registry, config);
+                var ruleRequests = new List<RuleRequest<Department>>();
+                var math = depts.First(d => d.Code == "MATH");
+                var biol = depts.First(d => d.Code == "BIOL");
+
+                var rule1 = new Rule<Department>("R1");
+                var rule2 = new Rule<Department>("R2");
+                var rule3 = new Rule<Department>("R3");
+
+                ruleRequests.Add(new RuleRequest<Department>(rule1, math));
+                ruleRequests.Add(new RuleRequest<Department>(rule1, biol));
+                ruleRequests.Add(new RuleRequest<Department>(rule2, math));
+                ruleRequests.Add(new RuleRequest<Department>(rule2, biol));
+                ruleRequests.Add(new RuleRequest<Department>(rule3, math));
+                ruleRequests.Add(new RuleRequest<Department>(rule3, biol));
+
+                var req1 = new ExecuteRulesRequest();
+                req1.ARuleId = rule1.Id;
+                req1.AFileSuiteInstance = "";
+                req1.AlRecordIds = new List<string>() { "MATH", "BIOL" };
+                var resp1 = new ExecuteRulesResponse();
+                resp1.Results = new List<bool>() { true, false };
+
+                var req2 = new ExecuteRulesRequest();
+                req2.ARuleId = rule2.Id;
+                req2.AFileSuiteInstance = "";
+                req2.AlRecordIds = new List<string>() { "MATH", "BIOL" };
+                var resp2 = new ExecuteRulesResponse();
+                resp2.Results = new List<bool>() { false, true };
+
+                var req3 = new ExecuteRulesRequest();
+                req3.ARuleId = rule3.Id;
+                req3.AFileSuiteInstance = "";
+                req3.AlRecordIds = new List<string>() { "MATH", "BIOL" };
+                var resp3 = new ExecuteRulesResponse();
+                resp3.Results = new List<bool>() { true, true };
+
+                ctxMock.Setup(cti => cti.ExecuteAsync<ExecuteRulesRequest, ExecuteRulesResponse>(It.Is<ExecuteRulesRequest>(r => IsSameRequest(r, req1)))).ReturnsAsync(resp1);
+                ctxMock.Setup(cti => cti.ExecuteAsync<ExecuteRulesRequest, ExecuteRulesResponse>(It.Is<ExecuteRulesRequest>(r => IsSameRequest(r, req2)))).ReturnsAsync(resp2);
+                ctxMock.Setup(cti => cti.ExecuteAsync<ExecuteRulesRequest, ExecuteRulesResponse>(It.Is<ExecuteRulesRequest>(r => IsSameRequest(r, req3)))).ReturnsAsync(resp3);
+
+                var results = await repo.ExecuteAsync<Department>(ruleRequests);
+                Assert.AreEqual(6, results.Count());
+
+                Assert.IsTrue(results.First(rr => rr.RuleId == rule1.Id && rr.Context == math).Passed);
+                Assert.IsFalse(results.First(rr => rr.RuleId == rule1.Id && rr.Context == biol).Passed);
+
+                Assert.IsFalse(results.First(rr => rr.RuleId == rule2.Id && rr.Context == math).Passed);
+                Assert.IsTrue(results.First(rr => rr.RuleId == rule2.Id && rr.Context == biol).Passed);
+
+                Assert.IsTrue(results.First(rr => rr.RuleId == rule3.Id && rr.Context == math).Passed);
+                Assert.IsTrue(results.First(rr => rr.RuleId == rule3.Id && rr.Context == biol).Passed);
+            }
+
             private bool IsSameRequest(ExecuteRulesRequest a, ExecuteRulesRequest b)
             {
                 return a.ARuleId == b.ARuleId && a.AFileSuiteInstance == b.AFileSuiteInstance && Enumerable.SequenceEqual(a.AlRecordIds, b.AlRecordIds);

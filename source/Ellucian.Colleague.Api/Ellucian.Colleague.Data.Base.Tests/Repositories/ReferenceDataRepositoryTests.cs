@@ -8114,5 +8114,120 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             }
         }
 
+        /// <summary>
+        /// Test class for AltIdTypes codes
+        /// </summary>
+        [TestClass]
+        public class AltIdTypesTests
+        {
+            Mock<IColleagueTransactionFactory> transFactoryMock;
+            Mock<ICacheProvider> cacheProviderMock;
+            Mock<IColleagueDataReader> dataAccessorMock;
+            Mock<ILogger> loggerMock;
+            IEnumerable<AltIdTypes> _alternativeCredentialTypesCollection;
+            string codeItemName;
+            ApplValcodes altIdTypesValcodeResponse;
+
+            ReferenceDataRepository referenceDataRepo;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                loggerMock = new Mock<ILogger>();
+
+                // Build responses used for mocking
+                _alternativeCredentialTypesCollection = new List<AltIdTypes>()
+                {
+                    new AltIdTypes("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "AT", "Athletic"),
+                    new AltIdTypes("849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "AC", "Academic"),
+                    new AltIdTypes("d2253ac7-9931-4560-b42f-1fccd43c952e", "CU", "Cultural")
+                };
+                altIdTypesValcodeResponse = BuildValcodeResponse(_alternativeCredentialTypesCollection);
+
+                // Build repository
+                referenceDataRepo = BuildValidReferenceDataRepository();
+                codeItemName = referenceDataRepo.BuildFullCacheKey("AllAltIdTypes");
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                transFactoryMock = null;
+                dataAccessorMock = null;
+                cacheProviderMock = null;
+                _alternativeCredentialTypesCollection = null;
+                referenceDataRepo = null;
+            }
+
+            [TestMethod]
+            public async Task GetsAltIdTypesCacheAsync()
+            {
+                var result = await referenceDataRepo.GetAlternateIdTypesAsync(false);
+
+                for (int i = 0; i < _alternativeCredentialTypesCollection.Count(); i++)
+                {
+                    Assert.AreEqual(_alternativeCredentialTypesCollection.ElementAt(i).Guid, result.ElementAt(i).Guid);
+                    Assert.AreEqual(_alternativeCredentialTypesCollection.ElementAt(i).Code, result.ElementAt(i).Code);
+                    Assert.AreEqual(_alternativeCredentialTypesCollection.ElementAt(i).Description, result.ElementAt(i).Description);
+                }
+            }
+
+            [TestMethod]
+            public async Task GetsAltIdTypesNonCacheAsync()
+            {
+                var result = await referenceDataRepo.GetAlternateIdTypesAsync(true);
+
+                for (int i = 0; i < _alternativeCredentialTypesCollection.Count(); i++)
+                {
+                    Assert.AreEqual(_alternativeCredentialTypesCollection.ElementAt(i).Guid, result.ElementAt(i).Guid);
+                    Assert.AreEqual(_alternativeCredentialTypesCollection.ElementAt(i).Code, result.ElementAt(i).Code);
+                    Assert.AreEqual(_alternativeCredentialTypesCollection.ElementAt(i).Description, result.ElementAt(i).Description);
+                }
+            }
+            private ApplValcodes BuildValcodeResponse(IEnumerable<AltIdTypes> altIdTypes)
+            {
+                ApplValcodes valcodeResponse = new ApplValcodes();
+                valcodeResponse.ValsEntityAssociation = new List<ApplValcodesVals>();
+                foreach (var item in altIdTypes)
+                {
+                    valcodeResponse.ValsEntityAssociation.Add(new ApplValcodesVals("", item.Description, "" /*newType*/, item.Code, "", "", ""));
+                }
+                return valcodeResponse;
+            }
+            private ReferenceDataRepository BuildValidReferenceDataRepository()
+            {
+                // transaction factory mock
+                transFactoryMock = new Mock<IColleagueTransactionFactory>();
+                // Cache Provider Mock
+                cacheProviderMock = new Mock<ICacheProvider>();
+                // Set up data accessor for mocking 
+                dataAccessorMock = new Mock<IColleagueDataReader>();
+
+                // Set up dataAccessorMock as the object for the DataAccessor
+                transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
+
+                // Setup response to citizenship status valcode read
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("CORE.VALCODES", "ALT.ID.TYPES", It.IsAny<bool>())).ReturnsAsync(altIdTypesValcodeResponse);
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x => x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+
+                dataAccessorMock.Setup(acc => acc.SelectAsync(It.IsAny<RecordKeyLookup[]>())).Returns<RecordKeyLookup[]>(recordKeyLookups =>
+                {
+                    var result = new Dictionary<string, RecordKeyLookupResult>();
+                    foreach (var recordKeyLookup in recordKeyLookups)
+                    {
+                        var altCredIdType = _alternativeCredentialTypesCollection.Where(e => e.Code == recordKeyLookup.SecondaryKey).FirstOrDefault();
+                        result.Add(string.Join("+", new string[] { "CORE.VALCODES", "ALT.ID.TYPES", altCredIdType.Code }),
+                            new RecordKeyLookupResult() { Guid = altCredIdType.Guid });
+                    }
+                    return Task.FromResult(result);
+                });
+
+                // Construct repository
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+
+                return referenceDataRepo;
+            }
+        }
     }
 }

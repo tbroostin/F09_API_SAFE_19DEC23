@@ -60,6 +60,8 @@
     <Compile Include="AcademicCredit.cs" />
     <Compile Include="AcademicCredit2.cs" />
     <Compile Include="AcademicCredit3.cs" />
+    <Compile Include="Catalog.cs" />
+    <Compile Include="GraduationApplicationEligibilityCriteria.cs" />
     <Compile Include="AcademicHistory4.cs" />
     <Compile Include="AcademicHistoryBatch3.cs" />
     <Compile Include="AcademicHistoryLevel3.cs" />
@@ -79,9 +81,11 @@
     <Compile Include="NonAcademicAttendanceRequirement.cs" />
     <Compile Include="NonAcademicEvent.cs" />
     <Compile Include="NonAcademicEventQueryCriteria.cs" />
+    <Compile Include="GraduationApplicationProgramEligibility.cs" />
     <Compile Include="SectionAttendanceResponse.cs" />
     <Compile Include="SectionAttendance.cs" />
     <Compile Include="SectionCharge.cs" />
+    <Compile Include="SectionEventsICalQueryCriteria.cs" />
     <Compile Include="ShoppingSheetAwardGroup.cs" />
     <Compile Include="StudentSectionsAttendances.cs" />
     <Compile Include="StudentSectionAttendancesQueryCriteria.cs" />

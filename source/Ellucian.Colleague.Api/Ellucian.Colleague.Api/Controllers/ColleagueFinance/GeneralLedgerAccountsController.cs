@@ -66,7 +66,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             // Application exceptions will be caught below.
             catch (Exception ex)
             {
-                logger.Error(ex.ToString());
+                logger.Error(ex.Message);
                 throw CreateHttpResponseException("Unable to get the GL account.", HttpStatusCode.BadRequest);
             }
         }

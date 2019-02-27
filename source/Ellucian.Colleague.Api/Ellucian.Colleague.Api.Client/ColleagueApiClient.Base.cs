@@ -10,6 +10,7 @@ using System.Collections.Specialized;
 using System.Net;
 using System.Threading.Tasks;
 using System.Linq;
+using System.Net.Http;
 
 namespace Ellucian.Colleague.Api.Client
 {
@@ -1088,7 +1089,7 @@ namespace Ellucian.Colleague.Api.Client
             }
             catch (Exception e)
             {
-                logger.Error(e, "Unable to get person photo for id '{0}'", id);
+                logger.Debug(e, "Unable to get person photo for id '{0}'", id);
                 throw;
             }
         }
@@ -1141,7 +1142,7 @@ namespace Ellucian.Colleague.Api.Client
             }
             catch (Exception e)
             {
-                logger.Error(e, "Unable to get person photo for id '{0}'", id);
+                logger.Debug(e, "Unable to get person photo for id '{0}'", id);
                 throw;
             }
         }
@@ -2159,6 +2160,28 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
 
+        public async Task<PersonProxyDetails> GetPersonProxyDetailsAsync(string personId)
+        {
+            if (string.IsNullOrEmpty(personId))
+            {
+                throw new ArgumentNullException("personId", "You must provide the person ID to return profile information");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_personsPath, personId);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderProxyUserVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<PersonProxyDetails>(await response.Content.ReadAsStringAsync());
+            }
+            // Log any exception then throw it and let the calling code determine how to handle
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get information for this person");
+                throw;
+            }
+        }
+
         /// <summary>
         ///Get phone types
         /// </summary>
@@ -2666,6 +2689,42 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
+        /// Get a W-2c tax form PDF
+        /// </summary>
+        /// <param name="personId">ID of the person assigned to and requesting the W-2c.</param>
+        /// <param name="recordId">The record ID where the W-2c pdf data is stored</param>
+        /// <returns>Byte array containing PDF data</returns>
+        public async Task<byte[]> GetW2cTaxFormPdf(string personId, string recordId)
+        {
+            if (string.IsNullOrEmpty(personId))
+                throw new ArgumentNullException("personId", "personId cannot be null or empty.");
+
+            if (string.IsNullOrEmpty(recordId))
+                throw new ArgumentNullException("id", "Record ID cannot be null or empty.");
+
+            try
+            {
+                // Build url path and create and execute a request to get the tax form pdf
+                var urlPath = UrlUtility.CombineUrlPath(_personsPath, personId, _taxFormW2cPdfPath, recordId);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                headers.Add(AcceptHeaderKey, "application/pdf");
+                headers.Add(AcceptHeaderKey, "application/vnd.ellucian.v1+pdf");
+                headers.Add("X-Ellucian-Media-Type", "application/vnd.ellucian.v1+pdf");
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                var resource = response.Content.ReadAsByteArrayAsync().Result;
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.GetBaseException(), "Unable to retrieve W-2c tax form pdf.");
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Get a 1095-C tax form PDF
         /// </summary>
         /// <param name="personId">ID of the person assigned to and requesting the 1095-C.</param>
@@ -2899,7 +2958,7 @@ namespace Ellucian.Colleague.Api.Client
             // Log any exception, then rethrow it and let calling code determine how to handle it.
             catch (Exception e)
             {
-                logger.Error(e, "Unable to get tax form consents.");
+                logger.Error(e, "Unable to get tax form configuration.");
                 throw;
             }
         }
@@ -3094,6 +3153,98 @@ namespace Ellucian.Colleague.Api.Client
                 logger.Error(ex, "Unable to update Profile.");
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Updates a person's message data.
+        /// </summary>
+        /// <param name="messageId">The id of the message to update</param>
+        /// <param name="personId">The id of the person whose message is being updated</param>
+        /// <param name="newState">The state that the message should be changed to.</param>
+        /// <returns>The updated <see cref="WorkTask">Message Work Task</see> object.</returns>
+        public async Task<WorkTask> UpdateMessageWorklistAsync(string messageId, string personId, ExecutionState newState)
+        { 
+            if (messageId == null)
+            {
+                throw new ArgumentNullException("message", "message cannot be null.");
+            }
+            try
+            {
+        
+                var messages = await GetWorkTasksAsync(personId);
+                WorkTask msg = new WorkTask();
+                
+                foreach (var taskDto in messages)
+                {
+                    if (taskDto.Id == messageId)
+                    {
+                        msg = taskDto;
+                    }
+                }
+
+                //var urlPath = UrlUtility.CombineUrlPathAndArguments(_messagePath, msgInfo);
+                var queryString = UrlUtility.BuildEncodedQueryString("personId", personId,"newState", newState.ToString());
+                var combinedUrl = UrlUtility.CombineUrlPathAndArguments(_messagePath, queryString);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePutRequestWithResponseAsync<WorkTask>(msg, combinedUrl, headers: headers);
+                return JsonConvert.DeserializeObject<WorkTask>(await response.Content.ReadAsStringAsync());
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to update Message.");
+                throw;
+            }
+            
+        }
+
+        /// <summary>
+        /// Creates a message.
+        /// </summary>
+        /// <param name="personId">The person for whom the message is created in database.</param>
+        /// <param name="workflowDefId">ID of the workflow.</param>
+        /// <param name="processCode"> Process code of workflow</param>
+        /// <param name="subjectLine">Subject line of worktask</param>
+        /// <param name="advisorId">Id of advisor</param>
+        /// <returns>The updated <see cref="WorkTask">Message Work Task</see> object.</returns>
+        public async Task<WorkTask> CreateMessageWorklistAsync(string personId, string workflowDefId, string processCode, string subjectLine, string advisorId)
+        {
+            //var msgInfo = personId + workflowId + processCode;
+            if (personId == null)
+            {
+                throw new ArgumentNullException("personId", "personId cannot be null.");
+            }
+            if (workflowDefId == null)
+            {
+                throw new ArgumentNullException("workflowDefId", "workflowDefId cannot be null.");
+            }
+            if (processCode == null)
+            {
+                throw new ArgumentNullException("processCode", "processCode cannot be null.");
+            }
+            if (subjectLine == null)
+            {
+                throw new ArgumentNullException("subjectLine", "subjectLine cannot be null.");
+            }
+            if (advisorId == null)
+            {
+                throw new ArgumentNullException("advisorId", "advisorId cannot be null.");
+            }
+            try
+            {
+                var queryString = UrlUtility.BuildEncodedQueryString("workflowDefId", workflowDefId,"processCode", processCode, "subjectLine", subjectLine, "advisorId", advisorId);
+                var combinedUrl = UrlUtility.CombineUrlPathAndArguments(_messagePath, queryString);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(personId, combinedUrl, headers: headers);
+                return JsonConvert.DeserializeObject<WorkTask>(await response.Content.ReadAsStringAsync());
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to create Message.");
+                throw;
+            }
+
         }
 
         /// <summary>
@@ -3325,6 +3476,32 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
 
+        /// <summary>
+        /// Retrieves the list of WorkTask DTOs for the given user
+        /// </summary>
+        /// <returns>List of assigned <see cref="WorkTask">WorkTask</see>> DTOs</returns>
+        public async Task<String> GetWorkTasksAsync2(string personId)
+        {
+            if (string.IsNullOrEmpty(personId))
+            {
+                throw new ArgumentNullException("personId", "PersonId cannot be null or empty.");
+            }
+            try
+            {
+                string query = UrlUtility.BuildEncodedQueryString("personId", personId);
+                string urlPath = UrlUtility.CombineUrlPathAndArguments(_workTasksPath, query);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<Ellucian.Colleague.Dtos.Base.WorkTask>>(await response.Content.ReadAsStringAsync());
+                return urlPath;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Error retrieving WorkTask items for person " + personId);
+                throw;
+            }
+        }
         /// <summary>
         /// Retrieve a set of tax form statement DTOs.
         /// </summary>
@@ -4263,6 +4440,58 @@ namespace Ellucian.Colleague.Api.Client
             catch (Exception ex)
             {
                 logger.Error(ex.GetBaseException(), "Unable to retrieve 1099-MISC tax form pdf.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// This method gets all of a person's correspondence requests
+        /// </summary>
+        /// <param name="studentId">Student Id for whom to retrieve documents</param>
+        /// <returns>A list of the given student's financial aid documents across all FA Years</returns>
+        public async Task<IEnumerable<CorrespondenceRequest>> GetCorrespondenceRequestsAsync(string personId)
+        {
+            if (string.IsNullOrEmpty(personId))
+            {
+                throw new ArgumentNullException("personId");
+            }
+
+            try
+            {
+                var query = UrlUtility.BuildEncodedQueryString("personId", personId);
+                var urlPath = UrlUtility.CombineUrlPathAndArguments(_correspondenceRequestsPath, query);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<CorrespondenceRequest>>(response.Content.ReadAsStringAsync().Result);
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get correspondence requests");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Asynchronously returns the Required Document Configuration.
+        /// </summary>
+        /// <returns>The Required Document Configuration object</returns>
+        public async Task<RequiredDocumentConfiguration> GetRequiredDocumentConfigurationAsync()
+        {
+            try
+            {
+                var urlPath = UrlUtility.CombineUrlPath(_configurationPath, _requiredDocument);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var responseString = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var configuration = JsonConvert.DeserializeObject<RequiredDocumentConfiguration>(await responseString.Content.ReadAsStringAsync());
+
+                return configuration;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get the Required Document Configuration.");
                 throw;
             }
         }

@@ -1270,5 +1270,159 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     var graduationApplicationDto = await graduationApplicationService.GetGraduationApplicationFeeAsync("0000011", "MATH.BA");
                 }
             }
+
+        [TestClass]
+        public class GetGraduationApplicationEligibilityAsyncTests
+        {
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private IAdapterRegistry adapterRegistry;
+            private ILogger logger;
+            private ICurrentUserFactory currentUserFactory;
+            private Mock<IRoleRepository> roleRepositoryMock;
+            private IRoleRepository roleRepository;
+            private Mock<IGraduationApplicationRepository> graduationApplicationRepositoryMock;
+            private IGraduationApplicationRepository graduationApplicationRepository;
+            private Mock<ITermRepository> termRepositoryMock;
+            private ITermRepository termRepository;
+            private Mock<IAddressRepository> addressRepositoryMock;
+            private IAddressRepository addressRepository;
+            private Mock<IProgramRepository> programRepositoryMock;
+            private IProgramRepository programRepository;
+            private Mock<IStudentConfigurationRepository> configurationRepositoryMock;
+            private IStudentConfigurationRepository configurationRepository;
+            private Mock<IStudentRepository> studentRepositoryMock;
+            private IStudentRepository studentRepository;
+            private Mock<IStaffRepository> staffRepositoryMock;
+            private IStaffRepository staffRepository;
+            private IGraduationApplicationService graduationApplicationService;
+            private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
+            private IConfigurationRepository baseConfigurationRepository;
+            private List<string> programCodes;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                programCodes = new List<string>() { "PROG1", "PROG2" };
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                adapterRegistry = adapterRegistryMock.Object;
+                roleRepositoryMock = new Mock<IRoleRepository>();
+                roleRepository = roleRepositoryMock.Object;
+                termRepositoryMock = new Mock<ITermRepository>();
+                termRepository = termRepositoryMock.Object;
+                programRepositoryMock = new Mock<IProgramRepository>();
+                programRepository = programRepositoryMock.Object;
+                studentRepositoryMock = new Mock<IStudentRepository>();
+                studentRepository = studentRepositoryMock.Object;
+                addressRepositoryMock = new Mock<IAddressRepository>();
+                addressRepository = addressRepositoryMock.Object;
+                studentRepository = studentRepositoryMock.Object;
+                staffRepositoryMock = new Mock<IStaffRepository>();
+                staffRepository = staffRepositoryMock.Object;
+                configurationRepositoryMock = new Mock<IStudentConfigurationRepository>();
+                configurationRepository = configurationRepositoryMock.Object;
+                graduationApplicationRepositoryMock = new Mock<IGraduationApplicationRepository>();
+                graduationApplicationRepository = graduationApplicationRepositoryMock.Object;
+                baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
+                baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
+                logger = new Mock<ILogger>().Object;
+                currentUserFactory = new CurrentUserSetup.UserFactory();
+                var graduationAppEligDtoAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.GraduationApplicationProgramEligibility, Ellucian.Colleague.Dtos.Student.GraduationApplicationProgramEligibility>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.GraduationApplicationProgramEligibility, Ellucian.Colleague.Dtos.Student.GraduationApplicationProgramEligibility>()).Returns(graduationAppEligDtoAdapter);
+                graduationApplicationService = new GraduationApplicationService(adapterRegistry, graduationApplicationRepository, termRepository, programRepository, studentRepository, configurationRepository, addressRepository, currentUserFactory, roleRepository, logger, baseConfigurationRepository, staffRepository);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                adapterRegistryMock = null;
+                roleRepositoryMock = null;
+                termRepositoryMock = null;
+                programRepositoryMock = null;
+                studentRepositoryMock = null;
+                graduationApplicationRepositoryMock = null;
+            }
+
+            [TestMethod]
+            public async Task GetGraduationApplicationEligibilityAsync_GetsGraduationApplicationProgramEligibilityDtos()
+            {
+                var studentId = currentUserFactory.CurrentUser.PersonId;
+
+                var graduationApplicationProgramEligibilityEntities = BuildValidEligibilityEntities();
+                graduationApplicationRepositoryMock.Setup(x => x.GetGraduationApplicationEligibilityAsync("0000011", programCodes)).Returns(Task.FromResult(graduationApplicationProgramEligibilityEntities));
+                var graduationApplicationEligResultsDtos = await graduationApplicationService.GetGraduationApplicationEligibilityAsync(studentId, programCodes);
+                Assert.AreEqual(2, graduationApplicationEligResultsDtos.Count());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task GetGraduationApplicationEligibilityAsync_GetsGraduationApplicationFeeDto_throws_PermissionsException_if_accessing_other_user_data()
+            {
+                var studentId = currentUserFactory.CurrentUser.PersonId + "1";
+
+                var graduationApplicationProgramEligibilityEntities = BuildValidEligibilityEntities();
+                graduationApplicationRepositoryMock.Setup(x => x.GetGraduationApplicationEligibilityAsync(It.IsAny<string>(), It.IsAny<string[]>())).Returns(Task.FromResult(graduationApplicationProgramEligibilityEntities));
+                var graduationApplicationEligResultsDtos = await graduationApplicationService.GetGraduationApplicationEligibilityAsync(studentId, programCodes);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetGraduationApplicationEligibilityAsync_StudentEmpty_ArgumentNullException()
+            {
+                var graduationApplicationEligResultsDtos = await graduationApplicationService.GetGraduationApplicationEligibilityAsync("", programCodes);
+            }
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetGraduationApplicationEligibilityAsync_StudentIdNull_ArgumentNullException()
+            {
+                var graduationApplicationDto = await graduationApplicationService.GetGraduationApplicationEligibilityAsync(null, programCodes);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetGraduationApplicationEligibilityAsync_BothParametersNull_ArgumentNullException()
+            {
+                var graduationApplicationDto = await graduationApplicationService.GetGraduationApplicationEligibilityAsync(null, null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetGraduationApplicationEligibilityAsync_ProgramCodesEmpty_ArgumentNullException()
+            {
+                var graduationApplicationDto = await graduationApplicationService.GetGraduationApplicationEligibilityAsync("0000011", new List<string>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetGraduationApplicationEligibilityAsync_ProgramCodesNull_ArgumentNullException()
+            {
+                var graduationApplicationDto = await graduationApplicationService.GetGraduationApplicationEligibilityAsync("0000011", null);
+            }
+
+
+            [TestMethod]
+            [ExpectedException(typeof(Exception))]
+            public async Task GetGraduationApplicationEligibilityAsync_ExceptionFromRepository()
+            {
+                var studentId = currentUserFactory.CurrentUser.PersonId;
+                graduationApplicationRepositoryMock.Setup(x => x.GetGraduationApplicationEligibilityAsync("0000011", programCodes)).Throws(new Exception());
+                var graduationApplicationEligResultsDtos = await graduationApplicationService.GetGraduationApplicationEligibilityAsync(studentId, programCodes);
+            }
+
+            private IEnumerable<GraduationApplicationProgramEligibility> BuildValidEligibilityEntities()
+            {
+                var entityResults = new List<GraduationApplicationProgramEligibility>();
+
+                var item1 = new GraduationApplicationProgramEligibility(currentUserFactory.CurrentUser.PersonId, "PROG1", true);
+                entityResults.Add(item1);
+                
+                var item2 = new GraduationApplicationProgramEligibility(currentUserFactory.CurrentUser.PersonId, "PROG2", false);
+                item2.AddIneligibleMessage("Fail reason 1");
+                item2.AddIneligibleMessage("Fail reason 2");
+                entityResults.Add(item2);
+                return entityResults;
+
+
+            }
         }
+    }
     }

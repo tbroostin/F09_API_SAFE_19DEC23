@@ -150,5 +150,11 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// </summary>
         /// <returns>A <see cref="SelfServiceConfiguration"/> object</returns>
         Task<SelfServiceConfiguration> GetSelfServiceConfigurationAsync();
+
+        /// <summary>
+        /// Gets the Required document configuration.
+        /// </summary>
+        /// <returns><see cref="RequiredDocumentConfiguration"/>Required Document Configuration</returns>
+        Task<RequiredDocumentConfiguration> GetRequiredDocumentConfigurationAsync();
     }
 }

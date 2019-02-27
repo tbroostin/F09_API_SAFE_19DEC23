@@ -14,17 +14,17 @@ namespace Ellucian.Colleague.Domain.Student.Tests
     {
         Ellucian.Colleague.Domain.Student.Entities.Term termData = null;
         IEnumerable<Ellucian.Colleague.Domain.Base.Entities.CitizenshipStatus> citizenshipStatusData = null;
-        public  Task<IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Student>> GetStudentsByIdAsync(IEnumerable<string> studentIds, Term termData, IEnumerable<Ellucian.Colleague.Domain.Base.Entities.CitizenshipStatus> citizenshipStatusData, bool inheritFromPerson = true, bool getDegreePlan = true, bool filterAdvisorsByTerm = false, bool filterEndedAdvisements = true)
+        public Task<IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Student>> GetStudentsByIdAsync(IEnumerable<string> studentIds, Term termData, IEnumerable<Ellucian.Colleague.Domain.Base.Entities.CitizenshipStatus> citizenshipStatusData, bool inheritFromPerson = true, bool getDegreePlan = true, bool filterAdvisorsByTerm = false, bool filterEndedAdvisements = true)
         {
             throw new NotImplementedException();
         }
 
-        public  Task<IDictionary<string, List<string>>> GetAcadCredIdsByStudentIdsAsync(IEnumerable<string> ids)
+        public Task<IDictionary<string, List<string>>> GetAcadCredIdsByStudentIdsAsync(IEnumerable<string> ids)
         {
             throw new NotImplementedException();
         }
 
-        public  Ellucian.Colleague.Domain.Student.Entities.Student Current(string token)
+        public Ellucian.Colleague.Domain.Student.Entities.Student Current(string token)
         {
             throw new NotImplementedException();
         }
@@ -34,7 +34,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests
             return await BuildStudentRepositoryAsync();
         }
 
-        public  Task<IEnumerable<string>> SearchStudentByNameAsync(string lastName, string firstName = null, string middleName = null)
+        public Task<IEnumerable<string>> SearchStudentByNameAsync(string lastName, string firstName = null, string middleName = null)
         {
             throw new NotImplementedException();
         }
@@ -76,7 +76,18 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                                     {"0000111","CourseReuse","","PROG.COURSE.REUSE", "103,104,105,106,107"},   //ENGL-200  COMPLETED ,ENGL-300  COMPLETED, COMM-1321  COMPLETED, COMM-100  COMPLETED,MATH-200  IN-PROGRESS
                                     {"0000112", "OverrideTranscriptGrouping","","MATH.BS", "36,33" }, //                          ENGL-101, MATH-460, MATH-502 (GR level course)
 
+                                    //create replace and replacement statuses data to validate replace and Replacement statuses
+                                    //this scenarios are for program MATH.BB with acad credits from MATH-300BB course. This course have retake for credit flag set to N.
+                                    {"0016285","ReplaceAndReplacement-student-1","","REPEAT.BB","110,111,112" } ,//3 acad credits. all are inprogress
+                                     {"0016286","ReplaceAndReplacement-student-2","","REPEAT.BB","113,114,115" },//3 acad credits. all are completed and graded
+                                     {"0016287","ReplaceAndReplacement-student-3","","REPEAT.BB","111,113,115" }, //3 acad credits. 2 are completed
+                                      {"0016288","ReplaceAndReplacement-student-4","","REPEAT.BB","110,112,114" }, //3 acad credits. 1 is completed
+                                       {"0016289","ReplaceAndReplacement-student-5","","REPEAT.BB","113" }, //1 acad credits completed
+                                        {"0016290","ReplaceAndReplacement-student-6","","REPEAT.BB","110" }, //1 acad credit inprogress
 
+                                        //set up acad credits for course that have retake for credits set to Y
+
+                                        //test for replace/retake with planned courses
                                     };
 
 
@@ -116,7 +127,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                     if (faStudent.faCounselors != null && faStudent.faCounselors.Count() > 0)
                     {
                         student.FinancialAidCounselorId = faStudent.faCounselors.First().counselorId;
-            }
+                    }
                 }
 
                 // Add advisor to one student for evaluation permissions checking
@@ -139,18 +150,18 @@ namespace Ellucian.Colleague.Domain.Student.Tests
             return await Task.FromResult(gradeRestriction);
         }
 
-        public  Task<RegistrationResponse> RegisterAsync(RegistrationRequest request)
+        public Task<RegistrationResponse> RegisterAsync(RegistrationRequest request)
         {
             throw new NotImplementedException();
         }
 
-        public  Task<IEnumerable<RegistrationMessage>> CheckRegistrationEligibilityAsync(RegistrationRequest request)
+        public Task<IEnumerable<RegistrationMessage>> CheckRegistrationEligibilityAsync(RegistrationRequest request)
         {
             throw new NotImplementedException();
         }
 
-        public async Task<RegistrationEligibility> CheckRegistrationEligibilityAsync(string id) 
-        { 
+        public async Task<RegistrationEligibility> CheckRegistrationEligibilityAsync(string id)
+        {
             // Set up a test RegistrationEligibility with terms to be returned regardless of student
             RegistrationEligibility regElig = new RegistrationEligibility(new List<RegistrationMessage>(), true, false);
             RegistrationEligibilityTerm term1 = new RegistrationEligibilityTerm("term1", false, true);
@@ -208,15 +219,15 @@ namespace Ellucian.Colleague.Domain.Student.Tests
 
         public async Task<IEnumerable<Student.Entities.Student>> SearchAsync(string lastName, string firstName, DateTime? dateOfBirth, string formerName, string studentId, string governmentId)
         {
-            return new List<Student.Entities.Student> {(await BuildStudentRepositoryAsync()).Where(s => s.LastName == lastName).FirstOrDefault() };
+            return new List<Student.Entities.Student> { (await BuildStudentRepositoryAsync()).Where(s => s.LastName == lastName).FirstOrDefault() };
         }
 
-        public  Task<IEnumerable<string>> SearchIdsAsync(string termId)
+        public Task<IEnumerable<string>> SearchIdsAsync(string termId)
         {
-            throw new NotImplementedException(); 
+            throw new NotImplementedException();
         }
 
-        public  Task<IEnumerable<Ellucian.Colleague.Domain.Student.Entities.RosterStudent>> GetRosterStudentsAsync(IEnumerable<string> ids)
+        public Task<IEnumerable<Ellucian.Colleague.Domain.Student.Entities.RosterStudent>> GetRosterStudentsAsync(IEnumerable<string> ids)
         {
             throw new NotImplementedException();
         }
@@ -226,7 +237,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests
             throw new NotImplementedException();
         }
 
-        public  Task<string> CheckTranscriptStatusAsync(string orderId, string currentStatusCode)
+        public Task<string> CheckTranscriptStatusAsync(string orderId, string currentStatusCode)
         {
             throw new NotImplementedException();
         }
@@ -250,10 +261,10 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         //StudentIds come from BasePersonSetup
         public List<FaStudent> faStudentData = new List<FaStudent>()
         {
-            new FaStudent() 
+            new FaStudent()
             {
                 studentId = "0000001",
-                faCounselors = new List<FaStudent.FaCounselor>() 
+                faCounselors = new List<FaStudent.FaCounselor>()
                 {
                     new FaStudent.FaCounselor() {counselorId = "0001111", startDate = new DateTime(2014, 5, 1), endDate = new DateTime(2014, 6, 1)},
                     new FaStudent.FaCounselor() {counselorId = "0002222", startDate = new DateTime(2014, 6, 2), endDate = null},
@@ -261,44 +272,44 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                     new FaStudent.FaCounselor() {counselorId = "0004444", startDate = null, endDate = null}
                 }
             },
-            new FaStudent() 
+            new FaStudent()
             {
                 studentId = "0000002",
-                faCounselors = new List<FaStudent.FaCounselor>() 
+                faCounselors = new List<FaStudent.FaCounselor>()
                 {
                     new FaStudent.FaCounselor() {counselorId = "0002222", startDate = new DateTime(2014, 6, 2), endDate = null},
                     new FaStudent.FaCounselor() {counselorId = "0003333", startDate = null, endDate = new DateTime(2014, 7, 1)},
                     new FaStudent.FaCounselor() {counselorId = "0004444", startDate = null, endDate = null}
                 }
             },
-            new FaStudent() 
+            new FaStudent()
             {
                 studentId = "0000003",
-                faCounselors = new List<FaStudent.FaCounselor>() 
+                faCounselors = new List<FaStudent.FaCounselor>()
                 {
                     new FaStudent.FaCounselor() {counselorId = "0003333", startDate = null, endDate = new DateTime(2014, 7, 1)},
                     new FaStudent.FaCounselor() {counselorId = "0004444", startDate = null, endDate = null}
                 }
             },
-            new FaStudent() 
+            new FaStudent()
             {
                 studentId = "0000004",
-                faCounselors = new List<FaStudent.FaCounselor>() 
+                faCounselors = new List<FaStudent.FaCounselor>()
                 {
                     new FaStudent.FaCounselor() {counselorId = "0004444", startDate = null, endDate = null}
                 }
             },
-            new FaStudent() 
+            new FaStudent()
             {
                 studentId = "0000005",
-                faCounselors = new List<FaStudent.FaCounselor>() 
-                {                                  
+                faCounselors = new List<FaStudent.FaCounselor>()
+                {
                 }
             },
-            new FaStudent() 
+            new FaStudent()
             {
                 studentId = "0000006",
-                faCounselors = new List<FaStudent.FaCounselor>() 
+                faCounselors = new List<FaStudent.FaCounselor>()
                 {
                     new FaStudent.FaCounselor() {counselorId = "0002222", startDate = new DateTime(2014, 6, 2), endDate = null},
                     new FaStudent.FaCounselor() {counselorId = "0003333", startDate = null, endDate = new DateTime(2014, 7, 1)}
@@ -308,7 +319,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests
 
         #endregion
 
-        public  Task<string> GetTranscriptAsync(string id, string transcriptGrouping)
+        public Task<string> GetTranscriptAsync(string id, string transcriptGrouping)
         {
             throw new NotImplementedException();
         }
@@ -325,7 +336,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests
             return students;
         }
 
-  
+
         public async Task<Ellucian.Colleague.Domain.Student.Entities.Student> GetAsync(string id)
         {
             return (await BuildStudentRepositoryAsync()).Where(s => s.Id == id).FirstOrDefault();
@@ -333,16 +344,26 @@ namespace Ellucian.Colleague.Domain.Student.Tests
 
         public Ellucian.Colleague.Domain.Student.Entities.Student Get(string id)
         {
-            return  BuildStudentRepositoryAsync().Result.Where(s => s.Id == id).FirstOrDefault();
+            return BuildStudentRepositoryAsync().Result.Where(s => s.Id == id).FirstOrDefault();
         }
 
 
         public async Task<Ellucian.Colleague.Domain.Student.Entities.Student> GetDataModelStudentFromGuidAsync(string guid)
         {
-            return  (await BuildStudentRepositoryAsync()).FirstOrDefault(s => s.Id == guid);
+            return (await BuildStudentRepositoryAsync()).FirstOrDefault(s => s.Id == guid);
+        }
+
+        public async Task<Ellucian.Colleague.Domain.Student.Entities.Student> GetDataModelStudentFromGuid2Async(string guid)
+        {
+            return (await BuildStudentRepositoryAsync()).FirstOrDefault(s => s.Id == guid);
         }
 
         public async Task<Tuple<IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Student>, int>> GetDataModelStudentsAsync(int offset, int limit, bool bypassCache, string person, string type, string cohort, string residency)
+        {
+            throw new NotImplementedException();
+        }
+
+        public async Task<Tuple<IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Student>, int>> GetDataModelStudents2Async(int offset, int limit, bool bypassCache, string personFilter, string person, List<string> types, List<string> cohorts, List<string> residencies)
         {
             throw new NotImplementedException();
         }
@@ -363,12 +384,29 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                 });
         }
 
+        public Task<string> GetResidencyStatusGuidAsync(string code)
+        {
+            var status = (new List<Student.Entities.ResidencyStatus>()
+                {
+                    new Student.Entities.ResidencyStatus("b4bcb3a0-2e8d-4643-bd17-ba93f36e8f09", "code1", "title1"),
+                    new Student.Entities.ResidencyStatus("bd54668d-50d9-416c-81e9-2318e88571a1", "code2", "title2"),
+                    new Student.Entities.ResidencyStatus("5eed2bea-8948-439b-b5c5-779d84724a38", "code3", "title3"),
+                    new Student.Entities.ResidencyStatus("82f74c63-df5b-4e56-8ef0-e871ccc789e8", "code4", "title4")
+                });
+            return Task.FromResult<string>((status.FirstOrDefault(cc => cc.Code == code)).Guid);
+        }
+
         public Task<IEnumerable<Student.Entities.Student>> GetStudentsSearchAsync(IEnumerable<string> ids)
         {
             throw new NotImplementedException();
         }
 
         public Task<IEnumerable<Student.Entities.Student>> GetStudentSearchByNameAsync(string lastName, string firstName = null, string middleName = null, int pageSize = int.MaxValue, int pageIndex = 1)
+        {
+            throw new NotImplementedException();
+        }
+
+        public async Task<IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Student>> GetStudentAcademicPeriodProfileStudentInfoAsync(IEnumerable<string> ids)
         {
             throw new NotImplementedException();
         }

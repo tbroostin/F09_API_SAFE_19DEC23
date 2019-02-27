@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Student.DataContracts;
@@ -8,6 +8,7 @@ using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.DataContracts;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
@@ -26,10 +27,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class AdmissionApplicationsRepository : BaseColleagueRepository, IAdmissionApplicationsRepository
     {
-        private Dictionary<string, string> _admissionApplicationDict = new Dictionary<string, string>();
-
         /// <summary>
-        /// ..ctor
+        /// constructor
         /// </summary>
         /// <param name="cacheProvider"></param>
         /// <param name="transactionFactory"></param>
@@ -43,150 +42,61 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
         #region GET methods
 
-        Collection<StudentPrograms> programData = null;
-
         /// <summary>
-        /// Get admission applications
+        /// Get AdmissionApplications domain entity collection
         /// </summary>
         /// <param name="offset"></param>
         /// <param name="limit"></param>
         /// <param name="bypassCache"></param>
-        /// <returns></returns>
-        public async Task<Tuple<IEnumerable<Domain.Student.Entities.AdmissionApplication>, int>> GetAdmissionApplications2Async(int offset, int limit, bool bypassCache)
+        /// <returns>A tuple consisting of 1) collection of AdmissionApplication doamin entities, 2) count</returns>
+        public async Task<Tuple<IEnumerable<AdmissionApplication>, int>> GetAdmissionApplicationsAsync(int offset, int limit, bool bypassCache)
         {
-            List<Domain.Student.Entities.AdmissionApplication> applicationEntities = new List<Domain.Student.Entities.AdmissionApplication>();
+            var applicationEntities = new List<AdmissionApplication>();
             int totalCount = 0;
             string[] subList = null;
-            string[] ids = null;
             string[] applicationIds = null;
-            string criteria = string.Empty;
+            var criteria = "WITH APPL.APPLICANT NE ''";
+                     
+            var applStatusesSpCodeIds = await DataReader.SelectAsync("APPLICATION.STATUSES", "WITH APPS.SPECIAL.PROCESSING.CODE EQ ''");
 
-            Collection<ApplicationStatuses> categoryTable = await DataReader.BulkReadRecordAsync<ApplicationStatuses>("WITH APPS.SPECIAL.PROCESSING.CODE EQ ''");
+            var currStatus = string.Empty;
+            foreach (var applStatusesSpCodeId in applStatusesSpCodeIds)
+            {
+                currStatus += string.Format("AND APPL.CURRENT.STATUS NE '{0}' ", applStatusesSpCodeId);
+            }
 
-            if (categoryTable != null && categoryTable.Any())
-            {
-                ids = categoryTable.Select(i => i.Recordkey).Distinct().ToArray();
-                criteria = "WITH APPL.APPLICANT NE '' ";
-                string currStatus = string.Empty;
-                foreach (var id in ids)
-                {
-                    currStatus += string.Format("AND APPL.CURRENT.STATUS NE '{0}' ", id);
-                }
-                criteria = criteria + currStatus;
-                applicationIds = await DataReader.SelectAsync("APPLICATIONS", criteria);
-            }
-            else
-            {
-                criteria = "WITH APPL.APPLICANT NE ''";
-                applicationIds = await DataReader.SelectAsync("APPLICATIONS", criteria);
-            }
+            applicationIds = (applStatusesSpCodeIds != null && applStatusesSpCodeIds.Any())
+                ? await DataReader.SelectAsync("APPLICATIONS", string.Concat(criteria, " ", currStatus))
+                : await DataReader.SelectAsync("APPLICATIONS", criteria);
 
             totalCount = applicationIds.Count();
-
             Array.Sort(applicationIds);
-
             subList = applicationIds.Skip(offset).Take(limit).ToArray();
-
-            // Now we have criteria, so we can select and read the records
-            Collection<DataContracts.Applications> applicationDataContracts = null;
-            applicationDataContracts = await DataReader.BulkReadRecordAsync<DataContracts.Applications>("APPLICATIONS", subList);
+            var applicationDataContracts = await DataReader.BulkReadRecordAsync<DataContracts.Applications>("APPLICATIONS", subList);
 
             if (applicationDataContracts != null && applicationDataContracts.Any())
-            {    
-                var stprIds = new List<string>();
-                stprIds.AddRange(applicationDataContracts.Where(i => !string.IsNullOrEmpty(i.ApplAcadProgram)).Select(i => string.Concat(i.ApplApplicant, "*", i.ApplAcadProgram)));
-                programData = await DataReader.BulkReadRecordAsync<StudentPrograms>(stprIds.Distinct().ToArray());
+            {
+                var studentProgramIds = new List<string>();
+                studentProgramIds.AddRange(applicationDataContracts.Where(i => !string.IsNullOrEmpty(i.ApplAcadProgram)).Select(i => string.Concat(i.ApplApplicant, "*", i.ApplAcadProgram)));
+                var programData = await DataReader.BulkReadRecordAsync<StudentPrograms>(studentProgramIds.Distinct().ToArray());
 
                 foreach (var applicationDataContract in applicationDataContracts)
                 {
-                    List<string> applicationKey = new List<string>();
-                    applicationKey.Add(applicationDataContract.Recordkey);
-                    _admissionApplicationDict = await GetAdmissionApplicationGuidDictionary(applicationKey);
-
-                    Domain.Student.Entities.AdmissionApplication applicationEntity = BuildAdmissionApplication(applicationDataContract, _admissionApplicationDict);
-                    applicationEntities.Add(applicationEntity);
+                    applicationEntities.Add(BuildAdmissionApplication(applicationDataContract, programData));
                 }
             }
 
             return applicationEntities.Any() ?
-                new Tuple<IEnumerable<Domain.Student.Entities.AdmissionApplication>, int>(applicationEntities, totalCount) :
-                new Tuple<IEnumerable<Domain.Student.Entities.AdmissionApplication>, int>(new List<Domain.Student.Entities.AdmissionApplication>(), 0);
+                new Tuple<IEnumerable<AdmissionApplication>, int>(applicationEntities, totalCount) :
+                new Tuple<IEnumerable<AdmissionApplication>, int>(new List<AdmissionApplication>(), 0);
         }
 
-        /// <summary>
-        /// Get admission applications
-        /// </summary>
-        /// <param name="offset"></param>
-        /// <param name="limit"></param>
-        /// <param name="bypassCache"></param>
-        /// <returns></returns>
-        public async Task<Tuple<IEnumerable<Domain.Student.Entities.AdmissionApplication>, int>> GetAdmissionApplicationsAsync(int offset, int limit, bool bypassCache)
-        {
-            List<Domain.Student.Entities.AdmissionApplication> applicationEntities = new List<Domain.Student.Entities.AdmissionApplication>();
-            int totalCount = 0;
-            string[] subList = null;
-            string[] ids = null;
-            string[] applicationIds = null;
-            string criteria = string.Empty;
-
-            Collection<ApplicationStatuses> categoryTable = await DataReader.BulkReadRecordAsync<ApplicationStatuses>("WITH APPS.SPECIAL.PROCESSING.CODE EQ ''");
-
-            if(categoryTable != null && categoryTable.Any())
-            {
-                ids = categoryTable.Select(i => i.Recordkey ).Distinct().ToArray();
-                criteria = "WITH APPL.APPLICANT NE '' ";
-                string currStatus = string.Empty;
-                foreach (var id in ids)
-                {
-                    currStatus += string.Format("AND APPL.CURRENT.STATUS NE '{0}' ", id);
-                }
-                criteria = criteria + currStatus;
-                applicationIds = await DataReader.SelectAsync("APPLICATIONS", criteria);
-            }
-            else
-            {
-                criteria = "WITH APPL.APPLICANT NE ''";
-                applicationIds = await DataReader.SelectAsync("APPLICATIONS", criteria);
-            }
-
-            totalCount = applicationIds.Count();
-
-            Array.Sort(applicationIds);
-
-            subList = applicationIds.Skip(offset).Take(limit).ToArray();
-
-            // Now we have criteria, so we can select and read the records
-            Collection<DataContracts.Applications> applicationDataContracts = null;
-            applicationDataContracts = await DataReader.BulkReadRecordAsync<DataContracts.Applications>("APPLICATIONS", subList);
-
-            if (applicationDataContracts != null && applicationDataContracts.Any())
-            {
-                var stprIds = new List<string>();
-                stprIds.AddRange(applicationDataContracts.Where(i => !string.IsNullOrEmpty(i.ApplAcadProgram)).Select(i => string.Concat(i.ApplApplicant, "*", i.ApplAcadProgram)));
-                programData = await DataReader.BulkReadRecordAsync<StudentPrograms>(stprIds.Distinct().ToArray());
-
-                foreach (var applicationDataContract in applicationDataContracts)
-                {
-                    List<string> applicationKey = new List<string>();
-                    applicationKey.Add(applicationDataContract.Recordkey);
-                    _admissionApplicationDict = await GetAdmissionApplicationGuidDictionary(applicationKey);
-
-                    Domain.Student.Entities.AdmissionApplication applicationEntity = BuildAdmissionApplication(applicationDataContract, _admissionApplicationDict);
-                    applicationEntities.Add(applicationEntity);
-                }
-            }
-
-            return applicationEntities.Any() ? 
-                new Tuple<IEnumerable<Domain.Student.Entities.AdmissionApplication>, int>(applicationEntities, totalCount) :
-                new Tuple<IEnumerable<Domain.Student.Entities.AdmissionApplication>, int>(new List<Domain.Student.Entities.AdmissionApplication>(), 0);
-        }
-        
         /// <summary>
         /// Get admission application by Id
         /// </summary>
         /// <param name="guid"></param>
         /// <returns></returns>
-        public async Task<Domain.Student.Entities.AdmissionApplication> GetAdmissionApplicationByIdAsync(string guid)
+        public async Task<AdmissionApplication> GetAdmissionApplicationByIdAsync(string guid)
         {
             var idDict = await DataReader.SelectAsync(new GuidLookup[] { new GuidLookup(guid) });
 
@@ -212,7 +122,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 throw new KeyNotFoundException("admission-applications key not found for GUID " + guid);
             }
 
-            Collection<ApplicationStatuses> categoryTable = await DataReader.BulkReadRecordAsync<ApplicationStatuses>("WITH APPS.SPECIAL.PROCESSING.CODE EQ ''");
+            var applicationStatuses = await DataReader.BulkReadRecordAsync<ApplicationStatuses>("WITH APPS.SPECIAL.PROCESSING.CODE EQ ''");
 
             var admissionApplicationDataContract = await DataReader.ReadRecordAsync<Applications>("APPLICATIONS", admissionApplicationId);
             if (admissionApplicationDataContract == null)
@@ -220,77 +130,35 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 throw new KeyNotFoundException("admission-applications data contract not found for Id " + admissionApplicationId);
             }
 
-            if (categoryTable != null && categoryTable.Any())
+            if ((applicationStatuses != null) && (applicationStatuses.Any())
+                    && (admissionApplicationDataContract.ApplStatusesEntityAssociation != null && admissionApplicationDataContract.ApplStatusesEntityAssociation.Any()))
             {
-                var statuses = categoryTable.Select(rk => rk.Recordkey).Distinct().ToArray();
+                var statuses = applicationStatuses.Select(rk => rk.Recordkey).Distinct().ToArray();
 
-                if (admissionApplicationDataContract.ApplStatusesEntityAssociation != null && admissionApplicationDataContract.ApplStatusesEntityAssociation.Any())
+                var admApplStatuses = admissionApplicationDataContract.ApplStatusesEntityAssociation.FirstOrDefault();
+
+                if (statuses.Contains(admApplStatuses.ApplStatusAssocMember))
                 {
-                    var admApplStatuses = admissionApplicationDataContract.ApplStatusesEntityAssociation.FirstOrDefault();
-
-                    if (statuses.Contains(admApplStatuses.ApplStatusAssocMember))
-                    {
-                        throw new KeyNotFoundException("admission-applications not found for GUID " + guid);
-                    }
+                    throw new KeyNotFoundException("admission-applications not found for GUID " + guid);
                 }
             }
+            var studentProgramIds = new List<string>();
+            studentProgramIds.Add(string.Concat(admissionApplicationDataContract.ApplApplicant, "*", admissionApplicationDataContract.ApplAcadProgram));
+            var programData = await DataReader.BulkReadRecordAsync<StudentPrograms>(studentProgramIds.Distinct().ToArray());
 
-            var stprIds = new List<string>();
-            stprIds.Add(string.Concat(admissionApplicationDataContract.ApplApplicant, "*", admissionApplicationDataContract.ApplAcadProgram));
-            programData = await DataReader.BulkReadRecordAsync<StudentPrograms>(stprIds.Distinct().ToArray());
-
-            List<string> applicationKey = new List<string>();
-            applicationKey.Add(admissionApplicationDataContract.Recordkey);
-            _admissionApplicationDict = await GetAdmissionApplicationGuidDictionary(applicationKey);
-            
-            var admissionApplicationEntity = BuildAdmissionApplication(admissionApplicationDataContract, _admissionApplicationDict);
-            return admissionApplicationEntity;
-        }
-
-        /// <summary>
-        /// Gets all the guids for the person keys
-        /// </summary>
-        /// <param name="personRecordKeys"></param>
-        /// <returns></returns>
-        public async Task<Dictionary<string, string>> GetPersonGuidsAsync(IEnumerable<string> personRecordKeys)
-        {
-            if (personRecordKeys != null && !personRecordKeys.Any())
-            {
-                return null;
-            }
-
-            var personGuids = new Dictionary<string, string>();
-
-            if (personRecordKeys != null && personRecordKeys.Any())
-            {
-                // convert the person keys to person guids
-                var personGuidLookup = personRecordKeys.ToList().ConvertAll(p => new RecordKeyLookup("PERSON", p, false)).ToArray();
-                var recordKeyLookupResults = await DataReader.SelectAsync(personGuidLookup);
-                foreach (var recordKeyLookupResult in recordKeyLookupResults)
-                {
-                    string[] splitKeys = recordKeyLookupResult.Key.Split(new[] { "+" }, StringSplitOptions.RemoveEmptyEntries);
-                    if (!personGuids.ContainsKey(splitKeys[1]))
-                    {
-                        if (recordKeyLookupResult.Value != null)
-                        {
-                            personGuids.Add(splitKeys[1], recordKeyLookupResult.Value.Guid);
-                        }
-                    }
-                }
-            }
-            return (personGuids != null && personGuids.Any()) ? personGuids : null;
+            return BuildAdmissionApplication(admissionApplicationDataContract, programData);
         }
 
 
-        public async Task<IDictionary<string, string>> GetStaffOperIdsAsync(List<string> ids)
+        public async Task<Dictionary<string, string>> GetStaffOperIdsAsync(List<string> ids)
         {
             var opersData = await DataReader.BulkReadRecordAsync<Opers>("UT.OPERS", ids.ToArray(), true);
             var staffData = await DataReader.BulkReadRecordAsync<Staff>(ids.ToArray());
-            IDictionary<string, string> combinedIds = new Dictionary<string, string>();
+            var combinedIds = new Dictionary<string, string>();
 
             if (opersData != null && opersData.Any())
             {
-                opersData.ToList().ForEach(i => 
+                opersData.ToList().ForEach(i =>
                 {
                     if (!string.IsNullOrEmpty(i.SysPersonId) && !combinedIds.ContainsKey(i.Recordkey))
                     {
@@ -309,38 +177,25 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     }
                 });
             }
-
             return combinedIds;
-
         }
-        
 
         #endregion
 
         #region Build method
-        
+
         /// <summary>
-        /// Builds admission application entity
+        /// BuildAdmissionApplication
         /// </summary>
         /// <param name="application"></param>
-        /// <returns></returns>
-        private Domain.Student.Entities.AdmissionApplication BuildAdmissionApplication(Applications application, Dictionary<string, string> _admissionApplicationDict)
+        /// <param name="programData"></param>
+        /// <returns>AdmissionApplication domain entity</returns>
+        private AdmissionApplication BuildAdmissionApplication(Applications application,
+            Collection<StudentPrograms> programData)   
         {
             try
             {
-                //
-                // Workaroud because applicant.RecordGuid unreliable because APPLICATIONS file has multiple GUID sources.  We
-                // always want the GUID tied to the Colleague application record with no secondary key values, previously stored in the incoming DICT
-                //
-                var applicationGuid = _admissionApplicationDict.FirstOrDefault(i => i.Key.Equals(application.Recordkey, StringComparison.OrdinalIgnoreCase));
-                if (string.IsNullOrEmpty(applicationGuid.Value))
-                {
-                    throw new KeyNotFoundException(string.Format("No application guid found for id: {0}", application.Recordkey));
-                }
-                application.RecordGuid = applicationGuid.Value;
-
-                Domain.Student.Entities.AdmissionApplication applicationEntity =
-                                new Domain.Student.Entities.AdmissionApplication(application.RecordGuid, application.Recordkey);
+                var applicationEntity = new AdmissionApplication(application.RecordGuid, application.Recordkey);
 
                 applicationEntity.ApplicantPersonId = application.ApplApplicant;
                 applicationEntity.ApplicationNo = application.ApplNo;
@@ -353,11 +208,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 applicationEntity.ApplicationResidencyStatus = application.ApplResidencyStatus;
                 applicationEntity.ApplicationStudentLoadIntent = application.ApplStudentLoadIntent;
                 applicationEntity.ApplicationAcadProgram = application.ApplAcadProgram;
-                applicationEntity.ApplicationStprAcadPrograms = BuildProgramCodeList(application);
+                applicationEntity.ApplicationStprAcadPrograms = BuildProgramCodeList(application, programData);
                 applicationEntity.ApplicationWithdrawReason = application.ApplWithdrawReason;
                 applicationEntity.ApplicationAttendedInstead = application.ApplAttendedInstead;
                 applicationEntity.ApplicationComments = application.ApplComments;
-                applicationEntity.ApplicationSchool = BuildSchool(string.Concat(application.ApplApplicant, "*", application.ApplAcadProgram));
+                applicationEntity.ApplicationSchool = BuildSchool(string.Concat(application.ApplApplicant, "*", application.ApplAcadProgram), programData);
 
                 //V11 changes
                 applicationEntity.ApplicationWithdrawDate = application.ApplWithdrawDate;
@@ -379,20 +234,20 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// </summary>
         /// <param name="application"></param>
         /// <returns></returns>
-        private List<string> BuildProgramCodeList(Applications application)
+        private List<string> BuildProgramCodeList(Applications application, Collection<StudentPrograms> programData)
         {
-            List<string> programs = new List<string>();
-
-            var key = string.Concat(application.ApplApplicant, "*", application.ApplAcadProgram);
+            var programs = new List<string>();
 
             if (programData == null || (programData != null && !programData.Any()))
             {
                 return programs;
             }
+            var key = string.Concat(application.ApplApplicant, "*", application.ApplAcadProgram);
+
             var program = programData.FirstOrDefault(i => i.Recordkey.Equals(key, StringComparison.OrdinalIgnoreCase));
             if (program == null)
             {
-                throw new KeyNotFoundException(string.Format("Student academic program not found for: {0}. ", key));
+                throw new KeyNotFoundException(string.Format("Student program not found for: {0}. ", key));
             }
 
             //STPR_MAJOR_LIST
@@ -438,7 +293,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// </summary>
         /// <param name="acadProgramKey"></param>
         /// <returns></returns>
-        private string BuildSchool(string acadProgramKey)
+        private string BuildSchool(string acadProgramKey, Collection<StudentPrograms> programData)
         {
             try
             {
@@ -449,7 +304,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 var program = programData.FirstOrDefault(i => i.Recordkey.Equals(acadProgramKey, StringComparison.OrdinalIgnoreCase));
                 if (program == null)
                 {
-                    throw new KeyNotFoundException(string.Format("Student academic program not found for: {0}. ", acadProgramKey));
+                    throw new KeyNotFoundException(string.Format("Student program not found for: {0}. ", acadProgramKey));
                 }
                 return program.StprSchool;
             }
@@ -466,16 +321,16 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <summary>
         /// Builds application statuses.
         /// </summary>
-        /// <param name="applStatusesAssiciation"></param>
+        /// <param name="applStatusesAssociation"></param>
         /// <returns></returns>
-        private List<Domain.Student.Entities.AdmissionApplicationStatus> BuildAdmissionApplicationStatuses(List<ApplicationsApplStatuses> applStatusesAssiciation)
+        private List<Domain.Student.Entities.AdmissionApplicationStatus> BuildAdmissionApplicationStatuses(List<ApplicationsApplStatuses> applStatusesAssociation)
         {
-            List<Domain.Student.Entities.AdmissionApplicationStatus> applStatuses = new List<Domain.Student.Entities.AdmissionApplicationStatus>();
-            if (applStatusesAssiciation != null && applStatusesAssiciation.Any())
+            var applStatuses = new List<Domain.Student.Entities.AdmissionApplicationStatus>();
+            if (applStatusesAssociation != null && applStatusesAssociation.Any())
             {
-                foreach (var item in applStatusesAssiciation)
+                foreach (var item in applStatusesAssociation)
                 {
-                    Domain.Student.Entities.AdmissionApplicationStatus admApplStatus = new Domain.Student.Entities.AdmissionApplicationStatus() 
+                    var admApplStatus = new Domain.Student.Entities.AdmissionApplicationStatus()
                     {
                         ApplicationDecisionBy = item.ApplDecisionByAssocMember,
                         ApplicationStatus = item.ApplStatusAssocMember,
@@ -495,13 +350,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns></returns>
         private List<string> BuildApplicationDecisionBy(List<ApplicationsApplStatuses> applicationsApplStatuses)
         {
-            List<string> decisionBy = new List<string>();
+            var decisionBy = new List<string>();
 
             var items = applicationsApplStatuses.OrderByDescending(i => i.ApplStatusDateAssocMember);
-            items.ToList().ForEach(i => 
-            {
-                decisionBy.Add(i.ApplDecisionByAssocMember);
-            });
+            items.ToList().ForEach(i => decisionBy.Add(i.ApplDecisionByAssocMember));
+
             return decisionBy.Any() ? decisionBy : null;
         }
 
@@ -509,30 +362,26 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// Gets dictionary with colleague id and guid key pair for APPLICATIONS.
         /// </summary>
         /// <param name="applicationIds"></param>
-        /// <returns></returns>
+        /// <returns>Dictionary containing entity PK (key) and guid (value)</returns>
         public async Task<Dictionary<string, string>> GetAdmissionApplicationGuidDictionary(IEnumerable<string> applicationIds)
         {
-            if (applicationIds == null || !Enumerable.Any<string>(applicationIds))
+            var ldmGuidCollection = new Dictionary<string, string>();
+
+            if ((applicationIds == null) || (!applicationIds.Any()))
             {
-                throw new ArgumentNullException("Application id's are required.");
+                return ldmGuidCollection;
             }
 
-            Dictionary<string, string> dict = new Dictionary<string, string>();
+            //The data contract can sometimes get the wrong guid
+            var guidList = await DataReader.SelectAsync("LDM.GUID", "WITH LDM.GUID.PRIMARY.KEY EQ '?' AND LDM.GUID.SECONDARY.KEY EQ '' AND LDM.GUID.LDM.NAME EQ 'admission-applications' AND LDM.GUID.REPLACED.BY EQ ''", applicationIds.ToArray());
+            var ldmGuidRecords = await DataReader.BulkReadRecordAsync<LdmGuid>(guidList);
+           
 
-            foreach (var applicationId in applicationIds)
-            {
-                var criteria = string.Format("WITH LDM.GUID.SECONDARY.FLD EQ '' AND LDM.GUID.SECONDARY.KEY EQ '' AND LDM.GUID.LDM.NAME EQ 'admission-applications' AND LDM.GUID.PRIMARY.KEY EQ '{0}'", applicationId);
-                var guidRecords = await DataReader.SelectAsync("LDM.GUID", criteria);
-                if (!dict.ContainsKey(applicationId))
-                {
-                    if (guidRecords != null && guidRecords.Any())
-                    {
-                        dict.Add(applicationId, guidRecords[0]);
-                    }
-                }
-            }
-            return dict;
+            ldmGuidRecords.ToList().ForEach(e => ldmGuidCollection.Add(e.LdmGuidPrimaryKey, e.Recordkey));
+
+            return ldmGuidCollection;
         }
+
 
         /// <summary>
         /// Gets the record key.
@@ -588,7 +437,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             return await CreateAdmissionApplicationAsync(entity);
         }
-       
+
         /// <summary>
         /// Creates an admission application.
         /// </summary>
@@ -632,7 +481,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         {
             try
             {
-                UpdateAdmApplicationRequest request = new UpdateAdmApplicationRequest()
+                var request = new UpdateAdmApplicationRequest()
                 {
                     Guid = entity.Guid,
                     Application = entity.ApplicationRecordKey
@@ -656,16 +505,17 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 request.WithdrawalInstitutionAttended = string.IsNullOrEmpty(entity.ApplicationAttendedInstead) ? string.Empty : entity.ApplicationAttendedInstead;
                 request.WithdrawalReason = string.IsNullOrEmpty(entity.ApplicationWithdrawReason) ? string.Empty : entity.ApplicationWithdrawReason;
                 request.WithdrawnOn = entity.WithdrawnOn.HasValue ? entity.WithdrawnOn.Value.Date.ToString() : string.Empty;
-                
+
 
                 return request;
             }
             catch (Exception e)
             {
                 throw new RepositoryException(e.Message);
-            }          
+            }
         }
 
         #endregion
     }
 }
+ 

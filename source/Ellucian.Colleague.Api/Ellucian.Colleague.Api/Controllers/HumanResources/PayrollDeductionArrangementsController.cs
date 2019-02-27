@@ -191,15 +191,34 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                 //call import extend method that needs the extracted extension dataa and the config
                 await _payrollDeductionArrangementsService.ImportExtendedEthosData(await ExtractExtendedData(await _payrollDeductionArrangementsService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
 
-                var originalDto = await _payrollDeductionArrangementsService.GetPayrollDeductionArrangementsByGuidAsync(id);
-                var mergedDto = await PerformPartialPayloadMerge(payrollDeductionArrangement, originalDto, dpList, _logger);
-                if (originalDto.Person != null && mergedDto.Person != null && originalDto.Person.Id != mergedDto.Person.Id)
+                Dtos.PayrollDeductionArrangements originalDto = null, mergedDto = null, payrollDeductionArrangementReturn = null;
+
+                try
                 {
-                    throw new ArgumentNullException("person.id", "The person id cannot be changed on an update request. ");
+                     originalDto = await _payrollDeductionArrangementsService.GetPayrollDeductionArrangementsByGuidAsync(id);
+                     mergedDto = await PerformPartialPayloadMerge(payrollDeductionArrangement, originalDto, dpList, _logger);
+
+                    if (originalDto.Person != null && mergedDto.Person != null && originalDto.Person.Id != mergedDto.Person.Id)
+                    {
+                        throw new ArgumentNullException("person.id", "The person id cannot be changed on an update request. ");
+                    }
+                    
+                }
+                catch (RepositoryException)
+                {
+                    // No existing deduction, perform a create instead.
                 }
 
-                //do update with partial logic
-                var payrollDeductionArrangementReturn = await _payrollDeductionArrangementsService.UpdatePayrollDeductionArrangementsAsync(id, mergedDto);
+                if (originalDto != null)
+                {
+                    //do update with partial logic
+                    payrollDeductionArrangementReturn = await _payrollDeductionArrangementsService.UpdatePayrollDeductionArrangementsAsync(id, mergedDto);
+                }
+                else
+                {
+                    // No existing deduction, perform a create instead.
+                    payrollDeductionArrangementReturn = await _payrollDeductionArrangementsService.UpdatePayrollDeductionArrangementsAsync(id, payrollDeductionArrangement);
+                }
 
                 //store dataprivacy list and get the extended data to store 
                 AddEthosContextProperties(dpList,
@@ -443,7 +462,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <param name="payrollDeductionArrangements">DTO of the updated payrollDeductionArrangements</param>
         /// <returns>A PayrollDeductionArrangements object <see cref="Dtos.PayrollDeductionArrangements"/> in EEDM format</returns>
         [HttpPut, EedmResponseFilter]
-        public async Task<Dtos.PayrollDeductionArrangements> PutPayrollDeductionArrangementsAsync([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.PayrollDeductionArrangements payrollDeductionArrangements)
+        public async Task<Dtos.PayrollDeductionArrangements> PutPayrollDeductionArrangement2Async([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.PayrollDeductionArrangements payrollDeductionArrangements)
         {
             if (string.IsNullOrEmpty(guid))
             {
@@ -473,26 +492,46 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             {
                 //get Data Privacy List
                 var dpList = await _payrollDeductionArrangementsService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
-
                 //call import extend method that needs the extracted extension dataa and the config
                 await _payrollDeductionArrangementsService.ImportExtendedEthosData(await ExtractExtendedData(await _payrollDeductionArrangementsService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
 
-                var originalDto = await _payrollDeductionArrangementsService.GetPayrollDeductionArrangementsByGuidAsync(guid);
-                var mergedDto = await PerformPartialPayloadMerge(payrollDeductionArrangements, originalDto, dpList, _logger);
-                if (originalDto.Person != null && mergedDto.Person != null && originalDto.Person.Id != mergedDto.Person.Id)
+            Dtos.PayrollDeductionArrangements originalDto = null, mergedDto = null, payrollDeductionArrangementReturn = null;
+
+                try
                 {
-                    throw new ArgumentNullException("person.id", "The person id cannot be changed on an update request. ");
+                    originalDto = await _payrollDeductionArrangementsService.GetPayrollDeductionArrangementsByGuidAsync(guid);
+                    mergedDto = await PerformPartialPayloadMerge(payrollDeductionArrangements, originalDto, dpList, _logger);
+
+                    if (originalDto.Person != null && mergedDto.Person != null && originalDto.Person.Id != mergedDto.Person.Id)
+                    {
+                        throw new ArgumentNullException("person.id", "The person id cannot be changed on an update request. ");
+                    }
+
+                }
+                catch (RepositoryException)
+                {
+                    // No existing deduction, perform a create instead.
                 }
 
-                //do update with partial logic
-                var payrollDeductionArrangementReturn = await _payrollDeductionArrangementsService.UpdatePayrollDeductionArrangementsAsync(guid, mergedDto);
+                if (originalDto != null)
+                {
+                    //do update with partial logic
+                    payrollDeductionArrangementReturn = await _payrollDeductionArrangementsService.UpdatePayrollDeductionArrangementsAsync(guid, mergedDto);
+                }
+                else
+                {
+                    // No existing deduction, perform a create instead.
+                    payrollDeductionArrangementReturn = await _payrollDeductionArrangementsService.UpdatePayrollDeductionArrangementsAsync(guid, payrollDeductionArrangements);
+                }
+
 
                 //store dataprivacy list and get the extended data to store 
                 AddEthosContextProperties(dpList,
-                    await _payrollDeductionArrangementsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(), new List<string>() { guid }));
+                await _payrollDeductionArrangementsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(), new List<string>() { guid }));
 
-                return payrollDeductionArrangementReturn;
+            return payrollDeductionArrangementReturn;
             }
+            
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());

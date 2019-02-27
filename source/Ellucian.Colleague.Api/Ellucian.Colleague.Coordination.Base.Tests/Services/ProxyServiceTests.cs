@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base.Adapters;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Coordination.Base.Tests.UserFactories;
@@ -184,6 +184,27 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             var proxyPermAsgmtAdapter = new ProxyPermissionAssignmentDtoAdapter(adapterRegistry, logger);
             adapterRegistryMock.Setup(reg => reg.GetAdapter<Dtos.Base.ProxyPermissionAssignment, Domain.Base.Entities.ProxyPermissionAssignment>()).Returns(proxyPermAsgmtAdapter);
 
+            var emailAddressDtoAdapter = new EmailAddressDtoAdapter(adapterRegistry, logger);
+            adapterRegistryMock.Setup(reg => reg.GetAdapter<Dtos.Base.EmailAddress, Domain.Base.Entities.EmailAddress>()).Returns(emailAddressDtoAdapter);
+            var emailAddressEntityAdapter = new AutoMapperAdapter<Domain.Base.Entities.EmailAddress, Dtos.Base.EmailAddress>(adapterRegistry, logger);
+            adapterRegistryMock.Setup(reg => reg.GetAdapter<Domain.Base.Entities.EmailAddress, Dtos.Base.EmailAddress>()).Returns(emailAddressEntityAdapter);
+
+            var personNameDtoAdapter = new PersonNameDtoAdapter(adapterRegistry, logger);
+            adapterRegistryMock.Setup(reg => reg.GetAdapter<Dtos.Base.PersonName, Domain.Base.Entities.PersonName>()).Returns(personNameDtoAdapter);
+            var personNameEntityAdapter = new AutoMapperAdapter<Domain.Base.Entities.PersonName, Dtos.Base.PersonName>(adapterRegistry, logger);
+            adapterRegistryMock.Setup(reg => reg.GetAdapter<Domain.Base.Entities.PersonName, Dtos.Base.PersonName>()).Returns(personNameEntityAdapter);
+
+            var phoneDtoAdapter = new AutoMapperAdapter<Dtos.Base.Phone, Domain.Base.Entities.Phone>(adapterRegistry, logger);
+            adapterRegistryMock.Setup(reg => reg.GetAdapter<Dtos.Base.Phone, Domain.Base.Entities.Phone>()).Returns(phoneDtoAdapter);
+            var phoneEntityAdapter = new AutoMapperAdapter<Domain.Base.Entities.Phone, Dtos.Base.Phone>(adapterRegistry, logger);
+            adapterRegistryMock.Setup(reg => reg.GetAdapter<Domain.Base.Entities.Phone, Dtos.Base.Phone>()).Returns(phoneEntityAdapter);
+
+            var personProxyUserDtoAdapter = new PersonProxyUserDtoAdapter(adapterRegistry, logger);
+            adapterRegistryMock.Setup(reg => reg.GetAdapter<Dtos.Base.PersonProxyUser, Domain.Base.Entities.PersonProxyUser>()).Returns(personProxyUserDtoAdapter);
+
+            var personProxyUserEntityAdapter = new PersonProxyUserEntityAdapter(adapterRegistry, logger);
+            adapterRegistryMock.Setup(reg => reg.GetAdapter<Domain.Base.Entities.PersonProxyUser, Dtos.Base.PersonProxyUser>()).Returns(personProxyUserEntityAdapter);
+
             // Mock the adapter registry to use the automappers between the EmergencyInformation domain entity and dto. 
             var emptyAdapterRegistryMock = new Mock<IAdapterRegistry>();
 
@@ -354,6 +375,58 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         [TestClass]
         public class ProxyService_PostPersonProxyUserAsync : ProxyServiceTests
         {
+            private string
+                emailValue = "pri@example.com",
+                emailType = "PRI",
+                givenName = "Given",
+                middleName = "Middle",
+                familyName = "Family",
+                gender = "M",
+                ssn = "987654321",
+                id = "0000001",
+                prefix = "MR",
+                suffix = "JR";
+            DateTime birthDate = DateTime.Now.AddYears(-20);
+
+            private PersonProxyUser personProxyUserDto;
+            private Domain.Base.Entities.PersonProxyUser personProxyUserEntity;
+
+            [TestInitialize]
+            public void InitializePostPersonProxyUserTests()
+            {
+                var emailDtos = new List<EmailAddress> { new EmailAddress() { Value = emailValue, TypeCode = emailType } };
+                personProxyUserDto = new PersonProxyUser()
+                {
+                    BirthDate = birthDate,
+                    FirstName = givenName,
+                    LastName = familyName,
+                    MiddleName = middleName,
+                    Gender = gender,
+                    GovernmentId = ssn,
+                    Prefix = prefix,
+                    Suffix = suffix,
+                    Id = id,
+                    EmailAddresses = new List<EmailAddress> { new EmailAddress() { Value = emailValue, TypeCode = emailType } }
+                };
+
+                var emailEntities = new List<Domain.Base.Entities.EmailAddress> { new Domain.Base.Entities.EmailAddress(emailValue, emailType) };
+                personProxyUserEntity = new Domain.Base.Entities.PersonProxyUser(id, givenName, familyName, emailEntities, null, null)
+                {
+                    MiddleName = middleName,
+                    GovernmentId = ssn,
+                    Prefix = prefix,
+                    Suffix = suffix,
+                    BirthDate = birthDate
+                };
+                personProxyUserRepoMock.Setup(repo => repo.CreatePersonProxyUserAsync(It.IsAny<Domain.Base.Entities.PersonProxyUser>())).ReturnsAsync(personProxyUserEntity);
+            }
+
+            [TestCleanup]
+            public void CleanupPostPersonProxyUserTests()
+            {
+                personProxyUserDto = null;
+            }
+
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
             public async Task ProxyService_PostPersonProxyUserAsync_NullId()
@@ -361,56 +434,61 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var result = await proxyService.PostPersonProxyUserAsync(null);
             }
 
-            //[TestMethod]
-            //public async Task ProxyService_PostPersonProxyUserAsync_Valid()
-            //{
-            //    Domain.Base.Entities.PersonProxyUser userEnt;
-            //    Dtos.Base.PersonProxyUser userDto;
-            //    string 
-            //        mail1 = "mail1@mail.com",
-            //        mailType1 = "PRI",
-            //        mail2 = "mail2@mail.com",
-            //        mailType2 = "BUS";
+            [TestMethod]
+            [ExpectedException(typeof(Exception))]
+            public async Task ProxyService_PostPersonProxyUserAsync_NoConfiguration_ThrowsException()
+            {
 
-            //    string
-            //        phone1 = "Phone1",
-            //        phoneType1 = "HO",
-            //        phoneExt1 = "Ext1",
-            //        phone2 = "phone2",
-            //        phoneType2 = "HO",
-            //        phoneExt2 = "Ext2";
+                var mockProxyRepoWithNullConfiguration = new Mock<IProxyRepository>();
+                mockProxyRepoWithNullConfiguration.Setup(repo => repo.GetProxyConfigurationAsync()).ReturnsAsync(null);
+                var proxyRepoWithNullConfiguration = mockProxyRepoWithNullConfiguration.Object;
+                var proxyServiceWithoutProxyConfiguration = new ProxyService(proxyRepoWithNullConfiguration, profileRepo, personProxyUserRepo, adapterRegistry, currentUserFactory, roleRepo, logger);
+                var user = new PersonProxyUser();
+                try
+                {
+                    var result = await proxyServiceWithoutProxyConfiguration.PostPersonProxyUserAsync(user);
+                }
+                catch (Exception e)
+                {
+                    Assert.IsTrue(e.Message.Contains("missing proxy configuration"));
+                    throw;
+                }
+            }
 
-            //    string
-            //        nameGiven1 = "Given1",
-            //        nameMiddle1 = "Middle1",
-            //        nameFamily1 = "Family1",
-            //        nameGiven2 = "Given2",
-            //        nameMiddle2 = "Middle2",
-            //        nameFamily2 = "Family2";
+            [TestMethod]
+            [ExpectedException(typeof(Exception))]
+            public async Task ProxyService_PostPersonProxyUserAsync_AddUserConfigurationDisabled_ThrowsException()
+            {
 
-            //    string
-            //        given = "Given",
-            //        middle = "Middle",
-            //        family = "Family",
-            //        gender = "M",
-            //        ssn = "987654321",
-            //        id = "0000001",
-            //        prefix = "MR",
-            //        suffix = "JR";
+                var disabledConfiguration = new Domain.Base.Entities.ProxyConfiguration(true, "DOCID", "EMAILID", false, false);
+                var mockProxyRepoWithDisabledConfiguration = new Mock<IProxyRepository>();
+                mockProxyRepoWithDisabledConfiguration.Setup(repo => repo.GetProxyConfigurationAsync()).ReturnsAsync(disabledConfiguration);
+                var proxyRepoWithDisabledConfiguration = mockProxyRepoWithDisabledConfiguration.Object;
+                var proxyServiceWithDisabledProxyConfiguration = new ProxyService(proxyRepoWithDisabledConfiguration, profileRepo, personProxyUserRepo, adapterRegistry, currentUserFactory, roleRepo, logger);
+                var user = new PersonProxyUser();
+                try
+                {
+                    var result = await proxyServiceWithDisabledProxyConfiguration.PostPersonProxyUserAsync(user);
+                }
+                catch (Exception e)
+                {
+                    Assert.IsTrue(e.Message.Contains("Feature disabled"));
+                    throw;
+                }
+            }
 
-            //    List<EmailAddress> emails;
-            //    List<Phone> phones;
-            //    List<PersonName> names;
-            //    DateTime birth = DateTime.Now.AddDays(-1);
-
-
-            //    var result = await proxyService.PostPersonProxyUserAsync(userDto);
-            //    Assert.AreEqual(fakeProxyCandidates[0].EmailAddress, result.EmailAddress);
-            //    Assert.AreEqual(fakeProxyCandidates[0].FirstName, result.FirstName);
-            //    Assert.AreEqual(fakeProxyCandidates[0].LastName, result.LastName);
-            //    Assert.AreEqual(fakeProxyCandidates[0].RelationType, result.RelationType);
-            //    Assert.AreEqual(fakeProxyCandidates[0].ProxyMatchResults.Count(), result.ProxyMatchResults.Count());
-            //}
+            [TestMethod]
+            public async Task ProxyService_PostPersonProxyUserAsync_Valid()
+            {
+                var result = await proxyService.PostPersonProxyUserAsync(personProxyUserDto);
+                Assert.AreEqual(personProxyUserDto.EmailAddresses.First().Value, result.EmailAddresses.First().Value);
+                Assert.AreEqual(personProxyUserDto.FirstName, result.FirstName);
+                Assert.AreEqual(personProxyUserDto.MiddleName, result.MiddleName);
+                Assert.AreEqual(personProxyUserDto.LastName, result.LastName);
+                Assert.AreEqual(personProxyUserDto.GovernmentId, result.GovernmentId);
+                Assert.AreEqual(personProxyUserDto.Prefix, result.Prefix);
+                Assert.AreEqual(personProxyUserDto.Suffix, result.Suffix);
+            }
         }
 
         /// <summary>

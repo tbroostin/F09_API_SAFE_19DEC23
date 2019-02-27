@@ -1,9 +1,8 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Web.Dependency;
 using slf4net;
@@ -39,9 +38,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             _configurationRepository = configurationRepository;
         }
 
-        /// <remarks>FOR USE WITH ELLUCIAN HEDM</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
-        /// Gets all comment subject areas
+        /// Gets all comments
         /// </summary>
         /// <returns>Collection of Comments DTO objects</returns>
         public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.Comments>, int>> GetCommentsAsync(int offset, int limit, string subjectMatter, string commentSubjectArea,bool bypassCache = false)
@@ -98,7 +97,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             return new Tuple<IEnumerable<Dtos.Comments>, int>(commentsCollection, totalRecords);
         }
 
-        /// <remarks>FOR USE WITH ELLUCIAN HEDM</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
         /// Get a comment from its GUID
         /// </summary>
@@ -110,7 +109,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
             if (string.IsNullOrEmpty(guid))
             {
-                throw new ArgumentNullException("guid", "GUID is required to get a Comments.");
+                throw new ArgumentNullException("guid", "GUID is required to get a comments.");
             }
 
             try
@@ -144,7 +143,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 throw new ArgumentNullException("comment", "Comments body required.");
             }
 
-            if (comments.Id == null)
+            if (string.IsNullOrEmpty(comments.Id))
             {
                 throw new ArgumentNullException("comment", "Comments id required.");
             }
@@ -166,7 +165,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
         }
 
-        /// <remarks>FOR USE WITH ELLUCIAN HEDM</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
         /// Delete Remark by ID
         /// </summary>
@@ -182,15 +181,26 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 CheckUserCommentsDeletePermissions();
 
-                 await _remarkRepository.DeleteRemarkAsync(guid);
+                var comment = await _remarkRepository.GetRemarkByGuidAsync(guid);
+
+                if (comment == null)
+                {
+                    throw new KeyNotFoundException();
+                }
+
+                await _remarkRepository.DeleteRemarkAsync(guid);
             }
             catch (InvalidOperationException ex)
             {
                 throw new InvalidOperationException(ex.Message, ex);
             }
+            catch (KeyNotFoundException)
+            {
+                throw new KeyNotFoundException(string.Format("Comments not found for guid: '{0}'.", guid)) ;
+            }
         }
 
-        /// <remarks>FOR USE WITH ELLUCIAN HEDM</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
         /// Update comment  from its GUID
         /// </summary>
@@ -291,12 +301,11 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     comments.Source = new Dtos.GuidObject2(remarkCode.Guid);
                 }
             }
-
             return comments;
         }
 
 
-        /// <remarks>FOR USE WITH ELLUCIAN HEDM</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
         /// Convert a comments dto to a remark entity
         /// </summary>

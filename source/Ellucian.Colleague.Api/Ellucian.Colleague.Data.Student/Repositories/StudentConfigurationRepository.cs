@@ -76,11 +76,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                    var stwebDefaultsTask = DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS");
                    var graduationQuestionsTask = DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.GraduationQuestions>("GRADUATION.QUESTIONS", "");
                    var defaultsTask = DataReader.ReadRecordAsync<Data.Base.DataContracts.Defaults>("CORE.PARMS", "DEFAULTS");
+                   var daDefaultsTask = DataReader.ReadRecordAsync<Data.Student.DataContracts.DaDefaults>("ST.PARMS", "DA.DEFAULTS");
 
-                   await Task.WhenAll(stwebDefaultsTask, graduationQuestionsTask, defaultsTask);
+                   await Task.WhenAll(stwebDefaultsTask, graduationQuestionsTask, defaultsTask, daDefaultsTask);
                    Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults stwebDefaults = stwebDefaultsTask.Result;
                    Collection<Ellucian.Colleague.Data.Student.DataContracts.GraduationQuestions> graduationQuestions = graduationQuestionsTask.Result;
                    Ellucian.Colleague.Data.Base.DataContracts.Defaults defaultData = defaultsTask.Result;
+                   Data.Student.DataContracts.DaDefaults daDefaults = daDefaultsTask.Result;
+
                    if (stwebDefaults == null)
                    {
                        var errorMessage = "Unable to access student web defaults from ST.PARMS. STWEB.DEFAULTS.";
@@ -93,7 +96,13 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                        logger.Info(errorMessage);
                        throw new Exception(errorMessage);
                    }
-                   return BuildGraduationConfiguration(stwebDefaults, graduationQuestions, defaultData.DefaultWebEmailType);
+                   if (daDefaults == null)
+                   {
+                       var errorMessage = "Unable to access DA.DEFAULTS from ST.PARMS table.";
+                       logger.Info(errorMessage);
+                       throw new Exception(errorMessage);
+                   }
+                   return BuildGraduationConfiguration(stwebDefaults, graduationQuestions, defaultData.DefaultWebEmailType, daDefaults);
                });
 
             return studentConfiguration;
@@ -471,7 +480,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return cdDefaults;
         }
 
-        private GraduationConfiguration BuildGraduationConfiguration(StwebDefaults webDefaults, Collection<Ellucian.Colleague.Data.Student.DataContracts.GraduationQuestions> graduationQuestions, string defaultEmailType)
+        private GraduationConfiguration BuildGraduationConfiguration(StwebDefaults webDefaults, Collection<Ellucian.Colleague.Data.Student.DataContracts.GraduationQuestions> graduationQuestions, string defaultEmailType, Data.Student.DataContracts.DaDefaults daDefaults)
         {
             GraduationConfiguration configuration = new GraduationConfiguration();
             if (webDefaults != null)
@@ -577,6 +586,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             configuration.DefaultWebEmailType = defaultEmailType;
             configuration.EmailGradNotifyPara = webDefaults.StwebGradNotifyPara;
+
+            // Anticipated date global settings
+            configuration.HideAnticipatedCompletionDate = 
+                    (string.IsNullOrEmpty(daDefaults.DaHideAntCmplDtInSsMp) || daDefaults.DaHideAntCmplDtInSsMp.ToUpper() == "Y") ? false : true;
+
             return configuration;
         }
 

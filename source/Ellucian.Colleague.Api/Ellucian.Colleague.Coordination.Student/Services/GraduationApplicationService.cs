@@ -79,7 +79,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 graduationApplicationEntity = await graduationApplicationRepository.GetGraduationApplicationAsync(studentId, programCode);
 
-                
+
             }
             catch (KeyNotFoundException)
             {
@@ -234,7 +234,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             var hasPrivacyRestriction = false;
             Dtos.Student.GraduationApplication graduationDto = null;
-            List <Dtos.Student.GraduationApplication> graduationApplicationsDtoLst = new List<Dtos.Student.GraduationApplication>();
+            List<Dtos.Student.GraduationApplication> graduationApplicationsDtoLst = new List<Dtos.Student.GraduationApplication>();
             List<Domain.Student.Entities.GraduationApplication> GraduationApplicationsEntityLst = null;
             if (string.IsNullOrEmpty(studentId))
             {
@@ -291,7 +291,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
                     if (hasPrivacyRestriction)
                     {
-                        graduationDto = new Dtos.Student.GraduationApplication() { Id= graduationApplicationEntity.Id, StudentId = studentId };
+                        graduationDto = new Dtos.Student.GraduationApplication() { Id = graduationApplicationEntity.Id, StudentId = studentId };
                     }
                     else
                     {
@@ -299,7 +299,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                     graduationApplicationsDtoLst.Add(graduationDto);
                 }
-               return new PrivacyWrapper<IEnumerable<Dtos.Student.GraduationApplication>>(graduationApplicationsDtoLst, hasPrivacyRestriction);
+                return new PrivacyWrapper<IEnumerable<Dtos.Student.GraduationApplication>>(graduationApplicationsDtoLst, hasPrivacyRestriction);
             }
             catch (Exception ex)
             {
@@ -378,7 +378,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 if (graduationApplicationDto.MailDiplomaToAddressLines == null || graduationApplicationDto.MailDiplomaToAddressLines.Count == 0)
                 {
                     UpdateGraduationDiplomaMailAddress(graduationApplicationDto);
-                   
+
                 }
 
                 Domain.Student.Entities.GraduationApplication graduationApplicationToUpdateEntity = null;
@@ -409,7 +409,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
         }
 
-        
+
 
         /// <summary>
         /// Retrieves graduation application fee information for the given student Id and program code asynchronously. 
@@ -454,6 +454,48 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 logger.Error(ex, "Error converting graduation application fee Entity to Dto: " + ex.Message);
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Determines a student's eligibility to apply for graduation in the requested programs
+        /// </summary>
+        /// <param name="studentId">Id of student to determine eligibility</param>
+        /// <param name="programCodes">Programs for which the eligibility is requested</param>
+        /// <returns>List of Graduation Application Program Eligibility DTOs.</returns>
+        public async Task<IEnumerable<Dtos.Student.GraduationApplicationProgramEligibility>> GetGraduationApplicationEligibilityAsync(string studentId, IEnumerable<string> programCodes)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("studentId", "Invalid Student Id");
+            }
+            if (programCodes == null || !programCodes.Any())
+            {
+                throw new ArgumentNullException("programCodes", "Must provide at least one program code to evaluate eligibility.");
+            }
+
+            // Make sure user has access to this student--If not, method throws permission exception
+            await CheckStudentAdvisorUserAccessAsync(studentId);
+
+            List<Dtos.Student.GraduationApplicationProgramEligibility> graduationApplicationProgramDtos = new List<Dtos.Student.GraduationApplicationProgramEligibility>();
+            try
+            {
+                IEnumerable<GraduationApplicationProgramEligibility> graduationApplicationPrograms = await graduationApplicationRepository.GetGraduationApplicationEligibilityAsync(studentId, programCodes);
+
+                var gradAppProgramEligibilityDtoAdapter = _adapterRegistry.GetAdapter<GraduationApplicationProgramEligibility, Dtos.Student.GraduationApplicationProgramEligibility>();
+                foreach (var gradAppProgramEligibility in graduationApplicationPrograms)
+                {
+                    Dtos.Student.GraduationApplicationProgramEligibility gradAppProgramEligibilityDto = gradAppProgramEligibilityDtoAdapter.MapToType(gradAppProgramEligibility);
+                    graduationApplicationProgramDtos.Add(gradAppProgramEligibilityDto);
+                }
+            }
+            catch (Exception ex)
+            {
+                var message = string.Format("Exception occurred while trying to determine graduation application eligibility using  student Id {0} and program Ids {1}  Exception message: ", studentId, string.Join(",", programCodes), ex.Message);
+                logger.Info(ex, message);
+                throw;
+            }
+
+            return graduationApplicationProgramDtos;
         }
 
         /// <summary>

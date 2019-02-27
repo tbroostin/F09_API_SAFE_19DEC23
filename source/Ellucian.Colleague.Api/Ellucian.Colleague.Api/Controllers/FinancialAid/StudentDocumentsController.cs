@@ -51,7 +51,7 @@ namespace Ellucian.Colleague.Api.Controllers.FinancialAid
         /// </accessComments>
         /// <param name="studentId">The Id of the student for whom to get documents</param>
         /// <returns>A list of StudentDocument objects</returns>
-        /// <exception cref="HttpResponseException">Thrown if the studentId argument is null or empty</exception>        
+        /// <exception cref="HttpResponseException">Thrown if the studentId argument is null or empty</exception> 
         public async Task<IEnumerable<StudentDocument>> GetStudentDocumentsAsync(string studentId)
         {
             if (string.IsNullOrEmpty(studentId))

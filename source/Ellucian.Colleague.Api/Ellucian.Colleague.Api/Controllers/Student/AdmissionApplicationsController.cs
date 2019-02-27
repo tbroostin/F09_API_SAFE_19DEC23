@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
@@ -6,7 +6,6 @@ using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.Exceptions;
-using Ellucian.Colleague.Dtos;
 using Ellucian.Web.Http;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.Exceptions;
@@ -306,6 +305,15 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         [HttpPost, EedmResponseFilter]
         public async Task<Dtos.AdmissionApplication2> PostAdmissionApplications2Async([ModelBinder(typeof(EedmModelBinder))] Dtos.AdmissionApplication2 admissionApplication)
         {
+            var bypassCache = false;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
+
             if (admissionApplication == null)
             {
                 throw CreateHttpResponseException("Request body must contain a valid admission application.", HttpStatusCode.BadRequest);
@@ -320,15 +328,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 throw new ArgumentNullException("admissionApplicationsDto", "On a post you can not define a GUID.");
             }
 
-
             try
-            {
-                ValidatePayload(admissionApplication);
-                
+            {                             
                 //call import extend method that needs the extracted extension data and the config
                 await _admissionApplicationsService.ImportExtendedEthosData(await ExtractExtendedData(await _admissionApplicationsService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
 
-                var admissionApplicationReturn = await _admissionApplicationsService.CreateAdmissionApplicationAsync(admissionApplication);
+                var admissionApplicationReturn = await _admissionApplicationsService.CreateAdmissionApplicationAsync(admissionApplication, bypassCache);
 
                 //store dataprivacy list and get the extended data to store 
                 AddEthosContextProperties(await _admissionApplicationsService.GetDataPrivacyListByApi(GetRouteResourceName(), true),
@@ -396,6 +401,15 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         [HttpPut, EedmResponseFilter]
         public async Task<Dtos.AdmissionApplication2> PutAdmissionApplications2Async([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.AdmissionApplication2 admissionApplication)
         {
+            var bypassCache = false;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
+
             if (string.IsNullOrEmpty(guid))
             {
                 throw CreateHttpResponseException(new IntegrationApiException("Null guid argument",
@@ -422,8 +436,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
             try
             {
-                ValidatePayload(admissionApplication);
-
+               
                 //get Data Privacy List
                 var dpList = await _admissionApplicationsService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
 
@@ -432,7 +445,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
                 var admissionApplicationReturn =await _admissionApplicationsService.UpdateAdmissionApplicationAsync(guid,
                   await PerformPartialPayloadMerge(admissionApplication, async () => await _admissionApplicationsService.GetAdmissionApplicationsByGuid2Async(guid),
-                  dpList, _logger));
+                  dpList, _logger), bypassCache);
 
                 AddEthosContextProperties(dpList, 
                     await _admissionApplicationsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(), new List<string>() { guid }));
@@ -482,82 +495,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
         }
 
-        private void ValidatePayload(AdmissionApplication2 source)
-        {
-            if(source.Applicant == null)
-            {
-                throw new ArgumentNullException("applicant", "Applicant is required.");
-            }
-
-            if (source.Applicant != null && string.IsNullOrEmpty(source.Applicant.Id))
-            {
-                throw new ArgumentNullException("applicant.id", "Applicant id is required.");
-            }
-
-            if(source.Type != null && string.IsNullOrEmpty(source.Type.Id))
-            {
-                throw new ArgumentNullException("type.Id", "Type id is required.");
-            }
-
-            if (source.AcademicPeriod != null && string.IsNullOrEmpty(source.AcademicPeriod.Id))
-            {
-                throw new ArgumentNullException("academicPeriod.Id", "Academic period id is required.");
-            }
-
-            if (source.Source != null && string.IsNullOrEmpty(source.Source.Id))
-            {
-                throw new ArgumentNullException("source.Id", "Source id is required.");
-            }
-
-            if (source.Owner != null && string.IsNullOrEmpty(source.Owner.Id))
-            {
-                throw new ArgumentNullException("owner.Id", "Owner id is required.");
-            }
-
-            if (source.AdmissionPopulation != null && string.IsNullOrEmpty(source.AdmissionPopulation.Id))
-            {
-                throw new ArgumentNullException("admissionPopulation.Id", "Admission population id is required.");
-            }
-
-            if (source.Site != null && string.IsNullOrEmpty(source.Site.Id))
-            {
-                throw new ArgumentNullException("site.Id", "Site id is required.");
-            }
-
-            if (source.ResidencyType != null && string.IsNullOrEmpty(source.ResidencyType.Id))
-            {
-                throw new ArgumentNullException("residencyType.Id", "Residency type id is required.");
-            }
-
-            if (source.Program != null && string.IsNullOrEmpty(source.Program.Id))
-            {
-                throw new ArgumentNullException("program.Id", "Program id is required.");
-            }
-
-            if (source.Level != null && string.IsNullOrEmpty(source.Level.Id))
-            {
-                throw new ArgumentNullException("level.Id", "Level id is required.");
-            }
-
-            if (source.School != null && string.IsNullOrEmpty(source.School.Id))
-            {
-                throw new ArgumentNullException("school.Id", "School id is required.");
-            }
-
-            if (source.Withdrawal != null && source.Withdrawal.WithdrawalReason != null && string.IsNullOrEmpty(source.Withdrawal.WithdrawalReason.Id))
-            {
-                throw new ArgumentNullException("withdrawal.withdrawalReason.Id", "Withdrawal reason id is required.");
-            }
-            else if(source.Withdrawal != null && source.Withdrawal.WithdrawnOn.HasValue && source.Withdrawal.WithdrawalReason == null)
-            {
-                throw new ArgumentNullException("withdrawal.withdrawnOn", "Withdrwawl reason must be provided if withdrawl date is provided.");
-            }
-
-            if (source.Withdrawal != null && source.Withdrawal.InstitutionAttended != null && string.IsNullOrEmpty(source.Withdrawal.InstitutionAttended.Id))
-            {
-                throw new ArgumentNullException("withdrawal.institutionAttended.Id", "Institution attended reason id is required.");
-            }
-        }
+       
 
         /// <summary>
         /// Delete (DELETE) a admissionApplications
@@ -568,7 +506,6 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         {
             //Update is not supported for Colleague but HeDM requires full crud support.
             throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
-
         }
     }
 }

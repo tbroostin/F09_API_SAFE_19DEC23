@@ -15,6 +15,7 @@ using slf4net;
 using Ellucian.Colleague.Domain.Finance.Entities;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Data.Finance.DataContracts;
+using Ellucian.Dmi.Runtime;
 
 namespace Ellucian.Colleague.Data.Finance.Repositories
 {
@@ -949,9 +950,31 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
                         }
                     }
 
+                    newItem.IneligibilityReasons.AddRange(ConvertSubvaluedStringToList(finAidItem.FaAwardEligibilityMsgs));
                     financialAid.AnticipatedAid.Add(newItem);
                 }
             }
+        }
+
+        /// <summary>
+        /// Takes in a string with subvalues and converts it into a list strings where each
+        /// string is a subvalue
+        /// </summary>
+        /// <param name="stringToConvert">a string to be converted</param>
+        /// <returns>created list of subvalued strings</returns>
+        private IEnumerable<string> ConvertSubvaluedStringToList(string stringToConvert)
+        {
+            List<string> convertedList = new List<string>();
+            if (!string.IsNullOrEmpty(stringToConvert))
+            {
+                char sm = Convert.ToChar(DynamicArray.SM);
+                var msgs = stringToConvert.Split(sm);
+                foreach(var msg in msgs)
+                {
+                    convertedList.Add(msg);
+                }
+            }
+            return convertedList;
         }
 
         #endregion

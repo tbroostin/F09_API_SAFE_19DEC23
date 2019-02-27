@@ -1768,6 +1768,68 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
             return configuration;
         }
+
+        /// <summary>
+        /// Primary and secondary sort code converted to WebSortField
+        /// </summary>
+        /// <param name="code">Sort field code</param>
+        /// <param name="type">Primary or secondary type</param>
+        /// <returns></returns>
+        private WebSortField ConvertCodeToWebSortField(string code, WebSortField defaultSortField)
+        {
+            if (code == null)
+            {
+                return  defaultSortField;
+            }
+
+            switch (code.ToUpperInvariant())
+            {
+                case "DESC":
+                    return WebSortField.Description;
+                case "STATUS":
+                    return WebSortField.Status;
+                case "STATDATE":
+                    return WebSortField.StatusDate;
+                case "DUEDATE":
+                    return WebSortField.DueDate;
+                case "OFFICE":
+                    return WebSortField.OfficeDescription;
+                default:
+                    return defaultSortField; 
+            }
+        }
+
+        /// <summary>
+        /// Retrieve required document configuration.
+        /// </summary>
+        /// <returns>Required document configuration</returns>
+        public async Task<RequiredDocumentConfiguration> GetRequiredDocumentConfigurationAsync()
+        {
+            RequiredDocumentConfiguration configuration = null;  
+
+            CorewebDefaults corewebDefaultsRecord = null;
+            try
+            {
+                corewebDefaultsRecord = await GetCorewebDefaultsAsync();
+            }
+            catch (Exception e)
+            {
+                logger.Info(e, "Error retrieving COREWEB.DEFAULTS record");
+                return configuration;
+            }
+            if (corewebDefaultsRecord != null)
+            {
+                configuration = new RequiredDocumentConfiguration(
+                    string.Equals(corewebDefaultsRecord.CorewebSuppressInstance, "Y", StringComparison.OrdinalIgnoreCase),
+                    ConvertCodeToWebSortField(corewebDefaultsRecord.CorewebDocumentsSort1, WebSortField.Status),
+                    ConvertCodeToWebSortField(corewebDefaultsRecord.CorewebDocumentsSort2, WebSortField.OfficeDescription),
+                    corewebDefaultsRecord.CorewebBlankStatusText,
+                    corewebDefaultsRecord.CorewebBlankDueDateText
+                    );
+            }
+            return configuration;
+        }
+
         /// <summary>
         /// Get Pilot configuration
         /// </summary>

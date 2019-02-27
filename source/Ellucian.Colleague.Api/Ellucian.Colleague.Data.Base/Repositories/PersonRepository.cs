@@ -38,7 +38,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         public PersonRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings settings)
             : base(cacheProvider, transactionFactory, logger, settings)
         {
-            }
+        }
 
         #region Person Get methods
 
@@ -117,12 +117,12 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 throw new ArgumentNullException("id", "Must provide an ID to get a record.");
             }
             if (useCache)
-            { 
+            {
                 // useCache == True: If item exists in cache, get it from cache. If not in cache, read from Colleague and write to cache.
                 return await GetOrAddToCacheAsync<TDomain>(id,
                    async () =>
                    {
-                        return await BuildPersonAsync(id, objectBuilder);
+                       return await BuildPersonAsync(id, objectBuilder);
                    }, PersonCacheTimeout);
             }
             else
@@ -168,13 +168,13 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             var personEntities = new List<TDomain>();
             if (useCache)
             {
-                List<string> notFoundRecordIds = new List<string>();                
+                List<string> notFoundRecordIds = new List<string>();
 
                 ids = ids.Where(id => !string.IsNullOrEmpty(id)).Distinct().ToList();
                 foreach (var id in ids)
                 {
                     string cacheKey = BuildFullCacheKey(id);
-                    if(ContainsKey(cacheKey))
+                    if (ContainsKey(cacheKey))
                     {
                         personEntities.Add((TDomain)_cacheProvider.Get(cacheKey));
                     }
@@ -183,21 +183,22 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         notFoundRecordIds.Add(id);
                     }
                 }
-                if(notFoundRecordIds.Any())
+                if (notFoundRecordIds.Any())
                 {
                     IEnumerable<TDomain> additionalRecords = await GetNonCachedPersonsAsync(notFoundRecordIds, objectBuilder);
                     personEntities.AddRange(additionalRecords);
-                }                    
+                }
             }
             else
             {
                 var records = await BuildRecordsAsync(ids, objectBuilder);
-                foreach(var record in records){
-                 
-                    await AddOrUpdateCacheAsync<TDomain>(record.Id, record, PersonCacheTimeout);                    
+                foreach (var record in records)
+                {
+
+                    await AddOrUpdateCacheAsync<TDomain>(record.Id, record, PersonCacheTimeout);
                     personEntities.Add(record);
 
-                }                   
+                }
             }
             return personEntities;
         }
@@ -218,9 +219,9 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 {
                     foreach (var record in nonCachedRecords)
                     {
-                        await AddOrUpdateCacheAsync<TDomain>(record.Id, record, PersonCacheTimeout);                        
+                        await AddOrUpdateCacheAsync<TDomain>(record.Id, record, PersonCacheTimeout);
                     }
-                }                
+                }
             }
             return nonCachedRecords;
         }
@@ -253,9 +254,9 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 {
                     LogDataError("Person", record.Recordkey, record, e);
                 }
-                
+
             }
-            return await BuildPersonsAsync<TDomain>(personsIds, records, persons);            
+            return await BuildPersonsAsync<TDomain>(personsIds, records, persons);
         }
 
 
@@ -345,6 +346,43 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             return await BuildPersonsAsync<TDomain>(personRecords.Select(p => p.Recordkey).ToList(), personRecords, personBasedObjects);
         }
 
+        #endregion
+
+        #region Email Address Hierarchy
+        /// <summary>
+        /// Used to retrieve the email address from the GetHierarchyEmail transaction.
+        /// </summary>
+        /// <param name="personId">Person ID of the proxy user</param>
+        /// <param name="emailHierarchy">Email address hierarchy used by proxy, specified on PREP</param>
+        /// <returns>An email address for a proxy user based on the email address hierarchy from PREP</returns>
+        public async Task<EmailAddress> GetEmailAddressFromHierarchyAsync(string personId, string emailHierarchy)
+        {
+            if (string.IsNullOrEmpty(personId))
+            {
+                throw new ArgumentNullException("personId", "Must provide a person ID to get a record");
+            }
+
+            var hierarchyRequest = new TxGetHierarchyEmailRequest();
+            hierarchyRequest.IoPersonId = personId;
+            if (string.IsNullOrEmpty(emailHierarchy))
+            {
+                hierarchyRequest.InHierarchy = null;
+            }
+            else
+            {
+                hierarchyRequest.InHierarchy = emailHierarchy;
+            }
+            var hierarchyResponse = await transactionInvoker.ExecuteAsync<TxGetHierarchyEmailRequest, TxGetHierarchyEmailResponse>(hierarchyRequest);
+            if (!string.IsNullOrEmpty(hierarchyResponse.OutEmailAddress))
+            {
+                var emailFromHierarchy = new EmailAddress(hierarchyResponse.OutEmailAddress, hierarchyResponse.OutEmailAddrType);
+                return emailFromHierarchy;
+            }
+            else
+            {
+                return null;
+            }
+        }
         #endregion
 
         #region Person Integration Get methods
@@ -460,7 +498,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         {
             if (guids == null || guids.Count() == 0)
                 throw new ArgumentNullException("guids", "Must provide guids to get person records.");
-            
+
             var personEntities = await GetCredentialsIntegrationByGuidNonCachedAsync<Domain.Base.Entities.PersonIntegration>(guids,
                 person =>
                  {
@@ -543,7 +581,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             var cacheKey = BuildFullCacheKey("PersonIntegration" + guid);
             if ((!bypassCache) && (ContainsKey(cacheKey)))
             {
-                return (TDomain) _cacheProvider.Get(cacheKey);
+                return (TDomain)_cacheProvider.Get(cacheKey);
 
             }
 
@@ -567,17 +605,17 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             // Create the specified domain object
             TDomain person = objectBuilder.Invoke(record);
             var personBasedEntities =
-                await BuildPersonsIntegrationAsync<TDomain>(new List<string>() {record.Recordkey},
-                    new Collection<DataContracts.Person>() {record},
-                    new Collection<DataContracts.ForeignPerson>() {foreignPerson},
-                    new Collection<DataContracts.PersonIntg>() {integrationPerson}, socialMediaHandles,
-                    new Collection<TDomain>() {person}, addressDataContracts);
+                await BuildPersonsIntegrationAsync<TDomain>(new List<string>() { record.Recordkey },
+                    new Collection<DataContracts.Person>() { record },
+                    new Collection<DataContracts.ForeignPerson>() { foreignPerson },
+                    new Collection<DataContracts.PersonIntg>() { integrationPerson }, socialMediaHandles,
+                    new Collection<TDomain>() { person }, addressDataContracts);
             var personRecord = personBasedEntities.FirstOrDefault();
             if (personRecord != null)
             {
                 await
                     AddOrUpdateCacheAsync<TDomain>(("PersonIntegration" + personRecord.Guid), personRecord,
-                        CacheTimeout);            
+                        CacheTimeout);
             }
             return personRecord;
         }
@@ -627,7 +665,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     new Collection<DataContracts.Person>() { record },
                     new Collection<DataContracts.ForeignPerson>() { foreignPerson },
                     new Collection<DataContracts.PersonIntg>() { integrationPerson }, socialMediaHandles,
-                    militaryPerson == null? null : new Collection<DataContracts.PerMilitary>() { militaryPerson },
+                    militaryPerson == null ? null : new Collection<DataContracts.PerMilitary>() { militaryPerson },
                     new Collection<TDomain>() { person }, addressDataContracts);
             var personRecord = personBasedEntities.FirstOrDefault();
             if (personRecord != null)
@@ -664,7 +702,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             var integrationPersonRecords = await DataReader.BulkReadRecordAsync<DataContracts.PersonIntg>(personIds);
             var socialMediaHandlesRecords = new Collection<SocialMediaHandles>();
 
-            var socialMediaHandlesIds = DataReader.Select("SOCIAL.MEDIA.HANDLES", "WITH SMH.PERSON.ID EQ '?'",personIds);
+            var socialMediaHandlesIds = DataReader.Select("SOCIAL.MEDIA.HANDLES", "WITH SMH.PERSON.ID EQ '?'", personIds);
             if (socialMediaHandlesIds != null && socialMediaHandlesIds.Any())
             {
                 socialMediaHandlesRecords = await DataReader.BulkReadRecordAsync<DataContracts.SocialMediaHandles>(socialMediaHandlesIds.ToArray());
@@ -693,7 +731,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     if (e.GetType() == typeof(ArgumentNullException) && e.Message.Contains("lastName"))
                     {
                         var msg = string.Format("Person ID '{0}' has no last name.", personRecord.Recordkey);
-                        ex.AddError(new RepositoryError("lastName.null",msg));
+                        ex.AddError(new RepositoryError("lastName.null", msg));
                     }
                 }
             }
@@ -844,7 +882,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         public async Task<IEnumerable<Ellucian.Colleague.Domain.Base.Entities.PersonPin>> GetPersonPinsAsync(string[] personGuids)
         {
             List<Domain.Base.Entities.PersonPin> personPinEntities = new List<Domain.Base.Entities.PersonPin>();
-            
+
             List<GuidLookup> guidLookUps = new List<GuidLookup>();
 
             personGuids.ToList().ForEach(guid => guidLookUps.Add(new GuidLookup(guid) { ModelName = "PERSON.PIN" }));
@@ -869,7 +907,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     personPinEntities.Add(new Domain.Base.Entities.PersonPin(personPinDataContract.Recordkey, personPinDataContract.PersonPinUserId));
                 }
             }
-            return personPinEntities.Any()? personPinEntities : null;
+            return personPinEntities.Any() ? personPinEntities : null;
         }
 
         #endregion
@@ -895,9 +933,9 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 DataContracts.Person record = records.Where(p => p.Recordkey == personId).FirstOrDefault();
                 TDomain tDomainObject = personBasedObjects.Where(p => p.Id == personId).FirstOrDefault();
                 if (record != null && tDomainObject != null)
-                            {
+                {
                     TDomain personBasedObject = await BuildBasePersonAsync<TDomain>(personId, record, tDomainObject);
-                    
+
                     // Build items not included in base person
                     List<string> preferredAddress = await GetPreferredAddressAsync(personBasedObject.Id);
                     if (preferredAddress != null)
@@ -1058,14 +1096,15 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                         names.NameHistoryLastNameAssocMember = "test";
                                     var nameHist = new PersonName(names.NameHistoryFirstNameAssocMember, names.NameHistoryMiddleNameAssocMember, names.NameHistoryLastNameAssocMember);
                                     personNameHistory.Add(nameHist);
-                                } catch (ArgumentNullException e)
+                                }
+                                catch (ArgumentNullException e)
                                 {
                                     var ex = new RepositoryException();
                                     var errMsg = new RepositoryError("lastName.Missing", "The last name is missing when gathering names., Entity: 'PERSON’, Record ID: ‘" + personId + "’");
                                     ex.AddError(errMsg);
                                     throw ex;
                                 }
-                                
+
                             }
                         }
                         if (personNameHistory != null)
@@ -1172,7 +1211,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                 {
                                     // Ignore phones if they are not also in the person record.  They may have been deleted from Colleague
                                     // but not the INTG table.
-                                    
+
                                     bool found = personDataContract.PersonalPhoneNumber.Any(ppn => ppn.Contains(phone.PerIntgPhoneNumberAssocMember));
 
                                     if (found)
@@ -1295,7 +1334,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                 }
                             }
                         }
-                        
+
                         // Social Media
                         if (socialMediaHandles != null)
                         {
@@ -1319,30 +1358,30 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         // Email Addresses
                         if (personDataContract.PersonEmailAddresses != null && personDataContract.PersonEmailAddresses.Any())
                         {
-                             for (int i = 0; i < personDataContract.PersonEmailAddresses.Count; i++)
-                             {
-                                  try
-                                  {
-                                       var emailAddress = personDataContract.PersonEmailAddresses[i];
-                                       var emailAddressType = personDataContract.PersonEmailTypes.Count > i
-                                           ? personDataContract.PersonEmailTypes[i]
-                                           : null;
-                                       var emailAddressPreferred = personDataContract.PersonPreferredEmail.Count > i
-                                           ? personDataContract.PersonPreferredEmail[i]
-                                           : string.Empty;
+                            for (int i = 0; i < personDataContract.PersonEmailAddresses.Count; i++)
+                            {
+                                try
+                                {
+                                    var emailAddress = personDataContract.PersonEmailAddresses[i];
+                                    var emailAddressType = personDataContract.PersonEmailTypes.Count > i
+                                        ? personDataContract.PersonEmailTypes[i]
+                                        : null;
+                                    var emailAddressPreferred = personDataContract.PersonPreferredEmail.Count > i
+                                        ? personDataContract.PersonPreferredEmail[i]
+                                        : string.Empty;
 
-                                       var emailToAdd = new EmailAddress(emailAddress, emailAddressType)
-                                       {
-                                            IsPreferred = emailAddressPreferred.Equals("y", StringComparison.OrdinalIgnoreCase)
-                                       };
+                                    var emailToAdd = new EmailAddress(emailAddress, emailAddressType)
+                                    {
+                                        IsPreferred = emailAddressPreferred.Equals("y", StringComparison.OrdinalIgnoreCase)
+                                    };
 
-                                       personBasedObject.AddEmailAddress(emailToAdd);
-                                  }
-                                  catch (Exception exception)
-                                  {
+                                    personBasedObject.AddEmailAddress(emailToAdd);
+                                }
+                                catch (Exception exception)
+                                {
                                     logger.Error(exception, string.Format("Could not load email address for person id {0} with GUID {1}", personDataContract.Recordkey, personDataContract.RecordGuid));
-                                  }
-                             }
+                                }
+                            }
                         }
                         // Roles
                         if (integrationPerson != null && integrationPerson.PerIntgRolesEntityAssociation != null)
@@ -1402,7 +1441,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             {
                                 personBasedObject.Roles.Add(new PersonRole(PersonRoleType.Instructor, null, null));
                                 //since we know this is a faculty, we can check for advisor role now.
-                               if (await IsAdvisorAsync(personId))
+                                if (await IsAdvisorAsync(personId))
                                 {
                                     personBasedObject.Roles.Add(new PersonRole(PersonRoleType.Advisor, null, null));
                                 }
@@ -1449,7 +1488,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             catch (RepositoryException e)
             {
                 Exception ex = new Exception(string.Concat(e.Message, " Entity: 'PERSON', Record ID: '", idPerson, "'"));
-                logger.Error(string.Concat(e.Message, " Entity: 'PERSON', Record ID: '", idPerson, "'" ));
+                logger.Error(string.Concat(e.Message, " Entity: 'PERSON', Record ID: '", idPerson, "'"));
                 throw ex;
             }
             catch (Exception e)
@@ -1476,8 +1515,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <param name="records"></param>
         /// <param name="personBasedObjects"></param>
         /// <returns></returns>
-        private async Task<IEnumerable<TDomain>> BuildPersons2IntegrationAsync<TDomain>(IEnumerable<string> personIds, IEnumerable<DataContracts.Person> records, 
-            IEnumerable<DataContracts.ForeignPerson> foreignPersonRecords, IEnumerable<DataContracts.PersonIntg> integrationPersonRecords, 
+        private async Task<IEnumerable<TDomain>> BuildPersons2IntegrationAsync<TDomain>(IEnumerable<string> personIds, IEnumerable<DataContracts.Person> records,
+            IEnumerable<DataContracts.ForeignPerson> foreignPersonRecords, IEnumerable<DataContracts.PersonIntg> integrationPersonRecords,
             IEnumerable<DataContracts.SocialMediaHandles> socialMediaHandlesRecords, IEnumerable<PerMilitary> militaryPersonRecords, IEnumerable<TDomain> personBasedObjects, IEnumerable<Data.Base.DataContracts.Address> allAddressDataContracts)
             where TDomain : Domain.Base.Entities.PersonIntegration
         {
@@ -1531,7 +1570,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             {
                                 var address = allAddressDataContracts.FirstOrDefault(adr => adr.Recordkey == addr);
                                 if (address != null)
-                                addressDataContracts.Add(address);
+                                    addressDataContracts.Add(address);
                             }
                         }
                     }
@@ -1571,12 +1610,9 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                 }
                                 catch (ArgumentNullException e)
                                 {
-                                    var ex = new RepositoryException();
-                                    var errMsg = new RepositoryError("lastName.Missing", "The last name is missing when gathering names., Entity: 'PERSON’, Record ID: ‘" + personId + "’");
-                                    ex.AddError(errMsg);
+                                    var ex = new RepositoryException("The last name is missing when gathering person history names.");
                                     throw ex;
                                 }
-
                             }
                         }
                         if (personNameHistory != null)
@@ -1980,7 +2016,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     throw ex;
                 }
             }
-           
+
             if (personIdsNotFound.Any())
             {
                 // log any ids that were not found.
@@ -2039,7 +2075,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <param name="addresses">List of <see cref="Address">addresses</see> to associate to the person in the database.</param>
         /// <param name="phones">List of <see cref="Phone">phones</see> to associate to the person in the database.</param>
         /// <returns>The newly created <see cref="PersonIntegration">person</see> entity</returns>
-        public async Task<PersonIntegration> Create2Async(Domain.Base.Entities.PersonIntegration person, IEnumerable<Domain.Base.Entities.Address> addresses, IEnumerable<Phone> phones)
+        public async Task<PersonIntegration> Create2Async(Domain.Base.Entities.PersonIntegration person, IEnumerable<Domain.Base.Entities.Address> addresses, IEnumerable<Phone> phones, int version = 1)
         {
             if (person == null)
                 throw new ArgumentNullException("person", "Must provide a person to create.");
@@ -2047,6 +2083,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             var extendedDataTuple = GetEthosExtendedDataLists();
 
             var createRequest = await BuildPersonIntegrationUpdateRequest(person, addresses, phones);
+            //send the version to the CTX
+            createRequest.Version = version;
             if (extendedDataTuple != null && extendedDataTuple.Item1 != null && extendedDataTuple.Item2 != null)
             {
                 createRequest.ExtendedNames = extendedDataTuple.Item1;
@@ -2115,7 +2153,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <param name="addresses">List of <see cref="Address">addresses</see> to associate to the person in the database.</param>
         /// <param name="phones">List of <see cref="Phone">phones</see> to associate to the person in the database.</param>
         /// <returns>The newly updated <see cref="PersonIntegration">person</see> entity</returns>
-        public async Task<PersonIntegration> Update2Async(Domain.Base.Entities.PersonIntegration person, IEnumerable<Domain.Base.Entities.Address> addresses, IEnumerable<Phone> phones)
+        public async Task<PersonIntegration> Update2Async(Domain.Base.Entities.PersonIntegration person, IEnumerable<Domain.Base.Entities.Address> addresses, IEnumerable<Phone> phones, int version = 1)
         {
             if (person == null)
                 throw new ArgumentNullException("person", "Must provide a person to update.");
@@ -2132,6 +2170,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 var extendedDataTuple = GetEthosExtendedDataLists();
 
                 var updateRequest = await BuildPersonIntegrationUpdateRequest(person, addresses, phones);
+                //send version to the CTX
+                updateRequest.Version = version;
                 if (extendedDataTuple != null && extendedDataTuple.Item1 != null && extendedDataTuple.Item2 != null)
                 {
                     updateRequest.ExtendedNames = extendedDataTuple.Item1;
@@ -2141,7 +2181,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 // write the person data
                 var updateResponse = await transactionInvoker.ExecuteAsync<UpdatePersonIntegrationRequest, UpdatePersonIntegrationResponse>(updateRequest);
 
-                if (updateResponse.PersonIntgErrors.Any() )
+                if (updateResponse.PersonIntgErrors.Any())
                 {
                     var errorMessage = string.Format("Error(s) occurred updating person '{0}':", person.Guid);
                     var exception = new RepositoryException(errorMessage);
@@ -2149,9 +2189,9 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     logger.Error(errorMessage);
                     throw exception;
                 }
-       
+
                 // get the updated person from the database
-                return await GetPersonIntegration2ByGuidAsync(updateResponse.PersonGuid, true);                      
+                return await GetPersonIntegration2ByGuidAsync(updateResponse.PersonGuid, true);
             }
             else
             {
@@ -2358,7 +2398,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 MiddleName = person.MiddleName,
                 Prefix = person.Prefix,
                 Suffix = person.Suffix,
-                PersonNameType = "LEGAL",          
+                PersonNameType = "LEGAL",
                 PersonFullName = PersonNameService.FormatName(person.Prefix, person.FirstName, person.MiddleName, person.LastName, person.Suffix)
             };
             if (person.PreferredNameType == "LEGAL")
@@ -2395,7 +2435,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     FirstName = person.BirthNameFirst,
                     LastName = person.BirthNameLast,
                     MiddleName = person.BirthNameMiddle,
-                    PersonNameType = "BIRTH", 
+                    PersonNameType = "BIRTH",
                     PersonFullName = PersonNameService.FormatName("", person.BirthNameFirst, person.BirthNameMiddle, person.BirthNameLast, "")
                 };
                 if (person.PreferredNameType == "BIRTH")
@@ -2404,13 +2444,13 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     if (!string.IsNullOrEmpty(person.PreferredName)) personIntgNameBirth.PersonFullName = person.PreferredName;
                 }
                 personIntgNames.Add(personIntgNameBirth);
-                personNameType.Add("BIRTH"); 
+                personNameType.Add("BIRTH");
             }
-           
+
             if (!string.IsNullOrEmpty(person.Nickname))
             {
                 var personIntgNameNickname = new PersonIntgNames
-                {                  
+                {
                     PersonFullName = person.Nickname,
                     PersonNameType = "NICKNAME"
                 };
@@ -2419,10 +2459,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     personIntgNameNickname.PersonNamePreferred = "preferred";
                 }
                 personIntgNames.Add(personIntgNameNickname);
-                personNameType.Add("NICKNAME"); 
+                personNameType.Add("NICKNAME");
             }
 
-            
+
             var formerNames = person.FormerNames;
             if (formerNames != null)
             {
@@ -2438,12 +2478,12 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         PersonNameType = "HISTORY"
                     };
                     personIntgNames.Add(personIntgNameHistory);
-                    personNameType.Add("HISTORY"); 
+                    personNameType.Add("HISTORY");
                 }
             }
 
             if (personNameType.Any())
-                 request.PersonIntgNames = personIntgNames;
+                request.PersonIntgNames = personIntgNames;
 
             //birth & deceased date
             request.BirthDate = person.BirthDate;
@@ -2462,6 +2502,12 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             //Gender
             request.Gender = person.Gender;
 
+            //Gender Identity
+            request.PersonGenderIdentity = person.GenderIdentityCode;
+
+            //personal pronoun
+            request.PersonPronoun = person.PersonalPronounCode;
+
             //religion
             request.Religion = person.Religion;
 
@@ -2476,7 +2522,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 foreach (var language in person.Languages)
                 {
-                    PersonIntgLanguage personLanguage = new PersonIntgLanguage() 
+                    PersonIntgLanguage personLanguage = new PersonIntgLanguage()
                     {
                         Language = language.Code,
                         LanguagePref = language.Preference.ToString()
@@ -2564,7 +2610,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     request.PersonIntgAlternate.Add(identityDoc);
                 }
             }
-            
+
             // interests
             if (person.Interests != null && person.Interests.Any())
             {
@@ -2802,7 +2848,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             return intlParams.HostCountry;
         }
         #endregion
-       
+
 
         #region Search for Matching Persons
 

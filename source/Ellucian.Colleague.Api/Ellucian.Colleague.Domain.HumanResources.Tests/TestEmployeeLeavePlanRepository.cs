@@ -201,7 +201,8 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                                 employeeLeavePlanRecord.allowedDate ?? employeeLeavePlanRecord.startDate.Value,
                                 employeeLeavePlanRecord.balance.Value,
                                 leavePlan.YearlyStartDate.HasValue ? leavePlan.YearlyStartDate.Value.Month : 1,
-                                leavePlan.YearlyStartDate.HasValue ? leavePlan.YearlyStartDate.Value.Day : 1);
+                                leavePlan.YearlyStartDate.HasValue ? leavePlan.YearlyStartDate.Value.Day : 1,
+                                leavePlan.EarningsTypes);
 
                             employeeLeavePlans.Add(employeeLeavePlan);
 

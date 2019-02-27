@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -27,6 +27,11 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         ///  The Amended text
         /// </summary>
         public string Amended { get; set; }
+
+        /// <summary>
+        /// Person ID for the recipient.
+        /// </summary>
+        public string RecipientId { get; set; }
 
         /// <summary>
         /// If the recipient is a business, the recipient's account number

@@ -74,7 +74,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException peex)
             {
                 logger.Error(peex.Message);
-                throw CreateHttpResponseException(peex.Message, HttpStatusCode.Forbidden);
+                throw CreateHttpResponseException("Insufficient permissions to access the GL account activity.", HttpStatusCode.Forbidden);
             }
             catch (ConfigurationException cnex)
             {

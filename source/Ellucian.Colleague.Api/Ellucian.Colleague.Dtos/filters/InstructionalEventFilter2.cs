@@ -5,6 +5,7 @@ using Ellucian.Colleague.Dtos.Converters;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 
 namespace Ellucian.Colleague.Dtos.Filters
 {
@@ -54,22 +55,22 @@ namespace Ellucian.Colleague.Dtos.Filters
         /// <summary>
         /// The recurrence information for this instructional event
         /// </summary>
-        [JsonProperty("recurrence")]
-        [FilterProperty("criteria")]
+        [JsonProperty("recurrence", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        //[FilterProperty("criteria")]
         public RecurrenceFilter Recurrence { get; set; }
 
         /// <summary>
         /// The locations where the instructional event will take place
         /// </summary>
         [JsonProperty("locations")]
-        [FilterProperty("criteria")]
+        //[FilterProperty("criteria")]
         public List<InstructionalEventLocationFilter> Locations { get; set; }
 
         /// <summary>
         /// The roster of instructors assigned to teach an instructional event
         /// </summary>
         [JsonProperty("instructorRoster")]
-        [FilterProperty("criteria")]
+        //[FilterProperty("criteria")]
         public List<InstructionalEventInstructor3> Instructors { get; set; }
 
         /// <summary>
@@ -83,18 +84,19 @@ namespace Ellucian.Colleague.Dtos.Filters
     /// <summary>
     /// A physical location within the organization where the event will take place
     /// </summary>
+    [DataContract]
     public class InstructionalEventLocationFilter
     {
         /// <summary>
         /// The location information for this instructional event
         /// </summary>
-        [JsonProperty("location")]
-        [FilterProperty("criteria")]
+        [JsonProperty("location")]        
         public InstructionalRoomFilter Location { get; set; }
     }
     /// <summary>
     /// Filter on Location and Room
     /// </summary>
+    [DataContract]
     public class InstructionalRoomFilter
     {
         /// <summary>

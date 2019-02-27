@@ -83,6 +83,17 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
             // Get tax form statement entities
             var taxFormEntities = await taxFormStatementRepository.GetAsync(personId, taxFormDomainId);
+            if (taxFormEntities == null)
+                throw new ApplicationException("taxFormEntities cannot be null.");
+
+            foreach (var taxFormEntity in taxFormEntities)
+            {
+                // Validate that the domain entity recipient ID is the same as the person ID requested.
+                if (taxFormEntity.PersonId != personId)
+                {
+                    throw new PermissionsException("Insufficient access to tax form statements data.");
+                }
+            }
 
             // Get tax form availability
             var taxFormConfiguration = await configurationRepository.GetTaxFormAvailabilityConfigurationAsync(taxFormDomainId);
@@ -130,8 +141,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                                 statementDto.PdfRecordId = string.Empty;
                             }
 
-                            // If the W-2 is a correction, remove the PDF record ID.
-                            if (statementDto.Notation == Dtos.Base.TaxFormNotations2.Correction)
+                            // If the W-2 is a correction and not a W-2c, remove the PDF record ID.
+                            if (statementDto.Notation == Dtos.Base.TaxFormNotations2.Correction && statementDto.TaxForm != Dtos.Base.TaxForms.FormW2C)
                                 statementDto.PdfRecordId = string.Empty;
                             break;
 

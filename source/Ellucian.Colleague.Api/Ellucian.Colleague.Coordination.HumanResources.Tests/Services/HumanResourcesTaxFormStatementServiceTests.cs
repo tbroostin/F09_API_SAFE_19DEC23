@@ -32,7 +32,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         private TestConfigurationRepository testConfigurationRepository;
         private List<TaxFormStatementAvailability> statementAvailabilities;
         private ICurrentUserFactory currentUserFactory;
-        private string personId = "0000001";
+        private string personId = "000001";
 
         [TestInitialize]
         public void Initialize()
@@ -143,6 +143,21 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         #endregion
 
         #region W-2
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task GetAsync_PersonIdNotMatchingException()
+        {
+            IEnumerable<Domain.Base.Entities.TaxFormStatement2> statements = new List<TaxFormStatement2> {
+                new TaxFormStatement2("999999","2015", Domain.Base.Entities.TaxForms.FormW2, "4")
+            };
+
+            var actualTaxFormStatements = await service.GetAsync("3", Dtos.Base.TaxForms.FormW2);
+            this.mockTaxFormStatementRepository.Setup<Task<IEnumerable<Domain.Base.Entities.TaxFormStatement2>>>(
+                 x => x.GetAsync(It.IsAny<string>(), Domain.Base.Entities.TaxForms.FormW2))
+                 .Returns(Task.FromResult(statements));
+            await service2.GetAsync("000001", Dtos.Base.TaxForms.FormW2);
+        }
 
         [TestMethod]
         public async Task GetAsync_Success_W2()
@@ -326,6 +341,14 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task GetAsync_MissingW2Permission()
+        {
+            BuildTaxFormStatementService(false);
+            var statementDtos = await service.GetAsync(personId, Dtos.Base.TaxForms.FormW2);
+        }
+
+        [TestMethod]
         [ExpectedException(typeof(ApplicationException))]
         public async Task GetAsync_StatementRepositoryReturnsNullObject_W2()
         {
@@ -376,6 +399,14 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                     && x.Notation.ToString() == entity.Notation.ToString());
                 Assert.AreEqual(1, selectedDtos.Count(), "Each  1095-C domain entity should have been converted into a DTO.");
             }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task GetAsync_Missing1095cPermission()
+        {
+            BuildTaxFormStatementService(false);
+            var statementDtos = await service.GetAsync(personId, Dtos.Base.TaxForms.Form1095C);
         }
 
         [TestMethod]
@@ -549,6 +580,14 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task GetAsync_MissingT4Permission()
+        {
+            BuildTaxFormStatementService(false);
+            var statementDtos = await service.GetAsync(personId, Dtos.Base.TaxForms.FormT4);
+        }
+
+        [TestMethod]
         public async Task GetAsync_SuccessCorrection_T4()
         {
             var statementEntities = await testStatementRepository.GetAsync(personId, Domain.Base.Entities.TaxForms.FormT4);
@@ -716,9 +755,16 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 
         #endregion
 
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentOutOfRangeException))]
+        public async Task GetAsync_WrongTaxForm()
+        {
+            var statementDtos = await service.GetAsync(personId, Dtos.Base.TaxForms.Form1099MI);
+        }
+
         #region Private methods and helper classes
 
-        private void BuildTaxFormStatementService()
+        private void BuildTaxFormStatementService(bool isPermissionsRequired = true)
         {
             // Set up current user
             currentUserFactory = new GenericUserFactory.TaxInformationUserFactory();
@@ -726,20 +772,27 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             var roles = new List<Domain.Entities.Role>();
 
             var role = new Domain.Entities.Role(1, "VIEW.W2");
-            role.AddPermission(new Domain.Entities.Permission("VIEW.W2"));
-            role.AddPermission(new Domain.Entities.Permission("VIEW.EMPLOYEE.W2"));
-            roles.Add(role);
+            if (isPermissionsRequired)
+            {
+                role.AddPermission(new Domain.Entities.Permission("VIEW.W2"));
+                role.AddPermission(new Domain.Entities.Permission("VIEW.EMPLOYEE.W2"));
 
+            }
+            roles.Add(role);
             role = new Domain.Entities.Role(2, "VIEW.1095C");
-            role.AddPermission(new Domain.Entities.Permission("VIEW.1095C"));
-            role.AddPermission(new Domain.Entities.Permission("VIEW.EMPLOYEE.1095C"));
+            if (isPermissionsRequired)
+            {
+                role.AddPermission(new Domain.Entities.Permission("VIEW.1095C"));
+                role.AddPermission(new Domain.Entities.Permission("VIEW.EMPLOYEE.1095C"));
+            }
             roles.Add(role);
-
             role = new Domain.Entities.Role(3, "VIEW.T4");
-            role.AddPermission(new Domain.Entities.Permission("VIEW.T4"));
-            role.AddPermission(new Domain.Entities.Permission("VIEW.EMPLOYEE.T4"));
+            if (isPermissionsRequired)
+            {
+                role.AddPermission(new Domain.Entities.Permission("VIEW.T4"));
+                role.AddPermission(new Domain.Entities.Permission("VIEW.EMPLOYEE.T4"));
+            }
             roles.Add(role);
-
 
             // We need the unit tests to be independent of "real" implementations of these classes,
             // so we use Moq to create mock implementations that are based on the same interfaces.

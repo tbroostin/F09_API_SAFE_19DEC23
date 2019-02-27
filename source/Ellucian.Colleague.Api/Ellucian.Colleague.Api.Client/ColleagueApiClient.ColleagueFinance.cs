@@ -265,6 +265,80 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
+        /// Get a budget Adjustment that is pending the user's approval.
+        /// </summary>
+        /// <param name="id">A budget adjustment ID.</param>
+        /// <returns>Budget Adjustment DTO.</returns>
+        public async Task<BudgetAdjustment> GetBudgetAdjustmentPendingApprovalDetailAsync(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new ArgumentNullException("id");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_budgetAdjustmentsPendingApprovalDetailPath, id);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<BudgetAdjustment>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get the budget adjustment record {0}.", id);
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get the budget adjustment record.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Approve a budget adjustment by the current user.
+        /// </summary>
+        /// <param name="budgetAdjustmentId">A budget adjustment ID.</param>
+        /// <param name="budgetAdjustmentApproval">The budget adjustment approval DTO.</param>
+        /// <returns>Budget Adjustment DTO.</returns>
+        public async Task<BudgetAdjustment> PostBudgetAdjustmentApprovalAsync(string budgetAdjustmentId, BudgetAdjustmentApproval budgetAdjustmentApproval)
+        {
+            if (string.IsNullOrWhiteSpace(budgetAdjustmentId))
+            {
+                throw new ArgumentNullException("budgetAdjustmentId", "The budget adjustment ID cannot be empty/null when posting an approval.");
+            }
+            if (budgetAdjustmentApproval == null)
+            {
+                throw new ArgumentNullException("budgetAdjustmentApproval", "The budget adjustment approval cannot be empty/null when posting an approval.");
+            }
+            try
+            {
+                string[] pathStrings = new string[] { _budgetAdjustmentsPath, budgetAdjustmentId, _approvalsPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(budgetAdjustmentApproval, urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<BudgetAdjustment>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException exnf)
+            {
+                logger.Error(exnf, "Unable to approve the budget adjustment record {0}.", budgetAdjustmentId);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to approve the budget adjustment record.");
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Get the list of budget adjustments for the current user.
         /// </summary>
         /// <returns>List of budget adjustments for the current user.</returns>

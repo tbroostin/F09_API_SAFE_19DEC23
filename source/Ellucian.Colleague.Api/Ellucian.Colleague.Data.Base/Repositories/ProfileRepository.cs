@@ -252,6 +252,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 ALastChangeDate = profile.LastChangedDateTime.ToLocalDateTime(_colleagueTimeZone),
                 ALastChangeTime = profile.LastChangedDateTime.ToLocalDateTime(_colleagueTimeZone)
             };
+
             foreach (var email in profile.EmailAddresses)
             {
                 profileUpdateRequest.ProfileEmailAddresses.Add(new ProfileEmailAddresses()
@@ -348,6 +349,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 };
 
                 var updateResponse = await transactionInvoker.ExecuteAsync<UpdatePersonConfirmationsRequest, UpdatePersonConfirmationsResponse>(updateRequest);
+
 
                 if (updateResponse.AErrorOccurred == "2")
                 {

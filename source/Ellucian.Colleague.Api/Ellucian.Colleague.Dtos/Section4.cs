@@ -77,11 +77,12 @@ namespace Ellucian.Colleague.Dtos
         [FilterProperty("criteria")]
         
         public GuidObject2 AcademicPeriod { get; set; }
-        
+
         /// <summary>
         /// Census dates for course being offered
         /// </summary>
-        [DataMember(Name = "censusDates")]
+        [DataMember(Name = "censusDates", EmitDefaultValue = false)]
+        [JsonProperty(ItemConverterType = typeof(DateOnlyConverter), DefaultValueHandling = DefaultValueHandling.Ignore)]
         public List<DateTime?> CensusDates { get; set; }
 
         /// <summary>

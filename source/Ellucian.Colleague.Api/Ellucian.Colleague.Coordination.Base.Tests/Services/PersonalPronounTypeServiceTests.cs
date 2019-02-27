@@ -10,6 +10,7 @@ using Ellucian.Web.Security;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Linq;
+using Ellucian.Colleague.Dtos;
 
 namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 {
@@ -17,7 +18,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
     public class PersonalPronounTypeServiceTests
     {
         private PersonalPronounTypeService _personalPronounTypesService;
-
+        private const string personalPronounsGuid = "1";
+        private const string personalPronounsCode = "HE";
         private Mock<IReferenceDataRepository> _refRepoMock;
         private IReferenceDataRepository _refRepo;
         private Mock<IEventRepository> _eventRepoMock;
@@ -27,16 +29,17 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         private ILogger _logger;
         private Mock<IRoleRepository> _roleRepoMock;
         private IRoleRepository _roleRepo;
-        private Mock<IPersonRepository> personRepositoryMock;
+       
         private ICurrentUserFactory _currentUserFactory;
         private IConfigurationRepository _configurationRepository;
         private Mock<IConfigurationRepository> _configurationRepositoryMock;
         private IEnumerable<Domain.Base.Entities.PersonalPronounType> allPersonalPronounTypes;
+        private Mock<IConfigurationRepository> _configurationRepoMock;
 
         [TestInitialize]
         public void Initialize()
         {
-            personRepositoryMock = new Mock<IPersonRepository>();
+
             _eventRepoMock = new Mock<IEventRepository>();
             _eventRepo = _eventRepoMock.Object;
 
@@ -51,9 +54,11 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             _roleRepo = _roleRepoMock.Object;
             _logger = new Mock<ILogger>().Object;
 
+            _configurationRepoMock = new Mock<IConfigurationRepository>();
+
             // Set up current user
             _currentUserFactory = new PersonServiceTests.CurrentUserSetup.PersonUserFactory();
-            _personalPronounTypesService = new PersonalPronounTypeService(_adapterRegistry, _refRepo, personRepositoryMock.Object, _currentUserFactory, _roleRepo, _logger);
+            _personalPronounTypesService = new PersonalPronounTypeService(_adapterRegistry, _refRepo, _currentUserFactory, _roleRepo, _configurationRepository, _logger);
 
             allPersonalPronounTypes = new List<Domain.Base.Entities.PersonalPronounType>
             {
@@ -71,7 +76,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         public void Cleanup()
         {
             _personalPronounTypesService = null;
-            personRepositoryMock = null;
+    
             _refRepoMock = null;
             _refRepo = null;
             _configurationRepository = null;
@@ -92,6 +97,93 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             _refRepoMock.Setup(repo => repo.GetPersonalPronounTypesAsync(false)).ReturnsAsync(allPersonalPronounTypes);
             var personalPronounTypes = await _personalPronounTypesService.GetBasePersonalPronounTypesAsync();
             Assert.AreEqual(3, personalPronounTypes.Count());
+        }
+
+        [TestMethod]
+        public async Task PersonalPronounsService_GetPersonalPronounsAsync()
+        {
+            var results = await _personalPronounTypesService.GetPersonalPronounsAsync(true);
+            Assert.IsTrue(results is IEnumerable<PersonalPronouns>);
+            Assert.IsNotNull(results);
+        }
+
+        [TestMethod]
+        public async Task PersonalPronounsService_GetPersonalPronounsAsync_Count()
+        {
+            var results = await _personalPronounTypesService.GetPersonalPronounsAsync(true);
+            Assert.AreEqual(3, results.Count());
+        }
+
+        [TestMethod]
+        public async Task PersonalPronounsService_GetPersonalPronounsAsync_Properties()
+        {
+            var result =
+                (await _personalPronounTypesService.GetPersonalPronounsAsync(true)).FirstOrDefault(x => x.Code == personalPronounsCode);
+            Assert.IsNotNull(result.Id);
+            Assert.IsNotNull(result.Code);
+            Assert.IsNull(result.Description);
+
+        }
+
+        [TestMethod]
+        public async Task PersonalPronounsService_GetPersonalPronounsAsync_Expected()
+        {
+            var expectedResults = allPersonalPronounTypes.FirstOrDefault(c => c.Guid == personalPronounsGuid);
+            var actualResult =
+                (await _personalPronounTypesService.GetPersonalPronounsAsync(true)).FirstOrDefault(x => x.Id == personalPronounsGuid);
+            Assert.AreEqual(expectedResults.Guid, actualResult.Id);
+            Assert.AreEqual(expectedResults.Description, actualResult.Title);
+            Assert.AreEqual(expectedResults.Code, actualResult.Code);
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(KeyNotFoundException))]
+        public async Task PersonalPronounsService_GetPersonalPronounsByGuidAsync_Empty()
+        {
+            await _personalPronounTypesService.GetPersonalPronounsByGuidAsync("");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(KeyNotFoundException))]
+        public async Task PersonalPronounsService_GetPersonalPronounsByGuidAsync_Null()
+        {
+            await _personalPronounTypesService.GetPersonalPronounsByGuidAsync(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(KeyNotFoundException))]
+        public async Task PersonalPronounsService_GetPersonalPronounsByGuidAsync_InvalidId()
+        {
+            _refRepoMock.Setup(repo => repo.GetPersonalPronounTypesAsync(It.IsAny<bool>()))
+                .Throws<KeyNotFoundException>();
+
+            await _personalPronounTypesService.GetPersonalPronounsByGuidAsync("99");
+        }
+
+        [TestMethod]
+        public async Task PersonalPronounsService_GetPersonalPronounsByGuidAsync_Expected()
+        {
+            var expectedResults =
+                allPersonalPronounTypes.First(c => c.Guid == personalPronounsGuid);
+            var actualResult =
+                await _personalPronounTypesService.GetPersonalPronounsByGuidAsync(personalPronounsGuid);
+            Assert.AreEqual(expectedResults.Guid, actualResult.Id);
+            Assert.AreEqual(expectedResults.Description, actualResult.Title);
+            Assert.AreEqual(expectedResults.Code, actualResult.Code);
+
+        }
+
+        [TestMethod]
+        public async Task PersonalPronounsService_GetPersonalPronounsByGuidAsync_Properties()
+        {
+            var result =
+                await _personalPronounTypesService.GetPersonalPronounsByGuidAsync(personalPronounsGuid);
+            Assert.IsNotNull(result.Id);
+            Assert.IsNotNull(result.Code);
+            Assert.IsNull(result.Description);
+            Assert.IsNotNull(result.Title);
+
         }
     }
 }

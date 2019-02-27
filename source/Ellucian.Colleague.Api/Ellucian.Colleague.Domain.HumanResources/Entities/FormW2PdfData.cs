@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
 
 using System;
 
@@ -63,6 +63,11 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         #endregion
 
         #region Employee Attributes
+
+        /// <summary>
+        /// The person ID for the employee.
+        /// </summary>
+        public string EmployeeId { get; set; }
 
         /// <summary>
         /// Employee's first name

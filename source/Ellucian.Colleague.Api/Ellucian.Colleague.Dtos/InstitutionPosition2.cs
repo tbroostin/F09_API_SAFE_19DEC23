@@ -103,7 +103,6 @@ namespace Ellucian.Colleague.Dtos
         /// The salary or wages awarded for the position.
         /// </summary>
         [DataMember(Name = "compensation", EmitDefaultValue = false)]
-        [FilterProperty("criteria")]
         public CompensationDtoProperty Compensation { get; set; }
      
         /// <summary>

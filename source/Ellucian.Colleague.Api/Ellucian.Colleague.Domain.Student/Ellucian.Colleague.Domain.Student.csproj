@@ -38,32 +38,32 @@
     <SignAssembly>false</SignAssembly>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Ellucian.Colleague.Configuration, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Colleague.Configuration.dll</HintPath>
+    <Reference Include="Ellucian.Colleague.Configuration, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Colleague.Configuration.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Ellucian.Colleague.Domain, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Colleague.Domain.dll</HintPath>
+    <Reference Include="Ellucian.Colleague.Domain, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Colleague.Domain.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Ellucian.Colleague.Legacy, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Colleague.Legacy.dll</HintPath>
+    <Reference Include="Ellucian.Colleague.Legacy, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Colleague.Legacy.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Ellucian.Colleague.Property, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Colleague.Property.dll</HintPath>
+    <Reference Include="Ellucian.Colleague.Property, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Colleague.Property.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Ellucian.Data.Colleague, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Data.Colleague.dll</HintPath>
+    <Reference Include="Ellucian.Data.Colleague, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Data.Colleague.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Ellucian.Dmi.Client, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Dmi.Client.dll</HintPath>
+    <Reference Include="Ellucian.Dmi.Client, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Dmi.Client.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Ellucian.Dmi.Runtime, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.Dmi.Runtime.dll</HintPath>
+    <Reference Include="Ellucian.Dmi.Runtime, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Dmi.Runtime.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Ellucian.Logging, Version=1.0.0.1, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
@@ -86,8 +86,8 @@
       <HintPath>..\packages\Ellucian.Web.Utility.1.0.0.181\lib\net451\Ellucian.Web.Utility.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Ellucian.WebServices.Core.Config, Version=1.17.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.17.0.71\lib\net451\Ellucian.WebServices.Core.Config.dll</HintPath>
+    <Reference Include="Ellucian.WebServices.Core.Config, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.WebServices.Core.Config.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="KellermanSoftware.Compare-NET-Objects, Version=2.1.0.0, Culture=neutral, PublicKeyToken=d970ace04cc85217, processorArchitecture=MSIL">
@@ -153,6 +153,14 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Entities\GraduationApplicationProgramEligibility.cs" />
+    <Compile Include="Entities\CurriculumObjectiveCategory.cs" />
+    <Compile Include="Entities\StudentAcadCredCourseSecInfo.cs" />
+    <Compile Include="Entities\StudentAcademicCredentialProgramInfo.cs" />
+    <Compile Include="Entities\StudentTranscriptGradesHistory.cs" />
+    <Compile Include="Entities\StudentTranscriptGradesAdjustments.cs" />
+    <Compile Include="Entities\StudentTranscriptGradesOptions.cs" />
+    <Compile Include="Entities\StudentTranscriptGrades.cs" />
     <Compile Include="Entities\AcademicCreditMinimum.cs" />
     <Compile Include="Entities\AcademicCredit.cs" />
     <Compile Include="Entities\AcademicCreditDataSubset.cs" />
@@ -175,6 +183,7 @@
     <Compile Include="Entities\AttendanceTypes.cs" />
     <Compile Include="Entities\CampusOrgAdvisorRole.cs" />
     <Compile Include="Entities\CampusOrgMemberRole.cs" />
+    <Compile Include="Entities\StudentUnverifiedGrades.cs" />
     <Compile Include="Entities\ContactMeasure.cs" />
     <Compile Include="Entities\ContactPeriod.cs" />
     <Compile Include="Entities\CourseStatuses.cs" />
@@ -254,11 +263,13 @@
     <Compile Include="Entities\SectionTitleType.cs" />
     <Compile Include="Entities\StudentAwardHistoryByPeriod.cs" />
     <Compile Include="Entities\StudentAwardHistoryStatus.cs" />
+    <Compile Include="Entities\StudentGPAInfo.cs" />
     <Compile Include="Entities\StudentAwardYear.cs" />
     <Compile Include="Entities\StudentCourseSectionStudents.cs" />
     <Compile Include="Entities\StudentSectionsAttendances.cs" />
     <Compile Include="Entities\StudentFinancialAidAward.cs" />
     <Compile Include="Entities\StudentNeedSummary.cs" />
+    <Compile Include="Entities\StudentAcademicCredit.cs" />
     <Compile Include="Entities\StudentSectionAttendanceError.cs" />
     <Compile Include="Entities\StudentSectionAttendance.cs" />
     <Compile Include="Entities\StudentAttendance.cs" />
@@ -549,8 +560,11 @@
     <Compile Include="PlanningPermissionCodes.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Entities\AccountingCodes.cs" />
+    <Compile Include="Repositories\IStudentTranscriptGradesOptionsRepository.cs" />
+    <Compile Include="Repositories\IStudentTranscriptGradesRepository.cs" />
     <Compile Include="Repositories\IFinancialAidApplicationOutcomeRepository.cs" />
     <Compile Include="Repositories\IFinancialAidFundRepository.cs" />
+    <Compile Include="Repositories\IStudentGradePointAveragesRepository.cs" />
     <Compile Include="Repositories\IStudentFinancialAidApplicationRepository.cs" />
     <Compile Include="Repositories\IStudentFinancialAidAwardRepository.cs" />
     <Compile Include="Repositories\IStudentFinancialAidNeedSummaryRepository.cs" />
@@ -568,6 +582,7 @@
     <Compile Include="Repositories\IAddAuthorizationRepository.cs" />
     <Compile Include="Repositories\INonAcademicAttendanceRepository.cs" />
     <Compile Include="Repositories\INonAcademicEventRepository.cs" />
+    <Compile Include="Repositories\IStudentUnverifiedGradesRepository.cs" />
     <Compile Include="Repositories\IStudentAttendanceRepository.cs" />
     <Compile Include="Repositories\IStudentAdvisorRelationshipsRepository.cs" />
     <Compile Include="Repositories\IStudentFinancialAidAcademicProgressStatusesRepository.cs" />

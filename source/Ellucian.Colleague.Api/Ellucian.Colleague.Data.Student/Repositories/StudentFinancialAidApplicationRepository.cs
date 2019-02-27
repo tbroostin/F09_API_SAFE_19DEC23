@@ -29,6 +29,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
         private Collection<FaLocations> faLocationDataContracts;
         private Collection<FaOffices> faOfficeDataContracts;
+        private FaSysParams faSysParamsDataContracts;
         //private Collection<IsirFafsa> isirFafsaDataContacts;
 
         /// <summary>
@@ -123,7 +124,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         {
                             if (isirFafsaNcp == null)
                             {
-                                throw new KeyNotFoundException(string.Format("No PNCP fafsa record was found for guid {0}, using ISIR.FAFSA.ID {1}'. ", id, pncpId));
+                                throw new KeyNotFoundException(string.Format("No PNCP fafsa record was found for guid {0}. Entity:'ISIR.FAFSA', Record Id :'{1}''. ", id, pncpId));
                             }
                             else
                             {
@@ -169,7 +170,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             else
             {
-                var errorMessage = string.Format("Fafsa record with ID : '{0}' is an invalid application.  Must be an uncorrected federal, uncorrected institutional, correction federal, or correction institutional application.", isirFafsa.RecordGuid);
+                var errorMessage = string.Format("Fafsa record with ID : '{0}' is an invalid application.  Must be an uncorrected federal, uncorrected institutional, correction federal, or correction institutional application.", isirFafsa.Recordkey);
                 throw new ArgumentException(errorMessage);
             }
             return fafsaEntity;
@@ -185,63 +186,27 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns>A list of FinancialAidApplication domain entities</returns>
         /// <exception cref="ArgumentNullException">Thrown if the id argument is null or empty</exception>
         /// <exception cref="KeyNotFoundException">Thrown if no database records exist for the given id argument</exception>
-        public async Task<Tuple<IEnumerable<Fafsa>, int>> GetAsync(int offset, int limit, bool bypassCache, List<string> faSuiteYears)
+        public async Task<Tuple<IEnumerable<Fafsa>, int>> GetAsync(int offset, int limit, bool bypassCache, string studentId, string aidYear, List<string> faSuiteYears)
         {
-            // Build a list of application IDs. They must be either the federal or institutional
-            // ISIR record defined in the CS.ACYR file.
-            var unvalidatedApplicationIds = new List<string>();
             var applicationIds = new List<string>();
-            // Check CS.ACYR from 2006 and forward.
-            for (int year = 2006; year <= DateTime.Today.Year; year += 1)
-            {
-                string stringYear = year.ToString();
-                if (faSuiteYears.Contains(stringYear))                
+            var aidYears = new List<string>();
+            //if there is a Aid year then use that otherwise get it from 2006
+            if (!string.IsNullOrEmpty(aidYear))
+                //if no suite file for that year then return empty
+                if (faSuiteYears.Contains(aidYear))
+                    aidYears.Add(aidYear);
+                else
+                    return new Tuple<IEnumerable<Fafsa>, int>(null, 0);
+            else
+                // Check CS.ACYR from 2006 and forward.
+                for (int year = 2006; year <= DateTime.Today.Year; year += 1)
                 {
-                    var csAcyrIds = await DataReader.SelectAsync("CS." + year, "WITH CS.FED.ISIR.ID NE '' OR WITH CS.INST.ISIR.ID NE ''");
-                    for (int i = 0; i < csAcyrIds.Count(); i += readSize)
-                    {
-                        var subList = csAcyrIds.Skip(i).Take(readSize);
-                        var records = await DataReader.BulkReadRecordAsync<CsAcyr>("CS." + year, subList.ToArray());
-                        if (records != null)
-                        {
-                            foreach (var record in records)
-                            {
-                                // Build combined list of federal and institutional applications
-                                if (!string.IsNullOrEmpty(record.CsFedIsirId))
-                                {
-                                    // Add federal application
-                                    unvalidatedApplicationIds.Add(record.CsFedIsirId);
-                                }
-
-                                if (!string.IsNullOrEmpty(record.CsInstIsirId))
-                                {
-                                    if (string.IsNullOrEmpty(record.CsFedIsirId))
-                                    {
-                                        // Add institutional application since we know thre is no federal application
-                                        // so can't be a duplicate.
-                                        unvalidatedApplicationIds.Add(record.CsInstIsirId);
-                                    }
-                                    else
-                                    {
-                                        if (record.CsFedIsirId != record.CsInstIsirId)
-                                        {
-                                            // Add institutional application since it differs from the federal application
-                                            unvalidatedApplicationIds.Add(record.CsInstIsirId);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    string stringYear = year.ToString();
+                    if (faSuiteYears.Contains(stringYear))
+                        aidYears.Add(stringYear);
                 }
-            }
-
-            if (unvalidatedApplicationIds != null)
-            {
-                var validApplicationIds = await DataReader.SelectAsync("ISIR.FAFSA", "WITH IFAF.STUDENT.ID NE '' AND WITH IFAF.IMPORT.YEAR NE ''");
-                validApplicationIds = validApplicationIds.Intersect(unvalidatedApplicationIds).ToArray();
-                applicationIds = validApplicationIds.ToList();
-            }
+            //call to get the appropriate application id
+            applicationIds = await GetApplicationIds(aidYears, studentId);
             //
             //  Gather supporting data for the applicationIds
             //
@@ -360,7 +325,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         }
                     }
                 }
-                 
+
                 //  If Profile NCP records were found from select while processing each ISIR.FAFSA, 
                 //  bulk read and add them to the list of fafsa records.   
                 if (profileNcpIds.Any())
@@ -447,7 +412,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
 
                 // Read FA.SYS.PARAMS
-                var faSysParams = await DataReader.ReadRecordAsync<FaSysParams>("ST.PARMS", "FA.SYS.PARAMS");
+                var faSysParams = await GetFaSysParms();
 
                 var isirFafsaEntities = await BuildFinancialAidApplicationsAsync(effectiveApplicationSubList.ToList(),
                     isirFafsaRecords,
@@ -471,6 +436,63 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 IEnumerable<Fafsa> isirFafsaEntities = null;
                 return new Tuple<IEnumerable<Fafsa>, int>(isirFafsaEntities, 0);
             }
+        }
+
+        /// <summary>
+        /// Get the Applications Ids
+        /// </summary>
+        /// <param name="year">Financial Aid Year</param>
+        /// <returns>A list of FinancialAidApplication Ids</returns>
+        private async Task<List<string>> GetApplicationIds(List<string> aidyears, string studentId)
+        {
+            // Build a list of application IDs. They must be either the federal or institutional
+            // ISIR record defined in the CS.ACYR file.
+            var unvalidatedApplicationIds = new List<string>();
+            var applicationIds = new List<string>();
+            var fedCriteria = "WITH CS.FED.ISIR.ID NE '' OR WITH CS.INST.ISIR.ID NE '' SAVING UNIQUE CS.FED.ISIR.ID";
+            var instCriteria = "WITH CS.FED.ISIR.ID NE '' OR WITH CS.INST.ISIR.ID NE '' SAVING UNIQUE CS.INST.ISIR.ID";
+            var stuCriteria = string.Empty;
+            if (!string.IsNullOrEmpty(studentId))
+                stuCriteria = string.Concat("WITH CS.STUDENT.ID EQ '", studentId, "'");
+            if (aidyears != null && aidyears.Any())
+            {
+                foreach ( var year in aidyears)
+                {
+                    var limitingKeys = new List<string>();
+                    string[] csAcyrIdsFed = new string[] { };
+                    string[] csAcyrIdsInst = new string[] { };
+                    //if there is a student Id then we just care of CS.ACYR record that belong to the student.
+                    if (!string.IsNullOrEmpty(stuCriteria))
+                    {
+                        limitingKeys = (await DataReader.SelectAsync("CS." + year, stuCriteria)).ToList();
+                        if (limitingKeys != null && limitingKeys.Any())
+                        {
+                            csAcyrIdsFed = await DataReader.SelectAsync("CS." + year, limitingKeys.ToArray(), fedCriteria);
+                            unvalidatedApplicationIds.AddRange(csAcyrIdsFed);
+                            csAcyrIdsInst = await DataReader.SelectAsync("CS." + year, limitingKeys.ToArray(), instCriteria);
+                            unvalidatedApplicationIds.AddRange(csAcyrIdsInst);
+
+                        }
+                    }
+                    else
+                    {
+                        csAcyrIdsFed = await DataReader.SelectAsync("CS." + year, fedCriteria);
+                        unvalidatedApplicationIds.AddRange(csAcyrIdsFed);
+                        csAcyrIdsInst = await DataReader.SelectAsync("CS." + year, instCriteria);
+                        unvalidatedApplicationIds.AddRange(csAcyrIdsInst);
+
+                    }                
+                }
+                unvalidatedApplicationIds = unvalidatedApplicationIds.Distinct().ToList();
+            }
+            if (unvalidatedApplicationIds != null && unvalidatedApplicationIds.Any())
+            {
+                var IsirCriteria = "WITH IFAF.IMPORT.YEAR NE ''";
+                // check if there is just one year then use that as a criteria
+                var validApplicationIds = await DataReader.SelectAsync("ISIR.FAFSA", unvalidatedApplicationIds.ToArray(), IsirCriteria);
+                applicationIds = validApplicationIds.ToList();
+            }
+            return applicationIds;
         }
 
         private async Task<IEnumerable<Fafsa>> BuildFinancialAidApplicationsAsync(List<string> fafsaIds,
@@ -539,9 +561,13 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                     fafsaList.Add(fafsaEntity);
                 }
+                catch (ArgumentException ex)
+                {
+                    throw ex;
+                }
                 catch
                 {
-                    var errorMessage = string.Format("Unable to build data processing FA application GUID '{0}'", fafsaId);
+                    var errorMessage = string.Format("Unable to build data processing FA application. Entity:'ISIR.FAFSA', Record Id :'{0}'", fafsaId);
                     throw new ArgumentException(errorMessage);
                 }
             }
@@ -726,7 +752,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
                 catch
                 {
-                    var errorMessage = string.Format("No FA Location '{0}' for FA application '{1}'", location, fafsa.Id);
+                    var errorMessage = string.Format("No FA Location '{0}' found for FA office '{1}'. Entity:'ISIR.FAFSA', Record Id :'{2}'", location, office, fafsa.Id);
                     throw new ArgumentException(errorMessage);
                 }
             }
@@ -746,7 +772,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
                 catch
                 {
-                    var errorMessage = string.Format("Unable to get FA Office information for '{0}' for application '{1}'", office, fafsa.Id);
+                    var errorMessage = string.Format("Unable to get FA Office information for '{0}'. Entity:'ISIR.FAFSA', Record Id :'{1}'", office, fafsa.Id);
                     throw new ArgumentException(errorMessage);
                 }
 
@@ -990,6 +1016,24 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             faOfficeDataContracts = await DataReader.BulkReadRecordAsync<FaOffices>("");
             return faOfficeDataContracts;
+        }
+
+
+        /// <summary>
+        /// Read the FA Sys Parms 
+        /// </summary>
+        /// <returns>fa offices data contract</returns>
+
+        // bma needs to honor bypasscache
+
+        private async Task<FaSysParams> GetFaSysParms()
+        {
+            if (faSysParamsDataContracts != null)
+            {
+                return faSysParamsDataContracts;
+            }
+            faSysParamsDataContracts = await DataReader.ReadRecordAsync<FaSysParams>("ST.PARMS", "FA.SYS.PARAMS");
+            return faSysParamsDataContracts;
         }
     }
 }

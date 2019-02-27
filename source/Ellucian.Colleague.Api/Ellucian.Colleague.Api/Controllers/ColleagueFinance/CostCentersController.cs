@@ -87,7 +87,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             // Application exceptions will be caught below.
             catch (Exception ex)
             {
-                logger.Error(ex.ToString());
+                logger.Error(ex.Message);
                 throw CreateHttpResponseException("Unable to get the cost center.", HttpStatusCode.BadRequest);
             }
         }
@@ -121,7 +121,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (ArgumentNullException anex)
             {
                 logger.Error(anex, anex.Message);
-                throw CreateHttpResponseException(anex.Message, HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException("Invalid argument.", HttpStatusCode.BadRequest);
             }
             // Application exceptions will be caught below.
             catch (Exception ex)

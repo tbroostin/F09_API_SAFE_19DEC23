@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -110,9 +110,13 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 earningTypes2 = new List<EarningType2>();
                 earningTypes2.Add(new EarningType2(guid, "VAC", "Vacation"));
 
+                List<string> earningTypeIdList = new List<string>();
+                earningTypeIdList.Add("VAC");
+                earningTypeIdList.Add("VAC2");
+
                 employeeLeavePlans = new List<EmployeeLeavePlan>();
                 employeeLeavePlans.Add(new EmployeeLeavePlan("foo", "0003914", DateTime.Today, null, "1", "vacation", DateTime.Today, null,
-                    LeaveTypeCategory.Vacation, "VAC", "Vacation", DateTime.Today, 10.00m, 1, 1, true));
+                    LeaveTypeCategory.Vacation, "VAC", "Vacation", DateTime.Today, 10.00m, 1, 1, earningTypeIdList, true));
 
             }
 
@@ -285,11 +289,12 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         {
             public EmployeeLeavePlansService serviceUnderTest;
 
+
             public List<EmployeeLeavePlan> employeeLeavePlans = new List<EmployeeLeavePlan>()
             {
-                new EmployeeLeavePlan("1", "0003914", new DateTime(2017, 1, 1), null, "VACH", "Vacation Hourly", new DateTime(2000, 1, 1), null, LeaveTypeCategory.Vacation, "VAC", "", new DateTime(2000,1,1), 20m, 1, 1, true),
-                new EmployeeLeavePlan("1", "0003915", new DateTime(2017, 1, 1), null, "VACH", "Vacation Hourly",  new DateTime(2000, 1, 1), null, LeaveTypeCategory.Vacation, "VAC", "", new DateTime(2000,1,1), 20m, 1, 1, true),
-                new EmployeeLeavePlan("1", "0003916", new DateTime(2017, 1, 1), null, "VACH", "Vacation Hourly",  new DateTime(2000, 1, 1), null, LeaveTypeCategory.Vacation, "VAC", "", new DateTime(2000,1,1), 20m, 1, 1, true),
+                new EmployeeLeavePlan("1", "0003914", new DateTime(2017, 1, 1), null, "VACH", "Vacation Hourly", new DateTime(2000, 1, 1), null, LeaveTypeCategory.Vacation, "VAC", "", new DateTime(2000,1,1), 20m, 1, 1,new List<string> { "VAC", "VAC1" }, true),
+                new EmployeeLeavePlan("1", "0003915", new DateTime(2017, 1, 1), null, "VACH", "Vacation Hourly",  new DateTime(2000, 1, 1), null, LeaveTypeCategory.Vacation, "VAC", "", new DateTime(2000,1,1), 20m, 1, 1,new List<string> { "VAC", "VAC1" }, true),
+                new EmployeeLeavePlan("1", "0003916", new DateTime(2017, 1, 1), null, "VACH", "Vacation Hourly",  new DateTime(2000, 1, 1), null, LeaveTypeCategory.Vacation, "VAC", "", new DateTime(2000,1,1), 20m, 1, 1, new List<string> { "VAC", "VAC1" },true),
             };
 
             public Mock<ISupervisorsRepository> supervisorsRepositoryMock;
@@ -409,7 +414,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 employeeUserFactory.ProxyClaim = new ProxySubjectClaims()
                 {
                     PersonId = "0003915",
-                    Permissions = new List<string>()
+                    Permissions = new List<string>() { Domain.Base.Entities.ProxyWorkflowConstants.TimeManagementTimeApproval.Value }
                 };
                 var actual = await serviceUnderTest.GetEmployeeLeavePlansV2Async("0003915");
 
@@ -433,7 +438,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 supervisorUserFactory.ProxyClaim = new ProxySubjectClaims()
                 {
                     PersonId = "foobar", //proxying for supervisor id "foobar"
-                    Permissions = new List<string>() { HumanResourcesPermissionCodes.ViewSuperviseeData },
+                    Permissions = new List<string>() { Domain.Base.Entities.ProxyWorkflowConstants.TimeManagementTimeApproval.Value },
                 };
 
                 //supervisor "foobar" is the supervisor for all the employees in the test data. expect the service to return all employees

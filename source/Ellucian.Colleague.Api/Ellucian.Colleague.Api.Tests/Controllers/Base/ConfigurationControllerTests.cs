@@ -320,5 +320,39 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             var config = await configurationController.GetSelfServiceConfigurationAsync();
             loggerMock.Verify(l => l.Error(It.IsAny<Exception>(), "Error occurred while retrieving Self-Service Configuration."));
         }
+
+        [TestMethod]
+        public async Task ConfigurationController_GetRequiredDocumentConfigurationAsync_Valid()
+        {
+            var configuration = new RequiredDocumentConfiguration()
+            {
+                SuppressInstance = false,
+                PrimarySortField = WebSortField.Status,
+                SecondarySortField = WebSortField.OfficeDescription,
+                TextForBlankStatus = "",
+                TextForBlankDueDate = ""
+            };
+            configServiceMock.Setup(x => x.GetRequiredDocumentConfigurationAsync()).ReturnsAsync(configuration);
+            configurationController = new ConfigurationController(adapterRegistry, configService, proxyService, logger);
+
+            var config = await configurationController.GetRequiredDocumentConfigurationAsync();
+
+            Assert.IsNotNull(config);
+            Assert.AreEqual(configuration.SuppressInstance, config.SuppressInstance);
+            Assert.AreEqual(configuration.PrimarySortField, config.PrimarySortField);
+            Assert.AreEqual(configuration.SecondarySortField, config.SecondarySortField);
+            Assert.AreEqual(configuration.TextForBlankStatus, config.TextForBlankStatus);
+            Assert.AreEqual(configuration.TextForBlankDueDate, config.TextForBlankDueDate);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task ConfigurationController_GetRequiredDocumentConfigurationAsync_BadRequest()
+        {
+            configServiceMock.Setup(x => x.GetRequiredDocumentConfigurationAsync()).ThrowsAsync(new ApplicationException());
+            configurationController = new ConfigurationController(adapterRegistry, configService, proxyService, logger);
+            var config = await configurationController.GetRequiredDocumentConfigurationAsync();
+            loggerMock.Verify(l => l.Error(It.IsAny<Exception>(), "Error occurred while retrieving Required Document Configuration."));
+        }
     }
 }

@@ -434,7 +434,7 @@ namespace Ellucian.Colleague.Api.Client
         /// <exception cref="ArgumentNullException">Thrown if the studentId or awardYear argument is null or empty</exception>
         /// <exception cref="ResourceNotFoundException">Thrown if the API is unable to find the requested Award Letter resource</exception>
         /// <exception cref="Exception">Thrown if the API is unable to get the student's award letter</exception>        
-        
+        [Obsolete("Obsolete as of API version 1.10. Use GetAwardLetter4Async.")]
         public async Task<AwardLetter2> GetAwardLetter3Async(string studentId, string awardYear)
         {
             if (string.IsNullOrEmpty(studentId))
@@ -453,6 +453,49 @@ namespace Ellucian.Colleague.Api.Client
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion3);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<AwardLetter2>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to find award letter resource");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get award letter");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get award letter for a student for a given year. Letter will be returned even if no awards are present.
+        /// </summary>
+        /// <param name="studentId">The id of the student for whom to get an award letter</param>
+        /// <param name="awardYear">The award year for which to get an award letter</param>
+        /// <returns>An AwardLetter3 DTO object</returns>
+        /// <exception cref="ArgumentNullException">Thrown if the studentId or awardYear argument is null or empty</exception>
+        /// <exception cref="ResourceNotFoundException">Thrown if the API is unable to find the requested Award Letter resource</exception>
+        /// <exception cref="Exception">Thrown if the API is unable to get the student's award letter</exception>        
+
+        public async Task<AwardLetter3> GetAwardLetter4Async(string studentId, string awardYear)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("studentId");
+            }
+            if (string.IsNullOrEmpty(awardYear))
+            {
+                throw new ArgumentNullException("awardYear");
+            }
+
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _awardLettersPath, awardYear);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion4);
+                var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<AwardLetter3>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.
@@ -638,6 +681,7 @@ namespace Ellucian.Colleague.Api.Client
         /// <exception cref="ArgumentNullException">Thrown if the studentId argument is null or empty</exception>
         /// <exception cref="ResourceNotFoundException">Thrown if the API is unable to find the Award Letters resource</exception>
         /// <exception cref="Exception">Thrown if the API is unable to get the student's award letters</exception>
+        [Obsolete("Obsolete as of API version 1.22. Use GetAwardLetters4Async.")]
         public async Task<IEnumerable<AwardLetter2>> GetAwardLetters3Async(string studentId)
         {
             if (string.IsNullOrEmpty(studentId))
@@ -668,11 +712,51 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
+        /// Get award letters for a student across all the years a student has
+        /// financial aid data. Each letter is returned even if no awards are associated with
+        /// that award letter
+        /// </summary>
+        /// <param name="studentId">The id of the student for whom to get award letters</param>
+        /// <returns>A list of award-letter DTO objects</returns>
+        /// <exception cref="ArgumentNullException">Thrown if the studentId argument is null or empty</exception>
+        /// <exception cref="ResourceNotFoundException">Thrown if the API is unable to find the Award Letters resource</exception>
+        /// <exception cref="Exception">Thrown if the API is unable to get the student's award letters</exception>
+        public async Task<IEnumerable<AwardLetter3>> GetAwardLetters4Async(string studentId)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("studentId");
+            }
+
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _awardLettersPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion4);
+                var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<AwardLetter3>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to find award letters resource");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get award letters");
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Get an award letter report for the given student award year.
         /// </summary>
         /// <param name="studentId">student id for whom to retrieve award letter report for</param>
         /// <param name="recordId">award letter history record id</param>
         /// <returns>AwardLetter Report</returns>
+        [Obsolete("Obsolete as of API version 1.22. Use GetAwardLetterReport4Async.")]
         public async Task<AwardLetterReport> GetAwardLetterReport3Async(string studentId, string recordId)
         {
             if (string.IsNullOrEmpty(studentId))
@@ -705,13 +789,48 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
+        /// Get an award letter report for the given student award year.
+        /// </summary>
+        /// <param name="studentId">student id for whom to retrieve award letter report for</param>
+        /// <param name="recordId">award letter history record id</param>
+        /// <returns>AwardLetter Report</returns>
+        public async Task<AwardLetterReport> GetAwardLetterReport4Async(string studentId, string recordId)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("studentId");
+            }
+            if (string.IsNullOrEmpty(recordId))
+            {
+                throw new ArgumentNullException("recordId");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _awardLettersPath, recordId);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, "application/vnd.ellucian.v4+pdf");
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                return new AwardLetterReport()
+                {
+                    FileName = response.Content.Headers.ContentDisposition.FileName,
+                    FileContent = await response.Content.ReadAsByteArrayAsync()
+                };
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get Award Letter Report");
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Update a student award letter for a given year.
         /// </summary>
         /// <param name="studentId">The id of the student for whom to update the award letter</param>
         /// <param name="awardYear">The award year for which to update the award letter</param>
         /// <param name="awardLetter">The award letter object containing the data with which to update the database</param>
         /// <returns>An updated award-letter DTO object</returns>
-        /// <exception cref="ArgumentNullException">Thrown if the studentId, awardYear or awardLetters argument is null or empty</exception>
+        /// <exception cref="ArgumentNullException">Thrown if the studentId, awardYear or awardLetter argument is null or empty</exception>
         /// <exception cref="ResourceNotFoundException">Thrown if the API is unable to find the requested Award Letter resource</exception>
         /// <exception cref="Exception">Thrown if the API is unable to update the student's award letter</exception>
         [Obsolete("Obsolete as of API version 1.10. Use UpdateAwardLetter2.")]
@@ -762,6 +881,7 @@ namespace Ellucian.Colleague.Api.Client
         /// <exception cref="ArgumentNullException">Thrown if the studentId, awardYear or awardLetters argument is null or empty</exception>
         /// <exception cref="ResourceNotFoundException">Thrown if the API is unable to find the requested Award Letter resource</exception>
         /// <exception cref="Exception">Thrown if the API is unable to update the student's award letter</exception>
+        [Obsolete("Obsolete as of API version 1.22. Use UpdateAwardLetter3Async.")]
         public async Task<AwardLetter2> UpdateAwardLetter2Async(string studentId, string awardYear, AwardLetter2 awardLetter)
         {
             if (string.IsNullOrEmpty(studentId))
@@ -784,6 +904,53 @@ namespace Ellucian.Colleague.Api.Client
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
                 var response = await ExecutePutRequestWithResponseAsync<AwardLetter2>(awardLetter, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<AwardLetter2>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to find award letter resource");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to update award letter");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Update a student award letter for a given year.
+        /// </summary>
+        /// <param name="studentId">The id of the student for whom to update the award letter</param>
+        /// <param name="awardYear">The award year for which to update the award letter</param>
+        /// <param name="awardLetter">The award letter object containing the data with which to update the database</param>
+        /// <returns>An updated awardLetter3 DTO object</returns>
+        /// <exception cref="ArgumentNullException">Thrown if the studentId, awardYear or awardLetters argument is null or empty</exception>
+        /// <exception cref="ResourceNotFoundException">Thrown if the API is unable to find the requested Award Letter resource</exception>
+        /// <exception cref="Exception">Thrown if the API is unable to update the student's award letter</exception>
+        public async Task<AwardLetter3> UpdateAwardLetter3Async(string studentId, string awardYear, AwardLetter3 awardLetter)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("studentId");
+            }
+            if (string.IsNullOrEmpty(awardYear))
+            {
+                throw new ArgumentNullException("awardYear");
+            }
+            if (awardLetter == null)
+            {
+                throw new ArgumentNullException("awardLetter");
+            }
+
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _awardLettersPath, awardYear);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion3);
+                var response = await ExecutePutRequestWithResponseAsync<AwardLetter3>(awardLetter, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<AwardLetter3>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
             // Log any exception, then rethrow it and let calling code determine how to handle it.

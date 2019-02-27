@@ -4,6 +4,7 @@ using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
 using Ellucian.Colleague.Domain.Base.Exceptions;
+using Ellucian.Colleague.Domain.ColleagueFinance.Exceptions;
 using Ellucian.Colleague.Dtos.ColleagueFinance;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
@@ -64,11 +65,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 logger.Error(cex.Message);
                 throw CreateHttpResponseException("Unable to get budget adjustment configuration.", HttpStatusCode.NotFound);
             }
-            catch (ApplicationException aex)
-            {
-                logger.Error(aex.Message);
-                throw CreateHttpResponseException(aex.Message, HttpStatusCode.BadRequest);
-            }
+            // Application exceptions will be caught below.
             catch (Exception ex)
             {
                 logger.Error(ex.Message);
@@ -146,15 +143,95 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 logger.Error(agex.Message);
                 throw CreateHttpResponseException("Invalid argument.", HttpStatusCode.BadRequest);
             }
-            catch (ApplicationException apex)
+            // Application exceptions will be caught below.
+            catch (Exception ex)
             {
-                logger.Error(apex.Message);
+                logger.Error(ex.Message);
                 throw CreateHttpResponseException("Unable to get the budget adjustment.", HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Get a budget adjustment that is awaiting the user's approval.
+        /// </summary>
+        /// <param name="id">The ID of the budget adjustment.</param>
+        /// <returns>A budget adjustment</returns>
+        /// <accessComments>
+        /// Requires permission VIEW.BUD.ADJ.PENDING.APPR.
+        /// The current user must be one of the users listed as a "next approver" on the budget adjustment.
+        /// </accessComments>
+        [HttpGet]
+        public async Task<BudgetAdjustment> GetBudgetAdjustmentPendingApprovalDetailAsync(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                string message = "A budget adjustment number must be specified.";
+                logger.Error(message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
+            }
+            try
+            {
+                return await budgetAdjustmentService.GetBudgetAdjustmentPendingApprovalDetailAsync(id);
+            }
+            catch (PermissionsException peex)
+            {
+                logger.Error(peex.Message);
+                throw CreateHttpResponseException("Insufficient permissions to get the budget adjustment.", HttpStatusCode.Forbidden);
+            }
+            catch (KeyNotFoundException cex)
+            {
+                logger.Error(cex.Message);
+                throw CreateHttpResponseException("Record not found.", HttpStatusCode.NotFound);
+            }
+            catch (ArgumentException agex)
+            {
+                logger.Error(agex.Message);
+                throw CreateHttpResponseException("Invalid argument.", HttpStatusCode.BadRequest);
             }
             catch (Exception ex)
             {
                 logger.Error(ex.Message);
                 throw CreateHttpResponseException("Unable to get the budget adjustment.", HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// A user approves an existing budget adjustment.
+        /// </summary>
+        /// <param name="id">The ID of the budget adjustment that will get the approval ID.</param>
+        /// <param name="budgetAdjustmentApprovalDto">The budget adjustment approval data.</param>
+        /// <returns>The budget adjustment approval dto.</returns>
+        /// <accessComments>
+        /// Requires permission VIEW.BUD.ADJ.PENDING.APPR.
+        /// The current user must be one of the users listed as a "next approver" on the budget adjustment,
+        /// and they must have not approved this budget adjustment already.
+        /// </accessComments>
+        [HttpPost]
+        public async Task<Dtos.ColleagueFinance.BudgetAdjustmentApproval> PostBudgetAdjustmentApprovalAsync(string id, [FromBody] Dtos.ColleagueFinance.BudgetAdjustmentApproval budgetAdjustmentApprovalDto)
+        {
+            try
+            {
+                return await budgetAdjustmentService.PostBudgetAdjustmentApprovalAsync(id, budgetAdjustmentApprovalDto);
+            }
+            catch (PermissionsException peex)
+            {
+                logger.Error(peex.Message);
+                throw CreateHttpResponseException("Insufficient permissions to approve the budget adjustment.", HttpStatusCode.Forbidden);
+            }
+            catch (AlreadyApprovedByUserException appx)
+            {
+                logger.Error(appx.Message);
+                throw CreateHttpResponseException("You have already approved this budget adjustment.", HttpStatusCode.BadRequest);
+            }
+            catch (NotApprovedStatusException naex)
+            {
+                logger.Error(naex.Message);
+                throw CreateHttpResponseException("The budget adjustment does not have a not approved status.", HttpStatusCode.BadRequest);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.Message);
+                throw CreateHttpResponseException("Unable to approve the budget adjustment.", HttpStatusCode.BadRequest);
             }
         }
 

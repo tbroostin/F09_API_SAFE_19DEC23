@@ -16,9 +16,9 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// </summary>
         public string TaxYear { get { return this.taxYear; } }
         private readonly string taxYear;
-
-        
+    
         #region Payer attributes
+
         /// <summary>
         /// ID of the Payer.
         /// </summary>
@@ -62,6 +62,12 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         #endregion
 
         #region Recipient attributes
+
+        /// <summary>
+        /// Person ID for the recipient.
+        /// </summary>
+        public string RecipientId { get; set; }
+
         /// <summary>
         /// If the recipient is a business, the recipient's account number
         /// </summary>
@@ -135,7 +141,17 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// <summary>
         /// Direct Resale
         /// </summary>
-        public string IsDirectResale { get; set; }
+        public bool IsDirectResale { get; set; }
+
+        /// <summary>
+        /// Box Country
+        /// </summary>
+        public string BoxCountry { get; set; }
+
+        /// <summary>
+        /// Foreign Tax Paid Amount (Required for Tax year 2013)
+        /// </summary>
+        public string ForeignTaxPaid { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the 1099MI pdf form.

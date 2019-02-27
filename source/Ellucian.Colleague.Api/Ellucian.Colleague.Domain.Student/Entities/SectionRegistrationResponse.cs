@@ -9,7 +9,9 @@ namespace Ellucian.Colleague.Domain.Student.Entities
     [Serializable]
     public class SectionRegistrationResponse
     {
-        public string Id { get; set; }
+        public string StudentAcadCredKey { get; set; }
+        public string StudentCourseSecKey { get; set; }
+        public string Guid { get; set; }
         public string StudentId { get; set; }
         public string SectionId { get; set; }
         public string StatusCode { get; set; }
@@ -40,10 +42,14 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         public decimal? AltcumContribGpaCred { get; set; }
         public decimal? EarnedCredit { get; set; }
         public decimal? EarnedCeus { get; set; }
+        public List<Tuple<string, DateTime?>> StatusDateTuple { get; set; }
+        public DateTime? StatusDate { get; set; }
+        public string OverrideAcadPeriod { get; set; }
+        public string OverrideSite { get; set; }
 
         public SectionRegistrationResponse(string guid, string studentId, string sectionId, string statusCode, string gradeScheme, string passAudit, IEnumerable<RegistrationMessage> messages)
         {
-            Id = guid;
+            Guid = guid;
             StudentId = studentId;
             SectionId = sectionId;
             StatusCode = statusCode;
@@ -54,7 +60,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
 
         public SectionRegistrationResponse(string guid, string studentId, string sectionId, string statusCode, IEnumerable<RegistrationMessage> messages)
         {
-            Id = guid;
+            Guid = guid;
             StudentId = studentId;
             SectionId = sectionId;
             StatusCode = statusCode;

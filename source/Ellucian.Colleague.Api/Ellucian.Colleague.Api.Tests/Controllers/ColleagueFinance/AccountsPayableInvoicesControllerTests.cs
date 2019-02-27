@@ -605,6 +605,101 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             }
         }
 
+
+        [TestMethod]
+        public async Task AccountsPayableInvoicesControllerTests_GetAccountsPayableInvoices2Async_NoPaging()
+        {
+            var DtosAPI = new List<Dtos.AccountsPayableInvoices2>();
+            DtosAPI.Add(accountsPayableInvoices);
+
+            page = new Paging(1, 1);
+
+            accountsPayableInvoicesTuple = new Tuple<IEnumerable<AccountsPayableInvoices2>, int>(DtosAPI, 1);
+
+            accountsPayableInvoicesController.Request = new System.Net.Http.HttpRequestMessage()
+            {
+                RequestUri = new Uri("http://localhost")
+            };
+            accountsPayableInvoicesController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
+            accountsPayableInvoicesServiceMock.Setup(x => x.GetAccountsPayableInvoices2Async(0, 100, It.IsAny<bool>()))
+                .ReturnsAsync(accountsPayableInvoicesTuple);
+            var actuals = await accountsPayableInvoicesController.GetAccountsPayableInvoices2Async(null);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            System.Net.Http.HttpResponseMessage httpResponseMessage = await actuals.ExecuteAsync(cancelToken);
+            List<AccountsPayableInvoices2> ActualsAPI =
+                ((ObjectContent<IEnumerable<AccountsPayableInvoices2>>)httpResponseMessage.Content).Value as
+                    List<AccountsPayableInvoices2>;
+            for (var i = 0; i < ActualsAPI.Count; i++)
+            {
+                var expected = DtosAPI.ToList()[i];
+                var actual = ActualsAPI[i];
+                Assert.AreEqual(expected.Id, actual.Id);
+                Assert.AreEqual(expected.GovernmentReporting, actual.GovernmentReporting);
+                Assert.AreEqual(expected.InvoiceComment, actual.InvoiceComment);
+                Assert.AreEqual(expected.InvoiceDiscountAmount.Currency, actual.InvoiceDiscountAmount.Currency);
+                Assert.AreEqual(expected.InvoiceDiscountAmount.Value, actual.InvoiceDiscountAmount.Value);
+                Assert.AreEqual(expected.InvoiceType, actual.InvoiceType);
+                Assert.AreEqual(expected.LineItems, actual.LineItems);
+                Assert.AreEqual(expected.Payment.DirectDepositOverride, actual.Payment.DirectDepositOverride);
+                Assert.AreEqual(expected.Payment.PaymentDueOn, actual.Payment.PaymentDueOn);
+                Assert.AreEqual(expected.Payment.PaymentTerms, actual.Payment.PaymentTerms);
+                Assert.AreEqual(expected.Payment.Source, actual.Payment.Source);
+                Assert.AreEqual(expected.PaymentStatus, actual.PaymentStatus);
+                Assert.AreEqual(expected.ProcessState, actual.ProcessState);
+                Assert.AreEqual(expected.ReferenceNumber, actual.ReferenceNumber);
+                Assert.AreEqual(expected.Taxes[0].TaxCode, actual.Taxes[0].TaxCode);
+                Assert.AreEqual(expected.Taxes[0].VendorAmount.Currency, actual.Taxes[0].VendorAmount.Currency);
+                Assert.AreEqual(expected.Taxes[0].VendorAmount.Value, actual.Taxes[0].VendorAmount.Value);
+                //Assert.AreEqual(expected.Vendor, actual.Vendor);
+                Assert.AreEqual(expected.TransactionDate, actual.TransactionDate);
+                Assert.AreEqual(expected.VendorBilledAmount.Currency, actual.VendorBilledAmount.Currency);
+                Assert.AreEqual(expected.VendorBilledAmount.Value, actual.VendorBilledAmount.Value);
+                Assert.AreEqual(expected.VendorInvoiceDate, actual.VendorInvoiceDate);
+                Assert.AreEqual(expected.VendorInvoiceNumber, actual.VendorInvoiceNumber);
+                Assert.AreEqual(expected.VoidDate, actual.VoidDate);
+
+                Assert.AreEqual(expected.LineItems.Count(), actual.LineItems.Count());
+                for (int x = 0; x < expected.LineItems.Count(); x++)
+                {
+                    var lineItem = actual.LineItems[x];
+                    var expectedLi = expected.LineItems[x];
+
+                    Assert.AreEqual(expectedLi.Description, lineItem.Description);
+                    Assert.AreEqual(expectedLi.Comment, lineItem.Comment);
+                    Assert.AreEqual(expectedLi.CommodityCode.Id, lineItem.CommodityCode.Id);
+                    Assert.AreEqual(expectedLi.Quantity, lineItem.Quantity);
+                    Assert.AreEqual(expectedLi.UnitofMeasure.Id, lineItem.UnitofMeasure.Id);
+                    Assert.AreEqual(expectedLi.UnitPrice.Value, lineItem.UnitPrice.Value);
+                    Assert.AreEqual(expectedLi.UnitPrice.Currency, lineItem.UnitPrice.Currency);
+
+                    Assert.AreEqual(expectedLi.Taxes.Count(), lineItem.Taxes.Count());
+                    Assert.AreEqual(expectedLi.Taxes[0].TaxCode.Id, lineItem.Taxes[0].TaxCode.Id);
+                    Assert.AreEqual(expectedLi.Taxes[0].VendorAmount.Currency, lineItem.Taxes[0].VendorAmount.Currency);
+                    Assert.AreEqual(expectedLi.Taxes[0].VendorAmount.Value, lineItem.Taxes[0].VendorAmount.Value);
+
+                    Assert.AreEqual(expectedLi.Discount.Amount.Value, lineItem.Discount.Amount.Value);
+                    Assert.AreEqual(expectedLi.Discount.Amount.Currency, lineItem.Discount.Amount.Currency);
+                    Assert.AreEqual(expectedLi.Discount.Percent, lineItem.Discount.Percent);
+
+                    Assert.AreEqual(expectedLi.PaymentStatus, lineItem.PaymentStatus);
+
+                    Assert.AreEqual(expectedLi.AccountDetails.Count(), lineItem.AccountDetails.Count());
+                    Assert.AreEqual(expectedLi.AccountDetails[0].SequenceNumber,
+                        lineItem.AccountDetails[0].SequenceNumber);
+                    Assert.AreEqual(expectedLi.AccountDetails[0].AccountingString,
+                        lineItem.AccountDetails[0].AccountingString);
+                    Assert.AreEqual(expectedLi.AccountDetails[0].Allocation.Allocated.Amount.Value,
+                        lineItem.AccountDetails[0].Allocation.Allocated.Amount.Value);
+                    Assert.AreEqual(expectedLi.AccountDetails[0].Allocation.Allocated.Amount.Currency,
+                        lineItem.AccountDetails[0].Allocation.Allocated.Amount.Currency);
+                    Assert.AreEqual(expectedLi.AccountDetails[0].Allocation.Allocated.Percentage,
+                        lineItem.AccountDetails[0].Allocation.Allocated.Percentage);
+                    Assert.AreEqual(expectedLi.AccountDetails[0].Allocation.Allocated.Quantity,
+                        lineItem.AccountDetails[0].Allocation.Allocated.Quantity);
+                }
+            }
+        }
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task AccountsPayableInvoicesControllerTests_GetAccountsPayableInvoices2ByGuidAsync_KeyNotFoundExecpt
@@ -795,6 +890,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         private AccountsPayableInvoicesController accountsPayableInvoicesController;
 
         private AccountsPayableInvoices2 accountsPayableInvoices;
+        private AccountsPayableInvoices2 accountsPayableInvoicesPOST;
 
         private string guid = "02dc2629-e8a7-410e-b4df-572d02822f8b";
 
@@ -836,6 +932,11 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             accountsPayableInvoices = new AccountsPayableInvoices2()
             {
                 Id = guid,
+                TransactionDate = DateTime.Now.Date
+            };
+            accountsPayableInvoicesPOST = new AccountsPayableInvoices2()
+            {
+                Id = Guid.Empty.ToString(),
                 TransactionDate = DateTime.Now.Date
             };
         }
@@ -903,6 +1004,14 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
+        public async Task AccountsPayableInvoicesController_Put_Throws_ArgumentNullException()
+        {
+            accountsPayableInvoicesServiceMock.Setup(s => s.PutAccountsPayableInvoices2Async(It.IsAny<string>(), It.IsAny<AccountsPayableInvoices2>())).ThrowsAsync(new ArgumentNullException());
+            var result = await accountsPayableInvoicesController.PutAccountsPayableInvoices2Async(guid, new AccountsPayableInvoices2() { Id = guid });
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
         public async Task AccountsPayableInvoicesController_Put_Throws_RepositoryException()
         {
             accountsPayableInvoicesServiceMock.Setup(s => s.PutAccountsPayableInvoices2Async(It.IsAny<string>(), It.IsAny<AccountsPayableInvoices2>())).ThrowsAsync(new RepositoryException());
@@ -955,37 +1064,48 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         }
 
         [TestMethod]
+        public async Task AccountsPayableInvoicesController_Post()
+        {
+
+            var result = await accountsPayableInvoicesController.PostAccountsPayableInvoices2Async(accountsPayableInvoicesPOST);
+
+            Assert.IsNotNull(result);
+            Assert.AreEqual(result.Id, guid);
+        }
+
+        [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task AccountsPayableInvoicesController_POST_Dto_As_Null()
         {
             var result = await accountsPayableInvoicesController.PostAccountsPayableInvoices2Async(null);
         }
 
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task AccountsPayableInvoicesController_POST_ArgumentNullException_Dto_TransactionDate_Prior_To_CurrentDate()
-        {
-            accountsPayableInvoices.TransactionDate = DateTime.Now.AddDays(-1);
-
-            var result = await accountsPayableInvoicesController.PostAccountsPayableInvoices2Async(accountsPayableInvoices);
-        }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task AccountsPayableInvoicesController_POST_ArgumentNullException_Dto_TransactionDate_As_Min_DataValue()
         {
-            accountsPayableInvoices.TransactionDate = DateTime.MinValue;
+            accountsPayableInvoicesPOST.TransactionDate = DateTime.MinValue;
 
-            var result = await accountsPayableInvoicesController.PostAccountsPayableInvoices2Async(accountsPayableInvoices);
+            var result = await accountsPayableInvoicesController.PostAccountsPayableInvoices2Async(accountsPayableInvoicesPOST);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task AccountsPayableInvoicesController_POST_ArgumentNullException_Dto_NotNullGUID()
+        {
+            accountsPayableInvoicesPOST.Id = "1234";
+
+            var result = await accountsPayableInvoicesController.PostAccountsPayableInvoices2Async(accountsPayableInvoicesPOST);
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task AccountsPayableInvoicesController_POST_ArgumentNullException_Dto_VoidDate_NotNull()
         {
-            accountsPayableInvoices.VoidDate = DateTime.Now;
+            accountsPayableInvoicesPOST.VoidDate = DateTime.Now;
 
-            var result = await accountsPayableInvoicesController.PostAccountsPayableInvoices2Async(accountsPayableInvoices);
+            var result = await accountsPayableInvoicesController.PostAccountsPayableInvoices2Async(accountsPayableInvoicesPOST);
         }
 
         [TestMethod]
@@ -993,7 +1113,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task AccountsPayableInvoicesController_POST_Throws_KeyNotFoundException()
         {
             accountsPayableInvoicesServiceMock.Setup(s => s.PostAccountsPayableInvoices2Async(It.IsAny<AccountsPayableInvoices2>())).ThrowsAsync(new KeyNotFoundException());
-            var result = await accountsPayableInvoicesController.PostAccountsPayableInvoices2Async(accountsPayableInvoices);
+            var result = await accountsPayableInvoicesController.PostAccountsPayableInvoices2Async(accountsPayableInvoicesPOST);
         }
 
         [TestMethod]
@@ -1001,7 +1121,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task AccountsPayableInvoicesController_POST_Throws_PermissionsException()
         {
             accountsPayableInvoicesServiceMock.Setup(s => s.PostAccountsPayableInvoices2Async(It.IsAny<AccountsPayableInvoices2>())).ThrowsAsync(new PermissionsException());
-            var result = await accountsPayableInvoicesController.PostAccountsPayableInvoices2Async(accountsPayableInvoices);
+            var result = await accountsPayableInvoicesController.PostAccountsPayableInvoices2Async(accountsPayableInvoicesPOST);
         }
 
         [TestMethod]
@@ -1009,7 +1129,15 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task AccountsPayableInvoicesController_POST_Throws_ArgumentException()
         {
             accountsPayableInvoicesServiceMock.Setup(s => s.PostAccountsPayableInvoices2Async(It.IsAny<AccountsPayableInvoices2>())).ThrowsAsync(new ArgumentException());
-            var result = await accountsPayableInvoicesController.PostAccountsPayableInvoices2Async(accountsPayableInvoices);
+            var result = await accountsPayableInvoicesController.PostAccountsPayableInvoices2Async(accountsPayableInvoicesPOST);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task AccountsPayableInvoicesController_POST_Throws_ArgumentNullException()
+        {
+            accountsPayableInvoicesServiceMock.Setup(s => s.PostAccountsPayableInvoices2Async(It.IsAny<AccountsPayableInvoices2>())).ThrowsAsync(new ArgumentNullException());
+            var result = await accountsPayableInvoicesController.PostAccountsPayableInvoices2Async(accountsPayableInvoicesPOST);
         }
 
         [TestMethod]
@@ -1017,7 +1145,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task AccountsPayableInvoicesController_POST_Throws_RepositoryException()
         {
             accountsPayableInvoicesServiceMock.Setup(s => s.PostAccountsPayableInvoices2Async(It.IsAny<AccountsPayableInvoices2>())).ThrowsAsync(new RepositoryException());
-            var result = await accountsPayableInvoicesController.PostAccountsPayableInvoices2Async(accountsPayableInvoices);
+            var result = await accountsPayableInvoicesController.PostAccountsPayableInvoices2Async(accountsPayableInvoicesPOST);
         }
 
         [TestMethod]
@@ -1025,7 +1153,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task AccountsPayableInvoicesController_POST_Throws_IntegrationApiException()
         {
             accountsPayableInvoicesServiceMock.Setup(s => s.PostAccountsPayableInvoices2Async(It.IsAny<AccountsPayableInvoices2>())).ThrowsAsync(new IntegrationApiException());
-            var result = await accountsPayableInvoicesController.PostAccountsPayableInvoices2Async(accountsPayableInvoices);
+            var result = await accountsPayableInvoicesController.PostAccountsPayableInvoices2Async(accountsPayableInvoicesPOST);
         }
 
         [TestMethod]
@@ -1033,7 +1161,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task AccountsPayableInvoicesController_POST_Throws_ConfigurationException()
         {
             accountsPayableInvoicesServiceMock.Setup(s => s.PostAccountsPayableInvoices2Async(It.IsAny<AccountsPayableInvoices2>())).ThrowsAsync(new ConfigurationException());
-            var result = await accountsPayableInvoicesController.PostAccountsPayableInvoices2Async(accountsPayableInvoices);
+            var result = await accountsPayableInvoicesController.PostAccountsPayableInvoices2Async(accountsPayableInvoicesPOST);
         }
 
         [TestMethod]
@@ -1041,7 +1169,14 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task AccountsPayableInvoicesController_POST_Throws_Exception()
         {
             accountsPayableInvoicesServiceMock.Setup(s => s.PostAccountsPayableInvoices2Async(It.IsAny<AccountsPayableInvoices2>())).ThrowsAsync(new Exception());
-            var result = await accountsPayableInvoicesController.PostAccountsPayableInvoices2Async(accountsPayableInvoices);
+            var result = await accountsPayableInvoicesController.PostAccountsPayableInvoices2Async(accountsPayableInvoicesPOST);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task AccountsPayableInvoicesController_DeleteT_Not_Supported()
+        {
+            await accountsPayableInvoicesController.DeleteAccountsPayableInvoicesAsync(It.IsAny<string>());
         }
 
         [TestMethod]
@@ -1053,7 +1188,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             exception.AddError(new Domain.Entities.RepositoryError("ERROR", "Repository Exception"));
 
             accountsPayableInvoicesServiceMock.Setup(s => s.PostAccountsPayableInvoices2Async(It.IsAny<AccountsPayableInvoices2>())).ThrowsAsync(exception);
-            var result = await accountsPayableInvoicesController.PostAccountsPayableInvoices2Async(accountsPayableInvoices);
+            var result = await accountsPayableInvoicesController.PostAccountsPayableInvoices2Async(accountsPayableInvoicesPOST);
         }
     }
 }

@@ -1,9 +1,10 @@
-//Copyright 2017 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+
 using Ellucian.Colleague.Coordination.Base.Services;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Ellucian.Colleague.Coordination.HumanResoures.Services
+namespace Ellucian.Colleague.Coordination.HumanResources.Services
 {
     /// <summary>
     /// Interface for PositionClassifications services

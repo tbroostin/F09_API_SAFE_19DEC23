@@ -4,6 +4,7 @@ using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Dtos;
+using Ellucian.Colleague.Dtos.Student;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
@@ -53,6 +54,28 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
             return academicCatalogDtoCollection;
+        }
+
+        /// <summary>
+        /// Gets all Academic Catalogs
+        /// </summary>
+        /// <param name="bypassCache">bypassCache</param>
+        /// <returns>Collection of Catalog DTO objects</returns>
+        public async Task<IEnumerable<Catalog>> GetAllAcademicCatalogsAsync(bool bypassCache = false)
+        {
+            var catalogCollection = await _catalogRepository.GetAsync(bypassCache);
+            List<Catalog> catalogsList = new List<Catalog>();
+            foreach (var item in catalogCollection)
+            {
+                Catalog cat = new Catalog()
+                {
+                    CatalogYear = item.Code,
+                    HideInWhatIf = item.HideInWhatIf,
+                    CatalogStartDate = item.StartDate.ToShortDateString()
+                };
+                catalogsList.Add(cat);
+            }
+            return catalogsList;
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN HeDM</remarks>

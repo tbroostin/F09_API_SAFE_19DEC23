@@ -83,7 +83,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             // Application and Null Reference exceptions will be caught below.
             catch (Exception ex)
             {
-                logger.Error(ex.ToString());
+                logger.Error(ex.Message);
                 throw CreateHttpResponseException("Unable to get T4A statements", HttpStatusCode.BadRequest);
             }
         }

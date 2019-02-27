@@ -98,11 +98,9 @@ namespace Ellucian.Colleague.Dtos
         public string Comment { get; set; }
 
         /// <summary>
-        /// Related Reference is a concept not supported in Colleague.  Here for filter only.
-        /// Return an empty set in all cases.
+        /// Related Reference is a concept not supported in Colleague.  
         /// </summary>
         [JsonProperty("relatedReference", DefaultValueHandling = DefaultValueHandling.Ignore)]
-        [FilterProperty("criteria")]
         public List<RelatedVendorDtoProperty> relatedReference { get; set; }
     }
 }

@@ -1,10 +1,8 @@
-//Copyright 2017 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using Ellucian.Colleague.Coordination.HumanResources.Adapters;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
@@ -14,10 +12,8 @@ using Ellucian.Web.Security;
 using slf4net;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Dtos;
-using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.HumanResources;
-using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Base.Repositories;
 
 namespace Ellucian.Colleague.Coordination.HumanResources.Services
@@ -197,15 +193,21 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             // get user permissions
             CheckUserEmploymentPerformanceReviewsDeletePermissions();
 
-            //string employmentPerformanceReviewId = await _employmentPerformanceReviewRepository.GetIdFromGuidAsync(employmentPerformanceReviewsId);
+            try
+            {
+                var entity = await _employmentPerformanceReviewRepository.GetEmploymentPerformanceReviewByIdAsync(employmentPerformanceReviewsId);
 
-            //if (string.IsNullOrEmpty(employmentPerformanceReviewId))
-            //{
-            //    throw new ArgumentNullException(string.Format("Did not find any employment performance review id with id: {0}", employmentPerformanceReviewsId));
-            //}
+                if (entity == null)
+                {
+                    throw new KeyNotFoundException();
+                }
 
-            await _employmentPerformanceReviewRepository.DeleteEmploymentPerformanceReviewsAsync(employmentPerformanceReviewsId);
-
+                await _employmentPerformanceReviewRepository.DeleteEmploymentPerformanceReviewsAsync(employmentPerformanceReviewsId);
+            }
+            catch (KeyNotFoundException)
+            {
+                throw new KeyNotFoundException(string.Format("Employment-performance-reviews not found for guid: '{0}'.",  employmentPerformanceReviewsId));
+            }
         }
         #endregion
 

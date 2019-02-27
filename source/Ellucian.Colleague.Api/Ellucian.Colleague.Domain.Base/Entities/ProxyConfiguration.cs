@@ -62,6 +62,11 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         public string ReauthorizationText { get; set; }
 
         /// <summary>
+        /// Code indicating the email address hierarchy to be used for proxy
+        /// </summary>
+        public string ProxyEmailAddressHierarchy { get; set; }
+
+        /// <summary>
         /// Proxy workflow groups
         /// </summary>
         public ReadOnlyCollection<ProxyWorkflowGroup> WorkflowGroups { get; private set; }

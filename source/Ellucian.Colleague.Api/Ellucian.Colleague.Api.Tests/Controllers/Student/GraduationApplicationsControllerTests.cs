@@ -483,5 +483,102 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
         }
 
+        [TestClass]
+        public class GraduationApplicationsControllerTests_QueryGraduationApplicationEligibilityAsync
+        {
+            private TestContext testContextInstance;
+
+            /// <summary>
+            ///Gets or sets the test context which provides
+            ///information about and functionality for the current test run.
+            ///</summary>
+            public TestContext TestContext
+            {
+                get
+                {
+                    return testContextInstance;
+                }
+                set
+                {
+                    testContextInstance = value;
+                }
+            }
+            private IGraduationApplicationService graduationApplicationService;
+            private Mock<IGraduationApplicationService> graduationApplicationServiceMock;
+            private GraduationApplicationsController graduationApplicationsController;
+            private IEnumerable<Dtos.Student.GraduationApplicationProgramEligibility> graduationApplicationEligDtos;
+            private Dtos.Student.GraduationApplicationEligibilityCriteria criteria;
+            private IAdapterRegistry adapterRegistry;
+            private ILogger logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+                graduationApplicationServiceMock = new Mock<IGraduationApplicationService>();
+                graduationApplicationService = graduationApplicationServiceMock.Object;
+                adapterRegistry = new Mock<IAdapterRegistry>().Object;
+                logger = new Mock<ILogger>().Object;
+
+                criteria = new Dtos.Student.GraduationApplicationEligibilityCriteria() { StudentId = "StudentId", ProgramCodes = new List<string>() { "Program1", "Program2" } };
+
+                // Mock up the result from the service
+                graduationApplicationEligDtos = new List<Dtos.Student.GraduationApplicationProgramEligibility>()
+                {
+                       new Dtos.Student.GraduationApplicationProgramEligibility() { ProgramCode = "Program1", IsEligible = true },
+                       new Dtos.Student.GraduationApplicationProgramEligibility() { ProgramCode = "Program2", IsEligible = false, IneligibleMessages = new List<string>() {"string1", "string2" } }
+                };
+
+                graduationApplicationsController = new GraduationApplicationsController(graduationApplicationService, logger);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                graduationApplicationsController = null;
+                graduationApplicationService = null;
+            }
+
+            [TestMethod]
+            public async Task QueryGraduationApplicationFEligibilityAsync_ReturnsGraduationApplicationProgramEligibilityDtos()
+            {
+                graduationApplicationServiceMock.Setup(x => x.GetGraduationApplicationEligibilityAsync(It.IsAny<string>(), It.IsAny<IEnumerable<string>>())).Returns(Task.FromResult(graduationApplicationEligDtos));
+                var results = await graduationApplicationsController.QueryGraduationApplicationEligibilityAsync(criteria);
+                Assert.AreEqual(2, results.Count());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task QueryGraduationApplicationFEligibilityAsync_ReturnsHttpResponseException_BadRequest()
+            {
+                try
+                {
+                    graduationApplicationServiceMock.Setup(x => x.GetGraduationApplicationEligibilityAsync(It.IsAny<string>(), It.IsAny<IEnumerable<string>>())).Throws(new Exception());
+                    var results = await graduationApplicationsController.QueryGraduationApplicationEligibilityAsync(criteria);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.Response.StatusCode);
+                    throw ex;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task QueryGraduationApplicationFEligibilityAsync_AnyOtherException_ReturnsHttpResponseException_PermissionsException()
+            {
+                try
+                {
+                    graduationApplicationServiceMock.Setup(x => x.GetGraduationApplicationEligibilityAsync(It.IsAny<string>(), It.IsAny<IEnumerable<string>>())).Throws(new PermissionsException());
+                    var results = await graduationApplicationsController.QueryGraduationApplicationEligibilityAsync(criteria);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Forbidden, ex.Response.StatusCode);
+                    throw ex;
+                }
+            }
+        }
     }
 }

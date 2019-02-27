@@ -12,7 +12,7 @@ namespace Ellucian.Colleague.Dtos.DtoProperties
     /// Course Level DTO property
     /// </summary>
     [JsonObject(MemberSerialization.OptIn)]
-    public class CourseLevelDtoProperty : BaseCodeTitleDetailDtoProperty
+    public class CourseLevelDtoProperty : BaseCodeTitleDetailDtoProperty2
     {
          /// <summary>
         /// Constructor

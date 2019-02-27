@@ -1,13 +1,13 @@
-﻿// Copyright 2012-2016 Ellucian Company L.P. and its affiliates.
-
-using Ellucian.Colleague.Domain.Entities;
+﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
 {
+    /// <summary>
+    /// Academic Catalog
+    /// </summary>
     [Serializable]
     public class Catalog
     {
@@ -69,6 +69,11 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
         /// </summary>
         public List<string> AcadPrograms { get; set; }
 
+        /// <summary>
+        /// Creates a new <see cref="Catalog"/> object.
+        /// </summary>
+        /// <param name="code">Catalog code</param>
+        /// <param name="startDate">Date on which catalog begins</param>
         public Catalog(string code, DateTime startDate)
         {
             if (code == null)
@@ -84,6 +89,13 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
             _StartDate = startDate;
         }
 
+        /// <summary>
+        /// Creates a new <see cref="Catalog"/> object.
+        /// </summary>
+        /// <param name="guid">Unique identifier</param>
+        /// <param name="code">Catalog code</param>
+        /// <param name="description">Description of the catalog</param>
+        /// <param name="startDate">Date on which catalog begins</param>
         public Catalog(string guid, string code, string description, DateTime startDate)
         {
             if (code == null)
@@ -99,6 +111,33 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
             _StartDate = startDate;
             _Guid = guid;
             _Description = description;
+        }
+
+        /// <summary>
+        /// Additional constructor for What if
+        /// </summary>
+        /// <param name="guid">guid</param>
+        /// <param name="code">code</param>
+        /// <param name="description">description</param>
+        /// <param name="startDate">startDate</param>
+        /// <param name="hideInWhatIf">hideInWhatIf</param>
+        public Catalog(string guid, string code, string description, DateTime startDate, string hideInWhatIf)
+        {
+            if (code == null)
+            {
+                throw new ArgumentNullException("code", "Catalog code is required");
+            }
+
+            if (startDate == DateTime.MinValue)
+            {
+                throw new ArgumentNullException("startDate", "Start Date is required");
+            }
+            _Code = code;
+            _StartDate = startDate;
+            _Guid = guid;
+            _Description = description;
+            // Hide catalog if hideInWhatIf is null or if hideInWhatIf is Y
+            _HideInWhatIf = (string.IsNullOrEmpty(hideInWhatIf) || hideInWhatIf.ToUpperInvariant() == "Y");
         }
 
         /// <summary>
@@ -135,6 +174,10 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
             return catalogList.Where(c => c.EndDate == null || c.EndDate > DateTime.Now).Where(cx => cx.StartDate <= DateTime.Now).OrderByDescending(s => s.StartDate).FirstOrDefault();
         }
 
-       
+        private readonly bool _HideInWhatIf;
+        /// <summary>
+        /// Flag indicating if this catalog year should be hidden in What If
+        /// </summary>
+        public bool HideInWhatIf { get { return _HideInWhatIf; } }
     }
 }

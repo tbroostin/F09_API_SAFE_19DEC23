@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Ellucian.Colleague.Domain.Base.Entities;
 
 namespace Ellucian.Colleague.Domain.Student.Tests
 {
@@ -57,7 +58,84 @@ namespace Ellucian.Colleague.Domain.Student.Tests
 
         public async Task<IEnumerable<Section>> GetAsync()
         {
-            return await BuildSectionsAsync();
+            return await  BuildSectionsAsync();
+        }
+
+
+        public async Task<ICollection<Section>> BuildSectionsWithPrimaryScetionMeetingsAsync()
+        {
+
+            List<Section> sections = new List<Section>();
+            var courses = await new TestCourseRepository().GetAsync();
+            Term term = await new TestTermRepository().GetAsync("2012/FA");
+            var statuses = new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddDays(-100)) };
+            var course1 = courses.Where(c => c.Id == "139").First();
+            var course2 = courses.Where(c => c.Id == "42").First();
+
+            //1st section
+            Section sec1 = new Section("999-SEC-WITH-PRIM-MTNGS", course1.Id, "01", term.StartDate, 3m, null, course1.SubjectCode + " " + "01", "IN", course1.Departments, course1.CourseLevelCodes, "A1", statuses);
+            //set meeting times on section
+            String guid = Guid.NewGuid().ToString();
+            SectionMeeting mp1 = new SectionMeeting("999-SEC-MTNG-1", "999-SEC-WITH-PRIM-MTNGS", "LEC", term.StartDate.AddDays(15), term.StartDate.AddDays(40), frequency)
+            {
+                Guid = guid,
+                StartTime = new DateTimeOffset(new DateTime(2012, 8, 9, 09, 10, 00)),
+                EndTime = new DateTimeOffset(new DateTime(2012, 8, 9, 10, 00, 00)),
+                Days = new List<DayOfWeek>() { DayOfWeek.Monday, DayOfWeek.Wednesday }
+            };
+
+            SectionMeeting mp2 = new SectionMeeting("999-SEC-MTNG-2", "999-SEC-WITH-PRIM-MTNGS", "LAB", term.StartDate.AddDays(15), term.StartDate.AddDays(40), frequency)
+            {
+                Guid = guid,
+                StartTime = new DateTimeOffset(new DateTime(2012, 8, 9, 09, 10, 00)),
+                EndTime = new DateTimeOffset(new DateTime(2012, 8, 9, 09, 50, 00)),
+                Days = new List<DayOfWeek>() { DayOfWeek.Tuesday }
+            };
+            sec1.UpdatePrimarySectionMeetings(new List<SectionMeeting>() { mp1, mp2 });
+            sec1.FirstMeetingDate = term.StartDate.AddDays(15);
+            sec1.LastMeetingDate = sec1.EndDate;
+
+            //2nd section
+
+            Section sec2 = new Section("998-SEC-WITH-PRIM-MTNGS", course1.Id, "01", term.StartDate, 3m, null, course1.SubjectCode + " " + "01", "IN", course1.Departments, course1.CourseLevelCodes, "A1", statuses);
+            //set meeting times on section
+            guid = Guid.NewGuid().ToString();
+            SectionMeeting mp3 = new SectionMeeting("998-SEC-MTNG-1", "998-SEC-WITH-PRIM-MTNGS", "LEC", term.StartDate.AddDays(15), term.StartDate.AddDays(40), frequency)
+            {
+                Guid = guid,
+                StartTime = new DateTimeOffset(new DateTime(2012, 8, 9, 13, 00, 00)),
+                EndTime = new DateTimeOffset(new DateTime(2012, 8, 9, 13, 50, 00)),
+                Days = new List<DayOfWeek>() { DayOfWeek.Tuesday, DayOfWeek.Thursday }
+            };
+
+
+            sec2.UpdatePrimarySectionMeetings(new List<SectionMeeting>() { mp3 });
+            sec2.FirstMeetingDate = term.StartDate.AddDays(15);
+            sec2.LastMeetingDate = sec2.EndDate;
+
+            //3rd section
+
+            Section sec3 = new Section("997-SEC-WITH-PRIM-MTNGS", course2.Id, "01", term.StartDate, 3m, null, course2.SubjectCode + " " + "01", "IN", course2.Departments, course2.CourseLevelCodes, "A1", statuses);
+            //set meeting times on section
+            guid = Guid.NewGuid().ToString();
+            SectionMeeting mp4 = new SectionMeeting("997-SEC-MTNG-1", "997-SEC-WITH-PRIM-MTNGS", "LEC", term.StartDate.AddDays(15), term.StartDate.AddDays(40), frequency)
+            {
+                Guid = guid,
+                StartTime = new DateTimeOffset(new DateTime(2012, 8, 9, 11, 00, 00)),
+                EndTime = new DateTimeOffset(new DateTime(2012, 8, 9, 11, 50, 00)),
+                Days = new List<DayOfWeek>() { DayOfWeek.Wednesday, DayOfWeek.Friday }
+            };
+
+
+            sec3.UpdatePrimarySectionMeetings(new List<SectionMeeting>() { mp4 });
+            sec3.FirstMeetingDate = term.StartDate.AddDays(15);
+            sec3.LastMeetingDate = sec3.EndDate;
+
+            sections.Add(sec1);
+            sections.Add(sec2);
+            sections.Add(sec3);
+            return sections;
+
         }
 
         private DateTime ChangedRegistrationSectionsCacheBuildTime = new DateTime();
@@ -872,9 +950,14 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                     }
                 }
             }
+            string JsonString = Newtonsoft.Json.JsonConvert.SerializeObject(sections, Newtonsoft.Json.Formatting.None);
 
             return sections;
+            
         }
+
+
+ 
 
         private ICollection<SectionMeeting> BuildMeetingTimes(string sectionId, DateTime startDate, DateTime? endDate)
         {
@@ -1148,14 +1231,17 @@ namespace Ellucian.Colleague.Domain.Student.Tests
             throw new NotImplementedException();
         }
 
-        public Task<Tuple<IEnumerable<Section>, int>> GetSectionsAsync(int offset, int limit, string title = "", string startDate = "", string endDate = "",
-            string code = "", string number = "", string learningProvider = "", string termId = "", string reportingTermId = "",
-            List<string> academicLevels = null, string course = "", string location = "", string status = "", List<string> departments = null, string subject = "", List<string> instructors = null)
+        public Task<Tuple<IEnumerable<Section>, int>> GetSectionsAsync(int offset, int limit, string title = "", string startDate = "", string endDate = "", string code = "", string number = "", string learningProvider = "", string termId = "", string reportingTermId = "", List<string> academicLevel = null, string course = "", string location = "", string status = "", List<string> department = null, string subject = "", List<string> instructors = null, string scheduleTermId = "")
         {
             throw new NotImplementedException();
         }
 
         public Task<Dictionary<string, string>> GetSectionGuidsCollectionAsync(IEnumerable<string> sectionIds)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<Event>> GetSectionEventsICalAsync(string calendarScheduleType, IEnumerable<string> calendarSchedulePointers, DateTime? startDate, DateTime? endDate)
         {
             throw new NotImplementedException();
         }

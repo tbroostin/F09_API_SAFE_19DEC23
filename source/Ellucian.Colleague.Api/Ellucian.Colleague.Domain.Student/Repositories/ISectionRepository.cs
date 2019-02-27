@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using Ellucian.Colleague.Domain.Student.Entities;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Base.Entities;
 
 namespace Ellucian.Colleague.Domain.Student.Repositories
 {
@@ -94,7 +95,7 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         Task<Tuple<IEnumerable<Section>, int>> GetSectionsAsync(int offset, int limit, string title = "", string startDate = "", string endDate = "",
             string code = "", string number = "", string learningProvider = "", string termId = "", string reportingTermId = "",
             List<string> academicLevel = null, string course = "", string location = "", string status = "", List<string> department = null,
-            string subject = "", List<string> instructors = null);
+            string subject = "", List<string> instructors = null, string scheduledTermId = "");
 
 
         /// <summary>        
@@ -440,6 +441,22 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// <param name="sectionIds">collection of person ids</param>
         /// <returns>Dictionary consisting of a sectionId (key) and guid (value)</returns>
         Task<Dictionary<string, string>> GetSectionGuidsCollectionAsync(IEnumerable<string> sectionIds);
+
+        /// <summary>
+        /// Gets the specified calendar schedule type.
+        /// </summary>
+        /// <param name="calendarScheduleType">Type of the calendar schedule.</param>
+        /// <param name="calendarSchedulePointers">The calendar schedule pointers.</param>
+        /// <param name="startDate">The start date.</param>
+        /// <param name="endDate">The end date.</param>
+        /// <returns></returns>
+        /// <exception cref="System.ArgumentNullException">
+        /// calendarScheduleType;Calendar Schedule Type may not be null or empty
+        /// or
+        /// calendarSchedulePointers;Calendar Schedule Associated Record Pointers may not be null
+        /// </exception>
+        /// <exception cref="System.ArgumentException">At least one Calendar Schedule Pointer to an Associated Record is required</exception>
+        Task<IEnumerable<Event>> GetSectionEventsICalAsync(string calendarScheduleType, IEnumerable<string> calendarSchedulePointers, DateTime? startDate, DateTime? endDate);
 
     }
 }

@@ -7,6 +7,7 @@ using System.Runtime.Serialization;
 using System.Text;
 using Newtonsoft.Json;
 using Ellucian.Colleague.Dtos.EnumProperties;
+using Ellucian.Colleague.Dtos.Attributes;
 
 namespace Ellucian.Colleague.Dtos.DtoProperties
 {
@@ -19,7 +20,7 @@ namespace Ellucian.Colleague.Dtos.DtoProperties
         /// <summary>
         /// Id of the Instructor
         /// </summary>
-        [JsonProperty("detail")]
+        [JsonProperty("detail")]      
         public GuidObject2 Detail { get; set; }
 
         /// <summary>

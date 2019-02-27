@@ -1,8 +1,6 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
@@ -10,8 +8,10 @@ using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
 using slf4net;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
-using Ellucian.Colleague.Domain.Base;
 
 namespace Ellucian.Colleague.Coordination.Base.Services
 {
@@ -46,7 +46,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         ///  Get all person-holds
         /// </summary>
         /// <returns>Tuple containing a Collection of Dtos.PersonHold, along with total record count</returns>
-        public async Task<Tuple<IEnumerable<Dtos.PersonHold>, int>> GetPersonHoldsAsync(int offset, int limit)
+        public async Task<Tuple<IEnumerable<Dtos.PersonHold>, int>> GetPersonHoldsAsync(int offset, int limit, bool bypassCache = false)
         {
             CheckUserPersonHoldsViewPermissions();
 
@@ -54,21 +54,26 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             var personHoldsEntities = await _personHoldsRepository.GetPersonHoldsAsync(offset, limit);
            
             //Get all hold types with category
-            var personHoldTypes = await _referenceDataRepository.GetRestrictionsWithCategoryAsync(true) as List<Domain.Base.Entities.Restriction>;
+            var personHoldTypes = await _referenceDataRepository.GetRestrictionsWithCategoryAsync(bypassCache) as List<Domain.Base.Entities.Restriction>;
+
             if (personHoldTypes != null)
             {
+                var personIds = personHoldsEntities.Item1.Where(p => !string.IsNullOrWhiteSpace(p.StudentId)).Select(s => s.StudentId).ToList();
+                var personIdDict = await _personRepository.GetPersonGuidsCollectionAsync(personIds.Distinct());
+
                 foreach (var holdEntity in personHoldsEntities.Item1)
                 {
                     var restriction = personHoldTypes.FirstOrDefault(r => r.Code == holdEntity.RestrictionId);
 
                     if (restriction != null)
                     {
-                        var personId = await _personRepository.GetPersonGuidFromIdAsync(holdEntity.StudentId);
-                        var personHoldId = await _personHoldsRepository.GetStudentHoldGuidFromIdAsync(holdEntity.Id);
-
-                        var dtosPersonHold = BuildPersonHold(personHoldId, holdEntity, personHoldTypes, personId,
-                            restriction);
-                        dtoPersonHolds.Add(dtosPersonHold);
+                        string personId;
+                        if(personIdDict != null && personIdDict.Any() && personIdDict.TryGetValue(holdEntity.StudentId, out personId))
+                        {
+                            var dtosPersonHold = BuildPersonHold(holdEntity.Guid, holdEntity, personHoldTypes, personId,
+                           restriction);
+                            dtoPersonHolds.Add(dtosPersonHold);
+                        }
                     }
                     else
                     {
@@ -88,7 +93,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// </summary>
         /// <param name="id">id for the person hold</param>
         /// <returns>List of PersonHold for the person</returns>
-        public async Task<Dtos.PersonHold> GetPersonHoldAsync(string id)
+        public async Task<Dtos.PersonHold> GetPersonHoldAsync(string id, bool bypassCache = false)
         {
             if (string.IsNullOrEmpty(id))
             {
@@ -107,7 +112,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             else
             {
                 //Get all hold types with category
-                List<Domain.Base.Entities.Restriction> personHoldTypes = await _referenceDataRepository.GetRestrictionsWithCategoryAsync(true) as List<Domain.Base.Entities.Restriction>;
+                List<Domain.Base.Entities.Restriction> personHoldTypes = await _referenceDataRepository.GetRestrictionsWithCategoryAsync(bypassCache) as List<Domain.Base.Entities.Restriction>;
 
                 string personId = await _personRepository.GetPersonGuidFromIdAsync(personHoldEntity.StudentId);
                 if (string.IsNullOrEmpty(personId))
@@ -116,7 +121,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 }
 
                 //Get the person hold type(restriction)
-                Restriction restriction = personHoldTypes.Where(r => r.Code == personHoldEntity.RestrictionId).FirstOrDefault();
+                Restriction restriction = personHoldTypes.FirstOrDefault(r => r.Code.Equals(personHoldEntity.RestrictionId, StringComparison.OrdinalIgnoreCase));
                 if (restriction == null)
                 {
                     throw new KeyNotFoundException(string.Format("Did not find any person hold type with id: {0}", personHoldEntity.RestrictionId));
@@ -129,7 +134,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     throw new KeyNotFoundException(string.Format("Did not find guid for id: {0}", personHoldEntity.Id));
                 }
 
-                dtoPersonHolds = BuildPersonHold(personHoldId, personHoldEntity, personHoldTypes, personId, restriction);
+                dtoPersonHolds = BuildPersonHold(personHoldEntity.Guid, personHoldEntity, personHoldTypes, personId, restriction);
             }
 
             return dtoPersonHolds;
@@ -140,7 +145,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// </summary>
         /// <param name="person"></param>
         /// <returns></returns>
-        public async Task<IEnumerable<Dtos.PersonHold>> GetPersonHoldsAsync(string personId)
+        public async Task<IEnumerable<Dtos.PersonHold>> GetPersonHoldsAsync(string personId, bool bypassCache = false)
         {
             CheckUserPersonHoldsViewPermissions();
 
@@ -154,18 +159,24 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             List<Dtos.PersonHold> dtoPersonHolds = new List<Dtos.PersonHold>();
 
             //Get all hold types with category
-            List<Domain.Base.Entities.Restriction> personHoldTypes = await _referenceDataRepository.GetRestrictionsWithCategoryAsync(true) as List<Domain.Base.Entities.Restriction>;
+            List<Domain.Base.Entities.Restriction> personHoldTypes = await _referenceDataRepository.GetRestrictionsWithCategoryAsync(bypassCache) as List<Domain.Base.Entities.Restriction>;
+
+            var personIds = personHoldsEntities.Where(p => !string.IsNullOrWhiteSpace(p.StudentId)).Select(s => s.StudentId).ToList();
+            var personIdDict = await _personRepository.GetPersonGuidsCollectionAsync(personIds.Distinct());
 
             foreach (var holdEntity in personHoldsEntities)
             {
                 Dtos.PersonHold dtosPersonHold = null;
-                string tempPersonId = await _personRepository.GetPersonGuidFromIdAsync(holdEntity.StudentId);
+
                 Restriction restriction = personHoldTypes.Where(r => r.Code == holdEntity.RestrictionId).FirstOrDefault();
-                string personHoldId = await _personHoldsRepository.GetStudentHoldGuidFromIdAsync(holdEntity.Id);
                 if (restriction != null)
                 {
-                    dtosPersonHold = BuildPersonHold(personHoldId, holdEntity, personHoldTypes, tempPersonId, restriction);
-                    dtoPersonHolds.Add(dtosPersonHold);
+                    string tempPersonId;
+                    if (personIdDict != null && personIdDict.Any() && personIdDict.TryGetValue(holdEntity.StudentId, out tempPersonId))
+                    {
+                        dtosPersonHold = BuildPersonHold(holdEntity.Guid, holdEntity, personHoldTypes, tempPersonId, restriction);
+                        dtoPersonHolds.Add(dtosPersonHold);
+                    }
                 }
                 else
                 {
@@ -189,25 +200,36 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <returns></returns>
         public async Task DeletePersonHoldAsync(string personHoldsId)
         {
+            if (string.IsNullOrEmpty(personHoldsId))
+            {
+                throw new ArgumentNullException("guid", "GUID is required to delete a person-holds.");
+            }
             // get user permissions
             CheckUserPersonHoldsDeletePermissions();
 
-            string personHoldId = await _personHoldsRepository.GetStudentHoldIdFromGuidAsync(personHoldsId);
+            try
+            {
 
-            if (string.IsNullOrEmpty(personHoldId))
-            {
-                throw new ArgumentNullException(string.Format("Did not find any person hold id with id: {0}", personHoldsId));
-            }
-            //Log all the warnings
-            var warnings = await _personHoldsRepository.DeletePersonHoldsAsync(personHoldId);
-            if (warnings.Any())
-            {
-                string warningMessage = string.Empty;
-                foreach (var warning in warnings)
+                var personHoldEntity = await _personHoldsRepository.GetPersonHoldByIdAsync(personHoldsId);
+                if (personHoldEntity == null)
                 {
-                    warningMessage += string.Format(Environment.NewLine + "'{0}' : '{1}'", warning.WarningCode, warning.WarningMessage);
+                    throw new KeyNotFoundException();
                 }
-                logger.Info(warningMessage);
+                //Log all the warnings
+                var warnings = await _personHoldsRepository.DeletePersonHoldsAsync(personHoldsId);
+                if (warnings.Any())
+                {
+                    string warningMessage = string.Empty;
+                    foreach (var warning in warnings)
+                    {
+                        warningMessage += string.Format(Environment.NewLine + "'{0}' : '{1}'", warning.WarningCode, warning.WarningMessage);
+                    }
+                    logger.Info(warningMessage);
+                }
+            }
+            catch (KeyNotFoundException ex)
+            {
+                throw new KeyNotFoundException(string.Format("Person-holds not found for guid: '{0}'.", personHoldsId));
             }
         }
 

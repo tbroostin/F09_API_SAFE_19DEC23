@@ -879,6 +879,14 @@
             administration page
             </summary>
         </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Page.CloudMaintenance">
+            <summary>
+            Indicates how the page is maintained in a cloud environment. This is used
+            during bootstrapping of the Self-Service host to secure admin functionality.
+            CloudOnly pages should only be accessible to cloud admins
+            Shared pages should be accessible to both cloud and client admins
+            </summary>
+        </member>
         <member name="T:Ellucian.Web.Mvc.Models.Link">
             <summary>
             Link base model

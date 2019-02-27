@@ -46,5 +46,12 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
         /// <param name="personId">Person ID for the current user.</param>
         /// <returns>List of budget adjustments pending approval summary DTOs.</returns>
         Task<IEnumerable<BudgetAdjustmentPendingApprovalSummary>> GetBudgetAdjustmentsPendingApprovalSummaryAsync(string personId);
+
+        /// <summary>
+        /// Validates the budget adjustment entity using a Colleague Transaction.
+        /// </summary>
+        /// <param name="budgetAdjustmentEntity">The entity to validate.</param>
+        /// <returns>List of strings that contain error messages from Colleague.</returns>
+        Task<List<string>> ValidateBudgetAdjustmentAsync(BudgetAdjustment budgetAdjustmentEntity);
     }
 }

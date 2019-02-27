@@ -48,52 +48,54 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         public async Task<ProxyConfiguration> GetProxyConfigurationAsync()
         {
             return await GetOrAddToCacheAsync<ProxyConfiguration>("ProxyConfiguration",
-                async () => { 
-            ProxyConfiguration config;
+                async () =>
+                {
+                    ProxyConfiguration config;
                     var proxyDefaults = await this.DataReader.ReadRecordAsync<ProxyDefaults>("UT.PARMS", "PROXY.DEFAULTS");
                     // Checks to see if Dflts is using a custom subroutine to format SSN
                     var ldapContextSubroutine = await this.DataReader.ReadRecordAsync<Dflts>("CORE.PARMS", "DEFAULTS");
                     bool customSubroutine = ldapContextSubroutine.DfltsSocIdSubr != "";
-            if (proxyDefaults == null)
-            {
-                // PROXY.DEFAULTS must exist for Proxy functionality to function properly
-                throw new ConfigurationException("Proxy setup not complete.");
-            }
-
-            config = new ProxyConfiguration(proxyDefaults.PrxdProxyEnabled.ToUpperInvariant() == "Y", proxyDefaults.PrxdDisclosureReleaseDoc, proxyDefaults.PrxdProxyEmailDocument, proxyDefaults.PrxdAddNewProxyAllowed.ToUpperInvariant() == "Y", customSubroutine)
-                {
-                    DisclosureReleaseText = proxyDefaults.PrxdDisclosureReleaseText,
-                    AddProxyHeaderText = proxyDefaults.PrxdGrantAccessText,
-                    ProxyFormHeaderText = proxyDefaults.PrxdHeaderText,
-                    ReauthorizationText = proxyDefaults.PrxdReauthorizationText
-                };
-
-            var enabledWorkflows = await GetProxyWorkflowGroupsAsync();
-            if (enabledWorkflows != null)
-            {
-                enabledWorkflows.ForEach(w => config.AddWorkflowGroup(w));
-            }
-
-            if (proxyDefaults.PrxdRelationships != null && proxyDefaults.PrxdRelationships.Any())
-            {
-                proxyDefaults.PrxdRelationships.ForEach(r => config.AddRelationshipTypeCode(r));
-            }
-
-            if (proxyDefaults.PrxdDemographicsEntityAssociation != null && proxyDefaults.PrxdDemographicsEntityAssociation.Count > 0)
-            {
-                foreach(var field in proxyDefaults.PrxdDemographicsEntityAssociation)
-                {
-                    if (field != null)
+                    if (proxyDefaults == null)
                     {
-                        config.AddDemographicField(new DemographicField(field.PrxdDemoElementsAssocMember, field.PrxdDemoDescsAssocMember,
-                            ConvertStringToDemographicFieldRequirement(field.PrxdDemoRqmtAssocMember)));
+                        // PROXY.DEFAULTS must exist for Proxy functionality to function properly
+                        throw new ConfigurationException("Proxy setup not complete.");
                     }
-                }
-            }
 
-            
+                    config = new ProxyConfiguration(proxyDefaults.PrxdProxyEnabled.ToUpperInvariant() == "Y", proxyDefaults.PrxdDisclosureReleaseDoc, proxyDefaults.PrxdProxyEmailDocument, proxyDefaults.PrxdAddNewProxyAllowed.ToUpperInvariant() == "Y", customSubroutine)
+                    {
+                        DisclosureReleaseText = proxyDefaults.PrxdDisclosureReleaseText,
+                        AddProxyHeaderText = proxyDefaults.PrxdGrantAccessText,
+                        ProxyFormHeaderText = proxyDefaults.PrxdHeaderText,
+                        ReauthorizationText = proxyDefaults.PrxdReauthorizationText,
+                        ProxyEmailAddressHierarchy = proxyDefaults.PrxdEmailHierarchy
+                    };
 
-            return config;
+                    var enabledWorkflows = await GetProxyWorkflowGroupsAsync();
+                    if (enabledWorkflows != null)
+                    {
+                        enabledWorkflows.ForEach(w => config.AddWorkflowGroup(w));
+                    }
+
+                    if (proxyDefaults.PrxdRelationships != null && proxyDefaults.PrxdRelationships.Any())
+                    {
+                        proxyDefaults.PrxdRelationships.ForEach(r => config.AddRelationshipTypeCode(r));
+                    }
+
+                    if (proxyDefaults.PrxdDemographicsEntityAssociation != null && proxyDefaults.PrxdDemographicsEntityAssociation.Count > 0)
+                    {
+                        foreach (var field in proxyDefaults.PrxdDemographicsEntityAssociation)
+                        {
+                            if (field != null)
+                            {
+                                config.AddDemographicField(new DemographicField(field.PrxdDemoElementsAssocMember, field.PrxdDemoDescsAssocMember,
+                                    ConvertStringToDemographicFieldRequirement(field.PrxdDemoRqmtAssocMember)));
+                            }
+                        }
+                    }
+
+
+
+                    return config;
                 }, ProxyRepositoryCacheTimeout);
         }
 
@@ -306,7 +308,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             var proxyUserIds = permissions.Select(p => p.ProxyUserId).Distinct().ToList();
             proxyUserIds.ForEach(userId => proxyUsers.Add(new ProxyUser(userId)));
 
-            foreach(var user in proxyUsers)
+            foreach (var user in proxyUsers)
             {
                 var permissionsForUser = permissions.Where(p => p.ProxyUserId == user.Id).ToList();
                 permissionsForUser.ForEach(pfu => user.AddPermission(pfu));
@@ -334,7 +336,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             // Get all proxy.access records associated with current user and are unexpired
             // so that we can gather the list of proxy subjects who have granted 
             // proxy access that are valid as of today.
-            string todaysDate = UniDataFormatter.UnidataFormatDate(DateTime.Today, 
+            string todaysDate = UniDataFormatter.UnidataFormatDate(DateTime.Today,
                 InternationalParameters.HostShortDateFormat, InternationalParameters.HostDateDelimiter);
             string proxyAccessQuery = "WITH PRAC.PROXY.WEB.USER EQ '{0}' " +
                 " AND (PRAC.BEGIN.DATE NE '' AND PRAC.BEGIN.DATE LE '{1}')" +
@@ -345,7 +347,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             if (proxyAccessRecs == null || !proxyAccessRecs.Any())
             {
                 // return empty proxySubjects collection
-                return proxySubjects; 
+                return proxySubjects;
             }
 
             foreach (var pa in proxyAccessRecs)
@@ -353,7 +355,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 try
                 {
                     permissions.Add(new Domain.Base.Entities.ProxyAccessPermission(
-                        pa.Recordkey, pa.PracPrincipalWebUser, pa.PracProxyWebUser, 
+                        pa.Recordkey, pa.PracPrincipalWebUser, pa.PracProxyWebUser,
                         pa.PracProxyAccessPermission, pa.PracBeginDate.GetValueOrDefault())
                     {
                         ApprovalEmailDocumentId = pa.PracProxyApprovalEmail,
@@ -380,7 +382,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         }
 
 
-#region Private methods
+        #region Private methods
         private List<ProxyAccessPermission> BuildProxyPermissions(ICollection<ProxyAccess> proxyAccesses)
         {
             var permissions = new List<ProxyAccessPermission>();
@@ -424,7 +426,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 var groupEntity = new ProxyWorkflowGroup(group.ValInternalCodeAssocMember, group.ValExternalRepresentationAssocMember, string.Equals(group.ValActionCode1AssocMember, EmployeeProxyGroupSpecialProcessingCode, StringComparison.InvariantCultureIgnoreCase));
                 foreach (var workflow in proxyWorkflows)
                 {
-                    groupEntity.AddWorkflow(new ProxyWorkflow(workflow.Recordkey, workflow.PrcpDescription, workflow.PrcpGroup, workflow.PrcpEnabled.ToUpper() == "Y") {
+                    groupEntity.AddWorkflow(new ProxyWorkflow(workflow.Recordkey, workflow.PrcpDescription, workflow.PrcpGroup, workflow.PrcpEnabled.ToUpper() == "Y")
+                    {
                         WorklistCategorySpecialProcessCode = workflow.PrcpWorklistCatSpecProc
                     });
                 }
@@ -456,35 +459,35 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
         private CreateProxyCandidateRequest BuildCreateProxyCandidateRequest(ProxyCandidate candidate)
         {
-             return new CreateProxyCandidateRequest()
-             {
-                 CandidateBirthDate = candidate.BirthDate,
-                 CandidateEmailAddress = candidate.EmailAddress,
-                 CandidateEmailType = candidate.EmailType,
-                 CandidateFirstName = candidate.FirstName,
-                 CandidateFormerFirstName = candidate.FormerFirstName,
-                 CandidateFormerLastName = candidate.FormerLastName,
-                 CandidateFormerMiddleName = candidate.FormerMiddleName,
-                 CandidateGender = candidate.Gender,
-                 CandidateGrantedPerms = candidate.GrantedPermissions.ToList(),
-                 CandidateLastName = candidate.LastName,
-                 CandidateMiddleName = candidate.MiddleName,
-                 CandidatePhone = candidate.Phone,
-                 CandidatePhoneExtension = candidate.PhoneExtension,
-                 CandidatePhoneType = candidate.PhoneType,
-                 CandidatePrefix = candidate.Prefix,
-                 CandidateProxySubject = candidate.ProxySubject,
-                 CandidateRelationType = candidate.RelationType,
-                 CandidateSsn = candidate.GovernmentId,
-                 CandidateSuffix = candidate.Suffix,
-                 PossibleDuplicates =
-                     candidate.ProxyMatchResults.Select(x => new PossibleDuplicates()
-                     {
-                         CandidateDuplPersonId = x.PersonId,
-                         CandidateDuplScore = x.MatchScore,
-                         CandidateDuplCategory = x.MatchCategory == PersonMatchCategoryType.Definite ? "D" : "P",
-                     }).ToList(),
-             };
+            return new CreateProxyCandidateRequest()
+            {
+                CandidateBirthDate = candidate.BirthDate,
+                CandidateEmailAddress = candidate.EmailAddress,
+                CandidateEmailType = candidate.EmailType,
+                CandidateFirstName = candidate.FirstName,
+                CandidateFormerFirstName = candidate.FormerFirstName,
+                CandidateFormerLastName = candidate.FormerLastName,
+                CandidateFormerMiddleName = candidate.FormerMiddleName,
+                CandidateGender = candidate.Gender,
+                CandidateGrantedPerms = candidate.GrantedPermissions.ToList(),
+                CandidateLastName = candidate.LastName,
+                CandidateMiddleName = candidate.MiddleName,
+                CandidatePhone = candidate.Phone,
+                CandidatePhoneExtension = candidate.PhoneExtension,
+                CandidatePhoneType = candidate.PhoneType,
+                CandidatePrefix = candidate.Prefix,
+                CandidateProxySubject = candidate.ProxySubject,
+                CandidateRelationType = candidate.RelationType,
+                CandidateSsn = candidate.GovernmentId,
+                CandidateSuffix = candidate.Suffix,
+                PossibleDuplicates =
+                    candidate.ProxyMatchResults.Select(x => new PossibleDuplicates()
+                    {
+                        CandidateDuplPersonId = x.PersonId,
+                        CandidateDuplScore = x.MatchScore,
+                        CandidateDuplCategory = x.MatchCategory == PersonMatchCategoryType.Definite ? "D" : "P",
+                    }).ToList(),
+            };
         }
 
         private ProxyCandidate BuildProxyCandidate(ProxyCandidates data)
@@ -497,11 +500,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
             var result = new ProxyCandidate(
                 data.PrxcProxySubject,
-                data.PrxcRelationType, 
-                data.PrxcGrantedPerms, 
-                data.PrxcFirstName, 
-                data.PrxcLastName, 
-                data.PrxcEmailAddress, 
+                data.PrxcRelationType,
+                data.PrxcGrantedPerms,
+                data.PrxcFirstName,
+                data.PrxcLastName,
+                data.PrxcEmailAddress,
                 data.ProxyMatchResultsEntityAssociation.Select(x => new PersonMatchResult(x.PrxcPersonIdAssocMember,
                     x.PrxcScoreAssocMember,
                     x.PrxcCategoryAssocMember)).ToList()
@@ -524,6 +527,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             return result;
         }
-#endregion
+        #endregion
     }
 }

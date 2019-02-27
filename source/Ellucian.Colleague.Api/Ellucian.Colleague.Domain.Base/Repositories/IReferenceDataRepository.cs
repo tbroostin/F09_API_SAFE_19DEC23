@@ -208,6 +208,13 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <returns>Collection of departments</returns>
         Task<IEnumerable<Department>> GetDepartments2Async(bool ignoreCache);
 
+        /// <summary>
+        /// Get guid for Departments code
+        /// </summary>
+        /// <param name="code">Departments code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetDepartments2GuidAsync(string code);
+
 
         /// <summary>
         /// Get a single department by guid
@@ -355,6 +362,13 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         Task<IEnumerable<Location>> GetLocationsAsync(bool ignoreCache);
 
 
+        /// <summary>
+        /// Get guid for Locations code
+        /// </summary>
+        /// <param name="code">Locations code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetLocationsGuidAsync(string code);
+
 
         /// <summary>
         /// Get a collection of Location Types
@@ -388,6 +402,12 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <returns>Collection of CCDs</returns>
         Task<IEnumerable<OtherCcd>> GetOtherCcdsAsync(bool ignoreCache);
 
+        /// <summary>
+        /// Get guid for Other ccds code
+        /// </summary>
+        /// <param name="code">Other Ccds code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetOtherCcdsGuidAsync(string code);
 
         /// <summary>
         /// Get a collection of degrees
@@ -403,6 +423,12 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <returns>Collection of degrees</returns>
         Task<IEnumerable<OtherDegree>> GetOtherDegreesAsync(bool ignoreCache);
 
+        /// <summary>
+        /// Get guid for Other Degrees code
+        /// </summary>
+        /// <param name="code">Other Degrees code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetOtherDegreeGuidAsync(string code);
 
 
         /// <summary>
@@ -413,11 +439,25 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         Task<IEnumerable<OtherMajor>> GetOtherMajorsAsync(bool ignoreCache);
 
         /// <summary>
+        /// Get guid for Other Majors code
+        /// </summary>
+        /// <param name="code">Other Majors code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetOtherMajorsGuidAsync(string code);
+
+        /// <summary>
         /// Get a collection of minors
         /// </summary>
         /// <param name="ignoreCache">Bypass cache flag</param>
         /// <returns>Collection of minors</returns>
         Task<IEnumerable<OtherMinor>> GetOtherMinorsAsync(bool ignoreCache);
+
+        /// <summary>
+        /// Get guid for Other Minors code
+        /// </summary>
+        /// <param name="code">Other Minors code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetOtherMinorsGuidAsync(string code);
 
         /// <summary>
         /// Get a collection of Other honors
@@ -427,11 +467,25 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         Task<IEnumerable<OtherHonor>> GetOtherHonorsAsync(bool ignoreCache);
 
         /// <summary>
+        /// Get guid for Other Honors code
+        /// </summary>
+        /// <param name="code">Other Honors code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetOtherHonorsGuidAsync(string code);
+
+        /// <summary>
         /// Get a collection of specializations
         /// </summary>
         /// <param name="ignoreCache"></param>
         /// <returns>Collection of specializations</returns>
         Task<IEnumerable<OtherSpecial>> GetOtherSpecialsAsync(bool ignoreCache);
+
+        /// <summary>
+        /// Get guid for Other specializations code
+        /// </summary>
+        /// <param name="code">Other specializations code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetOtherSpecialsGuidAsync(string code);
 
         /// <summary>
         /// Get a collection of Marital Statuses
@@ -643,6 +697,13 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         Task<IEnumerable<School>> GetSchoolsAsync(bool ignoreCache);
 
         /// <summary>
+        /// Get guid for Schools code
+        /// </summary>
+        /// <param name="code">Schools code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetSchoolsGuidAsync(string code);
+
+        /// <summary>
         /// 
         /// </summary>
         /// <returns></returns>
@@ -794,5 +855,12 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// </summary>
         /// <returns>A collection of Place entities</returns>
         Task<IEnumerable<Place>> GetPlacesAsync(bool bypassCache);
+
+        /// <summary>
+        /// Get a collection of AlternativeCredentialTypes.
+        /// </summary>
+        /// <param name="ignoreCache">Bypass cache flag</param>
+        /// <returns>Collection of AltIdTypes</returns>
+        Task<IEnumerable<AltIdTypes>> GetAlternateIdTypesAsync(bool ignoreCache);
     }
 }

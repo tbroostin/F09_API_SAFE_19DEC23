@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Coordination.Student.Tests.UserFactories;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -364,10 +364,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 //AdmissionApplicationStatusTypes
                 admissionStatusTypeEntities = new List<Domain.Student.Entities.AdmissionDecisionType>()
                 {
-                    new Domain.Student.Entities.AdmissionDecisionType("b90812ee-b573-4acb-88b0-6999a050be4f", "CODE1", "DESC1"),
-                    new Domain.Student.Entities.AdmissionDecisionType("f9871d1d-a7c0-4239-b4e3-6ee6b5bc9d52", "CODE2", "DESC2"),
-                    new Domain.Student.Entities.AdmissionDecisionType("abe5524b-6704-4f09-b858-763ee2ab5fe4", "CODE3", "DESC3"),
-                    new Domain.Student.Entities.AdmissionDecisionType("2158ad73-3416-467b-99d5-1b7b92599389", "CODE4", "DESC4")
+                    new Domain.Student.Entities.AdmissionDecisionType("b90812ee-b573-4acb-88b0-6999a050be4f", "CODE1", "DESC1") { SpecialProcessingCode = "AP" },
+                    new Domain.Student.Entities.AdmissionDecisionType("f9871d1d-a7c0-4239-b4e3-6ee6b5bc9d52", "CODE2", "DESC2") { SpecialProcessingCode = "CO" },
+                    new Domain.Student.Entities.AdmissionDecisionType("abe5524b-6704-4f09-b858-763ee2ab5fe4", "CODE3", "DESC3") { SpecialProcessingCode = "WI" },
+                    new Domain.Student.Entities.AdmissionDecisionType("2158ad73-3416-467b-99d5-1b7b92599389", "CODE4", "DESC4") { SpecialProcessingCode = "MS" }
                 };
 
                 //ApplicationSources
@@ -470,22 +470,67 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { personRole });
 
-                admissionRepositoryMock.Setup(i => i.GetPersonGuidsAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(personGuids);
+                personRepositoryMock.Setup(i => i.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(personGuids);
                 studentReferenceDataRepositoryMock.Setup(i => i.GetAdmissionApplicationTypesAsync(It.IsAny<bool>())).ReturnsAsync(admissionTypeEntities);
                 termRepositoryMock.Setup(i => i.GetAsync(It.IsAny<bool>())).ReturnsAsync(termEntities);
+                foreach (var termEntity in termEntities)
+                {
+                    termRepositoryMock.Setup(i => i.GetAcademicPeriodsGuidAsync(termEntity.Code)).ReturnsAsync(termEntity.RecordGuid);
+                }
+
                 studentReferenceDataRepositoryMock.Setup(i => i.GetAdmissionDecisionTypesAsync(It.IsAny<bool>())).ReturnsAsync(admissionStatusTypeEntities);
-                studentReferenceDataRepositoryMock.Setup(i => i.GetAdmissionDecisionTypesAsync(It.IsAny<bool>())).ReturnsAsync(admissionStatusTypeEntities);
+
+                foreach (var admissionStatusTypeEntity in admissionStatusTypeEntities)
+                {
+                    studentReferenceDataRepositoryMock.Setup(i => i.GetAdmissionDecisionTypesSPCodeAsync(admissionStatusTypeEntity.Code)).ReturnsAsync(admissionStatusTypeEntity.SpecialProcessingCode);
+                }              
                 studentReferenceDataRepositoryMock.Setup(i => i.GetApplicationSourcesAsync(It.IsAny<bool>())).ReturnsAsync(applicationSourceEntities);
+                foreach (var applicationSourceEntity in applicationSourceEntities)
+                {
+                    studentReferenceDataRepositoryMock.Setup(i => i.GetApplicationSourcesGuidAsync(applicationSourceEntity.Code)).ReturnsAsync(applicationSourceEntity.Guid);
+                }
+
                 studentReferenceDataRepositoryMock.Setup(i => i.GetAdmissionPopulationsAsync(It.IsAny<bool>())).ReturnsAsync(admissionPopulationEntities);
+                foreach (var admissionPopulationEntity in admissionPopulationEntities)
+                {
+                    studentReferenceDataRepositoryMock.Setup(i => i.GetAdmissionPopulationsGuidAsync(admissionPopulationEntity.Code)).ReturnsAsync(admissionPopulationEntity.Guid);
+                }
                 studentReferenceDataRepositoryMock.Setup(i => i.GetAdmissionResidencyTypesAsync(It.IsAny<bool>())).ReturnsAsync(admissionResidencyEntities);
+                foreach (var admissionResidencyEntity in admissionResidencyEntities)
+                {
+                    studentReferenceDataRepositoryMock.Setup(i => i.GetAdmissionResidencyTypesGuidAsync(admissionResidencyEntity.Code)).ReturnsAsync(admissionResidencyEntity.Guid);
+                }
                 studentReferenceDataRepositoryMock.Setup(i => i.GetAcademicLevelsAsync(It.IsAny<bool>())).ReturnsAsync(academicLevelEntities);
+                foreach (var academicLevelEntity in academicLevelEntities)
+                {
+                    studentReferenceDataRepositoryMock.Setup(i => i.GetAcademicLevelsGuidAsync(academicLevelEntity.Code)).ReturnsAsync(academicLevelEntity.Guid);
+                }
                 studentReferenceDataRepositoryMock.Setup(i => i.GetAcademicProgramsAsync(It.IsAny<bool>())).ReturnsAsync(academicProgramEntities);
+
+                foreach (var academicProgramEntity in academicProgramEntities)
+                {
+                    studentReferenceDataRepositoryMock.Setup(i => i.GetAcademicProgramsGuidAsync(academicProgramEntity.Code)).ReturnsAsync(academicProgramEntity.Guid);
+                }
                 studentReferenceDataRepositoryMock.Setup(i => i.GetWithdrawReasonsAsync(It.IsAny<bool>())).ReturnsAsync(withdrawReasonEntities);
+                foreach (var withdrawReasonEntity in withdrawReasonEntities)
+                {
+                    studentReferenceDataRepositoryMock.Setup(i => i.GetWithdrawReasonsGuidAsync(withdrawReasonEntity.Code)).ReturnsAsync(withdrawReasonEntity.Guid);
+                }
                 referenceRepositoryMock.Setup(i => i.GetLocationsAsync(It.IsAny<bool>())).ReturnsAsync(locationEntities);
+                foreach (var locationEntity in locationEntities)
+                {
+                    referenceRepositoryMock.Setup(i => i.GetLocationsGuidAsync(locationEntity.Code)).ReturnsAsync(locationEntity.Guid);
+                }
+
                 referenceRepositoryMock.Setup(i => i.GetAcademicDisciplinesAsync(It.IsAny<bool>())).ReturnsAsync(academicDisciplineEntities);
                 referenceRepositoryMock.Setup(i => i.GetSchoolsAsync(It.IsAny<bool>())).ReturnsAsync(schoolEntities);
 
-                studentReferenceDataRepositoryMock.Setup(i => i.GetAdmissionApplicationStatusTypesAsync(It.IsAny<bool>())).ReturnsAsync(admissionApplicationStatusTypes);
+                foreach (var schoolEntity in schoolEntities)
+                {
+                    referenceRepositoryMock.Setup(i => i.GetSchoolsGuidAsync(schoolEntity.Code)).ReturnsAsync(schoolEntity.Guid);
+                }
+
+                studentReferenceDataRepositoryMock.Setup(i => i.GetAdmissionApplicationStatusTypesAsync(It.IsAny<bool>())).ReturnsAsync(admissionApplicationStatusTypes);             
             }
 
             [TestMethod]
@@ -510,7 +555,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task AdmissionApplicationService__GetAdmissionApplications2Async()
             {
-                admissionRepositoryMock.Setup(i => i.GetAdmissionApplications2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(admissionEntitiesTuple);
+                admissionRepositoryMock.Setup(i => i.GetAdmissionApplicationsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(admissionEntitiesTuple);
                 var admissionApplications = await admissionApplicationService.GetAdmissionApplications2Async(offset, limit, false);
 
                 Assert.IsNotNull(admissionApplications);
@@ -521,29 +566,29 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     var expected = admissionDtosV11.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
                     Assert.IsNotNull(expected);
 
-                    Assert.AreEqual(expected.Id, actual.Id);
-                    Assert.AreEqual(expected.Applicant.Id, actual.Applicant.Id);
+                    Assert.AreEqual(expected.Id, actual.Id, "id");
+                    Assert.AreEqual(expected.Applicant.Id, actual.Applicant.Id, "Applicant.Id");
 
-                    if(expected.AcademicPeriod != null || actual.AcademicPeriod != null)
-                        Assert.AreEqual(expected.AcademicPeriod.Id, actual.AcademicPeriod.Id);
-                    Assert.AreEqual(expected.AcademicLoad, actual.AcademicLoad);
+                    if (expected.AcademicPeriod != null || actual.AcademicPeriod != null)
+                        Assert.AreEqual(expected.AcademicPeriod.Id, actual.AcademicPeriod.Id, "AcademicPeriod");
+                    Assert.AreEqual(expected.AcademicLoad, actual.AcademicLoad, "AcademicLoad");
                     if (expected.Type != null || actual.Type != null)
-                        Assert.AreEqual(expected.Type.Id, actual.Type.Id);
-                    Assert.AreEqual(expected.AppliedOn, actual.AppliedOn);
-                    Assert.AreEqual(expected.AdmittedOn, actual.AdmittedOn);
-                    Assert.AreEqual(expected.MatriculatedOn, actual.MatriculatedOn);
+                        Assert.AreEqual(expected.Type.Id, actual.Type.Id, "Type.Id");
+                    Assert.AreEqual(expected.AppliedOn, actual.AppliedOn, "AppliedOn");
+                    Assert.AreEqual(expected.AdmittedOn, actual.AdmittedOn, "AdmittedOn");
+                    Assert.AreEqual(expected.MatriculatedOn, actual.MatriculatedOn, "MatriculatedOn");
                     if (expected.Program != null || actual.Program != null)
-                        Assert.AreEqual(expected.Program.Id, actual.Program.Id);
+                        Assert.AreEqual(expected.Program.Id, actual.Program.Id, "Program.Id");
                     if (expected.AdmissionPopulation != null || actual.AdmissionPopulation != null)
-                        Assert.AreEqual(expected.AdmissionPopulation.Id, actual.AdmissionPopulation.Id);
+                        Assert.AreEqual(expected.AdmissionPopulation.Id, actual.AdmissionPopulation.Id, "AdmissionPopulation");
                     if (expected.Level != null || actual.Level != null)
-                        Assert.AreEqual(expected.Level.Id, actual.Level.Id);
+                        Assert.AreEqual(expected.Level.Id, actual.Level.Id, "Level.Id");
                     if (expected.ResidencyType != null || actual.ResidencyType != null)
-                        Assert.AreEqual(expected.ResidencyType.Id, actual.ResidencyType.Id);
+                        Assert.AreEqual(expected.ResidencyType.Id, actual.ResidencyType.Id, "ResidencyType.Id");
                     if (expected.Site != null || actual.Site != null)
-                        Assert.AreEqual(expected.Site.Id, actual.Site.Id);
+                        Assert.AreEqual(expected.Site.Id, actual.Site.Id, "Site.Id");
                     if (expected.School != null || actual.School != null)
-                        Assert.AreEqual(expected.School.Id, actual.School.Id);
+                        Assert.AreEqual(expected.School.Id, actual.School.Id, "School.Id");
 
                 }
             }
@@ -552,8 +597,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task AdmissionApplicationService__GetAdmissionApplicationByGuidAsync()
             {
                 var id = "0111d6ef-5a86-465f-ac58-4265a997c136";
-                var addmissionEntity = admissionEntities.FirstOrDefault(i => i.Guid.Equals(id));
-                admissionRepositoryMock.Setup(i => i.GetAdmissionApplicationByIdAsync(It.IsAny<string>())).ReturnsAsync(addmissionEntity);
+                var admissionEntity = admissionEntities.FirstOrDefault(i => i.Guid.Equals(id));
+                admissionRepositoryMock.Setup(i => i.GetAdmissionApplicationByIdAsync(It.IsAny<string>())).ReturnsAsync(admissionEntity);
 
                 var actual = await admissionApplicationService.GetAdmissionApplicationsByGuidAsync(id);
 
@@ -596,7 +641,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(Exception))]
             public async Task AdmissionApplications_GetAdmissionApplications2Async_Exception()
             {
-                admissionRepositoryMock.Setup(i => i.GetAdmissionApplications2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ThrowsAsync(new Exception());
+                admissionRepositoryMock.Setup(i => i.GetAdmissionApplicationsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ThrowsAsync(new Exception());
                 var actual = await admissionApplicationService.GetAdmissionApplications2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>());
             }
 
@@ -612,7 +657,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentNullException))]
             public async Task AdmissionApplications_GetAdmissionApplications2Async_ArgumentNullException()
             {
-                admissionRepositoryMock.Setup(i => i.GetAdmissionApplications2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ThrowsAsync(new ArgumentNullException());
+                admissionRepositoryMock.Setup(i => i.GetAdmissionApplicationsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ThrowsAsync(new ArgumentNullException());
                 var actual = await admissionApplicationService.GetAdmissionApplications2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>());
             }
 
@@ -628,7 +673,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task AdmissionApplications_GetAdmissionApplications2Async_KeyNotFoundException()
             {
-                admissionRepositoryMock.Setup(i => i.GetAdmissionApplications2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ThrowsAsync(new KeyNotFoundException());
+                admissionRepositoryMock.Setup(i => i.GetAdmissionApplicationsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ThrowsAsync(new KeyNotFoundException());
                 var actual = await admissionApplicationService.GetAdmissionApplications2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>());
             }
 
@@ -644,7 +689,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(PermissionsException))]
             public async Task AdmissionApplications_GetAdmissionApplications2Async_PermissionsException()
             {
-                admissionRepositoryMock.Setup(i => i.GetAdmissionApplications2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
+                admissionRepositoryMock.Setup(i => i.GetAdmissionApplicationsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
                 var actual = await admissionApplicationService.GetAdmissionApplications2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>());
             }
 
@@ -660,7 +705,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(InvalidOperationException))]
             public async Task AdmissionApplications_GetAdmissionApplications2Async_InvalidOperationException()
             {
-                admissionRepositoryMock.Setup(i => i.GetAdmissionApplications2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ThrowsAsync(new InvalidOperationException());
+                admissionRepositoryMock.Setup(i => i.GetAdmissionApplicationsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ThrowsAsync(new InvalidOperationException());
                 var actual = await admissionApplicationService.GetAdmissionApplications2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>());
             }
 
@@ -796,7 +841,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 var addmissionEntity = admissionEntities.FirstOrDefault(i => i.Guid.Equals(id));
                 admissionRepositoryMock.Setup(i => i.GetAdmissionApplicationByIdAsync(It.IsAny<string>())).ReturnsAsync(addmissionEntity);
 
-                admissionRepositoryMock.Setup(i => i.GetPersonGuidsAsync(It.IsAny<IEnumerable<string>>())).ThrowsAsync(new ArgumentNullException());
+                personRepositoryMock.Setup(i => i.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>())).ThrowsAsync(new ArgumentNullException());
                 var actual = await admissionApplicationService.GetAdmissionApplicationsByGuidAsync("abc");
             }
 
@@ -808,7 +853,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 var addmissionEntity = admissionEntities.FirstOrDefault(i => i.Guid.Equals(id));
                 admissionRepositoryMock.Setup(i => i.GetAdmissionApplicationByIdAsync(It.IsAny<string>())).ReturnsAsync(addmissionEntity);
 
-                admissionRepositoryMock.Setup(i => i.GetPersonGuidsAsync(It.IsAny<IEnumerable<string>>())).ThrowsAsync(new ArgumentNullException());
+                personRepositoryMock.Setup(i => i.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>())).ThrowsAsync(new ArgumentNullException());
                 var actual = await admissionApplicationService.GetAdmissionApplicationsByGuid2Async("abc");
             }
 
@@ -820,7 +865,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 var addmissionEntity = admissionEntities.FirstOrDefault(i => i.Guid.Equals(id));
                 admissionRepositoryMock.Setup(i => i.GetAdmissionApplicationByIdAsync(It.IsAny<string>())).ReturnsAsync(addmissionEntity);
 
-                admissionRepositoryMock.Setup(i => i.GetPersonGuidsAsync(It.IsAny<IEnumerable<string>>())).ThrowsAsync(new InvalidOperationException());
+                personRepositoryMock.Setup(i => i.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>())).ThrowsAsync(new InvalidOperationException());
                 var actual = await admissionApplicationService.GetAdmissionApplicationsByGuidAsync("abc");
             }
 
@@ -832,7 +877,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 var addmissionEntity = admissionEntities.FirstOrDefault(i => i.Guid.Equals(id));
                 admissionRepositoryMock.Setup(i => i.GetAdmissionApplicationByIdAsync(It.IsAny<string>())).ReturnsAsync(addmissionEntity);
 
-                admissionRepositoryMock.Setup(i => i.GetPersonGuidsAsync(It.IsAny<IEnumerable<string>>())).ThrowsAsync(new InvalidOperationException());
+                personRepositoryMock.Setup(i => i.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>())).ThrowsAsync(new InvalidOperationException());
                 var actual = await admissionApplicationService.GetAdmissionApplicationsByGuid2Async("abc");
             }
 
@@ -844,7 +889,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 var addmissionEntity = admissionEntities.FirstOrDefault(i => i.Guid.Equals(id));
                 admissionRepositoryMock.Setup(i => i.GetAdmissionApplicationByIdAsync(It.IsAny<string>())).ReturnsAsync(addmissionEntity);
 
-                admissionRepositoryMock.Setup(i => i.GetPersonGuidsAsync(It.IsAny<IEnumerable<string>>())).ThrowsAsync(new KeyNotFoundException());
+                personRepositoryMock.Setup(i => i.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>())).ThrowsAsync(new KeyNotFoundException());
                 var actual = await admissionApplicationService.GetAdmissionApplicationsByGuidAsync("abc");
             }
 
@@ -856,7 +901,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 var addmissionEntity = admissionEntities.FirstOrDefault(i => i.Guid.Equals(id));
                 admissionRepositoryMock.Setup(i => i.GetAdmissionApplicationByIdAsync(It.IsAny<string>())).ReturnsAsync(addmissionEntity);
 
-                admissionRepositoryMock.Setup(i => i.GetPersonGuidsAsync(It.IsAny<IEnumerable<string>>())).ThrowsAsync(new KeyNotFoundException());
+                personRepositoryMock.Setup(i => i.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>())).ThrowsAsync(new KeyNotFoundException());
                 var actual = await admissionApplicationService.GetAdmissionApplicationsByGuid2Async("abc");
             }
 
@@ -868,7 +913,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 var addmissionEntity = admissionEntities.FirstOrDefault(i => i.Guid.Equals(id));
                 admissionRepositoryMock.Setup(i => i.GetAdmissionApplicationByIdAsync(It.IsAny<string>())).ReturnsAsync(addmissionEntity);
 
-                admissionRepositoryMock.Setup(i => i.GetPersonGuidsAsync(It.IsAny<IEnumerable<string>>())).ThrowsAsync(new Exception());
+                personRepositoryMock.Setup(i => i.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>())).ThrowsAsync(new Exception());
                 var actual = await admissionApplicationService.GetAdmissionApplicationsByGuidAsync("abc");
             }
         }
@@ -987,10 +1032,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 admissionStatusTypeEntities = new List<Domain.Student.Entities.AdmissionDecisionType>()
                 {
-                    new Domain.Student.Entities.AdmissionDecisionType("b90812ee-b573-4acb-88b0-6999a050be4f", "CODE1", "DESC1"),
-                    new Domain.Student.Entities.AdmissionDecisionType("f9871d1d-a7c0-4239-b4e3-6ee6b5bc9d52", "CODE2", "DESC2"),
-                    new Domain.Student.Entities.AdmissionDecisionType("abe5524b-6704-4f09-b858-763ee2ab5fe4", "CODE3", "DESC3"),
-                    new Domain.Student.Entities.AdmissionDecisionType("2158ad73-3416-467b-99d5-1b7b92599389", "CODE4", "DESC4")
+                    new Domain.Student.Entities.AdmissionDecisionType("b90812ee-b573-4acb-88b0-6999a050be4f", "CODE1", "DESC1") { SpecialProcessingCode = "CO" },
+                    new Domain.Student.Entities.AdmissionDecisionType("f9871d1d-a7c0-4239-b4e3-6ee6b5bc9d52", "CODE2", "DESC2") { SpecialProcessingCode = "CO" },
+                    new Domain.Student.Entities.AdmissionDecisionType("abe5524b-6704-4f09-b858-763ee2ab5fe4", "CODE3", "DESC3") { SpecialProcessingCode = "CO" },
+                    new Domain.Student.Entities.AdmissionDecisionType("2158ad73-3416-467b-99d5-1b7b92599389", "CODE4", "DESC4") { SpecialProcessingCode = "CO" }
                 };
 
                 termEntities = new List<Domain.Student.Entities.Term>()
@@ -1102,22 +1147,71 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 
                 personRepositoryMock.Setup(x => x.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
                 studentReferenceDataRepositoryMock.Setup(i => i.GetAdmissionDecisionTypesAsync(It.IsAny<bool>())).ReturnsAsync(admissionStatusTypeEntities);
+                foreach (var admissionStatusTypeEntity in admissionStatusTypeEntities)
+                {
+                    studentReferenceDataRepositoryMock.Setup(i => i.GetAdmissionDecisionTypesSPCodeAsync(admissionStatusTypeEntity.Code)).ReturnsAsync(admissionStatusTypeEntity.SpecialProcessingCode);
+                }
                 termRepositoryMock.Setup(i => i.GetAsync(It.IsAny<bool>())).ReturnsAsync(termEntities);
+                foreach (var termEntity in termEntities)
+                {
+                    termRepositoryMock.Setup(i => i.GetAcademicPeriodsGuidAsync(termEntity.Code)).ReturnsAsync(termEntity.RecordGuid);
+                }
                 studentReferenceDataRepositoryMock.Setup(i => i.GetApplicationSourcesAsync(It.IsAny<bool>())).ReturnsAsync(applicationSourceEntities);
+                foreach (var applicationSourceEntity in applicationSourceEntities)
+                {
+                    studentReferenceDataRepositoryMock.Setup(i => i.GetApplicationSourcesGuidAsync(applicationSourceEntity.Code)).ReturnsAsync(applicationSourceEntity.Guid);
+                }
+
                 studentReferenceDataRepositoryMock.Setup(i => i.GetAdmissionPopulationsAsync(It.IsAny<bool>())).ReturnsAsync(admissionPopulationEntities);
+                foreach (var admissionPopulationEntity in admissionPopulationEntities)
+                {
+                    studentReferenceDataRepositoryMock.Setup(i => i.GetAdmissionPopulationsGuidAsync(admissionPopulationEntity.Code)).ReturnsAsync(admissionPopulationEntity.Guid);
+                }
                 referenceRepositoryMock.Setup(i => i.GetLocationsAsync(It.IsAny<bool>())).ReturnsAsync(locationEntities);
                 studentReferenceDataRepositoryMock.Setup(i => i.GetAdmissionResidencyTypesAsync(It.IsAny<bool>())).ReturnsAsync(admissionResidencyEntities);
+
+                foreach (var admissionResidencyEntity in admissionResidencyEntities)
+                {
+                    studentReferenceDataRepositoryMock.Setup(i => i.GetAdmissionResidencyTypesGuidAsync(admissionResidencyEntity.Code)).ReturnsAsync(admissionResidencyEntity.Guid);
+                }
                 studentReferenceDataRepositoryMock.Setup(i => i.GetAcademicProgramsAsync(It.IsAny<bool>())).ReturnsAsync(academicProgramEntities);
+                foreach (var academicProgramEntity in academicProgramEntities)
+                {
+                    studentReferenceDataRepositoryMock.Setup(i => i.GetAcademicProgramsGuidAsync(academicProgramEntity.Code)).ReturnsAsync(academicProgramEntity.Guid);
+                }
                 referenceRepositoryMock.Setup(i => i.GetAcademicDisciplinesAsync(It.IsAny<bool>())).ReturnsAsync(academicDisciplineEntities);
                 studentReferenceDataRepositoryMock.Setup(i => i.GetWithdrawReasonsAsync(It.IsAny<bool>())).ReturnsAsync(withdrawReasonEntities);
+                foreach (var withdrawReasonEntity in withdrawReasonEntities)
+                {
+                    studentReferenceDataRepositoryMock.Setup(i => i.GetWithdrawReasonsGuidAsync(withdrawReasonEntity.Code)).ReturnsAsync(withdrawReasonEntity.Guid);
+                }
                 studentReferenceDataRepositoryMock.Setup(i => i.GetAdmissionApplicationTypesAsync(It.IsAny<bool>())).ReturnsAsync(admissionTypeEntities);
+                foreach (var admissionTypeEntity in admissionTypeEntities)
+                {
+                    studentReferenceDataRepositoryMock.Setup(i => i.GetAdmissionApplicationTypesGuidAsync(admissionTypeEntity.Code)).ReturnsAsync(admissionTypeEntity.Guid);
+                }
                 studentReferenceDataRepositoryMock.Setup(i => i.GetAcademicLevelsAsync(It.IsAny<bool>())).ReturnsAsync(academicLevelEntities);
+                foreach (var academicLevelEntity in academicLevelEntities)
+                {
+                    studentReferenceDataRepositoryMock.Setup(i => i.GetAcademicLevelsGuidAsync(academicLevelEntity.Code)).ReturnsAsync(academicLevelEntity.Guid);
+
+                }
                 referenceRepositoryMock.Setup(i => i.GetSchoolsAsync(It.IsAny<bool>())).ReturnsAsync(schoolEntities);
+                foreach (var schoolEntity in schoolEntities)
+                {
+                    referenceRepositoryMock.Setup(i => i.GetSchoolsGuidAsync(schoolEntity.Code)).ReturnsAsync(schoolEntity.Guid);               }
+
                 admissionApplicationsRepositoryMock.Setup(x => x.CreateAdmissionApplicationAsync(It.IsAny<Domain.Student.Entities.AdmissionApplication>())).ReturnsAsync(admissionEntities.FirstOrDefault());
                 admissionApplicationsRepositoryMock.Setup(x => x.GetStaffOperIdsAsync(It.IsAny<List<string>>())).ReturnsAsync(personGuids);
-                admissionApplicationsRepositoryMock.Setup(i => i.GetPersonGuidsAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(personGuids);
+                personRepositoryMock.Setup(i => i.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(personGuids);
+
                 studentReferenceDataRepositoryMock.Setup(i => i.GetAdmissionApplicationStatusTypesAsync(It.IsAny<bool>())).ReturnsAsync(admissionApplicationStatusTypes);
-                personRepositoryMock.Setup(x => x.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("d190d4b5-03b5-41aa-99b8-b8286717c956");
+                foreach (var locationEntity in locationEntities)
+                {
+                    referenceRepositoryMock.Setup(i => i.GetLocationsGuidAsync(locationEntity.Code)).ReturnsAsync(locationEntity.Guid);
+                }
+
+                
                 admissionApplicationsRepositoryMock.Setup(x => x.GetRecordKeyAsync(It.IsAny<string>())).ReturnsAsync("1");
                 admissionApplicationsRepositoryMock.Setup(x => x.UpdateAdmissionApplicationAsync(It.IsAny<Domain.Student.Entities.AdmissionApplication>())).ReturnsAsync(admissionEntities.FirstOrDefault());
 
@@ -1194,7 +1288,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
             
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(ArgumentNullException))]
             public async Task AdmissionApplicationService_CreateAdmissionApplicationAsync_Owner_Id_Null()
             {
                 AdmissionApplication2 admissionApplication = new Dtos.AdmissionApplication2()
@@ -1288,7 +1382,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(ArgumentNullException))]
             public async Task AdmissionApplicationService_CreateAdmissionApplicationAsync_InstitutionAttended_Id_Null()
             {
 
@@ -1314,8 +1408,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task AdmissionApplicationService_CreateAdmissionApplicationAsync_ApplicantPersonKey_Null()
             {
                 personGuids = new Dictionary<string, string>() { { "4", "1110d4b5-03b5-41aa-99b8-b8286717c956" }, { "5", "222dce5a-54a7-45fb-a975-5392a579e5bf" } };
-                
-                admissionApplicationsRepositoryMock.Setup(i => i.GetPersonGuidsAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(personGuids);
+
+                personRepositoryMock.Setup(i => i.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(personGuids);
                 await admissionApplicationService.CreateAdmissionApplicationAsync(admissionDtosV11.FirstOrDefault());
             }
 
@@ -1323,7 +1417,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentNullException))]
             public async Task AdmissionApplicationService_CreateAdmissionApplicationAsync_ArgumentNullException()
             {
-                admissionApplicationsRepositoryMock.Setup(i => i.GetPersonGuidsAsync(It.IsAny<IEnumerable<string>>())).ThrowsAsync(new ArgumentNullException());
+                personRepositoryMock.Setup(i => i.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>())).ThrowsAsync(new ArgumentNullException());
                 await admissionApplicationService.CreateAdmissionApplicationAsync(admissionDtosV11.FirstOrDefault());
             }
 
@@ -1332,8 +1426,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task AdmissionApplicationService_CreateAdmissionApplicationAsync_InvalidOperationException()
             {
                 admissionDtosV11.FirstOrDefault().Type = null;
-            
-                admissionApplicationsRepositoryMock.Setup(i => i.GetPersonGuidsAsync(It.IsAny<IEnumerable<string>>())).ThrowsAsync(new InvalidOperationException());
+
+                personRepositoryMock.Setup(i => i.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>())).ThrowsAsync(new InvalidOperationException());
                 await admissionApplicationService.CreateAdmissionApplicationAsync(admissionDtosV11.FirstOrDefault());
             }
 
@@ -1354,7 +1448,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task AdmissionApplicationService_CreateAdmissionApplicationAsync_KeyNotFoundException()
             {
-                admissionApplicationsRepositoryMock.Setup(i => i.GetPersonGuidsAsync(It.IsAny<IEnumerable<string>>())).ThrowsAsync(new KeyNotFoundException());
+                personRepositoryMock.Setup(i => i.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>())).ThrowsAsync(new KeyNotFoundException());
                 await admissionApplicationService.CreateAdmissionApplicationAsync(admissionDtosV11.FirstOrDefault());
             }
 
@@ -1362,7 +1456,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(Exception))]
             public async Task AdmissionApplicationService_CreateAdmissionApplicationAsync_Exception()
             {
-                admissionApplicationsRepositoryMock.Setup(i => i.GetPersonGuidsAsync(It.IsAny<IEnumerable<string>>())).ThrowsAsync(new Exception());
+                personRepositoryMock.Setup(i => i.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>())).ThrowsAsync(new Exception());
                 await admissionApplicationService.CreateAdmissionApplicationAsync(admissionDtosV11.FirstOrDefault());
             }
 
@@ -1443,24 +1537,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 await admissionApplicationService.CreateAdmissionApplicationAsync(admissionDtosV11.FirstOrDefault());
             }
-
-            [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task AdmissionApplicationService_ConvertAdmissionApplicationsEntityToDto2_Level_Null()
-            {
-                academicLevelEntities = new List<Domain.Student.Entities.AcademicLevel>()
-                {
-                    new Domain.Student.Entities.AcademicLevel("b90812ee-b573-4acb-88b0-6999a050be4f", "CODE11", "DESC1"),
-                    new Domain.Student.Entities.AcademicLevel("f9871d1d-a7c0-4239-b4e3-6ee6b5bc9d52", "CODE22", "DESC2"),
-                    new Domain.Student.Entities.AcademicLevel("abe5524b-6704-4f09-b858-763ee2ab5fe4", "CODE33", "DESC3"),
-                    new Domain.Student.Entities.AcademicLevel("2158ad73-3416-467b-99d5-1b7b92599389", "CODE44", "DESC4")
-                };
-
-                studentReferenceDataRepositoryMock.Setup(i => i.GetAcademicLevelsAsync(It.IsAny<bool>())).ReturnsAsync(academicLevelEntities);
-                
-                await admissionApplicationService.CreateAdmissionApplicationAsync(admissionDtosV11.FirstOrDefault());
-            }
-
+        
             [TestMethod]
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task AdmissionApplicationService_ConvertAdmissionApplicationsEntityToDto2_WithDrawal_Null()
@@ -1474,7 +1551,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(ArgumentNullException))]
             public async Task AdmissionApplicationService_ConvertAdmissionApplicationsEntityToDto2_Attended_Null()
             {
                 admissionDtosV11.FirstOrDefault().Applicant = null;
@@ -1500,8 +1577,6 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 await admissionApplicationService.CreateAdmissionApplicationAsync(admissionDtosV11.FirstOrDefault());
             }
-
-
 
             [TestMethod]
             public async Task AdmissionApplicationService_CreateAdmissionApplicationAsync()
@@ -1565,8 +1640,6 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
 
             #endregion
-
-
         }
     }
 }

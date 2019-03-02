@@ -297,6 +297,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App_Start\BundleConfig.cs" />
+    <Compile Include="App_Start\F09RouteConfig.cs" />
     <Compile Include="App_Start\FilterConfig.cs" />
     <Compile Include="App_Start\RouteConfig.cs" />
     <Compile Include="Areas\Student\Controllers\TestController.cs" />
@@ -343,6 +344,8 @@
     <Compile Include="Controllers\ColleagueFinance\ColleagueFinanceTaxFormStatementsController.cs" />
     <Compile Include="Controllers\ColleagueFinance\ColleagueFinanceTaxFormPdfsController.cs" />
     <Compile Include="Controllers\ColleagueFinance\PurchasingArrangementsController.cs" />
+    <Compile Include="Controllers\F09\ActiveRestrictionsController.cs" />
+    <Compile Include="Controllers\F09\StudentRestrictionController.cs" />
     <Compile Include="Controllers\HumanResources\LeaveBalanceConfigurationController.cs" />
     <Compile Include="Controllers\Student\SectionRegistrationsGradeOptionsController.cs" />
     <Compile Include="Controllers\Student\StudentUnverifiedGradesSubmissionsController.cs" />
@@ -956,6 +959,10 @@
       <Project>{7461afa8-f600-4df5-9b43-6fed35402279}</Project>
       <Name>Ellucian.Colleague.Coordination.ColleagueFinance</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Coordination.F09\Ellucian.Colleague.Coordination.F09.csproj">
+      <Project>{d934feda-6bdf-4f44-89d8-85db7a115f72}</Project>
+      <Name>Ellucian.Colleague.Coordination.F09</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Ellucian.Colleague.Coordination.Finance\Ellucian.Colleague.Coordination.Finance.csproj">
       <Project>{E58B8C16-5BF9-45E5-934B-1C4804B157E4}</Project>
       <Name>Ellucian.Colleague.Coordination.Finance</Name>
@@ -979,6 +986,10 @@
     <ProjectReference Include="..\Ellucian.Colleague.Data.ColleagueFinance\Ellucian.Colleague.Data.ColleagueFinance.csproj">
       <Project>{8dd19909-a3b4-486f-959f-ac0a9cfd963c}</Project>
       <Name>Ellucian.Colleague.Data.ColleagueFinance</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Data.F09\Ellucian.Colleague.Data.F09.csproj">
+      <Project>{52ebaf5f-051a-44cd-8948-999eac4d054b}</Project>
+      <Name>Ellucian.Colleague.Data.F09</Name>
     </ProjectReference>
     <ProjectReference Include="..\Ellucian.Colleague.Data.Finance\Ellucian.Colleague.Data.Finance.csproj">
       <Project>{51453AB3-7CD4-4319-863E-24C08E205C9E}</Project>
@@ -1027,6 +1038,10 @@
     <ProjectReference Include="..\Ellucian.Colleague.Dtos.ColleagueFinance\Ellucian.Colleague.Dtos.ColleagueFinance.csproj">
       <Project>{ca034d7a-0963-4463-b974-bef18be515ae}</Project>
       <Name>Ellucian.Colleague.Dtos.ColleagueFinance</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos.F09\Ellucian.Colleague.Dtos.F09.csproj">
+      <Project>{600aec4b-3539-4a67-9c6d-a6d7a1ffe23a}</Project>
+      <Name>Ellucian.Colleague.Dtos.F09</Name>
     </ProjectReference>
     <ProjectReference Include="..\Ellucian.Colleague.Dtos.Finance\Ellucian.Colleague.Dtos.Finance.csproj">
       <Project>{F2409F02-791E-43B3-85E3-B577226FCF55}</Project>

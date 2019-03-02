@@ -9,8 +9,9 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Ellucian.Colleague.Data.F09</RootNamespace>
     <AssemblyName>Ellucian.Colleague.Data.F09</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -30,8 +31,36 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Ellucian.Colleague.Domain">
+      <HintPath>..\Ellucian.Colleague.Coordination.Base\bin\Debug\Ellucian.Colleague.Domain.dll</HintPath>
+    </Reference>
+    <Reference Include="Ellucian.Data.Colleague">
+      <HintPath>..\Ellucian.Colleague.Data.Base\bin\Debug\Ellucian.Data.Colleague.dll</HintPath>
+    </Reference>
+    <Reference Include="Ellucian.Dmi.Runtime">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Dmi.Runtime.dll</HintPath>
+    </Reference>
+    <Reference Include="Ellucian.Web.Adapters">
+      <HintPath>..\packages\Ellucian.Web.Adapters.1.0.0.177\lib\net451\Ellucian.Web.Adapters.dll</HintPath>
+    </Reference>
+    <Reference Include="Ellucian.Web.Cache">
+      <HintPath>..\Ellucian.Colleague.Data.Base\bin\Debug\Ellucian.Web.Cache.dll</HintPath>
+    </Reference>
+    <Reference Include="Ellucian.Web.Dependency">
+      <HintPath>..\packages\Ellucian.Web.Dependency.1.0.0.187\lib\net451\Ellucian.Web.Dependency.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=7.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Ellucian.Colleague.Dtos.Base\bin\Debug\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="slf4net">
+      <HintPath>..\Ellucian.Colleague.Data.Base\bin\Debug\slf4net.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Web" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -48,6 +77,15 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="DataContracts\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Ellucian.Colleague.Domain.F09\Ellucian.Colleague.Domain.F09.csproj">
+      <Project>{bce0190a-cc69-4e01-8f3c-0acbff56ad15}</Project>
+      <Name>Ellucian.Colleague.Domain.F09</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <WCFMetadata Include="Service References\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

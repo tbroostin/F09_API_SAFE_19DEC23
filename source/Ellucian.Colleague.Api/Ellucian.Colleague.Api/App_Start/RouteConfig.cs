@@ -39,6 +39,12 @@ namespace Ellucian.Colleague.Api
         {
             routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
 
+            #region F09
+
+            F09RouteConfig.RegisterRoutes(routes);
+
+            #endregion
+
             #region About
 
             routes.MapHttpRoute(

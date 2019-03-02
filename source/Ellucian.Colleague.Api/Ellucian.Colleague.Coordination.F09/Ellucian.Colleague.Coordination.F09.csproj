@@ -9,8 +9,9 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Ellucian.Colleague.Coordination.F09</RootNamespace>
     <AssemblyName>Ellucian.Colleague.Coordination.F09</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -30,6 +31,30 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Ellucian.Colleague.Coordination.Base">
+      <HintPath>..\Ellucian.Colleague.Coordination.Base\bin\Debug\Ellucian.Colleague.Coordination.Base.dll</HintPath>
+    </Reference>
+    <Reference Include="Ellucian.Colleague.Domain">
+      <HintPath>..\Ellucian.Colleague.Coordination.Base\bin\Debug\Ellucian.Colleague.Domain.dll</HintPath>
+    </Reference>
+    <Reference Include="Ellucian.Colleague.Domain.Base">
+      <HintPath>..\Ellucian.Colleague.Domain.Base\bin\Debug\Ellucian.Colleague.Domain.Base.dll</HintPath>
+    </Reference>
+    <Reference Include="Ellucian.Web.Adapters">
+      <HintPath>..\packages\Ellucian.Web.Adapters.1.0.0.177\lib\net451\Ellucian.Web.Adapters.dll</HintPath>
+    </Reference>
+    <Reference Include="Ellucian.Web.Dependency">
+      <HintPath>..\packages\Ellucian.Web.Dependency.1.0.0.187\lib\net451\Ellucian.Web.Dependency.dll</HintPath>
+    </Reference>
+    <Reference Include="Ellucian.Web.Http">
+      <HintPath>..\Ellucian.Web.Http\bin\Debug\Ellucian.Web.Http.dll</HintPath>
+    </Reference>
+    <Reference Include="Ellucian.Web.Security">
+      <HintPath>..\packages\Ellucian.Web.Security.1.0.0.206\lib\net451\Ellucian.Web.Security.dll</HintPath>
+    </Reference>
+    <Reference Include="slf4net">
+      <HintPath>..\Ellucian.Colleague.Data.Base\bin\Debug\slf4net.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -48,6 +73,19 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Adapters\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Ellucian.Colleague.Domain.F09\Ellucian.Colleague.Domain.F09.csproj">
+      <Project>{bce0190a-cc69-4e01-8f3c-0acbff56ad15}</Project>
+      <Name>Ellucian.Colleague.Domain.F09</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos.F09\Ellucian.Colleague.Dtos.F09.csproj">
+      <Project>{600aec4b-3539-4a67-9c6d-a6d7a1ffe23a}</Project>
+      <Name>Ellucian.Colleague.Dtos.F09</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <WCFMetadata Include="Service References\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

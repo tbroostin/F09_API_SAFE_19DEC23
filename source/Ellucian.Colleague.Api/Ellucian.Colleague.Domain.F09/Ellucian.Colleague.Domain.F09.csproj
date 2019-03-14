@@ -42,10 +42,14 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Entities\GetActiveRestrictionsResponse.cs" />
+    <Compile Include="Entities\ScholarshipApplicationRequest.cs" />
+    <Compile Include="Entities\ScholarshipApplicationAwards.cs" />
     <Compile Include="Entities\UpdateStudentRestrictionRequest.cs" />
+    <Compile Include="Entities\ScholarshipApplicationResponse.cs" />
     <Compile Include="Entities\UpdateStudentRestrictionResponse.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Repositories\IGetActiveRestrictionsRepository.cs" />
+    <Compile Include="Repositories\IScholarshipApplicationRepository.cs" />
     <Compile Include="Repositories\IUpdateStudentRestrictionRepository.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

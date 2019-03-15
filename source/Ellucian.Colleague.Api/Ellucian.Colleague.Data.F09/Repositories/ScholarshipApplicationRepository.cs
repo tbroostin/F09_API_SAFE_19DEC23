@@ -26,7 +26,7 @@ namespace Ellucian.Colleague.Data.F09.Repositories
         {
             var request = new F09_ScholarshipApplicationRequest();
             request.Id = personId;
-            request.RequestType = "GET";
+            request.RequestType = "Get";
 
             ScholarshipApplicationResponse application;
 

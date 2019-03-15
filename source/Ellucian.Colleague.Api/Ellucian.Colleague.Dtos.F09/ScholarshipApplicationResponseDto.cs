@@ -51,5 +51,59 @@ namespace Ellucian.Colleague.Dtos.F09
         public string ErrorMsg { get; set; }
 
         public List<ScholarshipApplicationAwardsDto> Awards { get; set; }
+
+        // Constructors
+        public ScholarshipApplicationResponseDto()
+        { }
+
+        public ScholarshipApplicationResponseDto
+        (
+            string id,
+            string respondType,
+            string msgHtml,
+            string studentName,
+            string studentEmail,
+            string studentAddress,
+            string applDeadline,
+            string applTerm,
+            string xfstId,
+            string xfstPrevSubmit,
+            string xfstRefName,
+            List<string> xfstSelfRateDesc,
+            List<string> xfstResearchInt,
+            List<string> xfstDissTopic,
+            List<string> xfstFinSit,
+            string xfstSelfRate,
+            string step1Html,
+            string step2Html,
+            string step3Html,
+            string step4Html,
+            string errorMsg,
+            List<ScholarshipApplicationAwardsDto> awards
+        )
+        {
+            this.Id = id;
+            this.RespondType = respondType;
+            this.MsgHtml = msgHtml;
+            this.StudentName = studentName;
+            this.StudentEmail = studentEmail;
+            this.StudentAddress = studentAddress;
+            this.ApplDeadline = applDeadline;
+            this.ApplTerm = applTerm;
+            this.XfstId = xfstId;
+            this.XfstPrevSubmit = xfstPrevSubmit;
+            this.XfstRefName = xfstRefName;
+            this.XfstSelfRateDesc = xfstSelfRateDesc;
+            this.XfstResearchInt = xfstResearchInt;
+            this.XfstDissTopic = xfstDissTopic;
+            this.XfstFinSit = xfstFinSit;
+            this.XfstSelfRate = xfstSelfRate;
+            this.Step1Html = step1Html;
+            this.Step2Html = step2Html;
+            this.Step3Html = step3Html;
+            this.Step4Html = step4Html;
+            this.ErrorMsg = errorMsg;
+            this.Awards = awards;
+        }
     }
 }

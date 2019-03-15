@@ -52,10 +52,11 @@ namespace Ellucian.Colleague.Api
                 }
             );
 
+            // F09 added here on 03-14-2019
             routes.MapHttpRoute(
-                name: "GetF09StudentRestrictionById2",
-                routeTemplate: "F09/student-restriction2/{personId}",
-                defaults: new { controller = "StudentRestriction2", action = "GetStudentRestrictionAsync" },
+                name: "GetF09ScholarshipApplicationById",
+                routeTemplate: "F09/get-scholarship-application/{personId}",
+                defaults: new { controller = "ScholarshipApplication", action = "GetScholarshipApplicationAsync" },
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("GET"),
@@ -64,9 +65,9 @@ namespace Ellucian.Colleague.Api
             );
 
             routes.MapHttpRoute(
-                name: "UpdateF09StudentRestriction2",
-                routeTemplate: "F09/student-restriction2",
-                defaults: new { controller = "StudentRestriction2", action = "PutStudentRestrictionAsync" },
+                name: "UpdateF09ScholarshipApplication2",
+                routeTemplate: "F09/update-scholarship-application",
+                defaults: new { controller = "ScholarshipApplication", action = "PutScholarshipApplicationAsync" },
                 constraints: new
                 {
                     httpMethod = new HttpMethodConstraint("PUT"),

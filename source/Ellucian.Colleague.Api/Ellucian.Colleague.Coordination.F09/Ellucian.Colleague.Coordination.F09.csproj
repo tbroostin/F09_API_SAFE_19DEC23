@@ -68,7 +68,9 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Services\GetActiveRestrictionsService.cs" />
     <Compile Include="Services\IGetActiveRestrictionsService.cs" />
+    <Compile Include="Services\IScholarshipApplicationService.cs" />
     <Compile Include="Services\IUpdateStudentRestrictionService.cs" />
+    <Compile Include="Services\ScholarshipApplicationService.cs" />
     <Compile Include="Services\UpdateStudentRestrictionService.cs" />
   </ItemGroup>
   <ItemGroup>

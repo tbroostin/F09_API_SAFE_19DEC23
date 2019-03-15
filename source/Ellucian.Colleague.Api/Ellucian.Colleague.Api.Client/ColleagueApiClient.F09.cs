@@ -10,8 +10,9 @@ namespace Ellucian.Colleague.Api.Client
     {
         private static readonly string F09ActiveRestrictions = "f09/active-restrictions";
         private static readonly string F09StudentRestriction = "f09/student-restriction";
-        private static readonly string F09ActiveRestrictions2 = "f09/active-restrictions2";
-        private static readonly string F09StudentRestriction2 = "f09/student-restriction2";
 
+        // F09 added here on 03-14-2019
+        private static readonly string F09GetScholarshipApplication = "f09/get-scholarship-application";
+        private static readonly string F09UpdateScholarshipApplication = "f09/update-scholarship-application";
     }
 }

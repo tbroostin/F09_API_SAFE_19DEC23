@@ -83,5 +83,53 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
+        // F09 added on 03-14-2019
+        public async Task<ScholarshipApplicationResponseDto> GetF09ScholarshipApplicationAsync(string personId)
+        {
+            if (string.IsNullOrEmpty(personId))
+            {
+                throw new ArgumentNullException("personId", "ID cannot be empty/null for User Profile retrieval.");
+            }
+            try
+            {
+                var baseUrl = UrlUtility.CombineUrlPath(F09GetScholarshipApplication, personId);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(baseUrl, headers: headers);
+                var myProfile = JsonConvert.DeserializeObject<ScholarshipApplicationResponseDto>(await response.Content.ReadAsStringAsync());
+
+                return myProfile;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to GetF09ScholarshipApplicationAsync");
+                throw;
+            }
+        }
+
+        public async Task<HttpResponseMessage> PutF09ScholarshipApplicationAsync(ScholarshipApplicationRequestDto request)
+        {
+            if (request == null)
+            {
+                throw new ArgumentNullException("userProfile", "User Profile cannot be null.");
+            }
+            try
+            {
+                var baseUrl = UrlUtility.CombineUrlPath(F09UpdateScholarshipApplication);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                var response = await ExecutePutRequestWithResponseAsync(request, baseUrl, headers: headers);
+                return response;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to PutF09ScholarshipApplicationAsync.");
+                throw;
+            }
+        }
     }
 }

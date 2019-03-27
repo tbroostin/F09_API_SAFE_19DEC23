@@ -28,5 +28,7 @@ namespace Ellucian.Colleague.Domain.F09.Entities
         public string XfstSelfRate { get; set; }
 
         public List<ScholarshipApplicationAwards> Awards { get; set; }
+
+        public List<ScholarshipApplicationSoftQ> SoftQs { get; set; }
     }
 }

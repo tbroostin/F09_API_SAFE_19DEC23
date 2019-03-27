@@ -15,6 +15,8 @@ namespace Ellucian.Colleague.Domain.F09.Entities
 
         public string MsgHtml { get; set; }
 
+        public string SoftQHtml { get; set; }
+
         public string StudentName { get; set; }
 
         public string StudentEmail { get; set; }
@@ -52,5 +54,7 @@ namespace Ellucian.Colleague.Domain.F09.Entities
         public string ErrorMsg { get; set; }
 
         public List<ScholarshipApplicationAwards> Awards { get; set; }
+
+        public List<ScholarshipApplicationSoftQ> SoftQs { get; set; }
     }
 }

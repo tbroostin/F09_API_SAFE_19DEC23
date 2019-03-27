@@ -67,10 +67,22 @@ namespace Ellucian.Colleague.Data.F09.Repositories
                 award.AwDesc = reqAward.Desc;
                 award.AwMinMax = reqAward.MinMax;
                 award.AwAddnlRequ = reqAward.AddnlRequ;
+                award.AwLorEmailRequ = reqAward.LorEmailRequ;
+                award.AwLorEmail = reqAward.LorEmail;
                 award.AwChecked = reqAward.Checked;
                 awards.Add(award);
             }
             request.Awards = awards;
+
+            List<SoftQ> softQs = new List<SoftQ>();
+            foreach (ScholarshipApplicationSoftQ reqSoftQ in applicationRequest.SoftQs)
+            {
+                SoftQ softQ = new SoftQ();
+                softQ.SoftQCode = reqSoftQ.Code;
+                softQ.SoftQDesc = reqSoftQ.Desc;
+                softQ.SoftQChecked = reqSoftQ.Checked;
+            }
+            request.SoftQ = softQs;
 
             ScholarshipApplicationResponse application;
 
@@ -94,6 +106,7 @@ namespace Ellucian.Colleague.Data.F09.Repositories
             application.Id = response.Id;
             application.RespondType = response.RespondType;
             application.MsgHtml = response.MsgHtml;
+            application.SoftQHtml = response.SoftQHtml;
             application.StudentName = response.StudentName;
             application.StudentEmail = response.StudentEmail;
             application.StudentAddress = response.StudentAddress;
@@ -122,10 +135,22 @@ namespace Ellucian.Colleague.Data.F09.Repositories
                 award.Desc = respAward.AwDesc;
                 award.MinMax = respAward.AwMinMax;
                 award.AddnlRequ = respAward.AwAddnlRequ;
+                award.LorEmailRequ = respAward.AwLorEmailRequ;
+                award.LorEmail = respAward.AwLorEmail;
                 award.Checked = respAward.AwChecked;
                 awards.Add(award);
             }
             application.Awards = awards;
+
+            List<ScholarshipApplicationSoftQ> softQs = new List<ScholarshipApplicationSoftQ>();
+            foreach (SoftQ respSoftQ in response.SoftQ)
+            {
+                ScholarshipApplicationSoftQ softQ = new ScholarshipApplicationSoftQ();
+                softQ.Code = respSoftQ.SoftQCode;
+                softQ.Desc = respSoftQ.SoftQDesc;
+                softQ.Checked = respSoftQ.SoftQChecked;
+            }
+            application.SoftQs = softQs;
 
             return application;
         }

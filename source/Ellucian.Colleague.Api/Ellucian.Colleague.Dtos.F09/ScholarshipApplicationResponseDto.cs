@@ -14,6 +14,8 @@ namespace Ellucian.Colleague.Dtos.F09
 
         public string MsgHtml { get; set; }
 
+        public string SoftQHtml { get; set; }
+
         public string StudentName { get; set; }
 
         public string StudentEmail { get; set; }
@@ -52,6 +54,8 @@ namespace Ellucian.Colleague.Dtos.F09
 
         public List<ScholarshipApplicationAwardsDto> Awards { get; set; }
 
+        public List<ScholarshipApplicationSoftQDto> SoftQs { get; set; }
+
         // Constructors
         public ScholarshipApplicationResponseDto()
         { }
@@ -61,6 +65,7 @@ namespace Ellucian.Colleague.Dtos.F09
             string id,
             string respondType,
             string msgHtml,
+            string softQHtml,
             string studentName,
             string studentEmail,
             string studentAddress,
@@ -79,12 +84,14 @@ namespace Ellucian.Colleague.Dtos.F09
             string step3Html,
             string step4Html,
             string errorMsg,
-            List<ScholarshipApplicationAwardsDto> awards
+            List<ScholarshipApplicationAwardsDto> awards,
+            List<ScholarshipApplicationSoftQDto> softQs
         )
         {
             this.Id = id;
             this.RespondType = respondType;
             this.MsgHtml = msgHtml;
+            this.SoftQHtml = softQHtml;
             this.StudentName = studentName;
             this.StudentEmail = studentEmail;
             this.StudentAddress = studentAddress;
@@ -104,6 +111,7 @@ namespace Ellucian.Colleague.Dtos.F09
             this.Step4Html = step4Html;
             this.ErrorMsg = errorMsg;
             this.Awards = awards;
+            this.SoftQs = softQs;
         }
     }
 }

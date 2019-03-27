@@ -27,5 +27,7 @@ namespace Ellucian.Colleague.Dtos.F09
         public string XfstSelfRate { get; set; }
 
         public List<ScholarshipApplicationAwardsDto> Awards { get; set; }
+
+        public List<ScholarshipApplicationSoftQDto> SoftQs { get; set; }
     }
 }

@@ -49,6 +49,35 @@ namespace Ellucian.Colleague.Coordination.F09.Services
             applicationRequest.XfstFinSit = request.XfstFinSit;
             applicationRequest.XfstSelfRate = request.XfstSelfRate;
 
+            List<Ellucian.Colleague.Domain.F09.Entities.ScholarshipApplicationAwards> awards = new List<Ellucian.Colleague.Domain.F09.Entities.ScholarshipApplicationAwards>();
+            foreach (ScholarshipApplicationAwardsDto reqAward in request.Awards)
+            {
+                Ellucian.Colleague.Domain.F09.Entities.ScholarshipApplicationAwards award = new Ellucian.Colleague.Domain.F09.Entities.ScholarshipApplicationAwards();
+                award.Id = reqAward.Id;
+                award.Title = reqAward.Title;
+                award.Desc = reqAward.Desc;
+                award.MinMax = reqAward.MinMax;
+                award.AddnlRequ = reqAward.AddnlRequ;
+                award.LorEmailRequ = reqAward.LorEmailRequ;
+                award.LorEmail = reqAward.LorEmail;
+                award.Checked = reqAward.Checked;
+                awards.Add(award);
+            }
+
+            applicationRequest.Awards = awards;
+
+            List<Ellucian.Colleague.Domain.F09.Entities.ScholarshipApplicationSoftQ> softQs = new List<Ellucian.Colleague.Domain.F09.Entities.ScholarshipApplicationSoftQ>();
+            foreach (ScholarshipApplicationSoftQDto reqSoftQ in request.SoftQs)
+            {
+                Ellucian.Colleague.Domain.F09.Entities.ScholarshipApplicationSoftQ softQ = new Ellucian.Colleague.Domain.F09.Entities.ScholarshipApplicationSoftQ();
+                softQ.Code = reqSoftQ.Code;
+                softQ.Desc = reqSoftQ.Desc;
+                softQ.Checked = reqSoftQ.Checked;
+                softQs.Add(softQ);
+            }
+
+            applicationRequest.SoftQs = softQs;
+
             var application = await _ScholarshipApplicationRepository.UpdateScholarshipApplicationAsync(applicationRequest);
             var dto = this.ConvertToDTO(application);
 
@@ -66,8 +95,20 @@ namespace Ellucian.Colleague.Coordination.F09.Services
                 award.Desc = respAward.Desc;
                 award.MinMax = respAward.MinMax;
                 award.AddnlRequ = respAward.AddnlRequ;
+                award.LorEmailRequ = respAward.LorEmailRequ;
+                award.LorEmail = respAward.LorEmail;
                 award.Checked = respAward.Checked;
                 awards.Add(award);
+            }
+
+            List<ScholarshipApplicationSoftQDto> softQs = new List<ScholarshipApplicationSoftQDto>();
+            foreach (Ellucian.Colleague.Domain.F09.Entities.ScholarshipApplicationSoftQ respSoftQ in application.SoftQs)
+            {
+                ScholarshipApplicationSoftQDto softQ = new ScholarshipApplicationSoftQDto();
+                softQ.Code = respSoftQ.Code;
+                softQ.Desc = respSoftQ.Desc;
+                softQ.Checked = respSoftQ.Checked;
+                softQs.Add(softQ);
             }
 
             var dto = new ScholarshipApplicationResponseDto
@@ -75,6 +116,7 @@ namespace Ellucian.Colleague.Coordination.F09.Services
                 application.Id,
                 application.RespondType,
                 application.MsgHtml,
+                application.SoftQHtml,
                 application.StudentName,
                 application.StudentEmail,
                 application.StudentAddress,
@@ -93,7 +135,8 @@ namespace Ellucian.Colleague.Coordination.F09.Services
                 application.Step3Html,
                 application.Step4Html,
                 application.ErrorMsg,
-                awards
+                awards,
+                softQs
             );
 
             return dto;

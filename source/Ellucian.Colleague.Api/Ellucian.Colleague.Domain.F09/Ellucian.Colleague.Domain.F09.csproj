@@ -42,6 +42,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Entities\GetActiveRestrictionsResponse.cs" />
+    <Compile Include="Entities\ScholarshipApplicationSoftQ.cs" />
     <Compile Include="Entities\ScholarshipApplicationRequest.cs" />
     <Compile Include="Entities\ScholarshipApplicationAwards.cs" />
     <Compile Include="Entities\UpdateStudentRestrictionRequest.cs" />

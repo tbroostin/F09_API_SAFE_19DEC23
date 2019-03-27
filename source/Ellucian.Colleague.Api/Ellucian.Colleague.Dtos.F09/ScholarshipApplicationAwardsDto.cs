@@ -18,6 +18,10 @@ namespace Ellucian.Colleague.Dtos.F09
 
         public string AddnlRequ { get; set; }
 
+        public bool LorEmailRequ { get; set; }
+
+        public string LorEmail { get; set; }
+
         public bool Checked { get; set; }
     }
 }

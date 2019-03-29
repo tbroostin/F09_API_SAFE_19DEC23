@@ -1311,7 +1311,7 @@
           <AutoAssignPort>True</AutoAssignPort>
           <DevelopmentServerPort>57276</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
-          <IISUrl>http://localhost/Ellucian.Colleague.Api</IISUrl>
+          <IISUrl>http://localhost/Ellucian.Colleague.Api.F09D</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>
           <UseCustomServer>False</UseCustomServer>
           <CustomServerUrl>

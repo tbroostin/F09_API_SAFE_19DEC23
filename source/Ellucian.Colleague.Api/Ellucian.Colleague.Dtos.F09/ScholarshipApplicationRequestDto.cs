@@ -16,13 +16,13 @@ namespace Ellucian.Colleague.Dtos.F09
 
         public string XfstRefName { get; set; }
 
-        public List<string> XfstSelfRateDesc { get; set; }
+        public string XfstSelfRateDesc { get; set; }
 
-        public List<string> XfstResearchInt { get; set; }
+        public string XfstResearchInt { get; set; }
 
-        public List<string> XfstDissTopic { get; set; }
+        public string XfstDissTopic { get; set; }
 
-        public List<string> XfstFinSit { get; set; }
+        public string XfstFinSit { get; set; }
 
         public string XfstSelfRate { get; set; }
 

@@ -81,6 +81,7 @@ namespace Ellucian.Colleague.Data.F09.Repositories
                 softQ.SoftQCode = reqSoftQ.Code;
                 softQ.SoftQDesc = reqSoftQ.Desc;
                 softQ.SoftQChecked = reqSoftQ.Checked;
+                softQs.Add(softQ);
             }
             request.SoftQ = softQs;
 
@@ -149,6 +150,7 @@ namespace Ellucian.Colleague.Data.F09.Repositories
                 softQ.Code = respSoftQ.SoftQCode;
                 softQ.Desc = respSoftQ.SoftQDesc;
                 softQ.Checked = respSoftQ.SoftQChecked;
+                softQs.Add(softQ);
             }
             application.SoftQs = softQs;
 

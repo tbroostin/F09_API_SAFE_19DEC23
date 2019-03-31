@@ -13,6 +13,30 @@ namespace Ellucian.Colleague.Api.Client
 {
     public partial class ColleagueApiClient
     {
+        public async Task<GetF09StuTrackingSheetResponseDto> GetF09StuTrackingSheetAsync(string Id)
+        {
+            if (string.IsNullOrEmpty(Id))
+            {
+                throw new ArgumentNullException("Id", "ID cannot be empty/null for Tracking Sheet retrieval.");
+            }
+            try
+            {
+                var baseUrl = UrlUtility.CombineUrlPath(F09StuTrackingSheet, Id);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(baseUrl, headers: headers);
+                var stuTrackingSheet = JsonConvert.DeserializeObject<GetF09StuTrackingSheetResponseDto>(await response.Content.ReadAsStringAsync());
+
+                return stuTrackingSheet;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to GetF09StuTrackingSheetAsync");
+                throw;
+            }
+        }
+
         public async Task<GetActiveRestrictionsResponseDto> GetF09ActiveRestrictionsAsync(string personId)
         {
             if (string.IsNullOrEmpty(personId))

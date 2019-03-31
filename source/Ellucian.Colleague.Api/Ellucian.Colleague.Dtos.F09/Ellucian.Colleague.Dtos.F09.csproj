@@ -42,6 +42,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="GetActiveRestrictionsResponseDto.cs" />
+    <Compile Include="GetF09StuTrackingSheetResponseDto.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="UpdateStudentRestrictionRequestDto.cs" />
     <Compile Include="UpdateStudentRestrictionResponseDto.cs" />

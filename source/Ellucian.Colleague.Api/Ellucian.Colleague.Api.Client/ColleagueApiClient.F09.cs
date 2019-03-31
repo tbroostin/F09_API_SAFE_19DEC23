@@ -12,6 +12,7 @@ namespace Ellucian.Colleague.Api.Client
         private static readonly string F09StudentRestriction = "f09/student-restriction";
         private static readonly string F09ActiveRestrictions2 = "f09/active-restrictions2";
         private static readonly string F09StudentRestriction2 = "f09/student-restriction2";
+        private static readonly string F09StuTrackingSheet = "f09/f09StuTrackingSheet";
 
     }
 }

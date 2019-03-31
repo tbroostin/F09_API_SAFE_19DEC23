@@ -73,6 +73,17 @@ namespace Ellucian.Colleague.Api
                     headerVersion = new HeaderVersionConstraint(1, true)
                 }
             );
+
+            routes.MapHttpRoute(
+                 name: "GetF09StuTrackingSheetById",
+                 routeTemplate: "f09/f09StuTrackingSheet/{Id}",
+                 defaults: new { controller = "F09StuTrackingSheet", action = "GetF09StuTrackingSheetAsync" },
+                 constraints: new
+                 {
+                     httpMethod = new HttpMethodConstraint("GET"),
+                     headerVersion = new HeaderVersionConstraint(1, true)
+                 }
+             );
         }
     }
 }

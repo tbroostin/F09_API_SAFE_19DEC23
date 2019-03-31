@@ -345,6 +345,7 @@
     <Compile Include="Controllers\ColleagueFinance\ColleagueFinanceTaxFormPdfsController.cs" />
     <Compile Include="Controllers\ColleagueFinance\PurchasingArrangementsController.cs" />
     <Compile Include="Controllers\F09\ActiveRestrictionsController.cs" />
+    <Compile Include="Controllers\F09\F09StuTrackingSheetController.cs" />
     <Compile Include="Controllers\F09\StudentRestrictionController.cs" />
     <Compile Include="Controllers\HumanResources\LeaveBalanceConfigurationController.cs" />
     <Compile Include="Controllers\Student\SectionRegistrationsGradeOptionsController.cs" />
@@ -878,7 +879,9 @@
     <Content Include="Views\Shared\Error.cshtml" />
     <Content Include="Views\Shared\_Layout.cshtml" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Views\F09StuTrackingSheet\" />
+  </ItemGroup>
   <ItemGroup>
     <Content Include="App_Data\settings.config" />
     <None Include="App_Data\settings.config.old">

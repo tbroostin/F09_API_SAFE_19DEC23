@@ -1,0 +1,162 @@
+﻿[
+  {
+    "name": "Do not modify this file."
+  },
+  {
+    "name": "sections",
+    "representations": [
+      {
+        "X-Media-Type": "application/vnd.hedtech.integration.v6+json",
+        "methods": [
+          "get",
+          "post",
+          "put"
+        ],
+        "deprecationNotice": {
+          "deprecatedOn": "2018-09-30",
+          "sunsetOn": "2020-10-01",
+          "description": "v16.0.0 enhances support for POST/PUT."
+        }
+      },
+      {
+        "X-Media-Type": "application/vnd.hedtech.integration.v8+json",
+        "methods": [
+          "get",
+          "post",
+          "put"
+        ],
+        "deprecationNotice": {
+          "deprecatedOn": "2018-09-30",
+          "sunsetOn": "2020-10-01",
+          "description": "v16.0.0 enhances support for POST/PUT."
+        }
+      },
+      {
+        "X-Media-Type": "application/vnd.hedtech.integration.v11+json",
+        "methods": [
+          "get",
+          "post",
+          "put"
+        ],
+        "deprecationNotice": {
+          "deprecatedOn": "2018-09-30",
+          "sunsetOn": "2020-10-01",
+          "description": "v16.0.0 enhances support for POST/PUT."
+        }
+      },
+        {
+        "X-Media-Type": "application/vnd.hedtech.integration.maximum.v6+json",
+        "methods": [ "get" ],
+        "deprecationNotice": {
+          "deprecatedOn": "2019-03-30",
+          "sunsetOn": "2021-04-01",
+          "description": "v16.0.0 aligns with v16.0.0 sections."
+        }
+      },
+      {
+        "X-Media-Type": "application/vnd.hedtech.integration.maximum.v8+json",
+        "methods": [ "get" ],
+        "deprecationNotice": {
+          "deprecatedOn": "2019-03-30",
+          "sunsetOn": "2021-04-01",
+          "description": "v16.0.0 aligns with v16.0.0 sections."
+        }
+      },
+      {
+        "X-Media-Type": "application/vnd.hedtech.integration.maximum.v11+json",
+        "methods": [ "get" ],
+        "deprecationNotice": {
+          "deprecatedOn": "2019-03-30",
+          "sunsetOn": "2021-04-01",
+          "description": "v16.0.0 aligns with v16.0.0 sections."
+        }
+      }
+    ]
+  },
+  {
+    "name": "academic-periods",
+    "representations": [
+      {
+        "X-Media-Type": "application/vnd.hedtech.integration.v6+json",
+        "methods": [ "get" ],
+        "deprecationNotice": {
+          "deprecatedOn": "2018-09-30",
+          "sunsetOn": "2020-10-01",
+          "description": "v16.0.0 adds functionality to indicate the year in which a term occurs."
+        }
+      },
+      {
+        "X-Media-Type": "application/vnd.hedtech.integration.v8+json",
+        "methods": [ "get" ],
+        "deprecationNotice": {
+          "deprecatedOn": "2018-09-30",
+          "sunsetOn": "2020-10-01",
+          "description": "v16.0.0 adds functionality to indicate the year in which a term occurs."
+        }
+      }
+    ]
+  },
+      {
+        "name": "courses",
+        "representations": [
+          {
+            "X-Media-Type": "application/vnd.hedtech.integration.v6+json",
+            "methods": [
+              "get",
+              "post",
+              "put"
+            ],
+            "deprecationNotice": {
+              "deprecatedOn": "2018-09-30",
+              "sunsetOn": "2020-10-01",
+              "description": "v16.0.0 enhances support for POST/PUT."
+            }
+          },
+          {
+            "X-Media-Type": "application/vnd.hedtech.integration.v8+json",
+            "methods": [
+              "get",
+              "post",
+              "put"
+            ],
+            "deprecationNotice": {
+              "deprecatedOn": "2018-09-30",
+              "sunsetOn": "2020-10-01",
+              "description": "v16.0.0 enhances support for POST/PUT."
+            }
+          }
+        ]
+      },
+       {
+        "name": "section-registrations",
+        "representations": [
+          {
+            "X-Media-Type": "application/vnd.hedtech.integration.v7+json",
+            "methods": [
+              "get",
+              "post",
+              "put"
+            ],
+            "deprecationNotice": {
+              "deprecatedOn": "2019-03-30",
+              "sunsetOn": "2021-04-01",
+              "description": "v16.0.0 removes grade-related information. This information is now available in student-grade-point-averages, student-transcript-grades, and student-unverified-grades and can be updated using student-transcript-grades-adjustments and student-unverified-grades-submissions."
+            }
+
+          },
+          {
+            "X-Media-Type": "application/vnd.hedtech.integration.v6+json",
+            "methods": [
+              "get",
+              "post",
+              "put"
+            ],
+            "deprecationNotice": {
+              "deprecatedOn": "2019-03-30",
+              "sunsetOn": "2021-04-01",
+              "description": "v16.0.0 removes grade-related information. This information is now available in student-grade-point-averages, student-transcript-grades, and student-unverified-grades and can be updated using student-transcript-grades-adjustments and student-unverified-grades-submissions."
+            }
+          }
+        ]
+    }
+]

@@ -42,6 +42,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Entities\GetActiveRestrictionsResponse.cs" />
+    <Compile Include="Entities\GetF09StuTrackingSheetResponse.cs" />
     <Compile Include="Entities\ScholarshipApplicationSoftQ.cs" />
     <Compile Include="Entities\ScholarshipApplicationRequest.cs" />
     <Compile Include="Entities\ScholarshipApplicationAwards.cs" />
@@ -50,6 +51,7 @@
     <Compile Include="Entities\UpdateStudentRestrictionResponse.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Repositories\IGetActiveRestrictionsRepository.cs" />
+    <Compile Include="Repositories\IGetF09StuTrackingSheetRepository.cs" />
     <Compile Include="Repositories\IScholarshipApplicationRepository.cs" />
     <Compile Include="Repositories\IUpdateStudentRestrictionRepository.cs" />
   </ItemGroup>

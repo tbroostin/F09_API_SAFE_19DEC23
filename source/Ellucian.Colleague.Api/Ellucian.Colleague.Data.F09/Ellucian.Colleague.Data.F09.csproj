@@ -71,8 +71,10 @@
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Repositories\GetActiveRestrictionsRepository.cs" />
+    <Compile Include="Repositories\GetF09StuTrackingSheetRepository.cs" />
     <Compile Include="Repositories\ScholarshipApplicationRepository.cs" />
     <Compile Include="Repositories\UpdateStudentRestrictionRepository.cs" />
+    <Compile Include="Transactions\CtxF09StuTrackingSheet.cs" />
     <Compile Include="Transactions\ctxGetActiveRestrictions.cs" />
     <Compile Include="Transactions\ctxUpdateStuRestriction.cs" />
     <Compile Include="Transactions\F09_ScholarshipApplication.cs" />

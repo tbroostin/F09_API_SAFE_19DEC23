@@ -86,6 +86,18 @@ namespace Ellucian.Colleague.Api
                      headerVersion = new HeaderVersionConstraint(1, true)
                  }
              );
+
+            // F09 added on 04-10-2019
+            routes.MapHttpRoute(
+                 name: "GetF09AdminTrackingSheetById",
+                 routeTemplate: "f09/f09AdminTrackingSheet/{Id}",
+                 defaults: new { controller = "F09AdminTrackingSheet", action = "GetF09AdminTrackingSheetAsync" },
+                 constraints: new
+                 {
+                     httpMethod = new HttpMethodConstraint("GET"),
+                     headerVersion = new HeaderVersionConstraint(1, true)
+                 }
+             );
         }
     }
 }

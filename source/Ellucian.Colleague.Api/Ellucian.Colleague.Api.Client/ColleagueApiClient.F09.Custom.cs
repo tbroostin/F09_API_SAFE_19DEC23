@@ -38,6 +38,31 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
 
+        // F09 added on 04-10-2019
+        public async Task<F09AdminTrackingSheetResponseDto> GetF09AdminTrackingSheetAsync(string personId)
+        {
+            if (string.IsNullOrEmpty(personId))
+            {
+                throw new ArgumentNullException("personId", "ID cannot be empty/null for User Profile retrieval.");
+            }
+            try
+            {
+                var baseUrl = UrlUtility.CombineUrlPath(F09AdminTrackingSheet, personId);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(baseUrl, headers: headers);
+                var tracking = JsonConvert.DeserializeObject<F09AdminTrackingSheetResponseDto>(await response.Content.ReadAsStringAsync());
+
+                return tracking;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to GetF09F09AdminTrackingSheetAsync");
+                throw;
+            }
+        }
+
         public async Task<GetActiveRestrictionsResponseDto> GetF09ActiveRestrictionsAsync(string personId)
         {
             if (string.IsNullOrEmpty(personId))

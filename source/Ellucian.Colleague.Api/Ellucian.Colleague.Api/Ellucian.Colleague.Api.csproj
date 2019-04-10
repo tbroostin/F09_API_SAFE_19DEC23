@@ -345,6 +345,7 @@
     <Compile Include="Controllers\ColleagueFinance\ColleagueFinanceTaxFormPdfsController.cs" />
     <Compile Include="Controllers\ColleagueFinance\PurchasingArrangementsController.cs" />
     <Compile Include="Controllers\F09\ActiveRestrictionsController.cs" />
+    <Compile Include="Controllers\F09\F09AdminTrackingSheetController.cs" />
     <Compile Include="Controllers\F09\F09StuTrackingSheetController.cs" />
     <Compile Include="Controllers\F09\ScholarshipApplicationController.cs" />
     <Compile Include="Controllers\F09\StudentRestrictionController.cs" />
@@ -880,7 +881,9 @@
     <Content Include="Views\Shared\Error.cshtml" />
     <Content Include="Views\Shared\_Layout.cshtml" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Views\F09AdminTrackingSheet\" />
+  </ItemGroup>
   <ItemGroup>
     <Content Include="App_Data\settings.config" />
     <Content Include="App_Data\ellucian.license" />
@@ -1314,7 +1317,7 @@
           <AutoAssignPort>True</AutoAssignPort>
           <DevelopmentServerPort>57276</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
-          <IISUrl>http://localhost/Ellucian.Colleague.Api.F09</IISUrl>
+          <IISUrl>http://localhost/Ellucian.Colleague.Api.F09E</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>
           <UseCustomServer>False</UseCustomServer>
           <CustomServerUrl>

@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<settings>
+  <colleague>
+    <accountName>projdb18_rt</accountName>
+    <ipAddress>laurel</ipAddress>
+    <port>7232</port>
+    <secure>False</secure>
+    <certificateHostnameOverride></certificateHostnameOverride>
+    <connectionPoolSize>100</connectionPoolSize>
+    <sharedSecret>D5914D690B6391780841EC7D7BD3995B14F3583BF23A9257EFFD5D21FDCC48232956141A7958E2D0D23F4B53BF26534ECCE4F264767F4BDDB1F320AAA8B3F34F5C1CCF53F4ED3A11F71DF167F8142420B6DD420AE8D19C899599534E69AB387CE6A164DD1FBF62B32B6CB64DB5BDBFF6</sharedSecret>
+    <dasEnvironment>projdb18</dasEnvironment>
+    <dasAddress>laurel</dasAddress>
+    <dasPort>7231</dasPort>
+    <dasSecure>False</dasSecure>
+    <dasCertificateHostnameOverride></dasCertificateHostnameOverride>
+    <dasConnectionPoolSize>100</dasConnectionPoolSize>
+    <dasLogin>06D1D2B8FD7DFA0B6FDB921378E29B61059E2BE2AE00AC2BD45AD3AFF10094383556DEA7E5C3B7AB8774988604B28FC9A9560B4E81BAE2BBC6AEF1796BF9D2CBC1FDFE5B7BF21B2D6A0AE76CEC78FFD53DB45B2E24EC6ED94650BD6178B704B6</dasLogin>
+    <dasPassword>DF78386C33B1075EBCED0C3B88E40412ABD3B2F609C77C4AE9B06C0BE7ABBC5C402AEC5984877B8F32773D60F52238DBAD0DCF8A9207045523AB42941CEC6A13529687F427A2A170E29F420E916AD08061AF7C5F30B5150E21A50870EF45E606</dasPassword>
+    <useDasDatareader>True</useDasDatareader>
+  </colleague>
+  <logLevel>Off</logLevel>
+  <profileName>PROJDB18</profileName>
+</settings>

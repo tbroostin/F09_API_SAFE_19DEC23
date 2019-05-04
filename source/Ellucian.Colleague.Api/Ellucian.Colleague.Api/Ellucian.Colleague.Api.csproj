@@ -1276,6 +1276,9 @@
     <Content Include="Reports\HumanResources\2018-T4.rdlc" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Reports\F09\StudentStatement.rdlc">
+      <SubType>Designer</SubType>
+    </Content>
     <EmbeddedResource Include="Reports\FinancialAid\AwardLetter3.rdlc">
       <SubType>Designer</SubType>
     </EmbeddedResource>

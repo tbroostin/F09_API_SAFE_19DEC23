@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
+using System.IO;
 using System.Linq;
-using System.Text;
+using System.Web;
+using System.Xml.Serialization;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -12,6 +15,10 @@ using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
 using slf4net;
+// F09 added on 05-04-2019 for Demo Reporting Project
+using Ellucian.Colleague.Coordination.Finance.Reports;
+using Ellucian.Colleague.Coordination.Base.Utility;
+using Microsoft.Reporting.WebForms;
 
 namespace Ellucian.Colleague.Coordination.F09.Services
 {
@@ -140,6 +147,109 @@ namespace Ellucian.Colleague.Coordination.F09.Services
             );
 
             return dto;
+        }
+
+        // F09 added on 05-04-2019 for Demo Reporting Project
+        /// <summary>
+        /// Get a student's accounts receivable statement as a byte array representation of a PDF file.  
+        /// </summary>
+        /// <param name="statementDto">StudentStatement DTO to use as the data source for producing the student statement report.</param>
+        /// <param name="pathToReport">The path on the server to the report template</param>
+        /// <param name="pathToResourceFile">The path on the server to the resource file</param>
+        /// <param name="pathToLogo">The path on the server to the institutions logo image to be used on the report</param>
+        /// <param name="utility">Report Parameter Utility</param>
+        /// <returns>A byte array representation of a PDF student statement report.</returns>
+        public byte[] GetStudentStatementReport(ScholarshipApplicationStudentStatementDto statementDto, string pathToReport, string pathToResourceFile, string pathToLogo)
+        {
+            if (statementDto == null)
+            {
+                throw new ArgumentNullException("statementDto");
+            }
+            if (string.IsNullOrEmpty(pathToReport))
+            {
+                throw new ArgumentNullException("pathToReport");
+            }
+            if (!File.Exists(pathToResourceFile))
+            {
+                throw new FileNotFoundException("The statement resource file could not be found.", "pathToResourceFile");
+            }
+
+            if (pathToLogo == null) pathToLogo = string.Empty;
+
+            var report = new LocalReport();
+            try
+            {
+                report.ReportPath = pathToReport;
+                report.SetBasePermissionsForSandboxAppDomain(new System.Security.PermissionSet(System.Security.Permissions.PermissionState.Unrestricted));
+                report.EnableExternalImages = true;
+
+                // Specify the report parameters
+                var utility = new ReportUtility();
+                var parameters = utility.BuildReportParametersFromResourceFiles(new List<string>() { pathToResourceFile });
+
+                parameters.Add(utility.BuildReportParameter("StudentId", statementDto.StudentId));
+                parameters.Add(utility.BuildReportParameter("StudentName", statementDto.StudentName));
+                parameters.Add(utility.BuildReportParameter("ImagePath", pathToLogo));
+                parameters.Add(utility.BuildReportParameter("DateGenerated", statementDto.Date.ToShortDateString()));
+                parameters.Add(utility.BuildReportParameter("DateFormat", System.Threading.Thread.CurrentThread.CurrentCulture.DateTimeFormat.ShortDatePattern));
+
+                // Set the report parameters
+                report.SetParameters(parameters);
+
+                // Convert report data to be sent to the report
+                DataSet ds_Awards = ConvertToDataSet(statementDto.Awards.ToArray());
+
+                // Add data to the report
+                report.DataSources.Add(new ReportDataSource("Awards", ds_Awards.Tables[0]));
+
+                // Set up some options for the report
+                string mimeType = string.Empty;
+                string encoding;
+                string fileNameExtension;
+                Warning[] warnings;
+                string[] streams;
+
+                // Render the report as a byte array
+                var renderedBytes = report.Render(
+                    PdfReportConstants.ReportType,
+                    PdfReportConstants.DeviceInfo,
+                    out mimeType,
+                    out encoding,
+                    out fileNameExtension,
+                    out streams,
+                    out warnings);
+
+                return renderedBytes;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to generate student statement.");
+                throw;
+            }
+            finally
+            {
+                report.DataSources.Clear();
+                report.ReleaseSandboxAppDomain();
+                report.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// Transform stored data collection into XML.
+        /// </summary>
+        /// <param name="values"></param>
+        /// <returns></returns>
+        private DataSet ConvertToDataSet(Object[] values)
+        {
+            DataSet ds = new DataSet();
+            Type temp = values.GetType();
+            XmlSerializer xmlSerializer = new XmlSerializer(values.GetType());
+            StringWriter writer = new StringWriter();
+
+            xmlSerializer.Serialize(writer, values);
+            StringReader reader = new StringReader(writer.ToString());
+            ds.ReadXml(reader);
+            return ds;
         }
     }
 }

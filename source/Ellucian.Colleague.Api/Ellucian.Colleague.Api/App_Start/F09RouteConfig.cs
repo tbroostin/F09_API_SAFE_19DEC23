@@ -13,8 +13,10 @@ namespace Ellucian.Colleague.Api
     /// </summary>
     public class F09RouteConfig
     {
+        private const string EllucianPDFMediaTypeFormat = "application/vnd.ellucian.v{0}+pdf";
+
         /// <summary>
-        /// 
+        /// F09 Custom Routings
         /// </summary>
         /// <param name="routes"></param>
         public static void RegisterRoutes(RouteCollection routes)
@@ -86,6 +88,18 @@ namespace Ellucian.Colleague.Api
                      headerVersion = new HeaderVersionConstraint(1, true)
                  }
              );
+
+            // F09 added on 05-05-2019 for Demo Reporting Project
+            routes.MapHttpRoute(
+                name: "GetF09StudentStatement",
+                routeTemplate: "F09/get-student-statement/{accountHolderId}",
+                defaults: new { controller = "ScholarshipApplication", action = "GetStudentStatementAsync" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint(1, true, string.Format(EllucianPDFMediaTypeFormat, 1)),
+                }
+            );
         }
     }
 }

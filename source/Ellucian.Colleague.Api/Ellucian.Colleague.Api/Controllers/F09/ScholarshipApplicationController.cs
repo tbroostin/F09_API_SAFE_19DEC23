@@ -134,20 +134,18 @@ namespace Ellucian.Colleague.Api.Controllers.F09
         /// permission or proxy permissions can request other users' data
         /// </accessComments>
         /// <param name="accountHolderId">ID of the student for whom the statement will be generated</param>
-        /// <param name="timeframeId">ID of the timeframe for which the statement will be generated</param>
-        /// <param name="startDate">Date on which the supplied timeframe starts</param>
-        /// <param name="endDate">Date on which the supplied timeframe ends</param>
         /// <returns>An HttpResponseMessage containing a byte array representing a PDF</returns>
         [ParameterSubstitutionFilter]
-        public async Task<HttpResponseMessage> GetStudentStatementAsync(string accountHolderId, string timeframeId, DateTime? startDate = null,
-            DateTime? endDate = null)
+        public async Task<HttpResponseMessage> GetStudentStatementAsync(string accountHolderId)
         {
             if (string.IsNullOrEmpty(accountHolderId)) throw CreateHttpResponseException("Account Holder ID must be specified.");
-            if (string.IsNullOrEmpty(timeframeId)) throw CreateHttpResponseException("Timeframe ID must be specified.");
+            //if (string.IsNullOrEmpty(timeframeId)) throw CreateHttpResponseException("Timeframe ID must be specified.");
 
             try
             {
-                var profile = await _UpdateScholarshipApplicationService.GetScholarshipApplicationAsync(accountHolderId);
+                var responseDto = await _UpdateScholarshipApplicationService.GetScholarshipApplicationAsync(accountHolderId);
+                var requestDto = this.CreateScholarshipApplicationRequestDto(responseDto, "Submit.Soft.Questions");
+                var profile = await _UpdateScholarshipApplicationService.UpdateScholarshipApplicationAsync(requestDto);
 
                 //get Student Statement DTO
                 var statementDto = new ScholarshipApplicationStudentStatementDto();
@@ -173,7 +171,7 @@ namespace Ellucian.Colleague.Api.Controllers.F09
                     reportLogoPath = HttpContext.Current.Server.MapPath(reportLogoPath);
                 }
 
-                var resourceFilePath = HttpContext.Current.Server.MapPath("~/App_GlobalResources/Finance/StatementResources.resx");
+                var resourceFilePath = HttpContext.Current.Server.MapPath("~/App_GlobalResources/F09/F09StatementResources.resx");
 
                 //generate the PDF based on the StudentStatement DTO
                 var renderedBytes = _UpdateScholarshipApplicationService.GetStudentStatementReport(statementDto, reportPath, resourceFilePath,
@@ -183,7 +181,8 @@ namespace Ellucian.Colleague.Api.Controllers.F09
                 var response = new HttpResponseMessage();
                 response.Content = new ByteArrayContent(renderedBytes);
 
-                var fileNameString = "StudentStatement" + " " + accountHolderId + " " + timeframeId;
+                var fileNameString = "StudentStatement" + " " + accountHolderId;
+                //var fileNameString = "StudentStatement" + " " + accountHolderId + " " + timeframeId;
                 response.Content.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
                 response.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
                 {
@@ -217,6 +216,24 @@ namespace Ellucian.Colleague.Api.Controllers.F09
                 _logger.Error(e, e.Message);
                 throw CreateHttpResponseException("Unknown error occurred getting StudentStatement resource. See log for details.");
             }
+        }
+
+        private ScholarshipApplicationRequestDto CreateScholarshipApplicationRequestDto(ScholarshipApplicationResponseDto response, string requestType)
+        {
+            ScholarshipApplicationRequestDto dto = new ScholarshipApplicationRequestDto();
+            dto.Id = response.Id;
+            dto.RequestType = requestType;
+            dto.XfstId = response.XfstId;
+            dto.XfstRefName = response.XfstRefName;
+            dto.XfstSelfRate = response.XfstSelfRate;
+            dto.XfstSelfRateDesc = response.XfstSelfRateDesc;
+            dto.XfstResearchInt = response.XfstResearchInt;
+            dto.XfstDissTopic = response.XfstDissTopic;
+            dto.XfstFinSit = response.XfstFinSit;
+            dto.Awards = new List<ScholarshipApplicationAwardsDto>();
+            dto.SoftQs = new List<ScholarshipApplicationSoftQDto>();
+
+            return dto;
         }
     }
 }

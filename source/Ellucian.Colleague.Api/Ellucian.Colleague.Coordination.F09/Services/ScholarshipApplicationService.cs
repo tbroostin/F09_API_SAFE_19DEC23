@@ -187,20 +187,24 @@ namespace Ellucian.Colleague.Coordination.F09.Services
                 var utility = new ReportUtility();
                 var parameters = utility.BuildReportParametersFromResourceFiles(new List<string>() { pathToResourceFile });
 
+                //parameters.Add(utility.BuildReportParameter("StatementTitle", "Awards Report"));
                 parameters.Add(utility.BuildReportParameter("StudentId", statementDto.StudentId));
                 parameters.Add(utility.BuildReportParameter("StudentName", statementDto.StudentName));
                 parameters.Add(utility.BuildReportParameter("ImagePath", pathToLogo));
-                parameters.Add(utility.BuildReportParameter("DateGenerated", statementDto.Date.ToShortDateString()));
-                parameters.Add(utility.BuildReportParameter("DateFormat", System.Threading.Thread.CurrentThread.CurrentCulture.DateTimeFormat.ShortDatePattern));
+                //parameters.Add(utility.BuildReportParameter("DateGenerated", statementDto.Date.ToShortDateString()));
+                //parameters.Add(utility.BuildReportParameter("DateFormat", System.Threading.Thread.CurrentThread.CurrentCulture.DateTimeFormat.ShortDatePattern));
 
                 // Set the report parameters
                 report.SetParameters(parameters);
 
                 // Convert report data to be sent to the report
-                DataSet ds_Awards = ConvertToDataSet(statementDto.Awards.ToArray());
+                if (statementDto.Awards != null && statementDto.Awards.Count > 0)
+                {
+                    DataSet ds_Awards = ConvertToDataSet(statementDto.Awards.ToArray());
 
-                // Add data to the report
-                report.DataSources.Add(new ReportDataSource("Awards", ds_Awards.Tables[0]));
+                    // Add data to the report
+                    report.DataSources.Add(new ReportDataSource("Awards", ds_Awards.Tables[0]));
+                }
 
                 // Set up some options for the report
                 string mimeType = string.Empty;

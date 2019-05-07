@@ -296,6 +296,11 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="App_GlobalResources\F09\F09StatementResources.designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>F09StatementResources.resx</DependentUpon>
+    </Compile>
     <Compile Include="App_Start\BundleConfig.cs" />
     <Compile Include="App_Start\F09RouteConfig.cs" />
     <Compile Include="App_Start\FilterConfig.cs" />
@@ -307,6 +312,11 @@
     <Compile Include="Areas\Student\Models\Tests\TestSections.cs" />
     <Compile Include="Areas\Student\Models\Tests\TestSectionsForCourses.cs" />
     <Compile Include="Areas\Student\StudentAreaRegistration.cs" />
+    <Compile Include="Awards.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Awards.xsd</DependentUpon>
+    </Compile>
     <Compile Include="Controllers\Base\AdmissionApplicationSupportingItemStatusesController.cs" />
     <Compile Include="Controllers\Base\AlternativeCredentialTypesController.cs" />
     <Compile Include="Controllers\Base\CorrespondenceRequestsController.cs" />
@@ -772,7 +782,10 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Content\icons\ellucian-icon-sprite.svg" />
+    <Content Include="Content\Images\719x94.jpg" />
     <Content Include="Content\Images\ellucian-logo.png" />
+    <Content Include="Content\Images\FGUlogo.png" />
+    <Content Include="Content\Images\fgu_logo_2.png" />
     <Content Include="Content\themes\base\ellucianStyle.css" />
     <Content Include="Content\themes\base\Site.css" />
     <Compile Include="Controllers\Student\MealTypesController.cs" />
@@ -948,6 +961,18 @@
     <Content Include="Properties\DataSources\Ellucian.Colleague.Dtos.HumanResources.PayStatementDeduction.datasource" />
     <Content Include="Views\Utilities\BackupConfig.cshtml" />
     <Content Include="Views\Utilities\RestoreConfigAsync.cshtml" />
+    <Content Include="Awards.xsc">
+      <DependentUpon>Awards.xsd</DependentUpon>
+    </Content>
+    <None Include="Awards.xsd">
+      <Generator>MSDataSetGenerator</Generator>
+      <LastGenOutput>Awards.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </None>
+    <Content Include="Awards.xss">
+      <DependentUpon>Awards.xsd</DependentUpon>
+    </Content>
+    <None Include="Properties\PublishProfiles\F09ColleagueApi.pubxml" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Ellucian.Colleague.Api.Client\Ellucian.Colleague.Api.Client.csproj">
@@ -1276,9 +1301,12 @@
     <Content Include="Reports\HumanResources\2018-T4.rdlc" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Reports\F09\StudentStatement.rdlc">
-      <SubType>Designer</SubType>
+    <Content Include="App_GlobalResources\F09\F09StatementResources.resx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Generator>GlobalResourceProxyGenerator</Generator>
+      <LastGenOutput>F09StatementResources.designer.cs</LastGenOutput>
     </Content>
+    <Content Include="Reports\F09\StudentStatement.rdlc" />
     <EmbeddedResource Include="Reports\FinancialAid\AwardLetter3.rdlc">
       <SubType>Designer</SubType>
     </EmbeddedResource>

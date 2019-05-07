@@ -17,5 +17,8 @@ namespace Ellucian.Colleague.Api.Client
 
         // F09 added here on 04-01-2019
         private static readonly string F09StuTrackingSheet = "f09/f09StuTrackingSheet";
+
+        // F09 added here on 05-05-2019 for Demo Reporting Project
+        private static readonly string F09GetStudentStatement = "f09/get-student-statement";
     }
 }

@@ -73,9 +73,11 @@
     <Compile Include="Services\GetF09StuTrackingSheetService.cs" />
     <Compile Include="Services\IGetActiveRestrictionsService.cs" />
     <Compile Include="Services\IGetF09StuTrackingSheetService.cs" />
+    <Compile Include="Services\IStudentAlumniDirectoriesService.cs" />
     <Compile Include="Services\IScholarshipApplicationService.cs" />
     <Compile Include="Services\IUpdateStudentRestrictionService.cs" />
     <Compile Include="Services\ScholarshipApplicationService.cs" />
+    <Compile Include="Services\StudentAlumniDirectoriesService.cs" />
     <Compile Include="Services\UpdateStudentRestrictionService.cs" />
   </ItemGroup>
   <ItemGroup>

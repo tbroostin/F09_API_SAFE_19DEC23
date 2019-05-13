@@ -357,6 +357,7 @@
     <Compile Include="Controllers\F09\ActiveRestrictionsController.cs" />
     <Compile Include="Controllers\F09\F09StuTrackingSheetController.cs" />
     <Compile Include="Controllers\F09\ScholarshipApplicationController.cs" />
+    <Compile Include="Controllers\F09\StudentAlumniDirectoriesController.cs" />
     <Compile Include="Controllers\F09\StudentRestrictionController.cs" />
     <Compile Include="Controllers\HumanResources\LeaveBalanceConfigurationController.cs" />
     <Compile Include="Controllers\Student\SectionRegistrationsGradeOptionsController.cs" />

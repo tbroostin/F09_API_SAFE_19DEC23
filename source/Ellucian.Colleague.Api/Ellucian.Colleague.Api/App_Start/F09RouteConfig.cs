@@ -23,7 +23,7 @@ namespace Ellucian.Colleague.Api
         {
             routes.MapHttpRoute(
                 name: "GetF09ActiveRestrictionsById",
-                routeTemplate: "F09/active-restrictions/{personId}",
+                routeTemplate: "f09/active-restrictions/{personId}",
                 defaults: new { controller = "ActiveRestrictions", action = "GetActiveRestrictionsAsync" },
                 constraints: new
                 {
@@ -34,7 +34,7 @@ namespace Ellucian.Colleague.Api
 
             routes.MapHttpRoute(
                 name: "GetF09StudentRestrictionById",
-                routeTemplate: "F09/student-restriction/{personId}",
+                routeTemplate: "f09/student-restriction/{personId}",
                 defaults: new { controller = "StudentRestriction", action = "GetStudentRestrictionAsync" },
                 constraints: new
                 {
@@ -45,7 +45,7 @@ namespace Ellucian.Colleague.Api
 
             routes.MapHttpRoute(
                 name: "UpdateF09StudentRestriction",
-                routeTemplate: "F09/student-restriction",
+                routeTemplate: "f09/student-restriction",
                 defaults: new { controller = "StudentRestriction", action = "PutStudentRestrictionAsync" },
                 constraints: new
                 {
@@ -57,7 +57,7 @@ namespace Ellucian.Colleague.Api
             // F09 added here on 03-14-2019
             routes.MapHttpRoute(
                 name: "GetF09ScholarshipApplicationById",
-                routeTemplate: "F09/get-scholarship-application/{personId}",
+                routeTemplate: "f09/get-scholarship-application/{personId}",
                 defaults: new { controller = "ScholarshipApplication", action = "GetScholarshipApplicationAsync" },
                 constraints: new
                 {
@@ -68,7 +68,7 @@ namespace Ellucian.Colleague.Api
 
             routes.MapHttpRoute(
                 name: "UpdateF09ScholarshipApplication2",
-                routeTemplate: "F09/update-scholarship-application",
+                routeTemplate: "f09/update-scholarship-application",
                 defaults: new { controller = "ScholarshipApplication", action = "PutScholarshipApplicationAsync" },
                 constraints: new
                 {
@@ -89,10 +89,33 @@ namespace Ellucian.Colleague.Api
                  }
              );
 
+            // F09 added on 05-13-2019 for Student Alumni Directories project
+            routes.MapHttpRoute(
+                 name: "GetF09StudentAlumniDirectoriesById",
+                 routeTemplate: "f09/get-student-alumni-directories/{personId}",
+                 defaults: new { controller = "StudentAlumniDirectories", action = "GetStudentAlumnniDirectoriesAsync" },
+                 constraints: new
+                 {
+                     httpMethod = new HttpMethodConstraint("GET"),
+                     headerVersion = new HeaderVersionConstraint(1, true)
+                 }
+             );
+
+            routes.MapHttpRoute(
+                name: "UpdateF09StudentAlumniDirectories",
+                routeTemplate: "f09/update-student-alumni-directories",
+                defaults: new { controller = "StudentAlumniDirectories", action = "PutStudentAlumnniDirectoriesAsync" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("PUT"),
+                    headerVersion = new HeaderVersionConstraint(1, true)
+                }
+            );
+
             // F09 added on 05-05-2019 for Demo Reporting Project
             routes.MapHttpRoute(
                 name: "GetF09StudentStatement",
-                routeTemplate: "F09/get-student-statement/{accountHolderId}",
+                routeTemplate: "f09/get-student-statement/{accountHolderId}",
                 defaults: new { controller = "ScholarshipApplication", action = "GetStudentStatementAsync" },
                 constraints: new
                 {

@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Dtos.F09;
+using Ellucian.Colleague.Dtos.F09.StudentAlumniDirectories;
 using Ellucian.Web.Utility;
 using Newtonsoft.Json;
 
@@ -138,7 +139,7 @@ namespace Ellucian.Colleague.Api.Client
         {
             if (request == null)
             {
-                throw new ArgumentNullException("userProfile", "User Profile cannot be null.");
+                throw new ArgumentNullException("scholarshipApplicationRequest", "Scholarship Application Request cannot be null.");
             }
             try
             {
@@ -153,6 +154,54 @@ namespace Ellucian.Colleague.Api.Client
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to PutF09ScholarshipApplicationAsync.");
+                throw;
+            }
+        }
+
+        // F09 added on 05-13-2019
+        public async Task<DirectoriesResponseDto> GetF09StudentAlumniDirectoriesAsync(string personId)
+        {
+            if (string.IsNullOrEmpty(personId))
+            {
+                throw new ArgumentNullException("personId", "ID cannot be empty/null for User Profile retrieval.");
+            }
+            try
+            {
+                var baseUrl = UrlUtility.CombineUrlPath(F09GetStudentAlumniDirectories, personId);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(baseUrl, headers: headers);
+                var myProfile = JsonConvert.DeserializeObject<DirectoriesResponseDto>(await response.Content.ReadAsStringAsync());
+
+                return myProfile;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to GetF09StudentAlumniDirectoriesAsync");
+                throw;
+            }
+        }
+
+        public async Task<HttpResponseMessage> PutF09StudentAlumniDirectoriesAsync(DirectoriesRequestDto request)
+        {
+            if (request == null)
+            {
+                throw new ArgumentNullException("directoriesRequest", "Directories Request cannot be null.");
+            }
+            try
+            {
+                var baseUrl = UrlUtility.CombineUrlPath(F09UpdateStudentAlumniDirectories);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                var response = await ExecutePutRequestWithResponseAsync(request, baseUrl, headers: headers);
+                return response;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to PutF09StudentAlumniDirectoriesAsync.");
                 throw;
             }
         }

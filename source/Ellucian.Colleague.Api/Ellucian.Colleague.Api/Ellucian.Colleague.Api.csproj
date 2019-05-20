@@ -355,6 +355,7 @@
     <Compile Include="Controllers\ColleagueFinance\ColleagueFinanceTaxFormPdfsController.cs" />
     <Compile Include="Controllers\ColleagueFinance\PurchasingArrangementsController.cs" />
     <Compile Include="Controllers\F09\ActiveRestrictionsController.cs" />
+    <Compile Include="Controllers\F09\F09AdminTrackingSheetController.cs" />
     <Compile Include="Controllers\F09\F09StuTrackingSheetController.cs" />
     <Compile Include="Controllers\F09\ScholarshipApplicationController.cs" />
     <Compile Include="Controllers\F09\StudentAlumniDirectoriesController.cs" />

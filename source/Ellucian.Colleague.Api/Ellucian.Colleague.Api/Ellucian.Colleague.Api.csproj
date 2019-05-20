@@ -785,9 +785,11 @@
   <ItemGroup>
     <Content Include="Content\icons\ellucian-icon-sprite.svg" />
     <Content Include="Content\Images\719x94.jpg" />
+    <Content Include="Content\Images\custom-header-logo.png" />
     <Content Include="Content\Images\ellucian-logo.png" />
     <Content Include="Content\Images\FGUlogo.png" />
     <Content Include="Content\Images\fgu_logo_2.png" />
+    <Content Include="Content\Images\logo.png" />
     <Content Include="Content\themes\base\ellucianStyle.css" />
     <Content Include="Content\themes\base\Site.css" />
     <Compile Include="Controllers\Student\MealTypesController.cs" />

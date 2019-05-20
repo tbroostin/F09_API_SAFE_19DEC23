@@ -44,6 +44,7 @@
     <Compile Include="Entities\F09AdminTrackingSheet.cs" />
     <Compile Include="Entities\F09AdminTrackingSheetResponse.cs" />
     <Compile Include="Entities\GetActiveRestrictionsResponse.cs" />
+    <Compile Include="Entities\PdfStudentTrackingSheet.cs" />
     <Compile Include="Entities\StudentAlumniDirectories.cs" />
     <Compile Include="Entities\GetF09StuTrackingSheetResponse.cs" />
     <Compile Include="Entities\ScholarshipApplicationSoftQ.cs" />
@@ -56,6 +57,7 @@
     <Compile Include="Repositories\IF09AdminTrackingSheetRepository.cs" />
     <Compile Include="Repositories\IGetActiveRestrictionsRepository.cs" />
     <Compile Include="Repositories\IGetF09StuTrackingSheetRepository.cs" />
+    <Compile Include="Repositories\IPdfStudentTrackingSheetRepository.cs" />
     <Compile Include="Repositories\IStudentAlumniDirectoriesRepository.cs" />
     <Compile Include="Repositories\IScholarshipApplicationRepository.cs" />
     <Compile Include="Repositories\IUpdateStudentRestrictionRepository.cs" />

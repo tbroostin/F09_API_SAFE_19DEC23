@@ -73,11 +73,13 @@
     <Compile Include="Repositories\F09AdminTrackingSheetRepository.cs" />
     <Compile Include="Repositories\GetActiveRestrictionsRepository.cs" />
     <Compile Include="Repositories\GetF09StuTrackingSheetRepository.cs" />
+    <Compile Include="Repositories\PdfStudentTrackingSheetRepository.cs" />
     <Compile Include="Repositories\StudentAlumniDirectoriesRepository.cs" />
     <Compile Include="Repositories\ScholarshipApplicationRepository.cs" />
     <Compile Include="Repositories\UpdateStudentRestrictionRepository.cs" />
     <Compile Include="Transactions\ctxF09AdminTrackingSheet.cs" />
     <Compile Include="Transactions\ctxF09Directories.cs" />
+    <Compile Include="Transactions\ctxF09PdfTrackingSheet.cs" />
     <Compile Include="Transactions\CtxF09StuTrackingSheet.cs" />
     <Compile Include="Transactions\ctxGetActiveRestrictions.cs" />
     <Compile Include="Transactions\ctxUpdateStuRestriction.cs" />

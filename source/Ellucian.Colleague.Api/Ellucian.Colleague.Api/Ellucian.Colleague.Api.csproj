@@ -296,6 +296,11 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="App_GlobalResources\F09\F09StudentTrackingSheetResources.designer.cs">
+      <DependentUpon>F09StudentTrackingSheetResources.resx</DependentUpon>
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+    </Compile>
     <Compile Include="App_GlobalResources\F09\F09StatementResources.designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -1311,6 +1316,11 @@
       <LastGenOutput>F09StatementResources.designer.cs</LastGenOutput>
     </Content>
     <Content Include="Reports\F09\StudentStatement.rdlc" />
+    <Content Include="App_GlobalResources\F09\F09StudentTrackingSheetResources.resx">
+      <Generator>GlobalResourceProxyGenerator</Generator>
+      <LastGenOutput>F09StudentTrackingSheetResources.designer.cs</LastGenOutput>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <EmbeddedResource Include="Reports\FinancialAid\AwardLetter3.rdlc">
       <SubType>Designer</SubType>
     </EmbeddedResource>

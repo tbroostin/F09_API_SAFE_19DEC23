@@ -89,6 +89,18 @@ namespace Ellucian.Colleague.Api
                  }
              );
 
+            // F09 added on 05-20-2019 for Pdf
+            routes.MapHttpRoute(
+                name: "GetF09PdfStudentTrackingSheetById",
+                routeTemplate: "f09/pdf-student-tracking-sheet/{accountHolderId}",
+                defaults: new { controller = "F09StuTrackingSheet", action = "GetPdfStudentTrackingSheetAsync" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("GET"),
+                    headerVersion = new HeaderVersionConstraint(1, true, string.Format(EllucianPDFMediaTypeFormat, 1)),
+                }
+            );
+
             // F09 added on 04-10-2019
             routes.MapHttpRoute(
                  name: "GetF09AdminTrackingSheetById",

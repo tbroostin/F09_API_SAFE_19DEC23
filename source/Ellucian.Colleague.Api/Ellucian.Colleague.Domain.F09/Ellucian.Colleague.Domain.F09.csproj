@@ -57,7 +57,6 @@
     <Compile Include="Repositories\IF09AdminTrackingSheetRepository.cs" />
     <Compile Include="Repositories\IGetActiveRestrictionsRepository.cs" />
     <Compile Include="Repositories\IGetF09StuTrackingSheetRepository.cs" />
-    <Compile Include="Repositories\IPdfStudentTrackingSheetRepository.cs" />
     <Compile Include="Repositories\IStudentAlumniDirectoriesRepository.cs" />
     <Compile Include="Repositories\IScholarshipApplicationRepository.cs" />
     <Compile Include="Repositories\IUpdateStudentRestrictionRepository.cs" />

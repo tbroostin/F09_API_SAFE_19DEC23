@@ -39,6 +39,47 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
 
+        ///
+        /// F09 added on 05-20-2019 for Pdf Student Tracking Sheet project
+        /// 
+        /// <summary>
+        /// Get an student's accounts receivable report for the given timeframe
+        /// </summary>
+        /// <param name="accountHolderId">ID of the student for whom the statement will be generated</param>
+        /// <param name="fileName">The name of the PDF file returned in the byte array.</param>
+        /// <returns>A byte array representation of the PDF Award Letter Report</returns>
+        /// <exception cref="Exception">Thrown if an error occurred generating the student tracking sheet report.</exception>
+        public byte[] GetF09PdfStudentTrackingSheet(string accountHolderId, out string fileName)
+        {
+            if (string.IsNullOrEmpty(accountHolderId))
+            {
+                throw new ArgumentNullException("accountHolderId", "Account Holder ID cannot be null or empty.");
+            }
+
+            try
+            {
+                // Build url path from qapi path and student statements path
+                var baseUrl = UrlUtility.CombineUrlPath(F09GetPdfStudentTrackingSheet, accountHolderId);
+                var queryString = string.Empty;
+
+                var combinedUrl = UrlUtility.CombineUrlPathAndArguments(baseUrl, queryString);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                headers.Add(AcceptHeaderKey, "application/pdf");
+                headers.Add(AcceptHeaderKey, "application/vnd.ellucian.v1+pdf");
+                headers.Add("X-Ellucian-Media-Type", "application/vnd.ellucian.v1+pdf");
+                var response = ExecuteGetRequestWithResponse(combinedUrl, headers: headers);
+                fileName = response.Content.Headers.ContentDisposition.FileName;
+                var resource = response.Content.ReadAsByteArrayAsync().Result;
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.GetBaseException(), "Unable to retrieve student statement.");
+                throw;
+            }
+        }
+
         // F09 added on 04-10-2019
         public async Task<F09AdminTrackingSheetResponseDto> GetF09AdminTrackingSheetAsync(string personId)
         {
@@ -248,7 +289,6 @@ namespace Ellucian.Colleague.Api.Client
                 throw new ArgumentNullException("accountHolderId", "Account Holder ID cannot be null or empty.");
             }
    
-
             try
             {
                 // Build url path from qapi path and student statements path

@@ -225,6 +225,8 @@ namespace Ellucian.Colleague.Domain.F09.Entities.PdfStudentTrackingSheet
     [Serializable]
     public class PdfTrackingSheetResponse
     {
+        public string Id { get; set; }
+
         public string StuName { get; set; }
 
         public string StuAddr { get; set; }

@@ -255,6 +255,7 @@ namespace Ellucian.Colleague.Coordination.F09.Services
 
             var dto = new PdfTrackingSheetResponseDto
             (
+                student.Id,
                 student.StuName,
                 student.StuAddr,
                 student.BusAddr,
@@ -332,8 +333,10 @@ namespace Ellucian.Colleague.Coordination.F09.Services
                 var parameters = utility.BuildReportParametersFromResourceFiles(new List<string>() { pathToResourceFile });
 
                 //parameters.Add(utility.BuildReportParameter("StatementTitle", "Awards Report"));
-                parameters.Add(utility.BuildReportParameter("StuName", responseDto.StuName));
-                parameters.Add(utility.BuildReportParameter("StuAddr", responseDto.StuAddr));
+                parameters.Add(utility.BuildReportParameter("StudentId", responseDto.Id));
+                parameters.Add(utility.BuildReportParameter("StudentName", responseDto.StuName));
+                parameters.Add(utility.BuildReportParameter("StudentAddress", responseDto.StuAddr));
+                parameters.Add(utility.BuildReportParameter("BusinessAddress", responseDto.BusAddr));
                 parameters.Add(utility.BuildReportParameter("ImagePath", pathToLogo));
                 //parameters.Add(utility.BuildReportParameter("DateGenerated", responseDto.Date.ToShortDateString()));
                 //parameters.Add(utility.BuildReportParameter("DateFormat", System.Threading.Thread.CurrentThread.CurrentCulture.DateTimeFormat.ShortDatePattern));
@@ -342,13 +345,13 @@ namespace Ellucian.Colleague.Coordination.F09.Services
                 report.SetParameters(parameters);
 
                 // Convert report data to be sent to the report
-                //if (responseDto.Awards != null && responseDto.Awards.Count > 0)
-                //{
-                //    DataSet ds_Awards = ConvertToDataSet(responseDto.Awards.ToArray());
+                if (responseDto.Programs != null && responseDto.Programs.Count > 0)
+                {
+                    DataSet dsPrograms = ConvertToDataSet(responseDto.Programs.ToArray());
 
-                //    // Add data to the report
-                //    report.DataSources.Add(new ReportDataSource("Awards", ds_Awards.Tables[0]));
-                //}
+                    // Add data to the report
+                    report.DataSources.Add(new ReportDataSource("dsPrograms", dsPrograms.Tables[0]));
+                }
 
                 // Set up some options for the report
                 string mimeType = string.Empty;

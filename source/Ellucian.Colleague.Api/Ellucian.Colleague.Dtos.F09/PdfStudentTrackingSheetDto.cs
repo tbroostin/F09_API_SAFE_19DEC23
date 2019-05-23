@@ -210,6 +210,8 @@ namespace Ellucian.Colleague.Dtos.F09.PdfStudentTrackingSheet
     
     public class PdfTrackingSheetResponseDto
     {
+        public string Id { get; set; }
+
         public string StuName { get; set; }
 
         public string StuAddr { get; set; }
@@ -277,13 +279,14 @@ namespace Ellucian.Colleague.Dtos.F09.PdfStudentTrackingSheet
         public List<PRs> PRs { get; set; }
 
         public PdfTrackingSheetResponseDto(
-            string stuName, string stuAddr, string busAddr, string familiarName, string gradProgAdvisor, string transEquivText, string tkResdyHours, string tkReshrHours,
+            string id, string stuName, string stuAddr, string busAddr, string familiarName, string gradProgAdvisor, string transEquivText, string tkResdyHours, string tkReshrHours,
             string aDisChair, string disAd, string disFacRdr, string disStuRdr, string disConFac, string disExtExam, string adLabel,
             List<string> degrees, List<Phones> phones, List<Emails> emails, List<Programs> programs, List<ProgExtras> progExtras,
             List<TEs> tes, List<GRs> grs, List<SAs> sas, List<CEs> ces, List<KAs> kas, List<IPs> ips, List<INs> ins, List<RPs> rps, List<Ms> ms,
             List<DisSteps> disSteps, List<Leaves> leaves, List<Evals> evals, List<PRs> prs
             )
         {
+            this.Id = id;
             this.StuName  = stuName;
             this.StuAddr  = stuAddr;
             this.BusAddr  = busAddr;

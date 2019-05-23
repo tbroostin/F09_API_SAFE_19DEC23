@@ -707,6 +707,11 @@
     <Compile Include="Controllers\Base\VisaTypesController.cs" />
     <Compile Include="Controllers\Student\StudentWaiverReasonsController.cs" />
     <Compile Include="Controllers\Student\StudentWaiversController.cs" />
+    <Compile Include="dsPrograms.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>dsPrograms.xsd</DependentUpon>
+    </Compile>
     <Compile Include="Models\ApiStatusModel.cs" />
     <Compile Include="Models\ResourceFileModel.cs" />
     <Compile Include="Models\ResourceFileEntryModel.cs" />
@@ -980,6 +985,17 @@
     </None>
     <Content Include="Awards.xss">
       <DependentUpon>Awards.xsd</DependentUpon>
+    </Content>
+    <Content Include="dsPrograms.xsc">
+      <DependentUpon>dsPrograms.xsd</DependentUpon>
+    </Content>
+    <None Include="dsPrograms.xsd">
+      <Generator>MSDataSetGenerator</Generator>
+      <LastGenOutput>dsPrograms.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </None>
+    <Content Include="dsPrograms.xss">
+      <DependentUpon>dsPrograms.xsd</DependentUpon>
     </Content>
     <None Include="Properties\PublishProfiles\F09ColleagueApi.pubxml" />
   </ItemGroup>
@@ -1321,6 +1337,7 @@
       <LastGenOutput>F09StudentTrackingSheetResources.designer.cs</LastGenOutput>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <EmbeddedResource Include="Reports\F09\StudentTrackingSheet.rdlc" />
     <EmbeddedResource Include="Reports\FinancialAid\AwardLetter3.rdlc">
       <SubType>Designer</SubType>
     </EmbeddedResource>

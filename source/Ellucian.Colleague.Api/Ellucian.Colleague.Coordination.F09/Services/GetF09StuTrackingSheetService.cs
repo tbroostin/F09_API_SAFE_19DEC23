@@ -333,36 +333,61 @@ namespace Ellucian.Colleague.Coordination.F09.Services
                 var parameters = utility.BuildReportParametersFromResourceFiles(new List<string>() { pathToResourceFile });
 
                 parameters.Add(utility.BuildReportParameter("ImagePath", pathToLogo));
+
                 parameters.Add(utility.BuildReportParameter("StudentId", responseDto.Id));
                 parameters.Add(utility.BuildReportParameter("StudentName", responseDto.StuName));
+                parameters.Add(utility.BuildReportParameter("DateGenerated", DateTime.Now.ToShortDateString()));
                 parameters.Add(utility.BuildReportParameter("StudentAddress", responseDto.StuAddr));
                 parameters.Add(utility.BuildReportParameter("BusinessAddress", responseDto.BusAddr));
                 parameters.Add(utility.BuildReportParameter("FamiliarName", responseDto.FamiliarName));
 
-                string emails = string.Empty;
+                // Convert report data to be sent to the report
+                DataSet dsEmails = new DataSet();
                 if (responseDto.Emails != null && responseDto.Emails.Count > 0)
                 {
-                    foreach (Emails email in responseDto.Emails)
-                        emails += email.EmailTypes + "\t" + email.EmailAddrs + "<br>";
-
-                    if (!String.IsNullOrEmpty(emails) && emails.LastIndexOf("<br>") > -1)
-                        emails = emails.TrimEnd('>', 'r', 'b', '<');
+                    dsEmails = ConvertToDataSet(responseDto.Emails.ToArray());
                 }
-                parameters.Add(utility.BuildReportParameter("Emails", emails));
+                else
+                {
+                    List<Emails> emails = new List<Emails>();
+                    emails.Add(new Emails());
+                    dsEmails = ConvertToDataSet(emails.ToArray());
+                }
+                report.DataSources.Add(new ReportDataSource("Emails", dsEmails.Tables[0]));
+
+                // Convert report data to be sent to the report
+                DataSet dsPhones = new DataSet();
+                if (responseDto.Phones != null && responseDto.Phones.Count > 0)
+                {
+                    dsPhones = ConvertToDataSet(responseDto.Phones.ToArray());
+                }
+                else
+                {
+                    List<Phones> phones = new List<Phones>();
+                    phones.Add(new Phones());
+                    dsPhones = ConvertToDataSet(phones.ToArray());
+                }
+                report.DataSources.Add(new ReportDataSource("Phones", dsPhones.Tables[0]));
+
                 parameters.Add(utility.BuildReportParameter("GraduateProgramAdvisor", responseDto.GradProgAdvisor));
-                parameters.Add(utility.BuildReportParameter("DateGenerated", DateTime.Now.ToShortDateString()));
 
                 // Set the report parameters
                 report.SetParameters(parameters);
 
                 // Convert report data to be sent to the report
+                DataSet dsPrograms = new DataSet();
                 if (responseDto.Programs != null && responseDto.Programs.Count > 0)
                 {
-                    DataSet dsPrograms = ConvertToDataSet(responseDto.Programs.ToArray());
-
-                    // Add data to the report
-                    report.DataSources.Add(new ReportDataSource("dsPrograms", dsPrograms.Tables[0]));
+                    dsPrograms = ConvertToDataSet(responseDto.Programs.ToArray());
                 }
+                else
+                {
+                    List<Programs> programs = new List<Programs>();
+                    programs.Add(new Programs());
+                    dsPrograms = ConvertToDataSet(programs.ToArray());
+                }
+                // Add data to the report
+                report.DataSources.Add(new ReportDataSource("Programs", dsPrograms.Tables[0]));
 
                 // Set up some options for the report
                 string mimeType = string.Empty;

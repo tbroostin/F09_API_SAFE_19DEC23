@@ -332,14 +332,25 @@ namespace Ellucian.Colleague.Coordination.F09.Services
                 var utility = new ReportUtility();
                 var parameters = utility.BuildReportParametersFromResourceFiles(new List<string>() { pathToResourceFile });
 
-                //parameters.Add(utility.BuildReportParameter("StatementTitle", "Awards Report"));
+                parameters.Add(utility.BuildReportParameter("ImagePath", pathToLogo));
                 parameters.Add(utility.BuildReportParameter("StudentId", responseDto.Id));
                 parameters.Add(utility.BuildReportParameter("StudentName", responseDto.StuName));
                 parameters.Add(utility.BuildReportParameter("StudentAddress", responseDto.StuAddr));
                 parameters.Add(utility.BuildReportParameter("BusinessAddress", responseDto.BusAddr));
-                parameters.Add(utility.BuildReportParameter("ImagePath", pathToLogo));
-                //parameters.Add(utility.BuildReportParameter("DateGenerated", responseDto.Date.ToShortDateString()));
-                //parameters.Add(utility.BuildReportParameter("DateFormat", System.Threading.Thread.CurrentThread.CurrentCulture.DateTimeFormat.ShortDatePattern));
+                parameters.Add(utility.BuildReportParameter("FamiliarName", responseDto.FamiliarName));
+
+                string emails = string.Empty;
+                if (responseDto.Emails != null && responseDto.Emails.Count > 0)
+                {
+                    foreach (Emails email in responseDto.Emails)
+                        emails += email.EmailTypes + "\t" + email.EmailAddrs + "<br>";
+
+                    if (!String.IsNullOrEmpty(emails) && emails.LastIndexOf("<br>") > -1)
+                        emails = emails.TrimEnd('>', 'r', 'b', '<');
+                }
+                parameters.Add(utility.BuildReportParameter("Emails", emails));
+                parameters.Add(utility.BuildReportParameter("GraduateProgramAdvisor", responseDto.GradProgAdvisor));
+                parameters.Add(utility.BuildReportParameter("DateGenerated", DateTime.Now.ToShortDateString()));
 
                 // Set the report parameters
                 report.SetParameters(parameters);
@@ -374,7 +385,7 @@ namespace Ellucian.Colleague.Coordination.F09.Services
             }
             catch (Exception e)
             {
-                logger.Error(e, "Unable to generate student statement.");
+                logger.Error(e, "Unable to generate student tracking sheet report.");
                 throw;
             }
             finally

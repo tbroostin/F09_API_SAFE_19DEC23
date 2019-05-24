@@ -82,7 +82,7 @@ namespace Ellucian.Colleague.Api.Controllers.F09
         }
 
         ///
-        /// F09 added on 05-04-2019 for Demo Reporting Project
+        /// F09 added on 05-23-2019 for Pdf Student Tracking Sheet project
         ///
         /// <summary>
         /// Get a student's accounts receivable statement as a byte array representation of a PDF file for a timeframe.  
@@ -164,7 +164,7 @@ namespace Ellucian.Colleague.Api.Controllers.F09
             catch (Exception e)
             {
                 _logger.Error(e, e.Message);
-                throw CreateHttpResponseException("Unknown error occurred getting StudentStatement resource. See log for details.");
+                throw CreateHttpResponseException("Unknown error occurred getting Student Tracking Sheet resource. See log for details.");
             }
         }
 

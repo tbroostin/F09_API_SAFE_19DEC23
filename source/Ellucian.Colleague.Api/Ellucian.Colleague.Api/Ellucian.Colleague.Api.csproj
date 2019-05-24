@@ -317,6 +317,11 @@
     <Compile Include="Areas\Student\Models\Tests\TestSections.cs" />
     <Compile Include="Areas\Student\Models\Tests\TestSectionsForCourses.cs" />
     <Compile Include="Areas\Student\StudentAreaRegistration.cs" />
+    <Compile Include="AsanaDataSet.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>AsanaDataSet.xsd</DependentUpon>
+    </Compile>
     <Compile Include="Awards.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -977,6 +982,17 @@
     <Content Include="Views\Utilities\RestoreConfigAsync.cshtml" />
     <Content Include="Awards.xsc">
       <DependentUpon>Awards.xsd</DependentUpon>
+    </Content>
+    <Content Include="AsanaDataSet.xsc">
+      <DependentUpon>AsanaDataSet.xsd</DependentUpon>
+    </Content>
+    <None Include="AsanaDataSet.xsd">
+      <Generator>MSDataSetGenerator</Generator>
+      <LastGenOutput>AsanaDataSet.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </None>
+    <Content Include="AsanaDataSet.xss">
+      <DependentUpon>AsanaDataSet.xsd</DependentUpon>
     </Content>
     <None Include="Awards.xsd">
       <Generator>MSDataSetGenerator</Generator>

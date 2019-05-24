@@ -9,7 +9,7 @@
           <Paragraph>
             <TextRuns>
               <TextRun>
-                <Value>=Parameters!StudentName.Value + " - " + Parameters!DateGenerated.Value</Value>
+                <Value>=Parameters!StudentName.Value</Value>
                 <Style>
                   <FontSize>14pt</FontSize>
                   <FontWeight>Bold</FontWeight>
@@ -19,8 +19,8 @@
             <Style />
           </Paragraph>
         </Paragraphs>
-        <Top>0.15in</Top>
-        <Height>0.3in</Height>
+        <Top>0.125in</Top>
+        <Height>0.35in</Height>
         <Width>7.5in</Width>
         <Style>
           <Border>
@@ -33,7 +33,8 @@
         </Style>
       </Textbox>
       <Line Name="Line1">
-        <Top>0.53in</Top>
+        <Top>0.54667in</Top>
+        <Left>0.00667in</Left>
         <Height>0in</Height>
         <Width>7.5in</Width>
         <ZIndex>1</ZIndex>
@@ -64,7 +65,6 @@
                 <Label>Student Id:</Label>
                 <Value>Student ID:</Value>
                 <Style>
-                  <FontSize>9pt</FontSize>
                   <FontWeight>Bold</FontWeight>
                 </Style>
               </TextRun>
@@ -75,6 +75,7 @@
           </Paragraph>
         </Paragraphs>
         <Top>0.62167in</Top>
+        <Left>0.00667in</Left>
         <Height>0.25in</Height>
         <Width>2in</Width>
         <ZIndex>3</ZIndex>
@@ -97,7 +98,6 @@
               <TextRun>
                 <Value>Address:</Value>
                 <Style>
-                  <FontSize>9pt</FontSize>
                   <FontWeight>Bold</FontWeight>
                 </Style>
               </TextRun>
@@ -109,6 +109,7 @@
         </Paragraphs>
         <rd:DefaultName>Textbox2</rd:DefaultName>
         <Top>0.875in</Top>
+        <Left>0.00667in</Left>
         <Height>0.25in</Height>
         <Width>2in</Width>
         <ZIndex>4</ZIndex>
@@ -131,7 +132,6 @@
               <TextRun>
                 <Value>Employer:</Value>
                 <Style>
-                  <FontSize>9pt</FontSize>
                   <FontWeight>Bold</FontWeight>
                 </Style>
               </TextRun>
@@ -142,7 +142,8 @@
           </Paragraph>
         </Paragraphs>
         <rd:DefaultName>Textbox2</rd:DefaultName>
-        <Top>1.375in</Top>
+        <Top>1.125in</Top>
+        <Left>0.00667in</Left>
         <Height>0.25in</Height>
         <Width>2in</Width>
         <ZIndex>5</ZIndex>
@@ -165,7 +166,6 @@
               <TextRun>
                 <Value>Familiar Name:</Value>
                 <Style>
-                  <FontSize>9pt</FontSize>
                   <FontWeight>Bold</FontWeight>
                 </Style>
               </TextRun>
@@ -176,7 +176,7 @@
           </Paragraph>
         </Paragraphs>
         <rd:DefaultName>Textbox2</rd:DefaultName>
-        <Top>1.9in</Top>
+        <Top>1.43056in</Top>
         <Left>0.00667in</Left>
         <Height>0.25in</Height>
         <Width>2in</Width>
@@ -200,7 +200,6 @@
               <TextRun>
                 <Value>Email:</Value>
                 <Style>
-                  <FontSize>9pt</FontSize>
                   <FontWeight>Bold</FontWeight>
                 </Style>
               </TextRun>
@@ -211,7 +210,8 @@
           </Paragraph>
         </Paragraphs>
         <rd:DefaultName>Textbox2</rd:DefaultName>
-        <Top>2.18in</Top>
+        <Top>1.7375in</Top>
+        <Left>0.00667in</Left>
         <Height>0.25in</Height>
         <Width>2in</Width>
         <ZIndex>7</ZIndex>
@@ -234,7 +234,6 @@
               <TextRun>
                 <Value>Phone Numbers:</Value>
                 <Style>
-                  <FontSize>9pt</FontSize>
                   <FontWeight>Bold</FontWeight>
                 </Style>
               </TextRun>
@@ -245,7 +244,7 @@
           </Paragraph>
         </Paragraphs>
         <rd:DefaultName>Textbox2</rd:DefaultName>
-        <Top>2.77917in</Top>
+        <Top>2.02917in</Top>
         <Height>0.25in</Height>
         <Width>2in</Width>
         <ZIndex>8</ZIndex>
@@ -268,7 +267,6 @@
               <TextRun>
                 <Value>Graduate Program Advisors:</Value>
                 <Style>
-                  <FontSize>9pt</FontSize>
                   <FontWeight>Bold</FontWeight>
                 </Style>
               </TextRun>
@@ -279,233 +277,10 @@
           </Paragraph>
         </Paragraphs>
         <rd:DefaultName>Textbox2</rd:DefaultName>
-        <Top>3.12083in</Top>
+        <Top>2.37083in</Top>
         <Height>0.25in</Height>
         <Width>2in</Width>
         <ZIndex>9</ZIndex>
-        <Style>
-          <Border>
-            <Style>None</Style>
-          </Border>
-          <PaddingLeft>2pt</PaddingLeft>
-          <PaddingRight>2pt</PaddingRight>
-          <PaddingTop>2pt</PaddingTop>
-          <PaddingBottom>2pt</PaddingBottom>
-        </Style>
-      </Textbox>
-      <Textbox Name="txtStudentId">
-        <CanGrow>true</CanGrow>
-        <KeepTogether>true</KeepTogether>
-        <Paragraphs>
-          <Paragraph>
-            <TextRuns>
-              <TextRun>
-                <Value>=Parameters!StudentId.Value</Value>
-                <Style>
-                  <FontSize>9pt</FontSize>
-                  <FontWeight>Normal</FontWeight>
-                </Style>
-              </TextRun>
-            </TextRuns>
-            <Style>
-              <TextAlign>Left</TextAlign>
-            </Style>
-          </Paragraph>
-        </Paragraphs>
-        <Top>0.62167in</Top>
-        <Left>2.13167in</Left>
-        <Height>0.25in</Height>
-        <Width>3in</Width>
-        <ZIndex>10</ZIndex>
-        <Style>
-          <Border>
-            <Style>None</Style>
-          </Border>
-          <PaddingLeft>2pt</PaddingLeft>
-          <PaddingRight>2pt</PaddingRight>
-          <PaddingTop>2pt</PaddingTop>
-          <PaddingBottom>2pt</PaddingBottom>
-        </Style>
-      </Textbox>
-      <Textbox Name="txtStudentAddress">
-        <KeepTogether>true</KeepTogether>
-        <Paragraphs>
-          <Paragraph>
-            <TextRuns>
-              <TextRun>
-                <Value>=Replace(Parameters!StudentAddress.Value, "&lt;br&gt;", System.Environment.NewLine)</Value>
-                <Style>
-                  <FontSize>9pt</FontSize>
-                  <FontWeight>Normal</FontWeight>
-                </Style>
-              </TextRun>
-            </TextRuns>
-            <Style>
-              <TextAlign>Left</TextAlign>
-            </Style>
-          </Paragraph>
-        </Paragraphs>
-        <Top>0.875in</Top>
-        <Left>2.13167in</Left>
-        <Height>0.5in</Height>
-        <Width>3in</Width>
-        <ZIndex>11</ZIndex>
-        <Style>
-          <Border>
-            <Style>None</Style>
-          </Border>
-          <PaddingLeft>2pt</PaddingLeft>
-          <PaddingRight>2pt</PaddingRight>
-          <PaddingTop>2pt</PaddingTop>
-          <PaddingBottom>2pt</PaddingBottom>
-        </Style>
-      </Textbox>
-      <Textbox Name="txtBusinessAddress">
-        <KeepTogether>true</KeepTogether>
-        <Paragraphs>
-          <Paragraph>
-            <TextRuns>
-              <TextRun>
-                <Value>=Replace(Parameters!BusinessAddress.Value, "&lt;br&gt;", System.Environment.NewLine)</Value>
-                <Style>
-                  <FontSize>9pt</FontSize>
-                  <FontWeight>Normal</FontWeight>
-                </Style>
-              </TextRun>
-            </TextRuns>
-            <Style>
-              <TextAlign>Left</TextAlign>
-            </Style>
-          </Paragraph>
-        </Paragraphs>
-        <Top>1.375in</Top>
-        <Left>2.13167in</Left>
-        <Height>0.5in</Height>
-        <Width>3in</Width>
-        <ZIndex>12</ZIndex>
-        <Style>
-          <Border>
-            <Style>None</Style>
-          </Border>
-          <PaddingLeft>2pt</PaddingLeft>
-          <PaddingRight>2pt</PaddingRight>
-          <PaddingTop>2pt</PaddingTop>
-          <PaddingBottom>2pt</PaddingBottom>
-        </Style>
-      </Textbox>
-      <Line Name="Line3">
-        <Top>0.5in</Top>
-        <Height>0in</Height>
-        <Width>7.5in</Width>
-        <ZIndex>13</ZIndex>
-        <Style>
-          <Border>
-            <Style>Solid</Style>
-          </Border>
-        </Style>
-      </Line>
-      <Line Name="Line4">
-        <Top>0.125in</Top>
-        <Height>0in</Height>
-        <Width>7.5in</Width>
-        <ZIndex>14</ZIndex>
-        <Style>
-          <Border>
-            <Style>Solid</Style>
-          </Border>
-        </Style>
-      </Line>
-      <Textbox Name="txtStudentId2">
-        <CanGrow>true</CanGrow>
-        <KeepTogether>true</KeepTogether>
-        <Paragraphs>
-          <Paragraph>
-            <TextRuns>
-              <TextRun>
-                <Value>=Parameters!FamiliarName.Value</Value>
-                <Style>
-                  <FontSize>9pt</FontSize>
-                  <FontWeight>Normal</FontWeight>
-                </Style>
-              </TextRun>
-            </TextRuns>
-            <Style>
-              <TextAlign>Left</TextAlign>
-            </Style>
-          </Paragraph>
-        </Paragraphs>
-        <Top>1.9in</Top>
-        <Left>2.12834in</Left>
-        <Height>0.25in</Height>
-        <Width>3in</Width>
-        <ZIndex>15</ZIndex>
-        <Style>
-          <Border>
-            <Style>None</Style>
-          </Border>
-          <PaddingLeft>2pt</PaddingLeft>
-          <PaddingRight>2pt</PaddingRight>
-          <PaddingTop>2pt</PaddingTop>
-          <PaddingBottom>2pt</PaddingBottom>
-        </Style>
-      </Textbox>
-      <Textbox Name="txtBusinessAddress2">
-        <KeepTogether>true</KeepTogether>
-        <Paragraphs>
-          <Paragraph>
-            <TextRuns>
-              <TextRun>
-                <Value>=Replace(Parameters!Emails.Value, "&lt;br&gt;", System.Environment.NewLine)</Value>
-                <Style>
-                  <FontSize>9pt</FontSize>
-                  <FontWeight>Normal</FontWeight>
-                </Style>
-              </TextRun>
-            </TextRuns>
-            <Style>
-              <TextAlign>Left</TextAlign>
-            </Style>
-          </Paragraph>
-        </Paragraphs>
-        <Top>2.18in</Top>
-        <Left>2.12834in</Left>
-        <Height>0.5in</Height>
-        <Width>3in</Width>
-        <ZIndex>16</ZIndex>
-        <Style>
-          <Border>
-            <Style>None</Style>
-          </Border>
-          <PaddingLeft>2pt</PaddingLeft>
-          <PaddingRight>2pt</PaddingRight>
-          <PaddingTop>2pt</PaddingTop>
-          <PaddingBottom>2pt</PaddingBottom>
-        </Style>
-      </Textbox>
-      <Textbox Name="txtStudentId3">
-        <CanGrow>true</CanGrow>
-        <KeepTogether>true</KeepTogether>
-        <Paragraphs>
-          <Paragraph>
-            <TextRuns>
-              <TextRun>
-                <Value>=Parameters!GraduateProgramAdvisor.Value</Value>
-                <Style>
-                  <FontSize>9pt</FontSize>
-                  <FontWeight>Normal</FontWeight>
-                </Style>
-              </TextRun>
-            </TextRuns>
-            <Style>
-              <TextAlign>Left</TextAlign>
-            </Style>
-          </Paragraph>
-        </Paragraphs>
-        <Top>3.12083in</Top>
-        <Left>2.13167in</Left>
-        <Height>0.25in</Height>
-        <Width>3in</Width>
-        <ZIndex>17</ZIndex>
         <Style>
           <Border>
             <Style>None</Style>
@@ -520,7 +295,7 @@
     <Height>10in</Height>
     <Style />
   </Body>
-  <Width>7.5in</Width>
+  <Width>8.00667in</Width>
   <Page>
     <PageHeader>
       <Height>0.825in</Height>
@@ -549,7 +324,7 @@
                   <Value>Student Tracking Sheet</Value>
                   <Style>
                     <FontSize>20pt</FontSize>
-                    <FontWeight>Normal</FontWeight>
+                    <FontWeight>Bold</FontWeight>
                   </Style>
                 </TextRun>
               </TextRuns>
@@ -601,6 +376,58 @@
     <Style />
   </Page>
   <AutoRefresh>0</AutoRefresh>
+  <DataSources>
+    <DataSource Name="PdfStudentTrackingSheetDto">
+      <ConnectionProperties>
+        <DataProvider>System.Data.DataSet</DataProvider>
+        <ConnectString>/* Local Connection */</ConnectString>
+      </ConnectionProperties>
+      <rd:DataSourceID>0d334b06-76c0-4050-903e-58388236375a</rd:DataSourceID>
+    </DataSource>
+  </DataSources>
+  <DataSets>
+    <DataSet Name="dsPrograms">
+      <Query>
+        <DataSourceName>PdfStudentTrackingSheetDto</DataSourceName>
+        <CommandText>/* Local Query */</CommandText>
+      </Query>
+      <Fields>
+        <Field Name="Prog">
+          <DataField>Prog</DataField>
+          <rd:TypeName>System.String</rd:TypeName>
+        </Field>
+        <Field Name="ProgStartDate">
+          <DataField>ProgStartDate</DataField>
+          <rd:TypeName>System.String</rd:TypeName>
+        </Field>
+        <Field Name="ProgStatus">
+          <DataField>ProgStatus</DataField>
+          <rd:TypeName>String.String</rd:TypeName>
+        </Field>
+        <Field Name="ProgYearsEnrl">
+          <DataField>ProgYearsEnrl</DataField>
+          <rd:TypeName>String.String</rd:TypeName>
+        </Field>
+        <Field Name="ProgAntCmpl">
+          <DataField>ProgAntCmpl</DataField>
+          <rd:TypeName>String.String</rd:TypeName>
+        </Field>
+        <Field Name="ProgFac">
+          <DataField>ProgFac</DataField>
+          <rd:TypeName>String.String</rd:TypeName>
+        </Field>
+        <Field Name="ProgAd">
+          <DataField>ProgAd</DataField>
+          <rd:TypeName>System.String</rd:TypeName>
+        </Field>
+      </Fields>
+      <rd:DataSetInfo>
+        <rd:DataSetName>Ellucian.Colleague.Dtos.F09</rd:DataSetName>
+        <rd:TableName>Programs</rd:TableName>
+        <rd:ObjectDataSourceType>Ellucian.Colleague.Dtos.F09.PdfStudentTrackingSheetDto, Ellucian.Colleague.Dtos.F09, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null</rd:ObjectDataSourceType>
+      </rd:DataSetInfo>
+    </DataSet>
+  </DataSets>
   <ReportParameters>
     <ReportParameter Name="StudentId">
       <DataType>String</DataType>
@@ -621,25 +448,6 @@
       <Prompt>ReportParameter1</Prompt>
     </ReportParameter>
     <ReportParameter Name="BusinessAddress">
-      <DataType>String</DataType>
-      <AllowBlank>true</AllowBlank>
-      <Prompt>ReportParameter1</Prompt>
-    </ReportParameter>
-    <ReportParameter Name="DateGenerated">
-      <DataType>String</DataType>
-      <Prompt>ReportParameter1</Prompt>
-    </ReportParameter>
-    <ReportParameter Name="FamiliarName">
-      <DataType>String</DataType>
-      <AllowBlank>true</AllowBlank>
-      <Prompt>ReportParameter1</Prompt>
-    </ReportParameter>
-    <ReportParameter Name="Emails">
-      <DataType>String</DataType>
-      <AllowBlank>true</AllowBlank>
-      <Prompt>ReportParameter1</Prompt>
-    </ReportParameter>
-    <ReportParameter Name="GraduateProgramAdvisor">
       <DataType>String</DataType>
       <AllowBlank>true</AllowBlank>
       <Prompt>ReportParameter1</Prompt>

@@ -75,7 +75,7 @@ namespace Ellucian.Colleague.Api.Client
             }
             catch (Exception ex)
             {
-                logger.Error(ex.GetBaseException(), "Unable to retrieve student statement.");
+                logger.Error(ex.GetBaseException(), "Unable to retrieve student tracking sheet report.");
                 throw;
             }
         }

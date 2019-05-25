@@ -341,7 +341,7 @@ namespace Ellucian.Colleague.Coordination.F09.Services
                 parameters.Add(utility.BuildReportParameter("BusinessAddress", responseDto.BusAddr));
                 parameters.Add(utility.BuildReportParameter("FamiliarName", responseDto.FamiliarName));
 
-                // Convert report data to be sent to the report
+                // Email Info
                 DataSet dsEmails = new DataSet();
                 if (responseDto.Emails != null && responseDto.Emails.Count > 0)
                 {
@@ -355,7 +355,7 @@ namespace Ellucian.Colleague.Coordination.F09.Services
                 }
                 report.DataSources.Add(new ReportDataSource("Emails", dsEmails.Tables[0]));
 
-                // Convert report data to be sent to the report
+                // Phone Info
                 DataSet dsPhones = new DataSet();
                 if (responseDto.Phones != null && responseDto.Phones.Count > 0)
                 {
@@ -371,10 +371,7 @@ namespace Ellucian.Colleague.Coordination.F09.Services
 
                 parameters.Add(utility.BuildReportParameter("GraduateProgramAdvisor", responseDto.GradProgAdvisor));
 
-                // Set the report parameters
-                report.SetParameters(parameters);
-
-                // Convert report data to be sent to the report
+                // Academic Programs
                 DataSet dsPrograms = new DataSet();
                 if (responseDto.Programs != null && responseDto.Programs.Count > 0)
                 {
@@ -388,6 +385,169 @@ namespace Ellucian.Colleague.Coordination.F09.Services
                 }
                 // Add data to the report
                 report.DataSources.Add(new ReportDataSource("Programs", dsPrograms.Tables[0]));
+
+                // Academic Program Extras
+                DataSet dsProgExtras = new DataSet();
+                if (responseDto.ProgExtras != null && responseDto.ProgExtras.Count > 0)
+                {
+                    dsProgExtras = ConvertToDataSet(responseDto.ProgExtras.ToArray());
+                }
+                else
+                {
+                    List<ProgExtras> ProgExtras = new List<ProgExtras>();
+                    ProgExtras.Add(new ProgExtras());
+                    dsProgExtras = ConvertToDataSet(ProgExtras.ToArray());
+                }
+                // Add data to the report
+                report.DataSources.Add(new ReportDataSource("ProgExtras", dsProgExtras.Tables[0]));
+
+                // Transcripted Work
+                DataSet dsGRs = new DataSet();
+                if (responseDto.GRs != null && responseDto.GRs.Count > 0)
+                {
+                    dsGRs = ConvertToDataSet(responseDto.GRs.ToArray());
+                }
+                else
+                {
+                    List<GRs> GRs = new List<GRs>();
+                    GRs.Add(new GRs());
+                    dsGRs = ConvertToDataSet(GRs.ToArray());
+                }
+                // Add data to the report
+                report.DataSources.Add(new ReportDataSource("GRs", dsGRs.Tables[0]));
+
+                // Completed Knowledge Areas
+                DataSet dsKAs = new DataSet();
+                if (responseDto.KAs != null && responseDto.KAs.Count > 0)
+                {
+                    dsKAs = ConvertToDataSet(responseDto.KAs.ToArray());
+                }
+                else
+                {
+                    List<KAs> KAs = new List<KAs>();
+                    KAs.Add(new KAs());
+                    dsKAs = ConvertToDataSet(KAs.ToArray());
+                }
+                // Add data to the report
+                report.DataSources.Add(new ReportDataSource("KAs", dsKAs.Tables[0]));
+
+                // Work in Progress
+                DataSet dsIPs = new DataSet();
+                if (responseDto.IPs != null && responseDto.IPs.Count > 0)
+                {
+                    dsIPs = ConvertToDataSet(responseDto.IPs.ToArray());
+                }
+                else
+                {
+                    List<IPs> IPs = new List<IPs>();
+                    IPs.Add(new IPs());
+                    dsIPs = ConvertToDataSet(IPs.ToArray());
+                }
+                // Add data to the report
+                report.DataSources.Add(new ReportDataSource("IPs", dsIPs.Tables[0]));
+
+                // Site in Hours
+                // Internship Site(s)
+                DataSet dsINs = new DataSet();
+                if (responseDto.INs != null && responseDto.INs.Count > 0)
+                {
+                    dsINs = ConvertToDataSet(responseDto.INs.ToArray());
+                }
+                else
+                {
+                    List<INs> INs = new List<INs>();
+                    INs.Add(new INs());
+                    dsINs = ConvertToDataSet(INs.ToArray());
+                }
+                // Add data to the report
+                report.DataSources.Add(new ReportDataSource("INs", dsINs.Tables[0]));
+
+                // Clinical Practice Site(s)
+                DataSet dsPRs = new DataSet();
+                if (responseDto.PRs != null && responseDto.PRs.Count > 0)
+                {
+                    dsPRs = ConvertToDataSet(responseDto.PRs.ToArray());
+                }
+                else
+                {
+                    List<PRs> PRs = new List<PRs>();
+                    PRs.Add(new PRs());
+                    dsPRs = ConvertToDataSet(PRs.ToArray());
+                }
+                // Add data to the report
+                report.DataSources.Add(new ReportDataSource("PRs", dsPRs.Tables[0]));
+
+                // Research Practice Site(s)
+                DataSet dsRPs = new DataSet();
+                if (responseDto.RPs != null && responseDto.RPs.Count > 0)
+                {
+                    dsRPs = ConvertToDataSet(responseDto.RPs.ToArray());
+                }
+                else
+                {
+                    List<RPs> RPs = new List<RPs>();
+                    RPs.Add(new RPs());
+                    dsRPs = ConvertToDataSet(RPs.ToArray());
+                }
+                // Add data to the report
+                report.DataSources.Add(new ReportDataSource("RPs", dsRPs.Tables[0]));
+
+                // Convert report data to be sent to the report
+                DataSet dsMs = new DataSet();
+                if (responseDto.Ms != null && responseDto.Ms.Count > 0)
+                {
+                    dsMs = ConvertToDataSet(responseDto.Ms.ToArray());
+                }
+                else
+                {
+                    List<Ms> Ms = new List<Ms>();
+                    Ms.Add(new Ms());
+                    dsMs = ConvertToDataSet(Ms.ToArray());
+                }
+                // Add data to the report
+                report.DataSources.Add(new ReportDataSource("Ms", dsMs.Tables[0]));
+
+                // Residency and Research Hours
+                parameters.Add(utility.BuildReportParameter("ResidencyHours", responseDto.TkResdyHours));
+                parameters.Add(utility.BuildReportParameter("ResearchHours", responseDto.TkReshrHours));
+
+                // Dissertation
+                parameters.Add(utility.BuildReportParameter("ADisChair", responseDto.ADisChair));
+                parameters.Add(utility.BuildReportParameter("AdLabel", responseDto.AdLabel));
+                parameters.Add(utility.BuildReportParameter("DisFacRdr", responseDto.DisFacRdr));
+                parameters.Add(utility.BuildReportParameter("DisStuRdr", responseDto.DisStuRdr));
+                parameters.Add(utility.BuildReportParameter("DisConFac", responseDto.DisConFac));
+                parameters.Add(utility.BuildReportParameter("DisExtExam", responseDto.DisExtExam));
+
+                // Dissertation Steps
+                DataSet dsDisSteps = new DataSet();
+                if (responseDto.DisSteps != null && responseDto.DisSteps.Count > 0)
+                {
+                    dsDisSteps = ConvertToDataSet(responseDto.DisSteps.ToArray());
+                }
+                else
+                {
+                    List<DisSteps> DisSteps = new List<DisSteps>();
+                    DisSteps.Add(new DisSteps());
+                    dsDisSteps = ConvertToDataSet(DisSteps.ToArray());
+                }
+                // Add data to the report
+                report.DataSources.Add(new ReportDataSource("DisSteps", dsDisSteps.Tables[0]));
+
+                // Degrees Awarded
+                string degrees = string.Empty;
+                if (responseDto.Degrees != null && responseDto.Degrees.Count > 0)
+                {
+                    foreach (string degree in responseDto.Degrees)
+                        degrees += degree + "<br>";
+
+                    if (!String.IsNullOrEmpty(degrees))
+                        degrees.TrimEnd('>', 'r', 'b', '<');
+                }
+                parameters.Add(utility.BuildReportParameter("Degrees", degrees));
+
+                // Set the report parameters
+                report.SetParameters(parameters);
 
                 // Set up some options for the report
                 string mimeType = string.Empty;

@@ -27,5 +27,9 @@ namespace Ellucian.Colleague.Api.Client
 
         // F09 added here on 05-05-2019 for Demo Reporting Project
         private static readonly string F09GetStudentStatement = "f09/get-student-statement";
+
+        // F09 teresa@toad-code.com 05/21/19
+        private static readonly string getF09Ssn = "f09/get-f09Ssn";
+        private static readonly string updateF09Ssn = "f09/put-f09Ssn";                                                      
     }
 }

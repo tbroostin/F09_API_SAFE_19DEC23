@@ -356,6 +356,7 @@
     <Compile Include="Controllers\ColleagueFinance\PurchasingArrangementsController.cs" />
     <Compile Include="Controllers\F09\ActiveRestrictionsController.cs" />
     <Compile Include="Controllers\F09\F09AdminTrackingSheetController.cs" />
+    <Compile Include="Controllers\F09\F09SsnController.cs" />
     <Compile Include="Controllers\F09\F09StuTrackingSheetController.cs" />
     <Compile Include="Controllers\F09\ScholarshipApplicationController.cs" />
     <Compile Include="Controllers\F09\StudentAlumniDirectoriesController.cs" />
@@ -1349,7 +1350,7 @@
           <AutoAssignPort>True</AutoAssignPort>
           <DevelopmentServerPort>57276</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
-          <IISUrl>http://localhost/Ellucian.Colleague.Api.F09</IISUrl>
+          <IISUrl>http://localhost/Ellucian.Colleague.Api.F09G</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>
           <UseCustomServer>False</UseCustomServer>
           <CustomServerUrl>

@@ -43,6 +43,8 @@
   <ItemGroup>
     <Compile Include="Entities\F09AdminTrackingSheet.cs" />
     <Compile Include="Entities\F09AdminTrackingSheetResponse.cs" />
+    <Compile Include="Entities\F09SsnRequest.cs" />
+    <Compile Include="Entities\F09SsnResponse.cs" />
     <Compile Include="Entities\GetActiveRestrictionsResponse.cs" />
     <Compile Include="Entities\StudentAlumniDirectories.cs" />
     <Compile Include="Entities\GetF09StuTrackingSheetResponse.cs" />
@@ -54,6 +56,7 @@
     <Compile Include="Entities\UpdateStudentRestrictionResponse.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Repositories\IF09AdminTrackingSheetRepository.cs" />
+    <Compile Include="Repositories\IF09SsnRepository.cs" />
     <Compile Include="Repositories\IGetActiveRestrictionsRepository.cs" />
     <Compile Include="Repositories\IGetF09StuTrackingSheetRepository.cs" />
     <Compile Include="Repositories\IStudentAlumniDirectoriesRepository.cs" />

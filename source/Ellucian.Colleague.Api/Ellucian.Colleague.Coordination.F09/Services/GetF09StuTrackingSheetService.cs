@@ -546,6 +546,36 @@ namespace Ellucian.Colleague.Coordination.F09.Services
                 }
                 parameters.Add(utility.BuildReportParameter("Degrees", degrees));
 
+                // Leaves
+                DataSet dsLeaves = new DataSet();
+                if (responseDto.Leaves != null && responseDto.Leaves.Count > 0)
+                {
+                    dsLeaves = ConvertToDataSet(responseDto.Leaves.ToArray());
+                }
+                else
+                {
+                    List<Leaves> Leaves = new List<Leaves>();
+                    Leaves.Add(new Leaves());
+                    dsLeaves = ConvertToDataSet(Leaves.ToArray());
+                }
+                // Add data to the report
+                report.DataSources.Add(new ReportDataSource("Leaves", dsLeaves.Tables[0]));
+
+                // Evals
+                DataSet dsEvals = new DataSet();
+                if (responseDto.Evals != null && responseDto.Evals.Count > 0)
+                {
+                    dsEvals = ConvertToDataSet(responseDto.Evals.ToArray());
+                }
+                else
+                {
+                    List<Evals> Evals = new List<Evals>();
+                    Evals.Add(new Evals());
+                    dsEvals = ConvertToDataSet(Evals.ToArray());
+                }
+                // Add data to the report
+                report.DataSources.Add(new ReportDataSource("Evals", dsEvals.Tables[0]));
+
                 // Set the report parameters
                 report.SetParameters(parameters);
 

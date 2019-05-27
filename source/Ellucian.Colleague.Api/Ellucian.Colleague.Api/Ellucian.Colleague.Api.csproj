@@ -1353,7 +1353,7 @@
       <LastGenOutput>F09StudentTrackingSheetResources.designer.cs</LastGenOutput>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <EmbeddedResource Include="Reports\F09\StudentTrackingSheet.rdlc" />
+    <Content Include="Reports\F09\StudentTrackingSheet.rdlc" />
     <EmbeddedResource Include="Reports\FinancialAid\AwardLetter3.rdlc">
       <SubType>Designer</SubType>
     </EmbeddedResource>

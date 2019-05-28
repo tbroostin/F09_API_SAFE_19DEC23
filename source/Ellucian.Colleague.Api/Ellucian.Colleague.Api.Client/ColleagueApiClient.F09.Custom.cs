@@ -312,5 +312,53 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
+        // F09 teresa@toad-code.com 05/21/19
+        public async Task<F09SsnResponseDto> GetF09SsnAsync(string personId)
+        {
+            if (string.IsNullOrEmpty(personId))
+            {
+                throw new ArgumentNullException("personId", "ID cannot be empty/null for F09Ssn.");
+            }
+            try
+            {
+                var baseUrl = UrlUtility.CombineUrlPath(getF09Ssn, personId);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(baseUrl, headers: headers);
+                var dtoResponse = JsonConvert.DeserializeObject<F09SsnResponseDto>(await response.Content.ReadAsStringAsync());
+
+                return dtoResponse;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to GetF09SsnAsync");
+                throw;
+            }
+        }
+
+        public async Task<HttpResponseMessage> PutF09SsnAsync(F09SsnRequestDto dtoRequest)
+        {
+            if (dtoRequest == null)
+            {
+                throw new ArgumentNullException("F09SsnRequest", "F09Ssn Request cannot be null.");
+            }
+            try
+            {
+                var baseUrl = UrlUtility.CombineUrlPath(updateF09Ssn);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var dtoResponse = await ExecutePutRequestWithResponseAsync(dtoRequest, baseUrl, headers: headers);
+                return dtoResponse;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to PutF09SsnAsync.");
+                throw;
+            }
+        }
+        
     }
 }

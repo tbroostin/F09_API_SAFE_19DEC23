@@ -147,6 +147,31 @@ namespace Ellucian.Colleague.Api
                     headerVersion = new HeaderVersionConstraint(1, true, string.Format(EllucianPDFMediaTypeFormat, 1)),
                 }
             );
+
+            // F09 teresa@toad-code.com 05/21/19
+            routes.MapHttpRoute(
+                 name: "GetF09SsnById",
+                 routeTemplate: "f09/get-f09Ssn/{personId}",
+                 defaults: new { controller = "F09Ssn", action = "GetF09SsnAsync" },
+                 constraints: new
+                 {
+                     httpMethod = new HttpMethodConstraint("GET"),
+                     headerVersion = new HeaderVersionConstraint(1, true)
+                 }
+             );
+
+            // F09 teresa@toad-code.com 05/21/19
+            routes.MapHttpRoute(
+                name: "PutF09Ssn",
+                routeTemplate: "f09/put-f09Ssn",
+                defaults: new { controller = "F09Ssn", action = "PutF09SsnAsync" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("PUT"),
+                    headerVersion = new HeaderVersionConstraint(1, true)
+                }
+            );
+
         }
     }
 }

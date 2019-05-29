@@ -240,6 +240,14 @@ namespace Ellucian.Colleague.Dtos.F09.PdfStudentTrackingSheet
 
         public string DisExtExam { get; set; }
 
+        public string DisPrApprDate { get; set; }
+
+        public string DisReApprDate { get; set; }
+
+        public string DisReWaivDate { get; set; }
+
+        public string DisPrOralDate { get; set; }
+
         public string AdLabel { get; set; }
 
         public List<string> Degrees { get; set; }
@@ -281,6 +289,7 @@ namespace Ellucian.Colleague.Dtos.F09.PdfStudentTrackingSheet
         public PdfTrackingSheetResponseDto(
             string id, string stuName, string stuAddr, string busAddr, string familiarName, string gradProgAdvisor, string transEquivText, string tkResdyHours, string tkReshrHours,
             string aDisChair, string disAd, string disFacRdr, string disStuRdr, string disConFac, string disExtExam, string adLabel,
+            string disPrApprDate, string disPrOralDate, string disReApprDate, string disReWaivDate,
             List<string> degrees, List<Phones> phones, List<Emails> emails, List<Programs> programs, List<ProgExtras> progExtras,
             List<TEs> tes, List<GRs> grs, List<SAs> sas, List<CEs> ces, List<KAs> kas, List<IPs> ips, List<INs> ins, List<RPs> rps, List<Ms> ms,
             List<DisSteps> disSteps, List<Leaves> leaves, List<Evals> evals, List<PRs> prs
@@ -301,6 +310,10 @@ namespace Ellucian.Colleague.Dtos.F09.PdfStudentTrackingSheet
             this.DisStuRdr  = disStuRdr;
             this.DisConFac  = disConFac;
             this.DisExtExam  = disExtExam;
+            this.DisPrApprDate = disPrApprDate;
+            this.DisPrOralDate = disPrOralDate;
+            this.DisReApprDate = disReApprDate; 
+            this.DisReWaivDate = disReWaivDate;
             this.AdLabel  = adLabel;
             this.Degrees = degrees;
             this.Phones = phones;

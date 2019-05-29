@@ -255,6 +255,14 @@ namespace Ellucian.Colleague.Domain.F09.Entities.PdfStudentTrackingSheet
 
         public string DisExtExam { get; set; }
 
+        public string DisPrApprDate { get; set; }
+
+        public string DisReApprDate { get; set; }
+
+        public string DisReWaivDate { get; set; }
+
+        public string DisPrOralDate { get; set; }
+
         public string AdLabel { get; set; }
 
         public List<string> Degrees { get; set; }

@@ -270,6 +270,10 @@ namespace Ellucian.Colleague.Coordination.F09.Services
                 student.DisStuRdr,
                 student.DisConFac,
                 student.DisExtExam,
+                student.DisPrApprDate,
+                student.DisPrOralDate,
+                student.DisReApprDate,
+                student.DisReWaivDate,
                 student.AdLabel,
                 student.Degrees,
                 phones,
@@ -331,8 +335,7 @@ namespace Ellucian.Colleague.Coordination.F09.Services
                 // Specify the report parameters
                 var utility = new ReportUtility();
                 var parameters = utility.BuildReportParametersFromResourceFiles(new List<string>() { pathToResourceFile });
-
-                parameters.Add(utility.BuildReportParameter("ImagePath", pathToLogo));
+                parameters.Add(utility.BuildReportParameter("ImagePath", pathToLogo.Replace("fgu_logo_2", "fgu_logo_3")));
 
                 parameters.Add(utility.BuildReportParameter("StudentId", responseDto.Id));
                 parameters.Add(utility.BuildReportParameter("StudentName", responseDto.StuName));
@@ -519,6 +522,11 @@ namespace Ellucian.Colleague.Coordination.F09.Services
                 parameters.Add(utility.BuildReportParameter("DisConFac", responseDto.DisConFac));
                 parameters.Add(utility.BuildReportParameter("DisExtExam", responseDto.DisExtExam));
 
+                parameters.Add(utility.BuildReportParameter("DisPrApprDate", responseDto.DisPrApprDate));
+                parameters.Add(utility.BuildReportParameter("DisPrOralDate", responseDto.DisPrOralDate));
+                parameters.Add(utility.BuildReportParameter("DisReApprDate", responseDto.DisReApprDate));
+                parameters.Add(utility.BuildReportParameter("DisReWaivDate", responseDto.DisReWaivDate));
+
                 // Dissertation Steps
                 DataSet dsDisSteps = new DataSet();
                 if (responseDto.DisSteps != null && responseDto.DisSteps.Count > 0)
@@ -545,6 +553,7 @@ namespace Ellucian.Colleague.Coordination.F09.Services
                         degrees.TrimEnd('>', 'r', 'b', '<');
                 }
                 parameters.Add(utility.BuildReportParameter("Degrees", degrees));
+                parameters.Add(utility.BuildReportParameter("Degrees2", responseDto.Degrees));
 
                 // Leaves
                 DataSet dsLeaves = new DataSet();
@@ -575,6 +584,9 @@ namespace Ellucian.Colleague.Coordination.F09.Services
                 }
                 // Add data to the report
                 report.DataSources.Add(new ReportDataSource("Evals", dsEvals.Tables[0]));
+
+                // Transfer Credits
+                parameters.Add(utility.BuildReportParameter("TranEquivText", responseDto.TranEquivText));
 
                 // Set the report parameters
                 report.SetParameters(parameters);

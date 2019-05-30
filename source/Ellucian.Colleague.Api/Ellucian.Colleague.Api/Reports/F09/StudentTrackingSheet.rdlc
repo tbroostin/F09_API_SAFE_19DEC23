@@ -332,7 +332,8 @@
           <Paragraph>
             <TextRuns>
               <TextRun>
-                <Value>=Replace(Parameters!StudentAddress.Value, "&lt;br&gt;", System.Environment.NewLine)</Value>
+                <Value>=Parameters!StudentAddress.Value</Value>
+                <MarkupType>HTML</MarkupType>
                 <Style>
                   <FontSize>9pt</FontSize>
                   <FontWeight>Normal</FontWeight>
@@ -366,7 +367,8 @@
           <Paragraph>
             <TextRuns>
               <TextRun>
-                <Value>=Replace(Parameters!BusinessAddress.Value, "&lt;br&gt;", System.Environment.NewLine)</Value>
+                <Value>=Parameters!BusinessAddress.Value</Value>
+                <MarkupType>HTML</MarkupType>
                 <Style>
                   <FontSize>9pt</FontSize>
                   <FontWeight>Normal</FontWeight>
@@ -1263,7 +1265,8 @@
                         <Paragraph>
                           <TextRuns>
                             <TextRun>
-                              <Value>=Replace(Fields!ProgAd.Value, "&lt;br&gt;", System.Environment.NewLine)</Value>
+                              <Value>=Fields!ProgAd.Value</Value>
+                              <MarkupType>HTML</MarkupType>
                               <Style>
                                 <FontSize>9pt</FontSize>
                               </Style>
@@ -6554,7 +6557,7 @@
             <Paragraph>
               <TextRuns>
                 <TextRun>
-                  <Value>="Student Tracking Sheet &lt;b&gt; - Page " + Globals!PageNumber.ToString() + "&lt;/b&gt;"</Value>
+                  <Value>="Student Tracking Sheet " + IIF(Globals!PageNumber = 1, "", "&lt;b&gt; - Page " + Globals!PageNumber.ToString() + "&lt;/b&gt;")</Value>
                   <MarkupType>HTML</MarkupType>
                   <Style>
                     <FontSize>18pt</FontSize>

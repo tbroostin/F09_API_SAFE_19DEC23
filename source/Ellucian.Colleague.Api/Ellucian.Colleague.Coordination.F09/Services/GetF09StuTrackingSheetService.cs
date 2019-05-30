@@ -335,7 +335,12 @@ namespace Ellucian.Colleague.Coordination.F09.Services
                 // Specify the report parameters
                 var utility = new ReportUtility();
                 var parameters = utility.BuildReportParametersFromResourceFiles(new List<string>() { pathToResourceFile });
-                parameters.Add(utility.BuildReportParameter("ImagePath", pathToLogo.Replace("fgu_logo_2", "fgu_logo_3")));
+
+                // Replace FGU logo image path new new logo.
+                string newPathToLogo = pathToLogo;
+                newPathToLogo = newPathToLogo.Substring(0, newPathToLogo.Replace("/", "\\").LastIndexOf("\\") + 1) + "fgu_logo_3.png";
+                parameters.Add(utility.BuildReportParameter("ImagePath", newPathToLogo));
+                //parameters.Add(utility.BuildReportParameter("ImagePath", pathToLogo.Replace("fgu_logo_2", "fgu_logo_3")));
 
                 parameters.Add(utility.BuildReportParameter("StudentId", responseDto.Id));
                 parameters.Add(utility.BuildReportParameter("StudentName", responseDto.StuName));

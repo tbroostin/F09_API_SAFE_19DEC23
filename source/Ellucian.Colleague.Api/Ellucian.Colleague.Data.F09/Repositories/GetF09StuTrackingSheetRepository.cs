@@ -94,6 +94,10 @@ namespace Ellucian.Colleague.Data.F09.Repositories
             application.DisStuRdr = response.DisStuRdr;
             application.DisConFac = response.DisConFac;
             application.DisExtExam = response.DisExtExam;
+            application.DisPrApprDate = response.DisPrApprDate;
+            application.DisPrOralDate = response.DisPrOralDate;
+            application.DisReApprDate = response.DisReApprDate;
+            application.DisReWaivDate = response.DisReWaivDate;
             application.AdLabel = response.AdLabel;
             application.Degrees = response.Degrees;
 

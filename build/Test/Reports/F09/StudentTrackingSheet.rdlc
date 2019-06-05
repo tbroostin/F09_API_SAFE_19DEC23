@@ -6283,6 +6283,7 @@
                 <Value>=Parameters!TranEquivText.Value</Value>
                 <MarkupType>HTML</MarkupType>
                 <Style>
+                  <FontFamily>Consolas</FontFamily>
                   <FontSize>9pt</FontSize>
                 </Style>
               </TextRun>

@@ -4828,7 +4828,7 @@
               </TextRun>
             </TextRuns>
             <Style>
-              <TextAlign>Left</TextAlign>
+              <TextAlign>Right</TextAlign>
             </Style>
           </Paragraph>
         </Paragraphs>
@@ -5484,6 +5484,7 @@
             <TextRuns>
               <TextRun>
                 <Value>=Parameters!Degrees.Value</Value>
+                <MarkupType>HTML</MarkupType>
                 <Style>
                   <FontSize>9pt</FontSize>
                 </Style>

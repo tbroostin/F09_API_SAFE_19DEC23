@@ -388,7 +388,9 @@ namespace Ellucian.Colleague.Coordination.F09.Services
                 else
                 {
                     List<Programs> programs = new List<Programs>();
-                    programs.Add(new Programs());
+                    Programs item = new Programs();
+                    item.Prog = "none";
+                    programs.Add(item);
                     dsPrograms = ConvertToDataSet(programs.ToArray());
                 }
                 // Add data to the report
@@ -403,7 +405,9 @@ namespace Ellucian.Colleague.Coordination.F09.Services
                 else
                 {
                     List<ProgExtras> ProgExtras = new List<ProgExtras>();
-                    ProgExtras.Add(new ProgExtras());
+                    ProgExtras item = new ProgExtras();
+                    item.ProgExtraDesc = "none";
+                    ProgExtras.Add(item);
                     dsProgExtras = ConvertToDataSet(ProgExtras.ToArray());
                 }
                 // Add data to the report
@@ -418,7 +422,9 @@ namespace Ellucian.Colleague.Coordination.F09.Services
                 else
                 {
                     List<GRs> GRs = new List<GRs>();
-                    GRs.Add(new GRs());
+                    GRs item = new GRs();
+                    item.GrStcTerm = "none";
+                    GRs.Add(item);
                     dsGRs = ConvertToDataSet(GRs.ToArray());
                 }
                 // Add data to the report
@@ -433,7 +439,9 @@ namespace Ellucian.Colleague.Coordination.F09.Services
                 else
                 {
                     List<KAs> KAs = new List<KAs>();
-                    KAs.Add(new KAs());
+                    KAs item = new KAs();
+                    item.KaCrsName = "none";
+                    KAs.Add(item);
                     dsKAs = ConvertToDataSet(KAs.ToArray());
                 }
                 // Add data to the report
@@ -448,7 +456,9 @@ namespace Ellucian.Colleague.Coordination.F09.Services
                 else
                 {
                     List<IPs> IPs = new List<IPs>();
-                    IPs.Add(new IPs());
+                    IPs item = new IPs();
+                    item.IpCrsName = "none";
+                    IPs.Add(item);
                     dsIPs = ConvertToDataSet(IPs.ToArray());
                 }
                 // Add data to the report
@@ -464,7 +474,9 @@ namespace Ellucian.Colleague.Coordination.F09.Services
                 else
                 {
                     List<INs> INs = new List<INs>();
-                    INs.Add(new INs());
+                    INs item = new INs();
+                    item.InSite = "none";
+                    INs.Add(item);
                     dsINs = ConvertToDataSet(INs.ToArray());
                 }
                 // Add data to the report
@@ -479,7 +491,9 @@ namespace Ellucian.Colleague.Coordination.F09.Services
                 else
                 {
                     List<PRs> PRs = new List<PRs>();
-                    PRs.Add(new PRs());
+                    PRs item = new PRs();
+                    item.PrSite = "none";
+                    PRs.Add(item);
                     dsPRs = ConvertToDataSet(PRs.ToArray());
                 }
                 // Add data to the report
@@ -494,7 +508,9 @@ namespace Ellucian.Colleague.Coordination.F09.Services
                 else
                 {
                     List<RPs> RPs = new List<RPs>();
-                    RPs.Add(new RPs());
+                    RPs item = new RPs();
+                    item.RpSite = "none";
+                    RPs.Add(item);
                     dsRPs = ConvertToDataSet(RPs.ToArray());
                 }
                 // Add data to the report
@@ -509,7 +525,9 @@ namespace Ellucian.Colleague.Coordination.F09.Services
                 else
                 {
                     List<Ms> Ms = new List<Ms>();
-                    Ms.Add(new Ms());
+                    Ms item = new Ms();
+                    item.MSite = "none";
+                    Ms.Add(item);
                     dsMs = ConvertToDataSet(Ms.ToArray());
                 }
                 // Add data to the report
@@ -541,7 +559,9 @@ namespace Ellucian.Colleague.Coordination.F09.Services
                 else
                 {
                     List<DisSteps> DisSteps = new List<DisSteps>();
-                    DisSteps.Add(new DisSteps());
+                    DisSteps item = new DisSteps();
+                    item.DisStep = "none";
+                    DisSteps.Add(item);
                     dsDisSteps = ConvertToDataSet(DisSteps.ToArray());
                 }
                 // Add data to the report
@@ -569,7 +589,9 @@ namespace Ellucian.Colleague.Coordination.F09.Services
                 else
                 {
                     List<Leaves> Leaves = new List<Leaves>();
-                    Leaves.Add(new Leaves());
+                    Leaves item = new Leaves();
+                    item.LeaveDesc = "none";
+                    Leaves.Add(item);
                     dsLeaves = ConvertToDataSet(Leaves.ToArray());
                 }
                 // Add data to the report
@@ -584,7 +606,9 @@ namespace Ellucian.Colleague.Coordination.F09.Services
                 else
                 {
                     List<Evals> Evals = new List<Evals>();
-                    Evals.Add(new Evals());
+                    Evals item = new Evals();
+                    item.EvalStartDate = "none";
+                    Evals.Add(item);
                     dsEvals = ConvertToDataSet(Evals.ToArray());
                 }
                 // Add data to the report
@@ -601,7 +625,9 @@ namespace Ellucian.Colleague.Coordination.F09.Services
                 else
                 {
                     List<TEs> TEs = new List<TEs>();
-                    TEs.Add(new TEs());
+                    TEs item = new TEs();
+                    item.TeInst = "none";
+                    TEs.Add(item);
                     dsTEs = ConvertToDataSet(TEs.ToArray());
                 }
                 // Add data to the report

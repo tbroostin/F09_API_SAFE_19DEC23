@@ -1343,7 +1343,7 @@
             <Style />
           </Paragraph>
         </Paragraphs>
-        <Top>5.405in</Top>
+        <Top>5.78in</Top>
         <Height>0.3in</Height>
         <Width>7.5in</Width>
         <ZIndex>20</ZIndex>
@@ -1358,7 +1358,7 @@
         </Style>
       </Textbox>
       <Line Name="Line5">
-        <Top>5.375in</Top>
+        <Top>5.75in</Top>
         <Height>0in</Height>
         <Width>7.5in</Width>
         <ZIndex>21</ZIndex>
@@ -1369,7 +1369,7 @@
         </Style>
       </Line>
       <Line Name="Line6">
-        <Top>5.35in</Top>
+        <Top>5.725in</Top>
         <Height>0in</Height>
         <Width>7.5in</Width>
         <ZIndex>22</ZIndex>
@@ -1380,7 +1380,7 @@
         </Style>
       </Line>
       <Line Name="Line7">
-        <Top>5.75in</Top>
+        <Top>6.125in</Top>
         <Height>0in</Height>
         <Width>7.5in</Width>
         <ZIndex>23</ZIndex>
@@ -1391,7 +1391,7 @@
         </Style>
       </Line>
       <Line Name="Line8">
-        <Top>5.775in</Top>
+        <Top>6.15in</Top>
         <Height>0in</Height>
         <Width>7.5in</Width>
         <ZIndex>24</ZIndex>
@@ -1418,7 +1418,7 @@
             <Style />
           </Paragraph>
         </Paragraphs>
-        <Top>5.85in</Top>
+        <Top>6.225in</Top>
         <Left>0.00001in</Left>
         <Height>0.3in</Height>
         <Width>7.5in</Width>
@@ -1451,7 +1451,7 @@
             <Style />
           </Paragraph>
         </Paragraphs>
-        <Top>6.15in</Top>
+        <Top>6.525in</Top>
         <Left>0.00001in</Left>
         <Height>0.52083in</Height>
         <Width>5.5in</Width>
@@ -2015,7 +2015,7 @@
           </TablixMembers>
         </TablixRowHierarchy>
         <DataSetName>GRs</DataSetName>
-        <Top>6.68958in</Top>
+        <Top>7.06458in</Top>
         <Left>0.00002in</Left>
         <Height>0.62083in</Height>
         <Width>7.49998in</Width>
@@ -2044,7 +2044,7 @@
             <Style />
           </Paragraph>
         </Paragraphs>
-        <Top>7.6in</Top>
+        <Top>7.975in</Top>
         <Left>0.00001in</Left>
         <Height>0.3in</Height>
         <Width>7.5in</Width>
@@ -2060,7 +2060,7 @@
         </Style>
       </Textbox>
       <Line Name="Line9">
-        <Top>8in</Top>
+        <Top>8.375in</Top>
         <Height>0in</Height>
         <Width>7.5in</Width>
         <ZIndex>29</ZIndex>
@@ -2071,7 +2071,7 @@
         </Style>
       </Line>
       <Line Name="Line10">
-        <Top>7.98in</Top>
+        <Top>8.355in</Top>
         <Height>0in</Height>
         <Width>7.5in</Width>
         <ZIndex>30</ZIndex>
@@ -2082,7 +2082,7 @@
         </Style>
       </Line>
       <Line Name="Line11">
-        <Top>5.375in</Top>
+        <Top>5.75in</Top>
         <Height>0in</Height>
         <Width>7.5in</Width>
         <ZIndex>31</ZIndex>
@@ -2093,7 +2093,7 @@
         </Style>
       </Line>
       <Line Name="Line12">
-        <Top>5.375in</Top>
+        <Top>5.75in</Top>
         <Height>0in</Height>
         <Width>7.5in</Width>
         <ZIndex>32</ZIndex>
@@ -2104,7 +2104,7 @@
         </Style>
       </Line>
       <Line Name="Line13">
-        <Top>7.5in</Top>
+        <Top>7.875in</Top>
         <Height>0in</Height>
         <Width>7.5in</Width>
         <ZIndex>33</ZIndex>
@@ -2115,7 +2115,7 @@
         </Style>
       </Line>
       <Line Name="Line14">
-        <Top>7.53in</Top>
+        <Top>7.905in</Top>
         <Height>0in</Height>
         <Width>7.5in</Width>
         <ZIndex>34</ZIndex>
@@ -2607,7 +2607,7 @@
           </TablixMembers>
         </TablixRowHierarchy>
         <DataSetName>KAs</DataSetName>
-        <Top>8.06459in</Top>
+        <Top>8.43959in</Top>
         <Left>0.00002in</Left>
         <Height>0.62083in</Height>
         <Width>7.49998in</Width>
@@ -2636,7 +2636,7 @@
             <Style />
           </Paragraph>
         </Paragraphs>
-        <Top>8.975in</Top>
+        <Top>9.35in</Top>
         <Height>0.3in</Height>
         <Width>7.5in</Width>
         <ZIndex>36</ZIndex>
@@ -2651,7 +2651,7 @@
         </Style>
       </Textbox>
       <Line Name="Line15">
-        <Top>8.95in</Top>
+        <Top>9.325in</Top>
         <Height>0in</Height>
         <Width>7.5in</Width>
         <ZIndex>37</ZIndex>
@@ -2662,7 +2662,7 @@
         </Style>
       </Line>
       <Line Name="Line16">
-        <Top>8.925in</Top>
+        <Top>9.3in</Top>
         <Height>0in</Height>
         <Width>7.5in</Width>
         <ZIndex>38</ZIndex>
@@ -2673,7 +2673,7 @@
         </Style>
       </Line>
       <Line Name="Line18">
-        <Top>9.325in</Top>
+        <Top>9.7in</Top>
         <Height>0in</Height>
         <Width>7.5in</Width>
         <ZIndex>39</ZIndex>
@@ -2684,7 +2684,7 @@
         </Style>
       </Line>
       <Line Name="Line19">
-        <Top>9.355in</Top>
+        <Top>9.73in</Top>
         <Height>0in</Height>
         <Width>7.5in</Width>
         <ZIndex>40</ZIndex>
@@ -3101,7 +3101,7 @@
           </TablixMembers>
         </TablixRowHierarchy>
         <DataSetName>IPs</DataSetName>
-        <Top>9.45in</Top>
+        <Top>9.825in</Top>
         <Height>0.62083in</Height>
         <Width>6.90831in</Width>
         <ZIndex>41</ZIndex>
@@ -3129,7 +3129,7 @@
             <Style />
           </Paragraph>
         </Paragraphs>
-        <Top>10.25in</Top>
+        <Top>10.75in</Top>
         <Left>0.00001in</Left>
         <Height>0.3in</Height>
         <Width>7.5in</Width>
@@ -3145,7 +3145,7 @@
         </Style>
       </Textbox>
       <Line Name="Line20">
-        <Top>10.23in</Top>
+        <Top>10.73in</Top>
         <Height>0in</Height>
         <Width>7.5in</Width>
         <ZIndex>43</ZIndex>
@@ -3156,7 +3156,7 @@
         </Style>
       </Line>
       <Line Name="Line21">
-        <Top>10.2in</Top>
+        <Top>10.7in</Top>
         <Height>0in</Height>
         <Width>7.5in</Width>
         <ZIndex>44</ZIndex>
@@ -3167,7 +3167,7 @@
         </Style>
       </Line>
       <Line Name="Line22">
-        <Top>10.56354in</Top>
+        <Top>11.06354in</Top>
         <Height>0in</Height>
         <Width>7.5in</Width>
         <ZIndex>45</ZIndex>
@@ -3178,7 +3178,7 @@
         </Style>
       </Line>
       <Line Name="Line23">
-        <Top>10.59in</Top>
+        <Top>11.09in</Top>
         <Height>0in</Height>
         <Width>7.5in</Width>
         <ZIndex>46</ZIndex>
@@ -3520,7 +3520,7 @@
           </TablixMembers>
         </TablixRowHierarchy>
         <DataSetName>PRs</DataSetName>
-        <Top>11.375in</Top>
+        <Top>12in</Top>
         <Height>0.62083in</Height>
         <Width>5.28584in</Width>
         <ZIndex>47</ZIndex>
@@ -3863,7 +3863,7 @@
           </TablixMembers>
         </TablixRowHierarchy>
         <DataSetName>INs</DataSetName>
-        <Top>10.63802in</Top>
+        <Top>11.26302in</Top>
         <Height>0.62083in</Height>
         <Width>5.28584in</Width>
         <ZIndex>48</ZIndex>
@@ -4131,7 +4131,7 @@
           </TablixMembers>
         </TablixRowHierarchy>
         <DataSetName>RPs</DataSetName>
-        <Top>12.125in</Top>
+        <Top>12.75in</Top>
         <Height>0.62083in</Height>
         <Width>6.66332in</Width>
         <ZIndex>49</ZIndex>
@@ -4159,7 +4159,7 @@
             <Style />
           </Paragraph>
         </Paragraphs>
-        <Top>13.98in</Top>
+        <Top>14.605in</Top>
         <Left>0.00001in</Left>
         <Height>0.3in</Height>
         <Width>7.5in</Width>
@@ -4175,7 +4175,7 @@
         </Style>
       </Textbox>
       <Line Name="Line24">
-        <Top>13.91719in</Top>
+        <Top>14.54219in</Top>
         <Height>0in</Height>
         <Width>7.5in</Width>
         <ZIndex>51</ZIndex>
@@ -4186,7 +4186,7 @@
         </Style>
       </Line>
       <Line Name="Line25">
-        <Top>13.95in</Top>
+        <Top>14.575in</Top>
         <Height>0in</Height>
         <Width>7.5in</Width>
         <ZIndex>52</ZIndex>
@@ -4197,7 +4197,7 @@
         </Style>
       </Line>
       <Line Name="Line26">
-        <Top>14.29in</Top>
+        <Top>14.915in</Top>
         <Height>0in</Height>
         <Width>7.5in</Width>
         <ZIndex>53</ZIndex>
@@ -4208,7 +4208,7 @@
         </Style>
       </Line>
       <Line Name="Line27">
-        <Top>14.32in</Top>
+        <Top>14.945in</Top>
         <Height>0in</Height>
         <Width>7.5in</Width>
         <ZIndex>54</ZIndex>
@@ -4475,7 +4475,7 @@
           </TablixMembers>
         </TablixRowHierarchy>
         <DataSetName>Ms</DataSetName>
-        <Top>12.875in</Top>
+        <Top>13.5in</Top>
         <Height>0.62083in</Height>
         <Width>6.66332in</Width>
         <ZIndex>55</ZIndex>
@@ -4503,7 +4503,7 @@
             <Style />
           </Paragraph>
         </Paragraphs>
-        <Top>13.575in</Top>
+        <Top>14.2in</Top>
         <Height>0.25in</Height>
         <Width>6.66332in</Width>
         <ZIndex>56</ZIndex>
@@ -4766,7 +4766,7 @@
             <Style />
           </Paragraph>
         </Paragraphs>
-        <Top>14.425in</Top>
+        <Top>15.05in</Top>
         <Height>0.25in</Height>
         <Width>1in</Width>
         <ZIndex>58</ZIndex>
@@ -4799,7 +4799,7 @@
             </Style>
           </Paragraph>
         </Paragraphs>
-        <Top>14.7in</Top>
+        <Top>15.325in</Top>
         <Height>0.25in</Height>
         <Width>2in</Width>
         <ZIndex>59</ZIndex>
@@ -4832,7 +4832,7 @@
             </Style>
           </Paragraph>
         </Paragraphs>
-        <Top>14.98in</Top>
+        <Top>15.605in</Top>
         <Height>0.25in</Height>
         <Width>2in</Width>
         <ZIndex>60</ZIndex>
@@ -4862,7 +4862,7 @@
             <Style />
           </Paragraph>
         </Paragraphs>
-        <Top>14.7in</Top>
+        <Top>15.325in</Top>
         <Left>2.1in</Left>
         <Height>0.25in</Height>
         <Width>4.75in</Width>
@@ -4893,7 +4893,7 @@
             <Style />
           </Paragraph>
         </Paragraphs>
-        <Top>15.25096in</Top>
+        <Top>15.87596in</Top>
         <Left>2.1in</Left>
         <Height>0.25in</Height>
         <Width>4.75in</Width>
@@ -4927,7 +4927,7 @@
             </Style>
           </Paragraph>
         </Paragraphs>
-        <Top>15.25096in</Top>
+        <Top>15.87596in</Top>
         <Height>0.25in</Height>
         <Width>2in</Width>
         <ZIndex>63</ZIndex>
@@ -4960,7 +4960,7 @@
             </Style>
           </Paragraph>
         </Paragraphs>
-        <Top>15.52778in</Top>
+        <Top>16.15278in</Top>
         <Height>0.25in</Height>
         <Width>2in</Width>
         <ZIndex>64</ZIndex>
@@ -4990,7 +4990,7 @@
             <Style />
           </Paragraph>
         </Paragraphs>
-        <Top>15.52778in</Top>
+        <Top>16.15278in</Top>
         <Left>2.1in</Left>
         <Height>0.25in</Height>
         <Width>4.75in</Width>
@@ -5024,7 +5024,7 @@
             </Style>
           </Paragraph>
         </Paragraphs>
-        <Top>15.80278in</Top>
+        <Top>16.42778in</Top>
         <Height>0.25in</Height>
         <Width>2in</Width>
         <ZIndex>66</ZIndex>
@@ -5054,7 +5054,7 @@
             <Style />
           </Paragraph>
         </Paragraphs>
-        <Top>15.80278in</Top>
+        <Top>16.42778in</Top>
         <Left>2.1in</Left>
         <Height>0.25in</Height>
         <Width>4.75in</Width>
@@ -5088,7 +5088,7 @@
             </Style>
           </Paragraph>
         </Paragraphs>
-        <Top>16.08278in</Top>
+        <Top>16.70778in</Top>
         <Height>0.25in</Height>
         <Width>2in</Width>
         <ZIndex>68</ZIndex>
@@ -5118,7 +5118,7 @@
             <Style />
           </Paragraph>
         </Paragraphs>
-        <Top>16.08278in</Top>
+        <Top>16.70778in</Top>
         <Left>2.1in</Left>
         <Height>0.25in</Height>
         <Width>4.75in</Width>
@@ -5319,7 +5319,7 @@
           </TablixMembers>
         </TablixRowHierarchy>
         <DataSetName>DisSteps</DataSetName>
-        <Top>16.5in</Top>
+        <Top>17.125in</Top>
         <Height>0.49166in</Height>
         <Width>5.60082in</Width>
         <ZIndex>70</ZIndex>
@@ -5349,7 +5349,7 @@
             </Style>
           </Paragraph>
         </Paragraphs>
-        <Top>17.125in</Top>
+        <Top>17.75in</Top>
         <Height>0.25in</Height>
         <Width>2in</Width>
         <ZIndex>71</ZIndex>
@@ -5380,7 +5380,7 @@
             <Style />
           </Paragraph>
         </Paragraphs>
-        <Top>18.5in</Top>
+        <Top>19.125in</Top>
         <Left>0.00001in</Left>
         <Height>0.3in</Height>
         <Width>7.5in</Width>
@@ -5396,7 +5396,7 @@
         </Style>
       </Textbox>
       <Line Name="Line28">
-        <Top>18.325in</Top>
+        <Top>18.95in</Top>
         <Left>0.00001in</Left>
         <Height>0in</Height>
         <Width>7.5in</Width>
@@ -5408,7 +5408,7 @@
         </Style>
       </Line>
       <Line Name="Line29">
-        <Top>18.355in</Top>
+        <Top>18.98in</Top>
         <Left>0.00001in</Left>
         <Height>0in</Height>
         <Width>7.5in</Width>
@@ -5420,7 +5420,7 @@
         </Style>
       </Line>
       <Line Name="Line30">
-        <Top>18.85in</Top>
+        <Top>19.475in</Top>
         <Left>0.00001in</Left>
         <Height>0in</Height>
         <Width>7.5in</Width>
@@ -5432,7 +5432,7 @@
         </Style>
       </Line>
       <Line Name="Line31">
-        <Top>18.82in</Top>
+        <Top>19.445in</Top>
         <Left>0.00001in</Left>
         <Height>0in</Height>
         <Width>7.5in</Width>
@@ -5461,7 +5461,7 @@
             <Style />
           </Paragraph>
         </Paragraphs>
-        <Top>18.95in</Top>
+        <Top>19.575in</Top>
         <Height>0.25in</Height>
         <Width>5in</Width>
         <ZIndex>77</ZIndex>
@@ -5493,7 +5493,7 @@
             <Style />
           </Paragraph>
         </Paragraphs>
-        <Top>19.2in</Top>
+        <Top>19.825in</Top>
         <Height>0.25in</Height>
         <Width>5in</Width>
         <ZIndex>78</ZIndex>
@@ -5525,7 +5525,7 @@
             <Style />
           </Paragraph>
         </Paragraphs>
-        <Top>19.75in</Top>
+        <Top>20.375in</Top>
         <Height>0.3in</Height>
         <Width>7.5in</Width>
         <ZIndex>79</ZIndex>
@@ -5540,7 +5540,7 @@
         </Style>
       </Textbox>
       <Line Name="Line32">
-        <Top>20.125in</Top>
+        <Top>20.75in</Top>
         <Height>0in</Height>
         <Width>7.5in</Width>
         <ZIndex>80</ZIndex>
@@ -5551,7 +5551,7 @@
         </Style>
       </Line>
       <Line Name="Line33">
-        <Top>20.1in</Top>
+        <Top>20.725in</Top>
         <Height>0in</Height>
         <Width>7.5in</Width>
         <ZIndex>81</ZIndex>
@@ -5562,7 +5562,7 @@
         </Style>
       </Line>
       <Line Name="Line34">
-        <Top>19.73in</Top>
+        <Top>20.355in</Top>
         <Height>0in</Height>
         <Width>7.5in</Width>
         <ZIndex>82</ZIndex>
@@ -5573,7 +5573,7 @@
         </Style>
       </Line>
       <Line Name="Line35">
-        <Top>19.7in</Top>
+        <Top>20.325in</Top>
         <Height>0in</Height>
         <Width>7.5in</Width>
         <ZIndex>83</ZIndex>
@@ -5769,7 +5769,7 @@
           </TablixMembers>
         </TablixRowHierarchy>
         <DataSetName>Leaves</DataSetName>
-        <Top>20.25in</Top>
+        <Top>20.875in</Top>
         <Height>0.49166in</Height>
         <Width>5in</Width>
         <ZIndex>84</ZIndex>
@@ -5797,7 +5797,7 @@
             <Style />
           </Paragraph>
         </Paragraphs>
-        <Top>20.99584in</Top>
+        <Top>21.62084in</Top>
         <Left>0.00001in</Left>
         <Height>0.3in</Height>
         <Width>7.5in</Width>
@@ -5813,7 +5813,7 @@
         </Style>
       </Textbox>
       <Line Name="Line36">
-        <Top>21in</Top>
+        <Top>21.625in</Top>
         <Height>0in</Height>
         <Width>7.5in</Width>
         <ZIndex>86</ZIndex>
@@ -5824,7 +5824,7 @@
         </Style>
       </Line>
       <Line Name="Line38">
-        <Top>20.97in</Top>
+        <Top>21.595in</Top>
         <Height>0in</Height>
         <Width>7.5in</Width>
         <ZIndex>87</ZIndex>
@@ -5835,7 +5835,7 @@
         </Style>
       </Line>
       <Line Name="Line40">
-        <Top>21.35in</Top>
+        <Top>21.975in</Top>
         <Height>0in</Height>
         <Width>7.5in</Width>
         <ZIndex>88</ZIndex>
@@ -5846,7 +5846,7 @@
         </Style>
       </Line>
       <Line Name="Line41">
-        <Top>21.32in</Top>
+        <Top>21.945in</Top>
         <Height>0in</Height>
         <Width>7.5in</Width>
         <ZIndex>89</ZIndex>
@@ -6188,7 +6188,7 @@
           </TablixMembers>
         </TablixRowHierarchy>
         <DataSetName>Evals</DataSetName>
-        <Top>21.45in</Top>
+        <Top>22.075in</Top>
         <Height>0.62083in</Height>
         <Width>5.89583in</Width>
         <ZIndex>90</ZIndex>
@@ -6274,39 +6274,6 @@
           </Border>
         </Style>
       </Line>
-      <Textbox Name="Textbox4">
-        <CanGrow>true</CanGrow>
-        <KeepTogether>true</KeepTogether>
-        <Paragraphs>
-          <Paragraph>
-            <TextRuns>
-              <TextRun>
-                <Value>=Parameters!TranEquivText.Value</Value>
-                <MarkupType>HTML</MarkupType>
-                <Style>
-                  <FontFamily>Consolas</FontFamily>
-                  <FontSize>9pt</FontSize>
-                </Style>
-              </TextRun>
-            </TextRuns>
-            <Style />
-          </Paragraph>
-        </Paragraphs>
-        <rd:DefaultName>Textbox4</rd:DefaultName>
-        <Top>4.93417in</Top>
-        <Height>0.25in</Height>
-        <Width>7.5in</Width>
-        <ZIndex>96</ZIndex>
-        <Style>
-          <Border>
-            <Style>None</Style>
-          </Border>
-          <PaddingLeft>2pt</PaddingLeft>
-          <PaddingRight>2pt</PaddingRight>
-          <PaddingTop>2pt</PaddingTop>
-          <PaddingBottom>2pt</PaddingBottom>
-        </Style>
-      </Textbox>
       <Textbox Name="lblProposalApprovalDate2">
         <CanGrow>true</CanGrow>
         <KeepTogether>true</KeepTogether>
@@ -6326,10 +6293,10 @@
             </Style>
           </Paragraph>
         </Paragraphs>
-        <Top>17.38889in</Top>
+        <Top>18.01389in</Top>
         <Height>0.25in</Height>
         <Width>2in</Width>
-        <ZIndex>97</ZIndex>
+        <ZIndex>96</ZIndex>
         <Style>
           <Border>
             <Style>None</Style>
@@ -6359,10 +6326,10 @@
             </Style>
           </Paragraph>
         </Paragraphs>
-        <Top>17.63889in</Top>
+        <Top>18.26389in</Top>
         <Height>0.25in</Height>
         <Width>2in</Width>
-        <ZIndex>98</ZIndex>
+        <ZIndex>97</ZIndex>
         <Style>
           <Border>
             <Style>None</Style>
@@ -6392,10 +6359,10 @@
             </Style>
           </Paragraph>
         </Paragraphs>
-        <Top>17.90278in</Top>
+        <Top>18.52778in</Top>
         <Height>0.25in</Height>
         <Width>2in</Width>
-        <ZIndex>99</ZIndex>
+        <ZIndex>98</ZIndex>
         <Style>
           <Border>
             <Style>None</Style>
@@ -6422,11 +6389,11 @@
             <Style />
           </Paragraph>
         </Paragraphs>
-        <Top>17.125in</Top>
+        <Top>17.75in</Top>
         <Left>2.1in</Left>
         <Height>0.25in</Height>
         <Width>4.75in</Width>
-        <ZIndex>100</ZIndex>
+        <ZIndex>99</ZIndex>
         <Style>
           <Border>
             <Style>None</Style>
@@ -6453,11 +6420,11 @@
             <Style />
           </Paragraph>
         </Paragraphs>
-        <Top>17.38889in</Top>
+        <Top>18.01389in</Top>
         <Left>2.1in</Left>
         <Height>0.25in</Height>
         <Width>4.75in</Width>
-        <ZIndex>101</ZIndex>
+        <ZIndex>100</ZIndex>
         <Style>
           <Border>
             <Style>None</Style>
@@ -6484,11 +6451,11 @@
             <Style />
           </Paragraph>
         </Paragraphs>
-        <Top>17.63889in</Top>
+        <Top>18.26389in</Top>
         <Left>2.1in</Left>
         <Height>0.25in</Height>
         <Width>4.75in</Width>
-        <ZIndex>102</ZIndex>
+        <ZIndex>101</ZIndex>
         <Style>
           <Border>
             <Style>None</Style>
@@ -6515,11 +6482,11 @@
             <Style />
           </Paragraph>
         </Paragraphs>
-        <Top>17.90278in</Top>
+        <Top>18.52778in</Top>
         <Left>2.1in</Left>
         <Height>0.25in</Height>
         <Width>4.75in</Width>
-        <ZIndex>103</ZIndex>
+        <ZIndex>102</ZIndex>
         <Style>
           <Border>
             <Style>None</Style>
@@ -6530,11 +6497,580 @@
           <PaddingBottom>2pt</PaddingBottom>
         </Style>
       </Textbox>
+      <Tablix Name="tblTEs">
+        <TablixBody>
+          <TablixColumns>
+            <TablixColumn>
+              <Width>2.69418in</Width>
+            </TablixColumn>
+            <TablixColumn>
+              <Width>0.90997in</Width>
+            </TablixColumn>
+            <TablixColumn>
+              <Width>0.73501in</Width>
+            </TablixColumn>
+            <TablixColumn>
+              <Width>0.68166in</Width>
+            </TablixColumn>
+            <TablixColumn>
+              <Width>0.875in</Width>
+            </TablixColumn>
+            <TablixColumn>
+              <Width>0.81332in</Width>
+            </TablixColumn>
+            <TablixColumn>
+              <Width>0.79696in</Width>
+            </TablixColumn>
+          </TablixColumns>
+          <TablixRows>
+            <TablixRow>
+              <Height>0.37083in</Height>
+              <TablixCells>
+                <TablixCell>
+                  <CellContents>
+                    <Textbox Name="Textbox53">
+                      <CanGrow>true</CanGrow>
+                      <KeepTogether>true</KeepTogether>
+                      <Paragraphs>
+                        <Paragraph>
+                          <TextRuns>
+                            <TextRun>
+                              <Value>Transfer Institution</Value>
+                              <Style>
+                                <FontSize>9pt</FontSize>
+                                <FontWeight>Bold</FontWeight>
+                                <Color>White</Color>
+                              </Style>
+                            </TextRun>
+                          </TextRuns>
+                          <Style>
+                            <TextAlign>Left</TextAlign>
+                          </Style>
+                        </Paragraph>
+                      </Paragraphs>
+                      <rd:DefaultName>Textbox2</rd:DefaultName>
+                      <Style>
+                        <Border>
+                          <Color>LightGrey</Color>
+                          <Style>Solid</Style>
+                        </Border>
+                        <BackgroundColor>Gray</BackgroundColor>
+                        <PaddingLeft>2pt</PaddingLeft>
+                        <PaddingRight>2pt</PaddingRight>
+                        <PaddingTop>2pt</PaddingTop>
+                        <PaddingBottom>2pt</PaddingBottom>
+                      </Style>
+                    </Textbox>
+                  </CellContents>
+                </TablixCell>
+                <TablixCell>
+                  <CellContents>
+                    <Textbox Name="Textbox54">
+                      <CanGrow>true</CanGrow>
+                      <KeepTogether>true</KeepTogether>
+                      <Paragraphs>
+                        <Paragraph>
+                          <TextRuns>
+                            <TextRun>
+                              <Value>Transfer Course</Value>
+                              <Style>
+                                <FontSize>9pt</FontSize>
+                                <FontWeight>Bold</FontWeight>
+                                <Color>White</Color>
+                              </Style>
+                            </TextRun>
+                          </TextRuns>
+                          <Style>
+                            <TextAlign>Left</TextAlign>
+                          </Style>
+                        </Paragraph>
+                      </Paragraphs>
+                      <rd:DefaultName>Textbox10</rd:DefaultName>
+                      <Style>
+                        <Border>
+                          <Color>LightGrey</Color>
+                          <Style>Solid</Style>
+                        </Border>
+                        <BackgroundColor>Gray</BackgroundColor>
+                        <PaddingLeft>2pt</PaddingLeft>
+                        <PaddingRight>2pt</PaddingRight>
+                        <PaddingTop>2pt</PaddingTop>
+                        <PaddingBottom>2pt</PaddingBottom>
+                      </Style>
+                    </Textbox>
+                  </CellContents>
+                </TablixCell>
+                <TablixCell>
+                  <CellContents>
+                    <Textbox Name="Textbox55">
+                      <CanGrow>true</CanGrow>
+                      <KeepTogether>true</KeepTogether>
+                      <Paragraphs>
+                        <Paragraph>
+                          <TextRuns>
+                            <TextRun>
+                              <Value>Transfer Credit</Value>
+                              <Style>
+                                <FontSize>9pt</FontSize>
+                                <FontWeight>Bold</FontWeight>
+                                <Color>White</Color>
+                              </Style>
+                            </TextRun>
+                          </TextRuns>
+                          <Style>
+                            <TextAlign>Left</TextAlign>
+                          </Style>
+                        </Paragraph>
+                      </Paragraphs>
+                      <rd:DefaultName>Textbox12</rd:DefaultName>
+                      <Style>
+                        <Border>
+                          <Color>LightGrey</Color>
+                          <Style>Solid</Style>
+                        </Border>
+                        <BackgroundColor>Gray</BackgroundColor>
+                        <PaddingLeft>2pt</PaddingLeft>
+                        <PaddingRight>2pt</PaddingRight>
+                        <PaddingTop>2pt</PaddingTop>
+                        <PaddingBottom>2pt</PaddingBottom>
+                      </Style>
+                    </Textbox>
+                  </CellContents>
+                </TablixCell>
+                <TablixCell>
+                  <CellContents>
+                    <Textbox Name="Textbox56">
+                      <CanGrow>true</CanGrow>
+                      <KeepTogether>true</KeepTogether>
+                      <Paragraphs>
+                        <Paragraph>
+                          <TextRuns>
+                            <TextRun>
+                              <Value>Transfer Grade</Value>
+                              <Style>
+                                <FontSize>9pt</FontSize>
+                                <FontWeight>Bold</FontWeight>
+                                <Color>White</Color>
+                              </Style>
+                            </TextRun>
+                          </TextRuns>
+                          <Style>
+                            <TextAlign>Left</TextAlign>
+                          </Style>
+                        </Paragraph>
+                      </Paragraphs>
+                      <rd:DefaultName>Textbox14</rd:DefaultName>
+                      <Style>
+                        <Border>
+                          <Color>LightGrey</Color>
+                          <Style>Solid</Style>
+                        </Border>
+                        <BackgroundColor>Gray</BackgroundColor>
+                        <PaddingLeft>2pt</PaddingLeft>
+                        <PaddingRight>2pt</PaddingRight>
+                        <PaddingTop>2pt</PaddingTop>
+                        <PaddingBottom>2pt</PaddingBottom>
+                      </Style>
+                    </Textbox>
+                  </CellContents>
+                </TablixCell>
+                <TablixCell>
+                  <CellContents>
+                    <Textbox Name="Textbox4">
+                      <CanGrow>true</CanGrow>
+                      <KeepTogether>true</KeepTogether>
+                      <Paragraphs>
+                        <Paragraph>
+                          <TextRuns>
+                            <TextRun>
+                              <Value>Equivalent Course</Value>
+                              <Style>
+                                <FontSize>9pt</FontSize>
+                                <FontWeight>Bold</FontWeight>
+                                <Color>White</Color>
+                              </Style>
+                            </TextRun>
+                          </TextRuns>
+                          <Style>
+                            <TextAlign>Left</TextAlign>
+                          </Style>
+                        </Paragraph>
+                      </Paragraphs>
+                      <rd:DefaultName>Textbox1</rd:DefaultName>
+                      <Style>
+                        <Border>
+                          <Color>LightGrey</Color>
+                          <Style>Solid</Style>
+                        </Border>
+                        <BackgroundColor>Gray</BackgroundColor>
+                        <PaddingLeft>2pt</PaddingLeft>
+                        <PaddingRight>2pt</PaddingRight>
+                        <PaddingTop>2pt</PaddingTop>
+                        <PaddingBottom>2pt</PaddingBottom>
+                      </Style>
+                    </Textbox>
+                  </CellContents>
+                </TablixCell>
+                <TablixCell>
+                  <CellContents>
+                    <Textbox Name="Textbox57">
+                      <CanGrow>true</CanGrow>
+                      <KeepTogether>true</KeepTogether>
+                      <Paragraphs>
+                        <Paragraph>
+                          <TextRuns>
+                            <TextRun>
+                              <Value>Equivalent Credit</Value>
+                              <Style>
+                                <FontSize>9pt</FontSize>
+                                <FontWeight>Bold</FontWeight>
+                                <Color>White</Color>
+                              </Style>
+                            </TextRun>
+                          </TextRuns>
+                          <Style>
+                            <TextAlign>Left</TextAlign>
+                          </Style>
+                        </Paragraph>
+                      </Paragraphs>
+                      <rd:DefaultName>Textbox16</rd:DefaultName>
+                      <Style>
+                        <Border>
+                          <Color>LightGrey</Color>
+                          <Style>Solid</Style>
+                        </Border>
+                        <BackgroundColor>Gray</BackgroundColor>
+                        <PaddingLeft>2pt</PaddingLeft>
+                        <PaddingRight>2pt</PaddingRight>
+                        <PaddingTop>2pt</PaddingTop>
+                        <PaddingBottom>2pt</PaddingBottom>
+                      </Style>
+                    </Textbox>
+                  </CellContents>
+                </TablixCell>
+                <TablixCell>
+                  <CellContents>
+                    <Textbox Name="Textbox59">
+                      <CanGrow>true</CanGrow>
+                      <KeepTogether>true</KeepTogether>
+                      <Paragraphs>
+                        <Paragraph>
+                          <TextRuns>
+                            <TextRun>
+                              <Value>Equivalent Status</Value>
+                              <Style>
+                                <FontSize>9pt</FontSize>
+                                <FontWeight>Bold</FontWeight>
+                                <Color>White</Color>
+                              </Style>
+                            </TextRun>
+                          </TextRuns>
+                          <Style>
+                            <TextAlign>Left</TextAlign>
+                          </Style>
+                        </Paragraph>
+                      </Paragraphs>
+                      <rd:DefaultName>Textbox18</rd:DefaultName>
+                      <Style>
+                        <Border>
+                          <Color>LightGrey</Color>
+                          <Style>Solid</Style>
+                        </Border>
+                        <BackgroundColor>Gray</BackgroundColor>
+                        <PaddingLeft>2pt</PaddingLeft>
+                        <PaddingRight>2pt</PaddingRight>
+                        <PaddingTop>2pt</PaddingTop>
+                        <PaddingBottom>2pt</PaddingBottom>
+                      </Style>
+                    </Textbox>
+                  </CellContents>
+                </TablixCell>
+              </TablixCells>
+            </TablixRow>
+            <TablixRow>
+              <Height>0.25in</Height>
+              <TablixCells>
+                <TablixCell>
+                  <CellContents>
+                    <Textbox Name="Prog6">
+                      <CanGrow>true</CanGrow>
+                      <KeepTogether>true</KeepTogether>
+                      <Paragraphs>
+                        <Paragraph>
+                          <TextRuns>
+                            <TextRun>
+                              <Value>=Fields!TeInst.Value</Value>
+                              <Style>
+                                <FontSize>9pt</FontSize>
+                              </Style>
+                            </TextRun>
+                          </TextRuns>
+                          <Style>
+                            <TextAlign>Left</TextAlign>
+                          </Style>
+                        </Paragraph>
+                      </Paragraphs>
+                      <rd:DefaultName>Prog</rd:DefaultName>
+                      <Style>
+                        <Border>
+                          <Color>LightGrey</Color>
+                          <Style>Solid</Style>
+                        </Border>
+                        <PaddingLeft>2pt</PaddingLeft>
+                        <PaddingRight>2pt</PaddingRight>
+                        <PaddingTop>2pt</PaddingTop>
+                        <PaddingBottom>2pt</PaddingBottom>
+                      </Style>
+                    </Textbox>
+                  </CellContents>
+                </TablixCell>
+                <TablixCell>
+                  <CellContents>
+                    <Textbox Name="ProgStartDate13">
+                      <CanGrow>true</CanGrow>
+                      <KeepTogether>true</KeepTogether>
+                      <Paragraphs>
+                        <Paragraph>
+                          <TextRuns>
+                            <TextRun>
+                              <Value>=Fields!TeTranCourse.Value</Value>
+                              <Style>
+                                <FontSize>9pt</FontSize>
+                              </Style>
+                            </TextRun>
+                          </TextRuns>
+                          <Style>
+                            <TextAlign>Left</TextAlign>
+                          </Style>
+                        </Paragraph>
+                      </Paragraphs>
+                      <rd:DefaultName>ProgStartDate</rd:DefaultName>
+                      <Style>
+                        <Border>
+                          <Color>LightGrey</Color>
+                          <Style>Solid</Style>
+                        </Border>
+                        <PaddingLeft>2pt</PaddingLeft>
+                        <PaddingRight>2pt</PaddingRight>
+                        <PaddingTop>2pt</PaddingTop>
+                        <PaddingBottom>2pt</PaddingBottom>
+                      </Style>
+                    </Textbox>
+                  </CellContents>
+                </TablixCell>
+                <TablixCell>
+                  <CellContents>
+                    <Textbox Name="ProgStatus12">
+                      <CanGrow>true</CanGrow>
+                      <KeepTogether>true</KeepTogether>
+                      <Paragraphs>
+                        <Paragraph>
+                          <TextRuns>
+                            <TextRun>
+                              <Value>=Fields!TeTranCredit.Value</Value>
+                              <Style>
+                                <FontSize>9pt</FontSize>
+                              </Style>
+                            </TextRun>
+                          </TextRuns>
+                          <Style>
+                            <TextAlign>Left</TextAlign>
+                          </Style>
+                        </Paragraph>
+                      </Paragraphs>
+                      <rd:DefaultName>ProgStatus</rd:DefaultName>
+                      <Style>
+                        <Border>
+                          <Color>LightGrey</Color>
+                          <Style>Solid</Style>
+                        </Border>
+                        <PaddingLeft>2pt</PaddingLeft>
+                        <PaddingRight>2pt</PaddingRight>
+                        <PaddingTop>2pt</PaddingTop>
+                        <PaddingBottom>2pt</PaddingBottom>
+                      </Style>
+                    </Textbox>
+                  </CellContents>
+                </TablixCell>
+                <TablixCell>
+                  <CellContents>
+                    <Textbox Name="ProgAntCmpl8">
+                      <CanGrow>true</CanGrow>
+                      <KeepTogether>true</KeepTogether>
+                      <Paragraphs>
+                        <Paragraph>
+                          <TextRuns>
+                            <TextRun>
+                              <Value>=Fields!TeTranGrade.Value</Value>
+                              <Style>
+                                <FontSize>9pt</FontSize>
+                              </Style>
+                            </TextRun>
+                          </TextRuns>
+                          <Style>
+                            <TextAlign>Left</TextAlign>
+                          </Style>
+                        </Paragraph>
+                      </Paragraphs>
+                      <rd:DefaultName>ProgAntCmpl</rd:DefaultName>
+                      <Style>
+                        <Border>
+                          <Color>LightGrey</Color>
+                          <Style>Solid</Style>
+                        </Border>
+                        <PaddingLeft>2pt</PaddingLeft>
+                        <PaddingRight>2pt</PaddingRight>
+                        <PaddingTop>2pt</PaddingTop>
+                        <PaddingBottom>2pt</PaddingBottom>
+                      </Style>
+                    </Textbox>
+                  </CellContents>
+                </TablixCell>
+                <TablixCell>
+                  <CellContents>
+                    <Textbox Name="GrStcCredCmpl2">
+                      <CanGrow>true</CanGrow>
+                      <KeepTogether>true</KeepTogether>
+                      <Paragraphs>
+                        <Paragraph>
+                          <TextRuns>
+                            <TextRun>
+                              <Value>=Fields!TeEquivCourse.Value</Value>
+                              <Style>
+                                <FontSize>9pt</FontSize>
+                              </Style>
+                            </TextRun>
+                          </TextRuns>
+                          <Style>
+                            <TextAlign>Left</TextAlign>
+                          </Style>
+                        </Paragraph>
+                      </Paragraphs>
+                      <rd:DefaultName>GrStcCredCmpl</rd:DefaultName>
+                      <Style>
+                        <Border>
+                          <Color>LightGrey</Color>
+                          <Style>Solid</Style>
+                        </Border>
+                        <PaddingLeft>2pt</PaddingLeft>
+                        <PaddingRight>2pt</PaddingRight>
+                        <PaddingTop>2pt</PaddingTop>
+                        <PaddingBottom>2pt</PaddingBottom>
+                      </Style>
+                    </Textbox>
+                  </CellContents>
+                </TablixCell>
+                <TablixCell>
+                  <CellContents>
+                    <Textbox Name="ProgFac4">
+                      <CanGrow>true</CanGrow>
+                      <KeepTogether>true</KeepTogether>
+                      <Paragraphs>
+                        <Paragraph>
+                          <TextRuns>
+                            <TextRun>
+                              <Value>=Fields!TeEquivCredit.Value</Value>
+                              <Style>
+                                <FontSize>9pt</FontSize>
+                              </Style>
+                            </TextRun>
+                          </TextRuns>
+                          <Style>
+                            <TextAlign>Left</TextAlign>
+                          </Style>
+                        </Paragraph>
+                      </Paragraphs>
+                      <rd:DefaultName>ProgFac</rd:DefaultName>
+                      <Style>
+                        <Border>
+                          <Color>LightGrey</Color>
+                          <Style>Solid</Style>
+                        </Border>
+                        <PaddingLeft>2pt</PaddingLeft>
+                        <PaddingRight>2pt</PaddingRight>
+                        <PaddingTop>2pt</PaddingTop>
+                        <PaddingBottom>2pt</PaddingBottom>
+                      </Style>
+                    </Textbox>
+                  </CellContents>
+                </TablixCell>
+                <TablixCell>
+                  <CellContents>
+                    <Textbox Name="ProgAd12">
+                      <CanGrow>true</CanGrow>
+                      <KeepTogether>true</KeepTogether>
+                      <Paragraphs>
+                        <Paragraph>
+                          <TextRuns>
+                            <TextRun>
+                              <Value>=Fields!TeEquivStatus.Value</Value>
+                              <Style>
+                                <FontSize>9pt</FontSize>
+                              </Style>
+                            </TextRun>
+                          </TextRuns>
+                          <Style>
+                            <TextAlign>Left</TextAlign>
+                          </Style>
+                        </Paragraph>
+                      </Paragraphs>
+                      <rd:DefaultName>ProgAd</rd:DefaultName>
+                      <Style>
+                        <Border>
+                          <Color>LightGrey</Color>
+                          <Style>Solid</Style>
+                        </Border>
+                        <PaddingLeft>2pt</PaddingLeft>
+                        <PaddingRight>2pt</PaddingRight>
+                        <PaddingTop>2pt</PaddingTop>
+                        <PaddingBottom>2pt</PaddingBottom>
+                      </Style>
+                    </Textbox>
+                  </CellContents>
+                </TablixCell>
+              </TablixCells>
+            </TablixRow>
+          </TablixRows>
+        </TablixBody>
+        <TablixColumnHierarchy>
+          <TablixMembers>
+            <TablixMember />
+            <TablixMember />
+            <TablixMember />
+            <TablixMember />
+            <TablixMember />
+            <TablixMember />
+            <TablixMember />
+          </TablixMembers>
+        </TablixColumnHierarchy>
+        <TablixRowHierarchy>
+          <TablixMembers>
+            <TablixMember>
+              <KeepWithGroup>After</KeepWithGroup>
+            </TablixMember>
+            <TablixMember>
+              <Group Name="Details14" />
+            </TablixMember>
+          </TablixMembers>
+        </TablixRowHierarchy>
+        <DataSetName>TEs</DataSetName>
+        <Top>4.96084in</Top>
+        <Left>0.00002in</Left>
+        <Height>0.62083in</Height>
+        <Width>7.5061in</Width>
+        <ZIndex>103</ZIndex>
+        <Style>
+          <Border>
+            <Style>None</Style>
+          </Border>
+          <FontSize>9pt</FontSize>
+        </Style>
+      </Tablix>
     </ReportItems>
-    <Height>22.2925in</Height>
+    <Height>22.69583in</Height>
     <Style />
   </Body>
-  <Width>7.50001in</Width>
+  <Width>7.50611in</Width>
   <Page>
     <PageHeader>
       <Height>1.30763in</Height>
@@ -7223,6 +7759,47 @@
         <rd:DataSetName>Ellucian.Colleague.Dtos.F09.PdfStudentTrackingSheet</rd:DataSetName>
         <rd:TableName>Evals</rd:TableName>
         <rd:ObjectDataSourceType>Ellucian.Colleague.Dtos.F09.PdfStudentTrackingSheet.Evals, Ellucian.Colleague.Dtos.F09, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null</rd:ObjectDataSourceType>
+      </rd:DataSetInfo>
+    </DataSet>
+    <DataSet Name="TEs">
+      <Query>
+        <DataSourceName>PdfStudentTrackingSheetDto</DataSourceName>
+        <CommandText>/* Local Query */</CommandText>
+      </Query>
+      <Fields>
+        <Field Name="TeInst">
+          <DataField>TeInst</DataField>
+          <rd:TypeName>System.String</rd:TypeName>
+        </Field>
+        <Field Name="TeTranCourse">
+          <DataField>TeTranCourse</DataField>
+          <rd:TypeName>System.String</rd:TypeName>
+        </Field>
+        <Field Name="TeTranCredit">
+          <DataField>TeTranCredit</DataField>
+          <rd:TypeName>String.String</rd:TypeName>
+        </Field>
+        <Field Name="TeTranGrade">
+          <DataField>TeTranGrade</DataField>
+          <rd:TypeName>String.String</rd:TypeName>
+        </Field>
+        <Field Name="TeEquivCourse">
+          <DataField>TeEquivCourse</DataField>
+          <rd:TypeName>String.String</rd:TypeName>
+        </Field>
+        <Field Name="TeEquivCredit">
+          <DataField>TeEquivCredit</DataField>
+          <rd:TypeName>String.String</rd:TypeName>
+        </Field>
+        <Field Name="TeEquivStatus">
+          <DataField>TeEquivStatus</DataField>
+          <rd:TypeName>String.String</rd:TypeName>
+        </Field>
+      </Fields>
+      <rd:DataSetInfo>
+        <rd:DataSetName>Ellucian.Colleague.Dtos.F09.PdfStudentTrackingSheet</rd:DataSetName>
+        <rd:TableName>TEs</rd:TableName>
+        <rd:ObjectDataSourceType>Ellucian.Colleague.Dtos.F09.PdfStudentTrackingSheet.TEs, Ellucian.Colleague.Dtos.F09, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null</rd:ObjectDataSourceType>
       </rd:DataSetInfo>
     </DataSet>
   </DataSets>

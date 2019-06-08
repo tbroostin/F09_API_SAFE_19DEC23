@@ -593,6 +593,20 @@ namespace Ellucian.Colleague.Coordination.F09.Services
                 // Transfer Credits
                 parameters.Add(utility.BuildReportParameter("TranEquivText", responseDto.TranEquivText));
 
+                DataSet dsTEs = new DataSet();
+                if (responseDto.TEs != null && responseDto.TEs.Count > 0)
+                {
+                    dsTEs = ConvertToDataSet(responseDto.TEs.ToArray());
+                }
+                else
+                {
+                    List<TEs> TEs = new List<TEs>();
+                    TEs.Add(new TEs());
+                    dsTEs = ConvertToDataSet(TEs.ToArray());
+                }
+                // Add data to the report
+                report.DataSources.Add(new ReportDataSource("TEs", dsTEs.Tables[0]));
+
                 // Set the report parameters
                 report.SetParameters(parameters);
 

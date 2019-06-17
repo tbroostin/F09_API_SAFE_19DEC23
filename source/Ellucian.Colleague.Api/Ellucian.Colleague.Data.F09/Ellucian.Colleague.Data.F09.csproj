@@ -71,6 +71,7 @@
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Repositories\F09AdminTrackingSheetRepository.cs" />
+    <Compile Include="Repositories\F09KaSelectRespository.cs" />
     <Compile Include="Repositories\F09SsnRepository.cs" />
     <Compile Include="Repositories\GetActiveRestrictionsRepository.cs" />
     <Compile Include="Repositories\GetF09StuTrackingSheetRepository.cs" />
@@ -79,6 +80,7 @@
     <Compile Include="Repositories\UpdateStudentRestrictionRepository.cs" />
     <Compile Include="Transactions\ctxF09AdminTrackingSheet.cs" />
     <Compile Include="Transactions\ctxF09Directories.cs" />
+    <Compile Include="Transactions\ctxF09KaSelect.cs" />
     <Compile Include="Transactions\ctxF09Ssn.cs" />
     <Compile Include="Transactions\CtxF09StuTrackingSheet.cs" />
     <Compile Include="Transactions\ctxGetActiveRestrictions.cs" />

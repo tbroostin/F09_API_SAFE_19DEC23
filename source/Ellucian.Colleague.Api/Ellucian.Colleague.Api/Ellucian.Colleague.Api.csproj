@@ -356,6 +356,7 @@
     <Compile Include="Controllers\ColleagueFinance\PurchasingArrangementsController.cs" />
     <Compile Include="Controllers\F09\ActiveRestrictionsController.cs" />
     <Compile Include="Controllers\F09\F09AdminTrackingSheetController.cs" />
+    <Compile Include="Controllers\F09\F09KaSelectController.cs" />
     <Compile Include="Controllers\F09\F09SsnController.cs" />
     <Compile Include="Controllers\F09\F09StuTrackingSheetController.cs" />
     <Compile Include="Controllers\F09\ScholarshipApplicationController.cs" />
@@ -898,7 +899,9 @@
     <Content Include="Views\Shared\Error.cshtml" />
     <Content Include="Views\Shared\_Layout.cshtml" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Views\F09KaSelect\" />
+  </ItemGroup>
   <ItemGroup>
     <Content Include="App_Data\settings.config" />
     <Content Include="App_Data\ellucian.license" />

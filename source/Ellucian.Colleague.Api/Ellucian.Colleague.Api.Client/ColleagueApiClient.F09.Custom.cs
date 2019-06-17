@@ -319,6 +319,31 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
-        
+
+        // F09 teresa@toad-code.com 06/17/19
+        public async Task<F09KaSelectResponseDto> GetF09KaSelectAsync(string personId)
+        {
+            if (string.IsNullOrEmpty(personId))
+            {
+                throw new ArgumentNullException("personId", "ID cannot be empty/null for F09KaSelect.");
+            }
+            try
+            {
+                var baseUrl = UrlUtility.CombineUrlPath(getF09KaSelect, personId);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(baseUrl, headers: headers);
+                var dtoResponse = JsonConvert.DeserializeObject<F09KaSelectResponseDto>(await response.Content.ReadAsStringAsync());
+
+                return dtoResponse;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to GetF09KaSelectAsync");
+                throw;
+            }
+        }
+
     }
 }

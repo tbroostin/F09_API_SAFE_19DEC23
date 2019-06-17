@@ -160,6 +160,19 @@ namespace Ellucian.Colleague.Api
                 }
             );
 
+
+            // F09 teresa@toad-code.com 06/17/19
+            routes.MapHttpRoute(
+                 name: "GetF09KaSelectById",
+                 routeTemplate: "f09/get-f09KaSelect/{personId}",
+                 defaults: new { controller = "F09KaSelect", action = "GetF09KaSelectAsync" },
+                 constraints: new
+                 {
+                     httpMethod = new HttpMethodConstraint("GET"),
+                     headerVersion = new HeaderVersionConstraint(1, true)
+                 }
+             );
+
         }
     }
 }

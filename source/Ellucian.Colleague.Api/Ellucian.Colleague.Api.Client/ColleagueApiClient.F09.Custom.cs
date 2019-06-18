@@ -345,5 +345,52 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
 
+        // F09 teresa@toad-code.com 06/18/19
+        public async Task<dtoF09KaGradingResponse> GetF09KaGradingAsync(string stcId)
+        {
+            if (string.IsNullOrEmpty(stcId))
+            {
+                throw new ArgumentNullException("stcId", "stcID cannot be empty/null for F09KaGrading.");
+            }
+            try
+            {
+                var baseUrl = UrlUtility.CombineUrlPath(getF09KaGrading, stcId);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(baseUrl, headers: headers);
+                var dtoResponse = JsonConvert.DeserializeObject<dtoF09KaGradingResponse>(await response.Content.ReadAsStringAsync());
+
+                return dtoResponse;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to GetF09KaGradingAsync");
+                throw;
+            }
+        }
+
+        // F09 teresa@toad-code.com 06/18/19
+        public async Task<HttpResponseMessage> PutF09KaGradingAsync(dtoF09KaGradingRequest dtoRequest)
+        {
+            if (dtoRequest == null)
+            {
+                throw new ArgumentNullException("F09KaGradingRequest", "F09KaGrading Request cannot be null.");
+            }
+            try
+            {
+                var baseUrl = UrlUtility.CombineUrlPath(updateF09KaGrading);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var dtoResponse = await ExecutePutRequestWithResponseAsync(dtoRequest, baseUrl, headers: headers);
+                return dtoResponse;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to PutF09KaGradingAsync.");
+                throw;
+            }
+        }
     }
 }

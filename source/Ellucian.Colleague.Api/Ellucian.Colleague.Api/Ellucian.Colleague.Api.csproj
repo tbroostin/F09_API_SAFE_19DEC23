@@ -356,6 +356,7 @@
     <Compile Include="Controllers\ColleagueFinance\PurchasingArrangementsController.cs" />
     <Compile Include="Controllers\F09\ActiveRestrictionsController.cs" />
     <Compile Include="Controllers\F09\F09AdminTrackingSheetController.cs" />
+    <Compile Include="Controllers\F09\F09KaGradingController.cs" />
     <Compile Include="Controllers\F09\F09KaSelectController.cs" />
     <Compile Include="Controllers\F09\F09SsnController.cs" />
     <Compile Include="Controllers\F09\F09StuTrackingSheetController.cs" />
@@ -900,6 +901,7 @@
     <Content Include="Views\Shared\_Layout.cshtml" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="Views\F09KaGrading\" />
     <Folder Include="Views\F09KaSelect\" />
   </ItemGroup>
   <ItemGroup>

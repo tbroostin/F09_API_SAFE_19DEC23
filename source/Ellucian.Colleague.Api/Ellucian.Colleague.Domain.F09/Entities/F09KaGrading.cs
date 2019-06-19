@@ -27,6 +27,7 @@ namespace Ellucian.Colleague.Domain.F09.Entities
     public class domF09KaGradingResponse
     {
         public string FacId { get; set; }
+        public string StcId { get; set; }
         public string RespondType { get; set; }
         public string ErrorMsg { get; set; }
         public string KaHeaderHtml { get; set; }

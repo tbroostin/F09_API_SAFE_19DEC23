@@ -46,6 +46,7 @@ namespace Ellucian.Colleague.Coordination.F09.Services
 
             var dtoResponse = new dtoF09KaGradingResponse(
                 domainResponse.FacId,
+                domainResponse.StcId,
                 domainResponse.RespondType,
                 domainResponse.ErrorMsg,
                 domainResponse.KaHeaderHtml,
@@ -64,6 +65,7 @@ namespace Ellucian.Colleague.Coordination.F09.Services
             domainRequest.StcId = dtoRequest.StcId;
             domainRequest.KaComments = dtoRequest.KaComments;
             domainRequest.GradeSelected = dtoRequest.GradeSelected;
+            domainRequest.RequestType = dtoRequest.RequestType;
 
             //send domainRequest to Repository
             var domainResponse = await _F09KaGradingRepository.UpdateF09KaGradingAsync(domainRequest);

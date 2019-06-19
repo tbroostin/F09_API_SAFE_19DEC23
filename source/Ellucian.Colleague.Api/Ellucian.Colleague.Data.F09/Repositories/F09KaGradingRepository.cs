@@ -50,6 +50,7 @@ namespace Ellucian.Colleague.Data.F09.Repositories
                     domGs.Add(domG);
                 }
                 domResponse.FacId = ctxResponse.FacId;
+                domResponse.StcId = ctxResponse.StcId;
                 domResponse.RespondType = ctxResponse.RespondType;
                 domResponse.ErrorMsg = ctxResponse.ErrorMsg;
                 domResponse.KaHeaderHtml = ctxResponse.KaHeaderHtml;
@@ -70,6 +71,7 @@ namespace Ellucian.Colleague.Data.F09.Repositories
             //create ctx request
             var ctxRequest = new ctxF09KaGradingRequest();
             ctxRequest.StcId = domainRequest.StcId;
+            ctxRequest.GradeSelected = domainRequest.GradeSelected;
             ctxRequest.KaComments = domainRequest.KaComments;
             ctxRequest.RequestType = domainRequest.RequestType;
 

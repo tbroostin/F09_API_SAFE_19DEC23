@@ -28,6 +28,7 @@ namespace Ellucian.Colleague.Dtos.F09
     public class dtoF09KaGradingResponse
     {
         public string FacId { get; set; }
+        public string StcId { get; set; }
         public string RespondType { get; set; }
         public string ErrorMsg { get; set; }
         public string KaHeaderHtml { get; set; }
@@ -36,6 +37,7 @@ namespace Ellucian.Colleague.Dtos.F09
 
         public dtoF09KaGradingResponse(
             string facId,
+            string stcId,
             string respondType,
             string errorMsg,
             string kaHeaderHtml,
@@ -43,6 +45,7 @@ namespace Ellucian.Colleague.Dtos.F09
             )
         {
             this.FacId = facId;
+            this.StcId = stcId;
             this.RespondType = respondType;
             this.ErrorMsg = errorMsg;
             this.KaHeaderHtml = kaHeaderHtml;

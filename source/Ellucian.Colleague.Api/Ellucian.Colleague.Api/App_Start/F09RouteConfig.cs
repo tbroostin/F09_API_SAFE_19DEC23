@@ -185,6 +185,20 @@ namespace Ellucian.Colleague.Api
                  }
              );
 
+
+            // F09 teresa@toad-code.com 06/19/19
+            routes.MapHttpRoute(
+                name: "PutF09KaGrading",
+                routeTemplate: "f09/put-f09KaGrading",
+                defaults: new { controller = "F09KaGrading", action = "PutF09KaGradingAsync" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("PUT"),
+                    headerVersion = new HeaderVersionConstraint(1, true)
+                }
+            );
+
+
         }
     }
 }

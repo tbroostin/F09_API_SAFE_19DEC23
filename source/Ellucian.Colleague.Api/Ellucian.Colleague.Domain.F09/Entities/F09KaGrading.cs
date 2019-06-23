@@ -14,6 +14,13 @@ namespace Ellucian.Colleague.Domain.F09.Entities
     }
 
     [Serializable]
+    public class Questions
+    {
+        public string QQuestion { get; set; }
+        public string QAnswers { get; set; }
+    }
+
+    [Serializable]
     public class domF09KaGradingRequest
     {
         public string FacId { get; set; }
@@ -33,5 +40,6 @@ namespace Ellucian.Colleague.Domain.F09.Entities
         public string KaHeaderHtml { get; set; }
 
         public List<GradeOptions> GradeOptions { get; set; }
+        public List<Questions> Questions { get; set; }
     }
 }

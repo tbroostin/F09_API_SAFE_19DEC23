@@ -12,6 +12,12 @@ namespace Ellucian.Colleague.Dtos.F09
         public string GradeDesc { get; set; }
     }
 
+    public class Questions
+    {
+        public string QQuestion { get; set; }
+        public string QAnswers { get; set; }
+    }
+
     public class dtoF09KaGradingRequest
     {
         public string FacId { get; set; }
@@ -34,6 +40,7 @@ namespace Ellucian.Colleague.Dtos.F09
         public string KaHeaderHtml { get; set; }
 
         public List<GradeOptions> GradeOptions { get; set; }
+        public List<Questions> Questions { get; set; }
 
         public dtoF09KaGradingResponse(
             string facId,
@@ -41,7 +48,8 @@ namespace Ellucian.Colleague.Dtos.F09
             string respondType,
             string errorMsg,
             string kaHeaderHtml,
-            List<GradeOptions> gradeOptions
+            List<GradeOptions> gradeOptions,
+            List<Questions> questions
             )
         {
             this.FacId = facId;
@@ -50,6 +58,7 @@ namespace Ellucian.Colleague.Dtos.F09
             this.ErrorMsg = errorMsg;
             this.KaHeaderHtml = kaHeaderHtml;
             this.GradeOptions = gradeOptions;
+            this.Questions = questions;
         }
 
         public dtoF09KaGradingResponse()

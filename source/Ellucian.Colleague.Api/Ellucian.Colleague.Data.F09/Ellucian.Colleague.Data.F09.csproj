@@ -31,6 +31,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="AutoMapper">
+      <HintPath>..\Ellucian.Colleague.Api\bin\AutoMapper.dll</HintPath>
+    </Reference>
     <Reference Include="Ellucian.Colleague.Domain">
       <HintPath>..\Ellucian.Colleague.Coordination.Base\bin\Debug\Ellucian.Colleague.Domain.dll</HintPath>
     </Reference>

@@ -1,18 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Colleague.Domain.F09.Entities;
 using Ellucian.Colleague.Domain.F09.Repositories;
 using Ellucian.Colleague.Dtos.F09;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
 using slf4net;
+using AutoMapper;
 
 namespace Ellucian.Colleague.Coordination.F09.Services
 {
@@ -34,24 +32,30 @@ namespace Ellucian.Colleague.Coordination.F09.Services
             var domainResponse = await _F09KaGradingRepository.GetF09KaGradingAsync(stcId);
 
             //convert domainResponse to DtoResponse
-            List<GradeOptions> dtoGs = new List<GradeOptions>();
+            Mapper.CreateMap<domF09KaGradingResponse, dtoF09KaGradingResponse>();
+            Mapper.CreateMap<Domain.F09.Entities.GradeOptions, Dtos.F09.GradeOptions>();
+            Mapper.CreateMap<Domain.F09.Entities.Questions, Dtos.F09.Questions>();
+            var dtoResponse = Mapper.Map<domF09KaGradingResponse, dtoF09KaGradingResponse>(domainResponse);
 
-            foreach (Domain.F09.Entities.GradeOptions domG in domainResponse.GradeOptions)
-            {
-                GradeOptions dtoG = new GradeOptions();
-                dtoG.GradeCode = domG.GradeCode;
-                dtoG.GradeDesc = domG.GradeDesc;
-                dtoGs.Add(dtoG);
-            }
 
-            var dtoResponse = new dtoF09KaGradingResponse(
-                domainResponse.FacId,
-                domainResponse.StcId,
-                domainResponse.RespondType,
-                domainResponse.ErrorMsg,
-                domainResponse.KaHeaderHtml,
-                dtoGs
-            );
+            //List<GradeOptions> dtoGs = new List<GradeOptions>();
+
+            //foreach (Domain.F09.Entities.GradeOptions domG in domainResponse.GradeOptions)
+            //{
+            //    GradeOptions dtoG = new GradeOptions();
+            //    dtoG.GradeCode = domG.GradeCode;
+            //    dtoG.GradeDesc = domG.GradeDesc;
+            //    dtoGs.Add(dtoG);
+            //}
+
+            //var dtoResponse = new dtoF09KaGradingResponse(
+            //    domainResponse.FacId,
+            //    domainResponse.StcId,
+            //    domainResponse.RespondType,
+            //    domainResponse.ErrorMsg,
+            //    domainResponse.KaHeaderHtml,
+            //    dtoGs
+            //);
 
             return dtoResponse;
 

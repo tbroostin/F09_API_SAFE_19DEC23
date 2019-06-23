@@ -13,6 +13,7 @@ using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using slf4net;
+using AutoMapper;
 
 namespace Ellucian.Colleague.Data.F09.Repositories
 {
@@ -41,20 +42,27 @@ namespace Ellucian.Colleague.Data.F09.Repositories
                 ctxF09KaGradingResponse ctxResponse = await transactionInvoker.ExecuteAsync<ctxF09KaGradingRequest, ctxF09KaGradingResponse>(ctxRequest);
 
                 //convert ctxResponse to domainResponse
-                List<Domain.F09.Entities.GradeOptions> domGs = new List<Domain.F09.Entities.GradeOptions>();
-                foreach (Transactions.GradeOptions ctxG in ctxResponse.GradeOptions)
-                {
-                    Domain.F09.Entities.GradeOptions domG = new Domain.F09.Entities.GradeOptions();
-                    domG.GradeCode = ctxG.GradeCode;
-                    domG.GradeDesc = ctxG.GradeDesc;
-                    domGs.Add(domG);
-                }
-                domResponse.FacId = ctxResponse.FacId;
-                domResponse.StcId = ctxResponse.StcId;
-                domResponse.RespondType = ctxResponse.RespondType;
-                domResponse.ErrorMsg = ctxResponse.ErrorMsg;
-                domResponse.KaHeaderHtml = ctxResponse.KaHeaderHtml;
-                domResponse.GradeOptions = domGs;
+                Mapper.CreateMap<ctxF09KaGradingResponse, domF09KaGradingResponse>();
+                Mapper.CreateMap<Transactions.GradeOptions, Domain.F09.Entities.GradeOptions > ();
+                Mapper.CreateMap<Transactions.Questions, Domain.F09.Entities.Questions>();
+                
+                domResponse = Mapper.Map<ctxF09KaGradingResponse, domF09KaGradingResponse>(ctxResponse);
+
+
+                //List<Domain.F09.Entities.GradeOptions> domGs = new List<Domain.F09.Entities.GradeOptions>();
+                //foreach (Transactions.GradeOptions ctxG in ctxResponse.GradeOptions)
+                //{
+                //    Domain.F09.Entities.GradeOptions domG = new Domain.F09.Entities.GradeOptions();
+                //    domG.GradeCode = ctxG.GradeCode;
+                //    domG.GradeDesc = ctxG.GradeDesc;
+                //    domGs.Add(domG);
+                //}
+                //domResponse.FacId = ctxResponse.FacId;
+                //domResponse.StcId = ctxResponse.StcId;
+                //domResponse.RespondType = ctxResponse.RespondType;
+                //domResponse.ErrorMsg = ctxResponse.ErrorMsg;
+                //domResponse.KaHeaderHtml = ctxResponse.KaHeaderHtml;
+                //domResponse.GradeOptions = domGs;
 
             }
             catch (Exception ex)

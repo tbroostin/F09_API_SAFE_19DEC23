@@ -75,16 +75,16 @@ namespace Ellucian.Colleague.Data.F09.Repositories
         public async Task<domF09KaGradingResponse> UpdateF09KaGradingAsync(domF09KaGradingRequest domainRequest)
         {
             ////create ctx request
-            //var ctxRequest = new ctxF09KaGradingRequest();
+            var ctxRequest = new ctxF09KaGradingRequest();
             //ctxRequest.StcId = domainRequest.StcId;
             //ctxRequest.GradeSelected = domainRequest.GradeSelected;
             //ctxRequest.KaComments = domainRequest.KaComments;
             //ctxRequest.RequestType = domainRequest.RequestType;
 
             //convert domainRequest to ctxRequest
-            Mapper.CreateMap<domF09KaGradingResponse, ctxF09KaGradingResponse>();
+            Mapper.CreateMap<domF09KaGradingRequest, ctxF09KaGradingRequest>();
             Mapper.CreateMap<Domain.F09.Entities.Questions, Transactions.Questions>();
-            var ctxRequest = Mapper.Map<domF09KaGradingRequest, ctxF09KaGradingRequest>(domainRequest);
+            ctxRequest = Mapper.Map<domF09KaGradingRequest, ctxF09KaGradingRequest>(domainRequest);
 
 
             domF09KaGradingResponse domainResponse = new domF09KaGradingResponse();

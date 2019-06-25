@@ -65,11 +65,16 @@ namespace Ellucian.Colleague.Coordination.F09.Services
         public async Task<dtoF09KaGradingResponse> UpdateF09KaGradingAsync(dtoF09KaGradingRequest dtoRequest)
         {
             //convert dtoRequest to domainRequest
-            Domain.F09.Entities.domF09KaGradingRequest domainRequest = new Domain.F09.Entities.domF09KaGradingRequest();
-            domainRequest.StcId = dtoRequest.StcId;
-            domainRequest.KaComments = dtoRequest.KaComments;
-            domainRequest.GradeSelected = dtoRequest.GradeSelected;
-            domainRequest.RequestType = dtoRequest.RequestType;
+
+            //Domain.F09.Entities.domF09KaGradingRequest domainRequest = new Domain.F09.Entities.domF09KaGradingRequest();
+            //domainRequest.StcId = dtoRequest.StcId;
+            //domainRequest.KaComments = dtoRequest.KaComments;
+            //domainRequest.GradeSelected = dtoRequest.GradeSelected;
+            //domainRequest.RequestType = dtoRequest.RequestType;
+
+            Mapper.CreateMap<dtoF09KaGradingRequest, domF09KaGradingRequest>();
+            Mapper.CreateMap<Dtos.F09.Questions, Domain.F09.Entities.Questions>();
+            var domainRequest = Mapper.Map<dtoF09KaGradingRequest, domF09KaGradingRequest>(dtoRequest);
 
             //send domainRequest to Repository
             var domainResponse = await _F09KaGradingRepository.UpdateF09KaGradingAsync(domainRequest);

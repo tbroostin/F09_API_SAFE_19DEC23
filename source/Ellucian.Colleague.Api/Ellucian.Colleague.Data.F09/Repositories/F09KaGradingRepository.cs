@@ -18,8 +18,6 @@ using AutoMapper;
 namespace Ellucian.Colleague.Data.F09.Repositories
 {
 
-
-
     [RegisterType]
     class F09KaGradingRepository : BaseColleagueRepository, IF09KaGradingRepository
     {
@@ -76,12 +74,17 @@ namespace Ellucian.Colleague.Data.F09.Repositories
 
         public async Task<domF09KaGradingResponse> UpdateF09KaGradingAsync(domF09KaGradingRequest domainRequest)
         {
-            //create ctx request
-            var ctxRequest = new ctxF09KaGradingRequest();
-            ctxRequest.StcId = domainRequest.StcId;
-            ctxRequest.GradeSelected = domainRequest.GradeSelected;
-            ctxRequest.KaComments = domainRequest.KaComments;
-            ctxRequest.RequestType = domainRequest.RequestType;
+            ////create ctx request
+            //var ctxRequest = new ctxF09KaGradingRequest();
+            //ctxRequest.StcId = domainRequest.StcId;
+            //ctxRequest.GradeSelected = domainRequest.GradeSelected;
+            //ctxRequest.KaComments = domainRequest.KaComments;
+            //ctxRequest.RequestType = domainRequest.RequestType;
+
+            //convert domainRequest to ctxRequest
+            Mapper.CreateMap<domF09KaGradingResponse, ctxF09KaGradingResponse>();
+            Mapper.CreateMap<Domain.F09.Entities.Questions, Transactions.Questions>();
+            var ctxRequest = Mapper.Map<domF09KaGradingRequest, ctxF09KaGradingRequest>(domainRequest);
 
 
             domF09KaGradingResponse domainResponse = new domF09KaGradingResponse();

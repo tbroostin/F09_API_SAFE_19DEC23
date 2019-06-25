@@ -16,6 +16,13 @@ namespace Ellucian.Colleague.Dtos.F09
     {
         public string QQuestion { get; set; }
         public string QAnswers { get; set; }
+        public string QHeader { get; set; }
+        public string QAnswerType { get; set; }
+        public string QComment { get; set; }
+        public string QRequired { get; set; }
+        public string QTag { get; set; }
+        public string QAnswer { get; set; }
+
     }
 
     public class dtoF09KaGradingRequest
@@ -25,6 +32,7 @@ namespace Ellucian.Colleague.Dtos.F09
         public string RequestType { get; set; }
         public string GradeSelected { get; set; }
         public string KaComments { get; set; }
+        public List<Questions> Questions { get; set; }
 
         public dtoF09KaGradingRequest()
         {

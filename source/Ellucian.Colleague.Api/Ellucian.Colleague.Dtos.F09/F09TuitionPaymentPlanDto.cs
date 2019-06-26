@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Ellucian.Colleague.Domain.F09.Entities
+﻿namespace Ellucian.Colleague.Dtos.F09
 {
-    public class F09TuitionPaymentPlan
+    public class F09TuitionPaymentPlanDto
     {
         public string PaymentOption { get; set; }
         public string StudentId { get; set; }

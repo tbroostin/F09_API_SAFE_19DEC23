@@ -39,5 +39,40 @@ namespace Ellucian.Colleague.Coordination.F09.Services
             var adapter = _adapterRegistry.GetAdapter<Domain.F09.Entities.F09PaymentForm, Dtos.F09.F09PaymentFormDto>();
             return adapter.MapToType(domain);
         }
+
+        public async Task<Dtos.F09.F09PaymentInvoiceDto> SubmitTuitionPaymentFormAsync(Dtos.F09.F09TuitionPaymentPlanDto dto)
+        {
+            if(dto == null) throw new ArgumentNullException(nameof(dto));
+            if(IsNullOrWhiteSpace(dto.StudentId)) throw new ArgumentNullException(nameof(dto.StudentId), "Student Id is Required");
+
+            var paymentForm = await GetTuitionPaymentFormAsync(dto.StudentId);
+
+            // validate the options
+            if (!(paymentForm.PaymentMethods.ContainsKey(dto.PaymentMethod) ||
+                  paymentForm.PaymentMethods.ContainsValue(dto.PaymentMethod)))
+            {
+                var err = $"Selected payment method '{dto.PaymentMethod}' is not valid";
+                logger.Error(err);
+                throw new ArgumentException(err);
+            }
+
+            if (!paymentForm.PaymentOptions.ContainsKey(dto.PaymentOption))
+            {
+                var err = $"Selected payment option '{dto.PaymentOption}' is not valid";
+                logger.Error(err);
+                throw new ArgumentException(err);
+            }
+
+            var domainAdapter =
+                _adapterRegistry
+                    .GetAdapter<Dtos.F09.F09TuitionPaymentPlanDto, Domain.F09.Entities.F09TuitionPaymentPlan>();
+            var domain = domainAdapter.MapToType(dto);
+            var invoice = await _repository.SubmitTuitionFormAsync(domain);
+
+            var adapter =
+                _adapterRegistry.GetAdapter<Domain.F09.Entities.F09PaymentInvoice, Dtos.F09.F09PaymentInvoiceDto>();
+            return adapter.MapToType(invoice);
+        }
     }
 }
+

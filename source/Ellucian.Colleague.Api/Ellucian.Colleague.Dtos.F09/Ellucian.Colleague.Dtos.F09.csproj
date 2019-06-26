@@ -44,8 +44,10 @@
     <Compile Include="F09AdminTrackingSheetDto.cs" />
     <Compile Include="F09AdminTrackingSheetResponseDto.cs" />
     <Compile Include="F09PaymentFormDto.cs" />
+    <Compile Include="F09PaymentInvoiceDto.cs" />
     <Compile Include="F09SsnRequestDto.cs" />
     <Compile Include="F09SsnResponseDto.cs" />
+    <Compile Include="F09TuitionPaymentPlanDto.cs" />
     <Compile Include="PdfStudentTrackingSheetDto.cs" />
     <Compile Include="StudentAlumniDirectoriesDto.cs" />
     <Compile Include="GetActiveRestrictionsResponseDto.cs" />

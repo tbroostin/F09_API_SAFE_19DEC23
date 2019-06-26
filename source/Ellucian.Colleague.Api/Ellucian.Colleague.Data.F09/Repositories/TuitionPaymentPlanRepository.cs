@@ -31,6 +31,31 @@ namespace Ellucian.Colleague.Data.F09.Repositories
         {
         }
 
+        public async Task<F09PaymentInvoice> SubmitTuitionFormAsync(F09TuitionPaymentPlan paymentPlan)
+        {
+            if(paymentPlan == null) throw new ArgumentNullException(nameof(paymentPlan));
+            if(IsNullOrWhiteSpace(paymentPlan.StudentId)) throw new ArgumentNullException(nameof(paymentPlan.StudentId), "Student Id is required");
+
+
+            var submitReq = new ctxF09PayPlanSignupRequest()
+            {
+                Id = paymentPlan.StudentId,
+                RequestType = UpdateTuitionFormType,
+                SuOptionSelected = paymentPlan.PaymentOption
+            };
+
+            var resp =
+                await
+                    transactionInvoker.ExecuteAsync<ctxF09PayPlanSignupRequest, ctxF09PayPlanSignupResponse>(submitReq);
+
+            var invoice = ConvertToInvoice(resp);
+
+            invoice.PaymentMethod = paymentPlan.PaymentMethod;
+            invoice.StudentId = paymentPlan.StudentId;
+
+            return invoice;
+        }
+
         public async Task<F09PaymentForm> GetTuitionFormAsync(string studentId)
         {
             if (String.IsNullOrWhiteSpace(studentId))
@@ -59,7 +84,25 @@ namespace Ellucian.Colleague.Data.F09.Repositories
             return GetPaymentForm(resp);
         }
 
-        private F09PaymentForm GetPaymentForm(ctxF09PayPlanSignupResponse response)
+        private static F09PaymentInvoice ConvertToInvoice(ctxF09PayPlanSignupResponse resp)
+        {
+            decimal d;
+            var invoice = new F09PaymentInvoice()
+            {
+                Term = resp.SuOption1InvTerm ?? resp.SuOption2InvTerm,
+                ArCode = resp.SuInvArCode,
+                Description = resp.SuInvDesc,
+
+                Amount = Decimal.TryParse(resp?.SuInvAmount ?? String.Empty, out d) ? d : Decimal.Zero,
+
+                // Teresa said to hard code these
+                Distribution = "CRE",
+                ArType = "01",
+                Mnemonic = "PPLAN",
+            };
+            return invoice;
+        }
+        private static F09PaymentForm GetPaymentForm(ctxF09PayPlanSignupResponse response)
         {
             var paymentForm = new F09PaymentForm
             {

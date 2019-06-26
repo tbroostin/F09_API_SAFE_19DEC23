@@ -44,6 +44,7 @@
     <Compile Include="Entities\F09AdminTrackingSheet.cs" />
     <Compile Include="Entities\F09AdminTrackingSheetResponse.cs" />
     <Compile Include="Entities\F09PaymentForm.cs" />
+    <Compile Include="Entities\F09PaymentInvoice.cs" />
     <Compile Include="Entities\F09SsnRequest.cs" />
     <Compile Include="Entities\F09SsnResponse.cs" />
     <Compile Include="Entities\F09TuitionPaymentPlan.cs" />

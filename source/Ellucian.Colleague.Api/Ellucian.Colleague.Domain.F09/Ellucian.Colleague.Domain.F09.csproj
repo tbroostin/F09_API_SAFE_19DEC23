@@ -46,6 +46,7 @@
     <Compile Include="Entities\F09PaymentForm.cs" />
     <Compile Include="Entities\F09SsnRequest.cs" />
     <Compile Include="Entities\F09SsnResponse.cs" />
+    <Compile Include="Entities\F09TuitionPaymentPlan.cs" />
     <Compile Include="Entities\GetActiveRestrictionsResponse.cs" />
     <Compile Include="Entities\PdfStudentTrackingSheet.cs" />
     <Compile Include="Entities\StudentAlumniDirectories.cs" />

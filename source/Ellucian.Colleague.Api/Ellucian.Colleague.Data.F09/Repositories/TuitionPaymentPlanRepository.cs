@@ -15,6 +15,7 @@ using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using slf4net;
+using static System.String;
 
 namespace Ellucian.Colleague.Data.F09.Repositories
 {
@@ -65,29 +66,37 @@ namespace Ellucian.Colleague.Data.F09.Repositories
                 FinancialAidTerms = response.SuFaTerms,
                 Instructions = response.SuInstructions,
                 TermsConditions = response.SuTermsAndCond,
-                PaymentOptions = GetPaymentOptionsDict(response)
+                PaymentOptions = GetPaymentOptionsDict(response),
+                PaymentMethods = GetPaymentMethodsDict(response),
+                UnderstandingStatements = GetUnderstandingStatements(response)
             };
 
             return paymentForm;
         }
 
-        private Dictionary<string, string> GetPaymentOptionsDict(ctxF09PayPlanSignupResponse response)
+        private static List<string> GetUnderstandingStatements(ctxF09PayPlanSignupResponse response)
         {
-            Expression<Func<object>> optionDescriptionExpression = () => response.SuOption1Desc;
-            Expression<Func<object>> optionValueExpression = () => response.SuOption1Value;
+            var understandingPattern = Regex.Replace(GetReflectionPropertyName(() => response.SuUnderstand1), "[0-9]+",
+                "[0-9]+");
+            var understandingProperties = GetPropertyInfo(response, opt => Regex.IsMatch(opt.Name, understandingPattern));
+            return understandingProperties.Select(u => u.GetValue(response, null) as string).ToList();
+        }
 
-            var descriptionPattern = Regex.Replace(((MemberExpression) optionDescriptionExpression.Body).Member.Name,
+        private static Dictionary<string, string> GetPaymentMethodsDict(ctxF09PayPlanSignupResponse response)
+            => response.PayMethods.ToDictionary(p => p.PayMethodsCode, p => p.PayMethodsDesc);
+
+        private static Dictionary<string, F09PaymentOption> GetPaymentOptionsDict(ctxF09PayPlanSignupResponse response)
+        {
+            var descriptionPattern = Regex.Replace(GetReflectionPropertyName(()=> response.SuOption1Desc),
                 "[0-9]+", "[0-9]+");
-            var valuePattern = Regex.Replace(((MemberExpression) optionValueExpression.Body).Member.Name,
+            var valuePattern = Regex.Replace(GetReflectionPropertyName(()=>response.SuOption1Value),
                 "[0-9]+", "[0-9]+");
 
             var descriptionOrValue = $"(?:{descriptionPattern}|{valuePattern})";
 
-            var optionParameters = response.GetType()
-                .GetProperties(BindingFlags.Instance | BindingFlags.Public)
-                .Where(opt => Regex.IsMatch(opt.Name, descriptionOrValue))
-                .OrderBy(x => Regex.Replace(x.Name, @"^[^0-9]+([0-9]+).*(Desc|Value).*$", "$1-$2")) // standardize the name for sorting?
-                .ToList();
+            var optionParameters = GetPropertyInfo(response,
+                opt => Regex.IsMatch(opt.Name, descriptionOrValue),
+                x => Regex.Replace(x.Name, @"^[^0-9]+([0-9]+).*(Desc|Value).*$", "$1-$2")); // standardize the name for sorting?
 
             var tracker = new HashSet<string>();
             var pairwise =
@@ -112,6 +121,18 @@ namespace Ellucian.Colleague.Data.F09.Repositories
                     .ToDictionary(option => option.Item1.ToString(), option => option.Item2.ToString());
 
             return pairwise;
+        }
+
+        private static string GetReflectionPropertyName(Expression<Func<object>> expr) => ((MemberExpression) expr.Body).Member.Name;
+
+        private static List<PropertyInfo> GetPropertyInfo<T>(T obj, Func<PropertyInfo, bool> where, Func<PropertyInfo, string> orderby = null)
+        {
+            if (orderby == null) orderby = (t) => t.Name;
+            return typeof(T)
+                .GetProperties(BindingFlags.Instance | BindingFlags.Public)
+                .Where(where)
+                .OrderBy(orderby) // standardize the name for sorting?
+                .ToList();
         }
     }
 }

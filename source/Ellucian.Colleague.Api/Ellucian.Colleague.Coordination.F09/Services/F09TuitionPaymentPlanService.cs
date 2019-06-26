@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.F09.Entities;
 using Ellucian.Colleague.Domain.F09.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Data.Colleague;

@@ -359,6 +359,31 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
-        
+
+
+        public async Task<F09PaymentFormDto> GetF09TuitionPaymentAsync(string personId)
+        {
+            if (string.IsNullOrEmpty(personId))
+            {
+                throw new ArgumentNullException(nameof(personId), "ID cannot be empty/null for the tuition payment plan");
+            }
+            try
+            {
+                var baseUrl = UrlUtility.CombineUrlPath(_getF09Payment, personId);
+
+                var headers = new NameValueCollection {{AcceptHeaderKey, _mediaTypeHeaderVersion1}};
+
+                var response = await ExecuteGetRequestWithResponseAsync(baseUrl, headers: headers);
+                var tuitionPayment = JsonConvert.DeserializeObject<F09PaymentFormDto>(await response.Content.ReadAsStringAsync());
+
+                return tuitionPayment;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to Tuition Payment");
+                throw;
+            }
+            
+        }
     }
 }

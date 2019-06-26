@@ -167,9 +167,11 @@
     <Compile Include="Repositories\GetF09StuTrackingSheetRepository.cs" />
     <Compile Include="Repositories\StudentAlumniDirectoriesRepository.cs" />
     <Compile Include="Repositories\ScholarshipApplicationRepository.cs" />
+    <Compile Include="Repositories\TuitionPaymentPlanRepository.cs" />
     <Compile Include="Repositories\UpdateStudentRestrictionRepository.cs" />
     <Compile Include="Transactions\ctxF09AdminTrackingSheet.cs" />
     <Compile Include="Transactions\ctxF09Directories.cs" />
+    <Compile Include="Transactions\ctxF09PayPlanSignup.cs" />
     <Compile Include="Transactions\ctxF09PdfTrackingSheet.cs" />
     <Compile Include="Transactions\ctxF09Ssn.cs" />
     <Compile Include="Transactions\CtxF09StuTrackingSheet.cs" />
@@ -188,6 +190,10 @@
   </ItemGroup>
   <ItemGroup>
     <WCFMetadata Include="Service References\" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

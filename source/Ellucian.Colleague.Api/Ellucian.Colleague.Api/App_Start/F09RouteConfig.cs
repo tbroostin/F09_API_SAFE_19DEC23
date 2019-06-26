@@ -172,6 +172,20 @@ namespace Ellucian.Colleague.Api
                 }
             );
 
+            #region TuitionPaymentPlan
+            routes.MapHttpRoute(
+                 name: "GetTuitionPaymentForm",
+                 routeTemplate: "f09/tuition-payment/{studentId}",
+                 defaults: new { controller = "F09TuitionPayment", action = "GetFormInformationAsync" },
+                 constraints: new
+                 {
+                     httpMethod = new HttpMethodConstraint("GET"),
+                     headerVersion = new HeaderVersionConstraint(1, true)
+                 }
+             );
+
+            #endregion TuitionPaymentPlan
+
         }
     }
 }

@@ -368,6 +368,7 @@
     <Compile Include="Controllers\F09\F09AdminTrackingSheetController.cs" />
     <Compile Include="Controllers\F09\F09SsnController.cs" />
     <Compile Include="Controllers\F09\F09StuTrackingSheetController.cs" />
+    <Compile Include="Controllers\F09\F09TuitionPaymentController.cs" />
     <Compile Include="Controllers\F09\ScholarshipApplicationController.cs" />
     <Compile Include="Controllers\F09\StudentAlumniDirectoriesController.cs" />
     <Compile Include="Controllers\F09\StudentRestrictionController.cs" />

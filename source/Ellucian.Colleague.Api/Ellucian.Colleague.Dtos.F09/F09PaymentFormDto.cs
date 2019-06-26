@@ -13,7 +13,7 @@ namespace Ellucian.Colleague.Dtos.F09
 
         public string FinancialAidTerms { get; set; }
 
-        public Dictionary<string, string> PaymentOptions { get; }
+        public Dictionary<string, string> PaymentOptions { get; set; }
 
         public List<string> UnderstandingStatements { get; set; }
         public Dictionary<string, string> PaymentMethods { get; set; }

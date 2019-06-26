@@ -71,7 +71,7 @@ namespace Ellucian.Colleague.Data.F09.Repositories
 
             var resp =
                 await transactionInvoker.ExecuteAsync<ctxF09PayPlanSignupRequest, ctxF09PayPlanSignupResponse>(req);
-            if (!String.IsNullOrWhiteSpace(resp.ErrorMsg))
+            if (!String.IsNullOrWhiteSpace(resp.ErrorMsg) || resp.RespondType == "Error")
             {
                 var errMesg = $"Failed to retrieve the tuition payment plan for '{studentId}'. {resp.ErrorMsg}";
                 logger.Error(errMesg);

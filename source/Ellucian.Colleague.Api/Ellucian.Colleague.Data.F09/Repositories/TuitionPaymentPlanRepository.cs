@@ -135,6 +135,15 @@ namespace Ellucian.Colleague.Data.F09.Repositories
             var valuePattern = Regex.Replace(GetReflectionPropertyName(()=>response.SuOption1Value),
                 "[0-9]+", "[0-9]+");
 
+            // why am i doing this if i know "Desc" and "Error"?
+            // this is so that if the names ever change, we will have a compile time error
+            // and we can then fix it. If i just used the magic strings, it might cause and error in the future
+            var wordDesc = Regex.Replace(GetReflectionPropertyName(() => response.SuOption1Desc), "^SuOption[0-9]+(Desc)$",
+                "$1", RegexOptions.IgnoreCase);
+            var errorPattern = Regex.Replace(GetReflectionPropertyName(() => response.SuOption1Error), "^.*(Error)$",
+                "$1", RegexOptions.IgnoreCase);
+
+
             var descriptionOrValue = $"(?:{descriptionPattern}|{valuePattern})";
 
             var optionParameters = GetPropertyInfo(response,
@@ -159,9 +168,24 @@ namespace Ellucian.Colleague.Data.F09.Repositories
 
                         tracker.Add(desc.Name);
                         tracker.Add(value.Name);
-                        return Tuple.Create(value.GetValue(response, null), desc.GetValue(response, null));
+                        // return the property info for the desc, so that we can
+                        // use it to get the paired error message
+                        return Tuple.Create(value.GetValue(response, null), desc);
                     }).Where(x => x != null)
-                    .ToDictionary(option => option.Item1.ToString(), option => option.Item2.ToString());
+                    .ToDictionary(option => option?.Item1?.ToString(),
+                        option =>
+                            new F09PaymentOption()
+                            {
+                                Value = option?.Item1?.ToString(),
+                                Description = option?.Item2?.GetValue(response, null)?.ToString(),
+                                ErrorMessage =
+                                    GetPropertyInfo(response,
+                                        opt =>
+                                            Regex.IsMatch(opt.Name,
+                                                Regex.Replace(option?.Item2?.Name ?? String.Empty, wordDesc,
+                                                    errorPattern)))
+                                        .SingleOrDefault()?.GetValue(response, null)?.ToString()
+                            });
 
             return pairwise;
         }

@@ -14,7 +14,7 @@ namespace Ellucian.Colleague.Domain.F09.Entities
 
         public string FinancialAidTerms { get; set; }
 
-        public Dictionary<string, string> PaymentOptions { get; set; }
+        public Dictionary<string, F09PaymentOption> PaymentOptions { get; set; }
 
         public List<string> UnderstandingStatements { get; set; }
         public Dictionary<string, string> PaymentMethods { get; set; }
@@ -23,7 +23,7 @@ namespace Ellucian.Colleague.Domain.F09.Entities
         public F09PaymentForm()
         {
             UnderstandingStatements = new List<string>();
-            PaymentOptions = new Dictionary<string, string>();
+            PaymentOptions = new Dictionary<string, F09PaymentOption>();
             PaymentMethods = new Dictionary<string, string>();
         }
 

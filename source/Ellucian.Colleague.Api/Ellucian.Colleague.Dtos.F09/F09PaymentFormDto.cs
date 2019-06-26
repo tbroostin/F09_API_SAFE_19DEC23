@@ -14,14 +14,14 @@ namespace Ellucian.Colleague.Dtos.F09
 
         public string FinancialAidTerms { get; set; }
 
-        public Dictionary<string, string> PaymentOptions { get; }
+        public Dictionary<string, F09PaymentOptionDto> PaymentOptions { get; set; }
 
         public List<string> UnderstandingStatements { get; set; }
         public Dictionary<string, string> PaymentMethods { get; set; }
 
         public F09PaymentFormDto()
         {
-            PaymentOptions = new Dictionary<string, string>();
+            PaymentOptions = new Dictionary<string, F09PaymentOptionDto>();
             PaymentMethods = new Dictionary<string, string>();
             UnderstandingStatements = new List<string>();
         }

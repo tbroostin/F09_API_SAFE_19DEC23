@@ -128,7 +128,7 @@ namespace Ellucian.Colleague.Data.F09.Repositories
         private static Dictionary<string, string> GetPaymentMethodsDict(ctxF09PayPlanSignupResponse response)
             => response.PayMethods.ToDictionary(p => p.PayMethodsCode, p => p.PayMethodsDesc);
 
-        private static Dictionary<string, F09PaymentOption> GetPaymentOptionsDict(ctxF09PayPlanSignupResponse response)
+        private static Dictionary<string, string> GetPaymentOptionsDict(ctxF09PayPlanSignupResponse response)
         {
             var descriptionPattern = Regex.Replace(GetReflectionPropertyName(()=> response.SuOption1Desc),
                 "[0-9]+", "[0-9]+");

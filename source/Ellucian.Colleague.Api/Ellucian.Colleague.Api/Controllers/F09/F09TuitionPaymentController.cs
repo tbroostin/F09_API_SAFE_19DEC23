@@ -74,5 +74,34 @@ namespace Ellucian.Colleague.Api.Controllers.F09
             }
             return ret;
         }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="paymentPlan"></param>
+        /// <returns></returns>
+        public async Task<F09PaymentInvoiceDto> PostPaymentPlanAsync(F09TuitionPaymentPlanDto paymentPlan)
+        {
+            if(paymentPlan == null) throw new ArgumentNullException(nameof(paymentPlan));
+            if(IsNullOrWhiteSpace(paymentPlan.StudentId)) throw new ArgumentNullException(nameof(paymentPlan.StudentId), "Student Id is Required");
+
+            F09PaymentInvoiceDto invoice = null;
+            try
+            {
+                invoice = await _tuitionPaymentPlanService.SubmitTuitionPaymentFormAsync(paymentPlan);
+            }
+            catch (ArgumentNullException e)
+            {
+                _logger.Error(e.Message);
+                throw CreateHttpResponseException(e.Message, HttpStatusCode.NotFound);
+            }
+            catch(Exception e)
+            {
+                _logger.Error(e.Message);
+                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+            }
+
+            return invoice;
+        }
     }
 }

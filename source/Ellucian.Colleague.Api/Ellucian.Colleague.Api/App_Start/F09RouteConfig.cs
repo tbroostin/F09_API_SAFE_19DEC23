@@ -183,6 +183,16 @@ namespace Ellucian.Colleague.Api
                      headerVersion = new HeaderVersionConstraint(1, true)
                  }
              );
+            routes.MapHttpRoute(
+                 name: "SubmitTuitionPaymentForm",
+                 routeTemplate: "f09/tuition-payment/",
+                 defaults: new { controller = "F09TuitionPayment", action = "PostPaymentPlanAsync" },
+                 constraints: new
+                 {
+                     httpMethod = new HttpMethodConstraint("POST"),
+                     headerVersion = new HeaderVersionConstraint(1, true)
+                 }
+             );
 
             #endregion TuitionPaymentPlan
 

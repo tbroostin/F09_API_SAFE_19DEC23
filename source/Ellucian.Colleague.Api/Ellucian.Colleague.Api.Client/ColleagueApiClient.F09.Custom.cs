@@ -380,10 +380,30 @@ namespace Ellucian.Colleague.Api.Client
             }
             catch (Exception ex)
             {
-                logger.Error(ex, "Unable to Tuition Payment");
+                logger.Error(ex, "Unable to get Tuition Payment");
                 throw;
             }
-            
+        }
+
+        public async Task<F09PaymentInvoiceDto> SubmitF09TuitionPaymentPlanAsync(F09TuitionPaymentPlanDto paymentPlan)
+        {
+            if(paymentPlan == null) throw new ArgumentNullException(nameof(paymentPlan));
+            if(String.IsNullOrWhiteSpace(paymentPlan.StudentId)) throw new ArgumentNullException(nameof(paymentPlan.StudentId), "Student Id is Required");
+
+            try
+            {
+                var headers = new NameValueCollection {{AcceptHeaderKey, _mediaTypeHeaderVersion1}};
+
+                var response = await ExecutePostRequestWithResponseAsync(paymentPlan, _getF09Payment, headers: headers);
+                var invoice = JsonConvert.DeserializeObject<F09PaymentInvoiceDto>(await response.Content.ReadAsStringAsync());
+
+                return invoice;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to submit Tuition Payment or receive invoice");
+                throw;
+            }
         }
     }
 }

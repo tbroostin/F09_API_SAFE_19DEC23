@@ -31,6 +31,7 @@ namespace Ellucian.Colleague.Dtos.F09
         public string StcId { get; set; }
         public string RequestType { get; set; }
         public string GradeSelected { get; set; }
+        public string GradeExpireDate { get; set; }
         public string KaComments { get; set; }
         public List<Questions> Questions { get; set; }
 
@@ -44,7 +45,7 @@ namespace Ellucian.Colleague.Dtos.F09
         public string FacId { get; set; }
         public string StcId { get; set; }
         public string RespondType { get; set; }
-        public string ErrorMsg { get; set; }
+        public string Msg { get; set; }
         public string KaHeaderHtml { get; set; }
 
         public List<GradeOptions> GradeOptions { get; set; }
@@ -54,7 +55,7 @@ namespace Ellucian.Colleague.Dtos.F09
             string facId,
             string stcId,
             string respondType,
-            string errorMsg,
+            string Msg,
             string kaHeaderHtml,
             List<GradeOptions> gradeOptions,
             List<Questions> questions
@@ -63,7 +64,7 @@ namespace Ellucian.Colleague.Dtos.F09
             this.FacId = facId;
             this.StcId = stcId;
             this.RespondType = respondType;
-            this.ErrorMsg = errorMsg;
+            this.Msg = Msg;
             this.KaHeaderHtml = kaHeaderHtml;
             this.GradeOptions = gradeOptions;
             this.Questions = questions;

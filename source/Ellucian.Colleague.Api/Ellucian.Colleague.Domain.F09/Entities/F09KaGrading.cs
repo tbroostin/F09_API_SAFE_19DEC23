@@ -33,6 +33,7 @@ namespace Ellucian.Colleague.Domain.F09.Entities
         public string StcId { get; set; }
         public string RequestType { get; set; }
         public string GradeSelected { get; set; }
+        public string GradeExpireDate { get; set; }
         public string KaComments { get; set; }
 
         public List<Questions> Questions { get; set; }
@@ -44,7 +45,7 @@ namespace Ellucian.Colleague.Domain.F09.Entities
         public string FacId { get; set; }
         public string StcId { get; set; }
         public string RespondType { get; set; }
-        public string ErrorMsg { get; set; }
+        public string Msg { get; set; }
         public string KaHeaderHtml { get; set; }
 
         public List<GradeOptions> GradeOptions { get; set; }

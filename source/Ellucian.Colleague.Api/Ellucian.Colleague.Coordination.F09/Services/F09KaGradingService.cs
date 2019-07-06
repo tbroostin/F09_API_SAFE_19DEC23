@@ -81,7 +81,7 @@ namespace Ellucian.Colleague.Coordination.F09.Services
 
             //convert domainResponse to DtoResponse
             dtoF09KaGradingResponse dtoResponse = new dtoF09KaGradingResponse();
-            dtoResponse.ErrorMsg = domainResponse.ErrorMsg;
+            dtoResponse.Msg = domainResponse.Msg;
 
             return dtoResponse;
         }

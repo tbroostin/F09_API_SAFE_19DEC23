@@ -96,7 +96,7 @@ namespace Ellucian.Colleague.Data.F09.Repositories
 
                 //convert ctxResponse to domainResponse
                 domainResponse.RespondType = ctxResponse.RespondType;
-                domainResponse.ErrorMsg = ctxResponse.ErrorMsg;
+                domainResponse.Msg = ctxResponse.Msg;
             }
             catch (Exception ex)
             {

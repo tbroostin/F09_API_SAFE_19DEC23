@@ -112,7 +112,7 @@ namespace Ellucian.Colleague.Api.Controllers.F09
             }
             catch (Exception ex)
             {
-                throw CreateHttpResponseException("Unable to update Scholarship Application information: " + ex.Message, HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException("Unable to F09KaGrading: " + ex.Message, HttpStatusCode.BadRequest);
             }
         }
 

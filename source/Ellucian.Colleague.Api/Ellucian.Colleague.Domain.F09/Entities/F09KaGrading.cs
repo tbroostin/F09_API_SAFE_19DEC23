@@ -49,6 +49,7 @@ namespace Ellucian.Colleague.Domain.F09.Entities
         public string KaHeaderHtml { get; set; }
 
         public List<GradeOptions> GradeOptions { get; set; }
+        public string GradeExpireLimit { get; set; }
         public List<Questions> Questions { get; set; }
     }
 }

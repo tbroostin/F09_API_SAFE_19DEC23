@@ -1,22 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Net.Http;
 using System.Web.Http;
 using System.Net;
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
-using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using Ellucian.Web.Security;
 using slf4net;
-using System.Web;
-using System.Net.Http.Headers;
 using Ellucian.Web.Http.Configuration;
-using System.Text.RegularExpressions;
-using Ellucian.Web.Http.Filters;
-using Ellucian.Colleague.Coordination.Finance;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Dtos.F09;
 using Ellucian.Colleague.Coordination.F09.Services;
@@ -68,7 +60,6 @@ namespace Ellucian.Colleague.Api.Controllers.F09
                 }
 
                 dtoResponse = await _UpdateF09KaGradingService.GetF09KaGradingAsync(stcId);
-
                 return dtoResponse;
 
             }
@@ -103,8 +94,8 @@ namespace Ellucian.Colleague.Api.Controllers.F09
                 }
 
                 var dtoResponse = await _UpdateF09KaGradingService.UpdateF09KaGradingAsync(dtoRequest);
-
                 return dtoResponse;
+
             }
             catch (PermissionsException permissionException)
             {

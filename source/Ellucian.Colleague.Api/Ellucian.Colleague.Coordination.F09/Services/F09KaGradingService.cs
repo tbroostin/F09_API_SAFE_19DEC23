@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
@@ -37,41 +36,13 @@ namespace Ellucian.Colleague.Coordination.F09.Services
             Mapper.CreateMap<Domain.F09.Entities.Questions, Dtos.F09.Questions>();
             var dtoResponse = Mapper.Map<domF09KaGradingResponse, dtoF09KaGradingResponse>(domainResponse);
 
-
-            //List<GradeOptions> dtoGs = new List<GradeOptions>();
-
-            //foreach (Domain.F09.Entities.GradeOptions domG in domainResponse.GradeOptions)
-            //{
-            //    GradeOptions dtoG = new GradeOptions();
-            //    dtoG.GradeCode = domG.GradeCode;
-            //    dtoG.GradeDesc = domG.GradeDesc;
-            //    dtoGs.Add(dtoG);
-            //}
-
-            //var dtoResponse = new dtoF09KaGradingResponse(
-            //    domainResponse.FacId,
-            //    domainResponse.StcId,
-            //    domainResponse.RespondType,
-            //    domainResponse.ErrorMsg,
-            //    domainResponse.KaHeaderHtml,
-            //    dtoGs
-            //);
-
             return dtoResponse;
-
         }
 
 
         public async Task<dtoF09KaGradingResponse> UpdateF09KaGradingAsync(dtoF09KaGradingRequest dtoRequest)
         {
             //convert dtoRequest to domainRequest
-
-            //Domain.F09.Entities.domF09KaGradingRequest domainRequest = new Domain.F09.Entities.domF09KaGradingRequest();
-            //domainRequest.StcId = dtoRequest.StcId;
-            //domainRequest.KaComments = dtoRequest.KaComments;
-            //domainRequest.GradeSelected = dtoRequest.GradeSelected;
-            //domainRequest.RequestType = dtoRequest.RequestType;
-
             Mapper.CreateMap<dtoF09KaGradingRequest, domF09KaGradingRequest>();
             Mapper.CreateMap<Dtos.F09.Questions, Domain.F09.Entities.Questions>();
             var domainRequest = Mapper.Map<dtoF09KaGradingRequest, domF09KaGradingRequest>(dtoRequest);
@@ -81,11 +52,10 @@ namespace Ellucian.Colleague.Coordination.F09.Services
 
             //convert domainResponse to DtoResponse
             dtoF09KaGradingResponse dtoResponse = new dtoF09KaGradingResponse();
+            dtoResponse.RespondType = domainResponse.RespondType;
             dtoResponse.Msg = domainResponse.Msg;
 
             return dtoResponse;
         }
-
-
     }
 }

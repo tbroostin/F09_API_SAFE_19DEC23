@@ -901,7 +901,6 @@
     <Content Include="Views\Shared\_Layout.cshtml" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Views\F09KaGrading\" />
     <Folder Include="Views\F09KaSelect\" />
   </ItemGroup>
   <ItemGroup>

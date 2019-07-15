@@ -36,6 +36,16 @@ namespace Ellucian.Colleague.Data.F09.Repositories
             if(paymentPlan == null) throw new ArgumentNullException(nameof(paymentPlan));
             if(IsNullOrWhiteSpace(paymentPlan.StudentId)) throw new ArgumentNullException(nameof(paymentPlan.StudentId), "Student Id is required");
 
+            // it looks like things I was expecting on the submit
+            // are actually in the get
+            var getForm = new ctxF09PayPlanSignupRequest()
+            {
+                Id = paymentPlan.StudentId,
+                RequestType = GetTuitionFormType
+            };
+
+            var formResp =
+                await transactionInvoker.ExecuteAsync<ctxF09PayPlanSignupRequest, ctxF09PayPlanSignupResponse>(getForm);
 
             var submitReq = new ctxF09PayPlanSignupRequest()
             {
@@ -48,7 +58,7 @@ namespace Ellucian.Colleague.Data.F09.Repositories
                 await
                     transactionInvoker.ExecuteAsync<ctxF09PayPlanSignupRequest, ctxF09PayPlanSignupResponse>(submitReq);
 
-            var invoice = ConvertToInvoice(resp);
+            var invoice = ConvertToInvoice(resp, formResp);
 
             invoice.PaymentMethod = paymentPlan.PaymentMethod;
             invoice.StudentId = paymentPlan.StudentId;
@@ -84,16 +94,22 @@ namespace Ellucian.Colleague.Data.F09.Repositories
             return GetPaymentForm(resp);
         }
 
-        private static F09PaymentInvoice ConvertToInvoice(ctxF09PayPlanSignupResponse resp)
+        private static F09PaymentInvoice ConvertToInvoice(ctxF09PayPlanSignupResponse resp, ctxF09PayPlanSignupResponse formResp)
         {
             decimal d;
             var invoice = new F09PaymentInvoice()
             {
-                Term = resp.SuOption1InvTerm ?? resp.SuOption2InvTerm,
+                Term = !IsNullOrWhiteSpace(resp.SuOption1InvTerm)
+                        ? resp.SuOption1InvTerm
+                        : !IsNullOrWhiteSpace(resp.SuOption2InvTerm)
+                            ? resp.SuOption2InvTerm
+                            : !IsNullOrWhiteSpace(formResp.SuOption1InvTerm)
+                                ? formResp.SuOption1InvTerm
+                                : formResp.SuOption2InvTerm,
                 ArCode = resp.SuInvArCode,
                 Description = resp.SuInvDesc,
 
-                Amount = Decimal.TryParse(resp?.SuInvAmount ?? String.Empty, out d) ? d : Decimal.Zero,
+                Amount = Decimal.TryParse(resp?.SuInvAmount ?? formResp?.SuInvAmount ?? String.Empty, out d) ? d : Decimal.Zero,
 
                 // Teresa said to hard code these
                 Distribution = "CRE",

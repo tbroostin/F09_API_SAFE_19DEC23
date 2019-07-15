@@ -112,7 +112,8 @@ namespace Ellucian.Colleague.Data.F09.Repositories
                 Amount = Decimal.TryParse(resp?.SuInvAmount ?? formResp?.SuInvAmount ?? String.Empty, out d) ? d : Decimal.Zero,
 
                 // Teresa said to hard code these
-                Distribution = "CRE",
+                //Distribution = "CRE",
+                Distribution = "WEB", // We may need to figure out why this works
                 ArType = "01",
                 Mnemonic = "PPLAN",
             };

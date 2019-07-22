@@ -36,16 +36,18 @@ namespace Ellucian.Colleague.Data.F09.Repositories
             if(paymentPlan == null) throw new ArgumentNullException(nameof(paymentPlan));
             if(IsNullOrWhiteSpace(paymentPlan.StudentId)) throw new ArgumentNullException(nameof(paymentPlan.StudentId), "Student Id is required");
 
-            // it looks like things I was expecting on the submit
-            // are actually in the get
-            var getForm = new ctxF09PayPlanSignupRequest()
-            {
-                Id = paymentPlan.StudentId,
-                RequestType = GetTuitionFormType
-            };
+            // this may not be needed now that the invoice ID is being returned
+            // TODO: verify and delete
+            //// it looks like things I was expecting on the submit
+            //// are actually in the get
+            //var getForm = new ctxF09PayPlanSignupRequest()
+            //{
+            //    Id = paymentPlan.StudentId,
+            //    RequestType = GetTuitionFormType
+            //};
 
-            var formResp =
-                await transactionInvoker.ExecuteAsync<ctxF09PayPlanSignupRequest, ctxF09PayPlanSignupResponse>(getForm);
+            //var formResp =
+            //    await transactionInvoker.ExecuteAsync<ctxF09PayPlanSignupRequest, ctxF09PayPlanSignupResponse>(getForm);
 
             var submitReq = new ctxF09PayPlanSignupRequest()
             {
@@ -58,10 +60,24 @@ namespace Ellucian.Colleague.Data.F09.Repositories
                 await
                     transactionInvoker.ExecuteAsync<ctxF09PayPlanSignupRequest, ctxF09PayPlanSignupResponse>(submitReq);
 
-            var invoice = ConvertToInvoice(resp, formResp);
+            if (!String.IsNullOrWhiteSpace(resp.ErrorMsg) || resp.RespondType == "Error")
+            {
+                var errMesg = $"Failed to retrieve the payment plan invoice id for '{paymentPlan.StudentId}'. {resp.ErrorMsg}";
+                logger.Error(errMesg);
 
-            invoice.PaymentMethod = paymentPlan.PaymentMethod;
-            invoice.StudentId = paymentPlan.StudentId;
+                // it looks like the resp.ErrorMsg is an html encoded string.
+                // return that without the fluff that i was adding
+                throw new ColleagueTransactionException(resp.ErrorMsg);
+            }
+
+            var invoice = new F09PaymentInvoice()
+            {
+                PaymentMethod = paymentPlan.PaymentMethod,
+                StudentId = paymentPlan.StudentId,
+                InvoiceId = resp.SuInvoiceId,
+                Distribution = "WEB" // hard code this for now, may want to get the data from the transaction in the future
+            };
+
 
             return invoice;
         }
@@ -94,31 +110,6 @@ namespace Ellucian.Colleague.Data.F09.Repositories
             return GetPaymentForm(resp);
         }
 
-        private static F09PaymentInvoice ConvertToInvoice(ctxF09PayPlanSignupResponse resp, ctxF09PayPlanSignupResponse formResp)
-        {
-            decimal d;
-            var invoice = new F09PaymentInvoice()
-            {
-                Term = !IsNullOrWhiteSpace(resp.SuOption1InvTerm)
-                        ? resp.SuOption1InvTerm
-                        : !IsNullOrWhiteSpace(resp.SuOption2InvTerm)
-                            ? resp.SuOption2InvTerm
-                            : !IsNullOrWhiteSpace(formResp.SuOption1InvTerm)
-                                ? formResp.SuOption1InvTerm
-                                : formResp.SuOption2InvTerm,
-                ArCode = resp.SuInvArCode,
-                Description = resp.SuInvDesc,
-
-                Amount = Decimal.TryParse(resp?.SuInvAmount ?? formResp?.SuInvAmount ?? String.Empty, out d) ? d : Decimal.Zero,
-
-                // Teresa said to hard code these
-                //Distribution = "CRE",
-                Distribution = "WEB", // We may need to figure out why this works
-                ArType = "01",
-                Mnemonic = "PPLAN",
-            };
-            return invoice;
-        }
         private static F09PaymentForm GetPaymentForm(ctxF09PayPlanSignupResponse response)
         {
             var paymentForm = new F09PaymentForm

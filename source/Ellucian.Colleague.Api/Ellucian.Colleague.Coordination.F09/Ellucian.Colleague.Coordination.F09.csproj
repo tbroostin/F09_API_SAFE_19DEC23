@@ -35,15 +35,9 @@
       <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Colleague.Configuration.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Ellucian.Colleague.Coordination.Base">
-      <HintPath>..\Ellucian.Colleague.Coordination.Base\bin\Debug\Ellucian.Colleague.Coordination.Base.dll</HintPath>
-    </Reference>
     <Reference Include="Ellucian.Colleague.Domain, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
       <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Colleague.Domain.dll</HintPath>
       <Private>True</Private>
-    </Reference>
-    <Reference Include="Ellucian.Colleague.Domain.Base">
-      <HintPath>..\Ellucian.Colleague.Domain.Base\bin\Debug\Ellucian.Colleague.Domain.Base.dll</HintPath>
     </Reference>
     <Reference Include="Ellucian.Colleague.Legacy, Version=1.18.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
       <HintPath>..\packages\EllucianColleagueDataAPI.1.18.0.7\lib\net451\Ellucian.Colleague.Legacy.dll</HintPath>
@@ -193,9 +187,17 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Ellucian.Colleague.Coordination.Base\Ellucian.Colleague.Coordination.Base.csproj">
+      <Project>{2d4513b8-2722-4c91-9a64-bdbbc3f03516}</Project>
+      <Name>Ellucian.Colleague.Coordination.Base</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Ellucian.Colleague.Coordination.Finance\Ellucian.Colleague.Coordination.Finance.csproj">
       <Project>{e58b8c16-5bf9-45e5-934b-1c4804b157e4}</Project>
       <Name>Ellucian.Colleague.Coordination.Finance</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Domain.Base\Ellucian.Colleague.Domain.Base.csproj">
+      <Project>{a3b49510-737b-4ffd-8bca-17bcce7fbaf7}</Project>
+      <Name>Ellucian.Colleague.Domain.Base</Name>
     </ProjectReference>
     <ProjectReference Include="..\Ellucian.Colleague.Domain.F09\Ellucian.Colleague.Domain.F09.csproj">
       <Project>{bce0190a-cc69-4e01-8f3c-0acbff56ad15}</Project>

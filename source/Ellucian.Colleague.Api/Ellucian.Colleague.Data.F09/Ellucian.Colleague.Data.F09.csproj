@@ -31,6 +31,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="AutoMapper">
+      <HintPath>..\Ellucian.Colleague.Api\bin\AutoMapper.dll</HintPath>
+    </Reference>
     <Reference Include="Ellucian.Colleague.Domain">
       <HintPath>..\Ellucian.Colleague.Coordination.Base\bin\Debug\Ellucian.Colleague.Domain.dll</HintPath>
     </Reference>
@@ -71,6 +74,8 @@
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Repositories\F09AdminTrackingSheetRepository.cs" />
+    <Compile Include="Repositories\F09KaGradingRepository.cs" />
+    <Compile Include="Repositories\F09KaSelectRespository.cs" />
     <Compile Include="Repositories\F09SsnRepository.cs" />
     <Compile Include="Repositories\GetActiveRestrictionsRepository.cs" />
     <Compile Include="Repositories\GetF09StuTrackingSheetRepository.cs" />
@@ -80,6 +85,8 @@
     <Compile Include="Transactions\ctxF09AdminTrackingSheet.cs" />
     <Compile Include="Transactions\ctxF09Directories.cs" />
     <Compile Include="Transactions\ctxF09PdfTrackingSheet.cs" />
+    <Compile Include="Transactions\ctxF09KaGrading.cs" />
+    <Compile Include="Transactions\ctxF09KaSelect.cs" />
     <Compile Include="Transactions\ctxF09Ssn.cs" />
     <Compile Include="Transactions\CtxF09StuTrackingSheet.cs" />
     <Compile Include="Transactions\ctxGetActiveRestrictions.cs" />

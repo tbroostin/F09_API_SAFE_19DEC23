@@ -31,6 +31,10 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="AutoMapper, Version=2.1.267.0, Culture=neutral, PublicKeyToken=be96cd2c38ef1005, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Ellucian.Colleague.Api\bin\AutoMapper.dll</HintPath>
+    </Reference>
     <Reference Include="Ellucian.Colleague.Coordination.Base">
       <HintPath>..\Ellucian.Colleague.Coordination.Base\bin\Debug\Ellucian.Colleague.Coordination.Base.dll</HintPath>
     </Reference>
@@ -70,10 +74,14 @@
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Services\F09AdminTrackingSheetService.cs" />
+    <Compile Include="Services\F09KaGradingService.cs" />
+    <Compile Include="Services\F09KaSelectService.cs" />
     <Compile Include="Services\F09SsnService.cs" />
     <Compile Include="Services\GetActiveRestrictionsService.cs" />
     <Compile Include="Services\GetF09StuTrackingSheetService.cs" />
     <Compile Include="Services\IF09AdminTrackingSheetService.cs" />
+    <Compile Include="Services\IF09KaGradingService.cs" />
+    <Compile Include="Services\IF09KaSelectService.cs" />
     <Compile Include="Services\IF09SsnService.cs" />
     <Compile Include="Services\IGetActiveRestrictionsService.cs" />
     <Compile Include="Services\IGetF09StuTrackingSheetService.cs" />

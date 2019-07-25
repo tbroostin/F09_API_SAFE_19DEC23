@@ -432,5 +432,50 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
+        public async Task<F09PaymentFormDto> GetF09TuitionPaymentAsync(string personId)
+        {
+            if (string.IsNullOrEmpty(personId))
+            {
+                throw new ArgumentNullException(nameof(personId), "ID cannot be empty/null for the tuition payment plan");
+            }
+            try
+            {
+                var baseUrl = UrlUtility.CombineUrlPath(_getF09Payment, personId);
+
+                var headers = new NameValueCollection {{AcceptHeaderKey, _mediaTypeHeaderVersion1}};
+
+                var response = await ExecuteGetRequestWithResponseAsync(baseUrl, headers: headers);
+                var tuitionPayment = JsonConvert.DeserializeObject<F09PaymentFormDto>(await response.Content.ReadAsStringAsync());
+
+                return tuitionPayment;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get Tuition Payment");
+                throw;
+            }
+        }
+
+        public async Task<F09PaymentInvoiceDto> SubmitF09TuitionPaymentPlanAsync(F09TuitionPaymentPlanDto paymentPlan)
+        {
+            if(paymentPlan == null) throw new ArgumentNullException(nameof(paymentPlan));
+            if(String.IsNullOrWhiteSpace(paymentPlan.StudentId)) throw new ArgumentNullException(nameof(paymentPlan.StudentId), "Student Id is Required");
+
+            try
+            {
+                var headers = new NameValueCollection {{AcceptHeaderKey, _mediaTypeHeaderVersion1}};
+
+                var response = await ExecutePostRequestWithResponseAsync(paymentPlan, _getF09Payment, headers: headers);
+                var invoice = JsonConvert.DeserializeObject<F09PaymentInvoiceDto>(await response.Content.ReadAsStringAsync());
+
+                return invoice;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to submit Tuition Payment or receive invoice");
+                throw;
+            }
+        }
     }
 }

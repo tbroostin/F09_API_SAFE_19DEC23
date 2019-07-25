@@ -196,7 +196,6 @@ namespace Ellucian.Colleague.Api
                  }
              );
 
-
             // F09 teresa@toad-code.com 06/19/19
             routes.MapHttpRoute(
                 name: "PutF09KaGrading",
@@ -208,6 +207,29 @@ namespace Ellucian.Colleague.Api
                     headerVersion = new HeaderVersionConstraint(1, true)
                 }
             );
+
+            #region TuitionPaymentPlan
+            routes.MapHttpRoute(
+                 name: "GetTuitionPaymentForm",
+                 routeTemplate: "f09/tuition-payment/{studentId}",
+                 defaults: new { controller = "F09TuitionPayment", action = "GetFormInformationAsync" },
+                 constraints: new
+                 {
+                     httpMethod = new HttpMethodConstraint("GET"),
+                     headerVersion = new HeaderVersionConstraint(1, true)
+                 }
+             );
+            routes.MapHttpRoute(
+                 name: "SubmitTuitionPaymentForm",
+                 routeTemplate: "f09/tuition-payment/",
+                 defaults: new { controller = "F09TuitionPayment", action = "PostPaymentPlanAsync" },
+                 constraints: new
+                 {
+                     httpMethod = new HttpMethodConstraint("POST"),
+                     headerVersion = new HeaderVersionConstraint(1, true)
+                 }
+             );
+            #endregion TuitionPaymentPlan
 
         }
     }

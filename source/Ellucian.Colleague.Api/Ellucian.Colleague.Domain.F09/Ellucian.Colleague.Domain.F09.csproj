@@ -46,8 +46,11 @@
     <Compile Include="Entities\PdfStudentTrackingSheet.cs" />
     <Compile Include="Entities\F09KaGrading.cs" />
     <Compile Include="Entities\F09KaSelectResponse.cs" />
+    <Compile Include="Entities\F09PaymentForm.cs" />
+    <Compile Include="Entities\F09PaymentInvoice.cs" />
     <Compile Include="Entities\F09SsnRequest.cs" />
     <Compile Include="Entities\F09SsnResponse.cs" />
+    <Compile Include="Entities\F09TuitionPaymentPlan.cs" />
     <Compile Include="Entities\GetActiveRestrictionsResponse.cs" />
     <Compile Include="Entities\KaSelectSTC.cs" />
     <Compile Include="Entities\KaSelectTerms.cs" />
@@ -68,6 +71,7 @@
     <Compile Include="Repositories\IGetF09StuTrackingSheetRepository.cs" />
     <Compile Include="Repositories\IStudentAlumniDirectoriesRepository.cs" />
     <Compile Include="Repositories\IScholarshipApplicationRepository.cs" />
+    <Compile Include="Repositories\ITuitionPaymentPlanRepository.cs" />
     <Compile Include="Repositories\IUpdateStudentRestrictionRepository.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

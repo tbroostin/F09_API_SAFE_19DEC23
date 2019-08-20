@@ -44,19 +44,6 @@ namespace Ellucian.Colleague.Data.F09.Repositories
             if(paymentPlan == null) throw new ArgumentNullException(nameof(paymentPlan));
             if(IsNullOrWhiteSpace(paymentPlan.StudentId)) throw new ArgumentNullException(nameof(paymentPlan.StudentId), "Student Id is required");
 
-            // this may not be needed now that the invoice ID is being returned
-            // TODO: verify and delete
-            //// it looks like things I was expecting on the submit
-            //// are actually in the get
-            //var getForm = new ctxF09PayPlanSignupRequest()
-            //{
-            //    Id = paymentPlan.StudentId,
-            //    RequestType = GetTuitionFormType
-            //};
-
-            //var formResp =
-            //    await transactionInvoker.ExecuteAsync<ctxF09PayPlanSignupRequest, ctxF09PayPlanSignupResponse>(getForm);
-
             var submitReq = new ctxF09PayPlanSignupRequest()
             {
                 Id = paymentPlan.StudentId,

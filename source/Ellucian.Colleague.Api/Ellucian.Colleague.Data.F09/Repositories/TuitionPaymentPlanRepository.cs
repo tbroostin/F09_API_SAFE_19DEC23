@@ -25,10 +25,18 @@ namespace Ellucian.Colleague.Data.F09.Repositories
         private static readonly string GetTuitionFormType = "GetSignUpForm";
         private static readonly string UpdateTuitionFormType = "SubmitSignUpForm";
 
+        private static readonly string GetChangeFormRequestType = "ChangeForm";
+        private static readonly string UpdateChangeFormRequestType = "SubmitChangeForm";
+
         public TuitionPaymentPlanRepository(ICacheProvider cacheProvider,
             IColleagueTransactionFactory transactionFactory, ILogger logger)
             : base(cacheProvider, transactionFactory, logger)
         {
+        }
+
+        public async Task<F09PaymentForm> GetChangeTuitionFormAsync(string studentId)
+        {
+            return await GetPaymentFormBaseAsync(studentId, GetChangeFormRequestType);
         }
 
         public async Task<F09PaymentInvoice> SubmitTuitionFormAsync(F09TuitionPaymentPlan paymentPlan)
@@ -124,7 +132,8 @@ namespace Ellucian.Colleague.Data.F09.Repositories
                 TermsConditions = response.SuTermsAndCond,
                 PaymentOptions = GetPaymentOptionsDict(response),
                 PaymentMethods = GetPaymentMethodsDict(response),
-                UnderstandingStatements = GetUnderstandingStatements(response)
+                UnderstandingStatements = GetUnderstandingStatements(response),
+                PaymentOptionSelected = response?.SuOptionSelected ?? String.Empty,
             };
 
             return paymentForm;

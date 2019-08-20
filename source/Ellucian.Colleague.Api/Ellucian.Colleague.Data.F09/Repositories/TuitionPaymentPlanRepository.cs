@@ -84,6 +84,11 @@ namespace Ellucian.Colleague.Data.F09.Repositories
 
         public async Task<F09PaymentForm> GetTuitionFormAsync(string studentId)
         {
+            return await GetPaymentFormBaseAsync(studentId, GetTuitionFormType);
+        }
+
+        private async Task<F09PaymentForm> GetPaymentFormBaseAsync(string studentId, string requestType)
+        {
             if (String.IsNullOrWhiteSpace(studentId))
             {
                 throw new ArgumentNullException(nameof(studentId));

@@ -39,9 +39,14 @@ namespace Ellucian.Colleague.Data.F09.Repositories
             return await GetPaymentFormBaseAsync(studentId, GetChangeFormRequestType);
         }
 
+        public async Task<string> SubmitChangeTuitionFormAsync(F09TuitionPaymentPlan  paymentPlan)
+        {
+            var resp = await SubmitFormBaseAsync(paymentPlan);
+            return resp.RespondType == "Confirmation" ? resp.Msg : resp.RespondType;
+        }
+
         public async Task<F09PaymentInvoice> SubmitTuitionFormAsync(F09TuitionPaymentPlan paymentPlan)
         {
-
             var resp = await SubmitFormBaseAsync(paymentPlan);
 
             var invoice = new F09PaymentInvoice()

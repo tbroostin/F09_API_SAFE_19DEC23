@@ -41,29 +41,8 @@ namespace Ellucian.Colleague.Data.F09.Repositories
 
         public async Task<F09PaymentInvoice> SubmitTuitionFormAsync(F09TuitionPaymentPlan paymentPlan)
         {
-            if(paymentPlan == null) throw new ArgumentNullException(nameof(paymentPlan));
-            if(IsNullOrWhiteSpace(paymentPlan.StudentId)) throw new ArgumentNullException(nameof(paymentPlan.StudentId), "Student Id is required");
 
-            var submitReq = new ctxF09PayPlanSignupRequest()
-            {
-                Id = paymentPlan.StudentId,
-                RequestType = UpdateTuitionFormType,
-                SuOptionSelected = paymentPlan.PaymentOption
-            };
-
-            var resp =
-                await
-                    transactionInvoker.ExecuteAsync<ctxF09PayPlanSignupRequest, ctxF09PayPlanSignupResponse>(submitReq);
-
-            if (!String.IsNullOrWhiteSpace(resp.ErrorMsg) || resp.RespondType == "Error")
-            {
-                var errMesg = $"Failed to retrieve the payment plan invoice id for '{paymentPlan.StudentId}'. {resp.ErrorMsg}";
-                logger.Error(errMesg);
-
-                // it looks like the resp.ErrorMsg is an html encoded string.
-                // return that without the fluff that i was adding
-                throw new ColleagueTransactionException(resp.ErrorMsg);
-            }
+            var resp = await SubmitFormBaseAsync(paymentPlan);
 
             var invoice = new F09PaymentInvoice()
             {
@@ -72,7 +51,6 @@ namespace Ellucian.Colleague.Data.F09.Repositories
                 InvoiceId = resp.SuInvoiceId,
                 Distribution = "WEB" // hard code this for now, may want to get the data from the transaction in the future
             };
-
 
             return invoice;
         }
@@ -108,6 +86,37 @@ namespace Ellucian.Colleague.Data.F09.Repositories
             }
 
             return GetPaymentForm(resp);
+        }
+
+        private async Task<ctxF09PayPlanSignupResponse> SubmitFormBaseAsync(F09TuitionPaymentPlan paymentPlan)
+        {
+            if (paymentPlan == null) throw new ArgumentNullException(nameof(paymentPlan));
+            if (IsNullOrWhiteSpace(paymentPlan.StudentId))
+                throw new ArgumentNullException(nameof(paymentPlan.StudentId), "Student Id is required");
+
+            var submitReq = new ctxF09PayPlanSignupRequest()
+            {
+                Id = paymentPlan.StudentId,
+                RequestType = UpdateTuitionFormType,
+                SuOptionSelected = paymentPlan.PaymentOption
+            };
+
+            var resp =
+                await
+                    transactionInvoker.ExecuteAsync<ctxF09PayPlanSignupRequest, ctxF09PayPlanSignupResponse>(submitReq);
+
+            if (!String.IsNullOrWhiteSpace(resp.ErrorMsg) || resp.RespondType == "Error")
+            {
+                var errMesg =
+                    $"Failed to retrieve the payment plan invoice id for '{paymentPlan.StudentId}'. {resp.ErrorMsg}";
+                logger.Error(errMesg);
+
+                // it looks like the resp.ErrorMsg is an html encoded string.
+                // return that without the fluff that i was adding
+                throw new ColleagueTransactionException(resp.ErrorMsg);
+            }
+
+            return resp;
         }
 
         private static F09PaymentForm GetPaymentForm(ctxF09PayPlanSignupResponse response)

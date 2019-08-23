@@ -25,7 +25,7 @@ namespace Ellucian.Colleague.Data.F09.Repositories
         private static readonly string GetTuitionFormType = "GetSignUpForm";
         private static readonly string UpdateTuitionFormType = "SubmitSignUpForm";
 
-        private static readonly string GetChangeFormRequestType = "ChangeForm";
+        private static readonly string GetChangeFormRequestType = "GetChangeForm";
         private static readonly string UpdateChangeFormRequestType = "SubmitChangeForm";
 
         public TuitionPaymentPlanRepository(ICacheProvider cacheProvider,
@@ -41,13 +41,13 @@ namespace Ellucian.Colleague.Data.F09.Repositories
 
         public async Task<string> SubmitChangeTuitionFormAsync(F09TuitionPaymentPlan  paymentPlan)
         {
-            var resp = await SubmitFormBaseAsync(paymentPlan);
+            var resp = await SubmitFormBaseAsync(paymentPlan, UpdateChangeFormRequestType);
             return resp.RespondType == "Confirmation" ? resp.Msg : resp.RespondType;
         }
 
         public async Task<F09PaymentInvoice> SubmitTuitionFormAsync(F09TuitionPaymentPlan paymentPlan)
         {
-            var resp = await SubmitFormBaseAsync(paymentPlan);
+            var resp = await SubmitFormBaseAsync(paymentPlan, UpdateTuitionFormType);
 
             var invoice = new F09PaymentInvoice()
             {
@@ -75,7 +75,7 @@ namespace Ellucian.Colleague.Data.F09.Repositories
             var req = new ctxF09PayPlanSignupRequest()
             {
                 Id = studentId,
-                RequestType = GetTuitionFormType
+                RequestType = requestType
             };
 
             var resp =
@@ -93,7 +93,7 @@ namespace Ellucian.Colleague.Data.F09.Repositories
             return GetPaymentForm(resp);
         }
 
-        private async Task<ctxF09PayPlanSignupResponse> SubmitFormBaseAsync(F09TuitionPaymentPlan paymentPlan)
+        private async Task<ctxF09PayPlanSignupResponse> SubmitFormBaseAsync(F09TuitionPaymentPlan paymentPlan, string requestType)
         {
             if (paymentPlan == null) throw new ArgumentNullException(nameof(paymentPlan));
             if (IsNullOrWhiteSpace(paymentPlan.StudentId))
@@ -102,8 +102,9 @@ namespace Ellucian.Colleague.Data.F09.Repositories
             var submitReq = new ctxF09PayPlanSignupRequest()
             {
                 Id = paymentPlan.StudentId,
-                RequestType = UpdateTuitionFormType,
-                SuOptionSelected = paymentPlan.PaymentOption
+                RequestType = requestType,
+                SuOptionSelected = paymentPlan.PaymentOption,
+                PayMethodSelected = paymentPlan.PaymentMethod
             };
 
             var resp =

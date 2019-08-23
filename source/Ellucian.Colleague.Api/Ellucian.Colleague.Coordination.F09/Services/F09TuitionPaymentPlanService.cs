@@ -69,7 +69,7 @@ namespace Ellucian.Colleague.Coordination.F09.Services
 
         public async Task<string> SubmitTuitionChangeFormAsync(Dtos.F09.F09TuitionPaymentPlanDto dto)
         {
-            await ValidatePaymentPlan(dto,true);
+            await ValidatePaymentPlan(dto, F09TuitionPaymentPlanType.Change,true);
 
             var domainAdapter =
                 _adapterRegistry
@@ -80,13 +80,22 @@ namespace Ellucian.Colleague.Coordination.F09.Services
             return changeInfo;
         }
 
-        private async Task ValidatePaymentPlan(Dtos.F09.F09TuitionPaymentPlanDto dto, bool allowNullPaymentMethod = false)
+        private async Task ValidatePaymentPlan(Dtos.F09.F09TuitionPaymentPlanDto dto, F09TuitionPaymentPlanType type = F09TuitionPaymentPlanType.Enroll, bool allowNullPaymentMethod = false)
         {
             if(dto == null) throw new ArgumentNullException(nameof(dto));
             if(IsNullOrWhiteSpace(dto.StudentId)) throw new ArgumentNullException(nameof(dto.StudentId), "Student Id is Required");
 
-            var paymentForm = await GetTuitionPaymentFormAsync(dto.StudentId);
-
+            var paymentForm =  await new Lazy<Task<Domain.F09.Entities.F09PaymentForm>>(async () =>
+            {
+                switch (type)
+                {
+                    case F09TuitionPaymentPlanType.Change:
+                        return await _repository.GetChangeTuitionFormAsync(dto.StudentId);
+                    case F09TuitionPaymentPlanType.Enroll:
+                    default:
+                        return await _repository.GetTuitionFormAsync(dto.StudentId);
+                }
+            }).Value;
             // validate the options
             if ((allowNullPaymentMethod || !String.IsNullOrWhiteSpace(dto.PaymentMethod)) && !(paymentForm.PaymentMethods.ContainsKey(dto.PaymentMethod) ||
                   paymentForm.PaymentMethods.ContainsValue(dto.PaymentMethod)))

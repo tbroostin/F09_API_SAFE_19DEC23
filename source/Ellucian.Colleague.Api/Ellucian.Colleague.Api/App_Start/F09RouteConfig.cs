@@ -212,8 +212,8 @@ namespace Ellucian.Colleague.Api
             #region TuitionPaymentPlan
             routes.MapHttpRoute(
                  name: "GetTuitionPaymentForm",
-                 routeTemplate: "f09/tuition-payment/{studentId}/{paymentPlan}",
-                 defaults: new { controller = "F09TuitionPayment", action = "GetFormInformationAsync", @paymentPlan = UrlParameter.Optional },
+                 routeTemplate: "f09/tuition-payment/{studentId}/{paymentPlanType}",
+                 defaults: new { controller = "F09TuitionPayment", action = "GetFormInformationAsync", @paymentPlanType = UrlParameter.Optional },
                  constraints: new
                  {
                      httpMethod = new HttpMethodConstraint("GET"),

@@ -50,11 +50,11 @@ namespace Ellucian.Colleague.Api.Controllers.F09
         /// 
         /// </summary>
         /// <param name="studentId"></param>
-        /// <param name="paymentType"></param>
+        /// <param name="paymentPlanType"></param>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="HttpResponseException"></exception>
-        public async Task<F09PaymentFormDto> GetFormInformationAsync(string studentId, string paymentType)
+        public async Task<F09PaymentFormDto> GetFormInformationAsync(string studentId, string paymentPlanType)
         {
             F09PaymentFormDto ret = null;
             try
@@ -62,7 +62,7 @@ namespace Ellucian.Colleague.Api.Controllers.F09
                 if (IsNullOrWhiteSpace(studentId)) { throw new ArgumentNullException(nameof(studentId));}
 
                 F09TuitionPaymentPlanType paymentOrDefaultType;
-                Enum.TryParse(paymentType ?? String.Empty, true, out paymentOrDefaultType);
+                Enum.TryParse(paymentPlanType ?? String.Empty, true, out paymentOrDefaultType);
                 ret = await _tuitionPaymentPlanService.GetTuitionPaymentFormAsync(studentId, paymentOrDefaultType);
             }
             catch (ArgumentNullException e)

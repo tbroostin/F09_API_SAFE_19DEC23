@@ -19,6 +19,8 @@ namespace Ellucian.Colleague.Domain.F09.Entities
         public List<string> UnderstandingStatements { get; set; }
         public Dictionary<string, string> PaymentMethods { get; set; }
 
+        public string PaymentOptionSelected { get; set; }
+
 
         public F09PaymentForm()
         {

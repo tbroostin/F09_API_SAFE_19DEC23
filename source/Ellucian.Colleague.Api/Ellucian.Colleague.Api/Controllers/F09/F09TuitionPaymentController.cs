@@ -50,17 +50,20 @@ namespace Ellucian.Colleague.Api.Controllers.F09
         /// 
         /// </summary>
         /// <param name="studentId"></param>
+        /// <param name="paymentPlanType"></param>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="HttpResponseException"></exception>
-        public async Task<F09PaymentFormDto> GetFormInformationAsync(string studentId)
+        public async Task<F09PaymentFormDto> GetFormInformationAsync(string studentId, string paymentPlanType)
         {
             F09PaymentFormDto ret = null;
             try
             {
                 if (IsNullOrWhiteSpace(studentId)) { throw new ArgumentNullException(nameof(studentId));}
 
-                ret = await _tuitionPaymentPlanService.GetTuitionPaymentFormAsync(studentId);
+                F09TuitionPaymentPlanType paymentOrDefaultType;
+                Enum.TryParse(paymentPlanType ?? String.Empty, true, out paymentOrDefaultType);
+                ret = await _tuitionPaymentPlanService.GetTuitionPaymentFormAsync(studentId, paymentOrDefaultType);
             }
             catch (ArgumentNullException e)
             {
@@ -102,6 +105,35 @@ namespace Ellucian.Colleague.Api.Controllers.F09
             }
 
             return invoice;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="paymentPlan"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="HttpResponseException"></exception>
+        public async Task<HttpResponseMessage> PutPaymentPlanAsync(F09TuitionPaymentPlanDto paymentPlan)
+        {
+            if(paymentPlan == null) throw new ArgumentNullException(nameof(paymentPlan));
+            if(IsNullOrWhiteSpace(paymentPlan.StudentId)) throw new ArgumentNullException(nameof(paymentPlan.StudentId), "Student Id is Required");
+
+            try
+            {
+                var message = await _tuitionPaymentPlanService.SubmitTuitionChangeFormAsync(paymentPlan);
+                return new HttpResponseMessage(HttpStatusCode.OK) {Content = new StringContent(message)};
+            }
+            catch (ArgumentNullException e)
+            {
+                _logger.Error(e.Message);
+                throw CreateHttpResponseException(e.Message, HttpStatusCode.NotFound);
+            }
+            catch(Exception e)
+            {
+                _logger.Error(e.Message);
+                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+            }
         }
     }
 }

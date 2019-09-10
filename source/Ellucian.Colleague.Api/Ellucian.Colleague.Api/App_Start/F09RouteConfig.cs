@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Web;
 using System.Web.Http;
+using System.Web.Mvc;
 using System.Web.Routing;
 using Ellucian.Web.Http.Routes;
 
@@ -211,14 +212,24 @@ namespace Ellucian.Colleague.Api
             #region TuitionPaymentPlan
             routes.MapHttpRoute(
                  name: "GetTuitionPaymentForm",
-                 routeTemplate: "f09/tuition-payment/{studentId}",
-                 defaults: new { controller = "F09TuitionPayment", action = "GetFormInformationAsync" },
+                 routeTemplate: "f09/tuition-payment/{studentId}/{paymentPlanType}",
+                 defaults: new { controller = "F09TuitionPayment", action = "GetFormInformationAsync", @paymentPlanType = UrlParameter.Optional },
                  constraints: new
                  {
                      httpMethod = new HttpMethodConstraint("GET"),
                      headerVersion = new HeaderVersionConstraint(1, true)
                  }
              );
+            //routes.MapHttpRoute(
+            //     name: "GetTuitionChangeForm",
+            //     routeTemplate: "f09/tuition-change-payment/{studentId}",
+            //     defaults: new { controller = "F09TuitionPayment", action = "GetChangeFormInformationAsync" },
+            //     constraints: new
+            //     {
+            //         httpMethod = new HttpMethodConstraint("GET"),
+            //         headerVersion = new HeaderVersionConstraint(1, true)
+            //     }
+            // );
             routes.MapHttpRoute(
                  name: "SubmitTuitionPaymentForm",
                  routeTemplate: "f09/tuition-payment/",
@@ -226,6 +237,16 @@ namespace Ellucian.Colleague.Api
                  constraints: new
                  {
                      httpMethod = new HttpMethodConstraint("POST"),
+                     headerVersion = new HeaderVersionConstraint(1, true)
+                 }
+             );
+            routes.MapHttpRoute(
+                 name: "SubmitTuitionChangeForm",
+                 routeTemplate: "f09/tuition-payment/",
+                 defaults: new { controller = "F09TuitionPayment", action = "PutPaymentPlanAsync" },
+                 constraints: new
+                 {
+                     httpMethod = new HttpMethodConstraint("PUT"),
                      headerVersion = new HeaderVersionConstraint(1, true)
                  }
              );

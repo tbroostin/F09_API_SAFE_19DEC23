@@ -18,6 +18,8 @@ namespace Ellucian.Colleague.Dtos.F09
         public List<string> UnderstandingStatements { get; set; }
         public Dictionary<string, string> PaymentMethods { get; set; }
 
+        public string PaymentOptionSelected { get; set; }
+
         public F09PaymentFormDto()
         {
             PaymentOptions = new Dictionary<string, string>();

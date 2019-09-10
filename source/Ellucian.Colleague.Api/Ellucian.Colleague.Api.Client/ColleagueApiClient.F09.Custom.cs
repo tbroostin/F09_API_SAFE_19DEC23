@@ -433,7 +433,7 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
 
-        public async Task<F09PaymentFormDto> GetF09TuitionPaymentAsync(string personId)
+        public async Task<F09PaymentFormDto> GetF09TuitionPaymentAsync(string personId, string paymentType ="")
         {
             if (string.IsNullOrEmpty(personId))
             {
@@ -441,7 +441,7 @@ namespace Ellucian.Colleague.Api.Client
             }
             try
             {
-                var baseUrl = UrlUtility.CombineUrlPath(_getF09Payment, personId);
+                var baseUrl = UrlUtility.CombineUrlPath(_getF09Payment, personId, paymentType);
 
                 var headers = new NameValueCollection {{AcceptHeaderKey, _mediaTypeHeaderVersion1}};
 
@@ -470,6 +470,24 @@ namespace Ellucian.Colleague.Api.Client
                 var invoice = JsonConvert.DeserializeObject<F09PaymentInvoiceDto>(await response.Content.ReadAsStringAsync());
 
                 return invoice;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to submit Tuition Payment or receive invoice");
+                throw;
+            }
+        }
+        public async Task<HttpResponseMessage> SubmitF09TuitionChangePlanAsync(F09TuitionPaymentPlanDto paymentPlan)
+        {
+            if(paymentPlan == null) throw new ArgumentNullException(nameof(paymentPlan));
+            if(String.IsNullOrWhiteSpace(paymentPlan.StudentId)) throw new ArgumentNullException(nameof(paymentPlan.StudentId), "Student Id is Required");
+
+            try
+            {
+                var headers = new NameValueCollection {{AcceptHeaderKey, _mediaTypeHeaderVersion1}};
+
+                var response = await ExecutePutRequestWithResponseAsync(paymentPlan, _getF09Payment, headers: headers);
+                return response;
             }
             catch (Exception ex)
             {

@@ -25,50 +25,29 @@ namespace Ellucian.Colleague.Data.F09.Repositories
         private static readonly string GetTuitionFormType = "GetSignUpForm";
         private static readonly string UpdateTuitionFormType = "SubmitSignUpForm";
 
+        private static readonly string GetChangeFormRequestType = "GetChangeForm";
+        private static readonly string UpdateChangeFormRequestType = "SubmitChangeForm";
+
         public TuitionPaymentPlanRepository(ICacheProvider cacheProvider,
             IColleagueTransactionFactory transactionFactory, ILogger logger)
             : base(cacheProvider, transactionFactory, logger)
         {
         }
 
+        public async Task<F09PaymentForm> GetChangeTuitionFormAsync(string studentId)
+        {
+            return await GetPaymentFormBaseAsync(studentId, GetChangeFormRequestType);
+        }
+
+        public async Task<string> SubmitChangeTuitionFormAsync(F09TuitionPaymentPlan  paymentPlan)
+        {
+            var resp = await SubmitFormBaseAsync(paymentPlan, UpdateChangeFormRequestType);
+            return resp.RespondType == "Confirmation" ? resp.Msg : resp.RespondType;
+        }
+
         public async Task<F09PaymentInvoice> SubmitTuitionFormAsync(F09TuitionPaymentPlan paymentPlan)
         {
-            if(paymentPlan == null) throw new ArgumentNullException(nameof(paymentPlan));
-            if(IsNullOrWhiteSpace(paymentPlan.StudentId)) throw new ArgumentNullException(nameof(paymentPlan.StudentId), "Student Id is required");
-
-            // this may not be needed now that the invoice ID is being returned
-            // TODO: verify and delete
-            //// it looks like things I was expecting on the submit
-            //// are actually in the get
-            //var getForm = new ctxF09PayPlanSignupRequest()
-            //{
-            //    Id = paymentPlan.StudentId,
-            //    RequestType = GetTuitionFormType
-            //};
-
-            //var formResp =
-            //    await transactionInvoker.ExecuteAsync<ctxF09PayPlanSignupRequest, ctxF09PayPlanSignupResponse>(getForm);
-
-            var submitReq = new ctxF09PayPlanSignupRequest()
-            {
-                Id = paymentPlan.StudentId,
-                RequestType = UpdateTuitionFormType,
-                SuOptionSelected = paymentPlan.PaymentOption
-            };
-
-            var resp =
-                await
-                    transactionInvoker.ExecuteAsync<ctxF09PayPlanSignupRequest, ctxF09PayPlanSignupResponse>(submitReq);
-
-            if (!String.IsNullOrWhiteSpace(resp.ErrorMsg) || resp.RespondType == "Error")
-            {
-                var errMesg = $"Failed to retrieve the payment plan invoice id for '{paymentPlan.StudentId}'. {resp.ErrorMsg}";
-                logger.Error(errMesg);
-
-                // it looks like the resp.ErrorMsg is an html encoded string.
-                // return that without the fluff that i was adding
-                throw new ColleagueTransactionException(resp.ErrorMsg);
-            }
+            var resp = await SubmitFormBaseAsync(paymentPlan, UpdateTuitionFormType);
 
             var invoice = new F09PaymentInvoice()
             {
@@ -78,11 +57,15 @@ namespace Ellucian.Colleague.Data.F09.Repositories
                 Distribution = "WEB" // hard code this for now, may want to get the data from the transaction in the future
             };
 
-
             return invoice;
         }
 
         public async Task<F09PaymentForm> GetTuitionFormAsync(string studentId)
+        {
+            return await GetPaymentFormBaseAsync(studentId, GetTuitionFormType);
+        }
+
+        private async Task<F09PaymentForm> GetPaymentFormBaseAsync(string studentId, string requestType)
         {
             if (String.IsNullOrWhiteSpace(studentId))
             {
@@ -92,7 +75,7 @@ namespace Ellucian.Colleague.Data.F09.Repositories
             var req = new ctxF09PayPlanSignupRequest()
             {
                 Id = studentId,
-                RequestType = GetTuitionFormType
+                RequestType = requestType
             };
 
             var resp =
@@ -110,6 +93,38 @@ namespace Ellucian.Colleague.Data.F09.Repositories
             return GetPaymentForm(resp);
         }
 
+        private async Task<ctxF09PayPlanSignupResponse> SubmitFormBaseAsync(F09TuitionPaymentPlan paymentPlan, string requestType)
+        {
+            if (paymentPlan == null) throw new ArgumentNullException(nameof(paymentPlan));
+            if (IsNullOrWhiteSpace(paymentPlan.StudentId))
+                throw new ArgumentNullException(nameof(paymentPlan.StudentId), "Student Id is required");
+
+            var submitReq = new ctxF09PayPlanSignupRequest()
+            {
+                Id = paymentPlan.StudentId,
+                RequestType = requestType,
+                SuOptionSelected = paymentPlan.PaymentOption,
+                PayMethodSelected = paymentPlan.PaymentMethod
+            };
+
+            var resp =
+                await
+                    transactionInvoker.ExecuteAsync<ctxF09PayPlanSignupRequest, ctxF09PayPlanSignupResponse>(submitReq);
+
+            if (!String.IsNullOrWhiteSpace(resp.ErrorMsg) || resp.RespondType == "Error")
+            {
+                var errMesg =
+                    $"Failed to retrieve the payment plan invoice id for '{paymentPlan.StudentId}'. {resp.ErrorMsg}";
+                logger.Error(errMesg);
+
+                // it looks like the resp.ErrorMsg is an html encoded string.
+                // return that without the fluff that i was adding
+                throw new ColleagueTransactionException(resp.ErrorMsg);
+            }
+
+            return resp;
+        }
+
         private static F09PaymentForm GetPaymentForm(ctxF09PayPlanSignupResponse response)
         {
             var paymentForm = new F09PaymentForm
@@ -119,7 +134,8 @@ namespace Ellucian.Colleague.Data.F09.Repositories
                 TermsConditions = response.SuTermsAndCond,
                 PaymentOptions = GetPaymentOptionsDict(response),
                 PaymentMethods = GetPaymentMethodsDict(response),
-                UnderstandingStatements = GetUnderstandingStatements(response)
+                UnderstandingStatements = GetUnderstandingStatements(response),
+                PaymentOptionSelected = response?.SuOptionSelected ?? String.Empty,
             };
 
             return paymentForm;

@@ -97,8 +97,10 @@ namespace Ellucian.Colleague.Coordination.F09.Services
                 }
             }).Value;
             // validate the options
-            if ((allowNullPaymentMethod || !String.IsNullOrWhiteSpace(dto.PaymentMethod)) && !(paymentForm.PaymentMethods.ContainsKey(dto.PaymentMethod) ||
-                  paymentForm.PaymentMethods.ContainsValue(dto.PaymentMethod)))
+            if ((!allowNullPaymentMethod && String.IsNullOrWhiteSpace(dto.PaymentMethod)) ||
+                (!String.IsNullOrWhiteSpace(dto.PaymentMethod) &&
+                 !(paymentForm.PaymentMethods.ContainsKey(dto.PaymentMethod) ||
+                   paymentForm.PaymentMethods.ContainsValue(dto.PaymentMethod))))
             {
                 var err = $"Selected payment method '{dto.PaymentMethod}' is not valid";
                 logger.Error(err);

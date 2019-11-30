@@ -43,6 +43,7 @@
   <ItemGroup>
     <Compile Include="Entities\F09AdminTrackingSheet.cs" />
     <Compile Include="Entities\F09AdminTrackingSheetResponse.cs" />
+    <Compile Include="Entities\F09Report.cs" />
     <Compile Include="Entities\PdfStudentTrackingSheet.cs" />
     <Compile Include="Entities\F09KaGrading.cs" />
     <Compile Include="Entities\F09KaSelectResponse.cs" />
@@ -66,6 +67,7 @@
     <Compile Include="Repositories\IF09AdminTrackingSheetRepository.cs" />
     <Compile Include="Repositories\IF09KaGradingRepository.cs" />
     <Compile Include="Repositories\IF09KaSelectRepository.cs" />
+    <Compile Include="Repositories\IF09ReportRepository.cs" />
     <Compile Include="Repositories\IF09SsnRepository.cs" />
     <Compile Include="Repositories\IGetActiveRestrictionsRepository.cs" />
     <Compile Include="Repositories\IGetF09StuTrackingSheetRepository.cs" />

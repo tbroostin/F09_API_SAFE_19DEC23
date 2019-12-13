@@ -38,6 +38,7 @@ namespace Ellucian.Colleague.Coordination.F09.Services
             var domainRequest = new Domain.F09.Entities.domF09ReportRequest();
             domainRequest.Id = dtoRequest.Id;
             domainRequest.Report = dtoRequest.Report;
+            domainRequest.RequestType = dtoRequest.RequestType;
             domainRequest.JsonRequest = dtoRequest.JsonRequest;
 
             //send domainRequest to Repository
@@ -45,7 +46,10 @@ namespace Ellucian.Colleague.Coordination.F09.Services
 
             //convert domainResponse to DtoResponse
             var dtoResponse = new dtoF09ReportResponse();
+            dtoResponse.RespondType = domainResponse.RespondType;
+            dtoResponse.Msg = domainResponse.Msg;
             dtoResponse.HtmlReport = domainResponse.HtmlReport;
+            dtoResponse.JsonReportOptions = domainResponse.JsonReportOptions;
             return dtoResponse;
         }
     }

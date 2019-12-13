@@ -28,6 +28,7 @@ namespace Ellucian.Colleague.Data.F09.Repositories
                 var ctxRequest = new ctxF09ReportRequest();
                 ctxRequest.Id = domainRequest.Id;
                 ctxRequest.Report = domainRequest.Report;
+                ctxRequest.RequestType = domainRequest.RequestType;
                 ctxRequest.JsonRequest = domainRequest.JsonRequest;
 
                 //send ctxRequest to Colleague for actual response
@@ -35,7 +36,10 @@ namespace Ellucian.Colleague.Data.F09.Repositories
 
                 //convert ctxResponse to domainResponse                
                 var domainResponse = new domF09ReportResponse();
+                domainResponse.RespondType = ctxResponse.RespondType;
+                domainResponse.Msg = ctxResponse.Msg;
                 domainResponse.HtmlReport = ctxResponse.HtmlReport;
+                domainResponse.JsonReportOptions = ctxResponse.JsonReportOptions;
 
                 return domainResponse;
             }

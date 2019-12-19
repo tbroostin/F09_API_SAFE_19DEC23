@@ -168,6 +168,7 @@
     <Compile Include="Repositories\F09AdminTrackingSheetRepository.cs" />
     <Compile Include="Repositories\F09KaGradingRepository.cs" />
     <Compile Include="Repositories\F09KaSelectRespository.cs" />
+    <Compile Include="Repositories\F09ReportRepository.cs" />
     <Compile Include="Repositories\F09SsnRepository.cs" />
     <Compile Include="Repositories\GetActiveRestrictionsRepository.cs" />
     <Compile Include="Repositories\GetF09StuTrackingSheetRepository.cs" />
@@ -181,6 +182,7 @@
     <Compile Include="Transactions\ctxF09PdfTrackingSheet.cs" />
     <Compile Include="Transactions\ctxF09KaGrading.cs" />
     <Compile Include="Transactions\ctxF09KaSelect.cs" />
+    <Compile Include="Transactions\ctxF09Report.cs" />
     <Compile Include="Transactions\ctxF09Ssn.cs" />
     <Compile Include="Transactions\CtxF09StuTrackingSheet.cs" />
     <Compile Include="Transactions\ctxGetActiveRestrictions.cs" />

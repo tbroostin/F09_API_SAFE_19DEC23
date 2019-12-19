@@ -477,6 +477,7 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
         public async Task<HttpResponseMessage> SubmitF09TuitionChangePlanAsync(F09TuitionPaymentPlanDto paymentPlan)
         {
             if(paymentPlan == null) throw new ArgumentNullException(nameof(paymentPlan));
@@ -492,6 +493,25 @@ namespace Ellucian.Colleague.Api.Client
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to submit Tuition Payment or receive invoice");
+                throw;
+            }
+        }
+
+        // F09 teresa@toad-code.com 11/30/19
+        public async Task<HttpResponseMessage> GetF09ReportAsync(dtoF09ReportRequest dtoRequest)
+        {
+            try
+            {
+                var baseUrl = UrlUtility.CombineUrlPath(getF09Report);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var dtoResponse = await ExecutePutRequestWithResponseAsync(dtoRequest, baseUrl, headers: headers);
+                return dtoResponse;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to GetF09ReportAsync.");
                 throw;
             }
         }

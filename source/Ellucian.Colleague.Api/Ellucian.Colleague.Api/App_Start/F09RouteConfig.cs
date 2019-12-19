@@ -209,6 +209,18 @@ namespace Ellucian.Colleague.Api
                 }
             );
 
+            // F09 teresa@toad-code.com 11/30/19
+            routes.MapHttpRoute(
+                name: "GetF09Report",
+                routeTemplate: "f09/get-f09Report",
+                defaults: new { controller = "F09Report", action = "GetF09ReportAsync" },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint("PUT"),
+                    headerVersion = new HeaderVersionConstraint(1, true)
+                }
+            );
+
             #region TuitionPaymentPlan
             routes.MapHttpRoute(
                  name: "GetTuitionPaymentForm",

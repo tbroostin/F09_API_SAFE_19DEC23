@@ -173,6 +173,7 @@
     <Compile Include="Services\F09AdminTrackingSheetService.cs" />
     <Compile Include="Services\F09KaGradingService.cs" />
     <Compile Include="Services\F09KaSelectService.cs" />
+    <Compile Include="Services\F09ReportService.cs" />
     <Compile Include="Services\F09SsnService.cs" />
     <Compile Include="Services\F09TuitionPaymentPlanService.cs" />
     <Compile Include="Services\GetActiveRestrictionsService.cs" />
@@ -180,6 +181,7 @@
     <Compile Include="Services\IF09AdminTrackingSheetService.cs" />
     <Compile Include="Services\IF09KaGradingService.cs" />
     <Compile Include="Services\IF09KaSelectService.cs" />
+    <Compile Include="Services\IF09ReportService.cs" />
     <Compile Include="Services\IF09SsnService.cs" />
     <Compile Include="Services\IF09TuitionPaymentPlanService.cs" />
     <Compile Include="Services\IGetActiveRestrictionsService.cs" />

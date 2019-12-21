@@ -44,6 +44,9 @@ namespace Ellucian.Colleague.Api.Client
         // F09 teresa@toad-code.com 06/18/19
         private static readonly string updateF09KaGrading = "f09/put-f09KaGrading";
 
+        // F09 teresa@toad-code.com 11/30/19
+        private static readonly string getF09Report = "f09/get-f09Report";
+
         #region TuitionPaymentPlan
         private static readonly string _getF09Payment = "f09/tuition-payment";
         #endregion TuitionPaymentPlan

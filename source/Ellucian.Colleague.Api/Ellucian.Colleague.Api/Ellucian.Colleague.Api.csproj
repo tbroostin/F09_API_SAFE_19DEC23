@@ -1024,6 +1024,7 @@
       <DependentUpon>dsPrograms.xsd</DependentUpon>
     </Content>
     <None Include="Properties\PublishProfiles\F09ColleagueApi.pubxml" />
+    <None Include="Properties\PublishProfiles\FGU-WebApi.pubxml" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Ellucian.Colleague.Api.Client\Ellucian.Colleague.Api.Client.csproj">

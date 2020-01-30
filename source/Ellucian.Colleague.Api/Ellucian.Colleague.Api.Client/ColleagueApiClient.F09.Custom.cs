@@ -498,7 +498,7 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         // F09 teresa@toad-code.com 11/30/19
-        public async Task<HttpResponseMessage> GetF09ReportAsync(dtoF09ReportRequest dtoRequest)
+        public async Task<dtoF09ReportResponse> GetF09ReportAsync(dtoF09ReportRequest dtoRequest)
         {
             try
             {
@@ -506,7 +506,11 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-                var dtoResponse = await ExecutePutRequestWithResponseAsync(dtoRequest, baseUrl, headers: headers);
+
+                //var dtoResponse = await ExecutePutRequestWithResponseAsync(dtoRequest, baseUrl, headers: headers);
+                var response = await ExecutePutRequestWithResponseAsync(dtoRequest, baseUrl, headers: headers);
+                var dtoResponse = JsonConvert.DeserializeObject<dtoF09ReportResponse>(await response.Content.ReadAsStringAsync());
+
                 return dtoResponse;
             }
             catch (Exception ex)

@@ -110,7 +110,7 @@
 
   <!-- MSTest adapter -->
   <MSTest>
-    <MapInconclusiveToFailed>True</MapInconclusiveToFailed>
+    <MapInconclusiveToFailed>False</MapInconclusiveToFailed>
     <CaptureTraceOutput>false</CaptureTraceOutput>
     <DeleteDeploymentDirectoryAfterTestRunIsComplete>False</DeleteDeploymentDirectoryAfterTestRunIsComplete>
     <DeploymentEnabled>True</DeploymentEnabled>

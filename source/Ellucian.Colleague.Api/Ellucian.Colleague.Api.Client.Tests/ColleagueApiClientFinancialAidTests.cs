@@ -1,4 +1,4 @@
-﻿//Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -1479,6 +1479,82 @@ namespace Ellucian.Colleague.Api.Client.Tests
             Assert.IsTrue(exceptionThrown);
         }
 
+        #endregion
+
+        #region GetStudentFinancialAidBudgetComponentsAsync
+
+        private string awardYear = "2018";
+        private List<StudentBudgetComponent> expectedBudgetComponentResponse = new List<StudentBudgetComponent>()
+        {
+            new StudentBudgetComponent()
+            {
+                AwardYear = "2018",
+                BudgetComponentCode = "Books",
+                CampusBasedOriginalAmount = 3456,
+                StudentId = "0003914"
+            },
+            new StudentBudgetComponent()
+            {
+                AwardYear = "2018",
+                BudgetComponentCode = "Tuition",
+                CampusBasedOriginalAmount = 15000,
+                StudentId = "0003914"
+            }
+        };
+
+        [TestMethod]
+        public async Task GetStudentBudgetComponentsForYearAsync_ReturnsExpectedResultTest()
+        {
+            var serializedResponse = JsonConvert.SerializeObject(expectedBudgetComponentResponse);
+            setResponse(serializedResponse, HttpStatusCode.OK);
+
+            var actualResponse = await client.GetStudentBudgetComponentsForYearAsync(_studentId, awardYear);
+
+            foreach(var component in expectedBudgetComponentResponse)
+            {
+                var actualComponent = actualResponse.FirstOrDefault(c => c.BudgetComponentCode == component.BudgetComponentCode);
+                Assert.AreEqual(component.AwardYear, actualComponent.AwardYear);
+                Assert.AreEqual(component.StudentId, actualComponent.StudentId);
+                Assert.AreEqual(component.CampusBasedOriginalAmount, actualComponent.CampusBasedOriginalAmount);
+            }            
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetStudentBudgetComponentsForYearAsync_StudentIdRequired_ThrowsArgumentNullExceptionTest()
+        {
+            var serializedResponse = JsonConvert.SerializeObject(expectedBudgetComponentResponse);
+            setResponse(serializedResponse, HttpStatusCode.OK);
+
+            await client.GetStudentBudgetComponentsForYearAsync(null, awardYear);            
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetStudentBudgetComponentsForYearAsync_AwardYearRequired_ThrowsArgumentNullExceptionTest()
+        {
+            var serializedResponse = JsonConvert.SerializeObject(expectedBudgetComponentResponse);
+            setResponse(serializedResponse, HttpStatusCode.OK);
+
+            await client.GetStudentBudgetComponentsForYearAsync(_studentId, null);
+        }
+
+        [TestMethod]
+        public async Task GetStudentBudgetComponentsForYearAsync_RethrowsExceptionTest()
+        {
+            var serializedResponse = JsonConvert.SerializeObject(expectedBudgetComponentResponse);
+            setResponse(serializedResponse, HttpStatusCode.BadRequest);
+            bool exceptionThrown = false;
+            try
+            {
+                await client.GetStudentBudgetComponentsForYearAsync(_studentId, awardYear);
+            }
+            catch
+            {
+                exceptionThrown = true;
+            }
+            Assert.IsTrue(exceptionThrown);
+        }
         #endregion
 
         #region GetStudentFinancialAidChecklistAsync

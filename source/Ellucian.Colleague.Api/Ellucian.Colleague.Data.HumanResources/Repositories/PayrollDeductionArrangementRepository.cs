@@ -403,7 +403,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 var exception = new RepositoryException(errorMessage);
                 foreach (var errMsg in updateResponse.PerbenUpdateErrors)
                 {
-                    exception.AddError(new RepositoryError(errMsg.ErrorCodes, errMsg.ErrorMessages));
+                    exception.AddError(new RepositoryError(string.IsNullOrEmpty(errMsg.ErrorCodes) ? "" : errMsg.ErrorCodes, errMsg.ErrorMessages));
                     errorMessage += string.Join(Environment.NewLine, errMsg.ErrorMessages);
                 }
                 logger.Error(errorMessage.ToString());

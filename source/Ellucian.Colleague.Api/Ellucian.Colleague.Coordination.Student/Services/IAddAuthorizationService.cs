@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.using System;
+﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -37,5 +37,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns><Dtos.Student.AddAuthorization>An AddAuthorization</returns>
         Task<Dtos.Student.AddAuthorization> GetAsync(string id);
 
+        /// <summary>
+        /// Retrieves add authorizations for a student
+        /// </summary>
+        /// <param name="studentId">id of student</param>
+        /// <returns>Add Authorizations for the student.</returns>
+        Task<IEnumerable<Dtos.Student.AddAuthorization>> GetStudentAddAuthorizationsAsync(string studentId);
     }
 }

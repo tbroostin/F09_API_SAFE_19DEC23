@@ -1,5 +1,7 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace Ellucian.Colleague.Domain.Student.Entities
 {
@@ -26,14 +28,60 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         public bool PromptForDropReason { get; set; }
 
         /// <summary>
-        /// To determine when drop reason is prompted in SelfService then if it is required or not.
+        /// To determine when drop reason is prompted in Colleague Self-Service then if it is required or not.
         /// </summary>
         public bool RequireDropReason { get; set; }
 
         /// <summary>
+        /// Show course section book information on printed schedules in Colleague Self-Service
+        /// </summary>
+        public bool ShowBooksOnPrintedSchedules { get; set; }
+
+        /// <summary>
+        /// Show course section additional information on printed schedules in Colleague Self-Service
+        /// </summary>
+        public bool ShowCommentsOnPrintedSchedules { get; set; }
+
+        /// <summary>
+        /// Add academic terms with Default on New Course Plans = Yes when creating a new Degree Plan
+        /// </summary>
+        public bool AddDefaultTermsToDegreePlan { get; set; }
+
+        /// <summary>
+        /// Flag indicating whether or not the Colleague Self-Service Quick Registration workflow is enabled
+        /// </summary>
+        public bool QuickRegistrationIsEnabled { get; private set; }
+
+        /// <summary>
+        /// List of terms for which the Colleague Self-Service Quick Registration workflow may be used
+        /// </summary>
+        public ReadOnlyCollection<string> QuickRegistrationTermCodes { get; private set; }
+
+        private readonly List<string> _quickRegistrationTermCodes = new List<string>();
+        /// <summary>
+        /// Adds a quick registration term to the registration configuration object.
+        /// </summary>
+        /// <param name="termCode">Term Code</param>
+        public void AddQuickRegistrationTerm(string termCode)
+        {
+            if (string.IsNullOrEmpty(termCode))
+            {
+                throw new ArgumentNullException("termId", "A term code is required when adding a quick registration term.");
+            }
+            if (!this.QuickRegistrationIsEnabled)
+            {
+                throw new ApplicationException("Cannot add quick registration terms when quick registration is disabled.");
+            }
+            if (!_quickRegistrationTermCodes.Contains(termCode))
+            {
+                _quickRegistrationTermCodes.Add(termCode);
+            }
+        }
+
+        /// <summary>
         /// Constructor for RegistrationConfiguration
         /// </summary>
-        public RegistrationConfiguration(bool requireFacultyAddAuthorization, int addAuthorizationStartOffsetDays)
+        public RegistrationConfiguration(bool requireFacultyAddAuthorization, int addAuthorizationStartOffsetDays, bool quickRegistrationIsEnabled = false)
         {
             if (addAuthorizationStartOffsetDays < 0)
             {
@@ -44,6 +92,11 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             this.AddAuthorizationStartOffsetDays = addAuthorizationStartOffsetDays;
             this.RequireDropReason = false;
             this.PromptForDropReason = false;
+            this.ShowBooksOnPrintedSchedules = false;
+            this.ShowCommentsOnPrintedSchedules = false;
+            this.AddDefaultTermsToDegreePlan = true;
+            this.QuickRegistrationIsEnabled = quickRegistrationIsEnabled;
+            this.QuickRegistrationTermCodes = _quickRegistrationTermCodes.AsReadOnly();
         }
 
     }

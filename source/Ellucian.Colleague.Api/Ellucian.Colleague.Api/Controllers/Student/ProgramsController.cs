@@ -87,10 +87,18 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Retrieves all active Programs.
         /// </summary>
         /// <returns>All active <see cref="Program">Programs</see></returns>
-        public async Task<IEnumerable<Program>> GetActivePrograms2Async()
+        public async Task<IEnumerable<Program>> GetActivePrograms2Async(bool IncludeEndedPrograms = true)
         {
-            var ProgramCollection = (await _ProgramRepository.GetAsync()).Where(p => p.IsActive == true && p.IsSelectable == true);
-
+           
+            var ProgramCollection = (IncludeEndedPrograms)?
+                                    (await _ProgramRepository.GetAsync()).Where(p => p != null && p.IsActive == true &&
+                                    p.IsSelectable == true)
+                                    .ToList():
+                                    (await _ProgramRepository.GetAsync()).Where(p => p != null && p.IsActive == true && 
+                                    p.IsSelectable == true && (p.ProgramEndDate == null || 
+                                    (p.ProgramEndDate.HasValue && p.ProgramEndDate >= DateTime.Now)))
+                                    .ToList();          
+            
             // Get the right adapter for the type mapping
             var programDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Requirements.Program, Program>();
 

@@ -144,7 +144,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
                 var associatedTaxCode = dataUtility.GetTaxCode(taxEntry.TaxCode);
                 if (associatedTaxCode != null && associatedTaxCode.FilingStatus != null)
                 {
-                    return associatedTaxCode.FilingStatus.Description;                                    
+                    return associatedTaxCode.FilingStatus.Description;
                 }
             }
             return string.Empty;
@@ -403,17 +403,17 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
                     {
                         //person was paid money for working this earnings type during this period
                         var entryRef = periodEarningsEntries.First();
-                        
+
                         earnings.Add(new PayStatementEarnings(dataUtility.GetEarningsType(entryRef.EarningsTypeId),
                             periodEarningsEntries.Sum(e => e.StandardUnitsWorked),
-                            AggregateStandardRate(entryRef.StandardRate, periodEarningsEntries) ,
+                            AggregateStandardRate(entryRef.StandardRate, periodEarningsEntries),
                             periodEarningsEntries.Sum(e => e.BasePeriodEarningsAmount + e.EarningsFactorPeriodAmount),
                             ytdEarningsGroup));
                     }
                     else
                     {
                         //person was paid money for working this earnings type at some point during the year, but not this period
-                        
+
                         earnings.Add(new PayStatementEarnings(
                             dataUtility.GetEarningsType(ytdEarningsGroup.First().EarningsTypeId), ytdEarningsGroup));
                     }
@@ -523,6 +523,17 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
                 return initialRate;
             }
             return null;
+        }
+
+        /// <summary>
+        /// Boolean to indicate if this record is using the 2020 W4 calculation rules.
+        /// </summary>
+        public bool Apply2020W4Rules
+        {
+            get
+            {
+                return sourceDataContext.payrollRegisterEntry.Apply2020W4Rules;
+            }
         }
 
         /// <summary>

@@ -93,6 +93,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests
             string gradAcadLevel = "GR";
             CreditFilter cf = new CreditFilter() { AcademicLevels = new List<string>() { acadLevelCode } };
             CreditFilter gcf = new CreditFilter() { AcademicLevels = new List<string>() { gradAcadLevel } };
+            CreditFilter scf = new CreditFilter() { Subjects = new List<string>() { "MATH" } };
+            CreditFilter additionalCF = new CreditFilter() { AdditionalSelectCriteria = "WITH STC.COURSE.LEVEL EQ '100'" };
             var catalogs = new List<string>() { "2012", "2013", "2014", "2015" };
             programs = new Dictionary<string, Program>();
             programs.Add("AA.UNDC", new Program("AA.UNDC", "Undecided AA", new List<string> { "UNDC" }, true, acadLevelCode, cf, false, "This is for Undecided Associates") { Catalogs = catalogs });
@@ -131,6 +133,12 @@ namespace Ellucian.Colleague.Domain.Student.Tests
             programs.Add("ALMOSTEXP.Ccd", new Program("ALMOSTEXP.Ccd", "Almost Expired Program Ccd", new List<string> { "ENGL" }, false, acadLevelCode, cf, true, "Almost Expired Ccd"));
             programs.Add("SIMPLE", new Program("SIMPLE", "Simple Program", new List<string> { "ENGL" }, true, acadLevelCode, cf, false, "Master of Science") { Catalogs = catalogs });
             programs.Add("REPEAT.BB", new Program("REPEAT.BB", "To test repeates and retakes", new List<string> { "MATH" }, true, gradAcadLevel, gcf, false, "Master of Math") { Catalogs = catalogs });
+            programs.Add("TRANSCRIPT.GROUPING.FILTER", new Program("TRANSCRIPT.GROUPING.FILTER", "To test transcript grouping filters", new List<string> { "MATH" }, true, gradAcadLevel, cf, false, "Master of Math") { Catalogs = catalogs });
+            programs.Add("TRANSCRIPT.GROUPING.FILTER.SUBJECTS", new Program("TRANSCRIPT.GROUPING.FILTER.SUBJECTS", "To test transcript grouping filters for subjects", new List<string> { "MATH" }, true, gradAcadLevel, scf, false, "Master of Math") { Catalogs = catalogs });
+            programs.Add("TRANSCRIPT.GROUPING.FILTER.ADDL.SELECT", new Program("TRANSCRIPT.GROUPING.FILTER.ADDL.SELECT", "To test transcript grouping filters for additional criteria", new List<string> { "MATH" }, true, gradAcadLevel, additionalCF, false, "Master of Math") { Catalogs = catalogs });
+
+
+
 
             // Set flag to make all programs available for selection with one exception, for testing
             foreach (var pgm in programs)

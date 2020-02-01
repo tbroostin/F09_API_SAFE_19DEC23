@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -54,6 +54,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         CommodityCodesController CommodityCodesController;
         private IEnumerable<Ellucian.Colleague.Domain.ColleagueFinance.Entities.CommodityCode> allCommodityCodeEntities;
         private List<Dtos.CommodityCode> allCommodityCodeDtos = new List<Dtos.CommodityCode>();
+        private List<Ellucian.Colleague.Dtos.ColleagueFinance.ProcurementCommodityCode> allCFCommodityCodeDtos = new List<Ellucian.Colleague.Dtos.ColleagueFinance.ProcurementCommodityCode>();
         private string commodityCodeGuid = "884a59d1-20e5-43af-94e3-f1504230bbbc";
 
         [TestInitialize]
@@ -193,6 +194,16 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task CommodityCodeController_DeleteThrowsIntAppiExc()
         {
             await CommodityCodesController.DeleteCommodityCodeAsync(commodityCodeGuid);
+        }
+
+        [TestMethod]
+        public async Task CommodityCodeController_GetAllCommodityCodesAsync()
+        {
+
+            CommodityCodeServiceMock.Setup(x => x.GetAllCommodityCodesAsync()).ReturnsAsync(allCFCommodityCodeDtos);
+
+            var allCommodityCodes = (await CommodityCodesController.GetAllCommodityCodesAsync()).ToList();
+            Assert.AreEqual(allCFCommodityCodeDtos.Count, allCommodityCodes.Count);
         }
     }
 }

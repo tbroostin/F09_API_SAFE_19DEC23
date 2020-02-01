@@ -148,8 +148,11 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
                             ar.Explanation = AcadResultExplanation.ExtraInGroup;
                         }
                     }
-                    else //if ExtraCourseDirective is Display, None or Ignore.
+                    //if ExtraCourseDirective is Display, None or Ignore or semi-apply then the extra courses in this extra group
+                    //should be removed from tracker so that those are available for other requirments that have exclusion type defined
+                    if (gr.Group.ExtraCourseDirective != ExtraCourses.Apply)
                     {
+
                         //if acad credits are applied or planned applied should be made as related for availabilty to other groups
                         if (ar.Result == Result.PlannedApplied || ar.Result == Result.Applied)
                         {
@@ -173,28 +176,31 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
                                                                mstr.GetCourse().Id == ar.GetCourse().Id);
                                 }
                                 //clean this acad credit from tracker too. 
-                                if (useTracker.ContainsKey(ar))
+                                if (useTracker.ContainsKey(orig))
                                 {
                                     string requirmentId = gr.Group.SubRequirement.Requirement.Id;
                                     //if acad credit is applied to requirment for current group
-                                    if (useTracker[ar].ContainsKey(requirmentId))
+                                    if (useTracker[orig].ContainsKey(requirmentId))
                                     {
                                         //if applied to current group
-                                        if (useTracker[ar][requirmentId].Contains(gr.Group.Id))
+                                        if (useTracker[orig][requirmentId].Contains(gr.Group.Id))
                                         {
                                             //remove the group entry from list
-                                            useTracker[ar][requirmentId].Remove(gr.Group.Id);
+                                            useTracker[orig][requirmentId].Remove(gr.Group.Id);
                                             //verify if this is the only group that this course was applied to, if so then delete whole requirment 
-                                            if (!useTracker[ar][requirmentId].Any())
+                                            if (!useTracker[orig][requirmentId].Any())
                                             {
-                                                useTracker[ar].Remove(requirmentId);
+                                                useTracker[orig].Remove(requirmentId);
                                             }
                                         }
                                     }
                                 }
                             }
                             //if acad credits are applied or planned applied should be made as related for availabilty to other groups
-                            ar.Result = Result.Related;
+                            if (gr.Group.ExtraCourseDirective != ExtraCourses.SemiApply)
+                            {
+                                ar.Result = Result.Related;
+                            }
                         }
                     }
 

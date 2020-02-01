@@ -61,7 +61,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             {
                 var errorMessage = string.Format("Error(s) occurred creating purchaseOrder '{0}':", purchaseOrdersEntity.Guid);
                 var exception = new RepositoryException(errorMessage);
-                createResponse.UpdatePOErrors.ForEach(e => exception.AddError(new RepositoryError(e.ErrorCodes, e.ErrorMessages)));
+                createResponse.UpdatePOErrors.ForEach(e => exception.AddError(new RepositoryError(string.IsNullOrEmpty(e.ErrorCodes) ? "" : e.ErrorCodes, e.ErrorMessages)));
                 logger.Error(errorMessage);
                 throw exception;
             }
@@ -96,7 +96,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 {
                     var errorMessage = string.Format("Error(s) occurred updating purchaseOrder '{0}':", purchaseOrdersEntity.Guid);
                     var exception = new RepositoryException(errorMessage);
-                    updateResponse.UpdatePOErrors.ForEach(e => exception.AddError(new RepositoryError(e.ErrorCodes, e.ErrorMessages)));
+                    updateResponse.UpdatePOErrors.ForEach(e => exception.AddError(new RepositoryError(string.IsNullOrEmpty(e.ErrorCodes) ? "" : e.ErrorCodes, e.ErrorMessages)));
                     logger.Error(errorMessage);
                     throw exception;
                 }
@@ -652,21 +652,13 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <returns>Tuple of PurchaseOrder entity objects <see cref="PurchaseOrder"/> and a count for paging.</returns>
         public async Task<Tuple<IEnumerable<PurchaseOrder>, int>> GetPurchaseOrdersAsync(int offset, int limit)
         {
-            var purchaseOrderIds = await DataReader.SelectAsync("PURCHASE.ORDERS", "WITH PO.ITEMS.ID NE ''");
+            var purchaseOrderIds = await DataReader.SelectAsync("PURCHASE.ORDERS", "WITH PO.CURRENT.STATUS NE 'U'");
 
             var totalCount = purchaseOrderIds.Count();
             Array.Sort(purchaseOrderIds);
             var subList = purchaseOrderIds.Skip(offset).Take(limit).ToArray();
-
             var purchaseOrderData = await DataReader.BulkReadRecordAsync<DataContracts.PurchaseOrders>("PURCHASE.ORDERS", subList);
-
-            if (purchaseOrderData == null)
-            {
-                throw new KeyNotFoundException("No records selected from PURCHASE.ORDERS file in Colleague.");
-            }
-
             var purchaseOrders = await BuildPurchaseOrdersAsync(purchaseOrderData);
-
             return new Tuple<IEnumerable<PurchaseOrder>, int>(purchaseOrders, totalCount);
 
         }
@@ -686,14 +678,14 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             if (id == null || string.IsNullOrEmpty(id))
             {
-                throw new KeyNotFoundException("Purchase Order not found for GUID " + guid);
+                throw new KeyNotFoundException("No Purchase Orders was found for guid " + guid);
             }
 
             var purchaseOrder = await DataReader.ReadRecordAsync<PurchaseOrders>(id);
-
-            if ( purchaseOrder != null && purchaseOrder.RecordGuid != null && purchaseOrder.RecordGuid != guid)
+            // exclude those PO that are inprogress
+            if ( purchaseOrder != null && purchaseOrder.PoStatus != null && purchaseOrder.PoStatus.Any() && purchaseOrder.PoStatus.FirstOrDefault().Equals("U", StringComparison.OrdinalIgnoreCase))
             {
-                throw new KeyNotFoundException("No Purchase Orders was found for guid " +guid);
+                throw new KeyNotFoundException("The guid specified " + guid + " for record key " + purchaseOrder.Recordkey + " from file PURCHASE.ORDERS is not valid for purchase-orders.");
             }
 
             return await BuildPurchaseOrderAsync(purchaseOrder);
@@ -758,16 +750,18 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         private async Task<IEnumerable<PurchaseOrder>> BuildPurchaseOrdersAsync(IEnumerable<DataContracts.PurchaseOrders> purchaseOrders)
         {
             var purchaseOrderCollection = new List<PurchaseOrder>();
-
-            foreach (var purchaseOrder in purchaseOrders)
+            if (purchaseOrders != null && purchaseOrders.Any())
             {
-                try
+                foreach (var purchaseOrder in purchaseOrders)
                 {
-                    purchaseOrderCollection.Add(await BuildPurchaseOrderAsync(purchaseOrder));
-                }
-                catch (Exception ex)
-                {
-                    throw new ApplicationException(string.Concat(ex.Message, "  Purchase Order: '", purchaseOrder.PoNo, "', Entity: 'PURCHASE.ORDERS', Record ID: '", purchaseOrder.Recordkey, "'"));
+                    try
+                    {
+                        purchaseOrderCollection.Add(await BuildPurchaseOrderAsync(purchaseOrder));
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new ApplicationException(string.Concat(ex.Message, "  Purchase Order: '", purchaseOrder.PoNo, "', Entity: 'PURCHASE.ORDERS', Record ID: '", purchaseOrder.Recordkey, "'"));
+                    }
                 }
             }
 
@@ -1070,6 +1064,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     if (lineItem.ItmExpectedDeliveryDate != null)
                     {
                         lineItemDomainEntity.ExpectedDeliveryDate = lineItem.ItmExpectedDeliveryDate.Value.Date;
+                    }
+                    if (lineItem.ItmDesiredDeliveryDate != null)
+                    {
+                        lineItemDomainEntity.DesiredDate = lineItem.ItmDesiredDeliveryDate.Value.Date;
                     }
                     lineItemDomainEntity.UnitOfIssue = lineItem.ItmPoIssue;
                     lineItemDomainEntity.VendorPart = lineItem.ItmVendorPart;
@@ -1442,7 +1440,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         ItemsDesc= apLineItem.Description,
                         ItemsCommodityCode = apLineItem.CommodityCode,
                         ItemsPartNumber = apLineItem.VendorPart,
-                        ItemsDesiredDate = apLineItem.DesiredDate,
+                        // Line items have both expected date and desired date.  We want to use expected date.
+                        // ItemsDesiredDate = apLineItem.DesiredDate,
+                        ItemsDesiredDate = apLineItem.ExpectedDeliveryDate,
                         ItemsQuantity = apLineItem.Quantity.ToString(),
                         ItemsUnitsOfMeasuredId = apLineItem.UnitOfIssue,
                         ItemsPrice = apLineItem.Price,
@@ -1542,6 +1542,256 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 throw ex;
             }
         }
-       
+
+        /// <summary>
+        /// Get a collection of Purchase Order summary domain entity objects
+        /// </summary>
+        /// <param name="id">Person ID</param>        
+        /// <returns>collection of purchase order summary domain entity objects</returns>
+        public async Task<IEnumerable<PurchaseOrderSummary>> GetPurchaseOrderSummaryByPersonIdAsync(string personId)
+        {
+            List<string> filteredPurchaseOrder = new List<string>();
+             if (string.IsNullOrEmpty(personId))
+            {
+                throw new ArgumentNullException("personId");
+            }
+            var cWebDefaults = await DataReader.ReadRecordAsync<CfwebDefaults>("CF.PARMS", "CFWEB.DEFAULTS");
+            filteredPurchaseOrder = await ApplyFilterCriteria(personId, filteredPurchaseOrder, cWebDefaults);
+
+            if (!filteredPurchaseOrder.Any())
+                return null;
+
+            var purchaseOrderData = await DataReader.BulkReadRecordAsync<DataContracts.PurchaseOrders>("PURCHASE.ORDERS", filteredPurchaseOrder.ToArray());
+
+            var purchaseOrderList = new List<PurchaseOrderSummary>();
+            if (purchaseOrderData != null && purchaseOrderData.Any())
+            {
+                Dictionary<string, string> hierarchyNameDictionary = GetPersonHierarchyNamesDictionary(purchaseOrderData);
+                var RequisitionNumbers = purchaseOrderData.Where(x => x.PoReqIds.Any()).Select(s => s.PoReqIds).ToList();
+                var requisitionIds = RequisitionNumbers.SelectMany(x => x).Distinct().ToList();
+                var requisitions = await DataReader.BulkReadRecordAsync<DataContracts.Requisitions>("REQUISITIONS", requisitionIds.ToArray());
+                var requistionDictionary = (requisitions != null && requisitions.Any()) ? requisitions.ToDictionary(x => x.Recordkey) : new Dictionary<string, Requisitions>();
+
+                foreach (PurchaseOrders purchaseOrder in purchaseOrderData)
+                {
+                    try
+                    {
+                        string initiatorName = string.Empty;
+                        hierarchyNameDictionary.TryGetValue(purchaseOrder.PoDefaultInitiator, out initiatorName);
+
+                        string requestorName = string.Empty;
+                        hierarchyNameDictionary.TryGetValue(purchaseOrder.PoRequestor, out requestorName);
+
+                        // If there is no vendor name and there is a vendor id, use the PO hierarchy to get the vendor name.
+                        var VendorName = purchaseOrder.PoMiscName.FirstOrDefault();
+                        if ((string.IsNullOrEmpty(VendorName)) && (!string.IsNullOrEmpty(purchaseOrder.PoVendor)))
+                        {
+                            hierarchyNameDictionary.TryGetValue(purchaseOrder.PoVendor, out VendorName);
+                        }
+                        purchaseOrderList.Add(BuildRequisitionSummary(purchaseOrder, requistionDictionary, VendorName, initiatorName, requestorName));
+                    }
+                    catch (Exception ex)
+                    {
+                        throw ex;
+                    }
+                }
+            }
+            return purchaseOrderList.AsEnumerable();
+        }
+
+        /// <summary>
+        /// Get a collection of hierarchy names for purchase order.
+        /// </summary>
+        /// <param name="purchaseOrderData">Purchase Order collection</param>        
+        /// <returns>collection of hierarchy names for purchase order</returns>
+        private Dictionary<string, string> GetPersonHierarchyNamesDictionary(System.Collections.ObjectModel.Collection<PurchaseOrders> purchaseOrderData)
+        {
+            #region Get Hierarchy Names
+
+            // Use a colleague transaction to get all names at once. 
+            List<string> personIds = new List<string>();
+            List<string> hierarchies = new List<string>();
+            List<string> personNames = new List<string>();
+            Dictionary<string, string> hierarchyNameDictionary = new Dictionary<string, string>();
+
+            GetHierarchyNamesForIdsResponse response = null;
+
+            //Get all unique requestor & initiator personIds
+            personIds = purchaseOrderData.Where(x => !string.IsNullOrEmpty(x.PoRequestor)).Select(s => s.PoRequestor)
+                .Union(purchaseOrderData.Where(x => !string.IsNullOrEmpty(x.PoDefaultInitiator)).Select(s => s.PoDefaultInitiator)).Distinct().ToList();
+
+            // Call a colleague transaction to get the person names based on their hierarchies, if necessary
+            if ((personIds != null) && (personIds.Count > 0))
+            {
+                hierarchies = Enumerable.Repeat("PREFERRED", personIds.Count).ToList();
+                GetHierarchyNamesForIdsRequest request = new GetHierarchyNamesForIdsRequest()
+                {
+                    IoPersonIds = personIds,
+                    IoHierarchies = hierarchies
+                };
+                response = transactionInvoker.Execute<GetHierarchyNamesForIdsRequest, GetHierarchyNamesForIdsResponse>(request);
+
+                // The transaction returns the hierarchy names. If the name is multivalued, 
+                // the transaction only returns the first value of the name.
+                if (response != null)
+                {
+                    for (int i = 0; i < response.IoPersonIds.Count; i++)
+                    {
+                        string key = response.IoPersonIds[i];
+                        string value = response.OutPersonNames[i];
+                        if (!hierarchyNameDictionary.ContainsKey(key))
+                        {
+                            hierarchyNameDictionary.Add(key, value);
+                        }
+                    }
+
+                }
+            }
+
+            //Get all unique ReqVendor Ids where ReqMiscName is missing
+            var vendorIds = purchaseOrderData.Where(x => !string.IsNullOrEmpty(x.PoVendor) && !x.PoMiscName.Any()).Select(s => s.PoVendor).Distinct().ToList();
+
+            if ((vendorIds != null) && (vendorIds.Count > 0))
+            {
+                hierarchies = Enumerable.Repeat("PO", vendorIds.Count).ToList();
+                GetHierarchyNamesForIdsRequest request = new GetHierarchyNamesForIdsRequest()
+                {
+                    IoPersonIds = vendorIds,
+                    IoHierarchies = hierarchies
+                };
+                response = transactionInvoker.Execute<GetHierarchyNamesForIdsRequest, GetHierarchyNamesForIdsResponse>(request);
+
+                // The transaction returns the hierarchy names. If the name is multivalued, 
+                // the transaction only returns the first value of the name.
+                if (response != null)
+                {
+                    for (int i = 0; i < response.IoPersonIds.Count; i++)
+                    {
+                        string key = response.IoPersonIds[i];
+                        string value = response.OutPersonNames[i];
+                        if (!hierarchyNameDictionary.ContainsKey(key))
+                        {
+                            hierarchyNameDictionary.Add(key, value);
+                        }
+                    }
+
+                }
+            }
+            #endregion
+            return hierarchyNameDictionary;
+        }
+
+        private PurchaseOrderSummary BuildRequisitionSummary(PurchaseOrders purchaseOrderDataContract, Dictionary<string, Requisitions> requistionDictionary, string vendorName, string initiatorName, string requestorName)
+        {
+            if (purchaseOrderDataContract == null)
+            {
+                throw new ArgumentNullException("purchaseOrderDataContract");
+            }
+
+            if (string.IsNullOrEmpty(purchaseOrderDataContract.Recordkey))
+            {
+                throw new ArgumentNullException("id");
+            }
+
+            if (!purchaseOrderDataContract.PoDate.HasValue)
+            {
+                throw new ApplicationException("Missing date for pirchase order id: " + purchaseOrderDataContract.Recordkey);
+            }
+
+
+            var requisitionStatus = GetPurchaseOrderStatus(purchaseOrderDataContract.PoStatus.FirstOrDefault(), purchaseOrderDataContract.Recordkey);
+
+            var requisitionSummaryEntity = new PurchaseOrderSummary(purchaseOrderDataContract.Recordkey, purchaseOrderDataContract.PoNo, vendorName, purchaseOrderDataContract.PoDate.Value.Date)
+            {
+                Status = requisitionStatus,
+                VendorId = purchaseOrderDataContract.PoVendor,
+                InitiatorName = initiatorName,
+                RequestorName = requestorName,
+                Amount = purchaseOrderDataContract.PoTotalAmt.HasValue ? purchaseOrderDataContract.PoTotalAmt.Value : 0
+            };
+
+            //  Add any associated requisitions to the purchase order summary domain entity
+            if ((purchaseOrderDataContract.PoReqIds != null) && (purchaseOrderDataContract.PoReqIds.Count > 0))
+            {
+                foreach (var purchaseOrderId in purchaseOrderDataContract.PoReqIds)
+                {
+                    if (!string.IsNullOrEmpty(purchaseOrderId))
+                    {
+                        Requisitions requisition = null;
+                        if (requistionDictionary.TryGetValue(purchaseOrderId, out requisition))
+                        {
+                            var purchaseOrderSummaryEntity = new RequisitionSummary(requisition.Recordkey, requisition.ReqNo, vendorName, requisition.ReqDate.Value.Date);
+                            requisitionSummaryEntity.AddRequisition(purchaseOrderSummaryEntity);
+                        }
+                    }
+                }
+            }
+
+            return requisitionSummaryEntity;
+        }
+
+        private async Task<List<string>> ApplyFilterCriteria(string personId, List<string> filteredPurchaseOrder, CfwebDefaults cfWebDefaults)
+        {
+            string poStartEndTransDateQuery = string.Empty;
+
+            if (cfWebDefaults != null)
+            {
+                //Filter by CfwebPoStartDate, CfwebPoEndDate values configured in CFWP form
+                //when CfwebPoStartDate & CfwebPoEndDate has a value
+                if (cfWebDefaults.CfwebPoStartDate.HasValue && cfWebDefaults.CfwebPoEndDate.HasValue)
+                {
+                    var startDate = await GetUnidataFormatDateAsync(cfWebDefaults.CfwebPoStartDate.Value);
+                    var endDate = await GetUnidataFormatDateAsync(cfWebDefaults.CfwebPoEndDate.Value);
+                    poStartEndTransDateQuery = string.Format("WITH (PO.MAINT.GL.TRAN.DATE GE '{0}' AND PO.MAINT.GL.TRAN.DATE LE '{1}') OR WITH (PO.DATE GE '{0}' AND PO.DATE LE '{1}') BY.DSND PO.NO", startDate, endDate);
+                }
+                //when CfwebPoStartDate has value but CfwebReqEndDate is null
+                else if (cfWebDefaults.CfwebPoStartDate.HasValue && !cfWebDefaults.CfwebPoEndDate.HasValue)
+                {
+                    var startDate = await GetUnidataFormatDateAsync(cfWebDefaults.CfwebPoStartDate.Value);
+                    poStartEndTransDateQuery = string.Format("PO.MAINT.GL.TRAN.DATE GE '{0}' OR WITH PO.DATE GE '{0}' BY.DSND PO.NO", startDate);
+                }
+                //when CfwebPoStartDate is null but CfwebPoEndDate has value
+                else if (!cfWebDefaults.CfwebPoStartDate.HasValue && cfWebDefaults.CfwebPoEndDate.HasValue)
+                {
+                    var endDate = await GetUnidataFormatDateAsync(cfWebDefaults.CfwebPoEndDate.Value);
+                    poStartEndTransDateQuery = string.Format("WITH ((PO.MAINT.GL.TRAN.DATE NE '') AND (PO.MAINT.GL.TRAN.DATE LE '{0}')) OR WITH ((PO.DATE NE '') AND (PO.DATE LE '{0}')) BY.DSND PO.NO", endDate);
+                }
+
+                if (!string.IsNullOrEmpty(poStartEndTransDateQuery))
+                {
+                    filteredPurchaseOrder = await ExecuteQueryStatement(filteredPurchaseOrder, poStartEndTransDateQuery);
+                }
+
+                //query by CfwebPoStatuses if statuses are configured in CFWP form.
+                if (cfWebDefaults.CfwebPoStatuses != null && cfWebDefaults.CfwebPoStatuses.Any())
+                {
+                    var purchaseOrderStatusesCriteria = string.Join(" ", cfWebDefaults.CfwebPoStatuses.Select(x => string.Format("'{0}'", x.ToUpper())));
+                    purchaseOrderStatusesCriteria = "WITH PO.CURRENT.STATUS EQ " + purchaseOrderStatusesCriteria;
+                    filteredPurchaseOrder = await ExecuteQueryStatement(filteredPurchaseOrder, purchaseOrderStatusesCriteria);
+                }
+            }
+
+            //where personId is Initiator OR requestor
+            string PurchaseOrderPersonIdQuery = string.Format("WITH PO.DEFAULT.INITIATOR EQ '{0}' OR WITH PO.REQUESTOR EQ '{0}' BY.DSND PO.NO", personId);
+            filteredPurchaseOrder = await ExecuteQueryStatement(filteredPurchaseOrder, PurchaseOrderPersonIdQuery);
+            return filteredPurchaseOrder;
+        }
+
+        private async Task<List<string>> ExecuteQueryStatement(List<string> filteredPurchaseOrders, string queryCriteria)
+        {
+            string[] filteredByQueryCriteria = null;
+            if (string.IsNullOrEmpty(queryCriteria))
+                return null;
+            if (filteredPurchaseOrders != null && filteredPurchaseOrders.Any())
+            {
+                filteredByQueryCriteria = await DataReader.SelectAsync("PURCHASE.ORDERS", filteredPurchaseOrders.ToArray(), queryCriteria);
+            }
+            else
+            {
+                filteredByQueryCriteria = await DataReader.SelectAsync("PURCHASE.ORDERS", queryCriteria);
+            }
+            return filteredByQueryCriteria.ToList();
+        }
+
     }
 }

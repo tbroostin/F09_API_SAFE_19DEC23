@@ -1,24 +1,21 @@
-//Copyright 2017 Ellucian Company L.P. and its affiliates.
+//Copyright 2019 Ellucian Company L.P. and its affiliates.
 
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos;
+using Ellucian.Web.Adapters;
+using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
-using Ellucian.Colleague.Domain.Base.Repositories;
-using Ellucian.Web.Adapters;
-using Ellucian.Web.Security;
-using Ellucian.Colleague.Domain.Repositories;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Coordination.Base.Tests.Services
-{    
+{
     [TestClass]
     public class RelationshipStatusesServiceTests
     {

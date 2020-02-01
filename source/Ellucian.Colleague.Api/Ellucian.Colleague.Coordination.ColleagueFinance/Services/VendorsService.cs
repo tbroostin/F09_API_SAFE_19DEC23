@@ -42,7 +42,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             ICurrentUserFactory currentUserFactory,
             IRoleRepository roleRepository,
             ILogger logger)
-            : base(adapterRegistry, currentUserFactory, roleRepository, logger, configurationRepository:configurationRepository)
+            : base(adapterRegistry, currentUserFactory, roleRepository, logger, configurationRepository: configurationRepository)
         {
             _configurationRepository = configurationRepository;
             _colleagueFinanceReferenceDataRepository = colleagueFinanceReferenceDataRepository;
@@ -101,7 +101,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
             return _currencyConv;
         }
-      
+
         #region EEDM vendor v8
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
@@ -142,7 +142,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             //check if the classification criteria is present and get the vendor type code to send in to the repo
             if (!string.IsNullOrEmpty(criteriaValues.classifications))
             {
-                
+
                 var vendorTypesList = await GetAllVendorTypesAsync(bypassCache);
                 var vendorType = vendorTypesList.Where(v => v.Guid == criteriaValues.classifications).FirstOrDefault();
                 if (vendorType != null)
@@ -168,14 +168,14 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             {
                 if (criteriaValues.statuses.Any() && criteriaValues.statuses.Count > 0)
                 {
-                    foreach(var status in criteriaValues.statuses)
+                    foreach (var status in criteriaValues.statuses)
                     {
-                        if(status.ToLower() != "active" && status.ToLower() != "holdpayment" && status.ToLower() != "approved")
+                        if (status.ToLower() != "active" && status.ToLower() != "holdpayment" && status.ToLower() != "approved")
                         {
                             return new Tuple<IEnumerable<Vendors>, int>(new List<Vendors>(), 0);
                         }
                     }
-                    
+
                 }
             }
 
@@ -260,21 +260,23 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             {
                 // get the  ID associated with the incoming guid
                 vendorId = await _vendorsRepository.GetVendorIdFromGuidAsync(vendorDto.Id);
-            } catch (KeyNotFoundException e)
+            }
+            catch (KeyNotFoundException e)
             {
                 vendorId = null;
-            } catch (ArgumentException e)
+            }
+            catch (ArgumentException e)
             {
                 throw new ArgumentException(e.Message);
             }
-            
+
 
             // verify the GUID exists to perform an update.  If not, perform a create instead
             if (!string.IsNullOrEmpty(vendorId))
             {
                 try
                 {
-                   
+
                     // verify the user has the permission to update a vendor
                     CheckUpdateVendorPermission();
 
@@ -283,7 +285,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     var vendor = await _vendorsRepository.GetVendorsByGuidAsync(guid);
                     if (vendor != null)
                     {
-                        if (vendorDto.StartOn != null && vendor.AddDate != null )
+                        if (vendorDto.StartOn != null && vendor.AddDate != null)
                         {
                             if (DateTime.Compare(Convert.ToDateTime(vendorDto.StartOn), Convert.ToDateTime(vendor.AddDate)) != 0)
                             {
@@ -294,11 +296,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         //PUT - Updating to "holdPayment" (VEN.STOP.PAYMENT.FLAG = N) but a vendorHoldReason is not received.       
                         if (vendor.StopPaymentFlag == "Y")
                         {
-                            if ((vendorDto.Statuses != null) && (!vendorDto.Statuses.Contains(VendorsStatuses.Holdpayment))                                )
+                            if ((vendorDto.Statuses != null) && (!vendorDto.Statuses.Contains(VendorsStatuses.Holdpayment)))
                             {
                                 throw new ArgumentNullException("Vendor.VendorHoldReasons", "The removal of the 'holdPayment' status for a vendor is not permitted.");
                             }
-                           
+
                         }
                     }
                     // map the DTO to entities
@@ -358,7 +360,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                          = await ConvertVendorsDtoToEntityAsync(vendorDto.Id, vendorDto);
 
                 // create a Vendor entity in the database
-                createdVendor =  await _vendorsRepository.CreateVendorsAsync(vendorEntity);
+                createdVendor = await _vendorsRepository.CreateVendorsAsync(vendorEntity);
             }
             catch (RepositoryException ex)
             {
@@ -375,7 +377,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
             // return the newly created Vendor
             return await ConvertVendorsEntityToDtoAsync(createdVendor, institutions, true);
-     
+
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
@@ -424,21 +426,21 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     {
                         throw new KeyNotFoundException(string.Concat("Unable to locate person record for guid: ", vendorDetail.Institution.Id));
                     }
-                    if ( (string.IsNullOrEmpty(person.PersonCorpIndicator) || (person.PersonCorpIndicator == "N")))
+                    if ((string.IsNullOrEmpty(person.PersonCorpIndicator) || (person.PersonCorpIndicator == "N")))
                     {
                         throw new ArgumentException(string.Concat("The institution guid specified is a person: ", vendorDetail.Institution.Id));
-                                 }
+                    }
 
-                    var institution =  await _institutionRepository.GetInstitutionsFromListAsync(new string[] { person.Id });
+                    var institution = await _institutionRepository.GetInstitutionsFromListAsync(new string[] { person.Id });
                     if (institution == null)
                     {
-                        throw new ArgumentException(string.Concat("The institution specified is an organization.: ", vendorDetail.Institution.Id)); 
+                        throw new ArgumentException(string.Concat("The institution specified is an organization.: ", vendorDetail.Institution.Id));
                     }
                     vendorEntity.Id = person.Id;
                 }
                 else if (vendorDetail.Organization != null && !(string.IsNullOrEmpty(vendorDetail.Organization.Id)))
                 {
-                    
+
                     var person = await _personRepository.GetPersonByGuidNonCachedAsync(vendorDetail.Organization.Id);
                     if (person == null)
                     {
@@ -450,11 +452,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     {
                         throw new ArgumentException(string.Concat("The organization guid specified is an institution: ", vendorDetail.Organization.Id));
                     }
-                    
+
                     if (person.PersonCorpIndicator != "Y")
                     {
                         throw new ArgumentException(string.Concat("The organization guid specified is a person: ", vendorDetail.Organization.Id));
-                    }    
+                    }
                     vendorEntity.Id = person.Id;
 
                     vendorEntity.IsOrganization = true;
@@ -472,7 +474,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     {
                         throw new ArgumentException(string.Concat("The person guid specified is an institution: ", vendorDetail.Person.Id));
                     }
-                    
+
                     if (person.PersonCorpIndicator == "Y")
                     {
                         throw new ArgumentException(string.Concat("The person specified is an organization.: ", vendorDetail.Person.Id));
@@ -638,29 +640,29 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             {
                 throw new KeyNotFoundException(string.Concat("Unable to locate guid for PERSON id: ", source.Id));
             }
-            
-                var vendorDetail = new VendorDetailsDtoProperty();
+
+            var vendorDetail = new VendorDetailsDtoProperty();
 
             Domain.Base.Entities.Institution institution = null;
             if (institutions != null && institutions.Any())
                 institution = institutions.FirstOrDefault(i => i.Id.Equals(source.Id));
 
             if (source.IsOrganization && institution == null)
-                {
-                    vendorDetail.Organization = new GuidObject2(personGuid);
-                }
-                else if (institution != null)
-                {                    
-                    vendorDetail.Institution = new GuidObject2(personGuid);
-                }
-                else
-                {
-                    vendorDetail.Person = new GuidObject2(personGuid);
-                }
-                vendors.VendorDetail = vendorDetail;
-           
+            {
+                vendorDetail.Organization = new GuidObject2(personGuid);
+            }
+            else if (institution != null)
+            {
+                vendorDetail.Institution = new GuidObject2(personGuid);
+            }
+            else
+            {
+                vendorDetail.Person = new GuidObject2(personGuid);
+            }
+            vendors.VendorDetail = vendorDetail;
 
-            if (((source.IsOrganization)||(institution != null)) 
+
+            if (((source.IsOrganization) || (institution != null))
                 && (source.CorpParent != null) && (source.CorpParent.Any()))
             {
                 var relatedVendors = new List<RelatedVendorDtoProperty>();
@@ -685,7 +687,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     {
                         // do not throw error 
                     }
-                                        
+
                 }
                 if (relatedVendors.Any())
                 {
@@ -694,7 +696,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
 
             var vendorsStatuses = new List<VendorsStatuses?>();
-            
+
             if (source.ActiveFlag == "Y")
                 vendorsStatuses.Add(VendorsStatuses.Active);
             if (source.StopPaymentFlag == "Y")
@@ -721,7 +723,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         throw new KeyNotFoundException("Unable to locate vendor hold reason for code: OB");
                     vendorHoldReasons.Add(new GuidObject2(vendorHoldReason.Guid));
                 }
-             
+
                 if (vendorHoldReasons.Any())
                     vendors.VendorHoldReasons = vendorHoldReasons;
             }
@@ -729,7 +731,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             vendors.Id = source.Guid;
             vendors.StartOn = source.AddDate;
 
-         
+
             if ((source.ApTypes != null) && (source.ApTypes.Any()))
             {
                 var paymentSources = new List<GuidObject2>();
@@ -810,13 +812,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// Gets all vendors
         /// </summary>
         /// <returns>Collection of Vendors DTO objects</returns>
-        public async Task<Tuple<IEnumerable<Vendors2>, int>> GetVendorsAsync2(int offset, int limit, string vendorDetails, List<string> classifications, 
-            List<string> statuses,  List<string> relatedReferences, List<string> types = null, bool bypassCache = false)
+        public async Task<Tuple<IEnumerable<Vendors2>, int>> GetVendorsAsync2(int offset, int limit, string vendorDetails, List<string> classifications,
+            List<string> statuses, List<string> relatedReferences, List<string> types = null, bool bypassCache = false)
         {
             CheckViewVendorPermission();
 
             var vendorsCollection = new List<Vendors2>();
-           
+
             var vendorIdCriteria = string.Empty;
             List<string> classificationCriteria = null;
 
@@ -861,7 +863,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
             //Check if the relatedReference filter was sent in. If it was we will return a empty list as relatedReference is not
             //supported in vendors v8.
-            if (relatedReferences  != null)
+            if (relatedReferences != null)
             {
                 foreach (var relatedReference in relatedReferences)
                 {
@@ -883,13 +885,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 }
             }
 
-            string[] venTypes = new []{ "eprocurement", "travel" };
+            string[] venTypes = new[] { "eprocurement", "travel" };
             if (types != null && !types.Any())
             {
-                return new Tuple<IEnumerable<Vendors2>, int>(new List<Vendors2>(), 0);                
+                return new Tuple<IEnumerable<Vendors2>, int>(new List<Vendors2>(), 0);
             }
 
-            if(types != null && types.Any())
+            if (types != null && types.Any())
             {
                 foreach (var vendorType in types)
                 {
@@ -905,7 +907,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             var totalRecords = vendorsEntities.Item2;
 
             if ((vendorsEntities != null) && (vendorsEntities.Item1.Any()))
-                {
+            {
                 var institutions = await _institutionRepository.GetInstitutionsFromListAsync(vendorsEntities.Item1.Select(x => x.Id).ToArray());
 
                 foreach (var vendorsEntity in vendorsEntities.Item1)
@@ -1108,7 +1110,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <param name="vendorId">guid</param>
         /// <param name="vendorDto"><see cref="Dtos.Vendors">Vendor</see></param>
         /// <returns><see cref="Domain.ColleagueFinance.Entities.Vendors">Vendor</see></returns>
-        private async Task<Domain.ColleagueFinance.Entities.Vendors> ConvertVendorsDtoToEntityAsync2(string vendorId, 
+        private async Task<Domain.ColleagueFinance.Entities.Vendors> ConvertVendorsDtoToEntityAsync2(string vendorId,
             Vendors2 vendorDto, bool bypassCache = true)
         {
             if (vendorDto == null || string.IsNullOrEmpty(vendorDto.Id))
@@ -1327,7 +1329,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             if (vendorDto.Types != null && vendorDto.Types.Any())
             {
-                foreach(var cat in vendorDto.Types)
+                foreach (var cat in vendorDto.Types)
                 {
                     switch (cat)
                     {
@@ -1340,7 +1342,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     }
                 }
             }
-            
+
             return vendorEntity;
         }
 
@@ -1380,7 +1382,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             //var institution = (await GetInstitutions()).FirstOrDefault(i => i.Id.Equals(source.Id));
             Domain.Base.Entities.Institution institution = null;
-            if ( institutions != null && institutions.Any())
+            if (institutions != null && institutions.Any())
                 institution = institutions.FirstOrDefault(i => i.Id.Equals(source.Id));
 
             if (source.IsOrganization && institution == null)
@@ -1396,7 +1398,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 vendorDetail.Person = new GuidObject2(personGuid);
             }
             vendors.VendorDetail = vendorDetail;
-            
+
             if (((source.IsOrganization) || (institution != null))
                 && (source.CorpParent != null) && (source.CorpParent.Any()))
             {
@@ -1559,6 +1561,47 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
         #endregion
 
+        /// <summary>
+        /// Get the list of vendors based on keyword search.
+        /// </summary>
+        /// <param name="searchCriteria"> The search criteria containing keyword for vendor search.</param>
+        /// <returns> The vendor search results</returns> 
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.ColleagueFinance.VendorSearchResult>> QueryVendorsByPostAsync(Ellucian.Colleague.Dtos.ColleagueFinance.VendorSearchCriteria searchCriteria)
+        {
+            List<Ellucian.Colleague.Dtos.ColleagueFinance.VendorSearchResult> vendorDtos = new List<Ellucian.Colleague.Dtos.ColleagueFinance.VendorSearchResult>();
+            if (searchCriteria == null)
+            {
+                string message = "Vendor search criteria must be specified.";
+                throw new ArgumentNullException(message);
+            }
+            if (string.IsNullOrEmpty(searchCriteria.QueryKeyword))
+            {
+                string message = "query keyword is required to query.";
+                throw new ArgumentNullException(message);
+            }
+
+            // Check the permission code to view vendor information.
+            CheckViewVendorPermissions();
+
+            // Get the list of vendor search result domain entity from the repository
+            var vendorDomainEntities = await _vendorsRepository.SearchByKeywordAsync(searchCriteria.QueryKeyword);
+
+            if (vendorDomainEntities == null || !vendorDomainEntities.Any())
+            {
+                return vendorDtos;
+            }
+            //sorting
+            vendorDomainEntities = vendorDomainEntities.OrderBy(item => item.VendorId).ThenBy(x => x.VendorName);
+
+            // Convert the vendor search result into DTOs
+            var dtoAdapter = _adapterRegistry.GetAdapter<Domain.ColleagueFinance.Entities.VendorSearchResult, Dtos.ColleagueFinance.VendorSearchResult>();
+            foreach (var vendorDomainEntity in vendorDomainEntities)
+            {
+                vendorDtos.Add(dtoAdapter.MapToType(vendorDomainEntity));
+            }
+
+            return vendorDtos;
+        }
         /// <summary>
         /// Helper method to determine if the user has permission to view data.
         /// </summary>
@@ -2250,6 +2293,24 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     return null;
             }
         }
-            
+
+        /// <summary>
+        /// Helper method to determine if the user has permission to view vendor information.
+        /// </summary>
+        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
+        private void CheckViewVendorPermissions()
+        {
+            var hasPermission = HasPermission(ColleagueFinancePermissionCodes.ViewVendor)
+                || HasPermission(ColleagueFinancePermissionCodes.CreateUpdateRequisition)
+                || HasPermission(ColleagueFinancePermissionCodes.CreateUpdatePurchaseOrder);
+
+            if (!hasPermission)
+            {
+                var message = string.Format("{0} does not have permission to view vendor information.", CurrentUser.PersonId);
+                logger.Error(message);
+                throw new PermissionsException(message);
+            }
+        }
+
     }
 }

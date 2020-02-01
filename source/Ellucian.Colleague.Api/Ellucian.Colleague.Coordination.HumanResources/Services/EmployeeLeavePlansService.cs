@@ -153,7 +153,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         }
 
         /// <summary>
-        /// Gets all EmployeeLeavePlan objects for the effective person id (supports employee, supervisor, and supervisor proxy access)
+        /// Gets all EmployeeLeavePlan objects for the effective person id (supports employee, supervisor, supervisor proxy access,and time history admin)
         /// Used by Self Service.
         /// </summary>
         /// <returns>A list of EmployeeLeavePlan Dto objects</returns>
@@ -188,7 +188,9 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 effectivePersonId = CurrentUser.PersonId;
             }
-            else if (!CurrentUser.IsPerson(effectivePersonId) && !HasProxyAccessForPerson(effectivePersonId, Domain.Base.Entities.ProxyWorkflowConstants.TimeManagementTimeApproval))
+            //To view other's info, logged in user must be a proxy or admin
+            else if (!CurrentUser.IsPerson(effectivePersonId) && !(HasProxyAccessForPerson(effectivePersonId, Domain.Base.Entities.ProxyWorkflowConstants.TimeManagementTimeApproval)
+                       || HasPermission(HumanResourcesPermissionCodes.ViewAllTimeHistory)))
             {
                 throw new PermissionsException(string.Format("User {0} does not have permission to view employee leave plan information for person {1}", CurrentUser.PersonId, effectivePersonId));
             }

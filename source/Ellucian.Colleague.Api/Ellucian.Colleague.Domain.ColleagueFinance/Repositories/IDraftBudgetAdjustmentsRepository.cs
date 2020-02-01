@@ -1,6 +1,7 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
@@ -14,8 +15,9 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
         /// Create or update a draft budget adjustment.
         /// </summary>
         /// <param name="draftBudgetAdjustment">Draft budget adjustment.</param>
+        /// <param name="majorComponentStartPosition">List of the major component start positions.</param>
         /// <returns></returns>
-        Task<DraftBudgetAdjustment> SaveAsync(DraftBudgetAdjustment draftBudgetAdjustment);
+        Task<DraftBudgetAdjustment> SaveAsync(DraftBudgetAdjustment draftBudgetAdjustment, IList<string> majorComponentStartPosition);
 
         /// <summary>
         /// Get the draft budget adjustment for the specified ID.

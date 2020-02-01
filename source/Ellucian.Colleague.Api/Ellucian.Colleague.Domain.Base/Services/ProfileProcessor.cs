@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -117,7 +117,7 @@ namespace Ellucian.Colleague.Domain.Base.Services
                     // Exception will be thrown if it cannot be updated. If no exception thrown, log change for informational purposes.
                     VerifyEmailUpdateAllowed(configuration, userPermissions, email.TypeCode);
                     isProfileChanged = true;
-                    if (_logger.IsInfoEnabled) logMessages.Add("Profile update person ID: " + newProfile.Id + "; Incoming changed email address: " + email.Value + " type: " + email.TypeCode + "preferred: " + email.IsPreferred.ToString());
+                    if (_logger.IsDebugEnabled) logMessages.Add("Profile update person ID: " + newProfile.Id + "; Incoming changed email address: " + email.Value + " type: " + email.TypeCode + "preferred: " + email.IsPreferred.ToString());
                 }
                 // Exception has not occurred, Add email to verified profile for update.
                 verifiedProfile.AddEmailAddress(email);
@@ -133,7 +133,7 @@ namespace Ellucian.Colleague.Domain.Base.Services
                     // Exception will be thrown if it cannot be updated. If no exception thrown, log change for informational purposes.
                     VerifyEmailUpdateAllowed(configuration, userPermissions, email.TypeCode);
                     isProfileChanged = true;
-                    if (_logger.IsInfoEnabled) logMessages.Add("Profile update person ID: " + newProfile.Id + "; Repo changed email address: " + email.Value + " type: " + email.TypeCode + "preferred: " + email.IsPreferred.ToString());
+                    if (_logger.IsDebugEnabled) logMessages.Add("Profile update person ID: " + newProfile.Id + "; Repo changed email address: " + email.Value + " type: " + email.TypeCode + "preferred: " + email.IsPreferred.ToString());
                 }
             }
 
@@ -148,7 +148,7 @@ namespace Ellucian.Colleague.Domain.Base.Services
                     // Exception will be thrown if it cannot be updated. If no exception thrown, log change for informational purposes.
                     VerifyPhoneUpdateAllowed(configuration, userPermissions, phone.TypeCode);
                     isProfileChanged = true;
-                    if (_logger.IsInfoEnabled) logMessages.Add("Profile update person ID: " + newProfile.Id + "; Incoming changed phone number: " + phone.Number + " type: " + phone.TypeCode + "extension: " + phone.Extension);
+                    if (_logger.IsDebugEnabled) logMessages.Add("Profile update person ID: " + newProfile.Id + "; Incoming changed phone number: " + phone.Number + " type: " + phone.TypeCode + "extension: " + phone.Extension);
                 }
                 // Exception has not occurred, Add phone to verified profile for update.
                 verifiedProfile.AddPhone(phone);
@@ -164,7 +164,7 @@ namespace Ellucian.Colleague.Domain.Base.Services
                     // Exception will be thrown if it cannot be updated. If no exception thrown, log change for informational purposes.
                     VerifyPhoneUpdateAllowed(configuration, userPermissions, phone.TypeCode);
                     isProfileChanged = true;
-                    if (_logger.IsInfoEnabled) logMessages.Add("Profile update person ID: " + newProfile.Id + "; Repo changed phone number: " + phone.Number + " type: " + phone.TypeCode + "extension: " + phone.Extension);
+                    if (_logger.IsDebugEnabled) logMessages.Add("Profile update person ID: " + newProfile.Id + "; Repo changed phone number: " + phone.Number + " type: " + phone.TypeCode + "extension: " + phone.Extension);
                 }
             }
 
@@ -188,7 +188,7 @@ namespace Ellucian.Colleague.Domain.Base.Services
                     // If not thrown out, add the address to the profile for update
                     verifiedProfile.AddAddress(address);
                     isProfileChanged = true;
-                    if (_logger.IsInfoEnabled) logMessages.Add("Profile update person ID: " + newProfile.Id + "; Repo address change request submitted: AddressLines: " + address.AddressLines.ElementAt(0) + " City: " + address.City + " State: " + address.State + " PostalCode: " + address.PostalCode + " AddressType: " + addressTypes.ElementAt(0));
+                    if (_logger.IsDebugEnabled) logMessages.Add("Profile update person ID: " + newProfile.Id + "; Repo address change request submitted: AddressLines: " + address.AddressLines.ElementAt(0) + " City: " + address.City + " State: " + address.State + " PostalCode: " + address.PostalCode + " AddressType: " + addressTypes.ElementAt(0));
                 }
             }
 
@@ -230,17 +230,17 @@ namespace Ellucian.Colleague.Domain.Base.Services
             // Log verification messages only if all verification was successful and changes found.
             if (isProfileChanged)
             {
-                if (_logger.IsInfoEnabled)
+                if (_logger.IsDebugEnabled)
                 {
                     foreach (var msg in logMessages)
                     {
-                        _logger.Info(msg);
+                        _logger.Debug(msg);
                     }
                 }
             }
             else
             {
-                _logger.Info("No changes found in Profile.");
+                _logger.Debug("No changes found in Profile.");
             }
 
             return verifiedProfile;
@@ -525,7 +525,7 @@ namespace Ellucian.Colleague.Domain.Base.Services
                     // Exception will be thrown if it cannot be updated. If no exception thrown, log change for informational purposes.
                     VerifyEmailUpdateAllowed(configuration, userPermissions, email.TypeCode);
                     isProfileChanged = true;
-                    if (_logger.IsInfoEnabled) logMessages.Add("Profile update person ID: " + newProfile.Id + "; Incoming changed email address: " + email.Value + " type: " + email.TypeCode + "preferred: " + email.IsPreferred.ToString());
+                    if (_logger.IsDebugEnabled) logMessages.Add("Profile update person ID: " + newProfile.Id + "; Incoming changed email address: " + email.Value + " type: " + email.TypeCode + "preferred: " + email.IsPreferred.ToString());
                 }
                 // Exception has not occurred, Add email to verified profile for update.
                 verifiedProfile.AddEmailAddress(email);
@@ -541,7 +541,7 @@ namespace Ellucian.Colleague.Domain.Base.Services
                     // Exception will be thrown if it cannot be updated. If no exception thrown, log change for informational purposes.
                     VerifyEmailUpdateAllowed(configuration, userPermissions, email.TypeCode);
                     isProfileChanged = true;
-                    if (_logger.IsInfoEnabled) logMessages.Add("Profile update person ID: " + newProfile.Id + "; Repo changed email address: " + email.Value + " type: " + email.TypeCode + "preferred: " + email.IsPreferred.ToString());
+                    if (_logger.IsDebugEnabled) logMessages.Add("Profile update person ID: " + newProfile.Id + "; Repo changed email address: " + email.Value + " type: " + email.TypeCode + "preferred: " + email.IsPreferred.ToString());
                 }
             }
 
@@ -556,7 +556,7 @@ namespace Ellucian.Colleague.Domain.Base.Services
                     // Exception will be thrown if it cannot be updated. If no exception thrown, log change for informational purposes.
                     VerifyPhoneUpdateAllowed(configuration, userPermissions, phone.TypeCode);
                     isProfileChanged = true;
-                    if (_logger.IsInfoEnabled) logMessages.Add("Profile update person ID: " + newProfile.Id + "; Incoming changed phone number: " + phone.Number + " type: " + phone.TypeCode + "extension: " + phone.Extension);
+                    if (_logger.IsDebugEnabled) logMessages.Add("Profile update person ID: " + newProfile.Id + "; Incoming changed phone number: " + phone.Number + " type: " + phone.TypeCode + "extension: " + phone.Extension);
                 }
                 // Exception has not occurred, Add phone to verified profile for update.
                 verifiedProfile.AddPhone(phone);
@@ -572,7 +572,7 @@ namespace Ellucian.Colleague.Domain.Base.Services
                     // Exception will be thrown if it cannot be updated. If no exception thrown, log change for informational purposes.
                     VerifyPhoneUpdateAllowed(configuration, userPermissions, phone.TypeCode);
                     isProfileChanged = true;
-                    if (_logger.IsInfoEnabled) logMessages.Add("Profile update person ID: " + newProfile.Id + "; Repo changed phone number: " + phone.Number + " type: " + phone.TypeCode + "extension: " + phone.Extension);
+                    if (_logger.IsDebugEnabled) logMessages.Add("Profile update person ID: " + newProfile.Id + "; Repo changed phone number: " + phone.Number + " type: " + phone.TypeCode + "extension: " + phone.Extension);
                 }
             }
 
@@ -596,7 +596,7 @@ namespace Ellucian.Colleague.Domain.Base.Services
                     // If not thrown out, add the address to the profile for update
                     verifiedProfile.AddAddress(address);
                     isProfileChanged = true;
-                    if (_logger.IsInfoEnabled) logMessages.Add("Profile update person ID: " + newProfile.Id + "; Repo address change request submitted: AddressLines: " + address.AddressLines.ElementAt(0) + " City: " + address.City + " State: " + address.State + " PostalCode: " + address.PostalCode + " AddressType: " + addressTypes.ElementAt(0));
+                    if (_logger.IsDebugEnabled) logMessages.Add("Profile update person ID: " + newProfile.Id + "; Repo address change request submitted: AddressLines: " + address.AddressLines.ElementAt(0) + " City: " + address.City + " State: " + address.State + " PostalCode: " + address.PostalCode + " AddressType: " + addressTypes.ElementAt(0));
                 }
             }
 
@@ -651,17 +651,17 @@ namespace Ellucian.Colleague.Domain.Base.Services
             // Log verification messages only if all verification was successful and changes found.
             if (isProfileChanged)
             {
-                if (_logger.IsInfoEnabled)
+                if (_logger.IsDebugEnabled)
                 {
                     foreach (var msg in logMessages)
                     {
-                        _logger.Info(msg);
+                        _logger.Debug(msg);
                     }
                 }
             }
             else
             {
-                _logger.Info("No changes found in Profile.");
+                _logger.Debug("No changes found in Profile.");
             }
 
             return verifiedProfile;

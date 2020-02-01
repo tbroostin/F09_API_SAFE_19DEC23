@@ -19,5 +19,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             : base(guid, code, description)
         {
         }
+
+        public string CohortType { get; set; }
     }
 }

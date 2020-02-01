@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2019 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -79,7 +79,9 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Return all relationshipTypes
         /// </summary>
         /// <returns>List of RelationshipTypes <see cref="Dtos.RelationshipTypes"/> objects representing matching relationshipTypes</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpGet, EedmResponseFilter]
+        [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]        
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.RelationshipTypes>> GetRelationshipTypesAsync()
         {
             var bypassCache = false;
@@ -92,14 +94,18 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             try
             {
-                var items = await _relationshipTypesService.GetRelationshipTypesAsync(bypassCache);
+                var relationshipTypes = await _relationshipTypesService.GetRelationshipTypesAsync(bypassCache);
 
-                AddEthosContextProperties(
-                  await _relationshipTypesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
-                  await _relationshipTypesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
-                      items.Select(i => i.Id).Distinct().ToList()));
+                if (relationshipTypes != null && relationshipTypes.Any())
+                {
 
-                return items;
+                    AddEthosContextProperties(
+                      await _relationshipTypesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                      await _relationshipTypesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                          relationshipTypes.Select(i => i.Id).ToList()));
+                }
+                return relationshipTypes;
+
             }
             catch (KeyNotFoundException e)
             {
@@ -109,7 +115,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -138,6 +144,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// </summary>
         /// <param name="guid">GUID to desired relationshipTypes</param>
         /// <returns>A relationshipTypes object <see cref="Dtos.RelationshipTypes"/> in EEDM format</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpGet, EedmResponseFilter]
         public async Task<Dtos.RelationshipTypes> GetRelationshipTypesByGuidAsync(string guid)
         {
@@ -157,10 +164,9 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             try
             {
                 AddEthosContextProperties(
-                  await _relationshipTypesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
-                  await _relationshipTypesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
-                      new List<string>() { guid }));
-
+                   await _relationshipTypesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                   await _relationshipTypesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                       new List<string>() { guid }));
                 return await _relationshipTypesService.GetRelationshipTypesByGuidAsync(guid);
             }
             catch (KeyNotFoundException e)
@@ -171,7 +177,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {

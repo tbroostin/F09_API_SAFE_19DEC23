@@ -23,7 +23,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         private ILogger _logger;
 
         public AcademicPeriodService(
-            ITermRepository termRepository, 
+            ITermRepository termRepository,
             IAdapterRegistry adapterRegistry, 
             IConfigurationRepository configurationRepository,
             ICurrentUserFactory currentUserFactory,
@@ -99,7 +99,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="termCode">Specific term filter</param>
         /// <param name="category">Specific category (term, subterm, year)</param>
         /// <returns>Collection of AcademicPeriod DTO objects</returns>
-        public async Task<IEnumerable<Ellucian.Colleague.Dtos.AcademicPeriod4>> GetAcademicPeriods4Async(bool bypassCache, string registration = "", string termCode = "", string category = "")
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.AcademicPeriod4>> GetAcademicPeriods4Async(bool bypassCache, string registration = "", string termCode = "", 
+            string category = "", DateTime? startOn = null, DateTime? endOn = null, Dictionary<string, string> filterQualifiers = null)
         {
 
             var academicPeriodCollection = new List<Ellucian.Colleague.Dtos.AcademicPeriod4>();
@@ -113,7 +114,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 // Filter on term code
                 if (!string.IsNullOrEmpty(termCode))
                 {
-                    var restrictedTerms = academicPeriodEntities.Where(te => te.Code.Equals(termCode, StringComparison.OrdinalIgnoreCase));
+                    var restrictedTerms = academicPeriodEntities.Where(te => te.Code.Equals(termCode, StringComparison.OrdinalIgnoreCase)).ToList();
                     academicPeriodEntities = restrictedTerms;
                 }
                 // Filter on category
@@ -121,17 +122,103 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     if (category.Equals("term", StringComparison.OrdinalIgnoreCase))
                     {
-                        var restrictedTerms = academicPeriodEntities.Where(te => te.Code.Equals(te.ReportingTerm, StringComparison.OrdinalIgnoreCase));
+                        var restrictedTerms = academicPeriodEntities.Where(te => te.Code.Equals(te.ReportingTerm, StringComparison.OrdinalIgnoreCase)).ToList();
                         academicPeriodEntities = restrictedTerms;
                     }
                     if (category.Equals("subterm", StringComparison.OrdinalIgnoreCase))
                     {
-                        var restrictedTerms = academicPeriodEntities.Where(te => te.Code.ToUpper() != te.ReportingTerm.ToUpper());
+                        var restrictedTerms = academicPeriodEntities.Where(te => te.Code.ToUpper() != te.ReportingTerm.ToUpper()).ToList();
                         academicPeriodEntities = restrictedTerms;
                     }
                     if (category.ToLower() != "term" && category.ToLower() != "subterm")
                     {
                         academicPeriodEntities = null;
+                    }
+                }
+
+                //Start on
+                if(startOn.HasValue)
+                {
+                    if(filterQualifiers != null && filterQualifiers.Any() && filterQualifiers.ContainsKey("StartOn"))
+                    {
+                        if (filterQualifiers.ContainsValue("GE"))
+                        {
+                            var restrictedTerms = academicPeriodEntities.Where(te => te.StartDate >= startOn.Value.Date).ToList();
+                            academicPeriodEntities = restrictedTerms;
+                        }
+                        else if (filterQualifiers.ContainsValue("GT"))
+                        {
+                            var restrictedTerms = academicPeriodEntities.Where(te => te.StartDate > startOn.Value.Date).ToList();
+                            academicPeriodEntities = restrictedTerms;
+                        }
+                        else if (filterQualifiers.ContainsValue("LT"))
+                        {
+                            var restrictedTerms = academicPeriodEntities.Where(te => te.StartDate < startOn.Value.Date).ToList();
+                            academicPeriodEntities = restrictedTerms;
+                        }
+                        else if (filterQualifiers.ContainsValue("LE"))
+                        {
+                            var restrictedTerms = academicPeriodEntities.Where(te => te.StartDate <= startOn.Value.Date).ToList();
+                            academicPeriodEntities = restrictedTerms;
+                        }
+                        else if (filterQualifiers.ContainsValue("NE"))
+                        {
+                            var restrictedTerms = academicPeriodEntities.Where(te => !te.StartDate.Equals(startOn.Value.Date)).ToList();
+                            academicPeriodEntities = restrictedTerms;
+                        }
+                        else if (filterQualifiers.ContainsValue("EQ"))
+                        {
+                            var restrictedTerms = academicPeriodEntities.Where(te => te.StartDate.Equals(startOn.Value.Date)).ToList();
+                            academicPeriodEntities = restrictedTerms;
+                        }
+                    }
+                    else
+                    {
+                        var restrictedTerms = academicPeriodEntities.Where(te => te.StartDate.Equals(startOn.Value.Date)).ToList();
+                        academicPeriodEntities = restrictedTerms;
+                    }
+                }
+
+                //End on
+                if (endOn.HasValue)
+                {
+                    if (filterQualifiers != null && filterQualifiers.Any() && filterQualifiers.ContainsKey("EndOn"))
+                    {
+                        if (filterQualifiers.ContainsValue("GE"))
+                        {
+                            var restrictedTerms = academicPeriodEntities.Where(te => te.EndDate >= endOn.Value.Date).ToList();
+                            academicPeriodEntities = restrictedTerms;
+                        }
+                        else if (filterQualifiers.ContainsValue("GT"))
+                        {
+                            var restrictedTerms = academicPeriodEntities.Where(te => te.EndDate > endOn.Value.Date).ToList();
+                            academicPeriodEntities = restrictedTerms;
+                        }
+                        else if (filterQualifiers.ContainsValue("LT"))
+                        {
+                            var restrictedTerms = academicPeriodEntities.Where(te => te.EndDate < endOn.Value.Date).ToList();
+                            academicPeriodEntities = restrictedTerms;
+                        }
+                        else if (filterQualifiers.ContainsValue("LE"))
+                        {
+                            var restrictedTerms = academicPeriodEntities.Where(te => te.EndDate <= endOn.Value.Date).ToList();
+                            academicPeriodEntities = restrictedTerms;
+                        }
+                        else if (filterQualifiers.ContainsValue("NE"))
+                        {
+                            var restrictedTerms = academicPeriodEntities.Where(te => !te.EndDate.Equals(endOn.Value.Date)).ToList();
+                            academicPeriodEntities = restrictedTerms;
+                        }
+                        else if (filterQualifiers.ContainsValue("EQ"))
+                        {
+                            var restrictedTerms = academicPeriodEntities.Where(te => te.EndDate.Equals(endOn.Value.Date)).ToList();
+                            academicPeriodEntities = restrictedTerms;
+                        }
+                    }
+                    else
+                    {
+                        var restrictedTerms = academicPeriodEntities.Where(te => te.EndDate.Equals(endOn.Value.Date)).ToList();
+                        academicPeriodEntities = restrictedTerms;
                     }
                 }
 
@@ -180,11 +267,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// including census dates and registration status
         /// </summary>
         /// <returns>AcademicPeriod DTO object</returns>
-        public async Task<Ellucian.Colleague.Dtos.AcademicPeriod3> GetAcademicPeriodByGuid3Async(string guid)
+        public async Task<Ellucian.Colleague.Dtos.AcademicPeriod3> GetAcademicPeriodByGuid3Async(string guid, bool bypassCache = false)
         {
             try
             {
-                var termEntities = await _termRepository.GetAsync(true);
+                var termEntities = await _termRepository.GetAsync(bypassCache);
                 var academicPeriods = _termRepository.GetAcademicPeriods(termEntities);
 
                 var academicPeriod = academicPeriods.Where(rt => rt.Guid == guid).FirstOrDefault();
@@ -207,11 +294,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// including census dates and registration status
         /// </summary>
         /// <returns>AcademicPeriod DTO object</returns>
-        public async Task<Ellucian.Colleague.Dtos.AcademicPeriod4> GetAcademicPeriodByGuid4Async(string guid)
+        public async Task<Ellucian.Colleague.Dtos.AcademicPeriod4> GetAcademicPeriodByGuid4Async(string guid, bool bypassCache = false)
         {
             try
             {
-                var termEntities = await _termRepository.GetAsync(true);
+                var termEntities = await _termRepository.GetAsync(bypassCache);
                 var academicPeriods = _termRepository.GetAcademicPeriods(termEntities);
 
                 var academicPeriod = academicPeriods.Where(rt => rt.Guid == guid).FirstOrDefault();
@@ -447,7 +534,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
             var category = new Dtos.AcademicPeriodCategory3();
-            category.Parent = new Dtos.AcademicPeriodCategoryParent();
             switch (source.Category)
             {
                 case "year":
@@ -470,7 +556,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     category.Type = AcademicTimePeriod2.Subterm;
                     if (!string.IsNullOrEmpty(source.ParentId))
                     {
-                        category.Parent.AcademicPeriod = new GuidObject2(source.ParentId);
                         category.Parent = new Dtos.AcademicPeriodCategoryParent();
                         category.Parent.Id = source.ParentId;
                     }

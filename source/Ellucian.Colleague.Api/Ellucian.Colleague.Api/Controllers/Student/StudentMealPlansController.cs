@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -51,11 +51,13 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// Return all studentMealPlans
         /// </summary>
         /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>
+        /// /// <param name="criteria">mealplan  search criteria in JSON format</param>
         /// <returns>List of StudentMealPlans <see cref="Dtos.StudentMealPlans"/> objects representing matching studentMealPlans</returns>
         [HttpGet, EedmResponseFilter]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
-        [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
-        public async Task<IHttpActionResult> GetStudentMealPlansAsync(Paging page)
+        [QueryStringFilterFilter("criteria", typeof(Dtos.StudentMealPlans))]
+        [FilteringFilter(IgnoreFiltering = true)]
+        public async Task<IHttpActionResult> GetStudentMealPlansAsync(Paging page, QueryStringFilter criteria)
         {
             var bypassCache = false;
             if (Request.Headers.CacheControl != null)
@@ -65,6 +67,10 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                     bypassCache = true;
                 }
             }
+            var criteriaFilter = GetFilterObject<Dtos.StudentMealPlans>(_logger, "criteria");
+
+            if (CheckForEmptyFilterParameters())
+                return new PagedHttpActionResult<IEnumerable<Dtos.StudentMealPlans>>(new List<Dtos.StudentMealPlans>(), page, 0, this.Request);
             try
             {
                 if (page == null)
@@ -72,7 +78,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                     page = new Paging(100, 0);
                 }
 
-                var pageOfItems = await _studentMealPlansService.GetStudentMealPlansAsync(page.Offset, page.Limit, bypassCache);
+                var pageOfItems = await _studentMealPlansService.GetStudentMealPlansAsync(page.Offset, page.Limit, criteriaFilter, bypassCache);
 
                 AddEthosContextProperties(await _studentMealPlansService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                                   await _studentMealPlansService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -88,7 +94,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -111,6 +117,306 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
         }
+
+        #region 16.0.0
+
+        /// <summary>
+        /// Return all studentMealPlans
+        /// </summary>
+        /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>
+        /// /// <param name="criteria">mealplan  search criteria in JSON format</param>
+        /// <returns>List of StudentMealPlans <see cref="Dtos.StudentMealPlans2"/> objects representing matching studentMealPlans</returns>
+        [HttpGet, EedmResponseFilter]
+        [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
+        [QueryStringFilterFilter("criteria", typeof(Dtos.StudentMealPlans2))]
+        [FilteringFilter(IgnoreFiltering = true)]
+        public async Task<IHttpActionResult> GetStudentMealPlans2Async(Paging page, QueryStringFilter criteria)
+        {
+            var bypassCache = false;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
+            var criteriaFilter = GetFilterObject<Dtos.StudentMealPlans2>(_logger, "criteria");
+
+            if (CheckForEmptyFilterParameters())
+                return new PagedHttpActionResult<IEnumerable<Dtos.StudentMealPlans2>>(new List<Dtos.StudentMealPlans2>(), page, 0, this.Request);
+
+            try
+            {
+                if (page == null)
+                {
+                    page = new Paging(100, 0);
+                }
+
+                var pageOfItems = await _studentMealPlansService.GetStudentMealPlans2Async(page.Offset, page.Limit, criteriaFilter, bypassCache);
+
+                AddEthosContextProperties(await _studentMealPlansService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                                  await _studentMealPlansService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                                  pageOfItems.Item1.Select(a => a.Id).ToList()));
+
+                return new PagedHttpActionResult<IEnumerable<Dtos.StudentMealPlans2>>(pageOfItems.Item1, page, pageOfItems.Item2, this.Request);
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
+
+        /// <summary>
+        /// Read (GET) a studentMealPlans using a GUID
+        /// </summary>
+        /// <param name="guid">GUID to desired studentMealPlans</param>
+        /// <returns>A studentMealPlans object <see cref="Dtos.StudentMealPlans2"/> in EEDM format</returns>
+        [HttpGet, EedmResponseFilter]
+        public async Task<Dtos.StudentMealPlans2> GetStudentMealPlansByGuid2Async(string guid)
+        {
+            var bypassCache = false;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
+
+            if (string.IsNullOrEmpty(guid))
+            {
+                throw CreateHttpResponseException(new IntegrationApiException("Null id argument",
+                    IntegrationApiUtility.GetDefaultApiError("The GUID must be specified in the request URL.")));
+            }
+            try
+            {
+                var mealPlans = await _studentMealPlansService.GetStudentMealPlansByGuid2Async(guid);
+
+                if (mealPlans != null)
+                {
+
+                    AddEthosContextProperties(await _studentMealPlansService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                              await _studentMealPlansService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              new List<string>() { mealPlans.Id }));
+                }
+                return mealPlans;
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
+
+        /// <summary>
+        /// Update (PUT) an existing studentMealPlans
+        /// </summary>
+        /// <param name="guid">GUID of the studentMealPlans to update</param>
+        /// <param name="studentMealPlans2">DTO of the updated studentMealPlans</param>
+        /// <returns>A studentMealPlans object <see cref="Dtos.StudentMealPlans2"/> in EEDM format</returns>
+        [HttpPut, EedmResponseFilter]
+        public async Task<Dtos.StudentMealPlans2> PutStudentMealPlans2Async([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.StudentMealPlans2 studentMealPlans2)
+        {
+
+            if (string.IsNullOrEmpty(guid))
+            {
+                throw CreateHttpResponseException(new IntegrationApiException("Null id argument",
+                    IntegrationApiUtility.GetDefaultApiError("The GUID must be specified in the request URL.")));
+            }
+            if (studentMealPlans2 == null)
+            {
+                throw CreateHttpResponseException(new IntegrationApiException("Null  studentMealPlans argument",
+                    IntegrationApiUtility.GetDefaultApiError("The request body is required.")));
+            }
+            if (string.IsNullOrEmpty(studentMealPlans2.Id))
+            {
+                studentMealPlans2.Id = guid.ToLowerInvariant();
+            }
+            else if ((string.Equals(guid, Guid.Empty.ToString())) || (string.Equals(studentMealPlans2.Id, Guid.Empty.ToString())))
+            {
+                throw CreateHttpResponseException(new IntegrationApiException("GUID empty",
+                    IntegrationApiUtility.GetDefaultApiError("GUID must be specified.")));
+            }
+            else if (guid.ToLowerInvariant() != studentMealPlans2.Id.ToLowerInvariant())
+            {
+                throw CreateHttpResponseException(new IntegrationApiException("GUID mismatch",
+                    IntegrationApiUtility.GetDefaultApiError("GUID not the same as in request body.")));
+            }
+            try
+            {
+                //get Data Privacy List
+                var dpList = await _studentMealPlansService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
+
+                //call import extend method that needs the extracted extension dataa and the config
+                await _studentMealPlansService.ImportExtendedEthosData(await ExtractExtendedData(await _studentMealPlansService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
+
+                Dtos.StudentMealPlans2 existingMealPlan = null;
+                try
+                {
+                    existingMealPlan = await _studentMealPlansService.GetStudentMealPlansByGuid2Async(guid);
+                    if (studentMealPlans2.Consumption != null)
+                    {
+                        existingMealPlan.Consumption = studentMealPlans2.Consumption;
+                    }
+                }
+                catch { }
+
+                //do update with partial logic
+                var studentMealPlanReturn = await _studentMealPlansService.PutStudentMealPlans2Async(guid,
+                    await PerformPartialPayloadMerge(studentMealPlans2, existingMealPlan,
+                        dpList, _logger));
+
+                //store dataprivacy list and get the extended data to store 
+                AddEthosContextProperties(dpList,
+                    await _studentMealPlansService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(), new List<string>() { guid }));
+
+                return studentMealPlanReturn;
+
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
+
+        /// <summary>
+        /// Create (POST) a new studentMealPlans
+        /// </summary>
+        /// <param name="studentMealPlans2">DTO of the new studentMealPlans</param>
+        /// <returns>A studentMealPlans object <see cref="Dtos.StudentMealPlans2"/> in EEDM format</returns>
+        [HttpPost, EedmResponseFilter]
+        public async Task<Dtos.StudentMealPlans2> PostStudentMealPlans2Async([ModelBinder(typeof(EedmModelBinder))] Dtos.StudentMealPlans2 studentMealPlans2)
+        {
+            if (studentMealPlans2 == null)
+            {
+                throw CreateHttpResponseException(new IntegrationApiException("Null StudentMealPlans argument",
+                    IntegrationApiUtility.GetDefaultApiError("The request body is required.")));
+            }
+            try
+            {
+                //call import extend method that needs the extracted extension data and the config
+                await _studentMealPlansService.ImportExtendedEthosData(await ExtractExtendedData(await _studentMealPlansService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
+
+                //create the student meal plan
+                var mealPlanReturn = await _studentMealPlansService.PostStudentMealPlans2Async(studentMealPlans2);
+
+                //store dataprivacy list and get the extended data to store 
+                AddEthosContextProperties(await _studentMealPlansService.GetDataPrivacyListByApi(GetRouteResourceName(), true),
+                   await _studentMealPlansService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(), new List<string>() { mealPlanReturn.Id }));
+
+                return mealPlanReturn;
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+
+        }
+
+        #endregion
 
         /// <summary>
         /// Read (GET) a studentMealPlans using a GUID
@@ -155,7 +461,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -183,7 +489,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// Create (POST) a new studentMealPlans
         /// </summary>
         /// <param name="studentMealPlans">DTO of the new studentMealPlans</param>
-        /// <returns>A studentMealPlans object <see cref="Dtos.StudentMealPlans"/> in EEDM format</returns>
+        /// <returns>A studentMealPlans object <see cref="Dtos.StudentMealPlans2"/> in EEDM format</returns>
         [HttpPost, EedmResponseFilter]
         public async Task<Dtos.StudentMealPlans> PostStudentMealPlansAsync([ModelBinder(typeof(EedmModelBinder))] Dtos.StudentMealPlans studentMealPlans)
         {
@@ -214,7 +520,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -281,9 +587,20 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 //call import extend method that needs the extracted extension dataa and the config
                 await _studentMealPlansService.ImportExtendedEthosData(await ExtractExtendedData(await _studentMealPlansService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
 
+                Dtos.StudentMealPlans existingMealPlan = null;
+                try
+                {
+                    existingMealPlan = await _studentMealPlansService.GetStudentMealPlansByGuidAsync(guid);
+                    if (studentMealPlans.Consumption != null)
+                    {
+                        existingMealPlan.Consumption = studentMealPlans.Consumption;
+                    }
+                }
+                catch { }
+
                 //do update with partial logic
                 var studentMealPlanReturn = await _studentMealPlansService.PutStudentMealPlansAsync(guid,
-                    await PerformPartialPayloadMerge(studentMealPlans, async () => await _studentMealPlansService.GetStudentMealPlansByGuidAsync(guid),
+                    await PerformPartialPayloadMerge(studentMealPlans, existingMealPlan,
                         dpList, _logger));
 
                 //store dataprivacy list and get the extended data to store 
@@ -302,7 +619,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {

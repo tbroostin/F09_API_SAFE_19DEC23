@@ -17,9 +17,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// </summary>
         /// <param name="offset">Offset for paging results</param>
         /// <param name="limit">Limit for paging results</param>
+        /// <param name="filters">Filters</param>
         /// <param name="bypassCache">Flag to bypass cache</param>
         /// <returns>Collection of <see cref="ProcurementReceipts">procurementReceipts</see> objects</returns>          
-        Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.ProcurementReceipts>, int>> GetProcurementReceiptsAsync(int offset, int limit, bool bypassCache = false);
+        Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.ProcurementReceipts>, int>> GetProcurementReceiptsAsync(int offset, int limit, Dtos.ProcurementReceipts filters, bool bypassCache = false);
 
         /// <summary>
         /// Get a procurementReceipts by guid.

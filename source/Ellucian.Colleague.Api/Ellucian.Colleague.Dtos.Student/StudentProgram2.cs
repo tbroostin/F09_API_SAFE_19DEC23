@@ -33,9 +33,17 @@ namespace Ellucian.Colleague.Dtos.Student
         /// </summary>
         public DateTime? EndDate { get; set; }
         /// <summary>
+        /// Academic End Date of the program.
+        /// </summary>
+        public DateTime? AcadEndDate { get; set; }
+        /// <summary>
         /// Start Date of Student Program
         /// </summary>
         public DateTime? StartDate { get; set; }
+        /// <summary>
+        /// Academic Start Date
+        /// </summary>
+        public DateTime? AcadStartDate { get; set; }
         /// <summary>
         /// Academic Level Code from the Program
         /// </summary>

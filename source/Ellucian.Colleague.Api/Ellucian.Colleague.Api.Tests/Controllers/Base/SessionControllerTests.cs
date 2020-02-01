@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -6,6 +6,7 @@ using System.Web.Http;
 using System.Web.Http.Hosting;
 using Ellucian.Colleague.Api.Controllers;
 using Ellucian.Colleague.Configuration.Licensing;
+using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Data.Colleague.Exceptions;
@@ -21,6 +22,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
     {
         public Mock<ILogger> loggerMock;
         public Mock<ISessionRepository> sessionRepositoryMock;
+        public Mock<ISessionRecoveryService> sessionRecoveryServiceMock;
         public SessionController controllerUnderTest;
         public Credentials loginCredentials;
         public ProxyCredentials proxyCredentials;
@@ -29,6 +31,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         {
             loggerMock = new Mock<ILogger>();
             sessionRepositoryMock = new Mock<ISessionRepository>();
+            sessionRecoveryServiceMock = new Mock<ISessionRecoveryService>();
             loginCredentials = new Credentials() { UserId = "abc", Password = "def" };
             proxyCredentials = new ProxyCredentials() { UserId = "abc", ProxyId = "123", ProxyPassword = "def" };
             string loginResponse = "Login was successful";
@@ -36,7 +39,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             sessionRepositoryMock.Setup(s => s.LoginAsync(It.IsAny<string>(), It.IsAny<string>()))
                 .ReturnsAsync(loginResponse);
 
-            controllerUnderTest = new SessionController(loggerMock.Object, sessionRepositoryMock.Object);
+            controllerUnderTest = new SessionController(loggerMock.Object, sessionRepositoryMock.Object, sessionRecoveryServiceMock.Object);
             controllerUnderTest.Request = new HttpRequestMessage();
             controllerUnderTest.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
             controllerUnderTest.Request.Headers.Add("X-ProductName", "WebApi");
@@ -184,7 +187,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                 Assert.AreEqual(result.StatusCode, HttpStatusCode.Forbidden);
             }
         }
-        
+
         [TestClass]
         public class PostLogin2AsyncTests : SessionControllerTests
         {
@@ -340,6 +343,64 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
 
                 var result = await controllerUnderTest.PostProxyLogin2Async(proxyCredentials);
                 Assert.AreEqual(result.StatusCode, HttpStatusCode.Forbidden);
+            }
+
+        }
+
+        [TestClass]
+        public class PasswordResetTests : SessionControllerTests
+        {
+            private TestContext testContextInstance;
+
+            public TestContext TestContext
+            {
+                get { return testContextInstance; }
+                set { testContextInstance = value; }
+            }
+
+
+            [TestInitialize]
+            public void Initialize()
+            {
+
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+                base.SessionControllerTestsInitialize();
+            }
+
+            [TestMethod]
+            public async Task PostResetPasswordTokenRequestAsync_SuccessfulServiceCall_ReturnsAccepted()
+            {
+                sessionRecoveryServiceMock.Setup(srs => srs.RequestPasswordResetTokenAsync(It.IsAny<string>(), It.IsAny<string>()))
+                    .Returns(Task.Delay(0));
+                var result = await controllerUnderTest.PostResetPasswordTokenRequestAsync(new PasswordResetTokenRequest() { EmailAddress = "test@example.com", UserId = "testUserId" });
+                Assert.AreEqual(result.StatusCode, HttpStatusCode.Accepted);
+            }
+
+            [TestMethod]
+            public async Task PostResetPasswordTokenRequestAsync_ServiceException_ReturnsAccepted()
+            {
+                sessionRecoveryServiceMock.Setup(srs => srs.RequestPasswordResetTokenAsync(It.IsAny<string>(), It.IsAny<string>()))
+                    .Throws(new System.Exception("Test Service Exception"));
+                var result = await controllerUnderTest.PostResetPasswordTokenRequestAsync(new PasswordResetTokenRequest() { EmailAddress = "test@example.com", UserId = "testUserId" });
+                Assert.AreEqual(result.StatusCode, HttpStatusCode.Accepted);
+            }
+
+            [TestMethod]
+            public async Task PostUserIdRecoveryRequestAsync_ReturnsAccepted()
+            {
+                sessionRecoveryServiceMock.Setup(srs => srs.RequestUserIdRecoveryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                    .Returns(Task.Delay(0));
+                var result = await controllerUnderTest.PostUserIdRecoveryRequestAsync(new UserIdRecoveryRequest() { EmailAddress = "test@example.com", FirstName = "Test", LastName = "Example" });
+                Assert.AreEqual(result.StatusCode, HttpStatusCode.Accepted);
+            }
+            [TestMethod]
+            public async Task PostResetPasswordAsync_ReturnsOK()
+            {
+                sessionRecoveryServiceMock.Setup(srs => srs.ResetPasswordAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                    .Returns(Task.Delay(0));
+                var result = await controllerUnderTest.PostResetPasswordAsync(new ResetPassword() { NewPassword = "testNewPassword", ResetToken = "testToken", UserId = "testUser" });
+                Assert.AreEqual(result.StatusCode, HttpStatusCode.OK);
             }
         }
     }

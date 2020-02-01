@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -79,7 +79,7 @@ namespace Ellucian.Colleague.Api.Utility
         public static IntegrationApiError GetDefaultApiError(string message)
         {
             var error = DefaultApiError;
-            error.Message = message;
+            error.Message = string.IsNullOrEmpty(message) ? null : message.Replace("\r\n", "  ");
 
             return error;
         }
@@ -91,9 +91,18 @@ namespace Ellucian.Colleague.Api.Utility
         /// <returns>An integration API exception</returns>
         public static IntegrationApiException ConvertToIntegrationApiException(RepositoryException ex)
         {
-            var iae = new IntegrationApiException(ex.Message);
+            var iae = new IntegrationApiException();
             iae.AddErrors(ex.Errors.ToList().ConvertAll(x => ConvertToIntegrationApiError(x)));
 
+            //Depending on how the RepositoryException is built, the parent object may have an associated error message.
+            //make sure we are not generating an IntegrationApiException for the default message.  
+            if ((!string.IsNullOrEmpty(ex.Message)) && !ex.Message.Equals("Repository exception", StringComparison.OrdinalIgnoreCase)
+                && (!ex.Message.Equals(new RepositoryException().Message, StringComparison.OrdinalIgnoreCase))
+                && (!iae.Errors.Any(e => !string.IsNullOrEmpty(e.Message) 
+                     && e.Message.Equals(ex.Message, StringComparison.OrdinalIgnoreCase))))
+            {
+                iae.AddError(GetDefaultApiError(ex.Message));
+            }
             return iae;
         }
 
@@ -166,7 +175,22 @@ namespace Ellucian.Colleague.Api.Utility
             var iae = new IntegrationApiException(ex.Message, ex.InnerException);
             foreach (var error in ex.Errors)
             {
-                iae.AddError(PopulateError(error));
+                // Do not include any errors where
+                // 1.  The message simply states "repository exception"
+                // 2.  The message is empty/null
+                // 3.  The exact message is duplicated.
+                if ((!string.IsNullOrEmpty(error.Message)) 
+                    && !error.Message.Equals("Repository exception", StringComparison.OrdinalIgnoreCase)
+                    && (!error.Message.Equals(new RepositoryException().Message, StringComparison.OrdinalIgnoreCase))
+                    && (!iae.Errors.Any(e => !string.IsNullOrEmpty(e.Message)
+                    &&      e.Message.Equals(error.Message, StringComparison.OrdinalIgnoreCase)
+                    &&      !string.IsNullOrEmpty(e.Id)
+                    &&      e.Id.Equals(error.Id, StringComparison.OrdinalIgnoreCase)
+                    &&      !string.IsNullOrEmpty(e.Guid)
+                    &&      e.Guid.Equals(error.Guid, StringComparison.InvariantCultureIgnoreCase))))
+                {
+                    iae.AddError(PopulateError(error));
+                }              
             }
 
             return iae;
@@ -182,7 +206,7 @@ namespace Ellucian.Colleague.Api.Utility
             var apiError = GetMessage(error.Code);
             return new IntegrationApiError(error.Code,                     
                 string.IsNullOrEmpty(error.Description) ? apiError.Description : error.Description,
-                error.Message,
+                string.IsNullOrEmpty(error.Message) ? null : error.Message.Replace("\r\n","  "),
                 apiError.ReturnCode,
                 string.IsNullOrEmpty(error.Guid) ? null : error.Guid,
                 string.IsNullOrEmpty(error.Id) ? null : error.Id);
@@ -213,6 +237,15 @@ namespace Ellucian.Colleague.Api.Utility
             new IntegrationApiErrorMessage( "Global.Internal.Error                                                 ", "Unspecified Error on the system which prevented execution.                                                                                                                         ", 400 ),
             new IntegrationApiErrorMessage( "Global.SchemaValidation.Error                                         ", "Errors parsing input JSON.                                                                                                                                                         ", 400 ),
             new IntegrationApiErrorMessage( "Global.Client.UnauthorizedOperation                                   ", "Client not authorized to perform this action.                                                                                                                                      ", 403 ),
+            new IntegrationApiErrorMessage( "Missing.Required.Property                                             ", "Property is required by the schema.                                                                                                                                                ", 400 ),
+            new IntegrationApiErrorMessage( "Validation.Exception                                                  ", "An error occurred attempting to validate data.                                                                                                                                     ", 400 ),
+            new IntegrationApiErrorMessage( "GUID.Not.Found                                                        ", "An error occurred translating the GUID to an ID.                                                                                                                                   ", 400 ),
+            new IntegrationApiErrorMessage( "Bad.Data                                                              ", "Data issue must be resolved in the source system.                                                                                                                                  ", 400 ),
+            new IntegrationApiErrorMessage( "GUID.Wrong.Type                                                       ", "The provided GUID is the wrong type for this resource.                                                                                                                             ", 400 ),
+            new IntegrationApiErrorMessage( "Create.Update.Exception                                               ", "Error occurred in the source system that prevented update or creation of the record.                                                                                               ", 400 ),
+            new IntegrationApiErrorMessage( "Delete.Exception                                                      ", "Error occurred in the source system that prevented deletion of the record.                                                                                                         ", 400 ),
+            new IntegrationApiErrorMessage( "Missing.Request.ID                                                    ", "Empty request ID.                                                                                                                                                                  ", 400 ),
+            new IntegrationApiErrorMessage( "Missing.Request.Body                                                  ", "	Empty request body.                                                                                                                                                               ", 400 ),
             new IntegrationApiErrorMessage( "Course.NotFound                                                       ", "Course does not exist.                                                                                                                                                             ", 404 ),
             new IntegrationApiErrorMessage( "Course.Duplicate                                                      ", "Course already exists in system.                                                                                                                                                   ", 400 ),
             new IntegrationApiErrorMessage( "Course.Locked                                                         ", "Course cannot be updated due to record lock.                                                                                                                                       ", 400 ),

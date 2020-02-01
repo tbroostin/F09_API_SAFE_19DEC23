@@ -1,4 +1,4 @@
-﻿//Copyright 2013-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2013-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.FinancialAid.DataContracts;
 using Ellucian.Colleague.Domain.FinancialAid.Entities;
@@ -80,6 +80,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                             {
                                 explanation = FormatString(explanation, _VM);
                             }
+                            
 
                             ShoppingSheetAwardGroup? shoppingSheetGroup = null;
                             if (!string.IsNullOrEmpty(awardRecord.AwShopsheetGroup))
@@ -125,7 +126,9 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                                     {
                                         IsFederalDirectLoan = (!string.IsNullOrEmpty(awardRecord.AwDlLoanType)),
                                         Type = awardRecord.AwType,
-                                        ShoppingSheetGroup = shoppingSheetGroup
+                                        ShoppingSheetGroup = shoppingSheetGroup,
+                                        AwRenewableFlag = awardRecord.AwRenewableFlag,
+                                        AwRenewableText = awardRecord.AwRenewableText
                                     };
                                 awardList.Add(award);
                             }
@@ -511,7 +514,8 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                                             allBudgetComponents.Add(
                                                 new BudgetComponent(awardYear.Code, budgetRecord.Recordkey, budgetRecord.FbcDesc)
                                                 {
-                                                    ShoppingSheetGroup = shoppingSheetGroup
+                                                    ShoppingSheetGroup = shoppingSheetGroup,
+                                                    CostType = CalculateCostType(budgetRecord)
                                                 });
                                         }
                                         catch (Exception e)
@@ -529,6 +533,30 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                         }
                         return allBudgetComponents;
                     });
+            }
+        }
+
+        /// <summary>
+        /// Calulates budget component cost type
+        /// </summary>
+        /// <param name="budgetRecord">budget record to calculate the type for</param>
+        /// <returns>BudgetComponentCostType or null</returns>
+        private BudgetComponentCostType? CalculateCostType(FbcAcyr budgetRecord)
+        {
+            if (budgetRecord != null && !string.IsNullOrEmpty(budgetRecord.FbcCostIndicator)) {
+                if (budgetRecord.FbcCostIndicator.ToUpper() == "D")
+                {
+                    return BudgetComponentCostType.Direct;
+                }
+                else if (budgetRecord.FbcCostIndicator.ToUpper() == "I")
+                {
+                    return BudgetComponentCostType.Indirect;
+                }
+                else return null;
+            }
+            else
+            {
+                return null;
             }
         }
 
@@ -719,6 +747,16 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                                 IsContactBlockActive = !string.IsNullOrEmpty(record.AltrOfficeBlock) && record.AltrOfficeBlock.ToUpper() == "Y",
                                 IsHousingBlockActive = !string.IsNullOrEmpty(record.AltrHousingCode) && record.AltrHousingCode.ToUpper() == "Y",
                                 IsNeedBlockActive = !string.IsNullOrEmpty(record.AltrNeedBlock) && record.AltrNeedBlock.ToUpper() == "Y",
+                                IsEfcActive = !string.IsNullOrEmpty(record.AltrEfcFlag) && record.AltrEfcFlag.ToUpper() == "Y",
+                                IsBudgetActive = !string.IsNullOrEmpty(record.AltrBudgetFlag) && record.AltrBudgetFlag.ToUpper() == "Y",
+                                IsDirectCostActive = !string.IsNullOrEmpty(record.AltrDirectCostFlag) && record.AltrDirectCostFlag.ToUpper() == "Y",
+                                IsIndirectCostActive = !string.IsNullOrEmpty(record.AltrIndirectCostFlag) && record.AltrIndirectCostFlag.ToUpper() == "Y",
+                                IsEnrollmentActive = !string.IsNullOrEmpty(record.AltrEnrollmentFlag) && record.AltrEnrollmentFlag.ToUpper() == "Y",
+                                IsPellEntitlementActive = !string.IsNullOrEmpty(record.AltrPellEntitlementFlag) && record.AltrPellEntitlementFlag.ToUpper() == "Y",
+                                IsPreAwardTextActive = !string.IsNullOrEmpty(record.AltrPreAwardsText) && record.AltrPreAwardsText.ToUpper() == "Y",
+                                IsPostAwardTextActive = !string.IsNullOrEmpty(record.AltrPostAwardsText) && record.AltrPostAwardsText.ToUpper() == "Y",
+                                IsPostClosingTextActive = !string.IsNullOrEmpty(record.AltrPostClosingText) && record.AltrPostClosingText.ToUpper() == "Y",
+                                IsRenewalActive = !string.IsNullOrEmpty(record.AltrRenewalFlag) && record.AltrRenewalFlag.ToUpper() == "Y",
                                 ParagraphSpacing = !string.IsNullOrEmpty(record.AltrParaSpacing) ? record.AltrParaSpacing : "1",
                                 AwardTableTitle = !string.IsNullOrEmpty(record.AltrTitleAwdName) ? record.AltrTitleAwdName : "Awards",
                                 AwardTotalTitle = !string.IsNullOrEmpty(record.AltrTitleAwdTotal) ? record.AltrTitleAwdTotal : "Total"

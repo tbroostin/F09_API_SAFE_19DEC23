@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Rest.Client.Exceptions;
@@ -7,10 +7,11 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Net;
-using System.Threading.Tasks;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Api.Client
 {
@@ -796,7 +797,7 @@ namespace Ellucian.Colleague.Api.Client
         /// </summary>
         /// <param name="personIds">List of Person Ids to retrieve phone numbers for</param>
         /// <returns>List of PhoneNumber objects for requested person Ids</returns>
-        public IEnumerable<PhoneNumber> GetPersonPhonesByIds(IEnumerable<string> personIds)
+        public async Task<IEnumerable<PhoneNumber>> GetPersonPhonesByIds(IEnumerable<string> personIds)
         {
             PhoneNumberQueryCriteria criteria = new PhoneNumberQueryCriteria();
             criteria.PersonIds = personIds;
@@ -813,7 +814,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-                var response = ExecutePostRequestWithResponse(criteria, urlPath, headers: headers);
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<PhoneNumber>>(response.Content.ReadAsStringAsync().Result);
             }
             catch (Exception ex)
@@ -827,7 +828,7 @@ namespace Ellucian.Colleague.Api.Client
         /// </summary>
         /// <param name="personIds">List of Person Ids to retrieve phone numbers for</param>
         /// <returns>List of PilotPhoneNumber objects for requested person Ids</returns>
-        public IEnumerable<PilotPhoneNumber> GetPilotPersonPhonesByIds(IEnumerable<string> personIds)
+        public async Task<IEnumerable<PilotPhoneNumber>> GetPilotPersonPhonesByIds(IEnumerable<string> personIds)
         {
             PhoneNumberQueryCriteria criteria = new PhoneNumberQueryCriteria();
             criteria.PersonIds = personIds;
@@ -844,7 +845,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderPilotVersion1);
-                var response = ExecutePostRequestWithResponse(criteria, urlPath, headers: headers);
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<PilotPhoneNumber>>(response.Content.ReadAsStringAsync().Result);
             }
             catch (Exception ex)
@@ -2171,6 +2172,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_personsPath, personId);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderProxyUserVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<PersonProxyDetails>(await response.Content.ReadAsStringAsync());
             }
@@ -3163,17 +3165,17 @@ namespace Ellucian.Colleague.Api.Client
         /// <param name="newState">The state that the message should be changed to.</param>
         /// <returns>The updated <see cref="WorkTask">Message Work Task</see> object.</returns>
         public async Task<WorkTask> UpdateMessageWorklistAsync(string messageId, string personId, ExecutionState newState)
-        { 
+        {
             if (messageId == null)
             {
                 throw new ArgumentNullException("message", "message cannot be null.");
             }
             try
             {
-        
+
                 var messages = await GetWorkTasksAsync(personId);
                 WorkTask msg = new WorkTask();
-                
+
                 foreach (var taskDto in messages)
                 {
                     if (taskDto.Id == messageId)
@@ -3183,7 +3185,7 @@ namespace Ellucian.Colleague.Api.Client
                 }
 
                 //var urlPath = UrlUtility.CombineUrlPathAndArguments(_messagePath, msgInfo);
-                var queryString = UrlUtility.BuildEncodedQueryString("personId", personId,"newState", newState.ToString());
+                var queryString = UrlUtility.BuildEncodedQueryString("personId", personId, "newState", newState.ToString());
                 var combinedUrl = UrlUtility.CombineUrlPathAndArguments(_messagePath, queryString);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
@@ -3195,7 +3197,7 @@ namespace Ellucian.Colleague.Api.Client
                 logger.Error(ex, "Unable to update Message.");
                 throw;
             }
-            
+
         }
 
         /// <summary>
@@ -3232,7 +3234,7 @@ namespace Ellucian.Colleague.Api.Client
             }
             try
             {
-                var queryString = UrlUtility.BuildEncodedQueryString("workflowDefId", workflowDefId,"processCode", processCode, "subjectLine", subjectLine, "advisorId", advisorId);
+                var queryString = UrlUtility.BuildEncodedQueryString("workflowDefId", workflowDefId, "processCode", processCode, "subjectLine", subjectLine, "advisorId", advisorId);
                 var combinedUrl = UrlUtility.CombineUrlPathAndArguments(_messagePath, queryString);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
@@ -3261,6 +3263,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent);
                 var response = await ExecutePostRequestWithResponseAsync<PersonMatchCriteria>(criteria, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<PersonMatchResult>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -4492,6 +4495,687 @@ namespace Ellucian.Colleague.Api.Client
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get the Required Document Configuration.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Returns the authentication scheme for the given username
+        /// </summary>
+        /// <param name="username">Username</param>
+        /// <returns>Authentication scheme</returns>
+        public async Task<AuthenticationScheme> GetAuthenticationSchemeAsync(string username)
+        {
+            if (string.IsNullOrEmpty(username))
+            {
+                throw new ArgumentNullException("username", "Username is required to get authentication scheme.");
+            }
+
+            try
+            {
+                var query = UrlUtility.BuildEncodedQueryString("username", username);
+                var urlPath = UrlUtility.CombineUrlPathAndArguments(_authenticationSchemePath, query);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var responseString = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var authScheme = JsonConvert.DeserializeObject<AuthenticationScheme>(await responseString.Content.ReadAsStringAsync());
+
+                return authScheme;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get the Authentication Scheme.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get attachments
+        /// </summary>
+        /// <param name="owner">Owner's PERSON ID (optional) to get attachments for</param>
+        /// <param name="collectionId">Collection Id (optional) to get attachments for</param>
+        /// <param name="tagOne">TagOne value to get attachments for</param>
+        /// <returns>List of <see cref="Attachment">Attachments</see></returns>
+        public async Task<IEnumerable<Attachment>> GetAttachmentsAsync(string owner = null, string collectionId = null, string tagOne = null)
+        {
+            try
+            {
+                var urlParms = new Dictionary<string, string>();
+                if (!string.IsNullOrEmpty(owner))
+                    urlParms.Add("owner", owner);
+                if (!string.IsNullOrEmpty(collectionId))
+                    urlParms.Add("collectionid", collectionId);
+                if (!string.IsNullOrEmpty(tagOne))
+                    urlParms.Add("tagone", tagOne);
+
+                var urlPath = urlParms.Count == 0 ? _attachmentsPath : UrlUtility.CombineEncodedUrlPathAndArguments(_attachmentsPath, urlParms);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var result = await response.Content.ReadAsStringAsync();
+
+                var resource = JsonConvert.DeserializeObject<IEnumerable<Attachment>>(response.Content.ReadAsStringAsync().Result);
+                return resource;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get attachments.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get the attachment's contents
+        /// </summary>
+        /// <param name="attachmentId">Id of the attachment whose content is requested</param>
+        /// <returns>A tuple whose item1 is the file's name, item2 is the file content in bytes, and item 3 is its encryption metadata</returns>
+        public async Task<Tuple<string, byte[], AttachmentEncryption>> GetAttachmentContentAsync(string attachmentId)
+        {
+            if (string.IsNullOrWhiteSpace(attachmentId))
+            {
+                throw new ArgumentNullException("attachmentId");
+            }
+            try
+            {
+                var urlPath = UrlUtility.CombineUrlPath(new string[] { _attachmentsPath, attachmentId, "content" });
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                IEnumerable<string> disposition;
+                response.Content.Headers.TryGetValues("content-disposition", out disposition);
+                var fileName = response.Content.Headers.ContentDisposition.FileName;
+                var contentBytes = await response.Content.ReadAsByteArrayAsync();
+
+                // get the encryption metadata, if present, from the response headers
+                AttachmentEncryption attachmentEncryption = null;
+                string encrKeyId = null;
+                IEnumerable<string> headerValues;
+                if (response.Headers.TryGetValues("X-Encr-Key-Id", out headerValues))
+                {
+                    encrKeyId = headerValues.FirstOrDefault();
+
+                    // get the rest of the encryption metadata
+                    string encrIV = null;
+                    string encrContentKey = null;
+                    string encrType = null;
+                    if (response.Headers.TryGetValues("X-Encr-IV", out headerValues))
+                        encrIV = headerValues.FirstOrDefault();
+                    if (response.Headers.TryGetValues("X-Encr-Content-Key", out headerValues))
+                        encrContentKey = headerValues.FirstOrDefault();
+                    if (response.Headers.TryGetValues("X-Encr-Type", out headerValues))
+                        encrType = headerValues.FirstOrDefault();
+
+                    attachmentEncryption = new AttachmentEncryption(encrKeyId, encrType, Convert.FromBase64String(encrContentKey),
+                            Convert.FromBase64String(encrIV));
+                }
+
+                return new Tuple<string, byte[], AttachmentEncryption>(fileName.Replace("\"", ""), contentBytes, attachmentEncryption);
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get this attachment's content.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Send an attachment record along with its contents.
+        /// </summary>
+        /// <param name="attachment">The attachment metadata record</param>
+        /// <param name="fileContent">The stream of the file content for this attachment</param>
+        /// <param name="attachmentEncryption">The attachment's encryption metadata</param>
+        /// <returns>Newly created <see cref="Attachment">Attachment</see></returns>
+        public async Task<Attachment> PostAttachmentAndContentsAsync(Attachment attachment, Stream fileContent, AttachmentEncryption attachmentEncryption)
+        {
+            if (attachment == null)
+            {
+                throw new ArgumentNullException("attachment");
+            }
+            if (fileContent == null)
+            {
+                throw new ArgumentNullException("fileContent");
+            }
+
+            // create the multi-part post request. 
+            // Use guid as boundary to guarantee no collision.
+            var multiPartContent = new MultipartContent("mixed", "----" + Guid.NewGuid().ToString());
+
+            // attachment metadata
+            var attachmentMetadata = new StringContent(JsonConvert.SerializeObject(attachment));
+            attachmentMetadata.Headers.ContentType = new MediaTypeHeaderValue(_mediaTypeHeaderVersion1);
+            attachmentMetadata.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment");
+            multiPartContent.Add(attachmentMetadata);
+
+            // attachment content
+            var attachmentContent = new StreamContent(fileContent);
+            attachmentContent.Headers.ContentType = new MediaTypeHeaderValue(attachment.ContentType);
+            attachmentContent.Headers.ContentDisposition = new ContentDispositionHeaderValue("datafile") { FileName = attachment.Name };
+            multiPartContent.Add(attachmentContent);
+
+            // use generic v1 header for accept, since this endpoint returns the attachment metadata only.
+            var headers = new NameValueCollection();
+            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+            // add attachment encryption metadata, if present
+            if (attachmentEncryption != null)
+            {
+                headers.Add("X-Encr-Content-Key", Convert.ToBase64String(attachmentEncryption.EncrContentKey));
+                headers.Add("X-Encr-IV", Convert.ToBase64String(attachmentEncryption.EncrIV));
+                headers.Add("X-Encr-Key-Id", attachmentEncryption.EncrKeyId);
+                headers.Add("X-Encr-Type", attachmentEncryption.EncrType);
+            }
+
+            try
+            {
+                var response = await ExecutePostHttpContentRequestWithResponseAsync(multiPartContent, _attachmentsPath, headers: headers);
+                var result = await response.Content.ReadAsStringAsync();
+                return JsonConvert.DeserializeObject<Attachment>(result);
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to POST an attachment and its contents.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Create the new attachment
+        /// </summary>
+        /// <param name="attachment">The attachment to create</param>
+        /// <returns>Newly created <see cref="Attachment">Attachment</see></returns>
+        public async Task<Attachment> PostAttachmentAsync(Attachment attachment, AttachmentEncryption attachmentEncryption)
+        {
+            if (attachment == null)
+            {
+                throw new ArgumentNullException("attachment");
+            }
+
+            var headers = new NameValueCollection();
+            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+            // add attachment encryption metadata, if present
+            if (attachmentEncryption != null)
+            {
+                headers.Add("X-Encr-Content-Key", Convert.ToBase64String(attachmentEncryption.EncrContentKey));
+                headers.Add("X-Encr-IV", Convert.ToBase64String(attachmentEncryption.EncrIV));
+                headers.Add("X-Encr-Key-Id", attachmentEncryption.EncrKeyId);
+                headers.Add("X-Encr-Type", attachmentEncryption.EncrType);
+            }
+
+            try
+            {
+                var response = await ExecutePostRequestWithResponseAsync(attachment, _attachmentsPath, headers: headers);
+                var result = await response.Content.ReadAsStringAsync();
+                return JsonConvert.DeserializeObject<Attachment>(result);
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to POST an attachment.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Update the attachment
+        /// </summary>
+        /// <param name="attachmentId">The ID of the attachment to update</param>
+        /// <param name="attachment">The attachment doc to update with</param>
+        /// <returns>Newly created <see cref="Attachment">Attachment</see></returns>
+        public async Task<Attachment> PutAttachmentAsync(string attachmentId, Attachment attachment)
+        {
+            if (attachment == null)
+            {
+                throw new ArgumentNullException("attachment");
+            }
+
+            if (string.IsNullOrWhiteSpace(attachmentId))
+            {
+                throw new ArgumentNullException("attachmentId");
+            }
+
+            if (attachmentId != attachment.Id)
+            {
+                throw new ArgumentException("The attachment ID from the URL does not match the one in the body");
+            }
+
+            var urlPath = UrlUtility.CombineUrlPath(new string[] { _attachmentsPath, attachmentId });
+            var headers = new NameValueCollection();
+            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+            try
+            {
+                var response = await ExecutePutRequestWithResponseAsync(attachment, urlPath, headers: headers);
+                var result = await response.Content.ReadAsStringAsync();
+                return JsonConvert.DeserializeObject<Attachment>(result);
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to PUT an attachment.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Delete the attachment
+        /// </summary>
+        /// <param name="attachmentId">Id of the attachment to delete</param>
+        public async Task DeleteAttachmentAsync(string attachmentId)
+        {
+            if (string.IsNullOrWhiteSpace(attachmentId))
+            {
+                throw new ArgumentNullException("attachmentId");
+            }
+            var urlPath = UrlUtility.CombineUrlPath(new string[] { _attachmentsPath, attachmentId });
+
+            var headers = new NameValueCollection();
+            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+            try
+            {
+                var response = await ExecuteDeleteRequestWithResponseAsync(urlPath, headers: headers);
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to DELETE an attachment.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get the attachment collection by ID
+        /// </summary>
+        /// <param name="attachmentCollectionId">The attachment collection Id</param>
+        /// <returns>The <see cref="AttachmentCollection">Attachment Collection</see></returns>
+        public async Task<AttachmentCollection> GetAttachmentCollectionByIdAsync(string attachmentCollectionId)
+        {
+            try
+            {
+                var urlPath = UrlUtility.CombineUrlPath(_attachmentsCollectionPath, attachmentCollectionId);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var result = await response.Content.ReadAsStringAsync();
+
+                var resource = JsonConvert.DeserializeObject<AttachmentCollection>(response.Content.ReadAsStringAsync().Result);
+                return resource;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get attachment collection by ID.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get the attachment collections for current user
+        /// </summary>
+        /// <returns>List of <see cref="AttachmentCollection">Attachment Collections</see></returns>
+        public async Task<IEnumerable<AttachmentCollection>> GetAttachmentCollectionsByUserAsync()
+        {
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                var response = await ExecuteGetRequestWithResponseAsync(_attachmentsCollectionPath, headers: headers);
+                var result = await response.Content.ReadAsStringAsync();
+
+                var resource = JsonConvert.DeserializeObject<IEnumerable<AttachmentCollection>>(response.Content.ReadAsStringAsync().Result);
+                return resource;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get attachment collection by user.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Create the new attachment collection
+        /// </summary>
+        /// <param name="attachmentCollection">The <see cref="AttachmentCollection">Attachment Collection</see> to create</param>
+        /// <returns>Newly created <see cref="AttachmentCollection">Attachment Collection</see></returns>
+        public async Task<AttachmentCollection> PostAttachmentCollectionAsync(AttachmentCollection attachmentCollection)
+        {
+            if (attachmentCollection == null)
+            {
+                throw new ArgumentNullException("attachmentCollection");
+            }
+
+            var headers = new NameValueCollection();
+            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+            try
+            {
+                var response = await ExecutePostRequestWithResponseAsync(attachmentCollection, _attachmentsCollectionPath, headers: headers);
+                var result = await response.Content.ReadAsStringAsync();
+                return JsonConvert.DeserializeObject<AttachmentCollection>(result);
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to POST an attachment collection.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Update the attachment collection
+        /// </summary>
+        /// <param name="attachmentCollectionId">The ID of the attachment collection to update</param>
+        /// <param name="attachmentCollection">The updated <see cref="AttachmentCollection">Attachment Collection</see></param>
+        public async Task<AttachmentCollection> PutAttachmentCollectionAsync(string attachmentCollectionId, AttachmentCollection attachmentCollection)
+        {
+            if (attachmentCollection == null)
+            {
+                throw new ArgumentNullException("attachmentCollection");
+            }
+
+            if (string.IsNullOrWhiteSpace(attachmentCollectionId))
+            {
+                throw new ArgumentNullException("attachmentCollectionId");
+            }
+
+            if (attachmentCollectionId != attachmentCollection.Id)
+            {
+                throw new ArgumentException("The attachment collection ID from the URL does not match the one in the body");
+            }
+
+            var urlPath = UrlUtility.CombineUrlPath(new string[] { _attachmentsCollectionPath, attachmentCollectionId });
+
+            var headers = new NameValueCollection();
+            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+            try
+            {
+                var response = await ExecutePutRequestWithResponseAsync(attachmentCollection, urlPath, headers: headers);
+                var result = await response.Content.ReadAsStringAsync();
+                return JsonConvert.DeserializeObject<AttachmentCollection>(result);
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to PUT an attachment collection.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get the attachment collection effective permissions for the current user
+        /// </summary>
+        /// <param name="attachmentCollectionId">The attachment collection Id</param>
+        /// <returns>The <see cref="AttachmentCollectionEffectivePermissions">Attachment Collection Effective Permissions</see></returns>
+        public async Task<AttachmentCollectionEffectivePermissions> GetAttachmentCollectionEffectivePermissionsAsync(string attachmentCollectionId)
+        {
+            if (string.IsNullOrEmpty(attachmentCollectionId))
+                throw new ArgumentNullException("attachmentCollectionId");
+
+            try
+            {
+                var urlPath = UrlUtility.CombineUrlPath(_attachmentsCollectionPath, attachmentCollectionId, _attachmentsCollectionEffectivePermissionsPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                return JsonConvert.DeserializeObject<AttachmentCollectionEffectivePermissions>(response.Content.ReadAsStringAsync().Result);
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get attachment collection effective permissions.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get a Content Key
+        /// </summary>
+        /// <param name="id">The encryption key ID to use to encrypt the content key</param>
+        /// <returns>The <see cref="ContentKey">Content Key</see></returns>
+        public async Task<ContentKey> GetContentKeyAsync(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+                throw new ArgumentNullException("id");
+
+            try
+            {
+                var urlPath = UrlUtility.CombineUrlPath(_contentKeysPath, id);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var result = await response.Content.ReadAsStringAsync();
+
+                return JsonConvert.DeserializeObject<ContentKey>(response.Content.ReadAsStringAsync().Result);
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get a content key.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Post an encrypted content key to have it decrypted
+        /// </summary>
+        /// <param name="contentKeyRequest">The <see cref="ContentKeyRequest">Content Key Request</see></param>
+        /// <returns>The <see cref="ContentKey">Content Key</see></returns>
+        public async Task<ContentKey> PostContentKeyAsync(ContentKeyRequest contentKeyRequest)
+        {
+            if (contentKeyRequest == null)
+                throw new ArgumentNullException("contentKeyRequest");
+
+            var headers = new NameValueCollection();
+            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+            try
+            {
+                var response = await ExecutePostRequestWithResponseAsync(contentKeyRequest, _contentKeysPath, headers: headers);
+                var result = await response.Content.ReadAsStringAsync();
+                return JsonConvert.DeserializeObject<ContentKey>(result);
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to POST a content key.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get all <see cref="AgreementPeriod">agreement periods</see>
+        /// </summary>
+        /// <param name="useCache">Defaults to true: If true, cached repository data will be returned when possible, otherwise fresh data is returned.</param>
+        /// <returns>All agreement periods</returns>
+        public async Task<IEnumerable<AgreementPeriod>> GetAgreementPeriodsAsync(bool useCache = true)
+        {
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(_agreementPeriodsPath, headers: headers, useCache: useCache);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<AgreementPeriod>>(response.Content.ReadAsStringAsync().Result);
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get agreement periods.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Retrieve person agreements using person agreement query criteria
+        /// </summary>
+        /// <param name="criteria">Query criteria for retrieving person agreements</param>
+        /// <returns>Collection of person agreements for a given person</returns>
+        public async Task<IEnumerable<PersonAgreement>> QueryPersonAgreementsByPostAsync(PersonAgreementQueryCriteria criteria)
+        {
+            if (criteria == null || string.IsNullOrEmpty(criteria.PersonId))
+            {
+                throw new ArgumentNullException("id", "A person ID is required to retrieve person agreements by person ID.");
+            }
+            try
+            {
+                // Build url path from qapi path and person-agreements path
+                string[] pathStrings = new string[] { _qapiPath, _personAgreementsPath };
+                var urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<IEnumerable<Ellucian.Colleague.Dtos.Base.PersonAgreement>>(response.Content.ReadAsStringAsync().Result);
+            }
+            catch (Exception ex)
+            {
+                string message = string.Format("Person agreements data for person {0} could not be retrieved.", criteria.PersonId);
+                logger.Error(ex.GetBaseException(), message);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Updates a <see cref="PersonAgreement">person agreement</see>. Users can only update the status and the date and time that action was taken on the person agreement.
+        /// </summary>
+        /// <param name="agreement">The <see cref="PersonAgreement">person agreement</see> to update</param>
+        /// <returns>An updated <see cref="PersonAgreement">person agreement</see></returns>
+        /// <accessComments>Authenticated users can only update their own person agreements.</accessComments>
+        public async Task<PersonAgreement> UpdatePersonAgreementAsync(PersonAgreement agreement)
+        {
+            if (agreement == null)
+            {
+                throw new ArgumentNullException("agreement", "A person agreement is required when updating a person agreement.");
+            }
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePutRequestWithResponseAsync(agreement, _personAgreementsPath, headers: headers);
+                return JsonConvert.DeserializeObject<Ellucian.Colleague.Dtos.Base.PersonAgreement>(response.Content.ReadAsStringAsync().Result);
+            }
+            catch (Exception ex)
+            {
+                string message = string.Format("An error occurred while updating person agreement {0} for person {1}.", agreement.Id, agreement.PersonId);
+                logger.Error(ex.GetBaseException(), message);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Asynchronously returns the Session Configuration.
+        /// </summary>
+        /// <returns>The Session Configuration object</returns>
+        public async Task<SessionConfiguration> GetSessionConfigurationAsync()
+        {
+            try
+            {
+                var urlPath = UrlUtility.CombineUrlPath(_configurationPath, _sessionPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var responseString = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var configuration = JsonConvert.DeserializeObject<SessionConfiguration>(await responseString.Content.ReadAsStringAsync());
+
+                return configuration;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get the Session Configuration.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Requests a user ID recovery
+        /// </summary>
+        /// <param name="userIdRecoveryRequest">User ID Recovery Request information</param>
+        /// <returns></returns>
+        public async Task RequestUserIdRecoveryAsync(UserIdRecoveryRequest userIdRecoveryRequest)
+        {
+            try
+            {
+                var urlPath = UrlUtility.CombineUrlPath(_sessionPath, _recoverUserIdPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var responseString = await ExecutePostRequestWithResponseAsync<UserIdRecoveryRequest>(userIdRecoveryRequest, urlPath, headers: headers);
+                return;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to recover user ID.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Requests a password reset token
+        /// </summary>
+        /// <param name="passwordResetTokenRequest">Password Reset Token Request information</param>
+        /// <returns></returns>
+        public async Task RequestPasswordResetTokenAsync(PasswordResetTokenRequest passwordResetTokenRequest)
+        {
+            try
+            {
+                var urlPath = UrlUtility.CombineUrlPath(_sessionPath, _passwordResetTokenRequestPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var responseString = await ExecutePostRequestWithResponseAsync<PasswordResetTokenRequest>(passwordResetTokenRequest, urlPath, headers: headers);
+                return;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to request password reset token.");
+                throw;
+            }
+        }
+
+        public async Task ResetPasswordAsync(ResetPassword resetPassword)
+        {
+            try
+            {
+                var urlPath = UrlUtility.CombineUrlPath(_sessionPath, _resetPasswordPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent);
+                var responseString = await ExecutePostRequestWithResponseAsync<ResetPassword>(resetPassword, urlPath, headers: headers);
+                return;
+            }
+            catch (Exception ex)
+            {
+                logger.Info(ex, "Unable to reset password.");
+                throw;
+            }
+
+        }
+
+        /// <summary>
+        /// Gets list of all Tax form box codes
+        /// </summary>
+        /// <returns>Returns List of Tax form box codes</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        /// <exception cref="Exception">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.Base.TaxFormBoxCodes>> GetAllTaxFormBoxCodesAsync()
+        {
+            try
+            {
+                // Create and execute a request to get the list of tax form box codes
+                string[] pathStrings = new string[] { _taxFormBoxCodesPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<List<Ellucian.Colleague.Dtos.Base.TaxFormBoxCodes>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get tax form box codes.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get tax form box codes.");
                 throw;
             }
         }

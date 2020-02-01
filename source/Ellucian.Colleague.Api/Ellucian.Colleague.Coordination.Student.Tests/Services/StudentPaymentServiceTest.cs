@@ -17,6 +17,7 @@ using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Web.Adapters;
 using System.Collections.ObjectModel;
 using Ellucian.Data.Colleague;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 {
@@ -87,7 +88,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
             createStudentPayments.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.CreateStudentPayments));
             viewStudentPayments.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.ViewStudentPayments));
-            _roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() {viewStudentPayments, createStudentPayments});
+            _roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewStudentPayments, createStudentPayments });
 
             _studentPaymentService = new StudentPaymentService(_studentPaymentRepositoryMock.Object,
                 _personRepositoryMock.Object, _referenceDataRepositoryMock.Object,
@@ -204,7 +205,25 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             Assert.AreEqual(Dtos.EnumProperties.CurrencyCodes.CAD, actual.Amount.Currency);
 
         }
-
+        
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task StudentPaymentService_GetByIDAsync_NoPermissions()
+        {
+            _studentPaymentRepositoryMock.Setup(x => x.GetByIdAsync(It.IsAny<string>())).ReturnsAsync(studentPaymentEntity);
+            _personRepositoryMock.Setup(x => x.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("e6857066-13a2-4316-981f-308d1474eabf");
+            _roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>());
+            var actual = await _studentPaymentService.GetByIdAsync(studentPaymentEntity.Guid);
+        }
+        [TestMethod]
+        public async Task StudentPaymentService_GetByIDAsync_CreatePermissionGrantsViewPermission()
+        {
+            _studentPaymentRepositoryMock.Setup(x => x.GetByIdAsync(It.IsAny<string>())).ReturnsAsync(studentPaymentEntity);
+            _personRepositoryMock.Setup(x => x.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("e6857066-13a2-4316-981f-308d1474eabf");
+            _roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createStudentPayments });
+            var actual = await _studentPaymentService.GetByIdAsync(studentPaymentEntity.Guid);
+            Assert.IsNotNull(actual);
+        }
         [TestMethod]
         [ExpectedException(typeof (ArgumentNullException))]
         public async Task StudentPaymentService_GetByIDAsync_NotFound()
@@ -748,8 +767,32 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
             _termRepositoryMock.Setup(x => x.GetAsync(It.IsAny<bool>())).ReturnsAsync(termCollection);
             _termRepositoryMock.Setup(x => x.GetAsync()).ReturnsAsync(termCollection);
+
+            foreach (var tc in termCollection)
+            {
+                _termRepositoryMock.Setup(x => x.GetAcademicPeriodsGuidAsync(tc.Code)).ReturnsAsync(tc.RecordGuid);
+                _termRepositoryMock.Setup(x => x.GetAcademicPeriodsCodeFromGuidAsync(tc.RecordGuid)).ReturnsAsync(tc.Code);
+            }
+
             _studentReferenceDataRepositoryMock.Setup(x => x.GetDistrMethodCodesAsync(It.IsAny<bool>())).ReturnsAsync(distributionCodeCollection);
+            foreach (var dc in distributionCodeCollection)
+            {
+                _studentReferenceDataRepositoryMock.Setup(x => x.GetDistrMethodGuidAsync(dc.Code)).ReturnsAsync(dc.Guid);
+                _studentReferenceDataRepositoryMock.Setup(x => x.GetDistrMethodCodeFromGuidAsync(dc.Guid)).ReturnsAsync(dc.Code);
+            }
+
             _studentReferenceDataRepositoryMock.Setup(x => x.GetAccountReceivableTypesAsync(It.IsAny<bool>())).ReturnsAsync(accountReceivalbeTypesCollection);
+            foreach (var ar in accountReceivalbeTypesCollection)
+            {
+                _studentReferenceDataRepositoryMock.Setup(x => x.GetAccountReceivableTypesGuidAsync(ar.Code)).ReturnsAsync(ar.Guid);
+                _studentReferenceDataRepositoryMock.Setup(x => x.GetAccountReceivableTypesCodeFromGuidAsync(ar.Guid)).ReturnsAsync(ar.Code);
+            }
+
+
+            Dictionary<string, string> dict = new Dictionary<string, string>();
+            dict.Add("0000122", "e6857066-13a2-4316-981f-308d1474eabf");
+            dict.Add("0000123", "e6857066-13a2-4316-981f-308d1474eabf");
+            _personRepositoryMock.Setup(repo => repo.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(dict);
 
         }
 
@@ -807,7 +850,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             Tuple<IEnumerable<Domain.Student.Entities.StudentPayment>, int> studentPaymentTuple = new Tuple<IEnumerable<Domain.Student.Entities.StudentPayment>, int>(studentPaymentEntityCollection, 2);
 
             _personRepositoryMock.Setup(x => x.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("e6857066-13a2-4316-981f-308d1474eabf");
-            _studentPaymentRepositoryMock.Setup(x => x.GetAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), "", "", "", "",It.IsAny<string>())).ReturnsAsync(studentPaymentTuple);
+            _studentPaymentRepositoryMock.Setup(x => x.GetAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), "", "", "", "",It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(studentPaymentTuple);
 
             var actuals = await _studentPaymentService.GetAsync2(0, 100, true, "", "", "", "");
 
@@ -852,7 +895,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 (studentPaymentEntityCollection, 1);
             _personRepositoryMock.Setup(x => x.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("0000122");
             _personRepositoryMock.Setup(x => x.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("e6857066-13a2-4316-981f-308d1474eabf");
-            _studentPaymentRepositoryMock.Setup(x => x.GetAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), "", "", "", "")).ReturnsAsync(studentPaymentTuple);
+            _studentPaymentRepositoryMock.Setup(x => x.GetAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), "", "", "", "", "")).ReturnsAsync(studentPaymentTuple);
 
             var actuals = await _studentPaymentService.GetAsync2(0, 100, true, "e6857066-13a2-4316-981f-308d1474eabf", "", "", "");
 
@@ -897,7 +940,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 new Tuple<IEnumerable<Domain.Student.Entities.StudentPayment>, int>(studentPaymentEntityCollection, 1);
 
             _personRepositoryMock.Setup(x => x.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("e6857066-13a2-4316-981f-308d1474eabf");
-            _studentPaymentRepositoryMock.Setup(x => x.GetAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), "", It.IsAny<string>(), "", "", "")).ReturnsAsync(studentPaymentTuple);
+            _studentPaymentRepositoryMock.Setup(x => x.GetAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), "", It.IsAny<string>(), "", "", "", "")).ReturnsAsync(studentPaymentTuple);
 
             var actuals = await _studentPaymentService.GetAsync2(0, 100, true, "", "1869dab7-12dc-4ea6-8c6d-8bedd36ebefe", "", "");
 
@@ -942,7 +985,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
             _studentReferenceDataRepositoryMock.Setup(x => x.GetDistrMethodCodesAsync(It.IsAny<bool>())).ReturnsAsync(distributionCodeCollection);
             _personRepositoryMock.Setup(x => x.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("e6857066-13a2-4316-981f-308d1474eabf");
-            _studentPaymentRepositoryMock.Setup(x => x.GetAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), "", "", It.IsAny<string>(), "", "")).ReturnsAsync(studentPaymentTuple);
+            _studentPaymentRepositoryMock.Setup(x => x.GetAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), "", "", It.IsAny<string>(), "", "", "")).ReturnsAsync(studentPaymentTuple);
 
             var actuals = await _studentPaymentService.GetAsync2(0, 100, true, "", "", "05cce1d0-c75c-40d7-9be0-88b61f2acfa6", "");
 
@@ -987,7 +1030,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 new Tuple<IEnumerable<Domain.Student.Entities.StudentPayment>, int>(studentPaymentEntityCollection, 1);
 
             _personRepositoryMock.Setup(x => x.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("e6857066-13a2-4316-981f-308d1474eabf");
-            _studentPaymentRepositoryMock.Setup(x => x.GetAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), "", "", "", It.IsAny<string>(), "")).ReturnsAsync(studentPaymentTuple);
+            _studentPaymentRepositoryMock.Setup(x => x.GetAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), "", "", "", It.IsAny<string>(), "", "")).ReturnsAsync(studentPaymentTuple);
 
             var actuals = await _studentPaymentService.GetAsync2(0, 100, true, "", "", "", "sponsor");
 
@@ -1056,7 +1099,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             Tuple<IEnumerable<Domain.Student.Entities.StudentPayment>, int> studentPaymentTuple =
                 new Tuple<IEnumerable<Domain.Student.Entities.StudentPayment>, int>(null, 0);
 
-            _studentPaymentRepositoryMock.Setup(x => x.GetAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), "", "", "", "", "")).ReturnsAsync(studentPaymentTuple);
+            _studentPaymentRepositoryMock.Setup(x => x.GetAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), "", "", "", "", "", "")).ReturnsAsync(studentPaymentTuple);
             var actuals = await _studentPaymentService.GetAsync2(0, 100, true, "", "", "", "");
             Assert.AreEqual(0, actuals.Item2);
         }
@@ -1151,7 +1194,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentNullException))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task StudentPaymentService_CreateAsync2_NullPerson()
         {
 
@@ -1161,7 +1204,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentNullException))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task StudentPaymentService_CreateAsync2_PaymentType_notset()
         {
             studentPaymentDto.PaymentType = Dtos.EnumProperties.StudentPaymentTypes.notset;
@@ -1169,14 +1212,14 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentNullException))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task StudentPaymentService_CreateAsync2_NullAccountingCode()
         {
             var actual = await _studentPaymentService.CreateAsync2(studentPaymentDto);
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentNullException))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task StudentPaymentService_CreateAsync2_FundingSourceIsNull()
         {
             studentPaymentDto.FundingSource = null;
@@ -1184,14 +1227,33 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task StudentPaymentService_CreateAsync2_TermEntity_Null()
         {
             studentPaymentDto.FundingDestination = null;
             studentPaymentDto.AcademicPeriod = null;
             var actual = await _studentPaymentService.CreateAsync2(studentPaymentDto);
         }
-        
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StudentPaymentService_CreateAsync2_OriginatedOn_Null()
+        {
+            studentPaymentDto.ReportingDetail = new Dtos.DtoProperties.StudentPaymentsReportingDtoProperty();
+            studentPaymentDto.ReportingDetail.Usage = Dtos.EnumProperties.StudentPaymentUsageTypes.taxReportingOnly;
+            var actual = await _studentPaymentService.CreateAsync2(studentPaymentDto);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StudentPaymentService_CreateAsync2_Usage_Null()
+        {
+            studentPaymentDto.ReportingDetail = new Dtos.DtoProperties.StudentPaymentsReportingDtoProperty();
+            studentPaymentDto.ReportingDetail.OriginatedOn = new DateTime(2019, 11, 12);
+
+            var actual = await _studentPaymentService.CreateAsync2(studentPaymentDto);
+        }
+
     }
 
     #endregion

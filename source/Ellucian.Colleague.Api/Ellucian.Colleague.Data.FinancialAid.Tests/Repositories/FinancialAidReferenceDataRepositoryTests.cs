@@ -1,4 +1,4 @@
-﻿/*Copyright 2014-2018 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2014-2019 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -17,9 +17,6 @@ using Ellucian.Web.Http.TestUtil;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
-using Ellucian.Web.Http.Configuration;
-using System.Threading;
-using System.Runtime.Caching;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -1492,6 +1489,33 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                 loggerMock.Verify(l => l.Error(It.IsAny<Exception>(), It.IsAny<string>()));
             }
 
+            [TestMethod]
+            public void AllComponentsAreIndirectCostsTest()
+            {
+                Assert.IsTrue(actualBudgetComponenets.All(budget => budget.CostType == BudgetComponentCostType.Indirect));
+            }
+
+            [TestMethod]
+            public void EmptyCostIndicatorValues_AllComponentsAreNullCostTypeTest()
+            {
+                expectedRepository.BudgetComponentData.ForEach(b => b.IsDirectCost = "");
+                Assert.IsTrue(actualBudgetComponenets.All(budget => budget.CostType == null));
+            }
+
+            [TestMethod]
+            public void UnexpectedCostIndicatorValues_AllComponentsAreNullCostTypeTest()
+            {
+                expectedRepository.BudgetComponentData.ForEach(b => b.IsDirectCost = "XYZ");
+                Assert.IsTrue(actualBudgetComponenets.All(budget => budget.CostType == null));
+            }
+
+            [TestMethod]
+            public void AllComponentsAreDirectCostsTest()
+            {
+                expectedRepository.BudgetComponentData.ForEach(b => b.IsDirectCost = "D");
+                Assert.IsTrue(actualBudgetComponenets.All(budget => budget.CostType == BudgetComponentCostType.Direct));
+            }
+
             private FinancialAidReferenceDataRepository BuildFinancialAidReferenceDataRepository()
             {
                 dataReaderMock.Setup(r => r.BulkReadRecord<FaSuites>("", true))
@@ -1508,7 +1532,8 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                                 {
                                     Recordkey = budget.Code,
                                     FbcDesc = budget.Description,
-                                    FbcShopsheetGroup = budget.ShoppingSheetGroupCode
+                                    FbcShopsheetGroup = budget.ShoppingSheetGroupCode,
+                                    FbcCostIndicator = budget.IsDirectCost
                                 }
                             ).ToList());
                         }

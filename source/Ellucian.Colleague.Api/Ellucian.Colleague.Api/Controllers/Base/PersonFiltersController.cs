@@ -1,19 +1,13 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
+
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Web;
 using System.Web.Http;
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base.Services;
-using Ellucian.Colleague.Domain.Base.Repositories;
-using Ellucian.Colleague.Dtos.Base;
-using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using slf4net;
@@ -21,6 +15,7 @@ using System.Threading.Tasks;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Http.Filters;
+using Ellucian.Web.Http.Models;
 
 namespace Ellucian.Colleague.Api.Controllers.Base
 {
@@ -45,6 +40,61 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             _demographicService = demographicService;
             _logger = logger;
         }
+
+        /// <remarks>FOR USE WITH ELLUCIAN EEDM VERSION 6</remarks>
+        /// <summary>
+        /// Retrieves all person filters.
+        /// </summary>
+        /// <returns>All PersonFilters objects.</returns>
+        [HttpGet, EedmResponseFilter, ValidateQueryStringFilter(new string[] {"code", "title" })]
+        [QueryStringFilterFilter("criteria", typeof(Dtos.PersonFilter))]
+        [FilteringFilter(IgnoreFiltering = true)]
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.PersonFilter>> GetPersonFilters2Async(QueryStringFilter criteria)
+        {
+            bool bypassCache = false;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
+            try
+            {
+                var filter = GetFilterObject<Dtos.PersonFilter>(_logger, "criteria");
+
+                if (CheckForEmptyFilterParameters())
+                    return new List<Dtos.PersonFilter>(new List<Dtos.PersonFilter>());
+
+                var personFiltersEntities = await _demographicService.GetPersonFiltersAsync(bypassCache);
+
+                //apply filters
+                if (filter != null && personFiltersEntities != null && personFiltersEntities.Any())
+                {
+                    if (!string.IsNullOrEmpty(filter.Code))
+                    {
+                        personFiltersEntities = personFiltersEntities.Where(pf => pf.Code.Equals(filter.Code, StringComparison.OrdinalIgnoreCase));
+                    }
+                    if ((personFiltersEntities.Any()) && (!string.IsNullOrEmpty(filter.Title)))
+                    {
+                        personFiltersEntities = personFiltersEntities.Where(pf => pf.Title.IndexOf(filter.Title, StringComparison.OrdinalIgnoreCase) >= 0);
+                    }
+                }
+
+                AddEthosContextProperties(
+                        await _demographicService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                        await _demographicService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                            personFiltersEntities.Select(pf => pf.Id).ToList()));
+
+                return personFiltersEntities;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(ex));
+            }
+        }
+
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM VERSION 6</remarks>
         /// <summary>
@@ -79,6 +129,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(ex));
             }
         }
+
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM VERSION 6</remarks>
         /// <summary>

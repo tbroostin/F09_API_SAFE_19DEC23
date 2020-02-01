@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Tests.UserFactories;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
@@ -26,13 +26,9 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         private HumanResourcesTaxFormPdfService service = null;
         private TestHumanResourcesTaxFormPdfDataRepository TestPdfDataRepository;
         private Mock<IHumanResourcesTaxFormPdfDataRepository> mockTaxFormPdfDataRepository;
-        private Mock<IPersonRepository> mockPersonRepository;
         private ICurrentUserFactory currentUserFactory;
         private string personId = "000001";
-        private string fakePdfPath = "fakePath";
         private string exceptionString = "exception";
-        private List<string> institutionAddressLines;
-        private Mock<IPdfSharpRepository> mockPdfSharpRepository;
 
         [TestInitialize]
         public void Initialize()
@@ -56,7 +52,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 throw new Exception("An exception occurred.");
             });
 
-            mockPdfSharpRepository = new Mock<IPdfSharpRepository>();
             BuildTaxFormPdfService();
         }
 
@@ -96,7 +91,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 
             // Set up the current user with a subset of tax form statements and set up the service.
             service = new HumanResourcesTaxFormPdfService(this.mockTaxFormPdfDataRepository.Object,
-                this.mockPdfSharpRepository.Object,
                 adapterRegistry.Object,
                 currentUserFactory,
                 roleRepository.Object,

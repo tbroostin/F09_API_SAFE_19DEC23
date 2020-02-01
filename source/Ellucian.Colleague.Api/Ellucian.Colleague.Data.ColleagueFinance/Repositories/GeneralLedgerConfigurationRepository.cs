@@ -36,6 +36,15 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// </summary>
         public async Task<GeneralLedgerFiscalYearConfiguration> GetFiscalYearConfigurationAsync()
         {
+            var fiscalYearConfiguration = await GetOrAddToCacheAsync<GeneralLedgerFiscalYearConfiguration>("GeneralLedgerFiscalYearConfiguration",
+               async () => await BuildGlFiscalYearConfiguration());
+
+            return fiscalYearConfiguration;
+            
+        }
+
+        private async Task<GeneralLedgerFiscalYearConfiguration> BuildGlFiscalYearConfiguration()
+        {
             var dataContract = await DataReader.ReadRecordAsync<Fiscalyr>("ACCOUNT.PARAMETERS", "FISCAL.YEAR", true);
 
             if (dataContract == null)

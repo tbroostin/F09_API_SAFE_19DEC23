@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base;
 using Ellucian.Colleague.Dtos.Student;
 using System;
@@ -65,5 +65,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <returns>Faculty permissions for the authenticated user.</returns>
         Task<FacultyPermissions> GetFacultyPermissions2Async();
+
+        /// <summary>
+        /// Returns the list of faculty office hours for the faculty ids
+        /// </summary>
+        /// <param name="facultyIds">A list of faculty id's</param>
+        /// <returns></returns>
+        Task<IEnumerable<FacultyOfficeHours>> GetFacultyOfficeHoursAsync(IEnumerable<string> facultyIds);
     }
 }

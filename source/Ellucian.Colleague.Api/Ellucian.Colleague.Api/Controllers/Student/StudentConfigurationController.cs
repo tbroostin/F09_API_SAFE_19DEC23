@@ -1,6 +1,7 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
+using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Dtos.Student;
 using Ellucian.Web.Adapters;
@@ -24,10 +25,10 @@ namespace Ellucian.Colleague.Api.Controllers.Student
     [EllucianLicenseModule(ModuleConstants.Student)]
     public class StudentConfigurationController : BaseCompressedApiController
     {
-        
+        private readonly IStudentConfigurationService _configurationService;
         private readonly IStudentConfigurationRepository _configurationRepository;
         private readonly IAdapterRegistry _adapterRegistry;
-        private readonly ILogger _logger; 
+        private readonly ILogger _logger;
 
         /// <summary>
         /// StudentConfigurationController class constructor
@@ -35,8 +36,10 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="configurationRepository">Repository of type <see cref="IStudentConfigurationRepository">IStudentConfigurationRepository</see></param>
         /// <param name="adapterRegistry">Adapter registry of type <see cref="IAdapterRegistry">IAdapterRegistry</see></param>
         /// <param name="logger">Logger of type <see cref="ILogger">ILogger</see></param>
-        public StudentConfigurationController(IStudentConfigurationRepository configurationRepository, IAdapterRegistry adapterRegistry, ILogger logger)
+        /// <param name="configurationService">Service of type <see cref="IStudentConfigurationService">IStudentConfigurationService</see></param>
+        public StudentConfigurationController(IStudentConfigurationRepository configurationRepository, IAdapterRegistry adapterRegistry, ILogger logger, IStudentConfigurationService configurationService)
         {
+            _configurationService = configurationService;
             _configurationRepository = configurationRepository;
             _adapterRegistry = adapterRegistry;
             _logger = logger;
@@ -122,11 +125,31 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         }
 
         /// <summary>
+        /// Retrieves the student profile configuration information needed for student profile asynchronously.
+        /// </summary>
+        /// <returns>The <see cref="StudentProfileConfiguration">Student Profile Configuration</see></returns>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="System.Net.Http.HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>. NotFound if the required setup is not complete or available.</exception>
+        /// <accessComments>Any authenticated user can get this resource.</accessComments>
+        public async Task<StudentProfileConfiguration> GetStudentProfileConfigurationAsync()
+        {
+            try
+            {
+                return await _configurationService.GetStudentProfileConfigurationAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.ToString());
+                throw CreateHttpResponseException("Error retrieving Student Profile Configuration for faculty", HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
         /// Retrieves the configuration information needed for course catalog searches asynchronously.
         /// </summary>
         /// <returns>The <see cref="CourseCatalogConfiguration">Course Catalog Configuration</see></returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="System.Net.Http.HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>. </exception>
         /// <accessComments>Any authenticated user can get this resource.</accessComments>
+        [Obsolete("Obsolete as of API version 1.26, use version 2 of this API")]
         public async Task<CourseCatalogConfiguration> GetCourseCatalogConfigurationAsync()
         {
             CourseCatalogConfiguration configurationDto = null;
@@ -134,6 +157,29 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 Ellucian.Colleague.Domain.Student.Entities.CourseCatalogConfiguration configuration = await _configurationRepository.GetCourseCatalogConfigurationAsync();
                 var catalogConfigurationDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.CourseCatalogConfiguration, Ellucian.Colleague.Dtos.Student.CourseCatalogConfiguration>();
+                configurationDto = catalogConfigurationDtoAdapter.MapToType(configuration);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.ToString());
+                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
+            }
+            return configurationDto;
+        }
+
+        /// <summary>
+        /// Retrieves the configuration information needed for course catalog searches asynchronously.
+        /// </summary>
+        /// <returns>The <see cref="CourseCatalogConfiguration2">Course Catalog Configuration</see></returns>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="System.Net.Http.HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>. </exception>
+        /// <accessComments>Any authenticated user can get this resource.</accessComments>
+        public async Task<CourseCatalogConfiguration2> GetCourseCatalogConfiguration2Async()
+        {
+            CourseCatalogConfiguration2 configurationDto = null;
+            try
+            {
+                Ellucian.Colleague.Domain.Student.Entities.CourseCatalogConfiguration configuration = await _configurationRepository.GetCourseCatalogConfiguration2Async();
+                var catalogConfigurationDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.CourseCatalogConfiguration, Ellucian.Colleague.Dtos.Student.CourseCatalogConfiguration2>();
                 configurationDto = catalogConfigurationDtoAdapter.MapToType(configuration);
             }
             catch (Exception ex)
@@ -162,7 +208,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (Exception ex)
             {
                 _logger.Error(ex.ToString());
-                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException("Could not retrieve registration configuration data.", HttpStatusCode.BadRequest);
             }
             return configurationDto;
         }

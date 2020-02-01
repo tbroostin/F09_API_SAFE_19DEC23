@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.ColleagueFinance.Transactions;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
@@ -33,8 +33,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// Create or update a new draft budget adjustment.
         /// </summary>
         /// <param name="draftBudgetAdjustmentInput">Draft budget adjustment.</param>
+        /// <param name="majorComponentStartPosition">List of the major component start positions.</param>
         /// <returns>Draft budget adjustment</returns>
-        public async Task<DraftBudgetAdjustment> SaveAsync(DraftBudgetAdjustment draftBudgetAdjustmentInput)
+        public async Task<DraftBudgetAdjustment> SaveAsync(DraftBudgetAdjustment draftBudgetAdjustmentInput, IList<string> majorComponentStartPosition)
         {
             // loop through the adjustment lines, if there are any, and set the GL numbers, from amounts, and 
             // and to amounts that will be passed into the CTX.
@@ -47,7 +48,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 {
                     if (!(string.IsNullOrEmpty(adjustmentLine.GlNumber)))
                     {
-                        var internalGlNumber = GlAccountUtility.ConvertToInternalFormat(adjustmentLine.GlNumber);
+                        var internalGlNumber = GlAccountUtility.ConvertGlAccountToInternalFormat(adjustmentLine.GlNumber, majorComponentStartPosition);
                         glNumbers.Add(internalGlNumber);
                     }
                     else

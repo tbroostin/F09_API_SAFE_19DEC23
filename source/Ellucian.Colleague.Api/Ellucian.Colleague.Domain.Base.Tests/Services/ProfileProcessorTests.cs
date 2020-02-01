@@ -609,6 +609,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Services
             private ICurrentUser currentUser;
             private ILogger logger;
             private bool isProfileChanged;
+            private List<AddressRelationType> allAdrelTypes;
 
 
             [TestInitialize]
@@ -639,6 +640,16 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Services
                 configuration.UpdateEmailTypeConfiguration(true, null, true, null);
                 configuration.CanUpdateEmailWithoutPermission = true;
                 configuration.CanUpdatePhoneWithoutPermission = true;
+
+                allAdrelTypes = new List<AddressRelationType>()
+                {
+                    new AddressRelationType("H", "Home", "1", ""),
+                    new AddressRelationType("B", "Business", "2", ""),
+                    new AddressRelationType("CO", "Correction", "7", ""),
+                    new AddressRelationType("LO", "Local", "", ""),
+                    new AddressRelationType("WB", "Web Obtained", "3", ""),
+                    new AddressRelationType("WB2", "Other Web", "3", "")
+                };
 
                 logger = new Mock<ILogger>().Object;
                 ProfileProcessor.InitializeLogger(logger);

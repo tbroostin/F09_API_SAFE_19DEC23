@@ -37,16 +37,13 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Ellucian.Logging, Version=1.0.0.1, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\Ellucian.Logging.MSEL.1.0.0.240\lib\net451\Ellucian.Logging.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>..\packages\Ellucian.Logging.MSEL.1.0.0.248\lib\net451\Ellucian.Logging.dll</HintPath>
     </Reference>
     <Reference Include="Ellucian.Rest.Client, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\Ellucian.Rest.Client.1.0.0.186\lib\net451\Ellucian.Rest.Client.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>..\packages\Ellucian.Rest.Client.1.0.0.192\lib\net451\Ellucian.Rest.Client.dll</HintPath>
     </Reference>
     <Reference Include="Ellucian.Web.Utility, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\Ellucian.Web.Utility.1.0.0.181\lib\net451\Ellucian.Web.Utility.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>..\packages\Ellucian.Web.Utility.1.0.0.184\lib\net451\Ellucian.Web.Utility.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.Practices.EnterpriseLibrary.Common, Version=5.0.505.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
@@ -114,6 +111,7 @@
     <Compile Include="ColleagueApiClientFinancialAidTests.cs" />
     <Compile Include="ColleagueApiClientHumanResourcesTests.cs" />
     <Compile Include="ColleagueApiClientStudentTests.cs" />
+    <Compile Include="ColleagueApiClientPlanningTests.cs" />
     <Compile Include="ColleagueApiClientTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ColleagueApiClientFinanceTests.cs" />
@@ -170,6 +168,10 @@
     <ProjectReference Include="..\Ellucian.Colleague.Dtos.HumanResources\Ellucian.Colleague.Dtos.HumanResources.csproj">
       <Project>{1a7b9d0e-1665-492c-b287-0d89710408e5}</Project>
       <Name>Ellucian.Colleague.Dtos.HumanResources</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos.Planning\Ellucian.Colleague.Dtos.Planning.csproj">
+      <Project>{BA6CC859-0852-4027-AABF-8536C495D239}</Project>
+      <Name>Ellucian.Colleague.Dtos.Planning</Name>
     </ProjectReference>
     <ProjectReference Include="..\Ellucian.Colleague.Dtos.Student\Ellucian.Colleague.Dtos.Student.csproj">
       <Project>{28EB3CAC-2FA7-401E-8246-0C03C50FDEDA}</Project>

@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
 using System;
 
 namespace Ellucian.Colleague.Dtos.Attributes
@@ -8,6 +8,11 @@ namespace Ellucian.Colleague.Dtos.Attributes
     /// </summary>
     public class FilterPropertyAttribute : Attribute
     {
+        /// <summary>
+        /// SupportedOperators
+        /// </summary>
+        public string[] SupportedOperators { get; set; }
+
         /// <summary>
         /// Name
         /// </summary>
@@ -48,5 +53,23 @@ namespace Ellucian.Colleague.Dtos.Attributes
             Name = new string[] { value };
             Ignore = ignore;
         }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="value"></param>
+        /// <param name="supportedOperators"></param>
+        /// <param name="ignore"></param>
+        public FilterPropertyAttribute(string value, string[] supportedOperators,  bool ignore = false)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                throw new ArgumentNullException("value", "value is required for FilterPropertyAttribute");
+            }
+            Name = new string[] { value };
+            Ignore = ignore;
+            SupportedOperators = supportedOperators;
+        }
+
     }
 }

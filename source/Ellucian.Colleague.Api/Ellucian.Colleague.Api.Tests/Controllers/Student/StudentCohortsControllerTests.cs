@@ -137,7 +137,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             {
                 string id = "f05a6c0f-3a56-4a87-b931-bc2901da5ef9";
                 var expected = studentCohorts.FirstOrDefault(i => i.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
-                studentServiceMock.Setup(i => i.GetStudentCohortByGuidAsync(id)).ReturnsAsync(expected);
+                studentServiceMock.Setup(i => i.GetStudentCohortByGuidAsync(id, It.IsAny<bool>())).ReturnsAsync(expected);
 
                 var actual = await studentCohortsController.GetStudentCohortByIdAsync(id);
 
@@ -163,7 +163,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task StudentCohortsController_GetById_Exception()
             {
                 string id = "f05a6c0f-3a56-4a87-b931-bc2901da5ef9";
-                studentServiceMock.Setup(i => i.GetStudentCohortByGuidAsync(id)).ThrowsAsync(new Exception());
+                studentServiceMock.Setup(i => i.GetStudentCohortByGuidAsync(id, It.IsAny<bool>())).ThrowsAsync(new Exception());
 
                 var actual = await studentCohortsController.GetStudentCohortByIdAsync(id);
             }
@@ -173,7 +173,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task StudentCohortsController_GetById_KeyNotFoundException()
             {
                 string id = "f05a6c0f-3a56-4a87-b931-bc2901da5ef9";
-                studentServiceMock.Setup(i => i.GetStudentCohortByGuidAsync(id)).ThrowsAsync(new KeyNotFoundException());
+                studentServiceMock.Setup(i => i.GetStudentCohortByGuidAsync(id, It.IsAny<bool>())).ThrowsAsync(new KeyNotFoundException());
 
                 var actual = await studentCohortsController.GetStudentCohortByIdAsync(id);
             }
@@ -203,7 +203,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             [ExpectedException(typeof(HttpResponseException))]
             public async Task studentCohortsController_GetByIdThrowsIntAppiPermissionExc()
             {
-                studentServiceMock.Setup(gc => gc.GetStudentCohortByGuidAsync(It.IsAny<string>())).Throws<PermissionsException>();
+                studentServiceMock.Setup(gc => gc.GetStudentCohortByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<PermissionsException>();
                 await studentCohortsController.GetStudentCohortByIdAsync("invalid");
             }
 
@@ -211,7 +211,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             [ExpectedException(typeof(HttpResponseException))]
             public async Task studentCohortsController_GetByIdThrowsIntAppiKeyNotFoundExc()
             {
-                studentServiceMock.Setup(gc => gc.GetStudentCohortByGuidAsync(It.IsAny<string>())).Throws<KeyNotFoundException>();
+                studentServiceMock.Setup(gc => gc.GetStudentCohortByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<KeyNotFoundException>();
                 await studentCohortsController.GetStudentCohortByIdAsync("invalid");
             }
 
@@ -219,7 +219,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             [ExpectedException(typeof(HttpResponseException))]
             public async Task studentCohortsController_GetByIdThrowsIntAppiIntegrationExc()
             {
-                studentServiceMock.Setup(gc => gc.GetStudentCohortByGuidAsync(It.IsAny<string>())).Throws<IntegrationApiException>();
+                studentServiceMock.Setup(gc => gc.GetStudentCohortByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<IntegrationApiException>();
                 await studentCohortsController.GetStudentCohortByIdAsync("invalid");
             }
 
@@ -227,7 +227,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             [ExpectedException(typeof(HttpResponseException))]
             public async Task studentCohortsController_GetByIdThrowsIntAppiArgumentExc()
             {
-                studentServiceMock.Setup(gc => gc.GetStudentCohortByGuidAsync(It.IsAny<string>())).Throws<ArgumentException>();
+                studentServiceMock.Setup(gc => gc.GetStudentCohortByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<ArgumentException>();
                 await studentCohortsController.GetStudentCohortByIdAsync("invalid");
             }
 
@@ -235,7 +235,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             [ExpectedException(typeof(HttpResponseException))]
             public async Task studentCohortsController_GetByIdThrowsIntAppiRepositoryExc()
             {
-                studentServiceMock.Setup(gc => gc.GetStudentCohortByGuidAsync(It.IsAny<string>())).Throws<RepositoryException>();
+                studentServiceMock.Setup(gc => gc.GetStudentCohortByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<RepositoryException>();
                 await studentCohortsController.GetStudentCohortByIdAsync("invalid");
             }
     

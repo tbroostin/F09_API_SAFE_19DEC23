@@ -1,4 +1,4 @@
-﻿/*Copyright 2014-2015 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2014-2019 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -40,5 +40,10 @@ namespace Ellucian.Colleague.Dtos.FinancialAid
         /// based on the unmet need amount. The sum of all graduate PLUS loans must be less than or equal to this amount.
         /// </summary>
         public int GradPlusMaximumAmount { get; set; }
+
+        /// <summary>
+        /// Flag indicating whether the loan max amounts should be suppressed for the year on the student level
+        /// </summary>
+        public bool SuppressStudentMaximumAmounts { get; set; }
     }
 }

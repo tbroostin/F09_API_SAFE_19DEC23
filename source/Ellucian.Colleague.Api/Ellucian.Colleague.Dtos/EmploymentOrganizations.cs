@@ -8,7 +8,7 @@ namespace Ellucian.Colleague.Dtos
     /// The valid list of user defined employment organizations. 
     /// </summary>
     [JsonObject(MemberSerialization.OptIn)]
-    public class EmploymentOrganizations : CodeItem2
+    public class EmploymentOrganizations : FilterCodeItem2
     {
     }
 }

@@ -81,25 +81,19 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
         }
 
-        public async Task<Dictionary<string, Bank>> GetAllBanksAsync(bool updateCache = false)
+        public async Task<Dictionary<string, Bank>> GetAllBanksAsync()
         {
-            return await GetBankDictionary(updateCache);
+            return await GetBankDictionary();
         }
 
 
         /// <summary>
         /// Adds US routing information or CA institution information to the cache
         /// </summary>
-        /// <returns></returns>
-        private async Task<Dictionary<string, Bank>> GetBankDictionary(bool updateCache = false)
-        {
-            if (updateCache)
-            {
-                return await AddOrUpdateCacheAsync<Dictionary<string, Bank>>(AllBanksCacheKey, await BuildBankDictionary(), CacheTimeout);
-            }
-
-            return await GetOrAddToCacheAsync<Dictionary<string, Bank>>(AllBanksCacheKey,
-                async () => await BuildBankDictionary(), CacheTimeout);
+        /// <returns></returns>    
+        private async Task<Dictionary<string, Bank>> GetBankDictionary()
+        {           
+            return await BuildBankDictionary();
         }
 
         /// <summary>

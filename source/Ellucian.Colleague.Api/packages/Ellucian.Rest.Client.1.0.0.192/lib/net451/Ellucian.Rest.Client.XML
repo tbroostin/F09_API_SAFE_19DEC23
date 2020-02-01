@@ -1,0 +1,925 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Ellucian.Rest.Client</name>
+    </assembly>
+    <members>
+        <member name="T:Ellucian.Rest.Client.AsyncBaseServiceClient">
+             <summary>
+             Provides a base class for RESTful service clients that support several implementation styles. 
+             </summary>
+             <remarks>
+             In the simplest usage, a concrete instance can be created, credentials set, and any 
+             number of requests made using at most two persistent http connections (one for
+             responses that can be cached and one for responses that are not to be cached).
+            
+             The class also provides the ability to specify the user making the request on a per
+             request basis, meaning that a single instance can service multiple users using
+             the same set of service connections, creating a pooling effect. The .NET HttpClient
+             will honor the value of System.Web.ServicePointManager.DefaultConnectionLimit, which
+             can be set in a concrete implementation of this class to affect the performance
+             of the connection pooling.
+            
+             Various aspects of this class can be overridden in the concrete implementation in 
+             order to control logging and how errors are handled.
+             </remarks>
+        </member>
+        <member name="F:Ellucian.Rest.Client.AsyncBaseServiceClient.urlPathSeparator">
+            <summary>
+            The URL path separator
+            </summary>
+        </member>
+        <member name="F:Ellucian.Rest.Client.AsyncBaseServiceClient.urlArgumentSeparator">
+            <summary>
+            The URL argument separator
+            </summary>
+        </member>
+        <member name="F:Ellucian.Rest.Client.AsyncBaseServiceClient.CredentialsHeaderKey">
+            <summary>
+            The credentials header key
+            </summary>
+        </member>
+        <member name="F:Ellucian.Rest.Client.AsyncBaseServiceClient.ProductNameHeaderKey">
+            <summary>
+            The product name header key
+            </summary>
+        </member>
+        <member name="F:Ellucian.Rest.Client.AsyncBaseServiceClient.ProductVersionHeaderKey">
+            <summary>
+            The product version header key
+            </summary>
+        </member>
+        <member name="F:Ellucian.Rest.Client.AsyncBaseServiceClient.MediaTypeHeaderKey">
+            <summary>
+            The media type header key
+            </summary>
+        </member>
+        <member name="F:Ellucian.Rest.Client.AsyncBaseServiceClient.JsonContentType">
+            <summary>
+            Content type for JSON bodies
+            </summary>
+        </member>
+        <member name="F:Ellucian.Rest.Client.AsyncBaseServiceClient.DefaultTimeout">
+            <summary>
+            Default request timeout.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Rest.Client.AsyncBaseServiceClient.cachingHttpClient">
+            <summary>
+            HttpClient instance for requests that can be serviced from cache.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Rest.Client.AsyncBaseServiceClient.nonCachingHttpClient">
+            <summary>
+            HttpClient instance for requests that should not be serviced from cache.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Rest.Client.AsyncBaseServiceClient.userContext">
+            <summary>
+            Internal user context to support legacy basic auth and custom credentials interaction.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Rest.Client.AsyncBaseServiceClient.timeout">
+            <summary>
+            Http timeout.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Rest.Client.AsyncBaseServiceClient.baseAddress">
+            <summary>
+            Base service address.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Rest.Client.AsyncBaseServiceClient.logger">
+            <summary>
+            The logger
+            </summary>
+        </member>
+        <member name="M:Ellucian.Rest.Client.AsyncBaseServiceClient.#ctor(System.Net.Http.HttpClient,slf4net.ILogger)">
+            <summary>
+            Unit Testing Constructor
+            </summary>
+            <param name="httpClient">http client</param>
+            <param name="logger">logging mechanism</param>
+        </member>
+        <member name="M:Ellucian.Rest.Client.AsyncBaseServiceClient.#ctor(System.String,System.String,System.String)">
+            <summary>
+            Creates a service client with preset basic authorization credentials.
+            </summary>
+            <param name="baseUrl">The base URL for all service requests</param>
+            <param name="userName">Basic auth username</param>
+            <param name="password">Basic auth password</param>
+        </member>
+        <member name="M:Ellucian.Rest.Client.AsyncBaseServiceClient.#ctor(System.String,System.String,System.String,slf4net.ILogger)">
+            <summary>
+            Creates a service client with preset basic authorization credentials.
+            </summary>
+            <param name="baseUrl">The base URL for all service requests</param>
+            <param name="userName">Basic auth username</param>
+            <param name="password">Basic auth password</param>
+            <param name="logger">An <see cref="T:slf4net.ILogger"/> instance for logging. When null a <see cref="T:slf4net.NOPLogger"/> is used.</param>
+        </member>
+        <member name="M:Ellucian.Rest.Client.AsyncBaseServiceClient.#ctor(System.String)">
+            <summary>
+            Creates a service client.
+            </summary>
+            <param name="baseUrl">The base URL for all service requests</param>
+        </member>
+        <member name="M:Ellucian.Rest.Client.AsyncBaseServiceClient.#ctor(System.String,slf4net.ILogger)">
+            <summary>
+            Creates a service client.
+            </summary>
+            <param name="baseUrl">The base URL for all service requests</param>
+            <param name="logger">An <see cref="T:slf4net.ILogger"/> instance for logging. When null a <see cref="T:slf4net.NOPLogger"/> is used.</param>
+        </member>
+        <member name="M:Ellucian.Rest.Client.AsyncBaseServiceClient.SetBasicCredentials(System.String,System.String)">
+            <summary>
+            Sets the credentials used for basic authentication.
+            </summary>
+            <param name="userName">user name, must not be null or empty</param>
+            <param name="password">password, must not be null</param>
+        </member>
+        <member name="M:Ellucian.Rest.Client.AsyncBaseServiceClient.BuildFullUrl(System.Net.Http.HttpClient,System.String,System.String)">
+            <summary>
+            Builds the full URL based on the HttpClient, path and URL arguments
+            </summary>
+            <param name="client">The HttpClient instance, provides the base URL.</param>
+            <param name="urlPath">The URL path.</param>
+            <param name="urlArguments">The URL arguments.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Rest.Client.AsyncBaseServiceClient.AddCredentials(System.Net.Http.HttpRequestMessage,Ellucian.Rest.Client.ServiceClientUser)">
+            <summary>
+            Adds the user credentials to the HttpRequestMessage.
+            </summary>
+            <param name="request">HttpRequestMessage to add the credentials to.</param>
+            <param name="specificUserContext">ServiceClientUser instance providing the credentials to use.
+            If null, this instance's user context is used.</param>
+        </member>
+        <member name="M:Ellucian.Rest.Client.AsyncBaseServiceClient.GetHttpClient(System.Boolean)">
+            <summary>
+            Gets the correct HttpClient instance based on the caching requirements.
+            </summary>
+            <param name="useCache">Specifies whether or not to use the http cache to satisfy the request.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Rest.Client.AsyncBaseServiceClient.ValidateHttpReponseAsync(System.Net.Http.HttpResponseMessage)">
+            <summary>
+            Begins the response validation process. Passes control to specific handling methods based on the type of error.
+            </summary>
+            <param name="response">The <see cref="T:System.Net.Http.HttpResponseMessage"/> response</param>
+        </member>
+        <member name="M:Ellucian.Rest.Client.AsyncBaseServiceClient.ExecuteHttpContentRequestAsync(System.Net.Http.HttpMethod,System.Net.Http.HttpContent,System.String,System.String,System.Collections.Specialized.NameValueCollection,System.Boolean,Ellucian.Rest.Client.ServiceClientUser)">
+            <summary>
+            Executes an HTTP request using the provided parameters and user context.
+            </summary>
+            <param name="method"><see cref="o:HttpMethod"/>HTTP method</param>
+            <param name="httpContent">HTTP content to be PUT or POSTed, can be null for GET and DELETE</param>
+            <param name="urlPath">Request URL</param>
+            <param name="urlArguments">Optional query string to be added to the request URL</param>
+            <param name="headers">Optional collection of header names and values to be added to the request</param>
+            <param name="useCache">Optional specification to indicate whether or not this request can be satisfied with an cached response.</param>
+            <param name="user">Optional <see cref="T:Ellucian.Rest.Client.ServiceClientUser"/> making the request. If not provided the user context instance of this calss is used.</param>
+            <returns>The resulting <see cref="T:System.Net.Http.HttpResponseMessage"/> response.</returns>
+        </member>
+        <member name="M:Ellucian.Rest.Client.AsyncBaseServiceClient.ExecuteRequestAsync(System.Net.Http.HttpMethod,System.String,System.String,System.String,System.Collections.Specialized.NameValueCollection,System.Boolean,Ellucian.Rest.Client.ServiceClientUser)">
+            <summary>
+            Executes an HTTP request using the provided parameters and user context.
+            </summary>
+            <param name="method"><see cref="o:HttpMethod"/>HTTP method</param>
+            <param name="jsonString">JSON stringcontent to be PUT or POSTed, can be null for GET and DELETE</param>
+            <param name="urlPath">Request URL</param>
+            <param name="urlArguments">Optional query string to be added to the request URL</param>
+            <param name="headers">Optional collection of header names and values to be added to the request</param>
+            <param name="useCache">Optional specification to indicate whether or not this request can be satisfied with an cached response.</param>
+            <param name="user">Optional <see cref="T:Ellucian.Rest.Client.ServiceClientUser"/> making the request. If not provided the user context instance of this calss is used.</param>
+            <returns>The resulting <see cref="T:System.Net.Http.HttpResponseMessage"/> response.</returns>
+        </member>
+        <member name="M:Ellucian.Rest.Client.AsyncBaseServiceClient.CreateHttpClients">
+            <summary>
+            Creates the HttpClient instances used by this class. If called after
+            class construction, the existing instances will be replaced. Must only
+            be called after depended instance variables have been set!
+            </summary>
+        </member>
+        <member name="M:Ellucian.Rest.Client.AsyncBaseServiceClient.SerializeObject``1(``0)">
+            <summary>
+            Serializes objects. Can be overridden in subclass.
+            </summary>
+            <typeparam name="T">source object type</typeparam>
+            <param name="objectToSerialize">object to serialize</param>
+            <returns>serialized object string</returns>
+        </member>
+        <member name="M:Ellucian.Rest.Client.AsyncBaseServiceClient.DeserializeJsonAsync``1(System.Net.Http.HttpResponseMessage)">
+            <summary>
+            Attempts to deserialize the specified JSON response.
+            </summary>
+            <typeparam name="T">the expected type</typeparam>
+            <param name="response">the response</param>
+            <returns>an object of the expected type</returns>
+        </member>
+        <member name="M:Ellucian.Rest.Client.AsyncBaseServiceClient.DeserializeJson``1(System.Net.Http.HttpResponseMessage)">
+            <summary>
+            Attempts to deserialize the specified JSON response.
+            </summary>
+            <typeparam name="T">the expected type</typeparam>
+            <param name="response">the response</param>
+            <returns>an object of the expected type</returns>
+        </member>
+        <member name="M:Ellucian.Rest.Client.AsyncBaseServiceClient.ExecuteGetRequestWithResponse(System.String,System.String,System.Collections.Specialized.NameValueCollection,System.Boolean,Ellucian.Rest.Client.ServiceClientUser)">
+            <summary>
+            Executes the get request with response.
+            </summary>
+            <param name="urlPath">The URL path.</param>
+            <param name="urlArguments">The URL arguments.</param>
+            <param name="headers">The headers.</param>
+            <param name="useCache">if set to <c>true</c> [use cache].</param>
+            <param name="user">Optional <see cref="T:Ellucian.Rest.Client.ServiceClientUser"/> making the request. 
+            When not provided the CustomCredentials or basic credentials established prior to this call are used.</param>
+            <returns>The response as an <see cref="T:System.Net.Http.HttpResponseMessage"/></returns>
+        </member>
+        <member name="M:Ellucian.Rest.Client.AsyncBaseServiceClient.ExecuteGetRequestWithResponseAsync(System.String,System.String,System.Collections.Specialized.NameValueCollection,System.Boolean,Ellucian.Rest.Client.ServiceClientUser)">
+            <summary>
+            Executes the get request asynchronously with response.
+            </summary>
+            <param name="urlPath">The URL path.</param>
+            <param name="urlArguments">The URL arguments.</param>
+            <param name="headers">The headers.</param>
+            <param name="useCache">if set to <c>true</c> [use cache].</param>
+            <param name="user">Optional <see cref="T:Ellucian.Rest.Client.ServiceClientUser"/> making the request. 
+            When not provided the CustomCredentials or basic credentials established prior to this call are used.</param>
+            <returns>The response as an <see cref="T:System.Net.Http.HttpResponseMessage"/></returns>
+        </member>
+        <member name="M:Ellucian.Rest.Client.AsyncBaseServiceClient.ExecutePostRequestWithResponse``1(``0,System.String,System.String,System.Collections.Specialized.NameValueCollection,System.Boolean,Ellucian.Rest.Client.ServiceClientUser)">
+            <summary>
+            Executes the post request with response.
+            </summary>
+            <typeparam name="T">the type of the object being sent</typeparam>
+            <param name="objectToSend">The object to be serialized then sent.</param>
+            <param name="urlPath">The URL path.</param>
+            <param name="urlArguments">The URL arguments.</param>
+            <param name="headers">The headers.</param>
+            <param name="useCache">if set to <c>true</c> [use cache].</param>
+            <param name="user">Optional <see cref="T:Ellucian.Rest.Client.ServiceClientUser"/> making the request. 
+            When not provided the CustomCredentials or basic credentials established prior to this call are used.</param>
+            <returns>The response as an <see cref="T:System.Net.Http.HttpResponseMessage"/></returns>
+        </member>
+        <member name="M:Ellucian.Rest.Client.AsyncBaseServiceClient.ExecutePostRequestWithResponseAsync``1(``0,System.String,System.String,System.Collections.Specialized.NameValueCollection,System.Boolean,Ellucian.Rest.Client.ServiceClientUser)">
+            <summary>
+            Executes the post request asynchronously with response.
+            </summary>
+            <typeparam name="T">the type of the object being sent</typeparam>
+            <param name="objectToSend">The object to be serialized then sent.</param>
+            <param name="urlPath">The URL path.</param>
+            <param name="urlArguments">The URL arguments.</param>
+            <param name="headers">The headers.</param>
+            <param name="useCache">if set to <c>true</c> [use cache].</param>
+            <param name="user">Optional <see cref="T:Ellucian.Rest.Client.ServiceClientUser"/> making the request. 
+            When not provided the CustomCredentials or basic credentials established prior to this call are used.</param>
+            <returns>The response as an <see cref="T:System.Net.Http.HttpResponseMessage"/></returns>
+        </member>
+        <member name="M:Ellucian.Rest.Client.AsyncBaseServiceClient.ExecutePostRequestWithResponse``1(``0,System.String,System.Collections.Generic.IDictionary{System.String,System.String},System.Collections.Specialized.NameValueCollection,System.Boolean,Ellucian.Rest.Client.ServiceClientUser)">
+            <summary>
+            Execute a post request accepting a dictionary of parameters and return the response.
+            </summary>
+            <typeparam name="T">the type of the object being sent</typeparam>
+            <param name="objectToSend">The object to be serialized then sent.</param>
+            <param name="urlPath">the URL path</param>
+            <param name="urlArguments">URL arguments, optional. These values will be URL encoded if present.</param>
+            <param name="headers">headers, optional</param>
+            <param name="useCache">cache flag</param>
+            <param name="user">Optional <see cref="T:Ellucian.Rest.Client.ServiceClientUser"/> making the request. 
+            When not provided the CustomCredentials or basic credentials established prior to this call are used.</param>
+            <returns>The response as an <see cref="T:System.Net.Http.HttpResponseMessage"/></returns>
+        </member>
+        <member name="M:Ellucian.Rest.Client.AsyncBaseServiceClient.ExecutePostRequestWithResponseAsync``1(``0,System.String,System.Collections.Generic.IDictionary{System.String,System.String},System.Collections.Specialized.NameValueCollection,System.Boolean,Ellucian.Rest.Client.ServiceClientUser)">
+            <summary>
+            Execute a post request asynchronously accepting a dictionary of parameters and return the response.
+            </summary>
+            <typeparam name="T">the type of the object being sent</typeparam>
+            <param name="objectToSend">The object to be serialized then sent.</param>
+            <param name="urlPath">the URL path</param>
+            <param name="urlArguments">URL arguments, optional. These values will be URL encoded if present.</param>
+            <param name="headers">headers, optional</param>
+            <param name="useCache">cache flag</param>
+            <param name="user">Optional <see cref="T:Ellucian.Rest.Client.ServiceClientUser"/> making the request. 
+            When not provided the CustomCredentials or basic credentials established prior to this call are used.</param>
+            <returns>The response as an <see cref="T:System.Net.Http.HttpResponseMessage"/></returns>
+        </member>
+        <member name="M:Ellucian.Rest.Client.AsyncBaseServiceClient.ExecutePostHttpContentRequestWithResponseAsync(System.Net.Http.HttpContent,System.String,System.Collections.Generic.IDictionary{System.String,System.String},System.Collections.Specialized.NameValueCollection,System.Boolean,Ellucian.Rest.Client.ServiceClientUser)">
+            <summary>
+            Execute a post request asynchronously accepting a dictionary of parameters and return the response.
+            </summary>
+            <param name="httpContent">The http content to be sent.</param>
+            <param name="urlPath">the URL path</param>
+            <param name="urlArguments">URL arguments, optional. These values will be URL encoded if present.</param>
+            <param name="headers">headers, optional</param>
+            <param name="useCache">cache flag</param>
+            <param name="user">Optional <see cref="T:Ellucian.Rest.Client.ServiceClientUser"/> making the request. 
+            When not provided the CustomCredentials or basic credentials established prior to this call are used.</param>
+            <returns>The response as an <see cref="T:System.Net.Http.HttpResponseMessage"/></returns>
+        </member>
+        <member name="M:Ellucian.Rest.Client.AsyncBaseServiceClient.ExecutePostHttpContentRequestWithResponseAsync(System.Net.Http.HttpContent,System.String,System.String,System.Collections.Specialized.NameValueCollection,System.Boolean,Ellucian.Rest.Client.ServiceClientUser)">
+            <summary>
+            Executes the post request asynchronously with response.
+            </summary>
+            <param name="httpContent">The http content to be sent.</param>
+            <param name="urlPath">The URL path.</param>
+            <param name="urlArguments">The URL arguments.</param>
+            <param name="headers">The headers.</param>
+            <param name="useCache">if set to <c>true</c> [use cache].</param>
+            <param name="user">Optional <see cref="T:Ellucian.Rest.Client.ServiceClientUser"/> making the request. 
+            When not provided the CustomCredentials or basic credentials established prior to this call are used.</param>
+            <returns>The response as an <see cref="T:System.Net.Http.HttpResponseMessage"/></returns>
+        </member>
+        <member name="M:Ellucian.Rest.Client.AsyncBaseServiceClient.ExecutePutRequestWithResponse``1(``0,System.String,System.String,System.Collections.Specialized.NameValueCollection,Ellucian.Rest.Client.ServiceClientUser)">
+            <summary>
+            Executes the put request with response.
+            </summary>
+            <typeparam name="T">the type of the object being sent</typeparam>
+            <param name="objectToSend">The object to be serialized then sent.</param>
+            <param name="urlPath">The URL path.</param>
+            <param name="urlArguments">The URL arguments.</param>
+            <param name="headers">The headers.</param>
+            <param name="user">Optional <see cref="T:Ellucian.Rest.Client.ServiceClientUser"/> making the request. 
+            When not provided the CustomCredentials or basic credentials established prior to this call are used.</param>
+            <returns>The response as an <see cref="T:System.Net.Http.HttpResponseMessage"/></returns>
+        </member>
+        <member name="M:Ellucian.Rest.Client.AsyncBaseServiceClient.ExecutePutRequestWithResponseAsync``1(``0,System.String,System.String,System.Collections.Specialized.NameValueCollection,Ellucian.Rest.Client.ServiceClientUser)">
+            <summary>
+            Executes the put request asynchronously with response.
+            </summary>
+            <typeparam name="T">the type of the object being sent</typeparam>
+            <param name="objectToSend">The object to be serialized then sent.</param>
+            <param name="urlPath">The URL path.</param>
+            <param name="urlArguments">The URL arguments.</param>
+            <param name="headers">The headers.</param>
+            <param name="user">Optional <see cref="T:Ellucian.Rest.Client.ServiceClientUser"/> making the request. 
+            When not provided the CustomCredentials or basic credentials established prior to this call are used.</param>
+            <returns>The response as an <see cref="T:System.Net.Http.HttpResponseMessage"/></returns>
+        </member>
+        <member name="M:Ellucian.Rest.Client.AsyncBaseServiceClient.ExecutePutHttpContentRequestWithResponseAsync(System.Net.Http.HttpContent,System.String,System.String,System.Collections.Specialized.NameValueCollection,Ellucian.Rest.Client.ServiceClientUser)">
+            <summary>
+            Executes the put request asynchronously with response.
+            </summary>
+            <param name="httpContent">The http content to be sent.</param>
+            <param name="urlPath">The URL path.</param>
+            <param name="urlArguments">The URL arguments.</param>
+            <param name="headers">The headers.</param>
+            <param name="user">Optional <see cref="T:Ellucian.Rest.Client.ServiceClientUser"/> making the request. 
+            When not provided the CustomCredentials or basic credentials established prior to this call are used.</param>
+            <returns>The response as an <see cref="T:System.Net.Http.HttpResponseMessage"/></returns>
+        </member>
+        <member name="M:Ellucian.Rest.Client.AsyncBaseServiceClient.ExecuteDeleteRequestWithResponse(System.String,System.String,System.Collections.Specialized.NameValueCollection,System.Boolean,Ellucian.Rest.Client.ServiceClientUser)">
+            <summary>
+            Executes a delete request with response.
+            </summary>
+            <param name="urlPath">the URL path</param>
+            <param name="urlArguments">URL arguments, optional. These values will be URL encoded if present.</param>
+            <param name="headers">headers, optional</param>
+            <param name="useCache">if set to <c>true</c> [use cache].</param>
+            <param name="user">Optional <see cref="T:Ellucian.Rest.Client.ServiceClientUser"/> making the request. 
+            When not provided the CustomCredentials or basic credentials established prior to this call are used.</param>
+            <returns>The response as an <see cref="T:System.Net.Http.HttpResponseMessage"/></returns>
+        </member>
+        <member name="M:Ellucian.Rest.Client.AsyncBaseServiceClient.ExecuteDeleteRequestWithResponseAsync(System.String,System.String,System.Collections.Specialized.NameValueCollection,System.Boolean,Ellucian.Rest.Client.ServiceClientUser)">
+            <summary>
+            Executes a delete request asynchronously with response.
+            </summary>
+            <param name="urlPath">the URL path</param>
+            <param name="urlArguments">URL arguments, optional. These values will be URL encoded if present.</param>
+            <param name="headers">headers, optional</param>
+            <param name="useCache">if set to <c>true</c> [use cache].</param>
+            <param name="user">Optional <see cref="T:Ellucian.Rest.Client.ServiceClientUser"/> making the request. 
+            When not provided the CustomCredentials or basic credentials established prior to this call are used.</param>
+            <returns>The response as an <see cref="T:System.Net.Http.HttpResponseMessage"/></returns>
+        </member>
+        <member name="M:Ellucian.Rest.Client.AsyncBaseServiceClient.OnRequestAsync(System.Net.Http.HttpRequestMessage)">
+            <summary>
+            Called before the request is sent. The base implementation logs the request.
+            </summary>
+            <param name="request">The <see cref="T:System.Net.Http.HttpRequestMessage"/> that will be sent</param>
+        </member>
+        <member name="M:Ellucian.Rest.Client.AsyncBaseServiceClient.OnResponseAsync(System.Net.Http.HttpResponseMessage)">
+            <summary>
+            Called after the response is received. The base implementation logs the response.
+            </summary>
+            <param name="response">The <see cref="T:System.Net.Http.HttpResponseMessage"/> received</param>
+        </member>
+        <member name="M:Ellucian.Rest.Client.AsyncBaseServiceClient.OnNotFoundResponseAsync(System.Net.Http.HttpResponseMessage)">
+            <summary>
+            Called if the response has a 404 status code. The base implementation logs the 
+            response and then throws a ResourceNotFoundException.
+            </summary>
+            <param name="response">The <see cref="T:System.Net.Http.HttpResponseMessage"/> received</param>
+        </member>
+        <member name="M:Ellucian.Rest.Client.AsyncBaseServiceClient.OnUnauthorizedResponseAsync(System.Net.Http.HttpResponseMessage)">
+            <summary>
+            Called if the response has a 401 status code. The base implementation logs the 
+            response and then throws a LoginException.
+            </summary>
+            <param name="response">The <see cref="T:System.Net.Http.HttpResponseMessage"/> received</param>
+        </member>
+        <member name="M:Ellucian.Rest.Client.AsyncBaseServiceClient.OnErrorResponseAsync(System.Net.Http.HttpResponseMessage)">
+            <summary>
+            Called if the response has a non-200 status code other than 404 or 401.
+            The base implementation logs the response and throws a HttpRequestFailedException.
+            </summary>
+            <param name="response">The <see cref="T:System.Net.Http.HttpResponseMessage"/> received</param>
+        </member>
+        <member name="M:Ellucian.Rest.Client.AsyncBaseServiceClient.Dispose">
+            <summary>
+            Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Rest.Client.AsyncBaseServiceClient.Credentials">
+            <summary>
+            Gets or sets the custom authorization credentials. The value specified here
+            is transmitted using the X-CustomCredentials header for REST services that
+            support custom authorization schemes.
+            </summary>
+            <value>
+            The credentials.
+            </value>
+        </member>
+        <member name="P:Ellucian.Rest.Client.AsyncBaseServiceClient.Timeout">
+            <summary>
+            Gets or sets the number of milliseconds to wait before a request times out.
+            </summary>
+            <exception cref="T:System.ArgumentOutOfRangeException">
+            The timeout specified is less than or equal to zero.
+            </exception>
+        </member>
+        <member name="T:Ellucian.Rest.Client.BaseServiceClient">
+             <summary>
+             Provides a base class for RESTful service clients that support several implementation styles. 
+             </summary>
+             <remarks>
+             In the simplest usage, a concrete instance can be created, credentials set, and any 
+             number of requests made using at most two persistent http connections (one for
+             responses that can be cached and one for responses that are not to be cached).
+            
+             The class also provides the ability to specify the user making the request on a per
+             request basis, meaning that a single instance can service multiple users using
+             the same set of service connections, creating a pooling effect. The .NET HttpClient
+             will honor the value of System.Web.ServicePointManager.DefaultConnectionLimit, which
+             can be set in a concrete implementation of this class to affect the performance
+             of the connection pooling.
+            
+             Various aspects of this class can be overridden in the concrete implementation in 
+             order to control logging and how errors are handled.
+             </remarks>
+        </member>
+        <member name="F:Ellucian.Rest.Client.BaseServiceClient.urlPathSeparator">
+            <summary>
+            The URL path separator
+            </summary>
+        </member>
+        <member name="F:Ellucian.Rest.Client.BaseServiceClient.urlArgumentSeparator">
+            <summary>
+            The URL argument separator
+            </summary>
+        </member>
+        <member name="F:Ellucian.Rest.Client.BaseServiceClient.CredentialsHeaderKey">
+            <summary>
+            The credentials header key
+            </summary>
+        </member>
+        <member name="F:Ellucian.Rest.Client.BaseServiceClient.ProductNameHeaderKey">
+            <summary>
+            The product name header key
+            </summary>
+        </member>
+        <member name="F:Ellucian.Rest.Client.BaseServiceClient.ProductVersionHeaderKey">
+            <summary>
+            The product version header key
+            </summary>
+        </member>
+        <member name="F:Ellucian.Rest.Client.BaseServiceClient.MediaTypeHeaderKey">
+            <summary>
+            The media type header key
+            </summary>
+        </member>
+        <member name="F:Ellucian.Rest.Client.BaseServiceClient.JsonContentType">
+            <summary>
+            Content type for JSON bodies
+            </summary>
+        </member>
+        <member name="F:Ellucian.Rest.Client.BaseServiceClient.DefaultTimeout">
+            <summary>
+            Default request timeout.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Rest.Client.BaseServiceClient.cachingHttpClient">
+            <summary>
+            HttpClient instance for requests that can be serviced from cache.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Rest.Client.BaseServiceClient.nonCachingHttpClient">
+            <summary>
+            HttpClient instance for requests that should not be serviced from cache.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Rest.Client.BaseServiceClient.userContext">
+            <summary>
+            Internal user context to support legacy basic auth and custom credentials interaction.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Rest.Client.BaseServiceClient.timeout">
+            <summary>
+            Http timeout.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Rest.Client.BaseServiceClient.baseAddress">
+            <summary>
+            Base service address.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Rest.Client.BaseServiceClient.logger">
+            <summary>
+            The logger
+            </summary>
+        </member>
+        <member name="M:Ellucian.Rest.Client.BaseServiceClient.#ctor(System.Net.Http.HttpClient,slf4net.ILogger)">
+            <summary>
+            Unit Testing Constructor
+            </summary>
+            <param name="httpClient">http client</param>
+            <param name="logger">logging mechanism</param>
+        </member>
+        <member name="M:Ellucian.Rest.Client.BaseServiceClient.#ctor(System.String,System.String,System.String)">
+            <summary>
+            Creates a service client with preset basic authorization credentials.
+            </summary>
+            <param name="baseUrl">The base URL for all service requests</param>
+            <param name="userName">Basic auth username</param>
+            <param name="password">Basic auth password</param>
+        </member>
+        <member name="M:Ellucian.Rest.Client.BaseServiceClient.#ctor(System.String,System.String,System.String,slf4net.ILogger)">
+            <summary>
+            Creates a service client with preset basic authorization credentials.
+            </summary>
+            <param name="baseUrl">The base URL for all service requests</param>
+            <param name="userName">Basic auth username</param>
+            <param name="password">Basic auth password</param>
+            <param name="logger">An <see cref="T:slf4net.ILogger"/> instance for logging. When null a <see cref="T:slf4net.NOPLogger"/> is used.</param>
+        </member>
+        <member name="M:Ellucian.Rest.Client.BaseServiceClient.#ctor(System.String)">
+            <summary>
+            Creates a service client.
+            </summary>
+            <param name="baseUrl">The base URL for all service requests</param>
+        </member>
+        <member name="M:Ellucian.Rest.Client.BaseServiceClient.#ctor(System.String,slf4net.ILogger)">
+            <summary>
+            Creates a service client.
+            </summary>
+            <param name="baseUrl">The base URL for all service requests</param>
+            <param name="logger">An <see cref="T:slf4net.ILogger"/> instance for logging. When null a <see cref="T:slf4net.NOPLogger"/> is used.</param>
+        </member>
+        <member name="M:Ellucian.Rest.Client.BaseServiceClient.SetBasicCredentials(System.String,System.String)">
+            <summary>
+            Sets the credentials used for basic authentication.
+            </summary>
+            <param name="userName">user name, must not be null or empty</param>
+            <param name="password">password, must not be null</param>
+        </member>
+        <member name="M:Ellucian.Rest.Client.BaseServiceClient.BuildFullUrl(System.Net.Http.HttpClient,System.String,System.String)">
+            <summary>
+            Builds the full URL based on the HttpClient, path and URL arguments
+            </summary>
+            <param name="client">The HttpClient instance, provides the base URL.</param>
+            <param name="urlPath">The URL path.</param>
+            <param name="urlArguments">The URL arguments.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Rest.Client.BaseServiceClient.AddCredentials(System.Net.Http.HttpRequestMessage,Ellucian.Rest.Client.ServiceClientUser)">
+            <summary>
+            Adds the user credentials to the HttpRequestMessage.
+            </summary>
+            <param name="request">HttpRequestMessage to add the credentials to.</param>
+            <param name="specificUserContext">ServiceClientUser instance providing the credentials to use.
+            If null, this instance's user context is used.</param>
+        </member>
+        <member name="M:Ellucian.Rest.Client.BaseServiceClient.GetHttpClient(System.Boolean)">
+            <summary>
+            Gets the correct HttpClient instance based on the caching requirements.
+            </summary>
+            <param name="useCache">Specifies whether or not to use the http cache to satisfy the request.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Rest.Client.BaseServiceClient.ValidateHttpReponse(System.Net.Http.HttpResponseMessage)">
+            <summary>
+            Begins the response validation process. Passes control to specific handling methods based on the type of error.
+            </summary>
+            <param name="response">The <see cref="T:System.Net.Http.HttpResponseMessage"/> response</param>
+        </member>
+        <member name="M:Ellucian.Rest.Client.BaseServiceClient.ExecuteHttpContentRequest(System.Net.Http.HttpMethod,System.Net.Http.HttpContent,System.String,System.String,System.Collections.Specialized.NameValueCollection,System.Boolean,Ellucian.Rest.Client.ServiceClientUser)">
+            <summary>
+            Executes an HTTP request using the provided parameters and user context.
+            </summary>
+            <param name="method"><see cref="o:HttpMethod"/>HTTP method</param>
+            <param name="httpContent">HTTP content to be PUT or POSTed, can be null for GET and DELETE</param>
+            <param name="urlPath">Request URL</param>
+            <param name="urlArguments">Optional query string to be added to the request URL</param>
+            <param name="headers">Optional collection of header names and values to be added to the request</param>
+            <param name="useCache">Optional specification to indicate whether or not this request can be satisfied with an cached response.</param>
+            <param name="user">Optional <see cref="T:Ellucian.Rest.Client.ServiceClientUser"/> making the request. If not provided the user context instance of this calss is used.</param>
+            <returns>The resulting <see cref="T:System.Net.Http.HttpResponseMessage"/> response.</returns>
+        </member>
+        <member name="M:Ellucian.Rest.Client.BaseServiceClient.ExecuteRequest(System.Net.Http.HttpMethod,System.String,System.String,System.String,System.Collections.Specialized.NameValueCollection,System.Boolean,Ellucian.Rest.Client.ServiceClientUser)">
+            <summary>
+            Executes an HTTP request using the provided parameters and user context.
+            </summary>
+            <param name="method"><see cref="o:HttpMethod"/>HTTP method</param>
+            <param name="jsonString">JSON stringcontent to be PUT or POSTed, can be null for GET and DELETE</param>
+            <param name="urlPath">Request URL</param>
+            <param name="urlArguments">Optional query string to be added to the request URL</param>
+            <param name="headers">Optional collection of header names and values to be added to the request</param>
+            <param name="useCache">Optional specification to indicate whether or not this request can be satisfied with an cached response.</param>
+            <param name="user">Optional <see cref="T:Ellucian.Rest.Client.ServiceClientUser"/> making the request. If not provided the user context instance of this calss is used.</param>
+            <returns>The resulting <see cref="T:System.Net.Http.HttpResponseMessage"/> response.</returns>
+        </member>
+        <member name="M:Ellucian.Rest.Client.BaseServiceClient.CreateHttpClients">
+            <summary>
+            Creates the HttpClient instances used by this class. If called after
+            class construction, the existing instances will be replaced. Must only
+            be called after depended instance variables have been set!
+            </summary>
+        </member>
+        <member name="M:Ellucian.Rest.Client.BaseServiceClient.SerializeObject``1(``0)">
+            <summary>
+            Serializes objects. Can be overridden in subclass.
+            </summary>
+            <typeparam name="T">source object type</typeparam>
+            <param name="objectToSerialize">object to serialize</param>
+            <returns>serialized object string</returns>
+        </member>
+        <member name="M:Ellucian.Rest.Client.BaseServiceClient.DeserializeJson``1(System.Net.Http.HttpResponseMessage)">
+            <summary>
+            Attempts to deserialize the specified JSON response.
+            </summary>
+            <typeparam name="T">the expected type</typeparam>
+            <param name="response">the response</param>
+            <returns>an object of the expected type</returns>
+        </member>
+        <member name="M:Ellucian.Rest.Client.BaseServiceClient.ExecuteGetRequestWithResponse(System.String,System.String,System.Collections.Specialized.NameValueCollection,System.Boolean,Ellucian.Rest.Client.ServiceClientUser)">
+            <summary>
+            Executes the get request with response.
+            </summary>
+            <param name="urlPath">The URL path.</param>
+            <param name="urlArguments">The URL arguments.</param>
+            <param name="headers">The headers.</param>
+            <param name="useCache">if set to <c>true</c> [use cache].</param>
+            <param name="user">Optional <see cref="T:Ellucian.Rest.Client.ServiceClientUser"/> making the request. 
+            When not provided the CustomCredentials or basic credentials established prior to this call are used.</param>
+            <returns>The response as an <see cref="T:System.Net.Http.HttpResponseMessage"/></returns>
+        </member>
+        <member name="M:Ellucian.Rest.Client.BaseServiceClient.ExecutePostRequestWithResponse``1(``0,System.String,System.String,System.Collections.Specialized.NameValueCollection,System.Boolean,Ellucian.Rest.Client.ServiceClientUser)">
+            <summary>
+            Executes the post request with response.
+            </summary>
+            <typeparam name="T">the type of the object being sent</typeparam>
+            <param name="objectToSend">The object to be serialized then sent.</param>
+            <param name="urlPath">The URL path.</param>
+            <param name="urlArguments">The URL arguments.</param>
+            <param name="headers">The headers.</param>
+            <param name="useCache">if set to <c>true</c> [use cache].</param>
+            <param name="user">Optional <see cref="T:Ellucian.Rest.Client.ServiceClientUser"/> making the request. 
+            When not provided the CustomCredentials or basic credentials established prior to this call are used.</param>
+            <returns>The response as an <see cref="T:System.Net.Http.HttpResponseMessage"/></returns>
+        </member>
+        <member name="M:Ellucian.Rest.Client.BaseServiceClient.ExecutePostRequestWithResponse``1(``0,System.String,System.Collections.Generic.IDictionary{System.String,System.String},System.Collections.Specialized.NameValueCollection,System.Boolean,Ellucian.Rest.Client.ServiceClientUser)">
+            <summary>
+            Execute a post request accepting a dictionary of parameters and return the response.
+            </summary>
+            <typeparam name="T">the type of the object being sent</typeparam>
+            <param name="objectToSend">The object to be serialized then sent.</param>
+            <param name="urlPath">the URL path</param>
+            <param name="urlArguments">URL arguments, optional. These values will be URL encoded if present.</param>
+            <param name="headers">headers, optional</param>
+            <param name="useCache">cache flag</param>
+            <param name="user">Optional <see cref="T:Ellucian.Rest.Client.ServiceClientUser"/> making the request. 
+            When not provided the CustomCredentials or basic credentials established prior to this call are used.</param>
+            <returns>The response as an <see cref="T:System.Net.Http.HttpResponseMessage"/></returns>
+        </member>
+        <member name="M:Ellucian.Rest.Client.BaseServiceClient.ExecutePostHttpContentRequestWithResponse(System.Net.Http.HttpContent,System.String,System.String,System.Collections.Specialized.NameValueCollection,System.Boolean,Ellucian.Rest.Client.ServiceClientUser)">
+            <summary>
+            Executes the post request with response.
+            </summary>
+            <param name="httpContent">The http content to be sent.</param>
+            <param name="urlPath">The URL path.</param>
+            <param name="urlArguments">The URL arguments.</param>
+            <param name="headers">The headers.</param>
+            <param name="useCache">if set to <c>true</c> [use cache].</param>
+            <param name="user">Optional <see cref="T:Ellucian.Rest.Client.ServiceClientUser"/> making the request. 
+            When not provided the CustomCredentials or basic credentials established prior to this call are used.</param>
+            <returns>The response as an <see cref="T:System.Net.Http.HttpResponseMessage"/></returns>
+        </member>
+        <member name="M:Ellucian.Rest.Client.BaseServiceClient.ExecutePostHttpContentRequestWithResponse(System.Net.Http.HttpContent,System.String,System.Collections.Generic.IDictionary{System.String,System.String},System.Collections.Specialized.NameValueCollection,System.Boolean,Ellucian.Rest.Client.ServiceClientUser)">
+            <summary>
+            Execute a post request accepting a dictionary of parameters and return the response.
+            </summary>
+            <param name="httpContent">The http content to be sent.</param>
+            <param name="urlPath">the URL path</param>
+            <param name="urlArguments">URL arguments, optional. These values will be URL encoded if present.</param>
+            <param name="headers">headers, optional</param>
+            <param name="useCache">cache flag</param>
+            <param name="user">Optional <see cref="T:Ellucian.Rest.Client.ServiceClientUser"/> making the request. 
+            When not provided the CustomCredentials or basic credentials established prior to this call are used.</param>
+            <returns>The response as an <see cref="T:System.Net.Http.HttpResponseMessage"/></returns>
+        </member>
+        <member name="M:Ellucian.Rest.Client.BaseServiceClient.ExecutePutRequestWithResponse``1(``0,System.String,System.String,System.Collections.Specialized.NameValueCollection,Ellucian.Rest.Client.ServiceClientUser)">
+            <summary>
+            Executes the put request with response.
+            </summary>
+            <typeparam name="T">the type of the object being sent</typeparam>
+            <param name="objectToSend">The object to be serialized then sent.</param>
+            <param name="urlPath">The URL path.</param>
+            <param name="urlArguments">The URL arguments.</param>
+            <param name="headers">The headers.</param>
+            <param name="user">Optional <see cref="T:Ellucian.Rest.Client.ServiceClientUser"/> making the request. 
+            When not provided the CustomCredentials or basic credentials established prior to this call are used.</param>
+            <returns>The response as an <see cref="T:System.Net.Http.HttpResponseMessage"/></returns>
+        </member>
+        <member name="M:Ellucian.Rest.Client.BaseServiceClient.ExecutePutHttpContentRequestWithResponse(System.Net.Http.HttpContent,System.String,System.String,System.Collections.Specialized.NameValueCollection,Ellucian.Rest.Client.ServiceClientUser)">
+            <summary>
+            Executes the put request with response.
+            </summary>
+            <param name="httpContent">The http content to be sent.</param>
+            <param name="urlPath">The URL path.</param>
+            <param name="urlArguments">The URL arguments.</param>
+            <param name="headers">The headers.</param>
+            <param name="user">Optional <see cref="T:Ellucian.Rest.Client.ServiceClientUser"/> making the request. 
+            When not provided the CustomCredentials or basic credentials established prior to this call are used.</param>
+            <returns>The response as an <see cref="T:System.Net.Http.HttpResponseMessage"/></returns>
+        </member>
+        <member name="M:Ellucian.Rest.Client.BaseServiceClient.ExecuteDeleteRequestWithResponse(System.String,System.String,System.Collections.Specialized.NameValueCollection,System.Boolean,Ellucian.Rest.Client.ServiceClientUser)">
+            <summary>
+            Executes a delete request with response.
+            </summary>
+            <param name="urlPath">the URL path</param>
+            <param name="urlArguments">URL arguments, optional. These values will be URL encoded if present.</param>
+            <param name="headers">headers, optional</param>
+            <param name="useCache">if set to <c>true</c> [use cache].</param>
+            <param name="user">Optional <see cref="T:Ellucian.Rest.Client.ServiceClientUser"/> making the request. 
+            When not provided the CustomCredentials or basic credentials established prior to this call are used.</param>
+            <returns>The response as an <see cref="T:System.Net.Http.HttpResponseMessage"/></returns>
+        </member>
+        <member name="M:Ellucian.Rest.Client.BaseServiceClient.OnRequest(System.Net.Http.HttpRequestMessage)">
+            <summary>
+            Called before the request is sent. The base implementation logs the request.
+            </summary>
+            <param name="request">The <see cref="T:System.Net.Http.HttpRequestMessage"/> that will be sent</param>
+        </member>
+        <member name="M:Ellucian.Rest.Client.BaseServiceClient.OnResponse(System.Net.Http.HttpResponseMessage)">
+            <summary>
+            Called after the response is received. The base implementation logs the response.
+            </summary>
+            <param name="response">The <see cref="T:System.Net.Http.HttpResponseMessage"/> received</param>
+        </member>
+        <member name="M:Ellucian.Rest.Client.BaseServiceClient.OnNotFoundResponse(System.Net.Http.HttpResponseMessage)">
+            <summary>
+            Called if the response has a 404 status code. The base implementation logs the 
+            response and then throws a ResourceNotFoundException.
+            </summary>
+            <param name="response">The <see cref="T:System.Net.Http.HttpResponseMessage"/> received</param>
+        </member>
+        <member name="M:Ellucian.Rest.Client.BaseServiceClient.OnUnauthorizedResponse(System.Net.Http.HttpResponseMessage)">
+            <summary>
+            Called if the response has a 401 status code. The base implementation logs the 
+            response and then throws a LoginException.
+            </summary>
+            <param name="response">The <see cref="T:System.Net.Http.HttpResponseMessage"/> received</param>
+        </member>
+        <member name="M:Ellucian.Rest.Client.BaseServiceClient.OnErrorResponse(System.Net.Http.HttpResponseMessage)">
+            <summary>
+            Called if the response has a non-200 status code other than 404 or 401.
+            The base implementation logs the response and throws a HttpRequestFailedException.
+            </summary>
+            <param name="response">The <see cref="T:System.Net.Http.HttpResponseMessage"/> received</param>
+        </member>
+        <member name="M:Ellucian.Rest.Client.BaseServiceClient.Dispose">
+            <summary>
+            Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Rest.Client.BaseServiceClient.Credentials">
+            <summary>
+            Gets or sets the custom authorization credentials. The value specified here
+            is transmitted using the X-CustomCredentials header for REST services that
+            support custom authorization schemes.
+            </summary>
+            <value>
+            The credentials.
+            </value>
+        </member>
+        <member name="P:Ellucian.Rest.Client.BaseServiceClient.Timeout">
+            <summary>
+            Gets or sets the number of milliseconds to wait before a request times out.
+            </summary>
+            <exception cref="T:System.ArgumentOutOfRangeException">
+            The timeout specified is less than or equal to zero.
+            </exception>
+        </member>
+        <member name="T:Ellucian.Rest.Client.Exceptions.HttpRequestFailedException">
+            <summary>
+            Definition of HttpRequestFailedException
+            </summary>
+        </member>
+        <member name="F:Ellucian.Rest.Client.Exceptions.HttpRequestFailedException.StatusCode">
+            <summary>
+            The status code
+            </summary>
+        </member>
+        <member name="M:Ellucian.Rest.Client.Exceptions.HttpRequestFailedException.#ctor(System.String,System.Net.HttpStatusCode)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Rest.Client.Exceptions.HttpRequestFailedException"/> class.
+            </summary>
+            <param name="message">The message.</param>
+            <param name="status">The status.</param>
+        </member>
+        <member name="M:Ellucian.Rest.Client.Exceptions.HttpRequestFailedException.ToString">
+            <summary>
+            Returns a <see cref="T:System.String"/> that represents this instance.
+            </summary>
+            <returns>
+            A <see cref="T:System.String"/> that represents this instance.
+            </returns>
+        </member>
+        <member name="T:Ellucian.Rest.Client.Exceptions.LoginException">
+            <summary>
+            Definition of LoginException
+            </summary>
+        </member>
+        <member name="F:Ellucian.Rest.Client.Exceptions.LoginException.StatusCode">
+            <summary>
+            The status code
+            </summary>
+        </member>
+        <member name="M:Ellucian.Rest.Client.Exceptions.LoginException.#ctor(System.String,System.Net.HttpStatusCode)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Rest.Client.Exceptions.LoginException"/> class.
+            </summary>
+            <param name="message">The message.</param>
+            <param name="status">The status.</param>
+        </member>
+        <member name="T:Ellucian.Rest.Client.Exceptions.ResourceNotFoundException">
+            <summary>
+            Definition of ResourceNotFoundException
+            </summary>
+        </member>
+        <member name="F:Ellucian.Rest.Client.Exceptions.ResourceNotFoundException.StatusCode">
+            <summary>
+            The status code
+            </summary>
+        </member>
+        <member name="M:Ellucian.Rest.Client.Exceptions.ResourceNotFoundException.#ctor(System.String,System.Net.HttpStatusCode)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Rest.Client.Exceptions.ResourceNotFoundException"/> class.
+            </summary>
+            <param name="message">The message.</param>
+            <param name="status">The status.</param>
+        </member>
+        <member name="T:Ellucian.Rest.Client.Properties.Resources">
+            <summary>
+              A strongly-typed resource class, for looking up localized strings, etc.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Rest.Client.Properties.Resources.ResourceManager">
+            <summary>
+              Returns the cached ResourceManager instance used by this class.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Rest.Client.Properties.Resources.Culture">
+            <summary>
+              Overrides the current thread's CurrentUICulture property for all
+              resource lookups using this strongly typed resource class.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Rest.Client.Properties.Resources.ErrorUrlArgumentsNotNull">
+            <summary>
+              Looks up a localized string similar to URL arguments cannot be null.
+            </summary>
+        </member>
+        <member name="T:Ellucian.Rest.Client.ServiceClientUser">
+            <summary>
+            Provides a user context for use with the BaseServiceClient.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Rest.Client.ServiceClientUser.Username">
+            <summary>
+            Gets or sets the user's username to be used for authentication.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Rest.Client.ServiceClientUser.Password">
+            <summary>
+            Gets or set the user's password to be used for authentication.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Rest.Client.ServiceClientUser.CustomCredentials">
+            <summary>
+            Gets or sets the Custom Credentials to be used for authentication.
+            </summary>
+        </member>
+    </members>
+</doc>

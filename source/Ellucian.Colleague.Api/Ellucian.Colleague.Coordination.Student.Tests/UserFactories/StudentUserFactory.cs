@@ -304,5 +304,47 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.UserFactories
                 }
             }
         }
+
+        public class ProspectOpportunitiesUser : ICurrentUserFactory
+        {
+            public ICurrentUser CurrentUser
+            {
+                get
+                {
+                    return new CurrentUser(new Claims()
+                    {
+                        PersonId = "0000004",
+                        ControlId = "123",
+                        Name = "Lemmy",
+                        SecurityToken = "321",
+                        SessionTimeout = 30,
+                        UserName = "ProspectOppUserName",
+                        Roles = new List<string>() { "VIEW.PROSPECT.OPPORTUNITY", "UPDATE.PROSPECT.OPPORTUNITY" },
+                        SessionFixationId = "abc123"
+                    });
+                }
+            }
+        }
+
+        public class StudentAcademicCredentialsUser : ICurrentUserFactory
+        {
+            public ICurrentUser CurrentUser
+            {
+                get
+                {
+                    return new CurrentUser(new Claims()
+                    {
+                        PersonId = "0000004",
+                        ControlId = "123",
+                        Name = "Johnny",
+                        SecurityToken = "321",
+                        SessionTimeout = 30,
+                        UserName = "StudentPO",
+                        Roles = new List<string>() { "VIEW.STUDENT.ACADEMIC.CREDENTIALS" },
+                        SessionFixationId = "abc123"
+                    });
+                }
+            }
+        }
     }
 }

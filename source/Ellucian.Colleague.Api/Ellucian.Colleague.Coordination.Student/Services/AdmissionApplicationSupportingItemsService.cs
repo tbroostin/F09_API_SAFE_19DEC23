@@ -43,14 +43,34 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 			_referenceDataRepository = referenceDataRepository;
 		}
 
-		/// <summary>
-		/// Gets all admission-application-supporting-items
-		/// </summary>
-		/// <param name="offset">Offset for paging results</param>
-		/// <param name="limit">Limit for paging results</param>
-		/// <param name="bypassCache">Flag to bypass cache</param>
-		/// <returns>Collection of <see cref="AdmissionApplicationSupportingItems">admissionApplicationSupportingItems</see> objects</returns> 
-		public async Task<Tuple<IEnumerable<AdmissionApplicationSupportingItems>, int>> GetAdmissionApplicationSupportingItemsAsync(int offset, int limit, bool bypassCache = false)
+        IEnumerable<Domain.Base.Entities.CommunicationCode>  _allSupportingItemTypes = null;
+        private async Task<IEnumerable<Domain.Base.Entities.CommunicationCode>> GetAllSupportingItemTypesAsync(bool ignoreCache)
+        {
+            if (_allSupportingItemTypes == null)
+            {
+                _allSupportingItemTypes = await _referenceDataRepository.GetAdmissionApplicationSupportingItemTypesAsync(ignoreCache);
+            }
+            return _allSupportingItemTypes;
+        }
+
+        IEnumerable<Domain.Base.Entities.CorrStatus> _allCorrStatuses = null;
+        private async Task<IEnumerable<Domain.Base.Entities.CorrStatus>> GetAllCorrStatusesAsync(bool ignoreCache)
+        {
+            if (_allCorrStatuses == null)
+            {
+                _allCorrStatuses = await _referenceDataRepository.GetCorrStatusesAsync(ignoreCache);
+            }
+            return _allCorrStatuses;
+        }
+
+        /// <summary>
+        /// Gets all admission-application-supporting-items
+        /// </summary>
+        /// <param name="offset">Offset for paging results</param>
+        /// <param name="limit">Limit for paging results</param>
+        /// <param name="bypassCache">Flag to bypass cache</param>
+        /// <returns>Collection of <see cref="AdmissionApplicationSupportingItems">admissionApplicationSupportingItems</see> objects</returns> 
+        public async Task<Tuple<IEnumerable<AdmissionApplicationSupportingItems>, int>> GetAdmissionApplicationSupportingItemsAsync(int offset, int limit, bool bypassCache = false)
 		{
 			CheckViewPermissions();
 
@@ -108,12 +128,20 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 			// get the ID associated with the incoming guid
 			var primaryKey = string.Empty;
 			var secondaryKey = string.Empty;
-			var admissionApplicationSupportingItemsEntityId = await _supportingItemsRepository.GetAdmissionApplicationSupportingItemsIdFromGuidAsync(admissionApplicationSupportingItems.Id);
-			if (admissionApplicationSupportingItemsEntityId.Value != null)
-			{
-				primaryKey = admissionApplicationSupportingItemsEntityId.Value.PrimaryKey;
-				secondaryKey = admissionApplicationSupportingItemsEntityId.Value.SecondaryKey;
-			}
+            try
+            {
+                var admissionApplicationSupportingItemsEntityId = await _supportingItemsRepository.GetAdmissionApplicationSupportingItemsIdFromGuidAsync(admissionApplicationSupportingItems.Id);
+                if (admissionApplicationSupportingItemsEntityId.Value != null)
+                {
+                    primaryKey = admissionApplicationSupportingItemsEntityId.Value.PrimaryKey;
+                    secondaryKey = admissionApplicationSupportingItemsEntityId.Value.SecondaryKey;
+                }
+            }
+            catch
+            {
+                // Primary and Secondary keys are null.  Continue as a CREATE instead of an update.
+            }
+
 			if (!string.IsNullOrEmpty(primaryKey) && !string.IsNullOrEmpty(secondaryKey))
 			{
 				// verify the user has the permission to update a admissionApplicationSupportingItems
@@ -342,21 +370,26 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 			var admissionApplicationSupportingItems = new AdmissionApplicationSupportingItems();
 
 			admissionApplicationSupportingItems.Id = source.Guid;
-			var applGuid = await _supportingItemsRepository.GetGuidFromIdAsync("APPLICATIONS", source.ApplicationId);
-			if (!string.IsNullOrEmpty(applGuid))
-				admissionApplicationSupportingItems.Application = new GuidObject2(applGuid);
+
+            if (!string.IsNullOrEmpty(source.ApplicationId))
+				admissionApplicationSupportingItems.Application = new GuidObject2(source.ApplicationId);
+
 			if (source.AssignedDate.HasValue)
 				admissionApplicationSupportingItems.AssignedOn = source.AssignedDate.Value;
+
 			if (!string.IsNullOrEmpty(source.ReceivedCode))
 			{
-				var ccGuid = await _supportingItemsRepository.GetGuidFromIdAsync("CC.CODES", source.ReceivedCode);
-				if (!string.IsNullOrEmpty(ccGuid))
-					admissionApplicationSupportingItems.Type = new GuidObject2(ccGuid);
+                var suppItemType = (await GetAllSupportingItemTypesAsync(bypassCache)).FirstOrDefault(sit => sit.Code == source.ReceivedCode);
+				if (suppItemType != null)
+					admissionApplicationSupportingItems.Type = new GuidObject2(suppItemType.Guid);
 			}
+
 			if (source.ReceivedDate.HasValue)
 				admissionApplicationSupportingItems.ReceivedOn = source.ReceivedDate.Value;
+
 			if (source.AssignedDate.HasValue)
 				admissionApplicationSupportingItems.AssignedOn = source.AssignedDate.Value;
+
 			if (source.ActionDate.HasValue)
 				admissionApplicationSupportingItems.RequiredByDate = source.ActionDate.Value;
 
@@ -367,14 +400,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 			}
 			else
 			{
-				var statusGuid = await _supportingItemsRepository.GetGuidFromIdAsync("VALCODES", "CORR.STATUSES", "VAL.INTERNAL.CODE", source.Status);
-				if (string.IsNullOrEmpty(statusGuid))
+                var corrStatus = (await GetAllCorrStatusesAsync(bypassCache)).FirstOrDefault(cs => cs.Code == source.Status);
+                if (corrStatus != null)
 				{
-					statusGuid = await _supportingItemsRepository.GetGuidFromIdAsync("CORE.VALCODES", "CORR.STATUSES", "VAL.INTERNAL.CODE", source.Status);
-				}
-				if (!string.IsNullOrEmpty(statusGuid))
-				{
-					admissionApplicationSupportingItems.Status.Detail = new GuidObject2(statusGuid);
+					admissionApplicationSupportingItems.Status.Detail = new GuidObject2(corrStatus.Guid);
 				}
 				switch (source.StatusAction)
 				{
@@ -400,7 +429,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 						break;
 				}
 			}
+
 			admissionApplicationSupportingItems.ExternalReference = source.Comment;
+
 			if (source.Required)
 				admissionApplicationSupportingItems.Required = AdmissionApplicationSupportingItemsRequired.Mandatory;
 

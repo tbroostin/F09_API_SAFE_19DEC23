@@ -1,16 +1,36 @@
 ﻿/*Copyright 2016 Ellucian Company L.P. and its affiliates.*/
 
 using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
 
 namespace Ellucian.Colleague.Domain.Base.Entities
 {
     [Serializable]
     public class Place
-    {       
+    {
+        private string _guid { get; set; }
+
+        /// <summary>
+        /// GUID for the remark; not required, but cannot be changed once assigned.
+        /// </summary>
+        public string Guid
+        {
+            get { return _guid; }
+            set
+            {
+                if (string.IsNullOrEmpty(_guid))
+                {
+                    if (!string.IsNullOrEmpty(value))
+                    {
+                        _guid = value.ToLowerInvariant();
+                    }
+                }
+                else
+                {
+                    throw new InvalidOperationException("Cannot change value of Guid.");
+                }
+            }
+        }
+
         /// <summary>
         /// 3166-1 alpha-3 country code 
         /// Note: this code will also be stored on the COUNTRIES code file in CTRY.ISO.ALPHA3.CODE
@@ -33,8 +53,23 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         public string PlacesDesc { get; set; }
 
         /// <summary>
+        /// An indicator as to whether the ISO code is currently in use or was previously used to represent a country.
+        /// </summary>
+        public string PlacesInactive { get; set; }
+
+
+        /// <summary>
         /// No Argument constructor
         /// </summary>
-        public Place()  {}    
+        public Place()  {}
+
+
+        /// <summary>
+        /// No Argument constructor
+        /// </summary>
+        public Place(string guid)
+        {
+            _guid = guid;
+        }
     }
 }

@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -77,5 +77,10 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// List of strings containing validation information which is used to tell the user what they can do with the budget adjustment.
         /// </summary>
         public List<string> ValidationResults { get; set; }
+
+        /// <summary>
+        /// The number of cost centers involved in the budget adjustment.
+        /// </summary>
+        public int CostCenterCount { get; set; }
     }
 }

@@ -1,9 +1,10 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Colleague.Domain.Base.Transactions;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Data.Colleague;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -297,6 +298,19 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                        person => new PersonBase(person.Recordkey, person.LastName)); ;
                     CompareBaseRecords(record, result);
                 }
+            }
+            [TestMethod]
+            public async Task GetPersonRacesAsync()
+            {
+
+                string personId = personRecords.First().Key;
+                DataContracts.Person record = personRecords.First().Value;
+                PersonBase result = await repository.GetBaseAsync<PersonBase>(personId,
+                   person => new PersonBase(person.Recordkey, person.LastName));
+                CompareBaseRecords(record, result);
+
+                Assert.IsNotNull(result.RaceCodes);
+
             }
 
             // GetPreferredName Tests - Given a name hierarchy list of "MA", "XYZ", "PF"
@@ -876,6 +890,468 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             }
         }
 
+        [TestClass]
+        public class GetFilteredPerson3Guids : BasePersonSetup
+        {
+            PersonBaseRepository repository;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                PersonSetupInitialize();
+
+                var personIds = new List<string>() { "1" };
+                dataReaderMock.Setup(d => d.SelectAsync("PERSON", It.IsAny<string>())).ReturnsAsync(personIds.ToArray());
+
+                repository = new PersonBaseRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                repository = null;
+            }
+
+            [TestMethod]
+            public async Task GetFilteredPerson3Guids_With_Invalid_PersonFilter1()
+            {
+                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(null);
+
+                var result = await repository.GetFilteredPerson3GuidsAsync(0, 10, true, null, "1");
+
+                Assert.IsTrue(result.Item2 == 0);
+            }
+
+            [TestMethod]
+            public async Task GetFilteredPerson3Guids_With_Invalid_PersonFilter2()
+            {
+                var dicResult = new Dictionary<string, GuidLookupResult>() { };
+                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(null);
+
+                var result = await repository.GetFilteredPerson3GuidsAsync(0, 10, true, null, "1");
+
+                Assert.IsTrue(result.Item2 == 0);
+            }
+
+            [TestMethod]
+            public async Task GetFilteredPerson3Guids_With_Invalid_PersonFilter3()
+            {
+                var dictResult = new Dictionary<string, GuidLookupResult>() { { "1", null } };
+                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(dictResult);
+
+                var result = await repository.GetFilteredPerson3GuidsAsync(0, 10, true, null, "1");
+
+                Assert.IsTrue(result.Item2 == 0);
+            }
+
+            [TestMethod]
+            public async Task GetFilteredPerson3Guids_With_Invalid_EntityName()
+            {
+                var dictResult = new Dictionary<string, GuidLookupResult>() { { "1", new GuidLookupResult() { Entity = "SAVE.LIST.PARMS1" } } };
+                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(dictResult);
+
+                var result = await repository.GetFilteredPerson3GuidsAsync(0, 10, true, null, "1");
+
+                Assert.IsTrue(result.Item2 == 0);
+            }
+
+            [TestMethod]
+            public async Task GetFilteredPerson3Guids_Without_Filters()
+            {
+                var personGuids = new Dictionary<string, RecordKeyLookupResult>() { { "1+1", null } };
+                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(personGuids);
+
+                var result = await repository.GetFilteredPerson3GuidsAsync(0, 10, true, null, "");
+                Assert.IsTrue(result.Item2 == 0);
+            }
+
+            [TestMethod]
+            public async Task GetFilteredPerson3Guids_With_Credential_Filters()
+            {
+                var personGuids = new Dictionary<string, RecordKeyLookupResult>() { { "1", new RecordKeyLookupResult() { Guid = Guid.NewGuid().ToString() } } };
+                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(personGuids);
+
+                var ids = new string[] { "1" };
+                dataReaderMock.Setup(d => d.SelectAsync("PERSON", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(ids);
+                dataReaderMock.Setup(d => d.SelectAsync("PERSON.PIN", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(ids);
+
+                var persons = new Collection<DataContracts.Person>()
+                {
+                    new DataContracts.Person()
+                    {
+                        RecordGuid = Guid.NewGuid().ToString(),
+                        Recordkey = "1",
+                        FirstName = "first",
+                        LastName = "last",
+                        MiddleName = "middle",
+                        Prefix = "Mr.",
+                        BirthNameLast = "P",
+                        PersonAltEntityAssociation = new List<DataContracts.PersonPersonAlt> { new DataContracts.PersonPersonAlt { PersonAltIdsAssocMember = "0000818", PersonAltIdTypesAssocMember = "ELEV" } }
+
+                    }
+                };
+
+                dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.Person>("PERSON", It.IsAny<string[]>(), true)).ReturnsAsync(persons);
+
+                var filter = new PersonFilterCriteria()
+                {
+                    Credentials = new List<Tuple<string, string>>()
+                    {
+                        new Tuple<string, string>("colleaguepersonid", "0000717"),
+                        new Tuple<string, string>("elevateid", "0000818"),
+                        new Tuple<string, string>("colleagueusername", "0000919"),
+                    }
+                };
+
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 1,
+                    CacheName = "AllFilteredPersons:",
+                    Entity = "Persons",
+                    Sublist = new List<string>() { "1" },
+                    TotalCount = 1,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    },
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 7625,
+                        KeyCacheMin = 5906,
+                        KeyCachePart = "001",
+                        KeyCacheSize = 1720
+                    }
+                }
+                };
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
+
+
+                var result = await repository.GetFilteredPerson3GuidsAsync(0, 10, true, filter, "");
+
+                Assert.IsTrue(result.Item2 == 1);
+            }
+
+            [TestMethod]
+            public async Task GetFilteredPerson3Guids_With_Names_Filters()
+            {
+                var personGuids = new Dictionary<string, RecordKeyLookupResult>() { { "1", new RecordKeyLookupResult() { Guid = Guid.NewGuid().ToString() } } };
+                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(personGuids);
+
+                var ids = new string[] { "1" };
+                dataReaderMock.Setup(d => d.SelectAsync("PERSON", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(ids);
+
+                var persons = new Collection<DataContracts.Person>()
+                {
+                    new DataContracts.Person()
+                    {
+                        RecordGuid = Guid.NewGuid().ToString(),
+                        Recordkey = "1",
+                        FirstName = "first",
+                        LastName = "last",
+                        MiddleName = "middle",
+                        Prefix = "Mr.",
+                        BirthNameLast = "P"
+                    }
+                };
+
+                var filter = new PersonFilterCriteria()
+                {
+                    Names = new List<PersonNamesCriteria>()
+                    {
+                        new PersonNamesCriteria()
+                        {
+                            FirstName = "first",
+                            MiddleName = "middle",
+                            LastName = "last",
+                            Title = "Mr.",
+                            LastNamePrefix = "P"
+                        }
+                    }
+                };
+
+                var response = new GetPersonFillterResultsV2Response()
+                {
+                    PersonIds = new List<string>() { "1" },
+                    TotalRecords = 1
+                };
+                transManagerMock.Setup(t => t.ExecuteAsync<GetPersonFillterResultsV2Request, GetPersonFillterResultsV2Response>(It.IsAny<GetPersonFillterResultsV2Request>())).
+                    ReturnsAsync(response);
+
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 1,
+                    CacheName = "AllFilteredPersons:",
+                    Entity = "Persons",
+                    Sublist = new List<string>() { "1" },
+                    TotalCount = 1,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    },
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 7625,
+                        KeyCacheMin = 5906,
+                        KeyCachePart = "001",
+                        KeyCacheSize = 1720
+                    }
+                }
+                };
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
+
+                var result = await repository.GetFilteredPerson3GuidsAsync(0, 10, true, filter, "");
+
+                Assert.IsTrue(result.Item2 == 1);
+            }
+
+            [TestMethod]
+            public async Task GetFilteredPerson3Guids_With_Email_Filter()
+            {
+                var personGuids = new Dictionary<string, RecordKeyLookupResult>() { { "1", new RecordKeyLookupResult() { Guid = Guid.NewGuid().ToString() } } };
+                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(personGuids);
+
+                var ids = new string[] { "1" };
+                dataReaderMock.Setup(d => d.SelectAsync("PERSON", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(ids);
+
+                var emailIds = new string[] { "first.last@ellucian.com" };
+                dataReaderMock.Setup(d => d.SelectAsync("PERSON", It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>(), true, 425)).ReturnsAsync(emailIds);
+
+                var persons = new Collection<DataContracts.Person>()
+                {
+                    new DataContracts.Person()
+                    {
+                        RecordGuid = Guid.NewGuid().ToString(),
+                        Recordkey = "1",
+                    }
+                };
+                dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.Person>("PERSON", It.IsAny<string[]>(), true)).ReturnsAsync(persons);
+
+                var filter = new PersonFilterCriteria()
+                {
+                    Emails = new List<string>() { "first.last@ellucian.com" }
+                };
+
+
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 1,
+                    CacheName = "AllFilteredPersons:",
+                    Entity = "Persons",
+                    Sublist = new List<string>() { "1" },
+                    TotalCount = 1,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    },
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 7625,
+                        KeyCacheMin = 5906,
+                        KeyCachePart = "001",
+                        KeyCacheSize = 1720
+                    }
+                }
+                };
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
+                var result = await repository.GetFilteredPerson3GuidsAsync(0, 10, true, filter, "");
+
+
+                Assert.IsTrue(result.Item2 == 1);
+            }
+
+            [TestMethod]
+            public async Task GetFilteredPerson3Guids_With_Role_Filter()
+            {
+                var roleIds = new List<string>() { "1" };
+                dataReaderMock.Setup(d => d.SelectAsync("STUDENTS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(roleIds.ToArray());
+                dataReaderMock.Setup(d => d.SelectAsync("FACULTY", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(roleIds.ToArray());
+                dataReaderMock.Setup(d => d.SelectAsync("HRPER", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(roleIds.ToArray());
+                dataReaderMock.Setup(d => d.SelectAsync("EMPLOYES", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(roleIds.ToArray());
+                dataReaderMock.Setup(d => d.SelectAsync("APPLICANTS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(roleIds.ToArray());
+                dataReaderMock.Setup(d => d.SelectAsync("VENDORS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(roleIds.ToArray());
+
+
+                var personGuids = new Dictionary<string, RecordKeyLookupResult>() { { "1", new RecordKeyLookupResult() { Guid = Guid.NewGuid().ToString() } } };
+                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(personGuids);
+
+                var ids = new string[] { "1" };
+                dataReaderMock.Setup(d => d.SelectAsync("PERSON", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(ids);
+                dataReaderMock.Setup(d => d.SelectAsync("PERSON.INTG", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(ids);
+
+                var persons = new Collection<DataContracts.Person>()
+                {
+                    new DataContracts.Person()
+                    {
+                        RecordGuid = Guid.NewGuid().ToString(),
+                        Recordkey = "1",
+                    }
+                };
+                dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.Person>("PERSON", It.IsAny<string[]>(), true)).ReturnsAsync(persons);
+
+                var filter = new PersonFilterCriteria()
+                {
+                    Roles = new List<string>() { "student", "instructor", "employee", "prospectivestudent", "advisor", "alumni", "vendor", }
+                };
+
+
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 1,
+                    CacheName = "AllFilteredPersons:",
+                    Entity = "Persons",
+                    Sublist = new List<string>() { "1" },
+                    TotalCount = 1,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    },
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 7625,
+                        KeyCacheMin = 5906,
+                        KeyCachePart = "001",
+                        KeyCacheSize = 1720
+                    }
+                }
+                };
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
+
+                var result = await repository.GetFilteredPerson3GuidsAsync(0, 10, true, filter, "");
+
+                Assert.IsTrue(result.Item2 == 1);
+            }
+
+            [TestMethod]
+            public async Task GetFilteredPerson3Guids_With_Person_Filter()
+            {
+                var dictResult = new Dictionary<string, GuidLookupResult>() { { "1", new GuidLookupResult() { Entity = "SAVE.LIST.PARMS" } } };
+                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(dictResult);
+
+                var personGuids = new Dictionary<string, RecordKeyLookupResult>() { { "1", new RecordKeyLookupResult() { Guid = Guid.NewGuid().ToString() } } };
+                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(personGuids);
+
+                var response = new GetPersonFillterResultsV2Response()
+                {
+                    PersonIds = new List<string>() { "1" },
+                    TotalRecords = 1
+                };
+                transManagerMock.Setup(t => t.ExecuteAsync<GetPersonFillterResultsV2Request, GetPersonFillterResultsV2Response>(It.IsAny<GetPersonFillterResultsV2Request>())).
+                    ReturnsAsync(response);
+
+
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 1,
+                    CacheName = "AllFilteredPersons:",
+                    Entity = "Persons",
+                    Sublist = new List<string>() { "1" },
+                    TotalCount = 1,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    },
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 7625,
+                        KeyCacheMin = 5906,
+                        KeyCachePart = "001",
+                        KeyCacheSize = 1720
+                    }
+                }
+                };
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
+
+                var result = await repository.GetFilteredPerson3GuidsAsync(0, 10, true, null, "1");
+
+                Assert.IsTrue(result.Item2 == 1);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task GetFilteredPerson3Guids_With_Names_Filters_ErrorResponse()
+            {
+                var personGuids = new Dictionary<string, RecordKeyLookupResult>() { { "1", new RecordKeyLookupResult() { Guid = Guid.NewGuid().ToString() } } };
+                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(personGuids);
+
+                var ids = new string[] { "1" };
+                dataReaderMock.Setup(d => d.SelectAsync("PERSON", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(ids);
+
+                var persons = new Collection<DataContracts.Person>()
+                {
+                    new DataContracts.Person()
+                    {
+                        RecordGuid = Guid.NewGuid().ToString(),
+                        Recordkey = "1",
+                        FirstName = "first",
+                        LastName = "last",
+                        MiddleName = "middle",
+                        Prefix = "Mr.",
+                        BirthNameLast = "P"
+                    }
+                };
+
+                var filter = new PersonFilterCriteria()
+                {
+                    Names = new List<PersonNamesCriteria>()
+                    {
+                        new PersonNamesCriteria()
+                        {
+                            FirstName = "first",
+                            MiddleName = "middle",
+                            LastName = "last",
+                            Title = "Mr.",
+                            LastNamePrefix = "P"
+                        }
+                    }
+                };
+
+                var response = new GetPersonFillterResultsV2Response()
+                {
+                    ErrorMessages = new List<string>() { "error" },
+                    LogStmt = new List<string>() { "log" }
+                };
+                transManagerMock.Setup(t => t.ExecuteAsync<GetPersonFillterResultsV2Request, GetPersonFillterResultsV2Response>(It.IsAny<GetPersonFillterResultsV2Request>())).
+                    ReturnsAsync(response);
+
+                await repository.GetFilteredPerson3GuidsAsync(0, 10, true, filter, "");
+            }
+        }
+
         #region SearchByName
 
         [TestClass]
@@ -1025,6 +1501,22 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                             FirstName = "XYZ",
                             MiddleName = "None",
                             PersonCorpIndicator = "Y"
+                        },
+                        new Base.DataContracts.Person()
+                        {
+                            Recordkey = "2222",
+                            RecordGuid = GenerateGuid(),
+                            LastName = "Padding",
+                            FirstName = "Patty",
+                            MiddleName = "Paddington"
+                        },
+                        new Base.DataContracts.Person()
+                        {
+                            Recordkey = "0002222",
+                            RecordGuid = GenerateGuid(),
+                            LastName = "Padding2",
+                            FirstName = "Patty2",
+                            MiddleName = "Paddington2"
                         }
                     });
                 MockRecordsAsync("PERSON", personRecords.ToDictionary(rr => rr.Recordkey), PersonCriteriaFilter);
@@ -1084,6 +1576,12 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             [TestMethod]
             public async Task SearchByIdsOrNamesAsync_WhenNumericKeywordIsGiven_ReturnsMatchingPersons()
             {
+                var fakeDfltsRecord = new Dflts()
+                {
+                    Recordkey = "DEFAULTS",
+                    DfltsFixedLenPerson = "7"
+                };
+                MockRecordAsync("CORE.PARMS", fakeDfltsRecord);
                 var keyword = "0000001";
                 var result = await personBaseRepository.SearchByIdsOrNamesAsync(null, keyword);
                 Assert.AreEqual(1, result.Count());
@@ -1093,6 +1591,12 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             [TestMethod]
             public async Task SearchByIdsOrNamesAsync_WhenIdsAndNumericKeywordIsGiven_ReturnsMatchingPersons()
             {
+                var fakeDfltsRecord = new Dflts()
+                {
+                    Recordkey = "DEFAULTS",
+                    DfltsFixedLenPerson = "7"
+                };
+                MockRecordAsync("CORE.PARMS", fakeDfltsRecord);
                 var requestedIds = new List<string>() { "0000001" };
                 var keyword = "0000002";
                 var result = await personBaseRepository.SearchByIdsOrNamesAsync(requestedIds, keyword);
@@ -1129,7 +1633,211 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 Assert.AreEqual("Doe", result.ElementAt(0).LastName);
             }
 
+            [TestMethod]
+            public async Task SearchByIdsOrNamesAsync_WhenNoPaddingAndSearchPadding_ReturnsMachingPersons()
+            {
+                var fakeDfltsRecord = new Dflts()
+                {
+                    Recordkey = "DEFAULTS",
+                    DfltsFixedLenPerson = null
+                };
+                MockRecordAsync("CORE.PARMS", fakeDfltsRecord);
+                var requestedIds = new List<string>() { };
+                var keyword = "0002222";
+                var result = await personBaseRepository.SearchByIdsOrNamesAsync(requestedIds, keyword);
+                Assert.AreEqual(1, result.Count());
+                Assert.AreEqual("Padding2", result.ElementAt(0).LastName);
+            }
+
+            [TestMethod]
+            public async Task SearchByIdsOrNamesAsync_WhenNoPaddingAndSearchNoPadding_ReturnsMachingPersons()
+            {
+                var fakeDfltsRecord = new Dflts()
+                {
+                    Recordkey = "DEFAULTS",
+                    DfltsFixedLenPerson = null
+                };
+                MockRecordAsync("CORE.PARMS", fakeDfltsRecord);
+                var requestedIds = new List<string>() { };
+                var keyword = "2222";
+                var result = await personBaseRepository.SearchByIdsOrNamesAsync(requestedIds, keyword);
+                Assert.AreEqual(1, result.Count());
+                Assert.AreEqual("Padding", result.ElementAt(0).LastName);
+            }
+
+            [TestMethod]
+            public async Task SearchByIdsOrNamesAsync_WhenPaddingAndSearchNoPadding_ReturnsMachingPersons()
+            {
+                var fakeDfltsRecord = new Dflts()
+                {
+                    Recordkey = "DEFAULTS",
+                    DfltsFixedLenPerson = "7"
+                };
+                MockRecordAsync("CORE.PARMS", fakeDfltsRecord);
+                var requestedIds = new List<string>() { };
+                var keyword = "2222";
+                var result = await personBaseRepository.SearchByIdsOrNamesAsync(requestedIds, keyword);
+                Assert.AreEqual(1, result.Count());
+                Assert.AreEqual("Padding2", result.ElementAt(0).LastName);
+            }
+
+            [TestMethod]
+            public async Task SearchByIdsOrNamesAsync_WhenPaddingAndSearchPadding_ReturnsMachingPersons()
+            {
+                var fakeDfltsRecord = new Dflts()
+                {
+                    Recordkey = "DEFAULTS",
+                    DfltsFixedLenPerson = "7"
+                };
+                MockRecordAsync("CORE.PARMS", fakeDfltsRecord);
+                var requestedIds = new List<string>() { };
+                var keyword = "0002222";
+                var result = await personBaseRepository.SearchByIdsOrNamesAsync(requestedIds, keyword);
+                Assert.AreEqual(1, result.Count());
+                Assert.AreEqual("Padding2", result.ElementAt(0).LastName);
+            }
+
         }
+        #endregion
+
+        #region SearchByNameForExactMatchAsync
+
+        [TestClass]
+        public class SearchByNameForExactMatchAsync : BaseRepositorySetup
+        {
+            PersonBaseRepository personBaseRepository;
+            string quote;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                quote = '"'.ToString();
+
+                // Build the test repository
+                MockInitialize();
+
+                personBaseRepository = new PersonBaseRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+            }
+
+            [TestMethod]
+            public async Task SearchByNameForExactMatchAsync_LastNameQuery()
+            {
+                var lastName = "brown";
+                var lookupStringResponse = new GetPersonSearchKeyListResponse() { ErrorMessage = "", KeyList = new List<string>() { "12345", "67890" } };
+                transManagerMock.Setup(manager => manager
+                        .ExecuteAsync<GetPersonSearchKeyListRequest, GetPersonSearchKeyListResponse>(It.IsAny<GetPersonSearchKeyListRequest>()))
+                        .ReturnsAsync(lookupStringResponse);
+                List<string> personIds = (await personBaseRepository.SearchByNameForExactMatchAsync(lastName)).ToList();
+                Assert.IsNotNull(personIds);
+                Assert.AreEqual(2, personIds.Count());
+                Assert.AreEqual("12345", personIds[0]);
+                Assert.AreEqual("67890", personIds[1]);
+            }
+
+            [TestMethod]
+            public async Task SearchByName_LastNameFirstNameMiddleNameQuery()
+            {
+                var lastName = "brown";
+                var firstName = "jane";
+                var middleName = "jubilee";
+                var lookupStringResponse = new GetPersonSearchKeyListResponse() { ErrorMessage = "", KeyList = new List<string>() { "12345", "67890" } };
+                transManagerMock.Setup(manager => manager
+                        .ExecuteAsync<GetPersonSearchKeyListRequest, GetPersonSearchKeyListResponse>(It.IsAny<GetPersonSearchKeyListRequest>()))
+                        .ReturnsAsync(lookupStringResponse);
+                List<string> personIds = (await personBaseRepository.SearchByNameForExactMatchAsync(lastName, firstName, middleName)).ToList();
+                Assert.IsNotNull(personIds);
+                Assert.AreEqual(2, personIds.Count());
+                Assert.AreEqual("12345", personIds[0]);
+                Assert.AreEqual("67890", personIds[1]);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task SearchByName_ThrowsErrorIfLastNameNull()
+            {
+                string lastName = null;
+                await personBaseRepository.SearchByNameForExactMatchAsync(lastName);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task SearchByName_ThrowsErrorIfLastNameBlank()
+            {
+                string lastName = "  ";
+                await personBaseRepository.SearchByNameForExactMatchAsync(lastName);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task SearchByName_ThrowsErrorIfLastNameEmpty()
+            {
+                string lastName = "";
+                await personBaseRepository.SearchByNameForExactMatchAsync(lastName);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task SearchByName_throwsErrorWhenLastNameLessThanTwoCharacters()
+            {
+                await personBaseRepository.SearchByNameForExactMatchAsync("x", "first", "middle");
+            }
+            //response is null
+            [TestMethod]
+            public async Task SearchByNameForExactMatchAsync_ResponseIsNull()
+            {
+                var lastName = "brown";
+
+                transManagerMock.Setup(manager => manager
+                        .ExecuteAsync<GetPersonSearchKeyListRequest, GetPersonSearchKeyListResponse>(It.IsAny<GetPersonSearchKeyListRequest>()))
+                        .ReturnsAsync(null);
+                List<string> personIds = (await personBaseRepository.SearchByNameForExactMatchAsync(lastName)).ToList();
+                Assert.IsNotNull(personIds);
+                Assert.AreEqual(0, personIds.Count);
+                loggerMock.Verify(l => l.Error("Response from transaction GetPersonSearchKeyListRequest is null"));
+
+            }
+            //keylist is null
+            public async Task SearchByNameForExactMatchAsync_KeyListIsNull()
+            {
+                var lastName = "brown";
+                var lookupStringResponse = new GetPersonSearchKeyListResponse() { ErrorMessage = "", KeyList = null };
+                transManagerMock.Setup(manager => manager
+                        .ExecuteAsync<GetPersonSearchKeyListRequest, GetPersonSearchKeyListResponse>(It.IsAny<GetPersonSearchKeyListRequest>()))
+                        .ReturnsAsync(lookupStringResponse);
+                List<string> personIds = (await personBaseRepository.SearchByNameForExactMatchAsync(lastName)).ToList();
+                Assert.IsNotNull(personIds);
+                Assert.AreEqual(0, personIds.Count());
+                loggerMock.Verify(l => l.Error("Response from transaction GetPersonSearchKeyListRequest Person Ids are null"));
+            }
+
+            //keylist count is 0
+            public async Task SearchByNameForExactMatchAsync_KeyListCountIs0()
+            {
+                var lastName = "brown";
+                var lookupStringResponse = new GetPersonSearchKeyListResponse() { ErrorMessage = "", KeyList = new List<string>() };
+                transManagerMock.Setup(manager => manager
+                        .ExecuteAsync<GetPersonSearchKeyListRequest, GetPersonSearchKeyListResponse>(It.IsAny<GetPersonSearchKeyListRequest>()))
+                        .ReturnsAsync(lookupStringResponse);
+                List<string> personIds = (await personBaseRepository.SearchByNameForExactMatchAsync(lastName)).ToList();
+                Assert.IsNotNull(personIds);
+                Assert.AreEqual(0, personIds.Count());
+                loggerMock.Verify(l => l.Error("Response from transaction GetPersonSearchKeyListRequest Person Ids count is 0"));
+            }
+            //error is not null
+            public async Task SearchByNameForExactMatchAsync_ErrorIsretrunedfromCTX()
+            {
+                var lastName = "brown";
+                var lookupStringResponse = new GetPersonSearchKeyListResponse() { ErrorMessage = "This is error", KeyList = new List<string>() { "something" } };
+                transManagerMock.Setup(manager => manager
+                        .ExecuteAsync<GetPersonSearchKeyListRequest, GetPersonSearchKeyListResponse>(It.IsAny<GetPersonSearchKeyListRequest>()))
+                        .ReturnsAsync(lookupStringResponse);
+                List<string> personIds = (await personBaseRepository.SearchByNameForExactMatchAsync(lastName)).ToList();
+                Assert.IsNotNull(personIds);
+                Assert.AreEqual(0, personIds.Count());
+                loggerMock.Verify(l => l.Error("Response have error returned from transaction GetPersonSearchKeyListRequest-" + lookupStringResponse.ErrorMessage));
+            }
+        }
+
         #endregion
 
         #region IsPerson
@@ -1467,6 +2175,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 Assert.AreEqual(2, result.Item1.Count());
             }
 
+
+
             [TestMethod]
             public async Task GetPersonGuidsFilteredAsync_Null()
             {
@@ -1687,11 +2397,11 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 rklr.Add("PERSON+P4", new RecordKeyLookupResult() { Guid = Guid.NewGuid().ToString() });
 
                 dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<Opers>("UT.OPERS", It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(opers);
-                dataReaderMock.Setup(dr => dr.SelectAsync("STAFF", It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>() )).ReturnsAsync(new []{ "3" });
+                dataReaderMock.Setup(dr => dr.SelectAsync("STAFF", It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>())).ReturnsAsync(new[] { "3" });
                 dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<DataContracts.Staff>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(new Collection<DataContracts.Staff>() { new DataContracts.Staff() { Recordkey = "P4", StaffInitials = "4" } });
                 dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(rklr);
 
-                var results = await repository.GetPersonGuidsFromOperKeysAsync(sublist);                
+                var results = await repository.GetPersonGuidsFromOperKeysAsync(sublist);
             }
 
             [TestMethod]
@@ -1701,10 +2411,204 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<Opers>("UT.OPERS", It.IsAny<string[]>(), It.IsAny<bool>())).ThrowsAsync(new Exception());
                 var results = await repository.GetPersonGuidsFromOperKeysAsync(new[] { "1" });
             }
-            
+
         }
         #endregion
+
+        [TestClass]
+        public class GetOrganizationsGuids : BasePersonSetup
+        {
+            PersonBaseRepository repository;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                PersonSetupInitialize();
+
+                var personIds = new List<string>() { "1" };
+                dataReaderMock.Setup(d => d.SelectAsync("PERSON", It.IsAny<string>())).ReturnsAsync(personIds.ToArray());
+
+                var institutionIds = new List<string>() { "2" };
+                dataReaderMock.Setup(d => d.SelectAsync("INSTITUTIONS", It.IsAny<string>())).ReturnsAsync(personIds.ToArray());
+
+                repository = new PersonBaseRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                repository = null;
+            }
+
+            [TestMethod]
+            public async Task GetFilteredOrganizationGuids_With_Invalid_Filter1()
+            {
+                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(null);
+
+                var result = await repository.GetFilteredOrganizationGuidsAsync(0, 10, "invalid", "", "");
+
+                Assert.IsTrue(result.Item2 == 0);
+            }
+
+            [TestMethod]
+            public async Task GetFilteredOrganizationGuids_With_Invalid_Filter2()
+            {
+                var dicResult = new Dictionary<string, GuidLookupResult>() { };
+                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(null);
+
+                var result = await repository.GetFilteredOrganizationGuidsAsync(0, 10, "", "invalid", "");
+
+                Assert.IsTrue(result.Item2 == 0);
+            }
+
+            [TestMethod]
+            public async Task GetFilteredOrganizationGuids_With_Invalid_Filter3()
+            {
+                var dictResult = new Dictionary<string, GuidLookupResult>() { { "1", null } };
+                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(dictResult);
+
+                var result = await repository.GetFilteredOrganizationGuidsAsync(0, 10, "", "", "invalid");
+
+                Assert.IsTrue(result.Item2 == 0);
+            }
+
+            [TestMethod]
+            public async Task GetFilteredOrganizationGuids_With_Invalid_EntityName()
+            {
+                var dictResult = new Dictionary<string, GuidLookupResult>() { { "1", new GuidLookupResult() { Entity = "SAVE.LIST.PARMS1" } } };
+                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(dictResult);
+
+                var result = await repository.GetFilteredOrganizationGuidsAsync(0, 10, "", "", "1");
+
+                Assert.IsTrue(result.Item2 == 0);
+            }
+
+            [TestMethod]
+            public async Task GetFilteredOrganizationGuids_With_Role_Filters()
+            {
+                var personGuids = new Dictionary<string, RecordKeyLookupResult>() { { "1", new RecordKeyLookupResult() { Guid = Guid.NewGuid().ToString() } } };
+                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(personGuids);
+
+                var ids = new string[] { "1" };
+                dataReaderMock.Setup(d => d.SelectAsync("PERSON", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(ids);
+                dataReaderMock.Setup(d => d.SelectAsync("PERSON.INTG", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(ids);
+
+                var persons = new Collection<DataContracts.Person>()
+                {
+                    new DataContracts.Person()
+                    {
+                        RecordGuid = Guid.NewGuid().ToString(),
+                        Recordkey = "1",
+                        FirstName = "first",
+                        LastName = "last",
+                        MiddleName = "middle",
+                        PersonCorpIndicator = "Y",
+                        PersonAltEntityAssociation = new List<DataContracts.PersonPersonAlt> {
+                            new DataContracts.PersonPersonAlt { PersonAltIdsAssocMember = "0000818", PersonAltIdTypesAssocMember = "ELEV" } }
+
+                    }
+                };
+
+
+                dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.Person>("PERSON", It.IsAny<string[]>(), true)).ReturnsAsync(persons);
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 1,
+                    CacheName = "AllOrganizations",
+                    Entity = "",
+                    Sublist = new List<string>() { "1" },
+                    TotalCount = 1,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                new KeyCacheInfo()
+                {
+                    KeyCacheMax = 5905,
+                    KeyCacheMin = 1,
+                    KeyCachePart = "000",
+                    KeyCacheSize = 5905
+                },
+                new KeyCacheInfo()
+                {
+                    KeyCacheMax = 7625,
+                    KeyCacheMin = 5906,
+                    KeyCachePart = "001",
+                    KeyCacheSize = 1720
+                    }
+                }
+                };
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
+                dataReaderMock.Setup(d => d.SelectAsync("INSTITUTIONS", It.IsAny<string>())).ReturnsAsync((new List<string>() { }).ToArray());
+
+                var roleIds = new string[] { "10" };
+                //roleOrgList = (await DataReader.SelectAsync("PERSON.INTG", roleCriteria)).ToList();
+                dataReaderMock.Setup(d => d.SelectAsync("PERSON.INTG", It.IsAny<string>())).ReturnsAsync(ids);
+                
+
+                var result = await repository.GetFilteredOrganizationGuidsAsync(0, 10, "partner", "", "");
+
+                Assert.IsTrue(result.Item2 == 1);
+            }
+
+            [TestMethod]
+            public async Task GetFilteredOrganizationGuids_With_Criteria_Filters()
+            {
+                var personGuids = new Dictionary<string, RecordKeyLookupResult>() { { "1", new RecordKeyLookupResult() { Guid = Guid.NewGuid().ToString() } } };
+                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(personGuids);
+
+                var ids = new string[] { "1" };
+                dataReaderMock.Setup(d => d.SelectAsync("PERSON", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync((new List<string>() { }).ToArray());
+
+                dataReaderMock.Setup(d => d.SelectAsync("INSTITUTIONS", It.IsAny<string>())).ReturnsAsync((new List<string>() { }).ToArray());
+
+             
+                var persons = new Collection<DataContracts.Person>()
+                {
+                    new DataContracts.Person()
+                    {
+                        RecordGuid = Guid.NewGuid().ToString(),
+                        Recordkey = "1",
+                        FirstName = "first",
+                        LastName = "last",
+                        MiddleName = "middle",
+                        PersonCorpIndicator = "Y"
+                    }
+                };
+
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 1,
+                    CacheName = "AllOrganizations",
+                    Entity = "",
+                    Sublist = new List<string>() { "1" },
+                    TotalCount = 1,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                new KeyCacheInfo()
+                {
+                    KeyCacheMax = 5905,
+                    KeyCacheMin = 1,
+                    KeyCachePart = "000",
+                    KeyCacheSize = 5905
+                },
+                new KeyCacheInfo()
+                {
+                    KeyCacheMax = 7625,
+                    KeyCacheMin = 5906,
+                    KeyCachePart = "001",
+                    KeyCacheSize = 1720
+                }
+                    }
+                };
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
+
+                var result = await repository.GetFilteredOrganizationGuidsAsync(0, 10, "", "", "1");
+
+                Assert.IsTrue(result.Item2 == 1);
+            }       
+        }
     }
-
 }
-

@@ -1,8 +1,7 @@
-﻿/*Copyright 2015-2017 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2015-2019 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.FinancialAid.Entities;
@@ -12,7 +11,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Services
     public static class AwardPackageChangeRequestDomainService
     {
         public static AwardPackageChangeRequest VerifyAwardPackageChangeRequest(AwardPackageChangeRequest awardPackageChangeRequest, StudentAward studentAward,
-            IEnumerable<AwardStatus> awardStatuses, IEnumerable<StudentAward> studentAwardsForYear = null)
+            IEnumerable<AwardStatus> awardStatuses, IEnumerable<StudentAward> studentAwardsForYear = null, bool updateAllAwardsFlag = false)
         {
             if (studentAward == null)
             {
@@ -21,7 +20,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Services
             if (awardPackageChangeRequest == null)
             {
                 throw new ArgumentNullException("awardPackageChangeRequest");
-            }            
+            }
             if (awardStatuses == null)
             {
                 throw new ArgumentNullException("awardStatuses");
@@ -54,13 +53,14 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Services
             }
             //If the incoming award is unsubsidized loan and there is a pending subsidized loan on the record for the year, throw an exception
             //since all subsidized loans must be accepted/rejected before unsubsidized loan can be taken action on
-            if (studentAward.Award.LoanType.HasValue && studentAward.Award.LoanType.Value == LoanType.UnsubsidizedLoan &&
-                studentAwardsForYear != null && studentAwardsForYear.Any(sa => 
-                    sa.Award.LoanType.HasValue && sa.Award.LoanType.Value == LoanType.SubsidizedLoan && sa.StudentAwardPeriods.Any(sap => sap.IsStatusModifiable 
+            if (!awardPackageChangeRequest.OverrideUnsubsidizedLoanCheck && studentAward.Award.LoanType.HasValue && studentAward.Award.LoanType.Value == LoanType.UnsubsidizedLoan &&
+                studentAwardsForYear != null && studentAwardsForYear.Any(sa =>
+                    sa.Award.LoanType.HasValue && sa.Award.LoanType.Value == LoanType.SubsidizedLoan && sa.StudentAwardPeriods.Any(sap => sap.IsStatusModifiable
                                                                                                                 && sap.AwardStatus.Category != AwardStatusCategory.Accepted)))
             {
                 throw new InvalidOperationException("All subsidized loans must be accepted/rejected before taking action on an unsubsidized loan");
             }
+
 
             var anyAmountChangeRequested = awardPackageChangeRequest.AwardPeriodChangeRequests.Join(studentAward.StudentAwardPeriods, cr => cr.AwardPeriodId, p => p.AwardPeriodId,
                 (cr, period) =>
@@ -88,8 +88,8 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Services
                 (cr, period) =>
                     !string.IsNullOrEmpty(cr.NewAwardStatusId) && cr.NewAwardStatusId != period.AwardStatus.Code && cr.NewAwardStatusId == "D").Any(b => b);
 
-         // if (anyStatusChangeRequested && !studentAward.StudentAwardYear.CurrentConfiguration.IsDeclinedStatusChangeRequestRequired)
-            if(anyStatusChangeRequested)
+            // if (anyStatusChangeRequested && !studentAward.StudentAwardYear.CurrentConfiguration.IsDeclinedStatusChangeRequestRequired)
+            if (anyStatusChangeRequested)
             {
                 if (anyDeclinedStatuses == true && !studentAward.StudentAwardYear.CurrentConfiguration.IsDeclinedStatusChangeRequestRequired)
                 {
@@ -189,22 +189,35 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Services
             }
         }
 
-
-        public static IEnumerable<Communication> GetCommunications(AwardPackageChangeRequest awardPackageChangeRequest, StudentAward studentAward)
+        /// <summary>
+        /// Gets communication entities associated with award change requests
+        /// to be sent to a student 
+        /// </summary>
+        /// <param name="awardPackageChangeRequest">award package change request in question</param>
+        /// <param name="studentAward">student award this request is made for</param>
+        /// <param name="awardStatuses">list of all reference award statuses</param>
+        /// <returns>List of Communication entities</returns>
+        public static IEnumerable<Communication> GetCommunications(AwardPackageChangeRequest awardPackageChangeRequest, StudentAward studentAward, IEnumerable<AwardStatus> awardStatuses)
         {
             var communications = new List<Communication>();
             if (!string.IsNullOrEmpty(studentAward.StudentAwardYear.CurrentConfiguration.RejectedAwardCommunicationCode) &&
-                awardPackageChangeRequest.AwardPeriodChangeRequests.Any(p => !string.IsNullOrEmpty(p.NewAwardStatusId) && p.Status == AwardPackageChangeRequestStatus.Pending))
+                awardPackageChangeRequest.AwardPeriodChangeRequests.Any(p => p != null && !string.IsNullOrEmpty(p.NewAwardStatusId)
+                && p.Status == AwardPackageChangeRequestStatus.Pending))
             {
-                communications.Add(new Communication(studentAward.StudentId, studentAward.StudentAwardYear.CurrentConfiguration.RejectedAwardCommunicationCode)
+                //Only add a rejected award communication code if the taken action is reject/deny
+                var newAwardStatusCategory = DetermineChangeRequestAwardStatusCategory(awardPackageChangeRequest, awardStatuses);
+                if (newAwardStatusCategory == AwardStatusCategory.Denied || newAwardStatusCategory == AwardStatusCategory.Rejected)
+                {
+                    communications.Add(new Communication(studentAward.StudentId, studentAward.StudentAwardYear.CurrentConfiguration.RejectedAwardCommunicationCode)
                     {
                         StatusCode = studentAward.StudentAwardYear.CurrentConfiguration.RejectedAwardCommunicationStatus,
                         StatusDate = DateTime.Today
                     });
+                }
             }
 
             if (!string.IsNullOrEmpty(studentAward.StudentAwardYear.CurrentConfiguration.LoanChangeCommunicationCode) &&
-                 awardPackageChangeRequest.AwardPeriodChangeRequests.Any(p => p.NewAmount.HasValue && p.Status == AwardPackageChangeRequestStatus.Pending))
+                 awardPackageChangeRequest.AwardPeriodChangeRequests.Any(p => p != null && p.NewAmount.HasValue && p.Status == AwardPackageChangeRequestStatus.Pending))
             {
                 communications.Add(new Communication(studentAward.StudentId, studentAward.StudentAwardYear.CurrentConfiguration.LoanChangeCommunicationCode)
                 {
@@ -214,6 +227,28 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Services
             }
 
             return communications;
+        }
+
+        /// <summary>
+        /// Determine the award package change request new status category
+        /// </summary>
+        /// <param name="awardPackageChangeRequest">award package change request</param>
+        /// <param name="awardStatuses">List of reference award statuses</param>
+        /// <returns>AwardStatusCategory or null</returns>
+        private static AwardStatusCategory? DetermineChangeRequestAwardStatusCategory(AwardPackageChangeRequest awardPackageChangeRequest, IEnumerable<AwardStatus> awardStatuses)
+        {
+            AwardStatusCategory? statusCategory = null;
+
+            //Get the new status id - all affected periods will have the same status id since we 
+            //either accept/reject all marked periods in one transaction
+            var awardPeriodWithNewStatus = awardPackageChangeRequest.AwardPeriodChangeRequests.Any() ? awardPackageChangeRequest.AwardPeriodChangeRequests
+                .Where(p => p != null && !string.IsNullOrEmpty(p.NewAwardStatusId)).First() : null;
+            if (awardPeriodWithNewStatus != null && awardStatuses != null && awardStatuses.Any())
+            {
+                var matchingAwardStatus = awardStatuses.FirstOrDefault(s => s != null && s.Code == awardPeriodWithNewStatus.NewAwardStatusId);
+                statusCategory = matchingAwardStatus != null ? matchingAwardStatus.Category : (AwardStatusCategory?)null;
+            }
+            return statusCategory;
         }
     }
 }

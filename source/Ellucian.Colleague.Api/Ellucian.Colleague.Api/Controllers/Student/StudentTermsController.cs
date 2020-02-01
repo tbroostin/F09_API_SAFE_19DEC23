@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2014 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -52,6 +52,9 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="criteria">DTO Object containing List of Student Keys, Academic Level and Term.</param>
         /// <returns>List of StudentTerm Objects <see cref="Ellucian.Colleague.Dtos.Student.StudentTerm">StudentTerm</see></returns>
+        /// <accessComments>
+        /// API endpoint is secured with VIEW.STUDENT.INFORMATION permission.
+        /// </accessComments>
         [HttpPost]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.Student.StudentTerm>> QueryStudentTermsAsync([FromBody] StudentTermsQueryCriteria criteria)
         {

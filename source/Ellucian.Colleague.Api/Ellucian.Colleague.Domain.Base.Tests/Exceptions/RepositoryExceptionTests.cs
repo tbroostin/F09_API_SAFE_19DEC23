@@ -82,6 +82,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Exceptions
             Assert.AreEqual(message2, result.Errors[1].Message);
         }
 
+        // When platform removes the throws from the AddError() method these tests will fail.
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
         public void RepositoryException_AddError_Null()

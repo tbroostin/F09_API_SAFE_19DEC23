@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -395,7 +395,6 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
         /// </summary>
         /// <param name="studentId">ID of the student for whom the statement will be generated</param>
         /// <param name="timeframeId">ID of the timeframe for which the statement will be generated</param>
-        /// <param name="activityDisplay">Account activity display method</param>
         /// <param name="terms">Collection of terms</param>
         /// <param name="periods">Collection of financial periods</param>
         /// <returns>A student's schedule for display on a student statement</returns>
@@ -413,7 +412,7 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
 
             var studentAcademicCredits = new List<AcademicCredit>();
             var academicCreditsDict = await _academicCreditRepository.GetAcademicCreditByStudentIdsAsync(new List<string>() { studentId });
-            if (academicCreditsDict.Count > 0)
+            if (academicCreditsDict.Any())
             {
                 studentAcademicCredits = academicCreditsDict[studentId];
                 var termIds = new List<string>();
@@ -468,29 +467,33 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
                 }
             }
 
-            // Filter out any non-Add and non-New academic credits
-            studentAcademicCredits.RemoveAll(ac => ac.Status != CreditStatus.Add && ac.Status != CreditStatus.New);
+            // Filter out any non-Add and non-New academic credits, as well as credits with no section id
+            studentAcademicCredits.RemoveAll(ac => ac == null || (ac.Status != CreditStatus.Add && ac.Status != CreditStatus.New) || string.IsNullOrEmpty(ac.SectionId));
 
             var sections = new List<Section>();
-            IEnumerable<Section> sectionsToAdd =await GetSectionsAsync(studentAcademicCredits);
+            IEnumerable<Section> sectionsToAdd = await GetSectionsAsync(studentAcademicCredits);
             sections.AddRange(sectionsToAdd);
-            if (studentAcademicCredits.Count > 0 && sections.Count > 0 && studentAcademicCredits.Count == sections.Count)
+            if (studentAcademicCredits.Any() && sections.Any())
             {
-                studentAcademicCredits = studentAcademicCredits.OrderBy(ac => ac.SectionId).ToList();
-                sections = sections.OrderBy(s => s.Id).ToList();
-                for (int i = 0; i < studentAcademicCredits.Count; i++)
+                foreach (var studentAcademicCredit in studentAcademicCredits)
                 {
-                    if (studentAcademicCredits[i].SectionId == sections[i].Id)
+                    //find a corresponding course section if any
+                    var section = sections.FirstOrDefault(s => s != null && s.Id == studentAcademicCredit.SectionId);
+                    if (section != null)
                     {
                         Term term = null;
-                        if (!string.IsNullOrEmpty(sections[i].TermId))
+                        if (!string.IsNullOrEmpty(section.TermId))
                         {
-                            term = _termRepository.Get(sections[i].TermId);
+                            term = _termRepository.Get(section.TermId);
                         }
-                        schedule.Add(new Domain.Finance.Entities.StudentStatementScheduleItem(studentAcademicCredits[i], sections[i])
+                        schedule.Add(new Domain.Finance.Entities.StudentStatementScheduleItem(studentAcademicCredit, section)
                         {
                             SectionTerm = term != null ? term.Description : string.Empty
                         });
+                    }
+                    else
+                    {
+                        logger.Warn(string.Format("Student academic credit {0} does not have an associated course section", studentAcademicCredit.Id));
                     }
                 }
             }
@@ -691,7 +694,7 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
                         }
                 };
             }
-
+            //As per jpm 01/24/2019, an empty object is added for the purposes of being able to render rdlc
             if (statement.CourseSchedule == null || statement.CourseSchedule.Count() == 0)
             {
                 statement.CourseSchedule = new List<StudentStatementScheduleItem>() 

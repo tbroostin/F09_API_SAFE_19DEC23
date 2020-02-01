@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -21,6 +21,8 @@ using System.Threading.Tasks;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Web.Http.Filters;
+using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Web.Security;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -72,6 +74,11 @@ namespace Ellucian.Colleague.Api.Controllers
                 }
                 return await _curriculumService.GetSectionRegistrationStatuses2Async(bypassCache);
             }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
             catch (Exception ex)
             {
                 _logger.Error(ex.ToString());
@@ -91,6 +98,16 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 return await _curriculumService.GetSectionRegistrationStatusById2Async(id);
             }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
             catch (Exception ex)
             {
                 _logger.Error(ex.ToString());
@@ -103,6 +120,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Retrieves all SectionRegistrationStatuses.
         /// </summary>
         /// <returns>All <see cref="Ellucian.Colleague.Dtos.SectionRegistrationStatusItem3">SectionRegistrationStatus.</see></returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.SectionRegistrationStatusItem3>> GetSectionRegistrationStatuses3Async()
         {
@@ -118,6 +136,11 @@ namespace Ellucian.Colleague.Api.Controllers
                 }
                 return await _curriculumService.GetSectionRegistrationStatuses3Async(bypassCache);
             }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
             catch (Exception e)
             {
                 _logger.Error(e.ToString());
@@ -131,11 +154,22 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="id">ID to desired SectionRegistrationStatus</param>
         /// <returns>A <see cref="Ellucian.Colleague.Dtos.SectionRegistrationStatusItem3">SectionRegistrationStatus.</see></returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Ellucian.Colleague.Dtos.SectionRegistrationStatusItem3> GetSectionRegistrationStatusById3Async(string id)
         {
             try
             {
                 return await _curriculumService.GetSectionRegistrationStatusById3Async(id);
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
             }
             catch (Exception e)
             {

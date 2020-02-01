@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 using System;
 
 namespace Ellucian.Colleague.Domain.Student.Entities
@@ -120,6 +120,32 @@ namespace Ellucian.Colleague.Domain.Student.Entities
                 _CumulativeMinutesAttended = value;
             }
         }
+
+        /// <summary>
+        /// Last date on which attedance was recorded 
+        /// </summary>
+        public DateTime? LastAttendanceRecorded { get; set; }
+
+        /// <summary>
+        /// Total days present
+        /// </summary>
+        public int NumberOfDaysPresent { get; set; }
+
+        /// <summary>
+        /// Total days  absent
+        /// </summary>
+        public int NumberOfDaysAbsent { get; set; }
+
+        /// <summary>
+        /// Total days absence excused
+        /// </summary>
+        public int NumberOfDaysExcused { get; set; }
+
+        /// <summary>
+        /// Total days late
+        /// </summary>
+        public int NumberOfDaysLate { get; set; }
+
         #endregion
 
         /// <summary>
@@ -175,15 +201,15 @@ namespace Ellucian.Colleague.Domain.Student.Entities
                 if (studentAttendance == null)
                     return false;
                 var tempInstructionalMethod = this.InstructionalMethod ?? string.Empty;
-                if (this.StudentId == studentAttendance.StudentId && 
-                    this.SectionId == studentAttendance.SectionId && 
-                    this.StartTime == studentAttendance.StartTime && 
-                    this.EndTime == studentAttendance.EndTime && 
+                if (this.StudentId == studentAttendance.StudentId &&
+                    this.SectionId == studentAttendance.SectionId &&
+                    this.StartTime == studentAttendance.StartTime &&
+                    this.EndTime == studentAttendance.EndTime &&
                     this.MeetingDate == studentAttendance.MeetingDate &&
                     this.MinutesAttended == studentAttendance.MinutesAttended &&
-                    ((string.IsNullOrEmpty(this.AttendanceCategoryCode) && string.IsNullOrEmpty(studentAttendance.AttendanceCategoryCode)) || 
+                    ((string.IsNullOrEmpty(this.AttendanceCategoryCode) && string.IsNullOrEmpty(studentAttendance.AttendanceCategoryCode)) ||
                     (this.AttendanceCategoryCode != null && this.AttendanceCategoryCode.Equals(studentAttendance.AttendanceCategoryCode, StringComparison.InvariantCultureIgnoreCase))) &&
-                    tempInstructionalMethod.Equals(studentAttendance.InstructionalMethod??string.Empty, StringComparison.InvariantCultureIgnoreCase))
+                    tempInstructionalMethod.Equals(studentAttendance.InstructionalMethod ?? string.Empty, StringComparison.InvariantCultureIgnoreCase))
 
                     return true;
                 else

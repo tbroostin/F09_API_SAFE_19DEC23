@@ -16,6 +16,7 @@ using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 {    
@@ -32,7 +33,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
         private Mock<IApplicationStatusRepository> _applicationStatusRepositoryMock;
         private Mock<IAdmissionApplicationsRepository> _admissionApplicationsRepositoryMock;
-        private Mock<IStudentReferenceDataRepository> _referenceRepositoryMock;
+        private Mock<IStudentReferenceDataRepository> _studentReferenceRepositoryMock;
+        private Mock<IReferenceDataRepository> _referenceRepositoryMock;
         private Dictionary<string, string> _admissionApplicationDict = new Dictionary<string, string>();
         Tuple<IEnumerable<Domain.Student.Entities.ApplicationStatus2>, int> _adminDecionsEntityTuple;
         Domain.Entities.Role _roleView = new Domain.Entities.Role(1, "VIEW.ADMISSION.DECISIONS");
@@ -51,7 +53,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         {
             _applicationStatusRepositoryMock = new Mock<IApplicationStatusRepository>();
             _admissionApplicationsRepositoryMock = new Mock<IAdmissionApplicationsRepository>();
-            _referenceRepositoryMock = new Mock<IStudentReferenceDataRepository>();
+            _studentReferenceRepositoryMock = new Mock<IStudentReferenceDataRepository>();
+            _referenceRepositoryMock = new Mock<IReferenceDataRepository>();
             _adapterRegistryMock = new Mock<IAdapterRegistry>();
             _roleRepositoryMock = new Mock<IRoleRepository>();
             _configurationRepoMock = new Mock<IConfigurationRepository>();
@@ -62,18 +65,21 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             InitializeData();
             InitializeMocks();
 
-            _admissionDecisionsService = new AdmissionDecisionsService(_applicationStatusRepositoryMock.Object, _admissionApplicationsRepositoryMock.Object, _referenceRepositoryMock.Object,
-                                            _adapterRegistryMock.Object, userFactory, _roleRepositoryMock.Object, _configurationRepoMock.Object, _loggerMock.Object);
+            _admissionDecisionsService = new AdmissionDecisionsService(_applicationStatusRepositoryMock.Object, _admissionApplicationsRepositoryMock.Object, _studentReferenceRepositoryMock.Object,
+                                            _referenceRepositoryMock.Object, _adapterRegistryMock.Object, userFactory, _roleRepositoryMock.Object, _configurationRepoMock.Object, _loggerMock.Object);
         }
 
         private void InitializeMocks()
         {
-            _applicationStatusRepositoryMock.Setup(repo => repo.GetApplicationStatusesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(_adminDecionsEntityTuple);
+            _applicationStatusRepositoryMock.Setup(repo => repo.GetApplicationStatusesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<DateTimeOffset>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<bool>())).ReturnsAsync(_adminDecionsEntityTuple);
             _applicationStatusRepositoryMock.Setup(repo => repo.GetApplicationStatusByGuidAsync(admissionDecisionsGuid, It.IsAny<bool>())).ReturnsAsync(_adminDecionsEntityTuple.Item1.FirstOrDefault());
             _applicationStatusRepositoryMock.Setup(repo => repo.UpdateAdmissionDecisionAsync(It.IsAny<ApplicationStatus2>())).ReturnsAsync(_admissionDecisionsCollection.First());
             _admissionApplicationsRepositoryMock.Setup(i => i.GetAdmissionApplicationGuidDictionary(It.IsAny<IEnumerable<string>>())).ReturnsAsync(_admissionApplicationDict);
-            _referenceRepositoryMock.Setup(i => i.GetAdmissionDecisionTypesAsync(It.IsAny<bool>())).ReturnsAsync(_admissionDecisionTypeCollection);
+            _studentReferenceRepositoryMock.Setup(i => i.GetAdmissionDecisionTypesAsync(It.IsAny<bool>())).ReturnsAsync(_admissionDecisionTypeCollection);
             _roleRepositoryMock.Setup(i => i.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { _roleView, _roleUpdate });
+
+            _studentReferenceRepositoryMock.Setup(i => i.GetAdmissionDecisionTypesGuidAsync(It.IsAny<string>()))
+                .ReturnsAsync(_admissionDecisionTypeCollection.FirstOrDefault(x=> x.Code == "WITHP").Guid);
 
         }
 
@@ -123,7 +129,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             _admissionApplicationDict = null;
             _admissionDecisionsService = null;
             _admissionDecisionsCollection = null;
-            _referenceRepositoryMock = null;
+            _studentReferenceRepositoryMock = null;
             _loggerMock = null;
             _roleRepositoryMock = null;
             _configurationRepoMock = null;
@@ -132,7 +138,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         [TestMethod]
         public async Task AdmissionDecisionsService_GetAdmissionDecisionsAsync()
         {
-            var results = await _admissionDecisionsService.GetAdmissionDecisionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>());
+            var results = await _admissionDecisionsService.GetAdmissionDecisionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>(), It.IsAny<bool>());
             Assert.IsTrue(results is Tuple<IEnumerable<AdmissionDecisions>, int>);
             Assert.IsNotNull(results);
         }
@@ -140,7 +146,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         [TestMethod]
         public async Task AdmissionDecisionsService_GetAdmissionDecisionsAsync_Count()
         {
-            var results = await _admissionDecisionsService.GetAdmissionDecisionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>());
+            var results = await _admissionDecisionsService.GetAdmissionDecisionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>(), It.IsAny<bool>());
             Assert.AreEqual(3, results.Item1.Count());
         }
 
@@ -149,7 +155,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         public async Task AdmissionDecisionsService_GetAdmissionDecisionsAsync_PermissionsException()
         {
             _roleRepositoryMock.Setup(i => i.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { });
-            await _admissionDecisionsService.GetAdmissionDecisionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>());
+            await _admissionDecisionsService.GetAdmissionDecisionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>(), It.IsAny<bool>());
         }
 
         [TestMethod]
@@ -157,11 +163,11 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         public async Task AdmissionDecisionsService_GetAdmissionDecisionsByGuidAsync_KeyNotFoundException()
         {
             _admissionApplicationsRepositoryMock.Setup(i => i.GetAdmissionApplicationGuidDictionary(It.IsAny<IEnumerable<string>>())).ThrowsAsync(new KeyNotFoundException());
-            await _admissionDecisionsService.GetAdmissionDecisionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>());
+            await _admissionDecisionsService.GetAdmissionDecisionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>(), It.IsAny<bool>());
         }
 
         [TestMethod]
-        [ExpectedException(typeof(KeyNotFoundException))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task AdmissionDecisionsService_GetAdmissionDecisionsByGuidAsync_Application_KeyNotFoundException()
         {
             Domain.Student.Entities.ApplicationStatus2 entity = new Domain.Student.Entities.ApplicationStatus2("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "100", "ABC", Convert.ToDateTime("2017-07-31 00:00:00.000"), Convert.ToDateTime("1900-01-01 21:38:44.000"));
@@ -175,7 +181,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         [ExpectedException(typeof(KeyNotFoundException))]
         public async Task AdmissionDecisionsService_GetAdmissionDecisionsByGuidAsync_AdmissionDecisionId_KeyNotFoundException()
         {
-            Domain.Student.Entities.ApplicationStatus2 entity = new Domain.Student.Entities.ApplicationStatus2("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "1", "ABC", Convert.ToDateTime("2017-07-31 00:00:00.000"), Convert.ToDateTime("1900-01-01 21:38:44.000"));
+            _studentReferenceRepositoryMock.Setup(i => i.GetAdmissionDecisionTypesGuidAsync(It.IsAny<string>()))
+               .Throws<KeyNotFoundException>();
+
+            var entity = new Domain.Student.Entities.ApplicationStatus2("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "1", "ABC", Convert.ToDateTime("2017-07-31 00:00:00.000"), Convert.ToDateTime("1900-01-01 21:38:44.000"));
             _applicationStatusRepositoryMock.Setup(repo => repo.GetApplicationStatusByGuidAsync(admissionDecisionsGuid, It.IsAny<bool>())).ReturnsAsync(entity);
 
             var actualResult =
@@ -219,14 +228,14 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(KeyNotFoundException))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task AdmissionDecisionsService_CreateAdmissionDecisionAsync_KeyNotFoundException()
         {
             var result = await _admissionDecisionsService.CreateAdmissionDecisionAsync(admissionDecisionDTOIn);
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task AdmissionDecisionsService_CreateAdmissionDecisionAsync_ID_With_Guid_ArgumentException()
         {
             admissionDecisionDTOIn.Id = Guid.NewGuid().ToString();
@@ -236,7 +245,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(KeyNotFoundException))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task AdmissionDecisionsService_CreateAdmissionDecisionAsync_Item1_APPLICATION_KeyNotFoundException()
         {            
             _applicationStatusRepositoryMock.SetupSequence(i => i.GetApplicationStatusKey(It.IsAny<string>()))
@@ -245,7 +254,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(KeyNotFoundException))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task AdmissionDecisionsService_CreateAdmissionDecisionAsync_Item3_Has_Index_KeyNotFoundException()
         {
             _applicationStatusRepositoryMock.SetupSequence(i => i.GetApplicationStatusKey(It.IsAny<string>()))
@@ -254,7 +263,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(KeyNotFoundException))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task AdmissionDecisionsService_CreateAdmissionDecisionAsync_DecisionType_ID_Invalid_KeyNotFoundException()
         {
             _applicationStatusRepositoryMock.SetupSequence(i => i.GetApplicationStatusKey(It.IsAny<string>()))
@@ -264,7 +273,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(KeyNotFoundException))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task AdmissionDecisionsService_CreateAdmissionDecisionAsync_SpecialProcessingCode_Null_KeyNotFoundException()
         {
             _applicationStatusRepositoryMock.SetupSequence(i => i.GetApplicationStatusKey(It.IsAny<string>()))
@@ -274,7 +283,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(InvalidOperationException))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task AdmissionDecisionsService_CreateAdmissionDecisionAsync_SpecialProcessingCode_MS_InvalidOperationException()
         {
             _applicationStatusRepositoryMock.SetupSequence(i => i.GetApplicationStatusKey(It.IsAny<string>()))
@@ -284,7 +293,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(InvalidOperationException))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task AdmissionDecisionsService_CreateAdmissionDecisionAsync_SpecialProcessingCode_Empty_String_InvalidOperationException()
         {
             _applicationStatusRepositoryMock.SetupSequence(i => i.GetApplicationStatusKey(It.IsAny<string>()))

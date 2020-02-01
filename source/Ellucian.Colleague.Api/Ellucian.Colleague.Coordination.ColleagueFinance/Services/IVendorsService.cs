@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Dtos.Filters;
+using Ellucian.Colleague.Dtos.ColleagueFinance;
 
 namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 {
@@ -56,6 +57,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <param name="vendor"></param>
         /// <returns></returns>
         Task<Ellucian.Colleague.Dtos.Vendors2> PostVendorAsync2(Ellucian.Colleague.Dtos.Vendors2 vendor);
+
+        /// <summary>
+        /// Get the list of vendors based on keyword search.
+        /// </summary>
+        /// <param name="searchCriteria"> The search criteria containing keyword for vendor search.</param>
+        /// <returns> The vendor search results</returns> 
+        Task<IEnumerable<Ellucian.Colleague.Dtos.ColleagueFinance.VendorSearchResult>> QueryVendorsByPostAsync(VendorSearchCriteria searchCriteria);
 
     }
 }

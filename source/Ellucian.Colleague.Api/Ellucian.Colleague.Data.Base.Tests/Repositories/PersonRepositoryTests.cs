@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -14,7 +14,6 @@ using Ellucian.Colleague.Data.Base.Transactions;
 using System.Threading.Tasks;
 using System.Threading;
 using Ellucian.Colleague.Domain.Exceptions;
-using Ellucian.Web.Http.Configuration;
 
 namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 {
@@ -721,7 +720,165 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             }
         }
 
-      
+        [TestClass]
+        public class GetPersonIntegration3 : BasePersonSetup
+        {
+            PersonRepository repository;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                // Initialize person setup and Mock framework
+                PersonSetupInitialize();
+
+                // Build the test repository
+                repository = new PersonRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                repository = null;
+            }
+
+            [TestMethod]
+            public async Task GetPersonIntegrationByGuidTests()
+            {
+                foreach (var kvp in personRecords)
+                {
+
+                    string personGuid = kvp.Value.RecordGuid;
+                    DataContracts.Person record = kvp.Value;
+
+                    var result = await repository.GetPersonIntegrationByGuidNonCachedAsync(personGuid);
+
+                    // Person result = await repository.GetIntegrationByGuidNonCachedAsync<PersonIntegration>(personGuid,
+                    //   person => new PersonIntegration(person.Recordkey, person.LastName)); ;
+                    CompareRecords(record, result);
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task GetPersonIntegrationByGuid_ArgumentNull()
+            {
+                string guid = null;
+                await repository.GetPersonIntegration3ByGuidNonCachedAsync(null);
+            }
+          
+
+            [TestMethod]
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task GetPersonIntegrationByGuidAsync_ArgumentEmpty()
+            {
+                string guid = "";
+                await repository.GetPersonIntegration3ByGuidAsync(guid, It.IsAny<bool>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task GetPersonIntegrationByGuidAsync_RepositoryException()
+            {
+                string guid = "1";
+                dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Person>(It.IsAny<GuidLookup>(), It.IsAny<bool>())).ThrowsAsync(new RepositoryException());
+                await repository.GetPersonIntegration3ByGuidAsync(guid, It.IsAny<bool>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(Exception))]
+            public async Task GetPersonIntegrationByGuidAsync_Exception()
+            {
+                string guid = "1";
+                dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Person>(It.IsAny<GuidLookup>(), It.IsAny<bool>())).ThrowsAsync(new Exception());
+                await repository.GetPersonIntegrationByGuidAsync(guid, It.IsAny<bool>());
+            }
+
+            [TestMethod]
+            public async Task GetMultiplePersonIntegrationByGuid()
+            {
+                var personGuids = personRecords.Select(pr => pr.Value.RecordGuid).ToList();
+
+                var result = await repository.GetPersonIntegration3ByGuidNonCachedAsync(personGuids);
+
+                foreach (var personEntity in result)
+                {
+                    var personRecord = personRecords.Where(pr => pr.Value.RecordGuid == personEntity.Guid).FirstOrDefault();
+                    var personIntgRecord = personIntgRecords.Where(pr => pr.Value.Recordkey == personEntity.Id).FirstOrDefault();
+                    CompareRecords(personRecord.Value, personEntity, personIntgRecord.Value);
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task GetMultipleNoGuidsException()
+            {
+                List<string> personGuids = null;
+
+                await repository.GetPersonIntegration3ByGuidNonCachedAsync(personGuids);
+            }
+
+            [TestMethod]
+            public async Task GetMultiplePersonByGuidTests()
+            {
+                var personGuids = personRecords.Select(pr => pr.Value.RecordGuid).ToList();
+                var result = await repository.GetPersonIntegration3ByGuidNonCachedAsync(personGuids);
+
+                foreach (var personEntity in result)
+                {
+                    var personRecord = personRecords.Where(pr => pr.Value.RecordGuid == personEntity.Guid).FirstOrDefault();
+                    CompareRecords(personRecord.Value, personEntity);
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task GetMultiplePersonByGuidNoGuidException()
+            {
+                List<string> personGuids = null;
+                await repository.GetPersonIntegration3ByGuidNonCachedAsync(personGuids);
+            }
+
+            private void CompareRecords(DataContracts.Person record, PersonIntegration result, DataContracts.PersonIntg recordPersonIntg = null)
+            {
+                string personId = record.Recordkey;
+                Assert.AreEqual(personId, result.Id);
+                Assert.AreEqual(record.RecordGuid, result.Guid);
+                Assert.AreEqual(record.LastName, result.LastName);
+                Assert.AreEqual(record.FirstName, result.FirstName);
+                Assert.AreEqual(record.MiddleName, result.MiddleName);
+                Assert.AreEqual(record.Prefix, result.Prefix);
+                Assert.AreEqual(record.Suffix, result.Suffix);
+                Assert.AreEqual(record.Nickname, result.Nickname);
+                Assert.AreEqual(record.Ssn, result.GovernmentId);
+                Assert.AreEqual(record.MaritalStatus, result.MaritalStatusCode);
+                Assert.AreEqual(record.PerRaces, result.RaceCodes);
+                //if (recordPersonIntg == null)
+                //    Assert.AreEqual(record.PerEthnics, result.EthnicCodes);
+                Assert.AreEqual(record.Gender, result.Gender);
+                Assert.AreEqual(record.BirthDate, result.BirthDate);
+                Assert.AreEqual(record.DeceasedDate, result.DeceasedDate);
+                if (record.PeopleEmailEntityAssociation != null && record.PeopleEmailEntityAssociation.Count() > 0)
+                {
+                    foreach (var peopleEmailEntity in record.PeopleEmailEntityAssociation)
+                    {
+                        var type = peopleEmailEntity.PersonEmailTypesAssocMember;
+                        var emailAddress = peopleEmailEntity.PersonEmailAddressesAssocMember;
+                        var resultEmail = result.GetEmailAddresses(type);
+                        if (resultEmail != null && resultEmail.Count() > 0)
+                        {
+                            var emailOfType = resultEmail.FirstOrDefault();
+                            Assert.AreEqual(emailAddress, emailOfType);
+                        }
+                    }
+                }
+
+                if (recordPersonIntg != null)
+                {
+                    Assert.AreEqual(recordPersonIntg.PerIntgBirthCountry, result.BirthCountry);
+                }
+            }
+        }
         #endregion
 
         #region Get Person Pin

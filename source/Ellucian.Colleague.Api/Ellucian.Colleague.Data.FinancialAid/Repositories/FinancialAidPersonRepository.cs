@@ -1,8 +1,7 @@
-﻿/*Copyright 2017 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2017-2018 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.FinancialAid.Repositories;
 using Ellucian.Web.Dependency;
@@ -11,7 +10,6 @@ using Ellucian.Web.Cache;
 using Ellucian.Data.Colleague;
 using slf4net;
 using Ellucian.Web.Http.Configuration;
-using Ellucian.Colleague.Domain.FinancialAid.Entities;
 using System.Text.RegularExpressions;
 using Ellucian.Colleague.Domain.Base.Entities;
 
@@ -54,8 +52,10 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
             bool isId = int.TryParse(criteria, out personId);
             if (isId)
             {
-                string id = criteria.PadLeft(7, '0');
-                if((await IsApplicantAsync(id)) || (await IsStudentAsync(id))){
+                //Format the id according to the existing configuration
+               string id = await PadIdPerPid2ParamsAsync(criteria);
+
+               if ((await IsApplicantAsync(id)) || (await IsStudentAsync(id))){
                     personIds.Add(id);
                 }
             }

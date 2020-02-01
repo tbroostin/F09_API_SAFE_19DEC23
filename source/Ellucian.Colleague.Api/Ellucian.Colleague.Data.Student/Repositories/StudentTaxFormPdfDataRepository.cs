@@ -65,7 +65,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
                 // Read CORP to get the institution information.
                 var corpContract = await DataReader.ReadRecordAsync<Corp>("PERSON", pdfDataContract.Tf98fInstitution);
-                
+
                 var corpFoundsContract = await DataReader.ReadRecordAsync<CorpFounds>(pdfDataContract.Tf98fInstitution);
 
                 if (pdfDataContract.Tf98fTaxForm1098Boxes == null || !pdfDataContract.Tf98fTaxForm1098Boxes.Any())
@@ -157,11 +157,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                     entity.InstitutionName = String.Join(" ", corpContract.CorpName.Where(x => !string.IsNullOrEmpty(x)));
 
-                    if(entity.TaxFormName == StudentConstants.TaxForm1098TName)
+                    if (entity.TaxFormName == StudentConstants.TaxForm1098TName)
                     {
                         SetInstitutionPhone(parm1098Contract.P1098TInstPhone, parm1098Contract.P1098TInstPhoneExt, entity);
                     }
-                    else if(entity.TaxFormName == StudentConstants.TaxForm1098EName)
+                    else if (entity.TaxFormName == StudentConstants.TaxForm1098EName)
                     {
                         SetInstitutionPhone(parm1098Contract.P1098EInstPhone, parm1098Contract.P1098EInstPhoneExt, entity);
                     }
@@ -251,23 +251,30 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     }
 
                     // Box 7 - for 1098T
-                    var box7BoxCode = boxCodesDataContracts.FirstOrDefault(x => x.BxcBoxNumber == "7");
-                    if (box7BoxCode != null)
+                    if (pdfDataContract.Tf98fTaxYear >= 2018)
                     {
-                        var boxData = form1098BoxDataContracts.LastOrDefault(x => x.Tf98bBoxCode == box7BoxCode.Recordkey);
-                        if (pdfDataContract.Tf98fTaxYear >= 2018)
+                        if (string.IsNullOrEmpty(parm1098Contract.P1098TNewYrPayBoxCode))
                         {
-                            if (boxData != null && boxData.Tf98bBoxCode == parm1098Contract.P1098TNewYrPayBoxCode)
-                            {
-                                entity.AmountsBilledAndReceivedForQ1Period = boxData.Tf98bValue.ToUpper() == "X";
-                            }
+                            logger.Error("P1098TNewYrPayBoxCode must have a value set up on T9TE.");
+                            throw new ApplicationException("P1098TNewYrPayBoxCode must have a value set up.");
                         }
-                        else
+                        var boxData = form1098BoxDataContracts.LastOrDefault(x => x.Tf98bBoxCode == parm1098Contract.P1098TNewYrPayBoxCode);
+                        if (boxData != null && boxData.Tf98bValue != null)
                         {
-                            if (boxData != null && boxData.Tf98bBoxCode == parm1098Contract.P1098TNewYrBoxCode)
-                            {
-                                entity.AmountsBilledAndReceivedForQ1Period = boxData.Tf98bValue.ToUpper() == "X";
-                            }
+                            entity.AmountsBilledAndReceivedForQ1Period = boxData.Tf98bValue.ToUpper() == "X";
+                        }
+                    }
+                    else
+                    {
+                        if (string.IsNullOrEmpty(parm1098Contract.P1098TNewYrBoxCode))
+                        {
+                            logger.Error("P1098TNewYrBoxCode must have a value set up on T9TE.");
+                            throw new ApplicationException("P1098TNewYrBoxCode must have a value set up.");
+                        }
+                        var boxData = form1098BoxDataContracts.LastOrDefault(x => x.Tf98bBoxCode == parm1098Contract.P1098TNewYrBoxCode);
+                        if (boxData != null && boxData.Tf98bValue != null)
+                        {
+                            entity.AmountsBilledAndReceivedForQ1Period = boxData.Tf98bValue.ToUpper() == "X";
                         }
                     }
 
@@ -332,6 +339,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         {
             // Get student demographic information and box numbers.
             var pdfDataContract = await DataReader.ReadRecordAsync<CnstT2202aRepos>(recordId);
+            var rptParmsDataContract = await DataReader.ReadRecordAsync<CnstRptParms>("ST.PARMS", "CNST.RPT.PARMS");
+            var personDataContract = await DataReader.ReadRecordAsync<Person>("PERSON", personId);
 
             // Get the default institution ID and read the default institution name.
             var institutionName = string.Empty;
@@ -348,6 +357,15 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     throw new ApplicationException("Person ID from request is not the same as the Person ID of the current user and the requesting user is not a Proxy.");
                 }
 
+                if (pdfDataContract.T2ReposYear == null)
+                {
+                    throw new NullReferenceException("T2ReposYear cannot be null.");
+                }
+                if (pdfDataContract.T2ReposStudent == null)
+                {
+                    throw new NullReferenceException("T2ReposStudent cannot be null.");
+                }
+
                 // Get the institution information from default institution.
                 var defaults = this.GetDefaults();
                 if (defaults != null)
@@ -359,23 +377,36 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         throw new ApplicationException("Institution must have a name.");
                     }
 
-                    institutionName = String.Join(" ", corpContract.CorpName.Where(x => !string.IsNullOrEmpty(x)));
-                }
-
-                if (pdfDataContract.T2ReposYear == null)
-                {
-                    throw new NullReferenceException("T2ReposYear cannot be null.");
-                }
-                if (pdfDataContract.T2ReposStudent == null)
-                {
-                    throw new NullReferenceException("T2ReposStudent cannot be null.");
+                    institutionName = corpContract.CorpName.Where(x => !string.IsNullOrEmpty(x)).FirstOrDefault();
                 }
 
                 FormT2202aPdfData entity = new FormT2202aPdfData(pdfDataContract.T2ReposYear.ToString(), pdfDataContract.T2ReposStudent);
 
+                // Determine if the T2202 is cancelled.
+                if ((pdfDataContract.T2CancelFlag != null && pdfDataContract.T2CancelFlag.Equals("Y", StringComparison.InvariantCultureIgnoreCase))
+                    || (pdfDataContract.T2Status != null && pdfDataContract.T2Status.Equals("C", StringComparison.InvariantCultureIgnoreCase) && !(pdfDataContract.T2AmendedFlag != null && pdfDataContract.T2AmendedFlag.Equals("Y", StringComparison.InvariantCultureIgnoreCase))))
+                {
+                    entity.Cancelled = true;
+                }
+                else
+                {
+                    entity.Cancelled = false;
+                }
+
                 // Add institution ID and name to domain entity. The ID will be used in the service to get the address information.
                 entity.InstitutionId = defaultCorpId;
                 entity.InstitutionNameAddressLine1 = institutionName;
+
+                if (rptParmsDataContract != null)
+                {
+                    entity.FlyingClub = rptParmsDataContract.CnstT2202FlyingClub;
+                    entity.SchoolType = rptParmsDataContract.CnstT2202SchoolType;
+                }
+
+                if (personDataContract != null)
+                {
+                    entity.SocialInsuranceNumber = personDataContract.Ssn;
+                }
 
                 // Add Student name and address lines
                 entity.StudentNameAddressLine1 = pdfDataContract.T2ReposStudentName;

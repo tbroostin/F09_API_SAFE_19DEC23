@@ -1,14 +1,12 @@
-﻿// Copyright 2014-2016 Ellucian Company L.P. and its affiliates.
-using System;
-using System.Text;
-using System.Collections.Generic;
-using System.Linq;
+﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Dtos.Base;
+using Ellucian.Colleague.Dtos.Student;
+using Ellucian.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using slf4net;
-using Ellucian.Web.Infrastructure.TestUtil;
-using Ellucian.Logging;
-using Ellucian.Colleague.Dtos.Student;
-using Ellucian.Colleague.Dtos.Base;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Api.Client.Tests
@@ -164,17 +162,32 @@ namespace Ellucian.Colleague.Api.Client.Tests
                 logger.Info(e.GetBaseException().Message + e.GetBaseException().StackTrace);
             }
         }
+
         [TestMethod]
-        public void TestPilotPhoneNumbers()
+        public async Task Test_GetPersonPhonesByIdsAsync()
         {
             // Set up parameters we're going to call these functions with.
             List<string> studentIds = new List<string>() { "0013055", "0013056" };
-            var result = client.GetPilotPersonPhonesByIds(studentIds);
+            var result = await client.GetPersonPhonesByIdsAsync(studentIds);
+
+            Assert.IsNotNull(result);
+            Assert.IsInstanceOfType(result, typeof(IEnumerable<PhoneNumber>));
+            Assert.AreEqual(2, result.Count());
+        }
+
+
+        [TestMethod]
+        public async Task Test_GetPilotPersonPhonesByIds()
+        {
+            // Set up parameters we're going to call these functions with.
+            List<string> studentIds = new List<string>() { "0013055", "0013056" };
+            var result = await client.GetPilotPersonPhonesByIds(studentIds);
 
             Assert.IsNotNull(result);
             Assert.IsInstanceOfType(result, typeof(IEnumerable<PilotPhoneNumber>));
             Assert.AreEqual(2, result.Count());
         }
+
         [TestMethod]
         public void TestPilotStudentTermsGpas()
         {

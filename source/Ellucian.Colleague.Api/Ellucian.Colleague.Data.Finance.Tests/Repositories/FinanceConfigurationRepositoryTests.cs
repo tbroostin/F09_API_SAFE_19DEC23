@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.Finance.DataContracts;
@@ -1034,6 +1034,81 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
                 var result = this.repository.GetFinanceConfiguration();
                 Assert.AreEqual(sfppRequirements.Count, result.TermPaymentPlanRequirements.Count);
                 Assert.AreEqual(sfppRequirements[0].SfpprPlanRequirementsEntityAssociation.Count - 1, result.TermPaymentPlanRequirements[0].PaymentPlanOptions.Count);
+            }
+            /// <summary>
+            /// Validate DisplayPotentialD7Amounts when parameter string is null
+            /// </summary>
+            [TestMethod]
+            public void FinanceConfigurationRepository_GetFinanceConfiguration_SfDefaultsWithD7FlagNull()
+            {
+                sfDefaults = new SfDefaults()
+                {
+                    SfFinActIntvl = "TERM",
+                    SfPmtIntvl = "TERM",
+                    SfTermDueDateOvrsEntityAssociation = new List<SfDefaultsSfTermDueDateOvrs>(),
+                    SfStmtInstAddrLines = new List<string>(),
+                    SfEnableD7CalcFlag = null,
+                };
+                dataReaderMock.Setup<SfDefaults>(reader => reader.ReadRecord<SfDefaults>("ST.PARMS", "SF.DEFAULTS", true)).Returns(sfDefaults);
+                var result = this.repository.GetFinanceConfiguration();
+                Assert.IsFalse(result.DisplayPotentialD7Amounts);
+            }
+
+            /// <summary>
+            /// Validate DisplayPotentialD7Amounts when parameter string is empty
+            /// </summary>
+            [TestMethod]
+            public void FinanceConfigurationRepository_GetFinanceConfiguration_SfDefaultsWithD7FlagEmpty()
+            {
+                sfDefaults = new SfDefaults()
+                {
+                    SfFinActIntvl = "TERM",
+                    SfPmtIntvl = "TERM",
+                    SfTermDueDateOvrsEntityAssociation = new List<SfDefaultsSfTermDueDateOvrs>(),
+                    SfStmtInstAddrLines = new List<string>(),
+                    SfEnableD7CalcFlag = string.Empty,
+                };
+                dataReaderMock.Setup<SfDefaults>(reader => reader.ReadRecord<SfDefaults>("ST.PARMS", "SF.DEFAULTS", true)).Returns(sfDefaults);
+                var result = this.repository.GetFinanceConfiguration();
+                Assert.IsFalse(result.DisplayPotentialD7Amounts);
+            }
+
+            /// <summary>
+            /// Validate DisplayPotentialD7Amounts when parameter string is not "Y"
+            /// </summary>
+            [TestMethod]
+            public void FinanceConfigurationRepository_GetFinanceConfiguration_SfDefaultsWithD7FlagN()
+            {
+                sfDefaults = new SfDefaults()
+                {
+                    SfFinActIntvl = "TERM",
+                    SfPmtIntvl = "TERM",
+                    SfTermDueDateOvrsEntityAssociation = new List<SfDefaultsSfTermDueDateOvrs>(),
+                    SfStmtInstAddrLines = new List<string>(),
+                    SfEnableD7CalcFlag = "N",
+                };
+                dataReaderMock.Setup<SfDefaults>(reader => reader.ReadRecord<SfDefaults>("ST.PARMS", "SF.DEFAULTS", true)).Returns(sfDefaults);
+                var result = this.repository.GetFinanceConfiguration();
+                Assert.IsFalse(result.DisplayPotentialD7Amounts);
+            }
+
+            /// <summary>
+            /// Validate DisplayPotentialD7Amounts when parameter string is "Y"
+            /// </summary>
+            [TestMethod]
+            public void FinanceConfigurationRepository_GetFinanceConfiguration_SfDefaultsWithD7FlagY()
+            {
+                sfDefaults = new SfDefaults()
+                {
+                    SfFinActIntvl = "TERM",
+                    SfPmtIntvl = "TERM",
+                    SfTermDueDateOvrsEntityAssociation = new List<SfDefaultsSfTermDueDateOvrs>(),
+                    SfStmtInstAddrLines = new List<string>(),
+                    SfEnableD7CalcFlag = "Y",
+                };
+                dataReaderMock.Setup<SfDefaults>(reader => reader.ReadRecord<SfDefaults>("ST.PARMS", "SF.DEFAULTS", true)).Returns(sfDefaults);
+                var result = this.repository.GetFinanceConfiguration();
+                Assert.IsTrue(result.DisplayPotentialD7Amounts);
             }
         }
 

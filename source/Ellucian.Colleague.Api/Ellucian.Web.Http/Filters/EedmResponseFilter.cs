@@ -1,4 +1,4 @@
-﻿// Copyright 2017 - 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -23,6 +23,8 @@ namespace Ellucian.Web.Http.Filters
     public class EedmResponseFilter : ActionFilterAttribute
     {
 
+        private const string CustomMediaType = "X-Media-Type";
+
         public override Task OnActionExecutedAsync(HttpActionExecutedContext actionExecutedContext, CancellationToken cancellationToken)
         {
             var logger = actionExecutedContext.Request.GetDependencyScope().GetService(typeof(ILogger)) as ILogger;
@@ -46,7 +48,7 @@ namespace Ellucian.Web.Http.Filters
 
                     var extendedDataList = (IList<EthosExtensibleData>)extendedData;
 
-                    //get the dataprivacylist froim the request context
+                    //get the dataprivacylist from the request context
                     object dataPrivacy;
                     actionExecutedContext.Request.Properties.TryGetValue("DataPrivacy", out dataPrivacy);
                     
@@ -74,7 +76,10 @@ namespace Ellucian.Web.Http.Filters
                     catch
                     {
                         //return empty object if the parsing of the json fails
-                        throw new ArgumentNullException("Response.Content","The JSON Response is empty or null upon return from GET operation. ");
+                        //throw new ArgumentNullException("Response.Content","The JSON Response is empty or null upon return from GET operation. ");
+                       
+                        logger.Error("The JSON Response is empty or null upon return from GET operation.");
+                        return base.OnActionExecutedAsync(actionExecutedContext, cancellationToken);
                     }
 
                     var extendedReturn = Extensibility.ApplyExtensibility(jsonToModify, extendedDataList, logger);
@@ -92,7 +97,7 @@ namespace Ellucian.Web.Http.Filters
                         //if extensions were applied set content first
                         if (extensionsApplied)
                         {
-                            actionExecutedContext.Response.Content = new ObjectContent(jsonToModify.GetType(), jsonToModify, new JsonMediaTypeFormatter(), @"application/json");
+                            actionExecutedContext.Response.Content = new ObjectContent<IEnumerable<dynamic>>(jsonToModify, new JsonMediaTypeFormatter(), @"application/json");
                         }
                         return base.OnActionExecutedAsync(actionExecutedContext, cancellationToken);
                     }
@@ -101,13 +106,33 @@ namespace Ellucian.Web.Http.Filters
                     var returnedJson = DataPrivacy.ApplyDataPrivacy(jsonToModify, dataPrivacyList, logger);
                     if (returnedJson != null)
                     {
-                        actionExecutedContext.Response.Content = new ObjectContent(returnedJson.GetType(), returnedJson, new JsonMediaTypeFormatter(), @"application/json");
+                        if (isEnumerable)
+                        {
+                            actionExecutedContext.Response.Content = new ObjectContent<IEnumerable<dynamic>>(returnedJson, new JsonMediaTypeFormatter(), @"application/json");
+                        }
+                        else
+                        {
+                            actionExecutedContext.Response.Content = new ObjectContent<dynamic>(returnedJson, new JsonMediaTypeFormatter(), @"application/json");
+                        }
                         actionExecutedContext.Response.Headers.Add("X-Content-Restricted", "partial");
                     }
-                    else if (extensionsApplied)//check if extensions were applied and return the modofied content even if dataprivacy is not applied
+                    else if (extensionsApplied)//check if extensions were applied and return the modified content even if dataprivacy is not applied
                     {
-                        actionExecutedContext.Response.Content = new ObjectContent(jsonToModify.GetType(), jsonToModify, new JsonMediaTypeFormatter(), @"application/json");
+                        if (isEnumerable)
+                        {
+                            actionExecutedContext.Response.Content = new ObjectContent<IEnumerable<dynamic>>(jsonToModify, new JsonMediaTypeFormatter(), @"application/json");
+                        }
+                        else
+                        {
+                            actionExecutedContext.Response.Content = new ObjectContent<dynamic>(jsonToModify, new JsonMediaTypeFormatter(), @"application/json");
+                        }
                     }
+
+                    var RequestedContentTypeval = actionExecutedContext.ActionContext.RequestContext.RouteData.Values["RequestedContentType"];
+                    IEnumerable<string> customMediaTypeValue = null;
+                    if ((RequestedContentTypeval != null) && (!actionExecutedContext.Response.Content.Headers.TryGetValues(CustomMediaType, out customMediaTypeValue)))
+                        actionExecutedContext.Response.Content.Headers.Add(CustomMediaType, RequestedContentTypeval.ToString());
+
                 }
             }
             return base.OnActionExecutedAsync(actionExecutedContext, cancellationToken);

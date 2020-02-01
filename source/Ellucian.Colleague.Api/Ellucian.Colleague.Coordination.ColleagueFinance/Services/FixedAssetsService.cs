@@ -1,4 +1,4 @@
-//Copyright 2018 Ellucian Company L.P. and its affiliates.
+//Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -16,6 +16,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Ellucian.Colleague.Dtos.ColleagueFinance;
 
 namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 {
@@ -111,6 +112,29 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
         }
 
+        /// <summary>
+        /// Get fixed assets transfer flag
+        /// </summary>
+        /// <returns>Collection of <see cref="FixedAssetsFlag">FixedAssetsFlag</see> objects</returns>
+        public async Task<IEnumerable<FixedAssetsFlag>> GetFixedAssetTransferFlagsAsync()
+        {
+            var fxaTransferFlagEntities = await _financeReferenceDataRepository.GetFixedAssetTransferFlagsAsync();
+            // Get the right adapter for the type mapping
+            var fxaTransferFlagAdapter = _adapterRegistry.GetAdapter<Domain.ColleagueFinance.Entities.FixedAssetsFlag, FixedAssetsFlag>();
+            // Map the entity to the DTO
+            var fxaTransferFlagDtos = new List<FixedAssetsFlag>();
+            if (fxaTransferFlagEntities != null && fxaTransferFlagEntities.Any())
+            {
+                foreach (var fxaFlag in fxaTransferFlagEntities)
+                {
+                    if (fxaFlag != null)
+                    {
+                        fxaTransferFlagDtos.Add(fxaTransferFlagAdapter.MapToType(fxaFlag));
+                    }
+                }
+            }
+            return fxaTransferFlagDtos;
+        }
         #endregion
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>

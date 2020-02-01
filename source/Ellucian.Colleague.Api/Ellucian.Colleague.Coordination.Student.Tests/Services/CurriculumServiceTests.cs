@@ -1163,6 +1163,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 instructionalMethodCollection.Add(new Domain.Student.Entities.InstructionalMethod("73244057-D1EC-4094-A0B7-DE602533E3A6", "30", "null", true));
                 instructionalMethodCollection.Add(new Domain.Student.Entities.InstructionalMethod("1df164eb-8178-4321-a9f7-24f12d3991d8", "04", "null", false));
                 referenceRepositoryMock.Setup(repo => repo.GetInstructionalMethodsAsync()).ReturnsAsync(instructionalMethodCollection);
+                referenceRepositoryMock.Setup(repo => repo.GetHeadcountInclusionListAsync(It.IsAny<bool>())).ReturnsAsync(new List<string>() { "A", "N" });
                 referenceRepositoryMock.Setup(repo => repo.GetInstructionalMethodsAsync(true)).ReturnsAsync(instructionalMethodCollection);
                 referenceRepositoryMock.Setup(repo => repo.GetInstructionalMethodsAsync(false)).ReturnsAsync(instructionalMethodCollection);
 
@@ -1393,7 +1394,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 sectionRegistrationStatusCollection.Add(new Domain.Student.Entities.CreditCategory("1df164eb-8178-4321-a9f7-24f12d3991d8", "T", "Transfer Credit", Domain.Student.Entities.CreditType.Transfer));
                */
                 //var sectionRegistrationStatusEntities = await _studentReferenceDataRepository.GetSectionRegistrationStatusesAsync(bypassCache);
-                referenceRepositoryMock.Setup(repo => repo.SectionRegistrationStatusesAsync()).ReturnsAsync(sectionRegistrationStatusItemCollection);                
+                referenceRepositoryMock.Setup(repo => repo.SectionRegistrationStatusesAsync()).ReturnsAsync(sectionRegistrationStatusItemCollection);
+                referenceRepositoryMock.Setup(repo => repo.GetHeadcountInclusionListAsync(It.IsAny<bool>())).ReturnsAsync(new List<string>() { "A", "N", "T" });
                 referenceRepositoryMock.Setup(repo => repo.GetStudentAcademicCreditStatusesAsync(false)).ReturnsAsync(sectionRegistrationStatusItemCollection);
                 referenceRepositoryMock.Setup(repo => repo.GetStudentAcademicCreditStatusesAsync(true)).ReturnsAsync(sectionRegistrationStatusItemCollection);
 

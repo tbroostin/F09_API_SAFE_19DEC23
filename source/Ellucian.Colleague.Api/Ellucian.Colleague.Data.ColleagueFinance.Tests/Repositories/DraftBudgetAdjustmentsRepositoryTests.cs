@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
@@ -26,6 +26,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         private TxUpdateDraftBudgetAdjustmentResponse draftBudgetAdjustmentResponse;
         private TxDeleteDraftBudgetAdjustmentResponse deleteDraftResponse;
         private string draftNumber = "B1234567";
+        private List<string> majorComponentStartPositions = new List<string>() { "1", "4", "7", "10", "13", "19" };
 
         // Create a list of DRAF.BUDGET.ENTRIES data contracts.
         public List<DraftBudgetEntries> draftBudgetEntriesRecords = new List<DraftBudgetEntries>()
@@ -165,7 +166,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             adjustmentInputEntity.Comments = comments;
             adjustmentInputEntity.TransactionDate = transactionDate;
             adjustmentInputEntity.Id = draftId;
-            var adjustmentOutputEntity = await actualRepository.SaveAsync(adjustmentInputEntity);
+            var adjustmentOutputEntity = await actualRepository.SaveAsync(adjustmentInputEntity, majorComponentStartPositions);
 
             adjustmentOutputEntity.TransactionDate = transactionDate;
             adjustmentOutputEntity.Initiator = initiator;
@@ -207,7 +208,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             adjustmentInputEntity.Comments = comments;
             adjustmentInputEntity.TransactionDate = transactionDate;
             adjustmentInputEntity.Id = draftId;
-            var adjustmentOutputEntity = await actualRepository.SaveAsync(adjustmentInputEntity);
+            var adjustmentOutputEntity = await actualRepository.SaveAsync(adjustmentInputEntity, majorComponentStartPositions);
 
             adjustmentOutputEntity.TransactionDate = transactionDate;
             adjustmentOutputEntity.Initiator = initiator;
@@ -243,7 +244,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             adjustmentInputEntity.TransactionDate = transactionDate;
             adjustmentInputEntity.Id = draftId;
             adjustmentInputEntity.NextApprovers = null;
-            var adjustmentOutputEntity = await actualRepository.SaveAsync(adjustmentInputEntity);
+            var adjustmentOutputEntity = await actualRepository.SaveAsync(adjustmentInputEntity, majorComponentStartPositions);
 
             adjustmentOutputEntity.TransactionDate = transactionDate;
             adjustmentOutputEntity.Initiator = initiator;
@@ -286,7 +287,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             adjustmentInputEntity.Id = draftId;
             adjustmentInputEntity.NextApprovers = nextApprovers;
 
-            var adjustmentOutputEntity = await actualRepository.SaveAsync(adjustmentInputEntity);
+            var adjustmentOutputEntity = await actualRepository.SaveAsync(adjustmentInputEntity, majorComponentStartPositions);
             adjustmentOutputEntity.TransactionDate = transactionDate;
             adjustmentOutputEntity.Initiator = initiator;
             adjustmentOutputEntity.Comments = comments;
@@ -338,7 +339,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             adjustmentInputEntity.Initiator = initiator;
             adjustmentInputEntity.Comments = comments;
             adjustmentInputEntity.TransactionDate = transactionDate;
-            var adjustmentOutputEntity = await actualRepository.SaveAsync(adjustmentInputEntity);
+            var adjustmentOutputEntity = await actualRepository.SaveAsync(adjustmentInputEntity, majorComponentStartPositions);
 
             foreach (var errorMessage in draftBudgetAdjustmentResponse.AlErrorMessages)
             {

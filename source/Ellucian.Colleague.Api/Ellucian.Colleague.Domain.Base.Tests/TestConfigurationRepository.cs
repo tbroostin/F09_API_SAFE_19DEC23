@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -131,7 +131,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests
                 CanUpdatePhoneWithoutPermission = true,
                 Text = "Test User Profile Configuration Text"
             };
-            upc.UpdateAddressTypeConfiguration(true, null, null);
+            upc.UpdateAddressTypeConfiguration(true, null, null, null);
             upc.UpdateEmailTypeConfiguration(false, new List<string>() { "COL" }, false, new List<string>() { "COL" });
             upc.UpdatePhoneTypeConfiguration(false, new List<string>() { "CP" }, new List<string>() { "CP" }, false);
             return upc;
@@ -219,5 +219,26 @@ namespace Ellucian.Colleague.Domain.Base.Tests
             return rdc;
         }
 
+        public async Task<UserProfileConfiguration2> GetUserProfileConfiguration2Async(List<AddressRelationType> webAdrelTypes)
+        {
+            var upc = new UserProfileConfiguration2();
+            upc.UpdateAddressTypeConfiguration(true, new List<string>(), new List<string>());
+            upc.UpdateEmailTypeConfiguration(false, new List<string>() { "COL" }, false, new List<string>() { "COL" });
+            upc.UpdatePhoneTypeConfiguration(false, new List<string>() { "CP" }, new List<string>() { "CP" }, false );
+            upc.CanUpdateAddressWithoutPermission = true;
+            upc.CanUpdateEmailWithoutPermission = true;
+            upc.CanUpdatePhoneWithoutPermission = true;
+            upc.CanViewUpdateChosenName = UserProfileViewUpdateOption.Viewable;
+            upc.CanViewUpdateGenderIdentity = UserProfileViewUpdateOption.Viewable;
+            upc.CanViewUpdateNickname = UserProfileViewUpdateOption.Viewable;
+            upc.CanViewUpdatePronoun = UserProfileViewUpdateOption.Viewable;
+            upc.Text = "Test User Profile Configuration Text";
+            return upc;
+        }
+
+        public async Task<SessionConfiguration> GetSessionConfigurationAsync()
+        {
+            return new SessionConfiguration();
+        }
     }
 }

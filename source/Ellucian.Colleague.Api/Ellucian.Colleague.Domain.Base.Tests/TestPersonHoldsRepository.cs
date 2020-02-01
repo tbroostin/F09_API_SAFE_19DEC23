@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,7 +26,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests
                                 'notificationIndicator': 'watch',
                                 'startOn': '2012-12-01T04:00:00Z',
                                 'endOn': '2012-12-03T04:00:00Z',
-                                'comment': '',
+                                'comment': null,
                                 'metadata': {},
                                 'id': '23977f85-f200-479f-9eee-3921bb4667d3'
                                 },
@@ -43,7 +43,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests
                                 'notificationIndicator': 'notify',
                                 'startOn': '2014-10-17T04:00:00Z',
                                 'endOn': null,
-                                'comment': '',
+                                'comment': null,
                                 'metadata': {},
                                 'id': 'ffbd9a82-3e05-4103-a243-995166f1430f'
                                 },
@@ -94,7 +94,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests
                                 'notificationIndicator': 'watch',
                                 'startOn': '2012-12-01T04:00:00Z',
                                 'endOn': '2012-12-03T04:00:00Z',
-                                'comment': '',
+                                'comment': null,
                                 'metadata': {},
                                 'id': '00000000-0000-0000-0000-000000000000'
                                 }

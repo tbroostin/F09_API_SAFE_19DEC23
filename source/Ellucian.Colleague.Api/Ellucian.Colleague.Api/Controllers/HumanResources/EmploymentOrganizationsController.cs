@@ -13,6 +13,8 @@ using System.Net;
 using System.Threading.Tasks;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Colleague.Api.Utility;
+using Ellucian.Web.Http.Filters;
+using Ellucian.Web.Http.Models;
 
 namespace Ellucian.Colleague.Api.Controllers.HumanResources
 {
@@ -41,8 +43,14 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// Retrieves all employment-organizations
         /// </summary>
         /// <returns>All <see cref="Dtos.EmploymentOrganizations">EmploymentOrganizations</see></returns>
-        public async Task<IEnumerable<Dtos.EmploymentOrganizations>> GetEmploymentOrganizationsAsync()
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, EedmResponseFilter]
+        [ValidateQueryStringFilter()]
+        [QueryStringFilterFilter("criteria", typeof(Dtos.EmploymentOrganizations))]
+        public async Task<IEnumerable<Dtos.EmploymentOrganizations>> GetEmploymentOrganizationsAsync(QueryStringFilter criteria)
         {
+            var criteriaObj = GetFilterObject<Dtos.EmploymentDepartments>(_logger, "criteria");
+            CheckForEmptyFilterParameters();
             return new List<Dtos.EmploymentOrganizations>();
         }
 
@@ -51,12 +59,13 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <param name="guid">GUID of the employment-organizations to get</param>
         /// <returns>A employmentOrganizations object <see cref="Dtos.EmploymentOrganizations"/> in EEDM format</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpGet]
         public async Task<Dtos.EmploymentOrganizations> GetEmploymentOrganizationsByGuidAsync([FromUri] string guid)
         {
             try
             {
-                throw new Exception(string.Format("No employment-organizations was found for guid {0}.", guid));
+                throw new Exception(string.Format("No employment-organizations was found for guid '{0}'.", guid));
             }
             catch (Exception e)
             {
@@ -68,6 +77,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <param name="employmentOrganizations">DTO of the new employmentOrganizations</param>
         /// <returns>A employmentOrganizations object <see cref="Dtos.EmploymentOrganizations"/> in EEDM format</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpPost]
         public async Task<Dtos.EmploymentOrganizations> PostEmploymentOrganizationsAsync([FromBody] Dtos.EmploymentOrganizations employmentOrganizations)
         {
@@ -82,6 +92,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <param name="guid">GUID of the employmentOrganizations to update</param>
         /// <param name="employmentOrganizations">DTO of the updated employmentOrganizations</param>
         /// <returns>A employmentOrganizations object <see cref="Dtos.EmploymentOrganizations"/> in EEDM format</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpPut]
         public async Task<Dtos.EmploymentOrganizations> PutEmploymentOrganizationsAsync([FromUri] string guid, [FromBody] Dtos.EmploymentOrganizations employmentOrganizations)
         {
@@ -94,6 +105,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// Delete (DELETE) a employmentOrganizations
         /// </summary>
         /// <param name="guid">GUID to desired employmentOrganizations</param>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpDelete]
         public async Task DeleteEmploymentOrganizationsAsync(string guid)
         {

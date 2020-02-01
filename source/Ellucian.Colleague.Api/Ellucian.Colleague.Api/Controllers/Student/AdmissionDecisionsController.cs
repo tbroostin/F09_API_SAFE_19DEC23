@@ -1,4 +1,4 @@
-//Copyright 2017-18 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-19 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
@@ -54,12 +54,15 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="page"></param>
         /// <param name="criteria"></param>
+        /// <param name="personFilter">Selection from SaveListParms definition or person-filters</param>
         /// <returns></returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter()]
         [QueryStringFilterFilter("criteria", typeof(Dtos.AdmissionDecisions)), FilteringFilter(IgnoreFiltering = true)]
+        [QueryStringFilterFilter("personFilter", typeof(Dtos.Filters.PersonFilterFilter2))]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
-        public async Task<IHttpActionResult> GetAdmissionDecisionsAsync(Paging page, QueryStringFilter criteria)
+        public async Task<IHttpActionResult> GetAdmissionDecisionsAsync(Paging page, QueryStringFilter criteria, QueryStringFilter personFilter)
         {
             var bypassCache = false;
             if (Request.Headers.CacheControl != null)
@@ -71,22 +74,38 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                string personFilterValue = string.Empty;
+                var personFilterObj = GetFilterObject<Dtos.Filters.PersonFilterFilter2>(_logger, "personFilter");
+                if (personFilterObj != null)
+                {
+                    if (personFilterObj.personFilter != null)
+                    {
+                        personFilterValue = personFilterObj.personFilter.Id;
+                    }
+                }
+
                 var admissionDecision = GetFilterObject<Dtos.AdmissionDecisions>(_logger, "criteria");
+                var filterQualifiers = GetFilterQualifiers(_logger);
 
                 if (CheckForEmptyFilterParameters())
                     return new PagedHttpActionResult<IEnumerable<Dtos.AdmissionDecisions>>(new List<Dtos.AdmissionDecisions>(), page, 0, this.Request);
                 
-                string applicationId = string.Empty;
+                string applicationId = string.Empty; DateTimeOffset decidedOn = DateTime.MinValue;
                 if (admissionDecision != null)
                 {
                     applicationId = admissionDecision.Application != null ? admissionDecision.Application.Id : string.Empty;
-                }                    
+                    if (admissionDecision.DecidedOn != DateTime.MinValue)
+                    {
+                        decidedOn = admissionDecision.DecidedOn;
+                    }
+                }
 
                 if (page == null)
                 {
                     page = new Paging(100, 0);
                 }
-                var pageOfItems = await _admissionDecisionsService.GetAdmissionDecisionsAsync(page.Offset, page.Limit, applicationId, bypassCache);
+                var pageOfItems = await _admissionDecisionsService.GetAdmissionDecisionsAsync(page.Offset, page.Limit, 
+                    applicationId, decidedOn, filterQualifiers, personFilterValue, bypassCache);
 
                 AddEthosContextProperties(await _admissionDecisionsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                               await _admissionDecisionsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -102,7 +121,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -131,6 +150,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="guid">GUID to desired admissionDecisions</param>
         /// <returns>A admissionDecisions object <see cref="Dtos.AdmissionDecisions"/> in EEDM format</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpGet, EedmResponseFilter]
         public async Task<Dtos.AdmissionDecisions> GetAdmissionDecisionsByGuidAsync(string guid)
         {
@@ -170,7 +190,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentNullException e)
             {
@@ -199,6 +219,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="admissionDecisions">DTO of the new admissionDecisions</param>
         /// <returns>A admissionDecisions object <see cref="Dtos.AdmissionDecisions"/> in EEDM format</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpPost, EedmResponseFilter]
         public async Task<Dtos.AdmissionDecisions> PostAdmissionDecisionsAsync([ModelBinder(typeof(EedmModelBinder))] Dtos.AdmissionDecisions admissionDecisions)
         {
@@ -240,7 +261,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentNullException e)
             {
@@ -299,6 +320,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="guid">GUID of the admissionDecisions to update</param>
         /// <param name="admissionDecisions">DTO of the updated admissionDecisions</param>
         /// <returns>A admissionDecisions object <see cref="Dtos.AdmissionDecisions"/> in EEDM format</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpPut]
         public async Task<Dtos.AdmissionDecisions> PutAdmissionDecisionsAsync([FromUri] string guid, [FromBody] Dtos.AdmissionDecisions admissionDecisions)
         {
@@ -317,8 +339,6 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         {
             //Update is not supported for Colleague but HeDM requires full crud support.
             throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
-
         }
-
     }
 }

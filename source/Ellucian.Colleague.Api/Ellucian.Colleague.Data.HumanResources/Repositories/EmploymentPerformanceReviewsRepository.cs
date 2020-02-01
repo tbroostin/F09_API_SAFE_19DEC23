@@ -222,7 +222,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 var errorMessage = string.Format("Error(s) occurred creating employmentPerformanceReviewsEntity '{0}':", employmentPerformanceReviewsEntity.Guid);
                 var exception = new RepositoryException(errorMessage);
-                createResponse.CreateReviewErrors.ForEach(e => exception.AddError(new RepositoryError(e.ErrorCodes, e.ErrorMessages)));
+                createResponse.CreateReviewErrors.ForEach(e => exception.AddError(new RepositoryError(string.IsNullOrEmpty(e.ErrorCodes) ? "" : e.ErrorCodes, e.ErrorMessages)));
                 logger.Error(errorMessage);
                 throw exception;
             }
@@ -269,7 +269,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 {
                     var errorMessage = string.Format("Error(s) occurred updating employmentPerformanceReviewsEntity '{0}':", employmentPerformanceReviewsEntity.Guid);
                     var exception = new RepositoryException(errorMessage);
-                    updateResponse.CreateReviewErrors.ForEach(e => exception.AddError(new RepositoryError(e.ErrorCodes, e.ErrorMessages)));
+                    updateResponse.CreateReviewErrors.ForEach(e => exception.AddError(new RepositoryError(string.IsNullOrEmpty(e.ErrorCodes) ? "" : e.ErrorCodes, e.ErrorMessages)));
                     logger.Error(errorMessage);
                     throw exception;
                 }
@@ -302,7 +302,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             if (response.DeleteReviewErrors.Any())
             {
                 var exception = new RepositoryException("Errors encountered while deleting employment performance review: " + guid);
-                response.DeleteReviewErrors.ForEach(e => exception.AddError(new RepositoryError(e.ErrorCodes, e.ErrorMessages)));
+                response.DeleteReviewErrors.ForEach(e => exception.AddError(new RepositoryError(string.IsNullOrEmpty(e.ErrorCodes) ? "" : e.ErrorCodes, e.ErrorMessages)));
                 throw exception;
             }
         }

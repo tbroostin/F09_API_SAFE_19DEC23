@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using Ellucian.Colleague.Data.Student.Transactions;
 using Ellucian.Data.Colleague;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Student.Entities;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {
@@ -42,7 +43,9 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
             private Collection<DataContracts.Students> students;
             private Collection<DataContracts.ArInvItemsIntg> arInvItemsIntg;
-            
+            private Dictionary<string, GuidLookupResult> dicResult;
+            string guid = Guid.NewGuid().ToString();
+
 
             [TestInitialize]
             public void Initialize()
@@ -172,8 +175,12 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataReaderMock.Setup(a => a.SelectAsync("AR.INV.ITEMS.INTG", It.IsAny<string>())).ReturnsAsync(studentChargeIds.ToArray());
 
                 dataReaderMock.Setup(a => a.BulkReadRecordAsync<ArInvItemsIntg>("AR.INV.ITEMS.INTG", studentChargeIds.ToArray(), true)).ReturnsAsync(arInvItemsIntg);
-                
-             }
+                dicResult = new Dictionary<string, GuidLookupResult>()
+                {
+                    { guid, new GuidLookupResult() { Entity = "AR.INV.ITEMS.INTG", PrimaryKey = "1" } }
+                };
+                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(dicResult);
+            }
 
             private IStudentChargeRepository BuildValidStudentChargeRepository()
             {
@@ -234,7 +241,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataReaderMock.Setup(a => a.BulkReadRecordAsync<ArInvItemsIntg>("AR.INV.ITEMS.INTG", It.IsAny<string[]>(), It.IsAny<bool>()))
                    .ReturnsAsync(arInvItemsIntg);
 
-                var actuals = await studentChargeRepo.GetAsync(0, 5, false, "0000011", "2015/SP", "TUI", "tuition");
+                var actuals = await studentChargeRepo.GetAsync(0, 5, false, "0000011", "2015/SP", "TUI", "tuition", "charge Type", "usage");
                 Assert.IsNotNull(actuals);
 
                 foreach (var actual in actuals.Item1)
@@ -255,6 +262,20 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     Assert.AreEqual(expected.InviIntgTerm, actual.Term);
                 }
             }
+
+            [TestMethod]
+            public async Task StudentChargeRepository_GetStudentCharges_WithFilter_EmptyResponse()
+            {
+                dataReaderMock.Setup(a => a.SelectAsync("AR.INV.ITEMS.INTG", It.IsAny<string>())).ReturnsAsync(studentChargeIds.ToArray());
+
+                dataReaderMock.Setup(a => a.BulkReadRecordAsync<ArInvItemsIntg>("AR.INV.ITEMS.INTG", It.IsAny<string[]>(), It.IsAny<bool>()))
+                   .ReturnsAsync(null);
+
+                var actuals = await studentChargeRepo.GetAsync(0, 5, false, "0000011", "2015/SP", "TUI", "tuition", "charge Type", "usage");
+                Assert.IsNotNull(actuals);
+                Assert.AreEqual(0, actuals.Item2);
+            }
+
             [TestMethod]
             public async Task StudentChargeRepository_GetById()
             {
@@ -285,6 +306,21 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataReaderMock.Setup(i => i.BulkReadRecordAsync<ArInvItemsIntg>("AR.INV.ITEMS.INTG", It.IsAny<string[]>(), true)).ThrowsAsync(new RepositoryException());
 
                 var actuals = await studentChargeRepo.GetAsync(0, 3, false, "", "");               
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task StudentChargeRepository_GetById_ArgumentNullException()
+            {
+               var actual = await studentChargeRepo.GetByIdAsync(string.Empty);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(KeyNotFoundException))]
+            public async Task StudentChargeRepository_GetRecordInfoFromGuidAsync_KeyNotFoundException()
+            {
+                dicResult[guid] = null;
+                var actual = await studentChargeRepo.GetByIdAsync("Bad Id");
             }
 
             [TestMethod]
@@ -419,6 +455,62 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task StudentChargeRepository_UpdateAsync_RepositoryException()
+            {
+                string guid = "db2cb4bf-9531-4d38-8bcf-a96bc8628156";
+                Ellucian.Colleague.Domain.Base.Entities.Person person1 = GetTestPersonEntity();
+
+                var studentCharge = new Domain.Student.Entities.StudentCharge(person1.Id, "tuition", Convert.ToDateTime("2016-10-17"))
+                {
+                    AccountsReceivableTypeCode = "01",
+                    AccountsReceivableCode = "TUI",
+                    ChargeAmount = 400m,
+                    ChargeCurrency = "CAD",
+                    Comments = new List<string> { "test" },
+                    InvoiceItemID = "168999",
+                    Guid = Guid.Empty.ToString(),
+                    Term = "2016/SP"
+                };
+
+                var response = new PostStudentChargesResponse()
+                {
+                    Error = "Error",
+                    StudentChargeErrors = new List<StudentChargeErrors>()
+                    {
+                       new StudentChargeErrors()
+                       {
+                           ErrorCodes = "1",
+                           ErrorMessages = "Error"
+                       }
+                    }
+                };
+
+                iColleagueTransactionInvokerMock.Setup(i => i.ExecuteAsync<PostStudentChargesRequest, PostStudentChargesResponse>(It.IsAny<PostStudentChargesRequest>()))
+                    .ReturnsAsync(response);
+                var actual = await studentChargeRepo.UpdateAsync(knownArInvItemsIntgId1, studentCharge);
+            }
+
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task UpdateAsync_ArgumentNullException()
+            {
+                var actual = await studentChargeRepo.UpdateAsync("", null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(InvalidOperationException))]
+            public async Task UpdateAsync_InvalidOperationException()
+            {
+                StudentCharge studentCharge = new StudentCharge("1", "chargeType", null)
+                {
+                    Guid = Guid.NewGuid().ToString()
+                };
+                var actual = await studentChargeRepo.UpdateAsync("Bad_Id", studentCharge);
+            }
+
+            [TestMethod]
             public async Task StudentChargeRepository_CreateAsync()
             {
                 string guid = "db2cb4bf-9531-4d38-8bcf-a96bc8628156";
@@ -487,6 +579,45 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.AreEqual(studentCharge.PersonId, actual.PersonId);
                 Assert.AreEqual(studentCharge.Term, actual.Term);
 
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(InvalidOperationException))]
+            public async Task CreateAsync_InvalidOperationException()
+            {
+                StudentCharge studentCharge = new StudentCharge("1", "chargeType", null)
+                {
+                    Guid = Guid.NewGuid().ToString()
+                };
+                var actual = await studentChargeRepo.CreateAsync(studentCharge);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(KeyNotFoundException))]
+            public async Task DeleteAsync_GetRecordInfoFromGuidAsync_KeyNotFoundException()
+            {
+                dicResult[guid] = null;
+                var actual = await studentChargeRepo.DeleteAsync("Bad Id");
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task DeleteAsync_KeyNotFoundException()
+            {
+                iColleagueTransactionInvokerMock.Setup(repo =>
+                repo.ExecuteAsync<DeleteStudentChargeRequest, DeleteStudentChargeResponse>(It.IsAny<DeleteStudentChargeRequest>()))
+                    .ReturnsAsync(new DeleteStudentChargeResponse()
+                    {
+                        DeleteIntgGlPostingErrors = new List<DeleteIntgGlPostingErrors>()
+                        {
+                            new DeleteIntgGlPostingErrors()
+                            {
+                                ErrorCode = "1",
+                                ErrorMsg = "Error Message"
+                            }
+                        }
+                    });
+                var actual = await studentChargeRepo.DeleteAsync(guid);
             }
         }
     }

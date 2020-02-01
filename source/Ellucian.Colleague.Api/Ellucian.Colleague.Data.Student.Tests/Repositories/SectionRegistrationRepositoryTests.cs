@@ -17,6 +17,8 @@ using slf4net;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Domain.Exceptions;
+using System.Threading;
+using Ellucian.Colleague.Domain.Base.Transactions;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {
@@ -228,7 +230,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             private SectionRegistrationRepository BuildValidSectionRegistrationRepository()
             {
                 transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
-
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x => x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
                 sectionRegistrationRepo = new SectionRegistrationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
                 return sectionRegistrationRepo;
 
@@ -616,7 +619,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             private SectionRegistrationRepository BuildValidSectionRegistrationRepository()
             {
                 transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
-
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x => x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
                 sectionRegistrationRepo = new SectionRegistrationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
                 return sectionRegistrationRepo;
 
@@ -793,6 +797,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             Mock<ILogger> loggerMock;
             Mock<ICacheProvider> cacheProviderMock;
             Mock<IColleagueDataReader> dataAccessorMock;
+            Mock<IColleagueTransactionInvoker> transManager;
 
             [TestInitialize]
             public void Initialize()
@@ -801,7 +806,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 loggerMock = new Mock<ILogger>();
                 cacheProviderMock = new Mock<ICacheProvider>();
                 dataAccessorMock = new Mock<IColleagueDataReader>();
-
+                transManager = new Mock<IColleagueTransactionInvoker>();
                 sectionRegistrationRepo = BuildValidSectionRegistrationRepository();
                 academicCreditData = (new TestAcademicCreditRepository().GetAsync().Result).ToList();
                 var academicCredit = academicCreditData.ElementAt(0);
@@ -818,111 +823,225 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
-            public async Task SectionRegistration_GetSectionRegistrations2Async_StudentId_EmptyResults()
+            public async Task SectionRegistration_GetSectionRegistrations3Async_StudentId_EmptyResults()
             {
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 1,
+                    CacheName = "AllSectionRegistrationsKeys:",
+                    Entity = "STUDENT.ACAD.CRED",
+                    Sublist = new List<string>(),
+                    TotalCount = 1,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                    {
+                    }
+                };
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManager.Object);
+                transManager.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
                 sectReg = new SectionRegistrationResponse(It.IsAny<string>(), "1", It.IsAny<string>(), It.IsAny<string>(), new List<RegistrationMessage>());
 
-                var response = await sectionRegistrationRepo.GetSectionRegistrations2Async(It.IsAny<int>(), It.IsAny<int>(), sectReg, It.IsAny<string>(), It.IsAny<string>());
+                var response = await sectionRegistrationRepo.GetSectionRegistrations3Async(It.IsAny<int>(), It.IsAny<int>(), sectReg, It.IsAny<string>(), It.IsAny<string>());
                 Assert.IsNotNull(response);
                 Assert.AreEqual(0, response.Item2);
             }
 
             [TestMethod]
-            public async Task SectionRegistration_GetSectionRegistrations2Async_AcadPeriod_EmptyResults()
+            public async Task SectionRegistration_GetSectionRegistrations3Async_AcadPeriod_EmptyResults()
             {
-                sectReg = new SectionRegistrationResponse(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), new List<RegistrationMessage>());
-
-                var response = await sectionRegistrationRepo.GetSectionRegistrations2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny< SectionRegistrationResponse>(), "1", It.IsAny<string>());
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 1,
+                    CacheName = "AllSectionRegistrationsKeys:",
+                    Entity = "STUDENT.ACAD.CRED",
+                    Sublist = new List<string>(),
+                    TotalCount = 1,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                    {
+                    }
+                };
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManager.Object);
+                transManager.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
+                var response = await sectionRegistrationRepo.GetSectionRegistrations3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny< SectionRegistrationResponse>(), "BadId", It.IsAny<string>());
                 Assert.IsNotNull(response);
                 Assert.AreEqual(0, response.Item2);
             }
 
             [TestMethod]
-            public async Task SectionRegistration_GetSectionRegistrations2Async_SectionId_EmptyResults()
+            public async Task SectionRegistration_GetSectionRegistrations3Async_SectionId_EmptyResults()
             {
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 1,
+                    CacheName = "AllSectionRegistrationsKeys:",
+                    Entity = "STUDENT.ACAD.CRED",
+                    Sublist = new List<string>(),
+                    TotalCount = 1,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                    {
+                    }
+                };
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManager.Object);
+                transManager.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
                 sectReg = new SectionRegistrationResponse(It.IsAny<string>(), It.IsAny<string>(), "1", It.IsAny<string>(), new List<RegistrationMessage>());
 
-                var response = await sectionRegistrationRepo.GetSectionRegistrations2Async(It.IsAny<int>(), It.IsAny<int>(), sectReg, It.IsAny<string>(), It.IsAny<string>());
+                var response = await sectionRegistrationRepo.GetSectionRegistrations3Async(It.IsAny<int>(), It.IsAny<int>(), sectReg, It.IsAny<string>(), It.IsAny<string>());
                 Assert.IsNotNull(response);
                 Assert.AreEqual(0, response.Item2);
             }
 
             [TestMethod]
-            public async Task SectionRegistration_GetSectionRegistrations2Async_SectionId_WithStudentId_EmptyResults()
+            public async Task SectionRegistration_GetSectionRegistrations3Async_SectionId_WithStudentId_EmptyResults()
             {
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 1,
+                    CacheName = "AllSectionRegistrationsKeys:",
+                    Entity = "STUDENT.ACAD.CRED",
+                    Sublist = new List<string>(),
+                    TotalCount = 1,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                    {
+                    }
+                };
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManager.Object);
+                transManager.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
                 sectReg = new SectionRegistrationResponse(It.IsAny<string>(), "1", "1", It.IsAny<string>(), new List<RegistrationMessage>());
                 dataAccessorMock.SetupSequence(dr => dr.SelectAsync(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>()))
                     .Returns(Task.FromResult(new[] { "1" }))
                     .Returns(Task.FromResult(new[] { "1" }))
                     .Returns(Task.FromResult(new string[] { }));
 
-                var response = await sectionRegistrationRepo.GetSectionRegistrations2Async(It.IsAny<int>(), It.IsAny<int>(), sectReg, It.IsAny<string>(), It.IsAny<string>());
+                var response = await sectionRegistrationRepo.GetSectionRegistrations3Async(It.IsAny<int>(), It.IsAny<int>(), sectReg, It.IsAny<string>(), It.IsAny<string>());
                 Assert.IsNotNull(response);
                 Assert.AreEqual(0, response.Item2);
             }
 
             [TestMethod]
-            public async Task SectionRegistration_GetSectionRegistrations2Async_SectionInstructor_EmptyResults()
+            public async Task SectionRegistration_GetSectionRegistrations3Async_SectionInstructor_EmptyResults()
             {
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 1,
+                    CacheName = "AllSectionRegistrationsKeys:",
+                    Entity = "STUDENT.ACAD.CRED",
+                    Sublist = new List<string>(),
+                    TotalCount = 1,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                    {
+                    }
+                };
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManager.Object);
+                transManager.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
                 sectReg = new SectionRegistrationResponse(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), new List<RegistrationMessage>());
-                //dataAccessorMock.SetupSequence(dr => dr.SelectAsync(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>()))
-                //    .Returns(Task.FromResult(new[] { "1" }))
-                //    .Returns(Task.FromResult(new[] { "1" }))
-                //    .Returns(Task.FromResult(new string[] { }));
 
-                var response = await sectionRegistrationRepo.GetSectionRegistrations2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<SectionRegistrationResponse>(), It.IsAny<string>(), "1");
+                var response = await sectionRegistrationRepo.GetSectionRegistrations3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<SectionRegistrationResponse>(), It.IsAny<string>(), "1");
                 Assert.IsNotNull(response);
                 Assert.AreEqual(0, response.Item2);
             }
 
             [TestMethod]
-            public async Task SectionRegistration_GetSectionRegistrations2Async_SectionInstructor_CourseSecIdsNull_EmptyResults()
+            public async Task SectionRegistration_GetSectionRegistrations3Async_SectionInstructor_CourseSecIdsNull_EmptyResults()
             {
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 1,
+                    CacheName = "AllSectionRegistrationsKeys:",
+                    Entity = "STUDENT.ACAD.CRED",
+                    Sublist = new List<string>(),
+                    TotalCount = 1,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                    {
+                    }
+                };
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManager.Object);
+                transManager.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
                 sectReg = new SectionRegistrationResponse(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), new List<RegistrationMessage>());
                 dataAccessorMock.Setup(dr => dr.SelectAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(new[] { "1" });
                 dataAccessorMock.Setup(dr => dr.SelectAsync(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(null);
 
-                var response = await sectionRegistrationRepo.GetSectionRegistrations2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<SectionRegistrationResponse>(), It.IsAny<string>(), "1");
+                var response = await sectionRegistrationRepo.GetSectionRegistrations3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<SectionRegistrationResponse>(), It.IsAny<string>(), "1");
                 Assert.IsNotNull(response);
                 Assert.AreEqual(0, response.Item2);
             }
 
             [TestMethod]
-            public async Task SectionRegistration_GetSectionRegistrations2Async_SectionInstructor_AcadCredLimitingKeysNull_EmptyResults()
+            public async Task SectionRegistration_GetSectionRegistrations3Async_SectionInstructor_AcadCredLimitingKeysNull_EmptyResults()
             {
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 1,
+                    CacheName = "AllSectionRegistrationsKeys:",
+                    Entity = "STUDENT.ACAD.CRED",
+                    Sublist = new List<string>(),
+                    TotalCount = 1,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                    {
+                    }
+                };
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManager.Object);
+                transManager.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
                 dataAccessorMock.Setup(dr => dr.SelectAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(new[] { "1" });
                 dataAccessorMock.SetupSequence(dr => dr.SelectAsync(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>()))
                     .Returns(Task.FromResult(new[] { "1" }));
 
 
-                var response = await sectionRegistrationRepo.GetSectionRegistrations2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<SectionRegistrationResponse>(), It.IsAny<string>(), "1");
+                var response = await sectionRegistrationRepo.GetSectionRegistrations3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<SectionRegistrationResponse>(), It.IsAny<string>(), "1");
                 Assert.IsNotNull(response);
                 Assert.AreEqual(0, response.Item2);
             }
 
             [TestMethod]
-            public async Task SectionRegistration_GetSectionRegistrations2Async_EmptyResults()
+            public async Task SectionRegistration_GetSectionRegistrations3Async_EmptyResults()
             {
-                var response = await sectionRegistrationRepo.GetSectionRegistrations2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<SectionRegistrationResponse>(), It.IsAny<string>(), It.IsAny<string>());
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 1,
+                    CacheName = "AllSectionRegistrationsKeys:",
+                    Entity = "STUDENT.ACAD.CRED",
+                    Sublist = new List<string>(),
+                    TotalCount = 1,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                    {
+                    }
+                };
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManager.Object);
+                transManager.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
+                var response = await sectionRegistrationRepo.GetSectionRegistrations3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<SectionRegistrationResponse>(), It.IsAny<string>(), It.IsAny<string>());
                 Assert.IsNotNull(response);
                 Assert.AreEqual(0, response.Item2);
             }
 
             [TestMethod]
-            public async Task SectionRegistration_GetSectionRegistrations2Async()
+            public async Task SectionRegistration_GetSectionRegistrations3Async()
             {
                 dataAccessorMock.Setup(repo => repo.SelectAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(new[] { "1" });
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<StudentAcadCred>(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(new Collection<StudentAcadCred>() { studentAcadCred });
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<StudentCourseSec>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(new Collection<StudentCourseSec>() { studentCourseSec });
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<CourseSections>(It.IsAny<string[]>(), true)).ReturnsAsync(courseSections);
 
-                var response = await sectionRegistrationRepo.GetSectionRegistrations2Async(0, 1, It.IsAny<SectionRegistrationResponse>(), It.IsAny<string>(), It.IsAny<string>());
+                var response = await sectionRegistrationRepo.GetSectionRegistrations3Async(0, 1, It.IsAny<SectionRegistrationResponse>(), It.IsAny<string>(), It.IsAny<string>());
                 Assert.IsNotNull(response);
                 Assert.AreEqual(1, response.Item2);
             }
 
             [TestMethod]
-            public async Task SectionRegistration_GetSectionRegistrations2Async_WithOverride()
+            public async Task SectionRegistration_GetSectionRegistrations3Async_WithOverride()
             {
                 dataAccessorMock.Setup(repo => repo.SelectAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(new[] { "1" });
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<StudentAcadCred>(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(new Collection<StudentAcadCred>() { studentAcadCred });
@@ -931,7 +1050,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 courseSections.ElementAt(0).SecLocation = "DiffLocation";
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<CourseSections>(It.IsAny<string[]>(), true)).ReturnsAsync(courseSections);
 
-                var response = await sectionRegistrationRepo.GetSectionRegistrations2Async(0, 1, It.IsAny<SectionRegistrationResponse>(), It.IsAny<string>(), It.IsAny<string>());
+                var response = await sectionRegistrationRepo.GetSectionRegistrations3Async(0, 1, It.IsAny<SectionRegistrationResponse>(), It.IsAny<string>(), It.IsAny<string>());
                 Assert.IsNotNull(response);
                 Assert.AreEqual(1, response.Item2);
             }
@@ -980,6 +1099,38 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             private SectionRegistrationRepository BuildValidSectionRegistrationRepository()
             {
                 transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x => x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 1,
+                    CacheName = "AllSectionRegistrationsKeys:",
+                    Entity = "STUDENT.ACAD.CRED",
+                    Sublist = new List<string>() { "1" },
+                    TotalCount = 1,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                    {
+                        new KeyCacheInfo()
+                        {
+                            KeyCacheMax = 5905,
+                            KeyCacheMin = 1,
+                            KeyCachePart = "000",
+                            KeyCacheSize = 5905
+                        },
+                        new KeyCacheInfo()
+                        {
+                            KeyCacheMax = 7625,
+                            KeyCacheMin = 5906,
+                            KeyCachePart = "001",
+                            KeyCacheSize = 1720
+                        }
+                    }
+                };
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManager.Object);
+                transManager.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
 
                 sectionRegistrationRepo = new SectionRegistrationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
                 return sectionRegistrationRepo;
@@ -1286,7 +1437,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             private SectionRegistrationRepository BuildValidSectionRegistrationRepository()
             {
                 transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
-
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x => x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
                 sectionRegistrationRepo = new SectionRegistrationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
                 return sectionRegistrationRepo;
 
@@ -1465,7 +1617,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             private SectionRegistrationRepository BuildValidSectionRegistrationRepository()
             {
                 transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
-
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x => x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
                 sectionRegistrationRepo = new SectionRegistrationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
                 return sectionRegistrationRepo;
 
@@ -1772,7 +1925,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             private SectionRegistrationRepository BuildValidSectionRegistrationRepository()
             {
                 transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
-
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x => x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
                 sectionRegistrationRepo = new SectionRegistrationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
                 return sectionRegistrationRepo;
 
@@ -2079,7 +2233,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             private SectionRegistrationRepository BuildValidSectionRegistrationRepository()
             {
                 transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
-
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x => x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
                 sectionRegistrationRepo = new SectionRegistrationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
                 return sectionRegistrationRepo;
 
@@ -2434,7 +2589,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             private SectionRegistrationRepository BuildValidSectionRegistrationRepository()
             {
                 transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
-
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x => x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
                 sectionRegistrationRepo = new SectionRegistrationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
                 return sectionRegistrationRepo;
 

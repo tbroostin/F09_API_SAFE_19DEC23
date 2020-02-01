@@ -1,4 +1,4 @@
-﻿/*Copyright 2017 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2019 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 
@@ -54,6 +54,11 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         public string PayStatementReferenceId { get; private set; }
 
         /// <summary>
+        /// Boolean to indicate if this record is using the 2020 W4 calculation rules.
+        /// </summary>
+        public bool Apply2020W4Rules { get; private set; }
+
+        /// <summary>
         /// The ReferenceKey is a combination of the PaycheckReferenceId and the PayStatementReferenceId. It
         /// can be used to join a PayrollRegisterEntry to a Pay Statement.
         /// </summary>
@@ -99,7 +104,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         /// <param name="sequenceNumber"></param>
         /// <param name="paycheckReferenceId"></param>
         /// <param name="payStatementReferenceId"></param>
-        public PayrollRegisterEntry(string id, string employeeId, DateTime? payPeriodStartDate, DateTime payPeriodEndDate, string payCycleId, int sequenceNumber, string paycheckReferenceId, string payStatementReferenceId)
+        public PayrollRegisterEntry(string id, string employeeId, DateTime? payPeriodStartDate, DateTime payPeriodEndDate, string payCycleId, int sequenceNumber, string paycheckReferenceId, string payStatementReferenceId, bool newW4Flag)
         {
             if (string.IsNullOrEmpty(id))
             {
@@ -126,7 +131,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             PayPeriodStartDate = payPeriodStartDate;
             PayPeriodEndDate = payPeriodEndDate;
             SequenceNumber = sequenceNumber;
-
+            Apply2020W4Rules = newW4Flag;
 
             EarningsEntries = new List<PayrollRegisterEarningsEntry>();
             TaxEntries = new List<PayrollRegisterTaxEntry>();

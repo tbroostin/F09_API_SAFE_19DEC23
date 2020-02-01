@@ -93,6 +93,11 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         public string ShipToCode { get; set; }
 
         /// <summary>
+        /// Requisition commodity code
+        /// </summary>
+        public string CommodityCode { get; set; }
+
+        /// <summary>
         /// The blanket purchase order ID associated to this requisition
         /// </summary>
         public string BlanketPurchaseOrder { get; set; }

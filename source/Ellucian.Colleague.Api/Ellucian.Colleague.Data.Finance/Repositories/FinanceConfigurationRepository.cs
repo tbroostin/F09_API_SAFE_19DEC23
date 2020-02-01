@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -297,6 +297,8 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
                     configuration.AddTermPaymentPlanRequirement(BuildPaymentRequirement(sfppr));
                 }
             }
+
+            configuration.DisplayPotentialD7Amounts = String.IsNullOrEmpty(sfDefaults.SfEnableD7CalcFlag) ? false : sfDefaults.SfEnableD7CalcFlag == "Y";
 
             return configuration;
         }

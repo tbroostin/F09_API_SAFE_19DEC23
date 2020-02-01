@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2014 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,6 +24,11 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         /// The set of privacy codes this staff member is allowed to access
         /// </summary>
         public List<string> PrivacyCodes { get; set; }
+
+        /// <summary>
+        /// The staff member's initials
+        /// </summary>
+        public string StaffInitials { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Staff"/> class.

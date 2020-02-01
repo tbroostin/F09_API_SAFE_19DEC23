@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Ellucian.Colleague.Coordination.Finance.Services;
@@ -457,6 +457,39 @@ namespace Ellucian.Colleague.Coordination.Finance.Tests.Services
                 var statement = await service.GetStudentStatementAsync(accountHolderId, timeframeId, startDate, endDate);
                 Assert.IsNotNull(statement);
             }
+
+            [TestMethod]
+            public async Task StudentStatementService_GetStudentStatement_AcademicCreditsNoSections_ReturnsStatementDtoTest()
+            {
+                var nonSectionCredits = new Dictionary<string, List<Domain.Student.Entities.AcademicCredit>>();
+                nonSectionCredits.Add(accountHolderId, new List<Domain.Student.Entities.AcademicCredit>()
+                {
+                    new Domain.Student.Entities.AcademicCredit("ABC") { SectionId = null, CourseName="ABCDEFG", TermCode = timeframeId},
+                    new Domain.Student.Entities.AcademicCredit("DEF") { SectionId = null, CourseName="DEFGHI", TermCode = timeframeId}
+                });
+                acRepoMock.Setup(repo => repo.GetAcademicCreditByStudentIdsAsync(It.IsAny<ICollection<string>>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>()))
+                    .Returns(Task.FromResult<Dictionary<string, List<Domain.Student.Entities.AcademicCredit>>>(nonSectionCredits));
+                BuildService();
+                var statement = await service.GetStudentStatementAsync(accountHolderId, timeframeId, startDate, endDate);
+                Assert.IsNotNull(statement);
+                Assert.IsTrue(statement.CourseSchedule.Count() == 1);                
+            }
+
+            [TestMethod]
+            public async Task StudentStatementService_GetStudentStatement_AcademicCreditsMixedNonSection_ReturnsStatementDtoTest()
+            {
+                timeframeId = "2014/FA";
+                allAcademicCredits[accountHolderId].Add(new Domain.Student.Entities.AcademicCredit("ABC") { SectionId = null, CourseName = "ABCDEFG", TermCode = timeframeId });
+                allAcademicCredits[accountHolderId].Add(new Domain.Student.Entities.AcademicCredit("DEF") { SectionId = null, CourseName = "DEFGHI", TermCode = timeframeId });
+                
+                acRepoMock.Setup(repo => repo.GetAcademicCreditByStudentIdsAsync(It.IsAny<ICollection<string>>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>()))
+                    .Returns(Task.FromResult<Dictionary<string, List<Domain.Student.Entities.AcademicCredit>>>(allAcademicCredits));
+                BuildService();
+                var statement = await service.GetStudentStatementAsync(accountHolderId, timeframeId, startDate, endDate);
+                Assert.IsNotNull(statement);
+                Assert.IsTrue(statement.CourseSchedule.Any());
+                Assert.IsTrue(statement.CourseSchedule.First().SectionId == "MUSC*212-001");
+            }
         }
 
         [TestClass]
@@ -634,8 +667,16 @@ namespace Ellucian.Colleague.Coordination.Finance.Tests.Services
 
             secRepoMock = new Mock<ISectionRepository>();
             secRepo = secRepoMock.Object;
-            secRepoMock.Setup(repo => repo.GetCachedSectionsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>())).Returns(Task.FromResult<IEnumerable<Domain.Student.Entities.Section>>(new List<Domain.Student.Entities.Section>() { allSections.Where(s => s.CourseId == "7721" && s.TermId == "2014/FA").FirstOrDefault() }));
-            secRepoMock.Setup(repo => repo.GetNonCachedSectionsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>())).Returns(Task.FromResult<IEnumerable<Domain.Student.Entities.Section>>(new List<Domain.Student.Entities.Section>() { allSections.Where(s => s.CourseId == "7721" && s.TermId == "2014/FA").FirstOrDefault() }));
+            secRepoMock.Setup(repo => repo.GetCachedSectionsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>()))
+                .Returns<IEnumerable<string>, bool>((ids, b) =>
+                {
+                    return Task.FromResult(allSections.FindAll(s => ids.Contains(s.Id)).AsEnumerable());
+                });
+            secRepoMock.Setup(repo => repo.GetNonCachedSectionsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>()))
+                .Returns<IEnumerable<string>, bool>((ids, b) =>
+                {
+                    return Task.FromResult(allSections.FindAll(s => ids.Contains(s.Id)).AsEnumerable());
+                });
 
             termRepoMock = new Mock<ITermRepository>();
             termRepo = termRepoMock.Object;
@@ -666,7 +707,8 @@ namespace Ellucian.Colleague.Coordination.Finance.Tests.Services
                     Returns(accountDuePeriod.Current);
                 arRepoMock.Setup(repo => repo.GetAccountHolder(personId)).
                     Returns(allAccountHolders.Where(ah => ah.Id == personId).FirstOrDefault());
-                acRepoMock.Setup(repo => repo.GetAcademicCreditByStudentIdsAsync(It.IsAny<ICollection<string>>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns(Task.FromResult<Dictionary<string, List<Domain.Student.Entities.AcademicCredit>>>(allAcademicCredits));
+                acRepoMock.Setup(repo => repo.GetAcademicCreditByStudentIdsAsync(It.IsAny<ICollection<string>>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>()))
+                    .Returns(Task.FromResult<Dictionary<string, List<Domain.Student.Entities.AcademicCredit>>>(allAcademicCredits));
             }
         }
     }

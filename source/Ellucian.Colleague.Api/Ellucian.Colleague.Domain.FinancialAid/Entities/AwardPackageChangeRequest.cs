@@ -66,6 +66,11 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
         /// </summary>
         public List<AwardPeriodChangeRequest> AwardPeriodChangeRequests { get; set; }
 
+        /// <summary>
+        /// This is an override for the check that all subsidized awards are accepted/declined.
+        /// </summary>
+        public bool OverrideUnsubsidizedLoanCheck { get; set; }
+
         public bool IsForStudentAward(StudentAward studentAward)
         {
             if (studentAward == null) return false;

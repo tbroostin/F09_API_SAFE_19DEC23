@@ -47,11 +47,25 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         Task<PersonIntegration> GetPersonIntegrationByGuidAsync(string guid, bool bypassCache);
 
         /// <summary>
+        /// Get a partial person integration entity by guid.
+        /// </summary>
+        /// <param name="personGuid">Guid of the person in Colleague.</param>
+        /// <returns>The <see cref="Person">person</see> entity</returns>
+        Task<PersonIntegration> GetPersonNamesAndCredsByGuidAsync(string guid);
+
+        /// <summary>
         /// Get a person integration entity by guid, with caching.
         /// </summary>
         /// <param name="guid">Guid of the person in Colleague.</param>
         /// <returns>The <see cref="Person">person</see> entity</returns>
         Task<PersonIntegration> GetPersonIntegration2ByGuidAsync(string guid, bool bypassCache);
+
+        /// <summary>
+        /// Get a person integration entity by guid, with caching.
+        /// </summary>
+        /// <param name="guid">Guid of the person in Colleague.</param>
+        /// <returns>The <see cref="Person">person</see> entity</returns>
+        Task<PersonIntegration> GetPersonIntegration3ByGuidAsync(string guid, bool bypassCache);
 
         /// <summary>
         /// Get a person integration entities by guids, without caching.
@@ -69,11 +83,25 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         Task<IEnumerable<PersonIntegration>> GetPersonCredentialsIntegrationByGuidNonCachedAsync(IEnumerable<string> guids);
 
         /// <summary>
-        /// Get a person integration entities by guids, without caching V12.
+        /// Get partial person integration entities by guids
+        /// </summary>
+        /// <param name="guids">Guids of the persons in Colleague.</param>
+        /// <returns>List of <see cref="Person">person</see> entities</returns>
+        Task<IEnumerable<PersonIntegration>> GetPersonNamesAndCredsByGuidAsync(IEnumerable<string> guids);
+
+        /// <summary>
+        /// Get person integration entities by guids, without caching V12.
         /// </summary>
         /// <param name="guids">Guids of the persons in Colleague.</param>
         /// <returns>List of <see cref="Person">person</see> entities</returns>
         Task<IEnumerable<PersonIntegration>> GetPersonIntegration2ByGuidNonCachedAsync(IEnumerable<string> guids);
+
+        /// <summary>
+        /// Get person integration entities by guids, without caching V12.
+        /// </summary>
+        /// <param name="guids">Guids of the persons in Colleague.</param>
+        /// <returns>List of <see cref="Person">person</see> entities</returns>
+        Task<IEnumerable<PersonIntegration>> GetPersonIntegration3ByGuidNonCachedAsync(IEnumerable<string> guids);
 
         /// <summary>
         /// Get the person ID from a GUID
@@ -132,13 +160,19 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <returns>The newly updated <see cref="PersonIntegration">person</see> entity</returns>
         Task<PersonIntegration> Update2Async(PersonIntegration person, IEnumerable<Address> addresses, IEnumerable<Phone> phones, int version = 1);
 
-
         /// <summary>
         /// Search for matching person records.
         /// </summary>
         /// <param name="person"><see cref="Person">Person</see> to use for matching</param>
         /// <returns>List of person Ids</returns>
         Task<IEnumerable<string>> GetMatchingPersonsAsync(Person person);
+
+        /// <summary>
+        /// Search for matching person records.
+        /// </summary>
+        /// <param name="person"><see cref="Person">Person</see> to use for matching</param>
+        /// <returns>List of person Ids</returns>
+        Task<IEnumerable<string>> GetMatchingPersons2Async(Person person);
 
         /// <summary>
         /// Returns the actual results of the matching algorithm for the supplied search criteria
@@ -199,6 +233,19 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <returns>List of person Idss associated determined by filters</returns>
 
         Task<Tuple<IEnumerable<string>, int>> GetFilteredPerson2GuidsAsync(int offset, int limit, bool bypassCache, PersonFilterCriteria personFilterCriteria, string personFilter);
+
+
+        /// <summary>
+        /// Get a list of guids associated with persons after filtering
+        /// </summary>
+        /// <param name="Offset">Paging offset</param>
+        /// <param name="Limit">Paging limit</param>
+        /// <param name="bypassCache">Flag to bypass cache</param>
+        /// <param name="personFilterCriteria">Criteria filter object</param>
+        /// <param name="personFilter">Person Saved List selection or list name from person-filters</param>
+        /// <returns>List of person Idss associated determined by filters</returns>
+
+        Task<Tuple<IEnumerable<string>, int>> GetFilteredPerson3GuidsAsync(int offset, int limit, bool bypassCache, PersonFilterCriteria personFilterCriteria, string personFilter);
 
         /// <summary>
         /// Get a list of guids associated with organization after filtering

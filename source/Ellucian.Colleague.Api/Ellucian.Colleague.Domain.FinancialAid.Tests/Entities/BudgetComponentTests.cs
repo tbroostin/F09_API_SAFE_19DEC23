@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿/*Copyright 2014-2019 Ellucian Company L.P. and its affiliates.*/
+using System;
 using Ellucian.Colleague.Domain.FinancialAid.Entities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -86,6 +84,20 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests.Entities
             {
                 budgetComponent = new BudgetComponent(AwardYear, Code, Description);
                 Assert.AreEqual(null, budgetComponent.ShoppingSheetGroup);
+            }
+
+            [TestMethod]
+            public void IsDirectCost_InitializedNullTest()
+            {
+                Assert.IsNull((new BudgetComponent(AwardYear, Code, Description)).CostType);
+            }
+
+            [TestMethod]
+            public void IsDirectCost_GetSetTest()
+            {
+                var budgetComponent = new BudgetComponent(AwardYear, Code, Description);
+                budgetComponent.CostType = BudgetComponentCostType.Direct;
+                Assert.AreEqual(BudgetComponentCostType.Direct, budgetComponent.CostType);
             }
         }
 

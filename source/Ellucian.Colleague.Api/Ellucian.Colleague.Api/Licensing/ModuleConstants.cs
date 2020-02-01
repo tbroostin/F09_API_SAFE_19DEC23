@@ -60,7 +60,6 @@ namespace Ellucian.Colleague.Api.Licensing
         /// </summary>
         public const string CampusOrgs = "CO";
 
-
         /// <summary>
         /// Time Entry module code
         /// </summary>
@@ -70,5 +69,10 @@ namespace Ellucian.Colleague.Api.Licensing
         /// FA Link optional module code
         /// </summary>
         public const string FALink = "POS";
+
+        /// <summary>
+        /// Budget Management module code
+        /// </summary>
+        public const string BudgetManagement = "BGT";
     }
 }

@@ -296,6 +296,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
         }
 
+
         /// <summary>
         /// Convert Grade entity to Grade DTO
         /// </summary>
@@ -304,7 +305,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         private async Task<Dtos.Grade> ConvertGradeEntityToGradeDtoAsync(Domain.Student.Entities.Grade response)
         {
             var grade = new Ellucian.Colleague.Dtos.Grade();
-            var gradeSchemeGuid = ConvertCodeToGuid(await GradeSchemesAsync(), response.GradeSchemeCode);
+            var gradeScheme = (await GradeSchemesAsync()).Where(gs => gs != null && gs.Code == response.GradeSchemeCode).FirstOrDefault();
+            var gradeSchemeGuid = gradeScheme != null ? gradeScheme.Guid : null;
 
             grade.Id = response.Guid;
             grade.GradeScheme = new Dtos.GuidObject2(gradeSchemeGuid);

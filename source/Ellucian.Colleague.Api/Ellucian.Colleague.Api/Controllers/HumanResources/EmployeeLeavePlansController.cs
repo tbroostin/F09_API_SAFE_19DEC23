@@ -123,6 +123,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// 1. As an employee you have access to your own leave plans
         /// 2. As a supervisor with the APPROVE.REJECT.TIME.ENTRY permission, you have access to your own leave plans and your supervisees' leave plans
         /// 3. As the proxy of a supervisor, you have access to that supervisor's leave plans and that supervisor's supervisees' leave plans.
+        /// 4. As an admin, you have access to anyone's leave plans
         /// </accessComments>
         /// <returns>A collection of EmployeeLeavePlan objects</returns>
         [HttpGet]

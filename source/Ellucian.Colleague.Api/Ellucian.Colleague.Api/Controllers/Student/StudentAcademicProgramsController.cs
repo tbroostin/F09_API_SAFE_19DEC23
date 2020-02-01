@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
@@ -21,7 +21,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.ModelBinding;
@@ -81,14 +80,13 @@ namespace Ellucian.Colleague.Api.Controllers
                               new List<string>() { studentAcademicProgram.Id }));
                 }
 
-
                 return studentAcademicProgram;
 
             }
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
@@ -145,14 +143,13 @@ namespace Ellucian.Colleague.Api.Controllers
                               new List<string>() { studentAcademicProgram.Id }));
                 }
 
-
                 return studentAcademicProgram;
 
             }
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
@@ -185,6 +182,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Retrieves an Student Academic Program by ID.
         /// </summary>
         /// <returns>An <see cref="Dtos.StudentAcademicPrograms3">StudentAcademicPrograms</see>object.</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpGet, EedmResponseFilter]
         public async Task<Dtos.StudentAcademicPrograms3> GetStudentAcademicProgramsByGuid3Async(string id)
         {
@@ -213,7 +211,7 @@ namespace Ellucian.Colleague.Api.Controllers
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
@@ -242,6 +240,67 @@ namespace Ellucian.Colleague.Api.Controllers
             }
         }
 
+        /// <summary>
+        /// Retrieves an Student Academic Program by ID.
+        /// </summary>
+        /// <returns>An <see cref="Dtos.StudentAcademicPrograms4">StudentAcademicPrograms</see>object.</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, EedmResponseFilter]
+        public async Task<Dtos.StudentAcademicPrograms4> GetStudentAcademicProgramsByGuid4Async(string id)
+        {
+            bool bypassCache = false;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
+
+            try
+            {
+                var studentAcademicProgram = await _studentAcademicProgramService.GetStudentAcademicProgramByGuid4Async(id);
+
+                if (studentAcademicProgram != null)
+                {
+
+                    AddEthosContextProperties(await _studentAcademicProgramService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                              await _studentAcademicProgramService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              new List<string>() { studentAcademicProgram.Id }));
+                }
+                return studentAcademicProgram;
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (ArgumentNullException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
 
         /// <summary>
         /// Return a list of StudentAcademicPrograms objects based on selection criteria.
@@ -265,7 +324,7 @@ namespace Ellucian.Colleague.Api.Controllers
         [ValidateQueryStringFilter(new string[] { "student", "startOn", "endOn", "program", "catalog", "enrollmentStatus", "programOwner", "site", "academicLevel", "graduatedOn",
             "credentials", "graduatedAcademicPeriod" }, false, true)]
         public async Task<IHttpActionResult> GetStudentAcademicProgramsAsync(Paging page, [FromUri] string student = "", [FromUri] string startOn = "", [FromUri] string endOn = "",
-            [FromUri] string program = "", [FromUri] string catalog = "", [FromUri] string enrollmentStatus = "", [FromUri] string programOwner = "", [FromUri] string site = "", 
+            [FromUri] string program = "", [FromUri] string catalog = "", [FromUri] string enrollmentStatus = "", [FromUri] string programOwner = "", [FromUri] string site = "",
             [FromUri] string academicLevel = "", [FromUri] string graduatedOn = "", [FromUri] string credentials = "", [FromUri] string graduatedAcademicPeriod = "")
         {
             bool bypassCache = false;
@@ -331,7 +390,7 @@ namespace Ellucian.Colleague.Api.Controllers
                 {
                     throw new Exception(string.Concat("'", enrollmentStatus, "' is an invalid enumeration value. "));
                 }
-               
+
                 var pageOfItems = await _studentAcademicProgramService.GetStudentAcademicProgramsAsync(page.Offset, page.Limit, bypassCache, student, startOn, endOn, program,
                    catalog, enrollmentStatus, programOwner, site, academicLevel, graduatedOn, credentials, graduatedAcademicPeriod);
 
@@ -344,7 +403,7 @@ namespace Ellucian.Colleague.Api.Controllers
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch(InvalidOperationException e)
             {
@@ -394,7 +453,7 @@ namespace Ellucian.Colleague.Api.Controllers
                 }
             }
             //do the filters
-            string program = string.Empty, student = string.Empty, site = string.Empty, academicLevel = string.Empty,  startOn = string.Empty,  endOn = string.Empty, 
+            string program = string.Empty, student = string.Empty, site = string.Empty, academicLevel = string.Empty,  startOn = string.Empty,  endOn = string.Empty,
                 enrollmentStatus = string.Empty, graduatedAcademicPeriod = string.Empty, graduatedOn = string.Empty;
             List<string> credentials = new List<string>();
 
@@ -409,10 +468,10 @@ namespace Ellucian.Colleague.Api.Controllers
                 program = (criteriaObj.AcademicProgram != null && !string.IsNullOrEmpty(criteriaObj.AcademicProgram.Id)) ? criteriaObj.AcademicProgram.Id : string.Empty;
                 site = (criteriaObj.Site != null && !string.IsNullOrEmpty(criteriaObj.Site.Id)) ? criteriaObj.Site.Id : string.Empty;
                 academicLevel = (criteriaObj.AcademicLevel != null && !string.IsNullOrEmpty(criteriaObj.AcademicLevel.Id)) ? criteriaObj.AcademicLevel.Id : string.Empty;
-                
+
                 if (criteriaObj.Credentials != null && criteriaObj.Credentials.Any())
                 {
-                    criteriaObj.Credentials.ToList().ForEach(i => 
+                    criteriaObj.Credentials.ToList().ForEach(i =>
                     {
                         credentials.Add(i.Id);
                     });
@@ -461,7 +520,7 @@ namespace Ellucian.Colleague.Api.Controllers
                 }
 
                 enrollmentStatus = criteriaObj.EnrollmentStatus != null ? criteriaObj.EnrollmentStatus.EnrollStatus.ToString() : string.Empty;
-                
+
                 if(criteriaObj.AcademicPeriods != null && criteriaObj.AcademicPeriods.ActualGraduation != null && !string.IsNullOrEmpty(criteriaObj.AcademicPeriods.ActualGraduation.Id))
                 {
                     graduatedAcademicPeriod = criteriaObj.AcademicPeriods.ActualGraduation.Id;
@@ -479,7 +538,7 @@ namespace Ellucian.Colleague.Api.Controllers
                     page = new Paging(100, 0);
                 }
 
-                var pageOfItems = await _studentAcademicProgramService.GetStudentAcademicPrograms2Async(page.Offset, page.Limit, bypassCache, student, startOn, endOn, program, 
+                var pageOfItems = await _studentAcademicProgramService.GetStudentAcademicPrograms2Async(page.Offset, page.Limit, bypassCache, student, startOn, endOn, program,
                     enrollmentStatus, site, academicLevel, graduatedOn, credentials, graduatedAcademicPeriod);
 
                 AddEthosContextProperties(await _studentAcademicProgramService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
@@ -492,7 +551,7 @@ namespace Ellucian.Colleague.Api.Controllers
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (InvalidOperationException e)
             {
@@ -526,8 +585,9 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         ///  <param name="page">page</param>
         /// <param name="criteria">filter criteria</param>
-        /// <returns>List of StudentAcademicPrograms <see cref="Dtos.StudentAcademicPrograms2"/> objects representing matching Student Academic Programs</returns>
+        /// <returns>List of StudentAcademicPrograms <see cref="Dtos.StudentAcademicPrograms3"/> objects representing matching Student Academic Programs</returns>
         [HttpGet]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("criteria", typeof(Dtos.StudentAcademicPrograms3))]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
@@ -549,7 +609,7 @@ namespace Ellucian.Colleague.Api.Controllers
             var criteriaObj = GetFilterObject<Dtos.StudentAcademicPrograms3>(_logger, "criteria");
 
             if (CheckForEmptyFilterParameters())
-                return new PagedHttpActionResult<IEnumerable<Dtos.StudentAcademicPrograms3>>(new List<Dtos.StudentAcademicPrograms3>(), page, 0, this.Request);            
+                return new PagedHttpActionResult<IEnumerable<Dtos.StudentAcademicPrograms3>>(new List<Dtos.StudentAcademicPrograms3>(), page, 0, this.Request);
             try
             {
                 if (page == null)
@@ -569,7 +629,7 @@ namespace Ellucian.Colleague.Api.Controllers
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (InvalidOperationException e)
             {
@@ -598,6 +658,93 @@ namespace Ellucian.Colleague.Api.Controllers
             }
         }
 
+        /// <summary>
+        /// Return a list of StudentAcademicPrograms objects based on selection criteria.
+        /// </summary>
+        ///  <param name="page">page</param>
+        /// <param name="criteria">filter criteria</param>
+        /// <param name="personFilter">person filter criteria</param>
+        /// <returns>List of StudentAcademicPrograms <see cref="Dtos.StudentAcademicPrograms4"/> objects representing matching Student Academic Programs</returns>
+        [HttpGet]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
+        [QueryStringFilterFilter("criteria", typeof(Dtos.StudentAcademicPrograms4))]
+        [QueryStringFilterFilter("personFilter", typeof(Dtos.Filters.PersonFilterFilter2))]
+        [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
+        public async Task<IHttpActionResult> GetStudentAcademicPrograms4Async(Paging page, QueryStringFilter criteria = null, QueryStringFilter personFilter= null)
+        {
+            bool bypassCache = false;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
+            //do the filters
+
+            string personFilterValue = string.Empty;
+            var personFilterObj = GetFilterObject<Dtos.Filters.PersonFilterFilter2>(_logger, "personFilter");
+            if ((personFilterObj != null) && (personFilterObj.personFilter != null))
+            {
+                personFilterValue = personFilterObj.personFilter.Id;
+            }
+
+            string program = string.Empty, student = string.Empty, site = string.Empty, academicLevel = string.Empty, startOn = string.Empty, endOn = string.Empty,
+                enrollmentStatus = string.Empty, graduatedAcademicPeriod = string.Empty, graduatedOn = string.Empty;
+            List<string> credentials = new List<string>();
+
+            var criteriaObj = GetFilterObject<Dtos.StudentAcademicPrograms4>(_logger, "criteria");
+
+            if (CheckForEmptyFilterParameters())
+                return new PagedHttpActionResult<IEnumerable<Dtos.StudentAcademicPrograms4>>(new List<Dtos.StudentAcademicPrograms4>(), page, 0, this.Request);
+            try
+            {
+                if (page == null)
+                {
+                    page = new Paging(100, 0);
+                }
+
+                var pageOfItems = await _studentAcademicProgramService.GetStudentAcademicPrograms4Async(page.Offset, page.Limit, criteriaObj, personFilterValue, bypassCache);
+
+                AddEthosContextProperties(await _studentAcademicProgramService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                              await _studentAcademicProgramService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              pageOfItems.Item1.Select(a => a.Id).ToList()));
+
+                return new PagedHttpActionResult<IEnumerable<Dtos.StudentAcademicPrograms4>>(pageOfItems.Item1, page, pageOfItems.Item2, this.Request);
+
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (InvalidOperationException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
 
         /// <summary>
         /// Creates an Student Academic Program.
@@ -649,7 +796,7 @@ namespace Ellucian.Colleague.Api.Controllers
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -727,7 +874,7 @@ namespace Ellucian.Colleague.Api.Controllers
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -750,6 +897,20 @@ namespace Ellucian.Colleague.Api.Controllers
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
         }
+
+        /// <summary>
+        /// Creates an Student Academic Program.
+        /// </summary>
+        /// <param name="StudentAcademicPrograms"><see cref="Dtos.StudentAcademicPrograms2">StudentAcademicPrograms</see> to create</param>
+        /// <returns>Newly created <see cref="Dtos.StudentAcademicPrograms3">StudentAcademicPrograms</see></returns>
+        [HttpPost]
+        public async Task<Dtos.StudentAcademicPrograms3> CreateStudentAcademicPrograms3Async(Dtos.StudentAcademicPrograms3 StudentAcademicPrograms)
+        {
+            //Update is not supported for Colleague but HeDM requires full crud support.
+            throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
+
+        }
+
 
         /// <summary>
         /// Updates an Student Academic Program.
@@ -806,19 +967,19 @@ namespace Ellucian.Colleague.Api.Controllers
 
                 var mergedStudentAcadProgram = await PerformPartialPayloadMerge(studentAcademicPrograms, async () => await _studentAcademicProgramService.GetStudentAcademicProgramByGuidAsync(id),
                     dpList, _logger);
-                    await ValidateStudentAcademicPrograms(mergedStudentAcadProgram);
+                await ValidateStudentAcademicPrograms(mergedStudentAcadProgram);
                 var studentAcademicProgramReturn = await _studentAcademicProgramService.UpdateStudentAcademicProgramAsync(mergedStudentAcadProgram, bypassCache);
 
                 //store dataprivacy list and get the extended data to store 
                 AddEthosContextProperties(dpList,
                     await _studentAcademicProgramService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(), new List<string>() { id }));
 
-                return studentAcademicProgramReturn; 
+                return studentAcademicProgramReturn;
             }
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentNullException e)
             {
@@ -894,7 +1055,7 @@ namespace Ellucian.Colleague.Api.Controllers
                 throw CreateHttpResponseException(new IntegrationApiException("Invalid GUID ",
               IntegrationApiUtility.GetDefaultApiError("The null GUID is not valid")));
             }
-            
+
             try
             {
                 //get Data Privacy List
@@ -913,12 +1074,12 @@ namespace Ellucian.Colleague.Api.Controllers
                 AddEthosContextProperties(dpList,
                     await _studentAcademicProgramService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(), new List<string>() { id }));
 
-                return studentAcademicProgramReturn; 
+                return studentAcademicProgramReturn;
             }
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentNullException e)
             {
@@ -953,6 +1114,21 @@ namespace Ellucian.Colleague.Api.Controllers
         }
 
         /// <summary>
+        /// Updates an Student Academic Program.
+        /// </summary>
+        /// <param name="id">Id of the Student Academic Program to update</param>
+        /// <param name="studentAcademicPrograms"><see cref="Dtos.StudentAcademicPrograms">StudentAcademicPrograms</see> to create</param>
+        /// <returns>Updated <see cref="Dtos.StudentAcademicPrograms3">StudentAcademicPrograms</see></returns>
+        [HttpPut]
+        public async Task<Dtos.StudentAcademicPrograms3> UpdateStudentAcademicPrograms3Async([FromUri] string id, [FromBody] Dtos.StudentAcademicPrograms3 studentAcademicPrograms)
+        {
+            //Update is not supported for Colleague but HeDM requires full crud support.
+            throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
+
+        }
+
+
+        /// <summary>
         /// Delete an existing student academic programs
         /// </summary>
         /// <param name="id">Employee GUID for update.</param>
@@ -964,6 +1140,197 @@ namespace Ellucian.Colleague.Api.Controllers
             throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
         }
 
+        #region submissions
+                 
+        /// <summary>
+        /// Updates an Student Academic Program.
+        /// </summary>
+        /// <param name="id">Id of the Student Academic Program to update</param>
+        /// <param name="studentAcademicPrograms"><see cref="Dtos.StudentAcademicPrograms">StudentAcademicPrograms</see> to create</param>
+        /// <returns>Updated <see cref="Dtos.StudentAcademicPrograms4">StudentAcademicPrograms</see></returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpPut, EedmResponseFilter]
+        public async Task<Dtos.StudentAcademicPrograms4> UpdateStudentAcademicProgramsSubmissionsAsync([FromUri] string id, [ModelBinder(typeof(EedmModelBinder))] Dtos.StudentAcademicProgramsSubmissions studentAcademicPrograms)
+        {
+
+            bool bypassCache = false;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
+            try
+            {
+                if (string.IsNullOrEmpty(id))
+                {
+                    throw new ArgumentNullException("Null StudentAcademicProgramsSubmissions guid", "guid is a required property.");
+                }
+                if (studentAcademicPrograms == null)
+                {
+                    throw new ArgumentNullException("Null StudentAcademicProgramsSubmissions argument", "The request body is required.");
+                }
+                if (string.IsNullOrEmpty(studentAcademicPrograms.Id))
+                {
+                    studentAcademicPrograms.Id = id.ToLowerInvariant();
+                }
+                if (!id.Equals(studentAcademicPrograms.Id, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException("GUID not the same as in request body.");
+                }
+                if (string.Equals(studentAcademicPrograms.Id, Guid.Empty.ToString()))
+                {
+                    throw new InvalidOperationException("Nil GUID cannot be used in PUT operation.");
+                }
+
+
+                //get Data Privacy List
+                var dpList = await _studentAcademicProgramService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
+
+                //call import extend method that needs the extracted extension dataa and the config
+                await _studentAcademicProgramService.ImportExtendedEthosData(await ExtractExtendedData(await _studentAcademicProgramService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
+
+                //do update with partial logic
+                var mergedStudentAcadProgram = await PerformPartialPayloadMerge(studentAcademicPrograms, async () => await _studentAcademicProgramService.GetStudentAcademicProgramSubmissionByGuidAsync(id),
+                        dpList, _logger);
+                var studentAcademicProgramReturn = await _studentAcademicProgramService.UpdateStudentAcademicProgramSubmissionAsync(mergedStudentAcadProgram, bypassCache);
+
+                //store dataprivacy list and get the extended data to store 
+                AddEthosContextProperties(dpList,
+                    await _studentAcademicProgramService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(), new List<string>() { id }));
+
+                return studentAcademicProgramReturn;
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (ArgumentNullException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (InvalidOperationException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
+
+        /// <summary>
+        /// Creates an Student Academic Program.
+        /// </summary>
+        /// <param name="StudentAcademicPrograms"><see cref="Dtos.StudentAcademicPrograms2">StudentAcademicPrograms</see> to create</param>
+        /// <returns>Newly created <see cref="Dtos.StudentAcademicPrograms2">StudentAcademicPrograms</see></returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpPost, EedmResponseFilter]
+        public async Task<Dtos.StudentAcademicPrograms4> CreateStudentAcademicProgramsSubmissionsAsync([ModelBinder(typeof(EedmModelBinder))]  Dtos.StudentAcademicProgramsSubmissions StudentAcademicPrograms)
+        {
+            bool bypassCache = false;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
+            try
+            {
+                if (StudentAcademicPrograms == null)
+                {
+                    throw new ArgumentNullException("Null StudentAcademicProgramsSubmissions argument", "The request body is required.");
+                }
+                if (string.IsNullOrEmpty(StudentAcademicPrograms.Id))
+                {
+                    throw new ArgumentNullException("Null StudentAcademicProgramsSubmissions guid", "guid is a required property.");
+                }
+                if (StudentAcademicPrograms.Id != Guid.Empty.ToString())
+                {
+                    throw new ArgumentNullException("Not null StudentAcademicProgramsSubmissions guid", "On a post, you can not define a GUID");
+                }
+
+
+                //call import extend method that needs the extracted extension data and the config
+                await _studentAcademicProgramService.ImportExtendedEthosData(await ExtractExtendedData(await _studentAcademicProgramService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
+
+                //create the student academic programs
+                var studentAcademicProgram = await _studentAcademicProgramService.CreateStudentAcademicProgramSubmissionAsync(StudentAcademicPrograms, bypassCache);
+
+                //store dataprivacy list and get the extended data to store 
+                AddEthosContextProperties(await _studentAcademicProgramService.GetDataPrivacyListByApi(GetRouteResourceName(), true),
+                   await _studentAcademicProgramService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(), new List<string>() { studentAcademicProgram.Id }));
+
+                return studentAcademicProgram;
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentNullException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (InvalidOperationException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
+        
+       
+
+        #endregion
+
+        
         /// <summary>
         /// Validates the data in the StudentAcademicPrograms object
         /// </summary>

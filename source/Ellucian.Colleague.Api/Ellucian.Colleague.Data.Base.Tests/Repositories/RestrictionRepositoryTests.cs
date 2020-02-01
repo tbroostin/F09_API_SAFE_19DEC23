@@ -8,6 +8,7 @@ using System.Linq;
 using System.Runtime.Caching;
 using Ellucian.Data.Colleague;
 using Ellucian.Web.Http.TestUtil;
+using Ellucian.Web.Http.Configuration;
 using Ellucian.Data.Colleague.DataContracts;
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
@@ -16,6 +17,7 @@ using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Tests;
 using slf4net;
 using Ellucian.Web.Cache;
+
 
 namespace Ellucian.Colleague.Data.Base.Tests
 {
@@ -32,6 +34,7 @@ namespace Ellucian.Colleague.Data.Base.Tests
         Collection<Restrictions> restrsResponseData;
         Collection<Restrictions> firstOne;
         ReferenceDataRepository refDataRepo;
+        private ApiSettings apiSettings;
 
         [TestInitialize]
         public void Initialize()
@@ -42,6 +45,7 @@ namespace Ellucian.Colleague.Data.Base.Tests
             var first = allRestrictions.First();
             firstOne = BuildRestrictionsResponse(new List<Restriction>() { first });
             refDataRepo = BuildRestrictionRepository();
+            apiSettings = new ApiSettings("TEST");
         }
 
         [TestCleanup]
@@ -126,7 +130,7 @@ namespace Ellucian.Colleague.Data.Base.Tests
             var temp1 = new List<string>() { allRestrictions.First().Code }.ToArray();
             dataAccessorMock.Setup<Collection<Restrictions>>(acc => acc.BulkReadRecord<Restrictions>("RESTRICTIONS", temp1, true)).Returns(firstOne);
 
-            ReferenceDataRepository refDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+            ReferenceDataRepository refDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
             return refDataRepo;
         }
 

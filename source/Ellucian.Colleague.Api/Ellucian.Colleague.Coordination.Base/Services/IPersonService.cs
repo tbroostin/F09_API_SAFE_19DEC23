@@ -367,6 +367,13 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         Task<string> CheckCitizenshipfields(Dtos.DtoProperties.PersonCitizenshipDtoProperty newStatus, string newCountry, Dtos.DtoProperties.PersonCitizenshipDtoProperty oldStatus, string oldCountry);
 
         /// <summary>
+        /// A method to check the citizenship fields in an incoming DTO
+        /// </summary>
+        /// <param name="status"></param>
+        /// <param name="country"></param>
+        Task CheckCitizenshipfields2(Dtos.DtoProperties.PersonCitizenshipDtoProperty newStatus, string newCountry, Dtos.DtoProperties.PersonCitizenshipDtoProperty oldStatus, string oldCountry, string personGuid = "");
+
+        /// <summary>
         /// A method that returns first name, last name and an email address based on the current hierarchy
         /// </summary>
         /// <param name="personId"></param>

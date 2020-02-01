@@ -51,7 +51,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             private Mock<IReferenceDataRepository> ReferenceRepositoryMock;
             private IReferenceDataRepository ReferenceRepository;
             private IAdapterRegistry AdapterRegistry;
-            private IEnumerable<Ellucian.Colleague.Domain.Base.Entities.PersonalRelationshipStatus> allPersonalRelationshipStatusEntities;
+            private IEnumerable<Ellucian.Colleague.Domain.Base.Entities.RelationshipStatus> allPersonalRelationshipStatusEntities;
             ILogger logger = new Mock<ILogger>().Object;
             private Mock<IPersonalRelationshipTypeService> personalRelationshipServiceMock;
             private IPersonalRelationshipTypeService personalRelationshipService;
@@ -87,7 +87,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                     PersonalRelationshipStatus target = ConvertPersonalRelationshipStatusEntityToDto(personalRelationshipStatus);
                     PersonalRelationshipStatusList.Add(target);
                 }
-                ReferenceRepositoryMock.Setup(x => x.GetPersonalRelationshipStatusesAsync(It.IsAny<bool>())).ReturnsAsync(allPersonalRelationshipStatusEntities);
+                ReferenceRepositoryMock.Setup(x => x.GetRelationshipStatusesAsync(It.IsAny<bool>())).ReturnsAsync(allPersonalRelationshipStatusEntities);
             }
 
             [TestCleanup]
@@ -255,7 +255,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             /// </summary>
             /// <param name="source">PersonalRelationshipStatus domain entity</param>
             /// <returns>PersonalRelationshipStatus DTO</returns>
-            private Ellucian.Colleague.Dtos.PersonalRelationshipStatus ConvertPersonalRelationshipStatusEntityToDto(Ellucian.Colleague.Domain.Base.Entities.PersonalRelationshipStatus source)
+            private Ellucian.Colleague.Dtos.PersonalRelationshipStatus ConvertPersonalRelationshipStatusEntityToDto(Ellucian.Colleague.Domain.Base.Entities.RelationshipStatus source)
             {
                 var personalRelationshipStatus = new Ellucian.Colleague.Dtos.PersonalRelationshipStatus();
                 personalRelationshipStatus.Id = source.Guid;

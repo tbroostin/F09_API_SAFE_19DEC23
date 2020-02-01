@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2013 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -45,6 +45,9 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// </summary>
         /// <param name="staffId">ID for the staff member</param>
         /// <returns>A staff record</returns>
+        /// <accessComments>
+        /// API endpoint is secured so that only requestor can access data
+        /// </accessComments>
         public async Task<Staff> GetAsync(string staffId)
         {
             if (string.IsNullOrEmpty(staffId))
@@ -69,6 +72,9 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// </summary>
         /// <param name="staffId">ID of the staff</param>
         /// <returns>The list of <see cref="PersonRestriction"></see> restrictions.</returns>
+        /// <accessComments>
+        /// API endpoint is secured so that only requestor can access data
+        /// </accessComments>
         public async Task<IEnumerable<PersonRestriction>> GetStaffRestrictions(string staffId)
         {
             if (string.IsNullOrEmpty(staffId))

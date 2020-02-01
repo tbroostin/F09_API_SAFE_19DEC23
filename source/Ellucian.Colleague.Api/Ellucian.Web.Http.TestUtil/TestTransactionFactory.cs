@@ -1,7 +1,9 @@
 ﻿// Copyright 2012-2013 Ellucian Company L.P. and its affiliates.
+using System;
 using Ellucian.Colleague.Configuration;
 using Ellucian.Data.Colleague;
 using Ellucian.Dmi.Client;
+using Ellucian.Dmi.Client.DMIF;
 using slf4net;
 
 namespace Ellucian.Web.Http.TestUtil
@@ -44,6 +46,11 @@ namespace Ellucian.Web.Http.TestUtil
         public IColleagueTransactionInvoker GetTransactionInvoker()
         {
             return new ColleagueTransactionInvoker(session.SecurityToken, session.SenderControlId, logger, settings);
+        }
+
+        public DMIFileTransferClient GetDMIFClient()
+        {
+            return new DMIFileTransferClient(settings, logger);
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Controllers.Student;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
@@ -455,5 +455,122 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             }
 
         }
+
+
+        [TestClass]
+        public class AddAuthorizationsControllerTests_GetStudentAddAuthorizationsAsync
+        {
+            private TestContext testContextInstance;
+
+            /// <summary>
+            ///Gets or sets the test context which provides
+            ///information about and functionality for the current test run.
+            ///</summary>
+            public TestContext TestContext
+            {
+                get
+                {
+                    return testContextInstance;
+                }
+                set
+                {
+                    testContextInstance = value;
+                }
+            }
+
+            private IAddAuthorizationService addAuthorizationService;
+            private Mock<IAddAuthorizationService> addAuthorizationServiceMock;
+            private AddAuthorizationsController addAuthorizationsController;
+            private List<Dtos.Student.AddAuthorization> addAuthorizationDtos;
+            private ILogger logger;
+
+            private string sectionId;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+                addAuthorizationServiceMock = new Mock<IAddAuthorizationService>();
+                addAuthorizationService = addAuthorizationServiceMock.Object;
+                logger = new Mock<ILogger>().Object;
+
+                addAuthorizationDtos = new List<Dtos.Student.AddAuthorization>();
+                sectionId = "section/Id";
+                var addAuthorizationDto1 = new Dtos.Student.AddAuthorization()
+                {
+                    StudentId = "studentId1",
+                    SectionId = "section/Id",
+                    Id = "authID1",
+                    AddAuthorizationCode = "addCode",
+                    AssignedBy = "facultyId"
+                };
+                addAuthorizationDtos.Add(addAuthorizationDto1);
+                var addAuthorizationDto2 = new Dtos.Student.AddAuthorization()
+                {
+                    StudentId = "studentId2",
+                    SectionId = "section/Id",
+                    Id = "authID2",
+                    AddAuthorizationCode = "addCode",
+                    AssignedBy = "facultyId"
+                };
+                addAuthorizationDtos.Add(addAuthorizationDto2);
+                addAuthorizationsController = new AddAuthorizationsController(addAuthorizationService, logger);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                addAuthorizationsController = null;
+                addAuthorizationService = null;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetStudentAddAuthorizationsAsync_PermissionsException_ReturnsHttpResponseException_Forbidden()
+            {
+                try
+                {
+                    addAuthorizationServiceMock.Setup(x => x.GetStudentAddAuthorizationsAsync(It.IsAny<string>())).Throws(new PermissionsException());
+                    var response = await addAuthorizationsController.GetStudentAddAuthorizationsAsync(sectionId);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.Forbidden, ex.Response.StatusCode);
+                    throw ex;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetStudentAddAuthorizationsAsync_AnyOtherException_ReturnsHttpResponseException_BadRequest()
+            {
+                try
+                {
+                    addAuthorizationServiceMock.Setup(x => x.GetStudentAddAuthorizationsAsync(It.IsAny<string>())).Throws(new ArgumentException());
+                    var response = await addAuthorizationsController.GetStudentAddAuthorizationsAsync(sectionId);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.Response.StatusCode);
+                    throw ex;
+                }
+            }
+
+            [TestMethod]
+            public async Task GetStudentAddAuthorizationsAsync_Success()
+            {
+                addAuthorizationServiceMock.Setup(x => x.GetStudentAddAuthorizationsAsync(It.IsAny<string>())).ReturnsAsync(addAuthorizationDtos);
+                var response = await addAuthorizationsController.GetStudentAddAuthorizationsAsync(sectionId);
+                Assert.AreEqual(addAuthorizationDtos.Count(), response.Count());
+                foreach (var resultDto in response)
+                {
+                    var expectedDto = addAuthorizationDtos.Where(aa => aa.Id == resultDto.Id).FirstOrDefault();
+                    Assert.AreEqual(expectedDto.StudentId, resultDto.StudentId);
+                    Assert.AreEqual(expectedDto.SectionId, resultDto.SectionId);
+                }
+            }
+        }
+
     }
 }

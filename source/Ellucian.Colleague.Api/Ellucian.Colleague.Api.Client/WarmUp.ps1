@@ -1,5 +1,5 @@
 # Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
-# Version 1.22 (Delivered with Colleague Web API 1.22)
+# Version 1.26 (Delivered with Colleague Web API 1.26)
 
 # PURPOSE:
 # Warm up the Colleague Web API by pre-loading the most frequently-used and shared API data
@@ -41,8 +41,9 @@
 # You can find when and how IIS automatically recycles the Colleague Web API application pool
 # by right-clicking on the application pool in IIS Manager and choosing 'Recycling.'
 #
-# This script could be scheduled using the Windows Task Scheduler as described in this blog post:
-# http://blogs.technet.com/b/heyscriptingguy/archive/2012/08/11/weekend-scripter-use-the-windows-task-scheduler-to-run-a-windows-powershell-script.aspx
+# This script could be scheduled using the Windows Task Scheduler as described in Knowledge
+# Article 000006250:
+#   https://ellucian.force.com/clients/s/article/9304-Colleague-Web-API-Automated-Warm-Up
 
 # NOTES: 
 # 1. This script, as delivered by Ellucian, pre-loads some caches that are most frequently used
@@ -84,6 +85,10 @@ Param(
 	[Parameter(Mandatory=$false)]
 	[switch]$runEthosApi
 )
+
+# Force Tls11, Tls12 support
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls12
+Write-Host "Forcing Tls11, Tls12 support"
 
 #various Accept headers
 $vndV1 = "application/vnd.ellucian.v1+json"
@@ -394,6 +399,26 @@ $results = get ($webApiBaseUrl + "/transcript-categories") $token
 Write-Host "Getting noncourse statuses..."
 $results = get ($webApiBaseUrl + "/noncourse-statuses") $token
 
+Write-Host "Getting time management configuration..."
+Try
+{
+	$results = get ($webApiBaseUrl + "/time-management-configuration") $token
+}
+Catch{}
+
+Write-Host "Getting pay cycles..."
+Try
+{
+	$results = get ($webApiBaseUrl + "/pay-cycles") $token
+}
+Catch{}
+Write-Host "Getting positions..."
+Try
+{
+	$results = get ($webApiBaseUrl + "/positions") $token
+}
+Catch{}
+
 # Added Ethos Endpoints to the script
 
 if ($runEthosApi)
@@ -406,7 +431,7 @@ if ($runEthosApi)
 	Write-Host "Getting Ethos academic-credentials..."
 	$results = get ($webApiBaseUrl + "/academic-credentials") $token
 
-    Write-Host "Getting Ethos alternative-credential-types..."
+	Write-Host "Getting Ethos alternative-credential-types..."
 	$results = get ($webApiBaseUrl + "/alternative-credential-types") $token
 
 	Write-Host "Getting Ethos academic-disciplines..."
@@ -471,6 +496,9 @@ if ($runEthosApi)
 	
 	Write-Host "Getting Ethos address-types..."
 	$results = get ($webApiBaseUrl + "/address-types") $token 
+
+	Write-Host "Getting Ethos admission-application-sources..."
+	$results = get ($webApiBaseUrl + "/admission-application-sources") $token
 
 	Write-Host "Getting Ethos admission-application-status-types..."
 	$results = get ($webApiBaseUrl + "/admission-application-status-types") $token
@@ -553,17 +581,26 @@ if ($runEthosApi)
 	Write-Host "Getting Ethos commerce-tax-codes..."
 	$results = get ($webApiBaseUrl + "/commerce-tax-codes") $token 
 
+	Write-Host "Getting Ethos commerce-tax-code-rates..."
+	$results = get ($webApiBaseUrl + "/commerce-tax-code-rates") $token 
+
 	Write-Host "Getting Ethos commodity-codes..."
 	$results = get ($webApiBaseUrl + "/commodity-codes") $token 
 
 	Write-Host "Getting Ethos commodity-unit-types..."
 	$results = get ($webApiBaseUrl + "/commodity-unit-types") $token 
-
+	
 	Write-Host "Getting Ethos contract-types..."
 	$results = get ($webApiBaseUrl + "/contract-types") $token
 
 	Write-Host "Getting Ethos cost-calculation-methods..."
 	$results = get ($webApiBaseUrl + "/cost-calculation-methods") $token
+
+	Write-Host "Getting Ethos countries..."
+	$results = get ($webApiBaseUrl + "/countries") $token
+
+	Write-Host "Getting Ethos country-iso-codes..."
+	$results = get ($webApiBaseUrl + "/country-iso-codes") $token
 
 	Write-Host "Getting Ethos course-levels..."
 	$results = get ($webApiBaseUrl + "/course-levels") $token
@@ -586,11 +623,14 @@ if ($runEthosApi)
 	Write-Host "Getting Ethos credit categories..."
 	$results = get ($webApiBaseUrl + "/credit-categories") $token
 
-	Write-Host "Getting Ethos deduction-categories..."
-	$results = get ($webApiBaseUrl + "/deduction-categories") $token
+	Write-Host "Getting Ethos currencies..."
+	$results = get ($webApiBaseUrl + "/currencies") $token
 
-	Write-Host "Getting Ethos employee-leave-plans..."
-	$results = get ($webApiBaseUrl + "/employee-leave-plans?offset=0&limit=1") $token
+	Write-Host "Getting Ethos currency-iso-codes..."
+	$results = get ($webApiBaseUrl + "/currency-iso-codes") $token
+
+	Write-Host "Getting Ethos deduction-categories..."
+	$results = get ($webApiBaseUrl + "/deduction-categories") $token	
 	
 	Write-Host "Getting Ethos deduction-types..."
 	$results = get ($webApiBaseUrl + "/deduction-types") $token
@@ -603,6 +643,15 @@ if ($runEthosApi)
 
 	Write-Host "Getting Ethos email-types..."
 	$results = get ($webApiBaseUrl + "/email-types") $token 
+
+	Write-Host "Getting Ethos emergency-contact-types..."
+	$results = get ($webApiBaseUrl + "/emergency-contact-types?offset=0&limit=1") $token
+
+	Write-Host "Getting Ethos emergency-contact-phone-availabilities..."
+	$results = get ($webApiBaseUrl + "/emergency-contact-phone-availabilities?offset=0&limit=1") $token
+
+	Write-Host "Getting Ethos employee-leave-plans..."
+	$results = get ($webApiBaseUrl + "/employee-leave-plans?offset=0&limit=1") $token
 
 	Write-Host "Getting Ethos employment-classifications..."
 	$results = get ($webApiBaseUrl + "/employment-classifications") $token 
@@ -730,6 +779,12 @@ if ($runEthosApi)
 	Write-Host "Getting Ethos job-change-reasons..."
 	$results = get ($webApiBaseUrl + "/job-change-reasons") $token
 
+	Write-Host "Getting Ethos language-iso-codes..."
+	$results = get ($webApiBaseUrl + "/language-iso-codes") $token
+
+	Write-Host "Getting Ethos languages..."
+	$results = get ($webApiBaseUrl + "/languages") $token
+
 	Write-Host "Getting Ethos leave-plans..."
 	$results = get ($webApiBaseUrl + "/leave-plans") $token
 
@@ -766,7 +821,7 @@ if ($runEthosApi)
 	Write-Host "Getting Ethos payroll-deduction-arrangement-change-reasons..."
 	$results = get ($webApiBaseUrl + "/payroll-deduction-arrangement-change-reasons") $token
 
-    Write-Host "Getting Ethos personal-pronouns..."
+	Write-Host "Getting Ethos personal-pronouns..."
 	$results = get ($webApiBaseUrl + "/personal-pronouns") $token
 
 	Write-Host "Getting Ethos personal-relationship-statuses..."
@@ -783,6 +838,9 @@ if ($runEthosApi)
 
 	Write-Host "Getting Ethos person-name-types..."
 	$results = get ($webApiBaseUrl + "/person-name-types") $token 
+
+	Write-Host "Getting Ethos person-sources..."
+	$results = get ($webApiBaseUrl + "/person-sources") $token 
 
 	Write-Host "Getting Ethos phone-types..."
 	$results = get ($webApiBaseUrl + "/phone-types") $token 
@@ -804,6 +862,9 @@ if ($runEthosApi)
 
 	Write-Host "Getting Ethos residency-types..."
 	$results = get ($webApiBaseUrl + "/residency-types") $token 
+
+	Write-Host "Getting Ethos resources..."
+	$results = get ($webApiBaseUrl + "/resources") $token 
 
 	Write-Host "Getting Ethos room-characteristics..."
 	$results = get ($webApiBaseUrl + "/room-characteristics") $token
@@ -889,10 +950,10 @@ if ($runEthosApi)
 	Write-Host "Getting Ethos vendor-payment-terms..."
 	$results = get ($webApiBaseUrl + "/vendor-payment-terms") $token
 
-    Write-Host "Getting Ethos financial-aid-academic-progress-types..."
+	Write-Host "Getting Ethos financial-aid-academic-progress-types..."
 	$results = get ($webApiBaseUrl + "/financial-aid-academic-progress-types") $token
 
-    Write-Host "Getting Ethos financial-aid-academic-progress-statuses..."
+	Write-Host "Getting Ethos financial-aid-academic-progress-statuses..."
 	$results = get ($webApiBaseUrl + "/financial-aid-academic-progress-statuses") $token
 }
 
@@ -1025,6 +1086,9 @@ $results = get ($webApiBaseUrl + "/earnings-type-groups") $token
 Write-Host "Getting campus calendars..."
 $results = get ($webApiBaseUrl + "/campus-calendars") $token
 
+# The endpoints used below are available only with Colleague Web API 1.25 and later.
+Write-Host "Getting agreement periods..."
+$results = get ($webApiBaseUrl + "/agreement-periods") $token
 
 # Add additional warm up requests for your custom APIs below.
 

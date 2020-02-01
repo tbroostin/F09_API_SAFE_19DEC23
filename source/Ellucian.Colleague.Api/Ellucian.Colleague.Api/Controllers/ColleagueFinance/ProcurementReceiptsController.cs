@@ -1,4 +1,4 @@
-﻿//Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -47,14 +47,16 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         }
 
         /// <summary>
-        /// Return all procurementReceipts
+        /// Return all ProcurementReceipts
         /// </summary>
         /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>
+        /// <param name="criteria">QueryStringFilter</param>
         /// <returns>List of ProcurementReceipts <see cref="Dtos.ProcurementReceipts"/> objects representing matching procurementReceipts</returns>
         [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
+        [QueryStringFilterFilter("criteria", typeof(Dtos.ProcurementReceipts))]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
-        public async Task<IHttpActionResult> GetProcurementReceiptsAsync(Paging page)
+        public async Task<IHttpActionResult> GetProcurementReceiptsAsync(Paging page, QueryStringFilter criteria)
         {
             var bypassCache = false;
             if (Request.Headers.CacheControl != null)
@@ -70,7 +72,13 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 {
                     page = new Paging(100, 0);
                 }
-                var pageOfItems = await _procurementReceiptsService.GetProcurementReceiptsAsync(page.Offset, page.Limit, bypassCache);
+
+                var criteriaValues = GetFilterObject<Dtos.ProcurementReceipts>(_logger, "criteria");
+
+                if (CheckForEmptyFilterParameters())
+                    return new PagedHttpActionResult<IEnumerable<Dtos.ProcurementReceipts>>(new List<Dtos.ProcurementReceipts>(), page, this.Request);
+
+                var pageOfItems = await _procurementReceiptsService.GetProcurementReceiptsAsync(page.Offset, page.Limit, criteriaValues, bypassCache);
 
                 AddEthosContextProperties(
                   await _procurementReceiptsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
@@ -88,7 +96,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -113,7 +121,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         }
 
         /// <summary>
-        /// Read (GET) a procurementReceipts using a GUID
+        /// Read (GET) a ProcurementReceipts using a GUID
         /// </summary>
         /// <param name="guid">GUID to desired procurementReceipts</param>
         /// <returns>A procurementReceipts object <see cref="Dtos.ProcurementReceipts"/> in EEDM format</returns>
@@ -149,7 +157,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -207,7 +215,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {

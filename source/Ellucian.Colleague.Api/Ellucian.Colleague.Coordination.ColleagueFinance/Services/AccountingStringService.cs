@@ -267,7 +267,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// Gets all accounting-string-component-values
         /// </summary>
         /// <returns>Collection of AccountingStringComponentValues DTO objects</returns>
-        public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.AccountingStringComponentValues>, int>> GetAccountingStringComponentValuesAsync(int offset, int limit, string component, string transactionStatus, string typeAccount, string typeFund,bool bypassCache = false)
+        public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.AccountingStringComponentValues>, int>> GetAccountingStringComponentValuesAsync(int offset, int limit, 
+            string component, string transactionStatus, string typeAccount, string typeFund,bool bypassCache = false)
         {
             await CheckAccountingStringComponentValuesViewPermission();
 
@@ -278,7 +279,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 return new Tuple<IEnumerable<Dtos.AccountingStringComponentValues>, int>(accountingStringComponentValuesCollection, 0);
             }
 
-            var accountingComponents = await _colleagueFinanceReferenceDataRepository.GetAccountComponentsAsync(true);
+            var accountingComponents = await _colleagueFinanceReferenceDataRepository.GetAccountComponentsAsync(bypassCache);
 
             string guidComponent = string.Empty;
             if (!string.IsNullOrEmpty(component))
@@ -286,14 +287,15 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 try
                 {
                     guidComponent = accountingComponents.FirstOrDefault(x => x.Guid == component).Code;
-                }catch (Exception e)
+                }
+                catch (Exception e)
                 {
                     return new Tuple<IEnumerable<Dtos.AccountingStringComponentValues>, int>(accountingStringComponentValuesCollection, 0);
                 }                
             }
 
-            var accountingStringComponentValuesEntities = await _colleagueFinanceReferenceDataRepository.GetAccountingStringComponentValuesAsync(
-                offset, limit, guidComponent, transactionStatus, typeAccount, typeFund, bypassCache);
+            var accountingStringComponentValuesEntities = await _colleagueFinanceReferenceDataRepository.GetAccountingStringComponentValues2Async(
+                offset, limit, guidComponent, transactionStatus, typeAccount);
 
             if (accountingStringComponentValuesEntities.Item1 != null && accountingStringComponentValuesEntities.Item1.Any())
             {
@@ -335,7 +337,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
 
             var accountingStringComponentValuesEntities = await _colleagueFinanceReferenceDataRepository.GetAccountingStringComponentValues2Async(
-                offset, limit, guidComponent, transactionStatus, typeAccount, typeFund, bypassCache);
+                offset, limit, guidComponent, transactionStatus, typeAccount);
 
             if (accountingStringComponentValuesEntities.Item1 != null && accountingStringComponentValuesEntities.Item1.Any())
             {
@@ -548,7 +550,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     }
                     else if (statusEnum == Dtos.EnumProperties.Status.Inactive)
                     {
-                        status = "unavailable";
+                        //Colleague always returns 'available'. So if they query for 'available', return all records / ignore the filter. 
+                        //If they query for 'unavailable', return an empty set.
+                        return new Tuple<IEnumerable<Dtos.AccountingStringComponentValues3>, int>(new List<Ellucian.Colleague.Dtos.AccountingStringComponentValues3>(), 0);
                     }
                 }
                 
@@ -599,7 +603,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
 
             var accountingStringComponentValuesEntities = await _colleagueFinanceReferenceDataRepository.GetAccountingStringComponentValues3Async(
-                offset, limit, guidComponent, typeAccount, status, grants, effectiveOn, bypassCache);
+                offset, limit, guidComponent, typeAccount, status, grants, effectiveOn);
 
             if (accountingStringComponentValuesEntities != null && accountingStringComponentValuesEntities.Item1 != null && accountingStringComponentValuesEntities.Item1.Any())
             {

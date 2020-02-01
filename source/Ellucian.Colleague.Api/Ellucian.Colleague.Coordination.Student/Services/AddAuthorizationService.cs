@@ -1,6 +1,7 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Web.Adapters;
@@ -20,7 +21,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         private readonly ISectionRepository _sectionRepository;
         private readonly IAddAuthorizationRepository _addAuthorizationRepository;
 
-
         /// <summary>
         /// Constructor for AddAuthorizationService
         /// </summary>
@@ -32,14 +32,15 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="configurationRepository"></param>
         /// <param name="roleRepository"></param>
         /// <param name="logger"></param>
-        public AddAuthorizationService(IAddAuthorizationRepository addAuthorizationRepository, ISectionRepository sectionRepository, IStudentRepository studentRepository, IConfigurationRepository configurationRepository, IAdapterRegistry adapterRegistry, ICurrentUserFactory currentUserFactory,  IRoleRepository roleRepository, ILogger logger)
+        public AddAuthorizationService(IAddAuthorizationRepository addAuthorizationRepository, ISectionRepository sectionRepository, 
+            IStudentRepository studentRepository, IConfigurationRepository configurationRepository, IAdapterRegistry adapterRegistry, 
+            ICurrentUserFactory currentUserFactory,  IRoleRepository roleRepository, ILogger logger)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger, studentRepository, configurationRepository)
         {
             _addAuthorizationRepository = addAuthorizationRepository;
             _sectionRepository = sectionRepository;
-
-
         }
+
         /// <summary>
         /// Update Add Authorization
         /// </summary>
@@ -106,9 +107,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 logger.Info(ex, message);
                 throw;
             }
-
-
         }
+
         /// <summary>
         /// Retrieves add authorizations for a section
         /// </summary>
@@ -142,7 +142,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             catch (Exception ex)
             {
                 var message = "Exception occurred while trying to retrieve add authorizations for section " + sectionId;
-                logger.Info(ex, message);
+                logger.Error(ex, message);
                 throw;
             }
         }
@@ -185,13 +185,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             catch (KeyNotFoundException kex)
             {
                 var message = "Record not found for newly add authorization";
-                logger.Info(kex, message);
+                logger.Error(kex, message);
                 throw;
             }
             catch (Exception ex)
             {
                 var message = "Exception occurred while trying to create add authorization for section " + addAuthorizationInput.SectionId + " and student Id " + addAuthorizationInput.StudentId;
-                logger.Info(ex, message);
+                logger.Error(ex, message);
                 throw;
             }
         }
@@ -322,9 +322,89 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 logger.Error(message);
                 throw new ArgumentException(message);
             }
-
         }
 
-    }
+        /// <summary>
+        /// Retrieve add authorizations for a student
+        /// </summary>
+        /// <param name="studentId">ID of the student for whom add authorizations are being retrieved</param>
+        /// <returns>Add Authorizations for the student</returns>
+        public async Task<IEnumerable<Dtos.Student.AddAuthorization>> GetStudentAddAuthorizationsAsync(string studentId)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("Student ID must be provided to retrieve student add authorizations.");
+            }
 
+            // Determine if the authenticated user can retrieve add authorizations for the student
+            await CheckGetAddAuthorizationsPermissions(studentId);
+
+            // Retrieve add authorizations and convert to DTOs
+            try
+            {
+                var sectionAddAuthorizations = await _addAuthorizationRepository.GetStudentAddAuthorizationsAsync(studentId);
+                var sectionAddAuthorizationDtos = new List<Dtos.Student.AddAuthorization>();
+                if (sectionAddAuthorizations != null && sectionAddAuthorizations.Any())
+                {
+                    var addAuthorizationDtoAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.AddAuthorization, Dtos.Student.AddAuthorization>();
+
+                    foreach (var saa in sectionAddAuthorizations)
+                    {
+                        Dtos.Student.AddAuthorization saadto = addAuthorizationDtoAdapter.MapToType(saa);
+                        sectionAddAuthorizationDtos.Add(saadto);
+                    }
+                }
+                return sectionAddAuthorizationDtos;
+            }
+            catch (Exception ex)
+            {
+                var message = "Exception occurred while trying to retrieve add authorizations for student " + studentId;
+                logger.Error(ex, message);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Determines if the user has permission to retrieve a student's add authorizations
+        /// </summary>
+        /// <param name="student">ID of the student for whom add authorizations are being requested</param>
+        private async Task CheckGetAddAuthorizationsPermissions(string studentId)
+        {
+            // If user is self, access is ok
+            if (UserIsSelf(studentId))
+            {
+                return;
+            }
+
+            // Get user permissions
+            IEnumerable<string> userPermissions = await GetUserPermissionCodesAsync();
+
+            // Access is Ok if this is an advisor with all access, update access or review access to any student.
+            if (userPermissions.Contains(PlanningPermissionCodes.AllAccessAnyAdvisee) ||
+                userPermissions.Contains(PlanningPermissionCodes.UpdateAnyAdvisee) ||
+                userPermissions.Contains(PlanningPermissionCodes.ReviewAnyAdvisee) ||
+                userPermissions.Contains(PlanningPermissionCodes.ViewAnyAdvisee))
+            {
+                return;
+            }
+
+            // Access is also OK if this is an advisor with all access, update access or review access to their assigned advisees and this is an assigned advisee.
+            bool userIsAssignedAdvisor = await UserIsAssignedAdvisorAsync(studentId);
+            if (userIsAssignedAdvisor &&
+                (userPermissions.Contains(PlanningPermissionCodes.AllAccessAssignedAdvisees) ||
+                userPermissions.Contains(PlanningPermissionCodes.UpdateAssignedAdvisees) ||
+                userPermissions.Contains(PlanningPermissionCodes.ReviewAssignedAdvisees) ||
+                userPermissions.Contains(PlanningPermissionCodes.ViewAssignedAdvisees)))
+            {
+                return;
+            }
+
+            // User does not have permissions and error needs to be thrown and logged
+            var error = string.Format("User {0} cannot retrieve add authorizations for student {1}", CurrentUser.PersonId, studentId);
+            logger.Info(error);
+            throw new PermissionsException(error);
+        }
+
+
+    }
 }

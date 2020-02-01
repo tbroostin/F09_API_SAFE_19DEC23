@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -30,12 +30,16 @@ namespace Ellucian.Colleague.Domain.Base.Entities
 
         /// <summary>
         /// List of address types users may update on their user profile
-        /// For now, we are only allowing web address type updates (DFLTS.WEB.ADREL.TYPE), 
-        /// and this list should only contain one item
         /// </summary>
         public ReadOnlyCollection<string> UpdatableAddressTypes { get; private set; }
         private readonly List<string> _updatableAddressTypes = new List<string>();
 
+        /// <summary>
+        /// List of "web" address types that can be used for address change requests -- such as with graduation application "Request this address going forward"
+        /// For address requests, we are only allowing web address type updates from the list of updatable address types defined on WUPP.
+        /// </summary>
+        public ReadOnlyCollection<string> ChangeRequestAddressTypes { get; private set; }
+        private readonly List<string> _changeRequestAddressTypes = new List<string>();
 
         /// <summary>
         /// Indicates if user can update address without role permissions. Defaults to false.
@@ -46,10 +50,11 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         /// Configuration cannot have flag indicating all address types viewable set to true and a list of
         /// address types, only one or the other is allowed.
         /// </summary>
-        /// <param name="allAddressTypesAreViewable"></param>
-        /// <param name="viewableAddressTypes"></param>
-        /// <param name="updatableAddressTypes"></param>
-        public void UpdateAddressTypeConfiguration(bool allAddressTypesAreViewable, List<string> viewableAddressTypes, List<string> updatableAddressTypes)
+        /// <param name="allAddressTypesAreViewable">Indicates that all addresses are viewable</param>
+        /// <param name="viewableAddressTypes">ADREL.TYPES indentified as being viewable</param>
+        /// <param name="updatableAddressTypes">ADREL.TYPEs identified as being updatable. They must also be in the viewable list</param>
+        /// <param name="allAdrelTypes">All address types - used to determine which are of what type</param>
+        public void UpdateAddressTypeConfiguration(bool allAddressTypesAreViewable, List<string> viewableAddressTypes, List<string> updatableAddressTypes, List<AddressRelationType> allAdrelTypes = null)
         {
             if (allAddressTypesAreViewable && viewableAddressTypes != null && viewableAddressTypes.Count() > 0)
                 throw new ArgumentException("List of viewable address types must be empty if all address types viewable is true");
@@ -68,7 +73,12 @@ namespace Ellucian.Colleague.Domain.Base.Entities
                     }
                 }
             }
-
+            List<string> webAdrelTypes = null;
+            if (allAdrelTypes != null && allAdrelTypes.Any())
+            {
+                webAdrelTypes = allAdrelTypes.Where(adt => adt.SpecialProcessingAction1 == "3").Select(c => c.Code).ToList();
+            }
+            
             // Prevent adding updatable addresses that are not also viewable
             if (updatableAddressTypes != null && updatableAddressTypes.Count() > 0)
             {
@@ -83,6 +93,16 @@ namespace Ellucian.Colleague.Domain.Base.Entities
                         if (_updatableAddressTypes.Where(t => t == addressType).FirstOrDefault() == null)
                         {
                             _updatableAddressTypes.Add(addressType);
+
+                            // Can it also be added to the changeRequestAddressTypes list?
+                            if (webAdrelTypes != null && webAdrelTypes.Any())
+                            {
+                                //Determine if this type is a webaddress type and if so it can also be used as an address change request address type.
+                                if (webAdrelTypes.Contains(addressType))
+                                {
+                                    _changeRequestAddressTypes.Add(addressType);
+                                }
+                            }
                         }
                     }
                 }
@@ -298,6 +318,7 @@ namespace Ellucian.Colleague.Domain.Base.Entities
             UpdatableEmailTypes = _updatableEmailTypes.AsReadOnly();
             ViewablePhoneTypes = _viewablePhoneTypes.AsReadOnly();
             UpdatablePhoneTypes = _updatablePhoneTypes.AsReadOnly();
+            ChangeRequestAddressTypes = _changeRequestAddressTypes.AsReadOnly();
 
         }
         #endregion

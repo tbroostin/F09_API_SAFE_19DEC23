@@ -907,6 +907,128 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                         return pr;
                     }
 
+                case "PROG.RELEASE.2.BB":
+                    {
+                        //PROG.RELEASE.2.BB - DATASETUP is in devcoll - releaseuser/Testing123!
+                        //Scenario 1: Req1->SubReq1 - type MIN - excludes SPC
+                        //  Take 2 credits from dept perf; (type 32)
+                        //Course Reuse = "N" at subrequirement and group level (REQU, AEVP)
+                        //AEDF setting is Semi_Apply
+
+                        //Req 2-> Sub Req1 - type SPC - excludes MIN
+                        //Take 2 CREDITS from DANC-100 DANC-101 (type 32)
+
+                        //Req1 excludes Req2 and vice-versa
+                        string reqname = id;
+
+                        List<string> reqnames = new List<string>();
+                        Dictionary<string, List<string>> Subreq = new Dictionary<string, List<string>>();
+                        Dictionary<string, List<string>> groups = new Dictionary<string, List<string>>();
+
+                        reqnames.Add("REQ-1:N");
+                        reqnames.Add("REQ-2:N");
+                        //one sub-requirment for requirment 1 that have 1 group
+                        Subreq.Add("REQ-1", new List<string>() { "REQ-1-SUBREQ-1" });
+                        groups.Add(Subreq["REQ-1"][0], new List<string>() { "GROUP-1-RELEASE" });
+
+                        //one sub-requirment for requirement 2 that have 1 group
+                        Subreq.Add("REQ-2", new List<string>() { "REQ-2-SUBREQ-1" });
+                        groups.Add(Subreq["REQ-2"][0], new List<string>() { "GROUP-2-RELEASE" });
+
+                        ProgramRequirements pr = await BuildTestProgramRequirementsAsync(reqname + "*" + cat, reqnames, Subreq, groups);
+                        //modify settings of requirments here
+                        pr.Requirements[0].RequirementType = requirementTypes.First(rt => rt.Code == "MIN");
+                        pr.Requirements[1].RequirementType = requirementTypes.First(rt => rt.Code == "SPC");
+                        pr.Requirements[0].Exclusions = new List<string>() { "SPC" };
+                        pr.Requirements[1].Exclusions = new List<string>() { "MIN" };
+                     
+                        return pr;
+                    }
+
+                case "PROG.RELEASE.BB":
+                    {
+                        //PROG.RELEASE.BB - DATASETUP is in devcoll - releaseuser/Testing123!
+                        //req-1 (MAJ)  priority 1 with course reuse=N
+                        //excludes  MIN
+                        //has 1 subrequirments with course reuse = N
+                        //Subrequirment 1
+                        //Take 1 group;
+                        //  Take 2 credits from dept PERF;  (block type 33)
+                        //  TAKE 2 credits from DANC-102 DANC-101 ENGL-201; (31)
+
+
+                        //Requirment 2 type MIN 
+                        //excludes MAJ
+                        //subrequirment -1 
+                        //Take 4 CREDITS FROM DANC-100 DANC-101 DANC-102 ENGL-201
+
+                        //Req1 excludes Req2 and vice-versa
+                        string reqname = id;
+
+                        List<string> reqnames = new List<string>();
+                        Dictionary<string, List<string>> Subreq = new Dictionary<string, List<string>>();
+                        Dictionary<string, List<string>> groups = new Dictionary<string, List<string>>();
+
+                        reqnames.Add("REQ-1:N");
+                        reqnames.Add("REQ-2:N");
+                        //one sub-requirment for requirment 1 that have 1 group
+                        Subreq.Add("REQ-1", new List<string>() { "REQ-1-SUBREQ-1" });
+                        groups.Add(Subreq["REQ-1"][0], new List<string>() { "GROUP-1-RELEASE", "GROUP-3-RELEASE" });
+
+                        //one sub-requirment for requirement 2 that have 1 group
+                        Subreq.Add("REQ-2", new List<string>() { "REQ-2-SUBREQ-1" });
+                        groups.Add(Subreq["REQ-2"][0], new List<string>() { "GROUP-4-RELEASE" });
+
+                        ProgramRequirements pr = await BuildTestProgramRequirementsAsync(reqname + "*" + cat, reqnames, Subreq, groups);
+                        //modify settings of requirments here
+                        pr.Requirements[0].RequirementType = requirementTypes.First(rt => rt.Code == "MAJ");
+                        pr.Requirements[1].RequirementType = requirementTypes.First(rt => rt.Code == "MIN");
+                        pr.Requirements[0].Exclusions = new List<string>() { "MIN" };
+                        pr.Requirements[1].Exclusions = new List<string>() { "MAJ" };
+                        pr.Requirements[0].SubRequirements[0].MinGroups = 1;
+
+                        return pr;
+                    }
+
+                case "TRANSCRIPT.GROUPING.FILTER" :
+                    {
+                        // This is take 2 courses
+                        string reqname = id + "*" + cat;
+                        List<string> requirementNames = new List<string>() { reqname };
+                        Dictionary<string, List<string>> SubrequirementNames = new Dictionary<string, List<string>>();
+                        Dictionary<string, List<string>> groupNames = new Dictionary<string, List<string>>();
+                        List<string> Subreqs = new List<string>() { "Subreq1" };
+                        SubrequirementNames.Add(reqname, Subreqs);
+                        List<string> groups1 = new List<string>() { "Test5" };
+                        groupNames.Add(Subreqs[0], groups1);
+                        return await BuildTestProgramRequirementsAsync(reqname, requirementNames, SubrequirementNames, groupNames);
+                    }
+                case "TRANSCRIPT.GROUPING.FILTER.SUBJECTS":
+                    {
+                        // This is take 2 courses
+                        string reqname = id + "*" + cat;
+                        List<string> requirementNames = new List<string>() { reqname };
+                        Dictionary<string, List<string>> SubrequirementNames = new Dictionary<string, List<string>>();
+                        Dictionary<string, List<string>> groupNames = new Dictionary<string, List<string>>();
+                        List<string> Subreqs = new List<string>() { "Subreq1" };
+                        SubrequirementNames.Add(reqname, Subreqs);
+                        List<string> groups1 = new List<string>() { "Test5" };
+                        groupNames.Add(Subreqs[0], groups1);
+                        return await BuildTestProgramRequirementsAsync(reqname, requirementNames, SubrequirementNames, groupNames);
+                    }
+                case "TRANSCRIPT.GROUPING.FILTER.ADDL.SELECT":
+                    {
+                        // This is take 2 courses
+                        string reqname = id + "*" + cat;
+                        List<string> requirementNames = new List<string>() { reqname };
+                        Dictionary<string, List<string>> SubrequirementNames = new Dictionary<string, List<string>>();
+                        Dictionary<string, List<string>> groupNames = new Dictionary<string, List<string>>();
+                        List<string> Subreqs = new List<string>() { "Subreq1" };
+                        SubrequirementNames.Add(reqname, Subreqs);
+                        List<string> groups1 = new List<string>() { "Test5" };
+                        groupNames.Add(Subreqs[0], groups1);
+                        return await BuildTestProgramRequirementsAsync(reqname, requirementNames, SubrequirementNames, groupNames);
+                    }
                 default:
                     {
                         string reqname = id;
@@ -2318,7 +2440,51 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                         group1.GroupType = GroupType.TakeCourses;
                         break;
                     }
+                case "GROUP-1-RELEASE":
+                    {
+                        //TAKE 2 CREDITS FROM DEPT PERF (32)
+                        group1.Id = "GROUP-1-RELEASE";
+                        group1.FromDepartments.Add("PERF");
+                        group1.MinCredits = 2;
+                        group1.GroupType = GroupType.TakeCredits;
+                        break;
+                    }
+                case "GROUP-2-RELEASE":
+                    {
+                        //TAKE 2 CREDITS FROM DANC-100 DANC-101  (31)
+                        group1.Id = "GROUP-2-RELEASE";
+                        group1.Courses.Add(courses["DANC-100"].Id);
+                        group1.Courses.Add(courses["DANC-101"].Id);
+                        group1.MinCredits = 2;
+                        group1.GroupType = GroupType.TakeCredits;
+                        break;
 
+                    }
+                case "GROUP-3-RELEASE":
+                    {
+                        //TAKE 2 CREDITS FROM DANC-101 DANC-102 ENGL-201 (31)
+                        group1.Id = "GROUP-3-RELEASE";
+                        group1.Courses.Add(courses["DANC-101"].Id);
+                        group1.Courses.Add(courses["DANC-102"].Id);
+                        group1.Courses.Add(courses["ENGL-201"].Id);
+                        group1.MinCredits = 2;
+                        group1.GroupType = GroupType.TakeCredits;
+                        break;
+
+                    }
+                case "GROUP-4-RELEASE":
+                    {
+                        //TAKE 4 CREDITS FROM DANC-100 DANC-101 DANC-102  ENGL-201 (31)
+                        group1.Id = "GROUP-4-RELEASE";
+                        group1.Courses.Add(courses["DANC-100"].Id);
+                        group1.Courses.Add(courses["DANC-101"].Id);
+                        group1.Courses.Add(courses["DANC-102"].Id);
+                        group1.Courses.Add(courses["ENGL-201"].Id);
+                        group1.MinCredits = 4;
+                        group1.GroupType = GroupType.TakeCredits;
+                        break;
+
+                    }
                 default:
                     {
                         // oh come now

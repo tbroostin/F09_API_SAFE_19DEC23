@@ -1,7 +1,8 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Transactions;
+using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
@@ -40,13 +41,49 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <param name="limit"></param>
         /// <param name="bypassCache"></param>
         /// <returns></returns>
-        public async Task<Tuple<IEnumerable<HousingAssignment>, int>> GetHousingAssignmentsAsync(int offset, int limit, bool bypassCache)
+        public async Task<Tuple<IEnumerable<HousingAssignment>, int>> GetHousingAssignmentsAsync(int offset, int limit, string person = "", string term = "", string status = "", string startDate = "", string endDate = "", bool bypassCache= false)
         {
             List<HousingAssignment> housingAssignmentEntities = new List<HousingAssignment>();
-            string criteria = "WITH RMAS.ROOM NE '' AND RMAS.BLDG NE ''";
+            var criteria = new StringBuilder();
+            criteria.AppendFormat("WITH RMAS.ROOM NE '' AND RMAS.BLDG NE ''");
+            String select = string.Empty;
+            var repositoryException = new RepositoryException();
+            if (!string.IsNullOrEmpty(person))
+            {
+                if (criteria.Length > 0)
+                    criteria.Append(" AND ");
+                criteria.AppendFormat("WITH RMAS.PERSON.ID EQ '{0}'", person);
+            }
+            if (!string.IsNullOrEmpty(term))
+            {
+                if (criteria.Length > 0)
+                    criteria.Append(" AND ");
+                criteria.AppendFormat("WITH RMAS.TERM EQ '{0}'", term);
+            }
+            if (!string.IsNullOrEmpty(status))
+            {
+                if (criteria.Length > 0)
+                    criteria.Append(" AND ");
+                criteria.AppendFormat("WITH RMAS.CURRENT.STATUS EQ '{0}'", status);
+            }
+            if (!string.IsNullOrEmpty(startDate))
+            {
+                if (criteria.Length > 0)
+                    criteria.Append(" AND ");
+                criteria.AppendFormat("WITH RMAS.START.DATE GE '{0}'", startDate);
+            }
+            if (!string.IsNullOrEmpty(endDate))
+            {
+                if (criteria.Length > 0)
+                    criteria.Append(" AND ");
+                criteria.AppendFormat("WITH RMAS.END.DATE NE '' AND RMAS.END.DATE LE '{0}'", endDate);
+            }
+
+            if (criteria.Length > 0)
+                select = criteria.ToString();
             var totalCount = 0;
 
-            var housingAssignmentIds = await DataReader.SelectAsync("ROOM.ASSIGNMENT", criteria);
+            var housingAssignmentIds = await DataReader.SelectAsync("ROOM.ASSIGNMENT", select);
 
             totalCount = housingAssignmentIds.Count();
 
@@ -56,9 +93,28 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
 
             var sublist = housingAssignmentIds.OrderBy(id => id).Skip(offset).Take(limit).ToArray();
-
-            var housingAssignmentDataContracts = await DataReader.BulkReadRecordAsync<DataContracts.RoomAssignment>("ROOM.ASSIGNMENT", sublist);
-
+                        
+            var results = await DataReader.BulkReadRecordWithInvalidKeysAndRecordsAsync<DataContracts.RoomAssignment>("ROOM.ASSIGNMENT", sublist);
+            if (results.Equals(default(BulkReadOutput<DataContracts.RoomAssignment>)))
+                return new Tuple<IEnumerable<Domain.Student.Entities.HousingAssignment>, int>(new List<Domain.Student.Entities.HousingAssignment>(), 0);
+            if ((results.InvalidKeys != null && results.InvalidKeys.Any()) || (results.InvalidRecords!=null && results.InvalidRecords.Any()))
+            {
+                if (results.InvalidKeys.Any())
+                {
+                    repositoryException.AddErrors(results.InvalidKeys
+                        .Select(key => new RepositoryError("invalid.key",
+                        string.Format("Unable to locate the following key '{0}'.", key.ToString()))));
+                }
+                if (results.InvalidRecords.Any())
+                {
+                    repositoryException.AddErrors(results.InvalidRecords
+                       .Select(r => new RepositoryError("invalid.record",
+                       string.Format("Error: '{0}'. Entity: 'ROOM.ASSIGNMENT', Record ID: '{1}' ", r.Value, r.Key))
+                       { }));
+                }
+                throw repositoryException;
+            }
+            var housingAssignmentDataContracts = results.BulkRecordsRead.ToList();
             if (housingAssignmentDataContracts != null && housingAssignmentDataContracts.Any())
             {
                 //Get records from AR.ADDNL.AMTS
@@ -73,11 +129,29 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 
                 foreach (var housingAssignmentDataContract in housingAssignmentDataContracts)
                 {
-                    Domain.Student.Entities.HousingAssignment housingAssignmentEntity = BuildHousingAssignmentEntity(housingAssignmentDataContract, arAddnlAmtsDataContracts, housingAssignmentDict, housingRequestDict);
-                    housingAssignmentEntities.Add(housingAssignmentEntity);
+                    //to catch entity  exceptions
+                    try
+                    {
+                        Domain.Student.Entities.HousingAssignment housingAssignmentEntity = BuildHousingAssignmentEntity(housingAssignmentDataContract, arAddnlAmtsDataContracts, housingAssignmentDict, housingRequestDict);
+                        housingAssignmentEntities.Add(housingAssignmentEntity);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.Error(ex.Message);
+                        var message = string.Concat(ex.Message, ". Entity: 'ROOM.ASSIGNMENT', Record ID: '", housingAssignmentDataContract.Recordkey, "'");
+
+                        repositoryException.AddError(new RepositoryError("invalid housing assignment", message)
+                        {
+                            //SourceId = stncData.Recordkey,
+                            //Id = stncData.RecordGuid
+                        });
+                    }
                 }
             }
-
+            if (repositoryException.Errors.Any())
+            {
+                throw repositoryException;
+            }
             return housingAssignmentEntities.Any()? new Tuple<IEnumerable<HousingAssignment>, int>(housingAssignmentEntities, totalCount) : 
                 new Tuple<IEnumerable<Domain.Student.Entities.HousingAssignment>, int>(null, 0);
         }

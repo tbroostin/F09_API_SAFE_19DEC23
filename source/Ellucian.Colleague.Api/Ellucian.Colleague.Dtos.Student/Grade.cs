@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2014 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 
 namespace Ellucian.Colleague.Dtos.Student
 {
@@ -48,5 +48,19 @@ namespace Ellucian.Colleague.Dtos.Student
         /// </summary>
         public bool RequireLastAttendanceDate { get; set; }
 
+        /// <summary>
+        /// Flag indicating whether or not this grade may be used for web-based final grade entry
+        /// </summary>
+        public bool IncludeInWebFinalGradesList { get; set; }
+
+        /// <summary>
+        /// Flag indicating whether or not this grade may be used for web-based midterm grade entry
+        /// </summary>
+        public bool IncludeInWebMidtermGradesList { get; set; }
+
+        /// <summary>
+        /// Flag indicating whether or not this grade may be used after a course section's Drop Grade Required date
+        /// </summary>
+        public bool CanBeUsedAfterDropGradeRequiredDate { get; set; }
     }
 }

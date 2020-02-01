@@ -1,4 +1,4 @@
-﻿// Copyright 2017-18 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Linq;
@@ -15,14 +15,12 @@ using Ellucian.Web.License;
 using slf4net;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Web.Http.Exceptions;
-using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Web.Security;
 using System.Net.Http;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Http;
-using Newtonsoft.Json.Linq;
 using Ellucian.Web.Http.ModelBinding;
 using System.Web.Http.ModelBinding;
 
@@ -91,7 +89,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
@@ -163,7 +161,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -232,7 +230,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -304,6 +302,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="id">The requested student payment GUID</param>
         /// <returns>A StudentPayment DTO</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpGet, EedmResponseFilter]
         public async Task<Dtos.StudentPayment2> GetByIdAsync2([FromUri] string id)
         {
@@ -320,7 +319,9 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 if (string.IsNullOrEmpty(id))
                 {
-                    throw new ArgumentNullException("id", "id is required.");
+                    var integrationApiException = new IntegrationApiException();
+                    integrationApiException.AddError(new IntegrationApiError("Missing.Request.ID", "The request id is required."));
+                    throw integrationApiException;
                 }
                 var studentPayment = await studentPaymentService.GetByIdAsync2(id);
 
@@ -337,7 +338,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
@@ -354,6 +355,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
+            catch (IntegrationApiException e)
+            {
+                logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Unknown error getting student payment");
@@ -365,13 +371,14 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// Retrieves all student payments for the data model version 11
         /// </summary>
         /// <returns>A Collection of StudentPayments</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpGet]
         [ValidateQueryStringFilter()]
         [QueryStringFilterFilter("criteria", typeof(Dtos.StudentPayment2)), FilteringFilter(IgnoreFiltering = true)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
         public async Task<IHttpActionResult> GetAsync2(Paging page, QueryStringFilter criteria)
         {
-            string student = "", academicPeriod = "", fundSource = "", fundDestination = "", paymentType = "";
+            string student = "", academicPeriod = "", fundSource = "", fundDestination = "", paymentType = "", usage = "";
 
             try
             {
@@ -404,9 +411,13 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                     {
                         paymentType = string.Empty;
                     }
+                    if (rawFilterData.ReportingDetail != null && rawFilterData.ReportingDetail.Usage != Dtos.EnumProperties.StudentPaymentUsageTypes.notset)
+                    {
+                        usage = rawFilterData.ReportingDetail.Usage.ToString();
+                    }
                 }
 
-                var pageOfItems = await studentPaymentService.GetAsync2(page.Offset, page.Limit, bypassCache, student, academicPeriod, fundSource, paymentType, fundDestination);
+                var pageOfItems = await studentPaymentService.GetAsync2(page.Offset, page.Limit, bypassCache, student, academicPeriod, fundSource, paymentType, fundDestination, usage);
 
                 AddEthosContextProperties(await studentPaymentService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                            await studentPaymentService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -418,9 +429,19 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (KeyNotFoundException e)
+            {
+                logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
             }
             catch (ArgumentException e)
+            {
+                logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
             {
                 logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
@@ -438,23 +459,27 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         }
 
         /// <summary>
-        /// Create a single student payment for the data model version 6
+        /// Create a single student payment 
         /// </summary>
-        /// <param name="studentPaymentDto">General Ledger DTO from Body of request</param>
+        /// <param name="studentPaymentDto">StudentPayment2 DTO from Body of request</param>
         /// <returns>A single StudentPayment</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpPost, EedmResponseFilter]
         public async Task<Dtos.StudentPayment2> CreateAsync2([ModelBinder(typeof(EedmModelBinder))] Dtos.StudentPayment2 studentPaymentDto)
         {
-
             try
             {
                 if (studentPaymentDto == null)
                 {
-                    throw new ArgumentNullException("studentPaymentDto", "The request body is required.");
+                    var integrationApiException = new IntegrationApiException();
+                    integrationApiException.AddError(new IntegrationApiError("Missing.Request.Body", "The request body is required."));
+                    throw integrationApiException;
                 }
                 if (studentPaymentDto.Id != Guid.Empty.ToString())
                 {
-                    throw new ArgumentNullException("studentChargeDto", "On a post you can not define a GUID");
+                    var integrationApiException = new IntegrationApiException();
+                    integrationApiException.AddError(new IntegrationApiError("Cannot.Set.GUID", "Please use a nil GUID to create a new record."));
+                    throw integrationApiException;
                 }
                 ValidateStudentPayments2(studentPaymentDto);
 
@@ -473,7 +498,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (KeyNotFoundException e)
+            {
+                logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
             }
             catch (ArgumentException e)
             {
@@ -481,6 +511,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (RepositoryException e)
+            {
+                logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
             {
                 logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
@@ -498,37 +533,40 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="studentPayment">student payment DTO object of type <see cref="Dtos.StudentPayment2"/></param>
         private void ValidateStudentPayments2(Dtos.StudentPayment2 studentPayment)
         {
+            var integrationApiException = new IntegrationApiException();
+          
+
             if (studentPayment.AcademicPeriod == null)
             {
-                throw new ArgumentNullException("studentPayments.academicPeriod", "The academic period is required when submitting a student payment. ");
+                integrationApiException.AddError(new IntegrationApiError("Missing.Required.Property", message: "The academic period is required when submitting a student payment (studentPayments.academicPeriod)."));
             }
             if (studentPayment.AcademicPeriod != null && string.IsNullOrEmpty(studentPayment.AcademicPeriod.Id))
             {
-                throw new ArgumentNullException("studentPayments.academicPeriod", "The academic period id is required when submitting a student payment. ");
+                integrationApiException.AddError(new IntegrationApiError("Missing.Required.Property", message: "The academic period id is required when submitting a student payment (studentPayments.academicPeriod.id)."));
             }
             if (studentPayment.Amount == null)
             {
-                throw new ArgumentNullException("studentPayments.paymentAmount", "The payment amount cannot be null when submitting a student payment. ");
+                 integrationApiException.AddError(new IntegrationApiError("Validation.Exception", message: "The payment amount cannot be null when submitting a student payment (studentPayments.paymentAmount)."));
             }
             if (studentPayment.Amount != null && (studentPayment.Amount.Value == 0 || studentPayment.Amount.Value == null))
             {
-                throw new ArgumentNullException("studentPayments.paymentAmount.value", "A student-payments in the amount of zero dollars is not permitted. ");
+               integrationApiException.AddError(new IntegrationApiError("Validation.Exception", message: "A student-payments in the amount of zero dollars is not permitted (studentPayments.paymentAmount.value)."));
             }
             if (studentPayment.Amount != null && studentPayment.Amount.Currency != Dtos.EnumProperties.CurrencyCodes.USD && studentPayment.Amount.Currency != Dtos.EnumProperties.CurrencyCodes.CAD)
             {
-                throw new ArgumentException("The currency code must be set to either 'USD' or 'CAD'. ", "studentPayments.amount.currency");
+                integrationApiException.AddError(new IntegrationApiError("Validation.Exception", message: "The currency code must be set to either 'USD' or 'CAD' (studentPayments.amount.currency)."));
             }
             if (studentPayment.PaymentType == Dtos.EnumProperties.StudentPaymentTypes.notset)
             {
-                throw new ArgumentException("The paymentType is either invalid or empty and is required when submitting a student payment. ", "studentPayments.paymentType");
+                integrationApiException.AddError(new IntegrationApiError("Validation.Exception", message: "The paymentType is either invalid or empty and is required when submitting a student payment (studentPayments.paymentType)."));
             }
             if (studentPayment.Person == null || string.IsNullOrEmpty(studentPayment.Person.Id))
             {
-                throw new ArgumentNullException("studentPayments.student.id", "The student id is required when submitting a student payment. ");
+                integrationApiException.AddError(new IntegrationApiError("Missing.Required.Property", message: "The student id is required when submitting a student payment (studentPayments.student.id)."));
             }
             if (studentPayment.FundingSource != null && string.IsNullOrEmpty(studentPayment.FundingSource.Id))
             {
-                throw new ArgumentException("The fundingSource requires an id when submitting student payments. ", "studentPayments.fundingSource.id");
+                integrationApiException.AddError(new IntegrationApiError("Missing.Required.Property", message: "The fundingSource requires an id when submitting student payments (studentPayments.fundingSource.id)."));
             }
             //if (studentPayment.PaymentType == Dtos.EnumProperties.StudentPaymentTypes.sponsor && studentPayment.FundingDestination == null)
             //{
@@ -538,6 +576,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             //{
             //    throw new ArgumentNullException("studentPayments.generalLedgerPosting", "The generalLedgerPosting is required when submitting a sponsor payment.");
             //}
+            if (integrationApiException.Errors != null && integrationApiException.Errors.Any())
+            {
+                throw integrationApiException;
+            }
+
         }
 
         #endregion

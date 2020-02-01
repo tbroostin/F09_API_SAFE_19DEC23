@@ -21,5 +21,20 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// This is the tax code description.
         /// </summary>
         public string Description { get; set; }
+
+        /// <summary>
+        /// Allow AccoutsPayable / Purchase Entry Flag
+        /// </summary>
+        public bool AllowAccountsPayablePurchaseEntry { get; set; }
+
+        /// <summary>
+        /// Is the tax code is under UseTax category
+        /// </summary>
+        public bool IsUseTaxCategory { get; set; }
+
+        /// <summary>
+        /// Tax category of the tax code
+        /// </summary>
+        public string TaxCategory { get; set; }
     }
 }

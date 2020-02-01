@@ -2,7 +2,7 @@
 <settings>
   <colleague>
     <accountName>projdb18_rt</accountName>
-    <ipAddress>laurel</ipAddress>
+    <ipAddress>laurel.fielding.edu</ipAddress>
     <port>7232</port>
     <secure>False</secure>
     <certificateHostnameOverride></certificateHostnameOverride>

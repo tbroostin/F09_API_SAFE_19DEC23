@@ -1,9 +1,11 @@
 ﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Web.Adapters;
+using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
@@ -11,7 +13,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using SwitchableRoleUserFactory = Ellucian.Colleague.Coordination.Base.Tests.Services.OrganizationalRelationshipServiceTest.SwitchableRoleUserFactory;
+using OrganizationalRelationshipPermissionUserFactory = Ellucian.Colleague.Coordination.Base.Tests.Services.OrganizationalPersonPositionServiceTests.OrganizationalRelationshipPermissionUserFactory;
 
 namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 {
@@ -30,7 +32,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         private Mock<IRoleRepository> _roleRepoMock;
         private IRoleRepository _roleRepo;
         private List<OrganizationalPosition> orgPositionsDomainObject;
-        private SwitchableRoleUserFactory _currentUserFactory;
+        private OrganizationalRelationshipPermissionUserFactory _currentUserFactory;
 
 
         [TestInitialize]
@@ -44,8 +46,13 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             _configurationRepoMock = new Mock<IConfigurationRepository>();
             _configurationRepo = _configurationRepoMock.Object;
             _roleRepoMock = new Mock<IRoleRepository>();
+            var viewOrganizationalRelationshipsRole = new Domain.Entities.Role(1, "View Organizational Relationships");
+            viewOrganizationalRelationshipsRole.AddPermission(new Domain.Entities.Permission(BasePermissionCodes.ViewOrganizationalRelationships));
+            var updateOrganizationalRelationshipsRole = new Domain.Entities.Role(2, "Update Organizational Relationships");
+            updateOrganizationalRelationshipsRole.AddPermission(new Domain.Entities.Permission(BasePermissionCodes.UpdateOrganizationalRelationships));
+            _roleRepoMock.Setup(rr => rr.Roles).Returns(new List<Domain.Entities.Role> { viewOrganizationalRelationshipsRole, updateOrganizationalRelationshipsRole });
             _roleRepo = _roleRepoMock.Object;
-            _currentUserFactory = new SwitchableRoleUserFactory();
+            _currentUserFactory = new OrganizationalRelationshipPermissionUserFactory();
             _orgPositionService = new OrganizationalPositionService(_adapterRegistry, _orgPositionRepo, _logger, _configurationRepo, _roleRepo, _currentUserFactory);
 
             orgPositionsDomainObject = BuildOrgPositionRepoResponse();
@@ -98,6 +105,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         [TestMethod]
         public async Task GetOrganizationalPositionByIdAsync_Success()
         {
+            _currentUserFactory.HasViewOrganizationalRelationshipsRole = true;
             var orgPosition = orgPositionsDomainObject.Where(p => p.Id == "POS1").FirstOrDefault();
             _orgPositionRepoMock.Setup(repo => repo.GetOrganizationalPositionsByIdsAsync(It.IsAny<List<string>>())).ReturnsAsync(new List<OrganizationalPosition>() { orgPosition });
 
@@ -113,6 +121,35 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Assert.AreEqual(orgPositionRel.RelatedOrganizationalPositionId, orgPositionRelDto.RelatedOrganizationalPositionId);
                 Assert.AreEqual(orgPositionRel.RelatedOrganizationalPositionTitle, orgPositionRelDto.RelatedOrganizationalPositionTitle);
             }
+        }
+
+        [TestMethod]
+        public async Task GetOrganizationalPositionByIdAsync_WithViewRole_ReturnsResults()
+        {
+            _currentUserFactory.HasViewOrganizationalRelationshipsRole = true;
+            var orgPosition = orgPositionsDomainObject.Where(p => p.Id == "POS1").FirstOrDefault();
+            _orgPositionRepoMock.Setup(repo => repo.GetOrganizationalPositionsByIdsAsync(It.IsAny<List<string>>())).ReturnsAsync(new List<OrganizationalPosition>() { orgPosition });
+
+            var orgPositionDto = await _orgPositionService.GetOrganizationalPositionByIdAsync("POS1");
+            Assert.IsNotNull(orgPositionDto);
+        }
+
+        [TestMethod]
+        public async Task GetOrganizationalPositionByIdAsync_WithUpdateRole_ReturnsResults()
+        {
+            _currentUserFactory.HasUpdateOrganizationalRelationshipsRole = true;
+            var orgPosition = orgPositionsDomainObject.Where(p => p.Id == "POS1").FirstOrDefault();
+            _orgPositionRepoMock.Setup(repo => repo.GetOrganizationalPositionsByIdsAsync(It.IsAny<List<string>>())).ReturnsAsync(new List<OrganizationalPosition>() { orgPosition });
+
+            var orgPositionDto = await _orgPositionService.GetOrganizationalPositionByIdAsync("POS1");
+            Assert.IsNotNull(orgPositionDto);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task GetOrganizationalPositionByIdAsync_WithoutPermission_ThrowsException()
+        {
+            var orgPositionDto = await _orgPositionService.GetOrganizationalPositionByIdAsync("POS1");
         }
 
         [TestMethod]
@@ -133,6 +170,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         [TestMethod]
         public async Task QueryOrganizationalPositionsAsync_Ids_ReturnsResults()
         {
+            _currentUserFactory.HasViewOrganizationalRelationshipsRole = true;
             var positionIds = new List<string>() { "POS2", "POS3" };
             var criteria = new Dtos.Base.OrganizationalPositionQueryCriteria() { Ids = positionIds, SearchString = null };
             var orgPositionsEntities = orgPositionsDomainObject.Where(obj => positionIds.Contains(obj.Id));
@@ -142,7 +180,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             for (int i = 0; i < orgPositionsEntities.Count(); i++)
             {
                 var orgPositionsEntity = orgPositionsEntities.ElementAt(i);
-                var orgPositionsDto = orgPositionsDtos.Where(d=>d.Id == orgPositionsEntity.Id).First();
+                var orgPositionsDto = orgPositionsDtos.Where(d => d.Id == orgPositionsEntity.Id).First();
                 Assert.AreEqual(orgPositionsEntity.Id, orgPositionsDto.Id);
                 Assert.AreEqual(orgPositionsEntity.Relationships.Count(), orgPositionsDto.Relationships.Count());
                 for (int j = 0; j < orgPositionsEntity.Relationships.Count(); j++)
@@ -160,6 +198,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         [TestMethod]
         public async Task QueryOrganizationalPositionsAsync_SearchString_ReturnsResults()
         {
+            _currentUserFactory.HasViewOrganizationalRelationshipsRole = true;
             var searchString = "Position";
             var criteria = new Dtos.Base.OrganizationalPositionQueryCriteria() { Ids = null, SearchString = searchString };
             var orgPositionsEntities = orgPositionsDomainObject.Where(obj => obj.Title.IndexOf(searchString) >= 0);
@@ -182,6 +221,39 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     Assert.AreEqual(orgPositionRel.RelatedOrganizationalPositionTitle, orgPositionRelDto.RelatedOrganizationalPositionTitle);
                 }
             }
+        }
+
+        [TestMethod]
+        public async Task QueryOrganizationalPositionsAsync_WithViewRole_ReturnsResults()
+        {
+            _currentUserFactory.HasViewOrganizationalRelationshipsRole = true;
+            var searchString = "Position";
+            var criteria = new Dtos.Base.OrganizationalPositionQueryCriteria() { Ids = null, SearchString = searchString };
+            var orgPositionsEntities = orgPositionsDomainObject.Where(obj => obj.Title.IndexOf(searchString) >= 0);
+            _orgPositionRepoMock.Setup(repo => repo.GetOrganizationalPositionsAsync(It.IsAny<string>(), It.IsAny<List<string>>())).ReturnsAsync(orgPositionsEntities);
+            var orgPositionsDtos = await _orgPositionService.QueryOrganizationalPositionsAsync(criteria);
+            Assert.IsNotNull(orgPositionsDtos);
+        }
+
+        [TestMethod]
+        public async Task QueryOrganizationalPositionsAsync_WithUpdateRole_ReturnsResults()
+        {
+            _currentUserFactory.HasUpdateOrganizationalRelationshipsRole = true;
+            var searchString = "Position";
+            var criteria = new Dtos.Base.OrganizationalPositionQueryCriteria() { Ids = null, SearchString = searchString };
+            var orgPositionsEntities = orgPositionsDomainObject.Where(obj => obj.Title.IndexOf(searchString) >= 0);
+            _orgPositionRepoMock.Setup(repo => repo.GetOrganizationalPositionsAsync(It.IsAny<string>(), It.IsAny<List<string>>())).ReturnsAsync(orgPositionsEntities);
+            var orgPositionsDtos = await _orgPositionService.QueryOrganizationalPositionsAsync(criteria);
+            Assert.IsNotNull(orgPositionsDtos);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task QueryOrganizationalPositionsAsync_WithoutPermission_ThrowsException()
+        {
+            var searchString = "Position";
+            var criteria = new Dtos.Base.OrganizationalPositionQueryCriteria() { Ids = null, SearchString = searchString };
+            var orgPositionsDtos = await _orgPositionService.QueryOrganizationalPositionsAsync(criteria);
         }
     }
 }

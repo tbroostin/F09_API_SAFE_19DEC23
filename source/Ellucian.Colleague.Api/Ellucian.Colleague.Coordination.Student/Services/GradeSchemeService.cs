@@ -1,17 +1,16 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Colleague.Domain.Student.Repositories;
+using Ellucian.Web.Adapters;
+using Ellucian.Web.Dependency;
+using Ellucian.Web.Security;
+using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using Ellucian.Colleague.Domain.Student.Repositories;
-using Ellucian.Web.Dependency;
-using slf4net;
 using System.Threading.Tasks;
-using Ellucian.Colleague.Coordination.Base.Services;
-using Ellucian.Colleague.Domain.Base.Repositories;
-using Ellucian.Web.Adapters;
-using Ellucian.Colleague.Domain.Repositories;
-using Ellucian.Web.Security;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
@@ -112,6 +111,72 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 throw new InvalidOperationException("Grade Scheme not found for ID " + id, ex);
             }
+        }
+
+        /// <summary>
+        /// Retrieves a <see cref="Ellucian.Colleague.Dtos.Student.GradeScheme"/> object by ID
+        /// </summary>
+        /// <param name="id">Grade Scheme ID</param>
+        /// <returns>A <see cref="Ellucian.Colleague.Dtos.Student.GradeScheme"/> object</returns>
+        public async Task<Ellucian.Colleague.Dtos.Student.GradeScheme> GetNonEthosGradeSchemeByIdAsync(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new ArgumentNullException("id", "A grade scheme ID is required to retrieve a grade scheme.");
+            }
+            Dtos.Student.GradeScheme gradeSchemeDto = null;
+            var gradeSchemeEntities = await _studentReferenceDataRepository.GetGradeSchemesAsync();
+            if (gradeSchemeEntities != null && gradeSchemeEntities.Any())
+            {
+                var gradeSchemeEntity = gradeSchemeEntities.Where(gs => gs.Code == id).FirstOrDefault();
+                if (gradeSchemeEntity == null)
+                {
+                    throw new KeyNotFoundException(string.Format("Could not retrieve a grade scheme with ID {0}.", id));
+                }
+                // Get the right adapter for the type mapping
+                var gradeSchemeDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.GradeScheme, Dtos.Student.GradeScheme>();
+
+                gradeSchemeDto = gradeSchemeDtoAdapter.MapToType(gradeSchemeEntity);
+            }
+            if (gradeSchemeDto == null)
+            {
+                throw new KeyNotFoundException(string.Format("Could not retrieve a grade scheme with ID {0}.", id));
+            }
+            return gradeSchemeDto;
+
+        }
+
+        /// <summary>
+        /// Retrieves a <see cref="Ellucian.Colleague.Dtos.Student.GradeSubscheme"/> object by ID
+        /// </summary>
+        /// <param name="id">Grade Subscheme ID</param>
+        /// <returns>A <see cref="Ellucian.Colleague.Dtos.Student.GradeSubscheme"/> object</returns>
+        public async Task<Ellucian.Colleague.Dtos.Student.GradeSubscheme> GetGradeSubschemeByIdAsync(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new ArgumentNullException("id", "A grade subscheme ID is required to retrieve a grade subscheme.");
+            }
+            Dtos.Student.GradeSubscheme gradeSubschemeDto = null;
+            var gradeSubschemeEntities = await _studentReferenceDataRepository.GetGradeSubschemesAsync();
+            if (gradeSubschemeEntities != null && gradeSubschemeEntities.Any())
+            {
+                var gradeSubschemeEntity = gradeSubschemeEntities.Where(gs => gs.Code == id).FirstOrDefault();
+                if (gradeSubschemeEntity == null)
+                {
+                    throw new KeyNotFoundException(string.Format("Could not retrieve a grade subscheme with ID {0}.", id));
+                }
+                // Get the right adapter for the type mapping
+                var gradeSchemeDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.GradeSubscheme, Dtos.Student.GradeSubscheme>();
+
+                gradeSubschemeDto = gradeSchemeDtoAdapter.MapToType(gradeSubschemeEntity);
+            }
+            if (gradeSubschemeDto == null)
+            {
+                throw new KeyNotFoundException(string.Format("Could not retrieve a grade subscheme with ID {0}.", id));
+            }
+            return gradeSubschemeDto;
+
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN HeDM</remarks>

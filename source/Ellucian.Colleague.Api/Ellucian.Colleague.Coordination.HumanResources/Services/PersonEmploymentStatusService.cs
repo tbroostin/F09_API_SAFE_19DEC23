@@ -37,7 +37,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
 
         /// <summary>
-        /// Get the PersonStatuses based on the permissions of the current user/user who has proxy
+        /// Get the PersonStatuses based on the permissions of the current user/user who has proxy or time history admin 
         /// </summary>
         /// <param name="effectivePersonId">Optional parameter for effective personId</param>
         /// <returns></returns>
@@ -47,7 +47,9 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 effectivePersonId = CurrentUser.PersonId;
             }
-            else if (!CurrentUser.IsPerson(effectivePersonId) && !HasProxyAccessForPerson(effectivePersonId, Domain.Base.Entities.ProxyWorkflowConstants.TimeManagementTimeApproval))
+            //To view other's info, logged in user must be a proxy or admin
+            else if (!CurrentUser.IsPerson(effectivePersonId) && !(HasProxyAccessForPerson(effectivePersonId, Domain.Base.Entities.ProxyWorkflowConstants.TimeManagementTimeApproval)
+                       || HasPermission(HumanResourcesPermissionCodes.ViewAllTimeHistory)))
             {
                 throw new PermissionsException("User does not have permission to view person employment status information");
             }

@@ -1,4 +1,4 @@
-﻿//Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,6 +17,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests
             public string recordKey;
             public string type;
             public string status;
+            public string initials;
         }
 
         public class PersonRecord
@@ -31,17 +32,21 @@ namespace Ellucian.Colleague.Domain.Base.Tests
             new StaffRecord(){
                 recordKey = "0000001",
                 type = "S",
-                status = "C"
+                status = "C",
+                initials = "STAFFA"
+                
             },
             new StaffRecord(){
                 recordKey = "0000002",
                 type = "S",
-                status = "F"
+                status = "F",
+                initials = "STAFFB"
             },
             new StaffRecord(){
                 recordKey = "0000003",
                 type = "V",
-                status = "C"
+                status = "C",
+                initials = "STAFFC"
             }
         };
 

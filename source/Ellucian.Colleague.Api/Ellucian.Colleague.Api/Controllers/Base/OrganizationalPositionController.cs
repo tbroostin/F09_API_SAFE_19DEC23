@@ -1,10 +1,11 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
+using Ellucian.Web.Security;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -42,6 +43,9 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// </summary>
         /// <param name="id">Organizational Position id</param>
         /// <returns>Organizational Position DTO</returns>
+        /// <accessComments>
+        /// User must have the VIEW.ORGANIZATIONAL.RELATIONSHIPS or UPDATE.ORGANIZATIONAL.RELATIONSHIPS permission.
+        /// </accessComments>
         [HttpGet]
         public async Task<Dtos.Base.OrganizationalPosition> GetOrganizationalPositionAsync(string id)
         {
@@ -50,26 +54,38 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 var organizationalPosition = await _organizationalPositionService.GetOrganizationalPositionByIdAsync(id);
                 return organizationalPosition;
             }
-            catch(Exception e)
+            catch (PermissionsException pe)
+            {
+                throw CreateHttpResponseException(pe.Message, HttpStatusCode.Forbidden);
+            }
+            catch (Exception e)
             {
                 _logger.Error(e, "Unable to get Organizational Position: " + id);
-                throw new HttpResponseException(new HttpResponseMessage(HttpStatusCode.BadRequest) {
+                throw new HttpResponseException(new HttpResponseMessage(HttpStatusCode.BadRequest)
+                {
                     Content = new StringContent("Unable to get Organizational Position: " + id)
-               });
+                });
             }
-            
+
         }
         /// <summary>
         /// For a given list of IDs or search string, returns organizational positions
         /// </summary>
         /// <param name="criteria">Organizational position query criteria</param>
         /// <returns>Matching organizational positions</returns>
+        /// <accessComments>
+        /// User must have the VIEW.ORGANIZATIONAL.RELATIONSHIPS or UPDATE.ORGANIZATIONAL.RELATIONSHIPS permission.
+        /// </accessComments>
         public async Task<IEnumerable<Dtos.Base.OrganizationalPosition>> QueryOrganizationalPositionsAsync(OrganizationalPositionQueryCriteria criteria)
         {
             try
             {
                 var organizationalPositions = await _organizationalPositionService.QueryOrganizationalPositionsAsync(criteria);
                 return organizationalPositions;
+            }
+            catch (PermissionsException pe)
+            {
+                throw CreateHttpResponseException(pe.Message, HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {

@@ -39,6 +39,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             StudentChargesController _studentChargesController;
             List<Dtos.StudentCharge> _studentChargeDtos;
             List<Dtos.StudentCharge1> _studentCharge1Dtos;
+            List<Dtos.StudentCharge2> _studentCharge2Dtos;
             private const int Offset = 0;
             private const int Limit = 2;
 
@@ -53,6 +54,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
                 BuildData();
                 BuildData1();
+                BuildData2();
 
                 _studentChargesController = new StudentChargesController(_studentChargesServiceMock.Object, _loggerMock.Object) { Request = new HttpRequestMessage() };
                 _studentChargesController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
@@ -69,6 +71,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 _loggerMock = null;
             }
 
+            #region HEDM V6
             [TestMethod]
             public async Task StudentChargesController_GetAll_NoCache_True()
             {
@@ -120,6 +123,162 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             }
 
             [TestMethod]
+            public async Task StudentChargesController_GetAll_PagingNull()
+            {
+                _studentChargesController.Request.Headers.CacheControl = new CacheControlHeaderValue
+                {
+                    NoCache = true,
+                    Public = true
+                };
+                var tuple = new Tuple<IEnumerable<Dtos.StudentCharge>, int>(_studentChargeDtos, It.IsAny<int>());
+                _studentChargesServiceMock.Setup(i => i.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(tuple);
+                Paging paging = null;
+                var results = await _studentChargesController.GetAsync(paging);
+
+                var cancelToken = new System.Threading.CancellationToken(false);
+
+                HttpResponseMessage httpResponseMessage = await results.ExecuteAsync(cancelToken);
+
+                var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.StudentCharge>>)httpResponseMessage.Content).Value as IEnumerable<Dtos.StudentCharge>;
+
+                Assert.IsNotNull(actuals);
+                Assert.AreEqual(3, actuals.Count());
+
+                foreach (var actual in actuals)
+                {
+                    var expected = _studentChargeDtos.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+                    Assert.IsNotNull(expected);
+
+                   
+                }
+            }
+
+            [TestMethod]
+            public async Task StudentChargesController_GetById()
+            {
+                string id = "af4d47eb-f06b-4add-b5bf-d9529742387a";
+                var expected = _studentChargeDtos[0];
+
+                _studentChargesServiceMock.Setup(i => i.GetByIdAsync(It.IsAny<string>())).ReturnsAsync(expected);
+
+                var actual = await _studentChargesController.GetByIdAsync(id);
+
+                Assert.IsNotNull(actual);
+                Assert.AreEqual(expected.Id, actual.Id);
+                Assert.AreEqual(expected.AcademicPeriod.Id, actual.AcademicPeriod.Id);
+                Assert.AreEqual(expected.AccountReceivableType.Id, actual.AccountReceivableType.Id);
+                Assert.AreEqual(expected.AccountingCode.Id, actual.AccountingCode.Id);
+                Assert.AreEqual(expected.ChargeType, actual.ChargeType);
+
+                Assert.AreEqual(expected.ChargeableOn, actual.ChargeableOn);
+                Assert.AreEqual(expected.Comments, actual.Comments);
+                Assert.AreEqual(expected.Person.Id, actual.Person.Id);
+
+                if (expected.ChargedAmount.Amount != null)
+                {
+                    Assert.AreEqual(expected.ChargedAmount.Amount.Currency, actual.ChargedAmount.Amount.Currency);
+                    Assert.AreEqual(expected.ChargedAmount.Amount.Value, actual.ChargedAmount.Amount.Value);
+                }
+                else if (expected.ChargedAmount.UnitCost != null)
+                {
+                    Assert.AreEqual(expected.ChargedAmount.UnitCost.Cost.Currency, actual.ChargedAmount.UnitCost.Cost.Currency);
+                    Assert.AreEqual(expected.ChargedAmount.UnitCost.Quantity, actual.ChargedAmount.UnitCost.Quantity);
+                    Assert.AreEqual(expected.ChargedAmount.UnitCost.Cost.Value, actual.ChargedAmount.UnitCost.Cost.Value);
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentChargesController_GetAsync_PermissionException()
+            {
+                _studentChargesServiceMock.Setup(i => i.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ThrowsAsync(new PermissionsException());
+                await _studentChargesController.GetAsync(It.IsAny<Paging>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentChargesController_GetAsync_ArgumentException()
+            {
+                _studentChargesServiceMock.Setup(i => i.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ThrowsAsync(new ArgumentException());
+                await _studentChargesController.GetAsync(It.IsAny<Paging>());
+            }
+            
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentChargesController_GetAsync_RepositoryException()
+            {
+                _studentChargesServiceMock.Setup(i => i.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ThrowsAsync(new RepositoryException());
+                await _studentChargesController.GetAsync(It.IsAny<Paging>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentChargesController_GetAsync_IntegrationApiException()
+            {
+                _studentChargesServiceMock.Setup(i => i.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ThrowsAsync(new IntegrationApiException());
+                await _studentChargesController.GetAsync(It.IsAny<Paging>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentChargesController_GetAsync_Exception()
+            {
+                _studentChargesServiceMock.Setup(i => i.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ThrowsAsync(new Exception());
+                await _studentChargesController.GetAsync(It.IsAny<Paging>());
+            }
+            
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentChargesController_GetById_PermissionException()
+            {
+                _studentChargesServiceMock.Setup(i => i.GetByIdAsync(It.IsAny<string>())).ThrowsAsync(new PermissionsException());
+                await _studentChargesController.GetByIdAsync(It.IsAny<string>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentChargesController_GetById_KeyNotFoundException()
+            {
+                _studentChargesServiceMock.Setup(i => i.GetByIdAsync(It.IsAny<string>())).ThrowsAsync(new KeyNotFoundException());
+                await _studentChargesController.GetByIdAsync(It.IsAny<string>());
+            }
+            
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentChargesController_GetById_ArgumentNullException()
+            {
+                _studentChargesServiceMock.Setup(i => i.GetByIdAsync(It.IsAny<string>())).ThrowsAsync(new ArgumentNullException());
+                await _studentChargesController.GetByIdAsync(It.IsAny<string>());
+            }
+            
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentChargesController_GetById_RepositoryException()
+            {
+                _studentChargesServiceMock.Setup(i => i.GetByIdAsync(It.IsAny<string>())).ThrowsAsync(new RepositoryException());
+                await _studentChargesController.GetByIdAsync(It.IsAny<string>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentChargesController_GetById_IntegrationApiException()
+            {
+                _studentChargesServiceMock.Setup(i => i.GetByIdAsync(It.IsAny<string>())).ThrowsAsync(new IntegrationApiException());
+                await _studentChargesController.GetByIdAsync(It.IsAny<string>());
+            }
+            
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentChargesController_GetById_Exception()
+            {
+                _studentChargesServiceMock.Setup(i => i.GetByIdAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
+                await _studentChargesController.GetByIdAsync(It.IsAny<string>());
+            }
+
+            #endregion HEDM V6
+
+            #region HEDM V11
+            [TestMethod]
             public async Task StudentChargesController_GetAll1_NoCache_True()
             {
                 _studentChargesController.Request.Headers.CacheControl = new CacheControlHeaderValue
@@ -170,39 +329,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             }
 
             [TestMethod]
-            public async Task StudentChargesController_GetAll_PagingNull()
-            {
-                _studentChargesController.Request.Headers.CacheControl = new CacheControlHeaderValue
-                {
-                    NoCache = true,
-                    Public = true
-                };
-                var tuple = new Tuple<IEnumerable<Dtos.StudentCharge>, int>(_studentChargeDtos, It.IsAny<int>());
-                _studentChargesServiceMock.Setup(i => i.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(tuple);
-                Paging paging = null;
-                var results = await _studentChargesController.GetAsync(paging);
-
-                var cancelToken = new System.Threading.CancellationToken(false);
-
-                HttpResponseMessage httpResponseMessage = await results.ExecuteAsync(cancelToken);
-
-                var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.StudentCharge>>)httpResponseMessage.Content).Value as IEnumerable<Dtos.StudentCharge>;
-
-                Assert.IsNotNull(actuals);
-                Assert.AreEqual(3, actuals.Count());
-
-                foreach (var actual in actuals)
-                {
-                    var expected = _studentChargeDtos.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
-                    Assert.IsNotNull(expected);
-
-                   
-                }
-            }
-
-
-
-            [TestMethod]
             public async Task StudentChargesController_GetAll1_PagingNull()
             {
                 _studentChargesController.Request.Headers.CacheControl = new CacheControlHeaderValue
@@ -244,7 +370,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 };
                 var tuple = new Tuple<IEnumerable<Dtos.StudentCharge1>, int>(_studentCharge1Dtos, It.IsAny<int>());
                 _studentChargesServiceMock.Setup(i => i.GetAsync1(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(tuple);
-                
+
                 QueryStringFilter criteria = new QueryStringFilter("criteria", @"{'student':{'id':'b371fba4-797d-4c2c-8adc-bedd6d9db730'}}");
 
 
@@ -396,42 +522,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
                 }
             }
-
-
-            [TestMethod]
-            public async Task StudentChargesController_GetById()
-            {
-                string id = "af4d47eb-f06b-4add-b5bf-d9529742387a";
-                var expected = _studentChargeDtos[0];
-
-                _studentChargesServiceMock.Setup(i => i.GetByIdAsync(It.IsAny<string>())).ReturnsAsync(expected);
-
-                var actual = await _studentChargesController.GetByIdAsync(id);
-
-                Assert.IsNotNull(actual);
-                Assert.AreEqual(expected.Id, actual.Id);               
-                Assert.AreEqual(expected.AcademicPeriod.Id, actual.AcademicPeriod.Id);
-                Assert.AreEqual(expected.AccountReceivableType.Id, actual.AccountReceivableType.Id);
-                Assert.AreEqual(expected.AccountingCode.Id, actual.AccountingCode.Id);
-                Assert.AreEqual(expected.ChargeType, actual.ChargeType);
-
-                Assert.AreEqual(expected.ChargeableOn, actual.ChargeableOn);
-                Assert.AreEqual(expected.Comments, actual.Comments);
-                Assert.AreEqual(expected.Person.Id, actual.Person.Id);
-
-                if (expected.ChargedAmount.Amount != null)
-                {
-                    Assert.AreEqual(expected.ChargedAmount.Amount.Currency, actual.ChargedAmount.Amount.Currency);
-                    Assert.AreEqual(expected.ChargedAmount.Amount.Value, actual.ChargedAmount.Amount.Value);
-                }
-                else if (expected.ChargedAmount.UnitCost != null)
-                {
-                    Assert.AreEqual(expected.ChargedAmount.UnitCost.Cost.Currency, actual.ChargedAmount.UnitCost.Cost.Currency);
-                    Assert.AreEqual(expected.ChargedAmount.UnitCost.Quantity, actual.ChargedAmount.UnitCost.Quantity);
-                    Assert.AreEqual(expected.ChargedAmount.UnitCost.Cost.Value, actual.ChargedAmount.UnitCost.Cost.Value);                
-                }
-            }
-
+            
             [TestMethod]
             public async Task StudentChargesController_GetById1()
             {
@@ -465,29 +556,13 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     Assert.AreEqual(expected.ChargedAmount.UnitCost.Cost.Value, actual.ChargedAmount.UnitCost.Cost.Value);
                 }
             }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentChargesController_GetAsync_PermissionException()
-            {
-                _studentChargesServiceMock.Setup(i => i.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ThrowsAsync(new PermissionsException());
-                 await _studentChargesController.GetAsync(It.IsAny<Paging>());
-            }
-
+            
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
             public async Task StudentChargesController_GetAsync1_PermissionException()
             {
                 _studentChargesServiceMock.Setup(i => i.GetAsync1(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ThrowsAsync(new PermissionsException());
                 await _studentChargesController.GetAsync1(It.IsAny<Paging>(), It.IsAny<QueryStringFilter>());
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentChargesController_GetAsync_ArgumentException()
-            {
-                _studentChargesServiceMock.Setup(i => i.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ThrowsAsync(new ArgumentException());
-                await _studentChargesController.GetAsync(It.IsAny<Paging>());
             }
 
             [TestMethod]
@@ -500,26 +575,10 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentChargesController_GetAsync_RepositoryException()
-            {
-                _studentChargesServiceMock.Setup(i => i.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ThrowsAsync(new RepositoryException());
-                await _studentChargesController.GetAsync(It.IsAny<Paging>());
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
             public async Task StudentChargesController_GetAsync1_RepositoryException()
             {
                 _studentChargesServiceMock.Setup(i => i.GetAsync1(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ThrowsAsync(new RepositoryException());
                 await _studentChargesController.GetAsync1(It.IsAny<Paging>(), It.IsAny<QueryStringFilter>());
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentChargesController_GetAsync_IntegrationApiException()
-            {
-                _studentChargesServiceMock.Setup(i => i.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ThrowsAsync(new IntegrationApiException());
-                 await _studentChargesController.GetAsync(It.IsAny<Paging>());
             }
 
             [TestMethod]
@@ -532,26 +591,10 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentChargesController_GetAsync_Exception()
-            {
-                _studentChargesServiceMock.Setup(i => i.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ThrowsAsync(new Exception());
-                 await _studentChargesController.GetAsync(It.IsAny<Paging>());
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
             public async Task StudentChargesController_GetAsync1_Exception()
             {
                 _studentChargesServiceMock.Setup(i => i.GetAsync1(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ThrowsAsync(new Exception());
                 await _studentChargesController.GetAsync1(It.IsAny<Paging>(), It.IsAny<QueryStringFilter>());
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentChargesController_GetById_PermissionException()
-            {
-                _studentChargesServiceMock.Setup(i => i.GetByIdAsync(It.IsAny<string>())).ThrowsAsync(new PermissionsException());
-                await _studentChargesController.GetByIdAsync(It.IsAny<string>());
             }
 
             [TestMethod]
@@ -564,26 +607,10 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentChargesController_GetById_KeyNotFoundException()
-            {
-                _studentChargesServiceMock.Setup(i => i.GetByIdAsync(It.IsAny<string>())).ThrowsAsync(new KeyNotFoundException());
-                await _studentChargesController.GetByIdAsync(It.IsAny<string>());
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
             public async Task StudentChargesController_GetById1_KeyNotFoundException()
             {
                 _studentChargesServiceMock.Setup(i => i.GetByIdAsync1(It.IsAny<string>())).ThrowsAsync(new KeyNotFoundException());
                 await _studentChargesController.GetByIdAsync1("1234");
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentChargesController_GetById_ArgumentNullException()
-            {
-                _studentChargesServiceMock.Setup(i => i.GetByIdAsync(It.IsAny<string>())).ThrowsAsync(new ArgumentNullException());
-               await _studentChargesController.GetByIdAsync(It.IsAny<string>());
             }
 
             [TestMethod]
@@ -596,28 +623,12 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentChargesController_GetById_RepositoryException()
-            {
-                _studentChargesServiceMock.Setup(i => i.GetByIdAsync(It.IsAny<string>())).ThrowsAsync(new RepositoryException());
-                 await _studentChargesController.GetByIdAsync(It.IsAny<string>());
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
             public async Task StudentChargesController_GetById1_RepositoryException()
             {
                 _studentChargesServiceMock.Setup(i => i.GetByIdAsync1(It.IsAny<string>())).ThrowsAsync(new RepositoryException());
                 await _studentChargesController.GetByIdAsync1("1234");
             }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentChargesController_GetById_IntegrationApiException()
-            {
-                _studentChargesServiceMock.Setup(i => i.GetByIdAsync(It.IsAny<string>())).ThrowsAsync(new IntegrationApiException());
-                await _studentChargesController.GetByIdAsync(It.IsAny<string>());
-            }
-
+            
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
             public async Task StudentChargesController_GetById1_IntegrationApiException()
@@ -628,19 +639,492 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentChargesController_GetById_Exception()
-            {
-                _studentChargesServiceMock.Setup(i => i.GetByIdAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
-                await _studentChargesController.GetByIdAsync(It.IsAny<string>());
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
             public async Task StudentChargesController_GetById1_Exception()
             {
                 _studentChargesServiceMock.Setup(i => i.GetByIdAsync1(It.IsAny<string>())).ThrowsAsync(new Exception());
                 await _studentChargesController.GetByIdAsync1(It.IsAny<string>());
             }
+
+            #endregion HEDM V11
+
+            #region HEDM V16.0.0
+            [TestMethod]
+            public async Task StudentChargesController_GetStudentChargesAsync_NoCache_True()
+            {
+                _studentChargesController.Request.Headers.CacheControl = new CacheControlHeaderValue
+                {
+                    NoCache = true,
+                    Public = true
+                };
+                var studentCharges = _studentCharge2Dtos.Take(2);
+                var tuple = new Tuple<IEnumerable<Dtos.StudentCharge2>, int>(studentCharges, 4);
+                _studentChargesServiceMock.Setup(i => i.GetStudentChargesAsync(Offset, Limit, It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(tuple);
+                Paging paging = new Paging(Limit, Offset);
+                var actuals = await _studentChargesController.GetStudentChargesAsync(paging);
+
+                var cancelToken = new System.Threading.CancellationToken(false);
+
+                System.Net.Http.HttpResponseMessage httpResponseMessage = await actuals.ExecuteAsync(cancelToken);
+
+                IEnumerable<Dtos.StudentCharge2> results = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.StudentCharge2>>)httpResponseMessage.Content).Value as IEnumerable<Dtos.StudentCharge2>;
+
+                Assert.IsNotNull(results);
+                Assert.AreEqual(2, results.Count());
+
+                foreach (var actual in results)
+                {
+                    var expected = studentCharges.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+                    Assert.IsNotNull(expected);
+
+                    Assert.AreEqual(expected.Id, actual.Id);
+                    Assert.AreEqual(expected.AcademicPeriod.Id, actual.AcademicPeriod.Id);
+                    Assert.AreEqual(expected.FundingSource.Id, actual.FundingSource.Id);
+                    Assert.AreEqual(expected.FundingDestination.Id, actual.FundingDestination.Id);
+
+                    Assert.AreEqual(expected.ChargeableOn, actual.ChargeableOn);
+                    Assert.AreEqual(expected.Comments, actual.Comments);
+                    Assert.AreEqual(expected.Person.Id, actual.Person.Id);
+                    if (expected.ReportingDetail != null)
+                    {
+                        if (expected.ReportingDetail.OriginatedOn != null)
+                            Assert.AreEqual(expected.ReportingDetail.OriginatedOn, actual.ReportingDetail.OriginatedOn);
+                        if (expected.ReportingDetail.Usage != null)
+                            Assert.AreEqual(expected.ReportingDetail.Usage, actual.ReportingDetail.Usage);
+                    }
+                    if (expected.OverrideDescription != null)
+                        Assert.AreEqual(expected.OverrideDescription, actual.OverrideDescription);
+
+                    if (expected.ChargedAmount.Amount != null)
+                    {
+                        Assert.AreEqual(expected.ChargedAmount.Amount.Currency, actual.ChargedAmount.Amount.Currency);
+                        Assert.AreEqual(expected.ChargedAmount.Amount.Value, actual.ChargedAmount.Amount.Value);
+                    }
+                    else if (expected.ChargedAmount.UnitCost != null)
+                    {
+                        Assert.AreEqual(expected.ChargedAmount.UnitCost.Cost, actual.ChargedAmount.UnitCost.Cost);
+                        Assert.AreEqual(expected.ChargedAmount.UnitCost.Quantity, actual.ChargedAmount.UnitCost.Quantity);
+                    }
+                }
+            }
+
+            [TestMethod]
+            public async Task StudentChargesController_GetStudentChargesAsync_PagingNull()
+            {
+                _studentChargesController.Request.Headers.CacheControl = new CacheControlHeaderValue
+                {
+                    NoCache = true,
+                    Public = true
+                };
+                var tuple = new Tuple<IEnumerable<Dtos.StudentCharge2>, int>(_studentCharge2Dtos, It.IsAny<int>());
+                _studentChargesServiceMock.Setup(i => i.GetStudentChargesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(tuple);
+                Paging paging = null;
+                var results = await _studentChargesController.GetStudentChargesAsync(paging);
+
+                var cancelToken = new System.Threading.CancellationToken(false);
+
+                HttpResponseMessage httpResponseMessage = await results.ExecuteAsync(cancelToken);
+
+                var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.StudentCharge2>>)httpResponseMessage.Content).Value as IEnumerable<Dtos.StudentCharge2>;
+
+                Assert.IsNotNull(actuals);
+                Assert.AreEqual(4, actuals.Count());
+
+                foreach (var actual in actuals)
+                {
+                    var expected = _studentCharge1Dtos.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+                    Assert.IsNotNull(expected);
+
+
+                }
+            }
+
+
+            [TestMethod]
+            public async Task StudentChargesController_GetStudentChargesAsync_Student_Filters()
+            {
+                _studentChargesController.Request.Headers.CacheControl = new CacheControlHeaderValue
+                {
+                    NoCache = true,
+                    Public = true
+                };
+                var tuple = new Tuple<IEnumerable<Dtos.StudentCharge2>, int>(_studentCharge2Dtos, It.IsAny<int>());
+                _studentChargesServiceMock.Setup(i => i.GetStudentChargesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(tuple);
+
+                QueryStringFilter criteria = new QueryStringFilter("criteria", @"{'student':{'id':'b371fba4-797d-4c2c-8adc-bedd6d9db730'}}");
+
+
+                Paging paging = null;
+                var results = await _studentChargesController.GetStudentChargesAsync(paging, criteria);
+
+                var cancelToken = new System.Threading.CancellationToken(false);
+
+                HttpResponseMessage httpResponseMessage = await results.ExecuteAsync(cancelToken);
+
+                var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.StudentCharge2>>)httpResponseMessage.Content).Value as IEnumerable<Dtos.StudentCharge2>;
+
+                Assert.IsNotNull(actuals);
+                Assert.AreEqual(4, actuals.Count());
+
+                foreach (var actual in actuals)
+                {
+                    var expected = _studentCharge1Dtos.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+                    Assert.IsNotNull(expected);
+
+
+                }
+            }
+
+            [TestMethod]
+            public async Task StudentChargesController_GetStudentChargesAsync_AcademicPeriod_Filters()
+            {
+                _studentChargesController.Request.Headers.CacheControl = new CacheControlHeaderValue
+                {
+                    NoCache = true,
+                    Public = true
+                };
+                var tuple = new Tuple<IEnumerable<Dtos.StudentCharge2>, int>(_studentCharge2Dtos, It.IsAny<int>());
+                _studentChargesServiceMock.Setup(i => i.GetStudentChargesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(tuple);
+                QueryStringFilter criteria = new QueryStringFilter("criteria", @"{'academicPeriod':{'id':'e9d544d7-d7cc-47e6-84b7-77d414e5d1d3'}}");
+                Paging paging = null;
+                var results = await _studentChargesController.GetStudentChargesAsync(paging, criteria);
+
+                var cancelToken = new System.Threading.CancellationToken(false);
+
+                HttpResponseMessage httpResponseMessage = await results.ExecuteAsync(cancelToken);
+
+                var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.StudentCharge2>>)httpResponseMessage.Content).Value as IEnumerable<Dtos.StudentCharge2>;
+
+                Assert.IsNotNull(actuals);
+                Assert.AreEqual(4, actuals.Count());
+
+                foreach (var actual in actuals)
+                {
+                    var expected = _studentCharge1Dtos.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+                    Assert.IsNotNull(expected);
+
+
+                }
+            }
+
+            [TestMethod]
+            public async Task StudentChargesController_GetStudentChargesAsync_fundingSource_Filters()
+            {
+                _studentChargesController.Request.Headers.CacheControl = new CacheControlHeaderValue
+                {
+                    NoCache = true,
+                    Public = true
+                };
+                var tuple = new Tuple<IEnumerable<Dtos.StudentCharge2>, int>(_studentCharge2Dtos, It.IsAny<int>());
+                _studentChargesServiceMock.Setup(i => i.GetStudentChargesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(tuple);
+                QueryStringFilter criteria = new QueryStringFilter("criteria", @"{'fundingSource':{'id':'b371fba4-797d-4c2c-8adc-bedd6d9db730'}}");
+                Paging paging = null;
+                var results = await _studentChargesController.GetStudentChargesAsync(paging, criteria);
+
+                var cancelToken = new System.Threading.CancellationToken(false);
+
+                HttpResponseMessage httpResponseMessage = await results.ExecuteAsync(cancelToken);
+
+                var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.StudentCharge2>>)httpResponseMessage.Content).Value as IEnumerable<Dtos.StudentCharge2>;
+
+                Assert.IsNotNull(actuals);
+                Assert.AreEqual(4, actuals.Count());
+
+                foreach (var actual in actuals)
+                {
+                    var expected = _studentCharge1Dtos.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+                    Assert.IsNotNull(expected);
+
+
+                }
+            }
+
+            [TestMethod]
+            public async Task StudentChargesController_GetStudentChargesAsync_fundingDestination_Filters()
+            {
+                _studentChargesController.Request.Headers.CacheControl = new CacheControlHeaderValue
+                {
+                    NoCache = true,
+                    Public = true
+                };
+                var tuple = new Tuple<IEnumerable<Dtos.StudentCharge2>, int>(_studentCharge2Dtos, It.IsAny<int>());
+                _studentChargesServiceMock.Setup(i => i.GetStudentChargesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(tuple);
+                QueryStringFilter criteria = new QueryStringFilter("criteria", @"{'fundingDestination':{'id':'b371fba4-797d-4c2c-8adc-bedd6d9db730'}}");
+                Paging paging = null;
+                var results = await _studentChargesController.GetStudentChargesAsync(paging, criteria);
+
+                var cancelToken = new System.Threading.CancellationToken(false);
+
+                HttpResponseMessage httpResponseMessage = await results.ExecuteAsync(cancelToken);
+
+                var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.StudentCharge2>>)httpResponseMessage.Content).Value as IEnumerable<Dtos.StudentCharge2>;
+
+                Assert.IsNotNull(actuals);
+                Assert.AreEqual(4, actuals.Count());
+
+                foreach (var actual in actuals)
+                {
+                    var expected = _studentCharge1Dtos.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+                    Assert.IsNotNull(expected);
+
+
+                }
+            }
+
+            [TestMethod]
+            public async Task StudentChargesController_GetStudentChargesAsync_chargeType_Filters()
+            {
+                _studentChargesController.Request.Headers.CacheControl = new CacheControlHeaderValue
+                {
+                    NoCache = true,
+                    Public = true
+                };
+                var tuple = new Tuple<IEnumerable<Dtos.StudentCharge2>, int>(_studentCharge2Dtos, It.IsAny<int>());
+                _studentChargesServiceMock.Setup(i => i.GetStudentChargesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(tuple);
+                QueryStringFilter criteria = new QueryStringFilter("criteria", @"{'chargeType':'tuition'}");
+                Paging paging = null;
+                var results = await _studentChargesController.GetStudentChargesAsync(paging, criteria);
+
+                var cancelToken = new System.Threading.CancellationToken(false);
+
+                HttpResponseMessage httpResponseMessage = await results.ExecuteAsync(cancelToken);
+
+                var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.StudentCharge2>>)httpResponseMessage.Content).Value as IEnumerable<Dtos.StudentCharge2>;
+
+                Assert.IsNotNull(actuals);
+                Assert.AreEqual(4, actuals.Count());
+
+                foreach (var actual in actuals)
+                {
+                    var expected = _studentCharge1Dtos.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+                    Assert.IsNotNull(expected);
+
+
+                }
+            }
+
+            [TestMethod]
+            public async Task StudentChargesController_GetById2()
+            {
+                string id = "af4d47eb-f06b-4add-b5bf-d9529742387a";
+                var expected = _studentCharge2Dtos[0];
+
+                _studentChargesServiceMock.Setup(i => i.GetStudentChargesByIdAsync(It.IsAny<string>())).ReturnsAsync(expected);
+
+                var actual = await _studentChargesController.GetStudentChargesByIdAsync(id);
+
+                Assert.IsNotNull(actual);
+                Assert.AreEqual(expected.Id, actual.Id);
+                Assert.AreEqual(expected.AcademicPeriod.Id, actual.AcademicPeriod.Id);
+                Assert.AreEqual(expected.FundingDestination.Id, actual.FundingDestination.Id);
+                Assert.AreEqual(expected.FundingSource.Id, actual.FundingSource.Id);
+
+                Assert.AreEqual(expected.ChargeableOn, actual.ChargeableOn);
+                Assert.AreEqual(expected.Comments, actual.Comments);
+                Assert.AreEqual(expected.Person.Id, actual.Person.Id);
+                if (expected.ReportingDetail != null)
+                {
+                    if (expected.ReportingDetail.OriginatedOn != null)
+                        Assert.AreEqual(expected.ReportingDetail.OriginatedOn, actual.ReportingDetail.OriginatedOn);
+                    if (expected.ReportingDetail.Usage != null)
+                        Assert.AreEqual(expected.ReportingDetail.Usage, actual.ReportingDetail.Usage);
+                }
+                if (expected.OverrideDescription != null)
+                    Assert.AreEqual(expected.OverrideDescription, actual.OverrideDescription);
+                if (expected.ChargedAmount.Amount != null)
+                {
+                    Assert.AreEqual(expected.ChargedAmount.Amount.Currency, actual.ChargedAmount.Amount.Currency);
+                    Assert.AreEqual(expected.ChargedAmount.Amount.Value, actual.ChargedAmount.Amount.Value);
+                }
+                else if (expected.ChargedAmount.UnitCost != null)
+                {
+                    Assert.AreEqual(expected.ChargedAmount.UnitCost.Cost.Currency, actual.ChargedAmount.UnitCost.Cost.Currency);
+                    Assert.AreEqual(expected.ChargedAmount.UnitCost.Quantity, actual.ChargedAmount.UnitCost.Quantity);
+                    Assert.AreEqual(expected.ChargedAmount.UnitCost.Cost.Value, actual.ChargedAmount.UnitCost.Cost.Value);
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentChargesController_GetStudentChargesAsync_PermissionException()
+            {
+                _studentChargesServiceMock.Setup(i => i.GetStudentChargesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ThrowsAsync(new PermissionsException());
+                await _studentChargesController.GetStudentChargesAsync(It.IsAny<Paging>(), It.IsAny<QueryStringFilter>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentChargesController_GetStudentChargesAsync_ArgumentException()
+            {
+                _studentChargesServiceMock.Setup(i => i.GetStudentChargesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ThrowsAsync(new ArgumentException());
+                await _studentChargesController.GetStudentChargesAsync(It.IsAny<Paging>(), It.IsAny<QueryStringFilter>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentChargesController_GetStudentChargesAsync_RepositoryException()
+            {
+                _studentChargesServiceMock.Setup(i => i.GetStudentChargesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ThrowsAsync(new RepositoryException());
+                await _studentChargesController.GetStudentChargesAsync(It.IsAny<Paging>(), It.IsAny<QueryStringFilter>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentChargesController_GetStudentChargesAsync_IntegrationApiException()
+            {
+                _studentChargesServiceMock.Setup(i => i.GetStudentChargesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ThrowsAsync(new IntegrationApiException());
+                await _studentChargesController.GetStudentChargesAsync(It.IsAny<Paging>(), It.IsAny<QueryStringFilter>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentChargesController_GetStudentChargesAsync_Exception()
+            {
+                _studentChargesServiceMock.Setup(i => i.GetStudentChargesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ThrowsAsync(new Exception());
+                await _studentChargesController.GetStudentChargesAsync(It.IsAny<Paging>(), It.IsAny<QueryStringFilter>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentChargesController_GetById2_PermissionException()
+            {
+                _studentChargesServiceMock.Setup(i => i.GetStudentChargesByIdAsync(It.IsAny<string>())).ThrowsAsync(new PermissionsException());
+                await _studentChargesController.GetStudentChargesByIdAsync("1234");
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentChargesController_GetById2_KeyNotFoundException()
+            {
+                _studentChargesServiceMock.Setup(i => i.GetStudentChargesByIdAsync(It.IsAny<string>())).ThrowsAsync(new KeyNotFoundException());
+                await _studentChargesController.GetStudentChargesByIdAsync("1234");
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentChargesController_GetById2_ArgumentNullException()
+            {
+                _studentChargesServiceMock.Setup(i => i.GetStudentChargesByIdAsync(It.IsAny<string>())).ThrowsAsync(new ArgumentNullException());
+                await _studentChargesController.GetStudentChargesByIdAsync(It.IsAny<string>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentChargesController_GetById2_RepositoryException()
+            {
+                _studentChargesServiceMock.Setup(i => i.GetStudentChargesByIdAsync(It.IsAny<string>())).ThrowsAsync(new RepositoryException());
+                await _studentChargesController.GetStudentChargesByIdAsync("1234");
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentChargesController_GetById2_IntegrationApiException()
+            {
+                _studentChargesServiceMock.Setup(i => i.GetStudentChargesByIdAsync(It.IsAny<string>())).ThrowsAsync(new IntegrationApiException());
+                await _studentChargesController.GetStudentChargesByIdAsync("1234");
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentChargesController_GetById2_Exception()
+            {
+                _studentChargesServiceMock.Setup(i => i.GetStudentChargesByIdAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
+                await _studentChargesController.GetStudentChargesByIdAsync(It.IsAny<string>());
+            }
+            // PUT/POST
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentChargesController_PUT_Not_SupportedV16()
+            {
+                await _studentChargesController.UpdateStudentChargesAsync(It.IsAny<string>(), It.IsAny<Dtos.StudentCharge2>());
+            }
+            
+            [TestMethod]
+            public async Task StudentChargesController_CreateStydebtChargesAsync()
+            {
+                var expected = _studentCharge2Dtos[3];
+
+                _studentChargesServiceMock.Setup(i => i.CreateStudentChargesAsync(It.IsAny<Dtos.StudentCharge2>())).ReturnsAsync(expected);
+
+                var actual = await _studentChargesController.CreateStudentChargesAsync(_studentCharge2Dtos[3]);
+
+                Assert.IsNotNull(actual);
+                Assert.AreEqual(expected.Id, actual.Id);
+                Assert.AreEqual(expected.AcademicPeriod.Id, actual.AcademicPeriod.Id);
+                Assert.AreEqual(expected.FundingDestination.Id, actual.FundingDestination.Id);
+                Assert.AreEqual(expected.FundingSource.Id, actual.FundingSource.Id);
+
+                Assert.AreEqual(expected.ChargeableOn, actual.ChargeableOn);
+                Assert.AreEqual(expected.Comments, actual.Comments);
+                Assert.AreEqual(expected.Person.Id, actual.Person.Id);
+                if (expected.ReportingDetail != null)
+                {
+                    if (expected.ReportingDetail.OriginatedOn != null)
+                        Assert.AreEqual(expected.ReportingDetail.OriginatedOn, actual.Person.Id);
+                    if (expected.ReportingDetail.Usage != null)
+                        Assert.AreEqual(expected.ReportingDetail.Usage, actual.ReportingDetail.Usage);
+                }
+                if (expected.OverrideDescription != null)
+                    Assert.AreEqual(expected.OverrideDescription, actual.OverrideDescription);
+                if (expected.ChargedAmount.Amount != null)
+                {
+                    Assert.AreEqual(expected.ChargedAmount.Amount.Currency, actual.ChargedAmount.Amount.Currency);
+                    Assert.AreEqual(expected.ChargedAmount.Amount.Value, actual.ChargedAmount.Amount.Value);
+                }
+                else if (expected.ChargedAmount.UnitCost != null)
+                {
+                    Assert.AreEqual(expected.ChargedAmount.UnitCost.Cost.Currency, actual.ChargedAmount.UnitCost.Cost.Currency);
+                    Assert.AreEqual(expected.ChargedAmount.UnitCost.Quantity, actual.ChargedAmount.UnitCost.Quantity);
+                    Assert.AreEqual(expected.ChargedAmount.UnitCost.Cost.Value, actual.ChargedAmount.UnitCost.Cost.Value);
+                }
+            }
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentChargesController_CreateStudentChargesAsync_PermissionException()
+            {
+                _studentChargesServiceMock.Setup(i => i.CreateStudentChargesAsync(It.IsAny<Dtos.StudentCharge2>())).ThrowsAsync(new PermissionsException());
+                await _studentChargesController.CreateStudentChargesAsync(_studentCharge2Dtos[3]);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentChargesController_CreateStudentChargesAsync_ArgumentException()
+            {
+                _studentChargesServiceMock.Setup(i => i.CreateStudentChargesAsync(It.IsAny<Dtos.StudentCharge2>())).ThrowsAsync(new ArgumentException());
+                await _studentChargesController.CreateStudentChargesAsync(It.IsAny<Dtos.StudentCharge2>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentChargesController_CreateStudentChargesAsync_ArgumentNullException()
+            {
+                await _studentChargesController.CreateStudentChargesAsync(null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentChargesController_CreateStudentChargesAsync_ArgumentNullException_GUID()
+            {
+                await _studentChargesController.CreateStudentChargesAsync(_studentCharge2Dtos[0]);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentChargesController_CreateStudentChargesAsync_RepositoryException()
+            {
+                _studentChargesServiceMock.Setup(i => i.CreateStudentChargesAsync(It.IsAny<Dtos.StudentCharge2>())).ThrowsAsync(new RepositoryException());
+                await _studentChargesController.CreateStudentChargesAsync(_studentCharge2Dtos[3]);
+            }
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentChargesController_CreateStudentChargesAsync_Exception()
+            {
+                _studentChargesServiceMock.Setup(i => i.CreateStudentChargesAsync(It.IsAny<Dtos.StudentCharge2>())).ThrowsAsync(new Exception());
+                await _studentChargesController.CreateStudentChargesAsync(_studentCharge2Dtos[3]);
+            }
+            
+            #endregion HEDM V16.0.0
+            
 
             #region PUT POST DELETE
             [TestMethod]
@@ -903,6 +1387,135 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 };
                 #endregion
             }
+
+            private void BuildData2()
+            {
+                #region Building StudentCharges
+                _studentCharge2Dtos = new List<StudentCharge2>()
+                {
+                    new StudentCharge2(){
+                        Id = "54c677e7-24ad-4591-be3f-d2175b7b0710",
+                        AcademicPeriod = new GuidObject2("e9d544d7-d7cc-47e6-84b7-77d414e5d1d3"),
+                        FundingSource = new GuidObject2("3693d5df-51c1-4071-aa53-164badfb2986"),
+                        FundingDestination = new GuidObject2( "2ed632ee-e4a8-4771-af46-220c245b3e74"),
+                        ChargeableOn = Convert.ToDateTime("2016-10-13"),
+                        ChargedAmount = new ChargedAmountDtoProperty()
+                        {
+                            UnitCost = new ChargedAmountUnitCostDtoProperty()
+                            {
+                                Cost = new AmountDtoProperty()
+                                {
+                                    Currency = CurrencyCodes.USD,
+                                    Value =  300
+                                },
+                                Quantity = 1
+                            },
+                            Amount = new AmountDtoProperty()
+                            {
+                                Currency = CurrencyCodes.USD,
+                                Value =  300
+                            },
+
+                        },
+                        ReportingDetail= new StudentChargesReportingDtoProperty()
+                        {
+                            OriginatedOn = Convert.ToDateTime("2016-10-13"),
+                            Usage = StudentChargeUsageTypes.notset
+                        },
+                        Comments = new List<string>() { "This is a comment" },
+                        Person = new GuidObject2("b371fba4-797d-4c2c-8adc-bedd6d9db730")
+
+                    },
+                     new StudentCharge2(){
+                        Id = "62c677e7-24ad-4591-be3f-d2175b7b0710",
+                        AcademicPeriod = new GuidObject2("2ed632ee-e4a8-4771-af46-220c245b3e74"),
+                        FundingSource = new GuidObject2("3693d5df-51c1-4071-aa53-164badfb2986"),
+                        FundingDestination = new GuidObject2("2ed632ee-e4a8-4771-af46-220c245b3e74"),
+                        ChargeableOn = Convert.ToDateTime("2016-10-16"),
+                        ChargedAmount = new ChargedAmountDtoProperty()
+                        {
+                            UnitCost = new ChargedAmountUnitCostDtoProperty()
+                            {
+                                Cost = new AmountDtoProperty()
+                                {
+                                    Currency = CurrencyCodes.USD,
+                                    Value =  300
+                                },
+                                Quantity = 8
+                            },
+                            Amount = new AmountDtoProperty()
+                            {
+                                Currency = CurrencyCodes.USD,
+                                Value =  2400
+                            },
+
+                        },
+                        Comments = new List<string>() { "This is a comment" },
+                        Person = new GuidObject2("ea7b7e26-3b78-4257-a365-857d317a97af")
+
+                    },
+                     new StudentCharge2(){
+                        Id = "62c677e7-24ad-4591-be3f-d2175b7b0710",
+                        AcademicPeriod = new GuidObject2("e9d544d7-d7cc-47e6-84b7-77d414e5d1d3"),
+                        FundingSource = new GuidObject2("3693d5df-51c1-4071-aa53-164badfb2986"),
+                        FundingDestination = new GuidObject2("2ed632ee-e4a8-4771-af46-220c245b3e74"),
+                        ChargeableOn = Convert.ToDateTime("2016-10-16"),
+                        ChargedAmount = new ChargedAmountDtoProperty()
+                        {
+                            UnitCost = new ChargedAmountUnitCostDtoProperty()
+                            {
+                                Cost = new AmountDtoProperty()
+                                {
+                                    Currency = CurrencyCodes.USD,
+                                    Value =  -300
+                                },
+                                Quantity = 1
+                            },
+                            Amount = new AmountDtoProperty()
+                            {
+                                Currency = CurrencyCodes.USD,
+                                Value =  300
+                            },
+
+                        },
+                        Comments = new List<string>() { "Test" },
+                        Person = new GuidObject2("b371fba4-797d-4c2c-8adc-bedd6d9db730")
+                    },
+                     new StudentCharge2(){
+                        Id = "00000000-0000-0000-0000-000000000000",
+                        AcademicPeriod = new GuidObject2("e9d544d7-d7cc-47e6-84b7-77d414e5d1d3"),
+                        FundingSource = new GuidObject2("3693d5df-51c1-4071-aa53-164badfb2986"),
+                        FundingDestination = new GuidObject2("2ed632ee-e4a8-4771-af46-220c245b3e74"),
+                        ChargeableOn = Convert.ToDateTime("2016-10-16"),
+                        ChargedAmount = new ChargedAmountDtoProperty()
+                        {
+                            UnitCost = new ChargedAmountUnitCostDtoProperty()
+                            {
+                                Cost = new AmountDtoProperty()
+                                {
+                                    Currency = CurrencyCodes.USD,
+                                    Value =  -300
+                                },
+                                Quantity = 1
+                            },
+                            Amount = new AmountDtoProperty()
+                            {
+                                Currency = CurrencyCodes.USD,
+                                Value =  300
+                            },
+
+                        },
+                        Comments = new List<string>() { "Test" },
+                        Person = new GuidObject2("b371fba4-797d-4c2c-8adc-bedd6d9db730"),
+                        ReportingDetail = new StudentChargesReportingDtoProperty() { Usage = StudentChargeUsageTypes.taxReportingOnly }
+                    },
+
+
+
+                };
+                #endregion
+            }
+
 
         }
     }

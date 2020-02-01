@@ -15,12 +15,18 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// Bank Code
         /// </summary>
         public string BankCode { get; set;  }
-    
+
+        /// <summary>
+        /// Source
+        /// </summary>
+        public string Source { get; set; }
+
         /// <summary>
         /// AP Type constructor
         /// </summary>
         /// <param name="code">code</param>
         /// <param name="description">description</param>
+        /// <param name="source">source</param>
         public AccountsPayableType(string code, string description)
             : base(code, description)
         {

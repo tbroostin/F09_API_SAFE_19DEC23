@@ -58,7 +58,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (!UserIsSelf(studentId) && !(await UserIsAdvisorAsync(studentId)))
             {
                 var message = "Current user is not the student of requested petitions and therefore cannot access it.";
-                logger.Info(message);
+                logger.Error(message);
                 throw new PermissionsException(message);
             }
             List<Dtos.Student.StudentPetition> studentPetitionsDto = new List<Dtos.Student.StudentPetition>();
@@ -74,7 +74,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             catch (Exception ex)
             {
                 var message = "Exception occurred while trying to read student petitions from repository using student id " + studentId;
-                logger.Info(ex, message);
+                logger.Error(ex, message);
                 throw;
             }
             return studentPetitionsDto;

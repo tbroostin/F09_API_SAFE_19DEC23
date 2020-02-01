@@ -15,6 +15,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
     public class TestPurchaseOrderRepository : IPurchaseOrderRepository
     {
         private List<PurchaseOrder> purchaseOrders = new List<PurchaseOrder>();
+        private List<PurchaseOrderSummary> purchaseOrdersSummaryList = new List<PurchaseOrderSummary>();
 
         #region Define all data for a purchase order
 
@@ -168,6 +169,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
         public TestPurchaseOrderRepository()
         {
             Populate();
+            PopulatePurchaseOrderSummary();
 
             // Add a domain entity to the PO list that has one GL account masked.
             var purchaseOrder = new PurchaseOrder("999", "P000999", "Susty Corporation", PurchaseOrderStatus.Accepted, DateTime.Now, DateTime.Now);
@@ -182,6 +184,127 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             purchaseOrders.Add(purchaseOrder);
         }
 
+        private void PopulatePurchaseOrderSummary()
+        {
+            #region Populate Purchase Order Summary
+
+            // Loop through the purchase orders array and create purchase orders domain entities.
+            string purchaseOrderId,
+                    vendorId,
+                    vendorName,
+                    apType,
+                    number,
+                    initiatorName,
+                    requestorName,
+                    shipToCode,
+                    comments,
+                    internalComments,
+                    currencyCode;
+
+            PurchaseOrderStatus status;
+
+            decimal purchaseOrderAmount;
+
+            DateTime date,
+                     statusDate,
+                     maintenanceDate;
+
+            DateTime? deliveryDate;
+
+            for (var i = 0; i < purchaseOrdersArray.GetLength(0); i++)
+            {
+                purchaseOrderId = purchaseOrdersArray[i, 0];
+                vendorId = purchaseOrdersArray[i, 1];
+                vendorName = purchaseOrdersArray[i, 2];
+
+                switch (purchaseOrdersArray[i, 3])
+                {
+                    case "A":
+                        status = PurchaseOrderStatus.Accepted;
+                        break;
+                    case "B":
+                        status = PurchaseOrderStatus.Backordered;
+                        break;
+                    case "C":
+                        status = PurchaseOrderStatus.Closed;
+                        break;
+                    case "U":
+                        status = PurchaseOrderStatus.InProgress;
+                        break;
+                    case "I":
+                        status = PurchaseOrderStatus.Invoiced;
+                        break;
+                    case "N":
+                        status = PurchaseOrderStatus.NotApproved;
+                        break;
+                    case "O":
+                        status = PurchaseOrderStatus.Outstanding;
+                        break;
+                    case "P":
+                        status = PurchaseOrderStatus.Paid;
+                        break;
+                    case "R":
+                        status = PurchaseOrderStatus.Reconciled;
+                        break;
+                    case "V":
+                        status = PurchaseOrderStatus.Voided;
+                        break;
+                    default:
+                        throw new Exception("Invalid status specified in TestPurchaseOrderRepository.");
+                }
+
+                apType = purchaseOrdersArray[i, 4];
+                purchaseOrderAmount = Convert.ToDecimal(purchaseOrdersArray[i, 5]);
+                date = Convert.ToDateTime(purchaseOrdersArray[i, 6]);
+                deliveryDate = Convert.ToDateTime(purchaseOrdersArray[i, 7]);
+                maintenanceDate = Convert.ToDateTime(purchaseOrdersArray[i, 8]);
+                number = purchaseOrdersArray[i, 9];
+                statusDate = Convert.ToDateTime(purchaseOrdersArray[i, 10]);
+                initiatorName = purchaseOrdersArray[i, 11];
+                requestorName = purchaseOrdersArray[i, 12];
+                comments = purchaseOrdersArray[i, 13];
+                shipToCode = purchaseOrdersArray[i, 14];
+                internalComments = purchaseOrdersArray[i, 15];
+                currencyCode = purchaseOrdersArray[i, 16];
+
+                var purchaseOrderSummary = new PurchaseOrderSummary(purchaseOrderId, number, vendorName, date);
+                purchaseOrderSummary.Status = PurchaseOrderStatus.Invoiced;
+                purchaseOrderSummary.VendorId = vendorId;
+                purchaseOrderSummary.ApType = apType;
+                purchaseOrderSummary.Amount = purchaseOrderAmount;
+                purchaseOrderSummary.MaintenanceDate = maintenanceDate;
+                purchaseOrderSummary.InitiatorName = initiatorName;
+                purchaseOrderSummary.RequestorName = requestorName;              
+                purchaseOrderSummary.Comments = comments;             
+                purchaseOrderSummary.CurrencyCode = currencyCode;
+                purchaseOrdersSummaryList.Add(purchaseOrderSummary);
+            }
+            #endregion
+
+            #region Populate Requisition
+
+            string requisitionId,
+                requisitionNumber,
+                requisitionPurchaseOrderId;
+
+            for (var i = 0; i < requisitionsArray.GetLength(0); i++)
+            {
+                requisitionId = requisitionsArray[i, 0];
+                requisitionNumber = requisitionsArray[i, 1];
+                requisitionPurchaseOrderId = requisitionsArray[i, 2];
+                
+                foreach (var purchaseOrdersSummary in purchaseOrdersSummaryList)
+                {
+                    if (purchaseOrdersSummary.Id == requisitionPurchaseOrderId)
+                    {
+                        var po = new RequisitionSummary(requisitionId, requisitionNumber, purchaseOrdersSummary.VendorName, purchaseOrdersSummary.Date);
+                        purchaseOrdersSummary.AddRequisition(po);
+                    }
+                }
+            }
+            #endregion
+
+        }
         public TestPurchaseOrderRepository(string guid)
         {
             PopulateGuid();
@@ -886,6 +1009,11 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
         public Tuple<List<string>, List<string>> GetEthosExtendedDataLists()
         {
             throw new NotImplementedException();
+        }
+
+        public async Task<IEnumerable<PurchaseOrderSummary>> GetPurchaseOrderSummaryByPersonIdAsync(string personId)
+        {
+            return await Task.Run(() => purchaseOrdersSummaryList);
         }
     }
 }

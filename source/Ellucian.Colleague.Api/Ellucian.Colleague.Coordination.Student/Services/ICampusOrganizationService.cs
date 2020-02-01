@@ -25,5 +25,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
         Task<Tuple<IEnumerable<Dtos.CampusInvolvement>, int>> GetCampusInvolvementsAsync(int offset, int limit, bool bypassCache);
         Task<Dtos.CampusInvolvement> GetCampusInvolvementByGuidAsync(string id);
+        Task<IEnumerable<CampusOrganization2>> GetCampusOrganizations2ByCampusOrgIdsAsync(List<string> campusOrgIds);
     }
 }

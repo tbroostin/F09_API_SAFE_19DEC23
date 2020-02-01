@@ -39,6 +39,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests.Services
         public class VerifyUpdatedStudentAwardsTests : StudentAwardDomainServiceTests
         {
             public StudentAwardYear inputStudentAwardYear;
+            public StudentAwardYear inputStudentAwardYear2;
             public IEnumerable<StudentAward> inputCurrentStudentAwards;
             public IEnumerable<StudentLoanLimitation> inputStudentLoanLimitations;
 
@@ -57,6 +58,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests.Services
                 StudentAwardDomainServiceTestsInitialize();
 
                 inputStudentAwardYear = studentAwardYearRepository.GetStudentAwardYears(studentId, new CurrentOfficeService(financialAidOfficeRepository.GetFinancialAidOffices())).First();
+                inputStudentAwardYear2 = studentAwardYearRepository.GetStudentAwardYears(studentId, new CurrentOfficeService(financialAidOfficeRepository.GetFinancialAidOffices())).Last();
                 inputStudentAwardYear.CurrentConfiguration.IsLoanAmountChangeRequestRequired = false;
                 inputStudentAwardYear.CurrentConfiguration.IsDeclinedStatusChangeRequestRequired = false;
 
@@ -74,7 +76,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests.Services
                 suppressMaximumLoanLimits = true;
 
                 inputNewStudentAwards = new List<StudentAward>() { inputAmountChangeAward, inputStatusChangeAward };
-            }            
+            }
 
             //TODO mcd: New exception attribute to verify the exception message?
 
@@ -188,7 +190,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests.Services
                     Assert.AreEqual(equivCurrentPeriod.AwardAmount, outputPeriod.AwardAmount);
                 }
             }
-            
+
             [TestMethod]
             [ExpectedException(typeof(UpdateRequiresReviewException))]
             public void LoanTypeAwards_AmountChangeRequiresReviewTest()
@@ -255,10 +257,10 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests.Services
             {
                 suppressMaximumLoanLimits = false;
                 inputStudentLoanLimitations.ToList().ForEach(l => { l.GradPlusMaximumAmount = 0; l.SubsidizedMaximumAmount = 0; l.UnsubsidizedMaximumAmount = 0; });
-                VerifyStudentAwards();
+                VerifyStudentAwards2();
             }
 
-            [TestMethod]            
+            [TestMethod]
             public void AmountChangesAreNotWithinLoanLimitations_SuppressLimitsTest()
             {
                 var exceptionThrown = false;
@@ -283,17 +285,6 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests.Services
                 VerifyStudentAwards();
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(InvalidOperationException))]
-            public void IncomingSingleUnsub_PendingSubAwardPresent_ThrowsInvalidOperationExceptionTest()
-            {
-                inputStudentAwardYear = studentAwardYearRepository.GetStudentAwardYears(studentId, new CurrentOfficeService(financialAidOfficeRepository.GetFinancialAidOffices()))
-                    .First(ay => ay.Code == "2017");
-                inputCurrentStudentAwards = studentAwardRepository.GetStudentAwardsForYearAsync(studentId, inputStudentAwardYear, financialAidReferenceDataRepository.Awards, financialAidReferenceDataRepository.AwardStatuses).Result;
-                inputStudentLoanLimitations = studentLoanLimitationRepository.GetStudentLoanLimitationsAsync(studentId, new List<StudentAwardYear>() { inputStudentAwardYear }).Result;
-                inputNewStudentAwards = new List<StudentAward>(){inputCurrentStudentAwards.First(a => a.Award.LoanType.Value == LoanType.UnsubsidizedLoan)};
-                VerifyStudentAwards();
-            }
 
             [TestMethod]
             public void IncomingSingleUnsub_AcceptedSubAwardPresent_VerificationGoesThroughTest()
@@ -306,7 +297,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests.Services
                 inputCurrentStudentAwards = studentAwardRepository.GetStudentAwardsForYearAsync(studentId, inputStudentAwardYear, financialAidReferenceDataRepository.Awards, financialAidReferenceDataRepository.AwardStatuses).Result;
                 inputStudentLoanLimitations = studentLoanLimitationRepository.GetStudentLoanLimitationsAsync(studentId, new List<StudentAwardYear>() { inputStudentAwardYear }).Result;
                 inputNewStudentAwards = new List<StudentAward>() { inputCurrentStudentAwards.First(a => a.Award.LoanType.Value == LoanType.UnsubsidizedLoan) };
-                    
+
                 try
                 {
                     VerifyStudentAwards();
@@ -336,6 +327,11 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests.Services
             private void VerifyStudentAwards()
             {
                 outputNewStudentAwards = StudentAwardDomainService.VerifyUpdatedStudentAwards(inputStudentAwardYear, inputNewStudentAwards, inputCurrentStudentAwards, inputStudentLoanLimitations, suppressMaximumLoanLimits).ToList();
+            }
+            private void VerifyStudentAwards2()
+            {
+                outputNewStudentAwards = StudentAwardDomainService.VerifyUpdatedStudentAwards(inputStudentAwardYear2, inputNewStudentAwards, inputCurrentStudentAwards, inputStudentLoanLimitations, suppressMaximumLoanLimits).ToList();
+
             }
         }
 
@@ -419,7 +415,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests.Services
                     financialAidReferenceDataRepository.AwardStatuses).Result.First();
 
 
-                awardPackageChangeRequestRepository.AddPendingChangeRequestRecordsForStudentAwards(new List<StudentAward>(){inputStudentAward});
+                awardPackageChangeRequestRepository.AddPendingChangeRequestRecordsForStudentAwards(new List<StudentAward>() { inputStudentAward });
                 inputAwardPackageChangeRequests = awardPackageChangeRequestRepository.GetAwardPackageChangeRequestsAsync(studentId).Result;
             }
 
@@ -459,7 +455,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests.Services
 
                 Assert.IsTrue(string.IsNullOrEmpty(inputStudentAward.PendingChangeRequestId));
             }
-            
+
         }
     }
 }

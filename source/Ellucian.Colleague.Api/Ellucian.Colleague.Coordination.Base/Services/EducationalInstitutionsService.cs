@@ -219,6 +219,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
                 try
                 {
+                    if (personGuidCollection == null)
+                    {
+                        throw new KeyNotFoundException(string.Concat("educationInsitution, ", "Unable to locate guid for : '", institution.Id, "'"));
+                    }
                     // educationInsitution.Id = await _personRepository.GetPersonGuidFromIdAsync(institution.Id);
                     var educationInsitutionGuid = string.Empty;
                     personGuidCollection.TryGetValue(institution.Id, out educationInsitutionGuid);
@@ -265,11 +269,15 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         };
                     }
 
-                    var tuplePerson = await _personRepository.GetPersonIntegrationData2Async(institution.Id);
-                    var emailEntities = tuplePerson.Item1;
-                    var phoneEntities = tuplePerson.Item2;
-                    var addressEntities = tuplePerson.Item3;
-                    var socialMediaEntities = tuplePerson.Item4;
+                    // var tuplePerson = await _personRepository.GetPersonIntegrationData2Async(institution.Id);
+                    // var emailEntities = tuplePerson.Item1;
+                    // var phoneEntities = tuplePerson.Item2;
+                    // var addressEntities = tuplePerson.Item3;
+                    // var socialMediaEntities = tuplePerson.Item4;
+                    var emailEntities = institution.EmailAddresses;
+                    var phoneEntities = institution.Phones;
+                    var addressEntities = institution.Addresses;
+                    var socialMediaEntities = institution.SocialMedia;
 
                     var emailDtoReturn = emailAdapter.MapToType(emailEntities, emailTypes);
                     if (emailDtoReturn != null && emailDtoReturn.Any())

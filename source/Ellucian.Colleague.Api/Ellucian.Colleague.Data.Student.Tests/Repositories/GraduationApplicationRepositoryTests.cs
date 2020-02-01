@@ -1375,7 +1375,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 mockManager.Setup(mgr => mgr.ExecuteAsync<GetGradApplEligibilityRequest, GetGradApplEligibilityResponse>(It.IsAny<GetGradApplEligibilityRequest>())).Returns(Task.FromResult(nullResponse)).Callback<GetGradApplEligibilityRequest>(req => getGradAppEligibilityRequest = req);
 
                 string message = "CTX returned null graduation application eligibility response for student Id " + studentId;
-                loggerMock.Setup(x => x.Info(It.Is<string>(y => y == message))).Verifiable();
+                loggerMock.Setup(x => x.Error(It.Is<string>(y => y == message))).Verifiable();
 
                 var graduationApplicationElig = await graduationApplicationRepository.GetGraduationApplicationEligibilityAsync(studentId, programCodes);
                 loggerMock.Verify();

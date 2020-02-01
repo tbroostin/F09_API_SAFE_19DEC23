@@ -21,6 +21,7 @@ using Ellucian.Colleague.Dtos.DtoProperties;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using AccountReceivableType = Ellucian.Colleague.Domain.Student.Entities.AccountReceivableType;
 using StudentCharge = Ellucian.Colleague.Domain.Student.Entities.StudentCharge;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 {
@@ -76,10 +77,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
         }
 
-
-
         [TestClass]
-        public class StudentChargeServiceTestsGet : CurrentUserSetup
+        public class StudentChargeServiceTests_Get_Post : CurrentUserSetup
         {
             private Mock<IStudentChargeRepository> _studentChargeRepositoryMock;
             private Mock<IStudentRepository> _studentRepositoryMock;
@@ -102,6 +101,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
             private IEnumerable<Ellucian.Colleague.Dtos.StudentCharge> _studentChargeDtos;
             private IEnumerable<Ellucian.Colleague.Dtos.StudentCharge1> _studentCharge1Dtos;
+            private IEnumerable<Ellucian.Colleague.Dtos.StudentCharge2> _studentCharge2Dtos;
 
             private IEnumerable<StudentCharge> _studentChargeEntities;
             private IEnumerable<Domain.Student.Entities.AcademicPeriod> _academicPeriodEntities;
@@ -155,6 +155,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                         InvoiceItemID = "168999",
                         Guid = "54c677e7-24ad-4591-be3f-d2175b7b0710",
                         Term = "2016/Spr",
+                        OverrideDescription = "Override description",
+                        OriginatedOn = Convert.ToDateTime("2016-10-17"),
 
                     }
                 };
@@ -203,7 +205,32 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     },
 
                 };
+                _studentCharge2Dtos = new List<Dtos.StudentCharge2>
+                {
+                    new Dtos.StudentCharge2()
+                    {
+                        Id = "54c677e7-24ad-4591-be3f-d2175b7b0710",
+                        AcademicPeriod = new GuidObject2("b9691210-8516-45ca-9cd1-7e5aa1777234"),
+                        FundingDestination = new GuidObject2("d3a4a98f-e858-495e-b12b-e6464442bbf4"),
+                        FundingSource = new GuidObject2("3c29e3f2-0399-4f73-aea7-ed424e6c5801"),
+                        ChargeableOn = Convert.ToDateTime("2016-10-17"),
+                        ChargedAmount = new ChargedAmountDtoProperty()
+                        {
+                            Amount = new AmountDtoProperty() {Currency = CurrencyCodes.CAD, Value = 400},
 
+                        },
+                        OverrideDescription = "Override description",
+                        ReportingDetail = new StudentChargesReportingDtoProperty()
+                        {
+                            OriginatedOn = Convert.ToDateTime("2016-10-17"),
+                            Usage = StudentChargeUsageTypes.taxReportingOnly
+                        },
+                        Comments = new List<string>() {"This is a comment"},
+                        Person = new GuidObject2("b371fba4-797d-4c2c-8adc-bedd6d9db730")
+
+                    },
+
+                };
 
                 _termEntities = new List<Term>()
                 {
@@ -277,7 +304,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 _roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() {ViewStudentChargeRole});
 
                 _studentChargeRepositoryMock.Setup(i =>
-                    i.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                    i.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
                     .ReturnsAsync(_stuChargesTuple);
 
                 _personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync("b371fba4-797d-4c2c-8adc-bedd6d9db730")).ReturnsAsync("00001");
@@ -310,7 +337,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 _roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { ViewStudentChargeRole });
 
                 _studentChargeRepositoryMock.Setup(i =>
-                    i.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                    i.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
                     .ReturnsAsync(_stuChargesTuple);
 
                 _personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync("b371fba4-797d-4c2c-8adc-bedd6d9db730")).ReturnsAsync("00001");
@@ -335,7 +362,40 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 }
             }
+            [TestMethod]
+            public async Task StudentChargeService_GetAsync2()
+            {
+                ViewStudentChargeRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.ViewStudentCharges));
+                _roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { ViewStudentChargeRole });
 
+                _studentChargeRepositoryMock.Setup(i =>
+                    i.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                    .ReturnsAsync(_stuChargesTuple);
+
+                _personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync("b371fba4-797d-4c2c-8adc-bedd6d9db730")).ReturnsAsync("00001");
+                _personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync("00001")).ReturnsAsync("b371fba4-797d-4c2c-8adc-bedd6d9db730");
+
+                var actuals = await _studentChargeService.GetStudentChargesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>());
+                Assert.IsNotNull(actuals);
+
+                foreach (var actual in actuals.Item1)
+                {
+                    var expected = _studentCharge2Dtos.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+                    Assert.IsNotNull(expected);
+                    Assert.AreEqual(expected.Id, actual.Id);
+                    Assert.AreEqual(expected.AcademicPeriod.Id, actual.AcademicPeriod.Id);
+                    Assert.AreEqual(expected.FundingDestination.Id, actual.FundingDestination.Id);
+                    Assert.AreEqual(expected.FundingSource.Id, actual.FundingSource.Id);
+                    Assert.AreEqual(expected.OverrideDescription, actual.OverrideDescription);
+                    Assert.AreEqual(expected.ReportingDetail.OriginatedOn, actual.ReportingDetail.OriginatedOn);
+                    Assert.AreEqual(expected.ReportingDetail.Usage, actual.ReportingDetail.Usage);
+                    Assert.AreEqual(expected.ChargeableOn, actual.ChargeableOn);
+                    Assert.AreEqual(expected.Comments[0], actual.Comments[0]);
+                    Assert.AreEqual(expected.ChargedAmount.UnitCost, actual.ChargedAmount.UnitCost);
+                    Assert.AreEqual(expected.Person.Id, actual.Person.Id);
+
+                }
+            }
 
             [TestMethod]
             public async Task StudentChargeService_GetAsyncWithFilters()
@@ -344,7 +404,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 _roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { ViewStudentChargeRole });
 
                 _studentChargeRepositoryMock.Setup(i =>
-                    i.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                    i.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
                     .ReturnsAsync(_stuChargesTuple);
 
                 _personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync("b371fba4-797d-4c2c-8adc-bedd6d9db730")).ReturnsAsync("00001");
@@ -378,7 +438,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 _roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { ViewStudentChargeRole });
 
                 _studentChargeRepositoryMock.Setup(i =>
-                    i.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                    i.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
                     .ReturnsAsync(_stuChargesTuple);
 
                 _personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync("b371fba4-797d-4c2c-8adc-bedd6d9db730")).ReturnsAsync("00001");
@@ -405,32 +465,50 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 }
             }
 
+            [TestMethod]
+            public async Task StudentChargeService_GetAsync2WithFilters()
+            {
+                ViewStudentChargeRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.ViewStudentCharges));
+                _roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { ViewStudentChargeRole });
 
+                _studentChargeRepositoryMock.Setup(i =>
+                    i.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                    .ReturnsAsync(_stuChargesTuple);
+
+                _personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync("b371fba4-797d-4c2c-8adc-bedd6d9db730")).ReturnsAsync("00001");
+                _personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync("00001")).ReturnsAsync("b371fba4-797d-4c2c-8adc-bedd6d9db730");
+
+                var actuals = await _studentChargeService.GetStudentChargesAsync(0, 10, false, "b371fba4-797d-4c2c-8adc-bedd6d9db730", "b9691210-8516-45ca-9cd1-7e5aa1777234",
+                    "d3a4a98f-e858-495e-b12b-e6464442bbf4", "3c29e3f2-0399-4f73-aea7-ed424e6c5801", "tuition");
+                Assert.IsNotNull(actuals);
+
+                foreach (var actual in actuals.Item1)
+                {
+                    var expected = _studentCharge2Dtos.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+                    Assert.IsNotNull(expected);
+                    Assert.AreEqual(expected.Id, actual.Id);
+                    Assert.AreEqual(expected.AcademicPeriod.Id, actual.AcademicPeriod.Id);
+                    Assert.AreEqual(expected.FundingDestination.Id, actual.FundingDestination.Id);
+                    Assert.AreEqual(expected.FundingSource.Id, actual.FundingSource.Id);
+                    Assert.AreEqual(expected.OverrideDescription, actual.OverrideDescription);
+                    Assert.AreEqual(expected.ReportingDetail.OriginatedOn, actual.ReportingDetail.OriginatedOn);
+                    Assert.AreEqual(expected.ReportingDetail.Usage, actual.ReportingDetail.Usage);
+                    Assert.AreEqual(expected.ChargeableOn, actual.ChargeableOn);
+                    Assert.AreEqual(expected.Comments[0], actual.Comments[0]);
+                    Assert.AreEqual(expected.ChargedAmount.UnitCost, actual.ChargedAmount.UnitCost);
+                    Assert.AreEqual(expected.Person.Id, actual.Person.Id);
+
+                }
+            }
             [TestMethod]
             [ExpectedException(typeof(PermissionsException))]
             public async Task StudentChargeService_GetAsync_PermissionsException()
             {              
                 _studentChargeRepositoryMock.Setup(i =>
-                    i.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                    i.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
                     .ReturnsAsync(_stuChargesTuple);
            
                 var actuals = await _studentChargeService.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>());
-                Assert.IsNotNull(actuals);
-
-                foreach (var actual in actuals.Item1)
-                {
-                    var expected = _studentChargeDtos.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
-                    Assert.IsNotNull(expected);
-                    Assert.AreEqual(expected.Id, actual.Id);
-                    Assert.AreEqual(expected.AcademicPeriod.Id, actual.AcademicPeriod.Id);
-                    Assert.AreEqual(expected.AccountReceivableType.Id, actual.AccountReceivableType.Id);
-                    Assert.AreEqual(expected.AccountingCode.Id, actual.AccountingCode.Id);
-                    Assert.AreEqual(expected.ChargeType, actual.ChargeType);
-                    Assert.AreEqual(expected.ChargeableOn, actual.ChargeableOn);
-                    Assert.AreEqual(expected.Comments[0], actual.Comments[0]);
-                    Assert.AreEqual(expected.ChargedAmount.UnitCost, actual.ChargedAmount.UnitCost);
-                   
-                }
             }
 
             [TestMethod]
@@ -438,29 +516,53 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task StudentChargeService_GetAsync1_PermissionsException()
             {
                 _studentChargeRepositoryMock.Setup(i =>
-                    i.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                    i.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
                     .ReturnsAsync(_stuChargesTuple);
 
                 var actuals = await _studentChargeService.GetAsync1(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>());
-                Assert.IsNotNull(actuals);
-
-                foreach (var actual in actuals.Item1)
-                {
-                    var expected = _studentCharge1Dtos.FirstOrDefault(i => i.Id.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
-                    Assert.IsNotNull(expected);
-                    Assert.AreEqual(expected.Id, actual.Id);
-                    Assert.AreEqual(expected.AcademicPeriod.Id, actual.AcademicPeriod.Id);
-                    Assert.AreEqual(expected.FundingDestination.Id, actual.FundingDestination.Id);
-                    Assert.AreEqual(expected.FundingSource.Id, actual.FundingSource.Id);
-                    Assert.AreEqual(expected.ChargeType, actual.ChargeType);
-                    Assert.AreEqual(expected.ChargeableOn, actual.ChargeableOn);
-                    Assert.AreEqual(expected.Comments[0], actual.Comments[0]);
-                    Assert.AreEqual(expected.ChargedAmount.UnitCost, actual.ChargedAmount.UnitCost);
-
-                }
             }
 
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task StudentChargeService_GetAsync2_PermissionsException()
+            {
+                _studentChargeRepositoryMock.Setup(i =>
+                    i.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                    .ReturnsAsync(_stuChargesTuple);
 
+                var actuals = await _studentChargeService.GetStudentChargesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>());
+            }
+
+            [TestMethod]
+            public async Task StudentChargeService_GetById1Async_CreatePermissionGivesViewPermission()
+            {
+                ViewStudentChargeRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.CreateStudentCharges));
+                _roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { ViewStudentChargeRole });
+
+                _studentChargeRepositoryMock.Setup(i =>
+                    i.GetByIdAsync(It.IsAny<string>())).ReturnsAsync(_studentChargeEntities.FirstOrDefault(x => x.Guid == "54c677e7-24ad-4591-be3f-d2175b7b0710"));
+
+                _personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync("b371fba4-797d-4c2c-8adc-bedd6d9db730")).ReturnsAsync("00001");
+                _personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync("00001")).ReturnsAsync("b371fba4-797d-4c2c-8adc-bedd6d9db730");
+
+                var actual = await _studentChargeService.GetByIdAsync1(It.IsAny<string>());
+                Assert.IsNotNull(actual);
+            }
+            [TestMethod]
+            public async Task StudentChargeService_GetById2Async_CreatePermissionGivesViewPermission()
+            {
+                ViewStudentChargeRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.CreateStudentCharges));
+                _roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { ViewStudentChargeRole });
+
+                _studentChargeRepositoryMock.Setup(i =>
+                    i.GetByIdAsync(It.IsAny<string>())).ReturnsAsync(_studentChargeEntities.FirstOrDefault(x => x.Guid == "54c677e7-24ad-4591-be3f-d2175b7b0710"));
+
+                _personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync("b371fba4-797d-4c2c-8adc-bedd6d9db730")).ReturnsAsync("00001");
+                _personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync("00001")).ReturnsAsync("b371fba4-797d-4c2c-8adc-bedd6d9db730");
+
+                var actual = await _studentChargeService.GetStudentChargesByIdAsync(It.IsAny<string>());
+                Assert.IsNotNull(actual);
+            }
             [TestMethod]
             public async Task StudentChargeService_GetByIdAsync()
             {
@@ -537,6 +639,37 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 Assert.AreEqual(expected.Person.Id, actual.Person.Id);
 
             }
+            [TestMethod]
+            public async Task StudentChargeService_GetByIdAsync2()
+            {
+                ViewStudentChargeRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.ViewStudentCharges));
+                _roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { ViewStudentChargeRole });
+
+                _studentChargeRepositoryMock.Setup(i =>
+                    i.GetByIdAsync(It.IsAny<string>())).ReturnsAsync(_studentChargeEntities.FirstOrDefault(x => x.Guid == "54c677e7-24ad-4591-be3f-d2175b7b0710"));
+
+                _personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync("b371fba4-797d-4c2c-8adc-bedd6d9db730")).ReturnsAsync("00001");
+                _personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync("00001")).ReturnsAsync("b371fba4-797d-4c2c-8adc-bedd6d9db730");
+
+                var actual = await _studentChargeService.GetStudentChargesByIdAsync(It.IsAny<string>());
+                Assert.IsNotNull(actual);
+
+                var expected = _studentCharge2Dtos.FirstOrDefault(i => i.Id.Equals("54c677e7-24ad-4591-be3f-d2175b7b0710", StringComparison.OrdinalIgnoreCase));
+                Assert.IsNotNull(expected);
+
+                Assert.AreEqual(expected.Id, actual.Id);
+                Assert.AreEqual(expected.AcademicPeriod.Id, actual.AcademicPeriod.Id);
+                Assert.AreEqual(expected.FundingDestination.Id, actual.FundingDestination.Id);
+                Assert.AreEqual(expected.FundingSource.Id, actual.FundingSource.Id);
+                Assert.AreEqual(expected.OverrideDescription, actual.OverrideDescription);
+                Assert.AreEqual(expected.ReportingDetail.OriginatedOn, actual.ReportingDetail.OriginatedOn);
+                Assert.AreEqual(expected.ReportingDetail.Usage, actual.ReportingDetail.Usage);
+                Assert.AreEqual(expected.ChargeableOn, actual.ChargeableOn);
+                Assert.AreEqual(expected.Comments[0], actual.Comments[0]);
+                Assert.AreEqual(expected.ChargedAmount.UnitCost, actual.ChargedAmount.UnitCost);
+                Assert.AreEqual(expected.Person.Id, actual.Person.Id);
+
+            }
 
             [TestMethod]
             [ExpectedException(typeof(KeyNotFoundException))]
@@ -556,6 +689,22 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
 
+            [TestMethod]
+            [ExpectedException(typeof(KeyNotFoundException))]
+            public async Task StudentChargeService_GetByIdAsync2_EmptyID()
+            {
+                ViewStudentChargeRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.ViewStudentCharges));
+                _roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { ViewStudentChargeRole });
+
+                _studentChargeRepositoryMock.Setup(i =>
+                    i.GetByIdAsync(It.IsAny<string>())).ReturnsAsync(null);
+
+                _personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync("b371fba4-797d-4c2c-8adc-bedd6d9db730")).ReturnsAsync("00001");
+                _personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync("00001")).ReturnsAsync("b371fba4-797d-4c2c-8adc-bedd6d9db730");
+
+                await _studentChargeService.GetStudentChargesByIdAsync("");
+
+            }
             [TestMethod]
             public async Task StudentChargeService_CreateAsync()
             {
@@ -618,7 +767,38 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 Assert.AreEqual(expected.ChargedAmount.UnitCost, actual.ChargedAmount.UnitCost);
                 Assert.AreEqual(expected.Person.Id, actual.Person.Id);
             }
+            [TestMethod]
+            public async Task StudentChargeService_CreateAsync2()
+            {
+                ViewStudentChargeRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.CreateStudentCharges));
+                _roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { ViewStudentChargeRole });
 
+                var response = _studentChargeEntities.FirstOrDefault(x => x.Guid == "54c677e7-24ad-4591-be3f-d2175b7b0710");
+
+                _studentChargeRepositoryMock.Setup(i =>
+                    i.CreateAsync(It.IsAny<StudentCharge>())).ReturnsAsync(response);
+
+                _personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync("b371fba4-797d-4c2c-8adc-bedd6d9db730")).ReturnsAsync("00001");
+                _personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync("00001")).ReturnsAsync("b371fba4-797d-4c2c-8adc-bedd6d9db730");
+
+                var expected = _studentCharge2Dtos.FirstOrDefault(i => i.Id.Equals("54c677e7-24ad-4591-be3f-d2175b7b0710", StringComparison.OrdinalIgnoreCase));
+
+                Assert.IsNotNull(expected);
+                var actual = await _studentChargeService.CreateStudentChargesAsync(expected);
+                Assert.IsNotNull(actual);
+
+                Assert.AreEqual(expected.Id, actual.Id);
+                Assert.AreEqual(expected.AcademicPeriod.Id, actual.AcademicPeriod.Id);
+                Assert.AreEqual(expected.FundingDestination.Id, actual.FundingDestination.Id);
+                Assert.AreEqual(expected.FundingSource.Id, actual.FundingSource.Id);
+                Assert.AreEqual(expected.OverrideDescription, actual.OverrideDescription);
+                Assert.AreEqual(expected.ReportingDetail.OriginatedOn, actual.ReportingDetail.OriginatedOn);
+                Assert.AreEqual(expected.ReportingDetail.Usage, actual.ReportingDetail.Usage);
+                Assert.AreEqual(expected.ChargeableOn, actual.ChargeableOn);
+                Assert.AreEqual(expected.Comments[0], actual.Comments[0]);
+                Assert.AreEqual(expected.ChargedAmount.UnitCost, actual.ChargedAmount.UnitCost);
+                Assert.AreEqual(expected.Person.Id, actual.Person.Id);
+            }
             [TestMethod]
             [ExpectedException(typeof(PermissionsException))]
             public async Task StudentChargeService_CreateAsync_PermissionsException()
@@ -636,49 +816,30 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 Assert.IsNotNull(expected);
                 var actual = await _studentChargeService.CreateAsync(expected);
-                Assert.IsNotNull(actual);
-
-                Assert.AreEqual(expected.Id, actual.Id);
-                Assert.AreEqual(expected.AcademicPeriod.Id, actual.AcademicPeriod.Id);
-                Assert.AreEqual(expected.AccountReceivableType.Id, actual.AccountReceivableType.Id);
-                Assert.AreEqual(expected.AccountingCode.Id, actual.AccountingCode.Id);
-                Assert.AreEqual(expected.ChargeType, actual.ChargeType);
-                Assert.AreEqual(expected.ChargeableOn, actual.ChargeableOn);
-                Assert.AreEqual(expected.Comments[0], actual.Comments[0]);
-                Assert.AreEqual(expected.ChargedAmount.UnitCost, actual.ChargedAmount.UnitCost);
-                Assert.AreEqual(expected.Person.Id, actual.Person.Id);
             }
 
             [TestMethod]
             [ExpectedException(typeof(PermissionsException))]
             public async Task StudentChargeService_CreateAsync1_PermissionsException()
             {
-
-                var response = _studentChargeEntities.FirstOrDefault(x => x.Guid == "54c677e7-24ad-4591-be3f-d2175b7b0710");
-
-                _studentChargeRepositoryMock.Setup(i =>
-                    i.CreateAsync(It.IsAny<StudentCharge>())).ReturnsAsync(response);
-
-                _personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync("b371fba4-797d-4c2c-8adc-bedd6d9db730")).ReturnsAsync("00001");
-                _personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync("00001")).ReturnsAsync("b371fba4-797d-4c2c-8adc-bedd6d9db730");
-
+                
                 var expected = _studentCharge1Dtos.FirstOrDefault(i => i.Id.Equals("54c677e7-24ad-4591-be3f-d2175b7b0710", StringComparison.OrdinalIgnoreCase));
 
                 Assert.IsNotNull(expected);
                 var actual = await _studentChargeService.CreateAsync1(expected);
-                Assert.IsNotNull(actual);
+            }
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task StudentChargeService_CreateAsync2_PermissionsException()
+            {
 
-                Assert.AreEqual(expected.Id, actual.Id);
-                Assert.AreEqual(expected.AcademicPeriod.Id, actual.AcademicPeriod.Id);
-                Assert.AreEqual(expected.FundingDestination.Id, actual.FundingDestination.Id);
-                Assert.AreEqual(expected.FundingSource.Id, actual.FundingSource.Id);
-                Assert.AreEqual(expected.ChargeType, actual.ChargeType);
-                Assert.AreEqual(expected.ChargeableOn, actual.ChargeableOn);
-                Assert.AreEqual(expected.Comments[0], actual.Comments[0]);
-                Assert.AreEqual(expected.ChargedAmount.UnitCost, actual.ChargedAmount.UnitCost);
-                Assert.AreEqual(expected.Person.Id, actual.Person.Id);
+                var expected = _studentCharge2Dtos.FirstOrDefault(i => i.Id.Equals("54c677e7-24ad-4591-be3f-d2175b7b0710", StringComparison.OrdinalIgnoreCase));
+
+                Assert.IsNotNull(expected);
+                var actual = await _studentChargeService.CreateStudentChargesAsync(expected);
             }
 
+            
 
             [TestMethod]
             public async Task StudentChargeService_UpdateAsync()
@@ -731,6 +892,22 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task StudentChargeService_Create2Async_EmptyAcademicPeriodException()
+            {
+                ViewStudentChargeRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.CreateStudentCharges));
+                _roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { ViewStudentChargeRole });
+
+
+                _personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync("b371fba4-797d-4c2c-8adc-bedd6d9db730")).ReturnsAsync("00001");
+                _personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync("00001")).ReturnsAsync("b371fba4-797d-4c2c-8adc-bedd6d9db730");
+
+                var request = _studentCharge2Dtos.FirstOrDefault(i => i.Id.Equals("54c677e7-24ad-4591-be3f-d2175b7b0710", StringComparison.OrdinalIgnoreCase));
+                Assert.IsNotNull(request);
+                request.AcademicPeriod = null;
+                await _studentChargeService.CreateStudentChargesAsync(request);
+            }
+            [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
             public async Task StudentChargeService_CreateAsync_EmptyChargeAmountException()
             {
@@ -746,7 +923,21 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 request.ChargedAmount = null;
                 await _studentChargeService.CreateAsync(request);
             }
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task StudentChargeService_Create2Async_EmptyChargeAmountException()
+            {
+                ViewStudentChargeRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.CreateStudentCharges));
+                _roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { ViewStudentChargeRole });
 
+
+                _personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync("b371fba4-797d-4c2c-8adc-bedd6d9db730")).ReturnsAsync("00001");
+                _personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync("00001")).ReturnsAsync("b371fba4-797d-4c2c-8adc-bedd6d9db730");
+
+                var request = _studentCharge2Dtos.FirstOrDefault(i => i.Id.Equals("54c677e7-24ad-4591-be3f-d2175b7b0710", StringComparison.OrdinalIgnoreCase));
+                Assert.IsNotNull(request);
+                request.ChargedAmount = null;
+                await _studentChargeService.CreateStudentChargesAsync(request);
+            }
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
             public async Task StudentChargeService_CreateAsync_EmptyUnitCostException()
@@ -764,7 +955,23 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 request.ChargedAmount.UnitCost = null;
                 await _studentChargeService.CreateAsync(request);
             }
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task StudentChargeService_Create2Async_EmptyUnitCostException()
+            {
+                ViewStudentChargeRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.CreateStudentCharges));
+                _roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { ViewStudentChargeRole });
 
+
+                _personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync("b371fba4-797d-4c2c-8adc-bedd6d9db730")).ReturnsAsync("00001");
+                _personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync("00001")).ReturnsAsync("b371fba4-797d-4c2c-8adc-bedd6d9db730");
+
+                var request = _studentCharge2Dtos.FirstOrDefault(i => i.Id.Equals("54c677e7-24ad-4591-be3f-d2175b7b0710", StringComparison.OrdinalIgnoreCase));
+                Assert.IsNotNull(request);
+                request.ChargedAmount.Amount = null;
+                request.ChargedAmount.UnitCost = null;
+                await _studentChargeService.CreateStudentChargesAsync(request);
+            }
             [TestMethod]
             [ExpectedException(typeof(ArgumentException))]
             public async Task StudentChargeService_CreateAsync_EmptyChargeTypeException()
@@ -798,6 +1005,28 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 request.Person = null;
                 await _studentChargeService.CreateAsync(request);
             }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task StudentChargeService_Create2Async_EmptyPersonException()
+            {
+                ViewStudentChargeRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.CreateStudentCharges));
+                _roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { ViewStudentChargeRole });
+
+
+                _personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync("b371fba4-797d-4c2c-8adc-bedd6d9db730")).ReturnsAsync("00001");
+                _personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync("00001")).ReturnsAsync("b371fba4-797d-4c2c-8adc-bedd6d9db730");
+
+                var request = _studentCharge2Dtos.FirstOrDefault(i => i.Id.Equals("54c677e7-24ad-4591-be3f-d2175b7b0710", StringComparison.OrdinalIgnoreCase));
+                Assert.IsNotNull(request);
+                request.Person = null;
+                await _studentChargeService.CreateStudentChargesAsync(request);
+            }
         }
+
+
+
+
+
     }
 }

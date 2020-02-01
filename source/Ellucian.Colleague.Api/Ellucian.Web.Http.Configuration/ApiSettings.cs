@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -142,6 +142,11 @@ namespace Ellucian.Web.Http.Configuration
         public bool EnableConfigBackup { get; set; }
 
         /// <summary>
+        /// Max size, in bytes, a file attachment HTTP request can be.
+        /// </summary>
+        public long AttachRequestMaxSize { get; set; }
+
+        /// <summary>
         /// Default constructor for deserialization
         /// </summary>
         public ApiSettings()
@@ -162,6 +167,7 @@ namespace Ellucian.Web.Http.Configuration
             IncludeLinkSelfHeaders = false;
             ColleagueTimeZone = TimeZoneInfo.Local.Id; // default to API server's time zone.
             EnableConfigBackup = false;
+            AttachRequestMaxSize = 26214400;  // 25 MB
         }
 
         public ApiSettings(int id, string name, int version) : this(name)

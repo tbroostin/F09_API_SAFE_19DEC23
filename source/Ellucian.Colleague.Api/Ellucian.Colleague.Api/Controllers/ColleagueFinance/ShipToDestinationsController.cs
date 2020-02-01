@@ -1,4 +1,4 @@
-//Copyright 2017 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -104,6 +104,28 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
         }
+
+        /// <summary>
+        /// Return all ShipToCodes
+        /// </summary>
+        /// <returns>List of ShipToCodes <see cref="Dtos.ColleagueFinance.ShipToCode"/> objects representing matching ShipToCode</returns>
+        [HttpGet]
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.ColleagueFinance.ShipToCode>> GetShipToCodesAsync()
+        {
+            try
+            {
+                var dtos = await _shipToDestinationsService.GetShipToCodesAsync();
+                return dtos;
+            }
+            // Application exceptions will be caught below.
+            catch (Exception ex)
+            {
+                _logger.Error(ex, ex.Message);
+                throw CreateHttpResponseException("Unable to get Ship to Codes.", HttpStatusCode.BadRequest);
+            }
+        }
+
+
 
         /// <summary>
         /// Read (GET) a shipToDestinations using a GUID

@@ -52,7 +52,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <returns>List of BudgetPhases <see cref="Dtos.BudgetPhases"/> objects representing matching budgetPhases</returns>
         [HttpGet, EedmResponseFilter, FilteringFilter(IgnoreFiltering = true)]
         [ValidateQueryStringFilter()]
-        [QueryStringFilterFilter("criteria", typeof(Dtos.Filters.BudgetPhaseFilter))]
+        [QueryStringFilterFilter("criteria", typeof(Dtos.BudgetPhases))]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.BudgetPhases>> GetBudgetPhasesAsync(QueryStringFilter criteria)
         {
             string budgetCode = string.Empty;
@@ -67,14 +67,14 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
             try
             {
-                var criteriaObj = GetFilterObject<Dtos.Filters.BudgetPhaseFilter>(_logger, "criteria");
+                if (CheckForEmptyFilterParameters())
+                    return new List<Dtos.BudgetPhases>();
+
+                var criteriaObj = GetFilterObject<Dtos.BudgetPhases>(_logger, "criteria");
                 if (criteriaObj != null)
                 {
                     budgetCode = criteriaObj.BudgetCode != null ? criteriaObj.BudgetCode.Id : string.Empty;
-                }
-
-                if (CheckForEmptyFilterParameters())
-                    return new List<Dtos.BudgetPhases>();
+                }             
                 
                 var items = await _budgetPhasesService.GetBudgetPhasesAsync(budgetCode, bypassCache);
 

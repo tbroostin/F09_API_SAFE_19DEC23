@@ -79,10 +79,11 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// <param name="classificationCode">The employment classification associated with the position. </param>
         /// <param name="preference">The preference for a job </param>
         /// <param name="bypassCache"></param>
+        /// <param name="filterQualifiers"></param>
         /// <returns></returns>
         public async Task<Tuple<IEnumerable<InstitutionJobs>, int>> GetInstitutionJobsAsync(int offset, int limit, string personCode = "",
             string employerCode = "", string positionCode = "", string departmentCode = "", string convertedStartOn = "",
-            string convertedEndOn = "", string status = "", string classificationCode = "", string preference = "", bool bypassCache = false)
+            string convertedEndOn = "", string status = "", string classificationCode = "", string preference = "", bool bypassCache = false, Dictionary<string,string> filterQualifiers = null)
         {
             var perposIds = new List<string>();
             var selectionCriteria = new StringBuilder();
@@ -90,6 +91,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
             try
             {
+                var startOnOperation = filterQualifiers != null && filterQualifiers.ContainsKey("StartOn") ? filterQualifiers["StartOn"] : "EQ";
+                var endOnOperation = filterQualifiers != null && filterQualifiers.ContainsKey("EndOn") ? filterQualifiers["EndOn"] : "EQ";
 
                 //startOn - select any records in PERPOS using PERPOS.START.DATE
                 //endOn - select any records in PERPOS using PERPOS.END.DATE 
@@ -97,7 +100,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 {
                     if (!string.IsNullOrEmpty(convertedStartOn))
                     {
-                        selectionCriteria.Append("WITH PERPOS.START.DATE EQ '");
+                        selectionCriteria.Append(string.Format("WITH PERPOS.START.DATE {0} '", startOnOperation));
                         selectionCriteria.Append(convertedStartOn);
                         selectionCriteria.Append("'");
                     }
@@ -107,7 +110,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                         {
                             selectionCriteria.Append("AND ");
                         }
-                        selectionCriteria.Append("WITH PERPOS.END.DATE EQ '");
+                        selectionCriteria.Append(string.Format("WITH PERPOS.END.DATE {0} '", endOnOperation));
                         selectionCriteria.Append(convertedEndOn);
                         selectionCriteria.Append("'");
                         selectionCriteria.Append(" AND PERPOS.END.DATE NE ''");
@@ -200,7 +203,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                         //status (active) - select any records in PERPOS where the PERPOS.END.DATE is null or the PERPOS.END.DATE 
                         //is on or after the request date.
                         case "active":
-                            selectionCriteria.AppendFormat(" AND WITH PERPOS.START.DATE LE '{0}'", today);
+                            // selectionCriteria.AppendFormat(" AND WITH PERPOS.START.DATE LE '{0}'", today);
                             selectionCriteria.Append(" AND WITH PERPOS.END.DATE EQ ''");
                             selectionCriteria.AppendFormat(" OR PERPOS.END.DATE GT '{0}'", today);
                             break;
@@ -243,7 +246,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
                 var personIds = perposRecords.Select(e => e.PerposHrpId);
 
-                var criteria = string.Format("WITH PPWG.PERPOS.ID EQ ?");
+                var criteria = string.Format("WITH PPWG.PERPOS.ID EQ ? AND PPWG.TYPE NE 'M'");
                 //var perposwgKeys = await DataReader.SelectAsync("PERPOSWG", criteria, perposSubList);
                 var perposwgKeys = await DataReader.SelectAsync("PERPOSWG", criteria, perposSubList.Select(id => string.Format("\"{0}\"", id)).ToArray());
 
@@ -508,7 +511,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     var perpos = await DataReader.ReadRecordAsync<DataContracts.Perpos>("PERPOS", guid);
 
                     // select all the PERPOSWG ids with the HRP.ID equal to the input person id.
-                    var criteria = string.Format("WITH PPWG.PERPOS.ID EQ '{0}'", perpos.Recordkey);
+                    // excluding stipend records.
+                    var criteria = string.Format("WITH PPWG.PERPOS.ID EQ '{0}' AND PPWG.TYPE NE 'M'", perpos.Recordkey);
                     var perposwgKeys = await DataReader.SelectAsync("PERPOSWG", criteria);
 
 
@@ -526,7 +530,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
                     var personIds = perposwgRecords.Select(e => e.PpwgHrpId);
 
-                    // select all the PERPOSWG ids with the HRP.ID equal to the input person id.
+                    // select all the POSITION ids with the HRP.ID equal to the input person id.
                     criteria = string.Format("WITH POSITION.ID EQ '{0}'", perpos.PerposPositionId);
                     var positionKeys = await DataReader.SelectAsync("POSITION", criteria);
 

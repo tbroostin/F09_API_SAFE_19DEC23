@@ -1,6 +1,6 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+
 using Ellucian.Colleague.Data.Base.DataContracts;
-// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -18,13 +18,9 @@ using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
 using slf4net;
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.Linq;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Entities;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -35,6 +31,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         private IDictionary<string, CreditType> types;
         private const string _modelName = "Course";
         private const string _coursesCacheName = "AllCourses";
+        private bool addToErrorCollection = false;
+        private RepositoryException exception;
 
         // Sets the maximum number of records to bulk read at one time
         readonly int readSize;
@@ -93,7 +91,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         {
                             course = await GetNewCourseAsync(id);
                         }
-                        courses.Add(course);
+                        if (course != null)
+                        {
+                            courses.Add(course);
+                        }
+                        else
+                        {
+                            idsNotFound += " " + id;
+                        }
                     }
                     catch
                     {
@@ -174,7 +179,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         public async Task<IEnumerable<Course>> GetNonCacheAsync(string subject, string number, string academicLevel, string owningInstitutionUnit, string title, string instructionalMethods, string startOn, string endOn, string topic, string categories)
         {
             string criteria = BuildCriteria(subject, number, new List<string>() { academicLevel }, new List<string>() { owningInstitutionUnit },
-                new List<string>() { title }, new List<string>() { instructionalMethods } , startOn, endOn, topic, new List<string>() { categories }, null);
+                new List<string>() { title }, new List<string>() { instructionalMethods }, startOn, endOn, topic, new List<string>() { categories }, null);
 
             // Select from COURSES to get all the Ids
             var courseIds = await DataReader.SelectAsync("COURSES", criteria);
@@ -196,13 +201,13 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// </summary>
         /// <returns></returns>
         public async Task<Tuple<IEnumerable<Course>, int>> GetPagedCoursesAsync(int offset, int limit, string subject,
-            string number, List<string> academicLevel, List<string> owningInstitutionUnit, string title, List<string> instructionalMethods, string startOn, string endOn, string topic = "", string category = "")
+            string number, List<string> academicLevel, List<string> owningInstitutionUnit, string title, List<string> instructionalMethods, string startOn, string endOn, string topic = "", string category = "", bool addToCollection = false)
         {
             var titles = new List<string>();
             if (!string.IsNullOrEmpty(title)) titles.Add(title);
             var categories = new List<string>();
             if (!string.IsNullOrEmpty(category)) categories.Add(category);
-            return await GetPagedCoursesAsync(offset, limit, subject, number, academicLevel, owningInstitutionUnit, titles, instructionalMethods, startOn, endOn, topic, categories);
+            return await GetPagedCoursesAsync(offset, limit, subject, number, academicLevel, owningInstitutionUnit, titles, instructionalMethods, startOn, endOn, topic, categories, "", addToCollection);
         }
 
         /// <summary>
@@ -210,12 +215,48 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// </summary>
         /// <returns></returns>
         public async Task<Tuple<IEnumerable<Course>, int>> GetPagedCoursesAsync(int offset, int limit, string subject, string number, List<string> academicLevel,
-            List<string> owningInstitutionUnit, List<string> titles, List<string> instructionalMethods, string startOn, string endOn, string topic = "", List<string> categories = null, string activeOn = "")
+            List<string> owningInstitutionUnit, List<string> titles, List<string> instructionalMethods, string startOn, string endOn, string topic = "", List<string> categories = null, string activeOn = "", bool addToCollection = false)
         {
+            //flag determines if errors will be returned as part of a collection.
+            this.addToErrorCollection = addToCollection;
+
             string criteria = BuildCriteria(subject, number, academicLevel, owningInstitutionUnit, titles, instructionalMethods, startOn, endOn, topic, categories, activeOn);
 
             // Select from COURSES to get all the Ids
-            var courseIds = await DataReader.SelectAsync("COURSES", criteria);
+            //string[] courseIds = await DataReader.SelectAsync("COURSES", criteria);
+            string[] courseIds = new string[] { };
+
+            var coursesCacheKey = string.Concat("CoursesKey",
+                string.IsNullOrEmpty(subject) ? "" : "Subject" + subject,
+                string.IsNullOrEmpty(number) ? "" : "Number" + number,
+                academicLevel != null && academicLevel.Any() ? "AcadLevel" + string.Join("", academicLevel) : "",
+                owningInstitutionUnit != null && owningInstitutionUnit.Any() ? "OwnInst" + string.Join("", owningInstitutionUnit) : "",
+                titles != null && titles.Any() ? "Title" + string.Join("", titles) : "",
+                instructionalMethods != null && instructionalMethods.Any() ? "InstMethods" + string.Join("", instructionalMethods) : "",
+                string.IsNullOrEmpty(startOn) ? "" : "StartOn" + startOn,
+                string.IsNullOrEmpty(endOn) ? "" : "EndOn" + endOn,
+                string.IsNullOrEmpty(topic) ? "" : "Topic" + topic,
+                categories != null && categories.Any() ? "Categories" + string.Join("", categories) : "",
+                string.IsNullOrEmpty(activeOn) ? "" : "ActiveOn" + activeOn );
+
+
+            if (offset == 0 && ContainsKey(BuildFullCacheKey(coursesCacheKey)))
+            {
+                ClearCache(new List<string> { coursesCacheKey });
+            }
+            courseIds = await GetOrAddToCacheAsync<string[]>(coursesCacheKey,
+                async () =>
+                {
+                    courseIds = await DataReader.SelectAsync("COURSES", criteria);
+                    Array.Sort(courseIds);
+                    return courseIds;
+                });
+
+
+            if ((courseIds == null) || (!courseIds.Any()))
+            {
+                return new Tuple<IEnumerable<Course>, int>(new List<Course>(), 0);
+            }
 
             int totalCount = courseIds.Count();
 
@@ -223,9 +264,48 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             var subList = courseIds.Skip(offset).Take(limit).ToArray();
 
-            var coursesData = await DataReader.BulkReadRecordAsync<Courses>("COURSES", subList);
+            var coursesData = await DataReader.BulkReadRecordWithInvalidKeysAndRecordsAsync<DataContracts.Courses>("COURSES", subList);
 
-            var courseList = await BuildCoursesAsync(coursesData, await GetCourseRequirements(coursesData.ToList()));
+            if (coursesData.Equals(default(BulkReadOutput<DataContracts.Courses>)))
+            {
+                return new Tuple<IEnumerable<Course>, int>(new List<Course>(), totalCount);
+            }
+            if ((coursesData.InvalidKeys != null && coursesData.InvalidKeys.Any())
+                    || (coursesData.InvalidRecords != null && coursesData.InvalidRecords.Any()))
+            {
+                var repositoryException = new RepositoryException();
+
+                if (coursesData.InvalidKeys.Any())
+                {
+                    repositoryException.AddErrors(coursesData.InvalidKeys
+                        .Select(key => new RepositoryError("invalid.key",
+                        string.Format("Unable to locate the following key '{0}'.", key.ToString()))));
+                }
+                if (coursesData.InvalidRecords.Any())
+                {
+                    repositoryException.AddErrors(coursesData.InvalidRecords
+                       .Select(r => new RepositoryError("invalid.record",
+                       string.Format("Error: '{0}' ", r.Value))
+                       { SourceId = r.Key }));
+                }
+                throw repositoryException;
+            }
+
+            Dictionary<string, Course> courseList = null;
+            try
+            {
+                courseList = await BuildCoursesAsync(coursesData.BulkRecordsRead.ToList(), await GetCourseRequirements(coursesData.BulkRecordsRead.ToList()));
+            }
+            catch (Exception ex)
+            {
+                LogRepoError(ex.Message);
+            }
+
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
+
             return courseList.Any() ? new Tuple<IEnumerable<Course>, int>(courseList.Values, totalCount) : new Tuple<IEnumerable<Course>, int>(new List<Course>(), 0);
         }
 
@@ -383,7 +463,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
 
             return criteria;
-        }        
+        }
+
 
         /// <summary>
         /// Returns a single course
@@ -404,6 +485,91 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
 
             return await GetNewCourseAsync(courseId);
+        }
+
+
+        /// <summary>
+        /// Get the course record key from a GUID
+        /// </summary>
+        /// <param name="guid">The GUID</param>
+        /// <returns>Primary key</returns>
+        private async Task<string> GetCourseIdFromGuidAsync(string guid)
+        {
+            if (string.IsNullOrEmpty(guid))
+            {
+                throw new ArgumentNullException("guid");
+            }
+
+            var idDict = await DataReader.SelectAsync(new GuidLookup[] { new GuidLookup(guid) });
+            if (idDict == null || idDict.Count == 0)
+            {
+                throw new KeyNotFoundException("Course GUID " + guid + " not found.");
+            }
+
+            var foundEntry = idDict.FirstOrDefault();
+            if (foundEntry.Value == null)
+            {
+                throw new KeyNotFoundException("Course GUID " + guid + " lookup failed.");
+            }
+
+            if (foundEntry.Value.Entity != "COURSES")
+            {
+                var errorMessage = string.Format("GUID {0} has different entity, {1}, than expected, COURSES", guid, foundEntry.Value.Entity);
+                logger.Error(errorMessage);
+                var exception = new RepositoryException(errorMessage);
+                exception.AddError(new RepositoryError("GUID.Not.Found", errorMessage));
+                throw exception;
+            }
+
+            return foundEntry.Value.PrimaryKey;
+        }
+
+        /// <summary>
+        /// Returns a single course
+        /// </summary>
+        /// <param name="courseId">Course GUID</param>
+        /// <returns>Course domain object</returns>
+        public async Task<Course> GetCourseByGuid2Async(string guid, bool addToCollection = false)
+        {
+            this.addToErrorCollection = addToCollection;
+
+            if (string.IsNullOrEmpty(guid))
+            {
+                throw new ArgumentNullException("guid", "GUID must be specified.");
+            }
+
+            Course course = null;
+            try
+            {
+                string courseId = await GetCourseIdFromGuidAsync(guid);
+
+                if (string.IsNullOrEmpty(courseId))
+                {
+                    LogRepoError("No course was found for GUID '" + guid + "'");
+                    throw exception;
+                }
+
+                course = await GetNewCourseAsync(courseId);
+            }
+            catch (RepositoryException ex)
+            {
+                throw ex;
+            }
+            catch (KeyNotFoundException)
+            {
+                LogRepoError("No course was found for GUID '" + guid + "'");
+            }
+            catch (Exception ex)
+            {
+                LogRepoError(ex.Message);
+            }
+
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
+
+            return course;
         }
 
         /// <summary>
@@ -617,6 +783,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             char _VM = Convert.ToChar(DynamicArray.VM);
             var courses = new Dictionary<string, Course>();
+            Course course = null;
             // If no data passed in, return a null collection
             if (courseData != null)
             {
@@ -626,10 +793,15 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     {
                         // Get the list of course statuses and identify the most recent one as the current status
                         List<CourseApproval> courseApprovals = new List<CourseApproval>();
-                        if (crs.ApprovalStatusEntityAssociation != null && crs.ApprovalStatusEntityAssociation.Count > 0)
+                        if (crs.ApprovalStatusEntityAssociation != null && crs.ApprovalStatusEntityAssociation.Any())
                         {
                             foreach (var approval in crs.ApprovalStatusEntityAssociation)
                             {
+                                if (string.IsNullOrEmpty(approval.CrsStatusAssocMember))
+                                {                                   
+                                    logger.Info("Course Approvals exists for Course Id '" + crs.Recordkey + "' that do not have a status provided.");
+                                    continue;
+                                }
                                 try
                                 {
                                     var courseApproval = new CourseApproval(approval.CrsStatusAssocMember, approval.CrsStatusDateAssocMember.Value, approval.CrsApprovalAgencyIdsAssocMember, approval.CrsApprovalIdsAssocMember, approval.CrsApprovalDateAssocMember.Value);
@@ -638,8 +810,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 }
                                 catch (Exception ex)
                                 {
-                                    logger.Info("Exception occurred while processing Course Approvals for Course Id" + crs.Recordkey);
+                                    var msg = "Exception occurred while processing Course Approvals for Course Id";
+                                    logger.Info(msg + " " + crs.Recordkey);
                                     logger.Info(ex.Message);
+                                    LogRepoError(msg + ex.Message, crs.RecordGuid, crs.Recordkey);
                                 }
                             }
                         }
@@ -656,13 +830,18 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 }
                                 catch (Exception ex)
                                 {
-                                    logger.Info("Exception occurred while processing Offering Departments for Course Id" + crs.Recordkey);
+                                    var msg = "Exception occurred while processing Offering Departments for Course Id";
+                                    logger.Info(msg + " " + crs.Recordkey);
                                     logger.Info(ex.Message);
+                                    LogRepoError(msg, crs.RecordGuid, crs.Recordkey);
                                 }
                             }
                         }
 
-                        var course = new Course(crs.Recordkey,
+
+                        try
+                        {
+                            course = new Course(crs.Recordkey,
                                                 crs.CrsShortTitle,
                                                 crs.CrsTitle,
                                                 departments,
@@ -673,43 +852,55 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                                 crs.CrsMinCred,
                                                 crs.CrsCeus,
                                                 courseApprovals);
-                        course.VerifyGrades = !string.IsNullOrEmpty(crs.CrsOvrVerifyGrades) ? crs.CrsOvrVerifyGrades.Equals("Y", StringComparison.OrdinalIgnoreCase) ? true : false : default(bool?);
-                        if (crs.CrsDesc != null)
-                        {
-                            course.Description = crs.CrsDesc.Replace(_VM, ' ');
-                        }
-                        course.LocationCodes = crs.CrsLocations;
-                        course.TermSessionCycle = crs.CrsSessionCycle;
-                        course.TermYearlyCycle = crs.CrsYearlyCycle;
-                        course.TermsOffered = sessionCycles.Where(sc => sc.Recordkey == crs.CrsSessionCycle).Select(sc => sc.ScDesc).FirstOrDefault();
-                        course.YearsOffered = yearlyCycles.Where(yc => yc.Recordkey == crs.CrsYearlyCycle).Select(yc => yc.YcDesc).FirstOrDefault();
-                        course.StartDate = crs.CrsStartDate;
-                        course.EndDate = crs.CrsEndDate;
-                        course.Name = crs.CrsName;
-                        course.TopicCode = crs.CrsTopicCode;
-                        if (crs.CrsBillingCred != null)
-                        {
-                            course.BillingCredits = crs.CrsBillingCred;
-                        }
 
-                        //
-                        // Added fields for Student Success project (srm)
-                        //
-                        course.FederalCourseClassification = crs.CrsCip;
-                        course.LocalCourseClassifications = crs.CrsLocalGovtCodes;
-                        course.CourseTypeCodes = crs.CrsCourseTypes;
-                        course.LocalCreditType = crs.CrsCredType;
-                        course.Guid = crs.RecordGuid;
-                        course.MaximumCredits = crs.CrsMaxCred;
-                        course.VariableCreditIncrement = crs.CrsVarCredIncrement;
-                        course.GradeSchemeCode = crs.CrsGradeScheme;
-                        course.AllowAudit = courseParameters.CdAllowAuditFlag == "Y";
-                        course.AllowPassNoPass = courseParameters.CdAllowPassNopassFlag == "Y";
-                        course.AllowWaitlist = courseParameters.CdAllowWaitlistFlag == "Y";
-                        course.IsInstructorConsentRequired = courseParameters.CdFacultyConsentFlag == "Y";
-                        course.OnlyPassNoPass = courseParameters.CdOnlyPassNopassFlag == "Y";
-                        course.WaitlistRatingCode = courseParameters.CdWaitlistRating;
-                        course.ExternalSource = crs.CrsExternalSource;
+                            course.VerifyGrades = !string.IsNullOrEmpty(crs.CrsOvrVerifyGrades) ? crs.CrsOvrVerifyGrades.Equals("Y", StringComparison.OrdinalIgnoreCase) ? true : false : default(bool?);
+                            if (crs.CrsDesc != null)
+                            {
+                                course.Description = crs.CrsDesc.Replace(_VM, ' ');
+                            }
+                            course.LocationCodes = crs.CrsLocations;
+                            course.TermSessionCycle = crs.CrsSessionCycle;
+                            course.TermYearlyCycle = crs.CrsYearlyCycle;
+                            course.TermsOffered = sessionCycles.Where(sc => sc.Recordkey == crs.CrsSessionCycle).Select(sc => sc.ScDesc).FirstOrDefault();
+                            course.YearsOffered = yearlyCycles.Where(yc => yc.Recordkey == crs.CrsYearlyCycle).Select(yc => yc.YcDesc).FirstOrDefault();
+                            course.StartDate = crs.CrsStartDate;
+                            course.EndDate = crs.CrsEndDate;
+                            course.Name = crs.CrsName;
+                            course.TopicCode = crs.CrsTopicCode;
+
+                            if (crs.CrsBillingCred != null)
+                            {
+                                course.BillingCredits = crs.CrsBillingCred;
+                            }
+
+                            //
+                            // Added fields for Student Success project (srm)
+                            //
+                            course.FederalCourseClassification = crs.CrsCip;
+                            course.LocalCourseClassifications = crs.CrsLocalGovtCodes;
+                            course.CourseTypeCodes = crs.CrsCourseTypes;
+                            course.LocalCreditType = crs.CrsCredType;
+                            course.Guid = crs.RecordGuid;
+                            course.MaximumCredits = crs.CrsMaxCred;
+                            course.VariableCreditIncrement = crs.CrsVarCredIncrement;
+                            course.GradeSchemeCode = crs.CrsGradeScheme;
+                            course.AllowAudit = courseParameters.CdAllowAuditFlag == "Y";
+                            course.AllowPassNoPass = courseParameters.CdAllowPassNopassFlag == "Y";
+                            course.AllowWaitlist = courseParameters.CdAllowWaitlistFlag == "Y";
+                            course.IsInstructorConsentRequired = courseParameters.CdFacultyConsentFlag == "Y";
+                            course.OnlyPassNoPass = courseParameters.CdOnlyPassNopassFlag == "Y";
+                            course.WaitlistRatingCode = courseParameters.CdWaitlistRating;
+                            course.ExternalSource = crs.CrsExternalSource;
+                        }
+                        catch (Exception e)
+                        {
+                            var msg = string.Format("Unable to create course for record ID {0} with guid {1}.  Exception: {2}", crs.Recordkey, crs.RecordGuid, e.Message);
+                            logger.Error(msg);
+                            LogRepoError(msg, crs.RecordGuid, crs.Recordkey);
+                           
+                            // throw new RepositoryException(msg);
+                            // Removed because breaking self service.  Will revisit with new error standards in 1.25
+                        }
 
                         // v20 changes add Instructional method details object
                         if (crs.CourseContactEntityAssociation != null && crs.CourseContactEntityAssociation.Count > 0)
@@ -727,12 +918,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 }
                                 catch (Exception ex)
                                 {
-                                    logger.Info("Exception occurred while processing Instructinal Method codes for Course Id" + crs.Recordkey);
+                                    var msg = "Exception occurred while processing Instructional Method codes for Course Id";
+                                    logger.Info(msg + " " + crs.Recordkey);
                                     logger.Info(ex.Message);
+                                    LogRepoError(msg, crs.RecordGuid, crs.Recordkey);
                                 }
                             }
                         }
-                        
+
                         if (crs.CrsInstrMethods != null && crs.CrsInstrMethods.Any())
                         {
                             foreach (var instrMethod in crs.CrsInstrMethods)
@@ -743,8 +936,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 }
                                 catch (Exception ex)
                                 {
-                                    logger.Info("Exception occurred while processing Instructinal Method codes for Course Id" + crs.Recordkey);
+                                    var msg = "Exception occurred while processing Instructional Method codes for Course Id";
+                                    logger.Info(msg + " " + crs.Recordkey);
                                     logger.Info(ex.Message);
+                                    LogRepoError(msg, crs.RecordGuid, crs.Recordkey);
                                 }
                             }
                         }
@@ -759,8 +954,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 }
                                 catch (Exception ex)
                                 {
-                                    logger.Info("Exception occurred while processing Type values for Course Id" + crs.Recordkey);
+                                    var msg = "Exception occurred while processing Type values for Course Id";
+                                    logger.Info(msg + " " + crs.Recordkey);
                                     logger.Info(ex.Message);
+                                    LogRepoError(msg, crs.RecordGuid, crs.Recordkey);
                                 }
                             }
                         }
@@ -842,6 +1039,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                             // Could not find the requirement for this requisite. Discard and log error.
                                             var requisiteError = "Course requisite item points to non-existent requirement";
                                             LogDataError("Course requisite", crs.Recordkey, crs, null, requisiteError);
+                                            LogRepoError(requisiteError, crs.RecordGuid, crs.Recordkey);
                                         }
                                     }
                                 }
@@ -863,6 +1061,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             {
                                 logger.Info("Could not add equated course id for course " + crs.Recordkey);
                                 logger.Info(ex.Message);
+                                LogRepoError(ex.Message, crs.RecordGuid, crs.Recordkey);
                             }
                         }
                         courses[course.Id] = course;
@@ -898,33 +1097,62 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         if (crs.CourseLocationCyclesEntityAssociation != null)
                         {
                             foreach (var locCycle in crs.CourseLocationCyclesEntityAssociation)
+                            {
+                                // The data accessor may create a single association member with empty values. 
+                                if (!(string.IsNullOrEmpty(locCycle.CrsClcLocationAssocMember)))
                                 {
-                                    // The data accessor may create a single association member with empty values. 
-                                    if (!(string.IsNullOrEmpty(locCycle.CrsClcLocationAssocMember)))
+                                    try
                                     {
-                                        try
-                                        {
-                                            course.AddLocationCycleRestriction(new LocationCycleRestriction(locCycle.CrsClcLocationAssocMember, locCycle.CrsClcSessionCycleAssocMember, locCycle.CrsClcYearlyCycleAssocMember));
-                                        }
-                                        catch
-                                        {
-                                            // Don't do anything if an exception occurs, just move on. Indicates a null restriction or one with a null or empty location which is invalid.
-                                        }
-
+                                        course.AddLocationCycleRestriction(new LocationCycleRestriction(locCycle.CrsClcLocationAssocMember, locCycle.CrsClcSessionCycleAssocMember, locCycle.CrsClcYearlyCycleAssocMember));
                                     }
+                                    catch
+                                    {
+
+                                        // Don't do anything if an exception occurs, just move on. Indicates a null restriction or one with a null or empty location which is invalid.
+                                    }
+
                                 }
+                            }
                         }
+                    }
+                    catch (RepositoryException rex)
+                    {
+                        throw rex;
                     }
                     catch (Exception ex)
                     {
                         LogDataError("Course", crs.Recordkey, crs, ex);
-                        //var message = string.Concat(ex.Message, ", ID: ", crs.Recordkey);
-                        //throw new Exception(message);
+                        LogRepoError(ex.Message, crs.RecordGuid, crs.Recordkey);
                     }
                 }
             }
             return courses;
         }
+
+
+        /// <summary>
+        /// Checks addErrorToCollection boolean to determine of error message should be added to the repository exception
+        /// Note - the exception is not thrown, but is only added to the collection.
+        /// </summary>
+        /// <param name="dataName"></param>
+        /// <param name="id"></param>
+        /// <param name="dataObject"></param>
+        /// <param name="ex"></param>
+        private void LogRepoError(string errorMessage, string guid = "", string sourceId = "")
+        {
+            if (addToErrorCollection)
+            {
+                if (exception == null)
+                    exception = new RepositoryException();
+
+                exception.AddError(new RepositoryError("Bad.Data", errorMessage)
+                {
+                    SourceId = string.IsNullOrEmpty(sourceId) ? "" : sourceId,
+                    Id = string.IsNullOrEmpty(guid) ? "" : guid
+                });
+            }
+        }
+
 
         // Returns the SessionCycles data contract objects so that courses can be populated with the description
         private async Task<IEnumerable<SessionCycles>> GetSessionCycleDescriptionsAsync()
@@ -1412,10 +1640,15 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             if (response.ErrorMsg != null && response.ErrorMsg.Any())
             {
-                foreach (var error in response.ErrorMsg)
+                var errorMessage = string.Format("Error(s) occurred updating courses '{0}':", request.CrsGuid);
+                var exception = new RepositoryException(errorMessage);
+                response.ErrorMsg.ForEach(error => exception.AddError(new RepositoryError("Create.Update.Exception", error)
                 {
-                    throw new InvalidOperationException(error);
+                    Id = request.CrsGuid
                 }
+                ));
+                logger.Error(errorMessage);
+                throw exception;
             }
 
             // Create the new object to be returned

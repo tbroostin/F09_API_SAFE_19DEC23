@@ -1,10 +1,7 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
 
 namespace Ellucian.Colleague.Domain.Student.Entities
 {
@@ -65,7 +62,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         public decimal? PaymentAmount { get; set; }
 
         /// <summary>
-        /// Paymentd Currency (only USD and CAD are supported).
+        /// Payment Currency (only USD and CAD are supported).
         /// </summary>
         public string PaymentCurrency { get; set; }
 
@@ -79,15 +76,27 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// </summary>
         public bool ChargeFromElevate { get; set; }
 
-        ///// <summary>
-        ///// A indicator to see if the transaction was posted to the GL.
-        ///// </summary>
-        //public bool? GlPosted { get; set; }
+        /// <summary>
+        /// The usage associated with the charge (i.e. tax reporting only)
+        /// </summary>
+        public string Usage { get; set; }
+
+        /// <summary>
+        /// The date the charge orginated for sonsideration in tax report generation.
+        /// </summary>
+        public DateTime? OriginatedOn { get; set; }
+
+        /// <summary>
+        /// The override description associated with the charge.
+        /// </summary>
+        public string OverrideDescription { get; set; }
+
+
+        public string RecordKey { get; set; }
 
         /// <summary>
         /// Constructor initializes the StudentPayments transaction object.
         /// </summary>
-
         public StudentPayment(string personId, string paymentType, DateTime? paymentDate)
         {
             if (string.IsNullOrEmpty(personId))

@@ -220,11 +220,16 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         {
             try
             {
-                return ConvertPersonFilterEntityToDto((await _referenceDataRepository.GetPersonFiltersAsync(true)).Where(r => r.Guid == guid).First());
+                //return ConvertPersonFilterEntityToDto((await _referenceDataRepository.GetPersonFiltersAsync(true)).Where(r => r.Guid == guid).First());
+                return ConvertPersonFilterEntityToDto(await _referenceDataRepository.GetPersonFilterByGuidAsync(guid));
+            }
+            catch (KeyNotFoundException ex)
+            {
+                throw new KeyNotFoundException("Person filter not found for GUID " + guid, ex);
             }
             catch (InvalidOperationException ex)
             {
-                throw new InvalidOperationException("Person filter not found for GUID " + guid, ex);
+                throw new KeyNotFoundException("Person filter not found for GUID " + guid, ex);
             }
         }
 

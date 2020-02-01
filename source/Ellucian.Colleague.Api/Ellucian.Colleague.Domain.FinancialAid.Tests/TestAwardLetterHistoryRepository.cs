@@ -1,4 +1,4 @@
-﻿//Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -471,12 +471,8 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
             
         }
       
-        public async Task<AwardLetter2> GetAwardLetterByIdAsync(string studentId, string recordId, IEnumerable<StudentAwardYear> studentAwardYears, IEnumerable<Award> allAwards)
+        public async Task<AwardLetter2> GetAwardLetterByIdAsync(string recordId, IEnumerable<StudentAwardYear> studentAwardYears, IEnumerable<Award> allAwards)
         {
-            if (string.IsNullOrEmpty(studentId))
-            {
-                throw new ArgumentNullException("studentId");
-            }
             if (studentAwardYears == null || !studentAwardYears.Any())
             {
                 throw new ArgumentNullException("studentAwardYears");
@@ -486,7 +482,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                 throw new ArgumentNullException("recordId");
             }
 
-            return await Task.FromResult(BuildAwardLetter(studentId, recordId, studentAwardYears, allAwards));
+            return await Task.FromResult(BuildAwardLetter(recordId, studentAwardYears, allAwards));
         }
 
         private AwardLetter2 BuildAwardLetter(string studentId, StudentAwardYear studentAwardYear, IEnumerable<Award> allAwards)
@@ -513,11 +509,11 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
             return awardLetterEntity;
         }
 
-        private AwardLetter2 BuildAwardLetter(string studentId, string recordId, IEnumerable<StudentAwardYear> awardYears, IEnumerable<Award> allAwards)
+        private AwardLetter2 BuildAwardLetter(string recordId, IEnumerable<StudentAwardYear> awardYears, IEnumerable<Award> allAwards)
         {
             var awardLetterHistoryRecord = awardLetterHistoryData.FirstOrDefault(alhr => alhr.Id == recordId);
 
-            var awardLetterEntity = new AwardLetter2(studentId, awardYears.FirstOrDefault(y => y.Code == awardLetterHistoryRecord.AwardYear));
+            var awardLetterEntity = new AwardLetter2(awardLetterHistoryRecord.StudentId, awardYears.FirstOrDefault(y => y.Code == awardLetterHistoryRecord.AwardYear));
 
             awardLetterEntity.AcceptedDate = awardLetterHistoryRecord.AcceptedDate;
             awardLetterEntity.AwardLetterParameterId = awardLetterHistoryRecord.AwardLetterParametersId;
@@ -674,12 +670,8 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
             return await Task.FromResult(BuildAwardLetter2(studentId, studentAwardYear, allAwards));
         }
 
-        public async Task<AwardLetter3> GetAwardLetterById2Async(string studentId, string recordId, IEnumerable<StudentAwardYear> studentAwardYears, IEnumerable<Award> allAwards)
+        public async Task<AwardLetter3> GetAwardLetterById2Async(string recordId, IEnumerable<StudentAwardYear> studentAwardYears, IEnumerable<Award> allAwards)
         {
-            if (string.IsNullOrEmpty(studentId))
-            {
-                throw new ArgumentNullException("studentId");
-            }
             if (studentAwardYears == null || !studentAwardYears.Any())
             {
                 throw new ArgumentNullException("studentAwardYears");
@@ -689,7 +681,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                 throw new ArgumentNullException("recordId");
             }
 
-            return await Task.FromResult(BuildAwardLetter2(studentId, recordId, studentAwardYears, allAwards));
+            return await Task.FromResult(BuildAwardLetter2(recordId, studentAwardYears, allAwards));
         }
 
         public async Task<AwardLetter3> UpdateAwardLetter2Async(string studentId, AwardLetter3 studentAwardLetter, StudentAwardYear studentAwardYear, IEnumerable<Award> allAwards)
@@ -738,11 +730,11 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
             return awardLetterEntity;
         }
 
-        private AwardLetter3 BuildAwardLetter2(string studentId, string recordId, IEnumerable<StudentAwardYear> awardYears, IEnumerable<Award> allAwards)
+        private AwardLetter3 BuildAwardLetter2(string recordId, IEnumerable<StudentAwardYear> awardYears, IEnumerable<Award> allAwards)
         {
             var awardLetterHistoryRecord = awardLetterHistoryData.FirstOrDefault(alhr => alhr.Id == recordId);
 
-            var awardLetterEntity = new AwardLetter3(studentId, awardYears.FirstOrDefault(y => y.Code == awardLetterHistoryRecord.AwardYear));
+            var awardLetterEntity = new AwardLetter3(awardLetterHistoryRecord.StudentId, awardYears.FirstOrDefault(y => y.Code == awardLetterHistoryRecord.AwardYear));
 
             awardLetterEntity.AcceptedDate = awardLetterHistoryRecord.AcceptedDate;
             awardLetterEntity.AwardLetterParameterId = awardLetterHistoryRecord.AwardLetterParametersId;

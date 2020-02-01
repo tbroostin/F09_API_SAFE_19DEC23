@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -118,6 +118,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
                         // Add the privacy codes to the staff record
                         staff.PrivacyCodes = staffDataContact.StaffPrivacyCodesAccess;
+                        // Add the staff initials to the staff record
+                        staff.StaffInitials = staffDataContact.StaffInitials;
 
                         staffEntities.Add(staff);
                     }

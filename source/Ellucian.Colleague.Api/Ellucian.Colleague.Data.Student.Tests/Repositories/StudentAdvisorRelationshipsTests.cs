@@ -1,25 +1,24 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+
+using Ellucian.Colleague.Data.Base.DataContracts;
+using Ellucian.Colleague.Data.Base.Tests.Repositories;
+using Ellucian.Colleague.Data.Student.DataContracts;
+using Ellucian.Colleague.Data.Student.Repositories;
+using Ellucian.Colleague.Domain.Base.Transactions;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Student.Entities;
-using Ellucian.Colleague.Domain.Student.Repositories;
+using Ellucian.Data.Colleague;
+using Ellucian.Web.Cache;
+using Ellucian.Web.Http.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
-using Ellucian.Colleague.Domain.Base.Repositories;
-using Ellucian.Web.Security;
-using Ellucian.Colleague.Domain.Repositories;
-using Ellucian.Web.Cache;
-using Ellucian.Data.Colleague;
-using Ellucian.Colleague.Data.Student.Repositories;
-using Ellucian.Colleague.Data.Base.Tests.Repositories;
-using Ellucian.Colleague.Data.Student.DataContracts;
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using Ellucian.Web.Http.Configuration;
-using Ellucian.Colleague.Domain.Exceptions;
-using Ellucian.Colleague.Data.Base.DataContracts;
+using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {
@@ -37,6 +36,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         private string[] studentAdvismentIds = { "1", "2", "3" };
         private Collection<StudentAdvisement> studentAdvisementDataContractList;
         private Collection<StudentAdvisement> studentAdvisementDataContractListofOne;
+        string criteria = "WITH STAD.STUDENT NE '' AND WITH STAD.FACULTY NE '' AND STAD.START.DATE NE ''";
+
 
         [TestInitialize]
         public void Initialize()
@@ -57,34 +58,71 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             studentAdvisorRelationshipsCollection = new List<StudentAdvisorRelationship>()
                 {
                     new StudentAdvisorRelationship() {
-                        id = "1",
-                        guid = "3632ece0-8b9e-495f-a697-b5c9e053aad5",
-                        advisor = "ad1",
-                        advisorType = "Type1",
-                        startOn = new DateTime(2001, 10,15),
-                        program = "ProgCode1",
-                        student = "stu1"
+                        Id = "1",
+                        Guid = "3632ece0-8b9e-495f-a697-b5c9e053aad5",
+                        Advisor = "ad1",
+                        AdvisorType = "Type1",
+                        StartOn = new DateTime(2001, 10,15),
+                        Program = "ProgCode1",
+                        Student = "stu1"
                     },
                     new StudentAdvisorRelationship() {
-                        id = "2",
-                        guid = "176d35fb-5f7a-4c06-b3ae-65a7662c8b43",
-                        advisor = "ad2",
-                        startOn = new DateTime(2001, 09,01),
-                        endOn = new DateTime(2004, 05,15),
-                        student = "stu2"
+                        Id = "2",
+                        Guid = "176d35fb-5f7a-4c06-b3ae-65a7662c8b43",
+                        Advisor = "ad2",
+                        StartOn = new DateTime(2001, 09,01),
+                        EndOn = new DateTime(2004, 05,15),
+                        Student = "stu2"
                     },
                     new StudentAdvisorRelationship() {
-                        id = "3",
-                        guid = "635a3ad5-59ab-47ca-af87-8538c2ad727f",
-                        advisor = "ad3",
-                        advisorType = "Type1",
-                        startOn = new DateTime(2009, 07,17),
-                        program = "ProgCode1",
-                        student = "stu3"
+                        Id = "3",
+                        Guid = "635a3ad5-59ab-47ca-af87-8538c2ad727f",
+                        Advisor = "ad3",
+                        AdvisorType = "Type1",
+                        StartOn = new DateTime(2009, 07,17),
+                        Program = "ProgCode1",
+                        Student = "stu3"
                     },
                 };
+            dataAccessorMock.Setup(repo => repo.SelectAsync("STUDENT.ADVISEMENT", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(new string[] { "1", "2", "3" });
+            GetCacheApiKeysRequest request = new GetCacheApiKeysRequest() 
+            {
+                Criteria = criteria,
 
-            
+            };
+            Mock<IColleagueTransactionInvoker> mockManager = new Mock<IColleagueTransactionInvoker>();
+
+            transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(mockManager.Object);
+
+            GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+            {
+                Offset = 0,
+                Limit = 2,
+                CacheName = "AllStudentAdvisors:",
+                Entity = "STUDENT.ADVISEMENT",
+                Sublist = new List<string>() { "1", "2", "3" },
+                TotalCount = 7,
+                KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    },
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 7625,
+                        KeyCacheMin = 5906,
+                        KeyCachePart = "001",
+                        KeyCacheSize = 1720
+                    }
+                }
+            };
+            mockManager.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                .ReturnsAsync(resp);
+
             studentAdvisementDataContractList = new Collection<StudentAdvisement>();            
             studentAdvisementDataContractListofOne = new Collection<StudentAdvisement>();
                         
@@ -92,25 +130,25 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 var sa = new StudentAdvisement()
                 {
-                    RecordGuid = sar.guid,
-                    Recordkey = sar.id,
-                    StadFaculty = sar.advisor,
-                    StadStudent = sar.student,
-                    StadType = sar.advisorType,
-                    StadAcadProgram = sar.program,
-                    StadEndDate = sar.endOn,
-                    StadStartDate = sar.startOn
+                    RecordGuid = sar.Guid,
+                    Recordkey = sar.Id,
+                    StadFaculty = sar.Advisor,
+                    StadStudent = sar.Student,
+                    StadType = sar.AdvisorType,
+                    StadAcadProgram = sar.Program,
+                    StadEndDate = sar.EndOn,
+                    StadStartDate = sar.StartOn
                 };
                 studentAdvisementDataContractList.Add(sa);
-                if (sar.id == "1")
+                if (sar.Id == "1")
                 {
                     studentAdvisementDataContractListofOne.Add(sa);
                 }
 
-                PersonSt personSt = new PersonSt() { Recordkey = sar.student, PstAdvisement = new List<string>() { sar.id } };
-                dataAccessorMock.Setup(x => x.ReadRecordAsync<PersonSt>(sar.student, true)).ReturnsAsync(personSt);
-                DataContracts.Faculty faculty = new DataContracts.Faculty() { Recordkey = sar.advisor, FacAdvisees = new List<string>() { sar.id } };
-                dataAccessorMock.Setup(x => x.ReadRecordAsync<DataContracts.Faculty> (sar.advisor, true)).ReturnsAsync(faculty);
+                PersonSt personSt = new PersonSt() { Recordkey = sar.Student, PstAdvisement = new List<string>() { sar.Id } };
+                dataAccessorMock.Setup(x => x.ReadRecordAsync<PersonSt>(sar.Student, true)).ReturnsAsync(personSt);
+                DataContracts.Faculty faculty = new DataContracts.Faculty() { Recordkey = sar.Advisor, FacAdvisees = new List<string>() { sar.Id }, FacAdviseFlag = "Y" };
+                dataAccessorMock.Setup(x => x.ReadRecordAsync<DataContracts.Faculty> (sar.Advisor, true)).ReturnsAsync(faculty);
             }
 
             
@@ -144,40 +182,49 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         }
 
         [TestMethod]
+        [ExpectedException(typeof(RepositoryException))]
+        public async Task StudentAdvisorRelationshipsRepo_GetStudentAdvisorRelationshipsAsync_RepositoryException()
+        {
+            var results = await studentAdvisorRelationshipsRepository.GetStudentAdvisorRelationshipsAsync(0, 100, true);
+        }
+
+        [TestMethod]
         public async Task StudentAdvisorRelationshipsRepo_GetStudentAdvisorRelationshipsAsync()
         {
+            dataAccessorMock.Setup(x => x.BulkReadRecordAsync<StudentAdvisement>("STUDENT.ADVISEMENT", It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(studentAdvisementDataContractList);
 
             var results = await studentAdvisorRelationshipsRepository.GetStudentAdvisorRelationshipsAsync(0, 100, true);
 
             Assert.IsNotNull(results);
-            Assert.AreEqual(3, results.Item2);
+            Assert.AreEqual(7, results.Item2);
             Assert.AreEqual(3, results.Item1.Count());
 
-            foreach(var actual in results.Item1)
+            foreach (var actual in results.Item1)
             {
-                var expected = studentAdvisorRelationshipsCollection.FirstOrDefault(x => x.id == actual.id);
+                var expected = studentAdvisorRelationshipsCollection.FirstOrDefault(x => x.Id == actual.Id);
 
-                Assert.AreEqual(expected.id, actual.id);
-                Assert.AreEqual(expected.guid, actual.guid);
-                Assert.AreEqual(expected.advisor, actual.advisor);
-                Assert.AreEqual(expected.student, actual.student);
-                Assert.AreEqual(expected.advisorType, actual.advisorType);
-                Assert.AreEqual(expected.program, actual.program);
-                Assert.AreEqual(expected.startOn, actual.startOn);
-                Assert.AreEqual(expected.endOn, actual.endOn);
+                Assert.AreEqual(expected.Id, actual.Id);
+                Assert.AreEqual(expected.Guid, actual.Guid);
+                Assert.AreEqual(expected.Advisor, actual.Advisor);
+                Assert.AreEqual(expected.Student, actual.Student);
+                Assert.AreEqual(expected.AdvisorType, actual.AdvisorType);
+                Assert.AreEqual(expected.Program, actual.Program);
+                Assert.AreEqual(expected.StartOn, actual.StartOn);
+                Assert.AreEqual(expected.EndOn, actual.EndOn);
             }
         }
 
         [TestMethod]
         public async Task StudentAdvisorRelationshipsRepo_GetStudentAdvisorRelationshipsAsync_filters()
         {
+            dataAccessorMock.Setup(x => x.BulkReadRecordAsync<StudentAdvisement>("STUDENT.ADVISEMENT", It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(studentAdvisementDataContractList);
 
             var results = await studentAdvisorRelationshipsRepository.GetStudentAdvisorRelationshipsAsync(0, 100, true,
                 "stu1","ad1", "Type1");
 
             Assert.IsNotNull(results);
-            Assert.AreEqual(1, results.Item2);
-            Assert.AreEqual(1, results.Item1.Count());
+            Assert.AreEqual(7, results.Item2);
+            Assert.AreEqual(3, results.Item1.Count());
 
         }
 
@@ -204,21 +251,21 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
             var actual = await studentAdvisorRelationshipsRepository.GetStudentAdvisorRelationshipsByGuidAsync("1");
             
-            var expected = studentAdvisorRelationshipsCollection.FirstOrDefault(x => x.id == actual.id);
+            var expected = studentAdvisorRelationshipsCollection.FirstOrDefault(x => x.Id == actual.Id);
 
-            Assert.AreEqual(expected.id, actual.id);
-            Assert.AreEqual(expected.guid, actual.guid);
-            Assert.AreEqual(expected.advisor, actual.advisor);
-            Assert.AreEqual(expected.student, actual.student);
-            Assert.AreEqual(expected.advisorType, actual.advisorType);
-            Assert.AreEqual(expected.program, actual.program);
-            Assert.AreEqual(expected.startOn, actual.startOn);
-            Assert.AreEqual(expected.endOn, actual.endOn);
+            Assert.AreEqual(expected.Id, actual.Id);
+            Assert.AreEqual(expected.Guid, actual.Guid);
+            Assert.AreEqual(expected.Advisor, actual.Advisor);
+            Assert.AreEqual(expected.Student, actual.Student);
+            Assert.AreEqual(expected.AdvisorType, actual.AdvisorType);
+            Assert.AreEqual(expected.Program, actual.Program);
+            Assert.AreEqual(expected.StartOn, actual.StartOn);
+            Assert.AreEqual(expected.EndOn, actual.EndOn);
 
         }
 
         [TestMethod]
-        [ExpectedException(typeof(KeyNotFoundException))]
+        [ExpectedException(typeof(RepositoryException))]
         public async Task StudentAdvisorRelationshipsRepo_GetStudentAdvisorRelationshipsAsync_NotFound()
         {
             string[] studentAdvismentIds = {  };
@@ -228,7 +275,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             dataAccessorMock.Setup(x => x.BulkReadRecordAsync<StudentAdvisement>("STUDENT.ADVISEMENT", studentAdvismentIds, true)).ReturnsAsync(studentAdvisementDataContractList);
 
             var results = await studentAdvisorRelationshipsRepository.GetStudentAdvisorRelationshipsAsync(0, 100, true);
-            
+            Assert.IsNotNull(results);
         }
 
         [TestMethod]

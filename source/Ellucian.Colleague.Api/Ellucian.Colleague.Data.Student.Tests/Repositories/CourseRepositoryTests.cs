@@ -19,6 +19,7 @@ using Ellucian.Web.Cache;
 using System.Threading.Tasks;
 using System.Threading;
 using Ellucian.Colleague.Data.Student.Transactions;
+using Ellucian.Colleague.Domain.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {
@@ -403,6 +404,19 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             Assert.IsTrue(!string.IsNullOrEmpty(course.LocalCreditType));
             Assert.AreEqual(checkCourse.LocalCreditType, course.LocalCreditType);
         }
+
+
+        [TestMethod]
+        public async Task CourseRepository_Get_CourseApprovalWithNoStatus()
+        {
+            string courseId = "186";
+            Course course = await courseRepo.GetAsync(courseId);
+            Assert.IsNotNull(course);
+            // a course approval with an invalid status will only log the error, but will still return
+            Assert.AreEqual(0, course.CourseApprovals.Count());
+        }
+
+
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
@@ -834,6 +848,147 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             Assert.AreEqual(2, courses.Count());
         }
 
+        #region CourseContstructorExceptionTests
+        // Removed constructor throw for now, was breaking self service.  Will
+        // revisit with 1.25 error standards.
+
+        // Test to prove the constructor throw is gone:
+
+        [TestMethod]
+        public async Task CourseRepository_GetCoursesWithBadCourseAsync_Success()
+        {
+            var courses = await courseRepo.GetAsync();
+            var course99 = courses.FirstOrDefault(c => c.Id == "7439");
+            var course100 = courses.FirstOrDefault(c => c.Id == "7440");
+            Assert.IsNotNull(course99);
+            Assert.IsNull(course100);
+        }
+
+
+        //[TestMethod]
+        //[ExpectedException(typeof(RepositoryException))]
+        //public async Task CourseRepository_Get_Bad_date()
+        //{
+        //    var expected = coursesResponseData.First(crd => crd.Recordkey == "46");
+        //    expected.CrsStartDate = DateTime.Now.AddDays(1);
+        //    expected.CrsEndDate = DateTime.Now.AddDays(-1);
+        //    dataAccessorMock.Setup<Task<Courses>>(acc => acc.ReadRecordAsync<Courses>("COURSES", It.IsAny<string>(), true)).Returns(Task.FromResult(expected));
+        //    var courses = await courseRepo.GetCoursesByIdAsync(new List<string>() { "46" });
+        //}
+        //[TestMethod]
+        //[ExpectedException(typeof(RepositoryException))]
+        //public async Task CourseRepository_Get_Bad_ShortTitle()
+        //{
+        //    var expected = coursesResponseData.First(crd => crd.Recordkey == "46");
+        //    expected.CrsShortTitle = "";
+        //    dataAccessorMock.Setup<Task<Courses>>(acc => acc.ReadRecordAsync<Courses>("COURSES", It.IsAny<string>(), true)).Returns(Task.FromResult(expected));
+        //    var courses = await courseRepo.GetCoursesByIdAsync(new List<string>() { "46" });
+        //}
+        //[TestMethod]
+        //[ExpectedException(typeof(RepositoryException))]
+        //public async Task CourseRepository_Get_Bad_Departments()
+        //{
+        //    var expected = coursesResponseData.First(crd => crd.Recordkey == "46");
+        //    expected.CourseDeptsEntityAssociation = null;
+        //    dataAccessorMock.Setup<Task<Courses>>(acc => acc.ReadRecordAsync<Courses>("COURSES", It.IsAny<string>(), true)).Returns(Task.FromResult(expected));
+        //    var courses = await courseRepo.GetCoursesByIdAsync(new List<string>() { "46" });
+        //}
+        //[TestMethod]
+        //[ExpectedException(typeof(RepositoryException))]
+        //public async Task CourseRepository_Get_Bad_Subject()
+        //{
+        //    var expected = coursesResponseData.First(crd => crd.Recordkey == "46");
+        //    expected.CrsSubject = null;
+        //    dataAccessorMock.Setup<Task<Courses>>(acc => acc.ReadRecordAsync<Courses>("COURSES", It.IsAny<string>(), true)).Returns(Task.FromResult(expected));
+        //    var courses = await courseRepo.GetCoursesByIdAsync(new List<string>() { "46" });
+        //}
+        //[TestMethod]
+        //[ExpectedException(typeof(RepositoryException))]
+        //public async Task CourseRepository_Get_Bad_Number()
+        //{
+        //    var expected = coursesResponseData.First(crd => crd.Recordkey == "46");
+        //    expected.CrsNo = "";
+        //    dataAccessorMock.Setup<Task<Courses>>(acc => acc.ReadRecordAsync<Courses>("COURSES", It.IsAny<string>(), true)).Returns(Task.FromResult(expected));
+        //    var courses = await courseRepo.GetCoursesByIdAsync(new List<string>() { "46" });
+        //}
+        //[TestMethod]
+        //[ExpectedException(typeof(RepositoryException))]
+        //public async Task CourseRepository_Get_Bad_AcadLevelCode()
+        //{
+        //    var expected = coursesResponseData.First(crd => crd.Recordkey == "46");
+        //    expected.CrsAcadLevel = "";
+        //    dataAccessorMock.Setup<Task<Courses>>(acc => acc.ReadRecordAsync<Courses>("COURSES", It.IsAny<string>(), true)).Returns(Task.FromResult(expected));
+        //    var courses = await courseRepo.GetCoursesByIdAsync(new List<string>() { "46" });
+        //}
+        //[TestMethod]
+        //[ExpectedException(typeof(RepositoryException))]
+        //public async Task CourseRepository_Get_Bad_LevelCodes()
+        //{
+        //    var expected = coursesResponseData.First(crd => crd.Recordkey == "46");
+        //    expected.CrsLevels = null;
+        //    dataAccessorMock.Setup<Task<Courses>>(acc => acc.ReadRecordAsync<Courses>("COURSES", It.IsAny<string>(), true)).Returns(Task.FromResult(expected));
+        //    var courses = await courseRepo.GetCoursesByIdAsync(new List<string>() { "46" });
+        //}
+        //[TestMethod]
+        //[ExpectedException(typeof(RepositoryException))]
+        //public async Task CourseRepository_Get_Missing_Min_Cred_And_CEU()
+        //{
+        //    var expected = coursesResponseData.First(crd => crd.Recordkey == "46");
+        //    expected.CrsMinCred = null;
+        //    expected.CrsCeus = null;
+        //    dataAccessorMock.Setup<Task<Courses>>(acc => acc.ReadRecordAsync<Courses>("COURSES", It.IsAny<string>(), true)).Returns(Task.FromResult(expected));
+        //    var courses = await courseRepo.GetCoursesByIdAsync(new List<string>() { "46" });
+        //}
+        //[TestMethod]
+        //[ExpectedException(typeof(RepositoryException))]
+        //public async Task CourseRepository_Get_Bad_MinCred()
+        //{
+        //    var expected = coursesResponseData.First(crd => crd.Recordkey == "46");
+        //    expected.CrsMinCred = -1;
+        //    dataAccessorMock.Setup<Task<Courses>>(acc => acc.ReadRecordAsync<Courses>("COURSES", It.IsAny<string>(), true)).Returns(Task.FromResult(expected));
+        //    var courses = await courseRepo.GetCoursesByIdAsync(new List<string>() { "46" });
+        //}
+        //[TestMethod]
+        //[ExpectedException(typeof(RepositoryException))]
+        //public async Task CourseRepository_Get_Bad_CEU()
+        //{
+        //    var expected = coursesResponseData.First(crd => crd.Recordkey == "46");
+        //    expected.CrsCeus = -1;
+        //    dataAccessorMock.Setup<Task<Courses>>(acc => acc.ReadRecordAsync<Courses>("COURSES", It.IsAny<string>(), true)).Returns(Task.FromResult(expected));
+        //    var courses = await courseRepo.GetCoursesByIdAsync(new List<string>() { "46" });
+        //}
+        //[TestMethod]
+        //[ExpectedException(typeof(RepositoryException))]
+        //public async Task CourseRepository_Get_Bad_Max_credits()
+        //{
+        //    var expected = coursesResponseData.First(crd => crd.Recordkey == "46");
+        //    expected.CrsMaxCred = 1;
+        //    expected.CrsMinCred = 2;
+        //    dataAccessorMock.Setup<Task<Courses>>(acc => acc.ReadRecordAsync<Courses>("COURSES", It.IsAny<string>(), true)).Returns(Task.FromResult(expected));
+        //    var courses = await courseRepo.GetCoursesByIdAsync(new List<string>() { "46" });
+        //}
+        //[TestMethod]
+        //[ExpectedException(typeof(RepositoryException))]
+        //public async Task CourseRepository_Get_Null_subject()
+        //{
+        //    var expected = coursesResponseData.First(crd => crd.Recordkey == "46");
+        //    expected.CrsSubject = "";
+        //    dataAccessorMock.Setup<Task<Courses>>(acc => acc.ReadRecordAsync<Courses>("COURSES", It.IsAny<string>(), true)).Returns(Task.FromResult(expected));
+        //    var courses = await courseRepo.GetCoursesByIdAsync(new List<string>() { "46" });
+        //}
+
+        //// The way the controller is coded - there is no way the approval assn will be null when it gets
+        //// to the constructor.  
+        ////[TestMethod]
+        ////[ExpectedException(typeof(RepositoryException))]
+        ////public async Task CourseRepository_Get_Bad_Approvals()
+        ////{
+        ////    var expected = coursesResponseData.First(crd => crd.Recordkey == "46");
+        ////    expected.ApprovalStatusEntityAssociation = null;
+        ////    dataAccessorMock.Setup<Task<Courses>>(acc => acc.ReadRecordAsync<Courses>("COURSES", It.IsAny<string>(), true)).Returns(Task.FromResult(expected));
+        ////    var courses = await courseRepo.GetCoursesByIdAsync(new List<string>() { "46" });
+        ////}
+        #endregion
 
         private CourseRepository BuildValidCourseRepository()
         {
@@ -984,7 +1139,15 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 {
                     foreach (var ca in course.CourseApprovals)
                     {
-                        repoCrs.ApprovalStatusEntityAssociation.Add(new CoursesApprovalStatus(ca.StatusCode, ca.ApprovingPersonId, ca.ApprovingAgencyId, ca.Date, ca.StatusDate));
+                        switch (course.Id)
+                        {
+                            case "186":
+                                repoCrs.ApprovalStatusEntityAssociation.Add(new CoursesApprovalStatus() { CrsApprovalAgencyIdsAssocMember= ca.ApprovingPersonId });
+                                break;
+                            default:
+                                repoCrs.ApprovalStatusEntityAssociation.Add(new CoursesApprovalStatus(ca.StatusCode, ca.ApprovingPersonId, ca.ApprovingAgencyId, ca.Date, ca.StatusDate));
+                                break;
+                        }
                     }
                 }
 

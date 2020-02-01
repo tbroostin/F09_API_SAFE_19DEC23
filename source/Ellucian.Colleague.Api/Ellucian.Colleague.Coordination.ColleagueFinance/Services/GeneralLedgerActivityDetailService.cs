@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -83,7 +83,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
 
             // Obtain the GL account activity for this GL account for the fiscal year.
-            var glAccountDomain = await glActivityDetailRepository.QueryGlActivityDetailAsync(glAccount, fiscalYear, costCenterStructure, glClassConfiguration);
+            var glAccountDomain = await glActivityDetailRepository.QueryGlActivityDetailAsync(glAccount, fiscalYear, costCenterStructure, glClassConfiguration, glAccountStructure.MajorComponentStartPositions);
 
             // Convert the domain entity and its list of activity detail into DTOs.
             if (glAccountDomain != null)

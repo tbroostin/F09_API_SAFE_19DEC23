@@ -98,7 +98,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
             throw new NotImplementedException();
         }
 
-        public Task<Tuple<IEnumerable<Position>, int>> GetPositionsAsync(int offset, int limit, string campus = "", string status = "", string bargainingUnit = "",
+        public Task<Tuple<IEnumerable<Position>, int>> GetPositionsAsync(int offset, int limit, string code = "", string campus = "", string status = "", string bargainingUnit = "",
             List<string> reportsToPosition = null, string exemptionType = "", string compensationType = "", string startOn = "", string endOn = "", bool bypassCache = false)
         {
             throw new NotImplementedException();

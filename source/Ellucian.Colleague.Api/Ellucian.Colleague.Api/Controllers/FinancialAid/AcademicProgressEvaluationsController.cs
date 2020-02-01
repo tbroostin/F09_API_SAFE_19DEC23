@@ -1,4 +1,4 @@
-﻿/*Copyright 2015-2018 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2015-2019 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.FinancialAid.Services;
@@ -47,12 +47,12 @@ namespace Ellucian.Colleague.Api.Controllers.FinancialAid
         /// <summary>
         /// Get AcademicProgressEvaluation entities for the given student. 
         /// </summary>
+        /// <param name="studentId">Colleague PERSON id of the student for whom to get AcademicProgressEvaluations</param>
+        /// <returns>A list of AcademicProgressEvaluations</returns>
         /// <accessComments>
         /// Users may request their own data. Additionally, users who have VIEW.FINANCIAL.AID.INFORMATION permission 
         /// or proxy permissions can request other users' data
         /// </accessComments>
-        /// <param name="studentId">Colleague PERSON id of the student for whom to get AcademicProgressEvaluations</param>
-        /// <returns>A list of AcademicProgressEvaluations</returns>
         [Obsolete("Obsolete as of API 1.14. Use GetStudentAcademicProgressEvaluations2Async")]
         public async Task<IEnumerable<AcademicProgressEvaluation>> GetStudentAcademicProgressEvaluationsAsync(string studentId)
         {

@@ -1,6 +1,8 @@
-﻿// Copyright 2015-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
+using Ellucian.Colleague.Domain.Base.Services;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
 using Ellucian.Data.Colleague;
@@ -13,19 +15,25 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 {
     /// <summary>
-    /// This class implements the IRequisitionRepository interface
+    /// This class implements the ILedgerActivityRepository interface
     /// </summary>
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class LedgerActivityRepository : BaseColleagueRepository, ILedgerActivityRepository
-    {       
+    {
+        private const string AllLedgerActivitiesCache = "AllLedgerActivities";
+        private const int AllLedgerActivitiesCacheTimeout = 20; // Clear from cache every 20 minutes
+        private string institutionName = string.Empty;
+        private ApplValcodes sourceCodes = null;
+        private string hostCountry = null;
+        private Ellucian.Data.Colleague.DataContracts.IntlParams _internationalParameters = null;
+
         /// <summary>
-        /// The constructor to instantiate a requisition repository object
+        /// The constructor to instantiate a LedgerActivity repository object
         /// </summary>
         /// <param name="cacheProvider">Pass in an ICacheProvider object</param>
         /// <param name="transactionFactory">Pass in an IColleagueTransactionFactory object</param>
@@ -33,8 +41,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         public LedgerActivityRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger)
             : base(cacheProvider, transactionFactory, logger)
         {
-            
         }
+
+        #region public methods
 
         /// <summary>
         /// Gets general ledger activities.
@@ -55,55 +64,71 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
             string glaFyrFileName = string.Format("GLA.{0}", fiscalYear);
             string glpFyrFileName = string.Format("GLP.{0}", fiscalYear);
-            string[] glaFyrIds = null;
+
             Collection<GlaFyr> glaDataContracts = null;
             Collection<GlpFyr> glpDataContracts = null;
+            int totalCount = 0;
+
+            string glCriteria = string.Empty;
 
             List<GlaFyr> glaFyrFiltered = null;
 
-            if(!string.IsNullOrEmpty(reportingSegment))
+            if (!string.IsNullOrEmpty(reportingSegment))
             {
                 var repSegment = await BuildReportingSegment();
-                if(!repSegment.Equals(reportingSegment, StringComparison.OrdinalIgnoreCase))
+                if (!repSegment.Equals(reportingSegment, StringComparison.OrdinalIgnoreCase))
                 {
                     throw new KeyNotFoundException(string.Format("Reporting segment not found for {0}.", reportingSegment));
                 }
             }
 
-            string glaFyrKeysCacheKey = string.Concat("AllLedgerActivityGlaFyrKeys", fiscalYear, fiscalPeriod, fiscalPeriodYear, transactionDate, reportingSegment);
+            string ledgerActivitiesCacheKey = CacheSupport.BuildCacheKey(AllLedgerActivitiesCache, fiscalYear, fiscalPeriod, fiscalPeriodYear, transactionDate, reportingSegment);
 
-            if (offset == 0 && ContainsKey(BuildFullCacheKey(glaFyrKeysCacheKey)))
+            var keyCache = await CacheSupport.GetOrAddKeyCacheToCache(
+                  this,
+                  ContainsKey,
+                  GetOrAddToCacheAsync,
+                  AddOrUpdateCacheAsync,
+                  transactionInvoker,
+                  ledgerActivitiesCacheKey,
+                  glaFyrFileName,
+                  offset,
+                  limit,
+                  AllLedgerActivitiesCacheTimeout,
+
+                  async () =>
+                  {
+                      if (string.IsNullOrEmpty(fiscalPeriod) && string.IsNullOrEmpty(transactionDate))
+                          glCriteria = string.Empty;
+                      else if (!string.IsNullOrEmpty(fiscalPeriod) && string.IsNullOrEmpty(transactionDate))
+                      {
+                          var daysInMonth = DateTime.DaysInMonth(Convert.ToInt32(fiscalYear), Convert.ToInt32(fiscalPeriod));
+
+                          var startOn = await GetUnidataFormattedDate(new DateTime(Convert.ToInt32(fiscalPeriodYear), Convert.ToInt32(fiscalPeriod), 1).ToString());
+                          var endOn = await GetUnidataFormattedDate(new DateTime(Convert.ToInt32(fiscalPeriodYear), Convert.ToInt32(fiscalPeriod), daysInMonth).ToString());
+
+                          glCriteria = string.Format("WITH GLA.TR.DATE GE '{0}' AND WITH GLA.TR.DATE LE '{1}'", startOn, endOn);
+                      }
+                      else if (!string.IsNullOrEmpty(transactionDate))
+                          glCriteria = (string.Format("WITH GLA.TR.DATE EQ '{0}'", transactionDate));
+
+                      return new CacheSupport.KeyCacheRequirements()
+                      {
+                          criteria = glCriteria,
+                      };
+                  }    
+            );
+
+            if (keyCache == null || keyCache.Sublist == null || !keyCache.Sublist.Any())
             {
-                ClearCache(new List<string> { glaFyrKeysCacheKey });
+                return new Tuple<IEnumerable<GeneralLedgerActivity>, int>(new List<GeneralLedgerActivity>(), 0);
             }
-            glaFyrIds =  await GetOrAddToCacheAsync<string []>(glaFyrKeysCacheKey,
-                async () =>
-                {
-                    if (string.IsNullOrEmpty(fiscalPeriod) && string.IsNullOrEmpty(transactionDate))
-                    {
-                        glaFyrIds = await DataReader.SelectAsync(glaFyrFileName, string.Empty);
-                    }
-                    else if (!string.IsNullOrEmpty(fiscalPeriod) && string.IsNullOrEmpty(transactionDate))
-                    {
-                        var daysInMonth = DateTime.DaysInMonth(Convert.ToInt32(fiscalYear), Convert.ToInt32(fiscalPeriod));
 
-                        var startOn = await GetUnidataFormattedDate(new DateTime(Convert.ToInt32(fiscalPeriodYear), Convert.ToInt32(fiscalPeriod), 1).ToString());
-                        var endOn = await GetUnidataFormattedDate(new DateTime(Convert.ToInt32(fiscalPeriodYear), Convert.ToInt32(fiscalPeriod), daysInMonth).ToString());
+            var subListIds = keyCache.Sublist.ToArray();
+            totalCount = keyCache.TotalCount.Value;
 
-                        glaFyrIds = await DataReader.SelectAsync(glaFyrFileName, string.Format("WITH GLA.TR.DATE GE '{0}' AND WITH GLA.TR.DATE LE '{1}'", startOn, endOn));
-                    }
-                    else if (!string.IsNullOrEmpty(transactionDate))
-                    {
-                        glaFyrIds = await DataReader.SelectAsync(glaFyrFileName, string.Format("WITH GLA.TR.DATE EQ '{0}'", transactionDate));
-                    }
-                    glaFyrIds.ToList().Sort();
-                    return glaFyrIds;
-                });
-
-            var subListIds = glaFyrIds.Skip(offset).Take(limit);
-
-            glaDataContracts = await DataReader.BulkReadRecordAsync<GlaFyr>(glaFyrFileName, subListIds.ToArray());
-            var glpFyrKeys = await DataReader.SelectAsync(glpFyrFileName, "WITH GLP.POOLEE.ACCTS.LIST = '?'", subListIds.ToArray());
+            glaDataContracts = await DataReader.BulkReadRecordAsync<GlaFyr>(glaFyrFileName, subListIds);
+            var glpFyrKeys = await DataReader.SelectAsync(glpFyrFileName, "WITH GLP.POOLEE.ACCTS.LIST = '?'", subListIds);
             if (glpFyrKeys.Any())
                 glpDataContracts = await DataReader.BulkReadRecordAsync<GlpFyr>(glpFyrFileName, glpFyrKeys.ToArray(), true);
             glaFyrFiltered = glaDataContracts.ToList();
@@ -114,9 +139,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             Collection<DataContracts.Projects> projectContracts = null;
             Collection<DataContracts.ProjectsCf> grantsContracts = null;
             Collection<DataContracts.GlAccts> glAcctsContracts = null;
+
             if (personIds != null && personIds.Any())
             {
-                personContracts = await DataReader.BulkReadRecordAsync<Person>("PERSON", personIds);
+                personContracts = await DataReader.BulkReadRecordAsync<Person>("PERSON", personIds);          
                 instContracts = await DataReader.BulkReadRecordAsync<Institutions>("INSTITUTIONS", personIds);
             }
             string[] projectIds = glaDataContracts.Where(repo => !string.IsNullOrWhiteSpace(repo.GlaProjectsIds)).Select(id => id.GlaProjectsIds).Distinct().ToArray();
@@ -132,14 +158,14 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
             List<GeneralLedgerActivity> ledgerActivities = new List<GeneralLedgerActivity>();
 
-            if(glaFyrFiltered != null && glaFyrFiltered.Any())
+            if (glaFyrFiltered != null && glaFyrFiltered.Any())
             {
                 foreach (var glaFyr in glaFyrFiltered)
                 {
                     Person person = null;
                     Institutions inst = null;
                     if (personContracts != null)
-                    { 
+                    {
                         person = personContracts.FirstOrDefault(p => p.Recordkey == glaFyr.GlaAcctId);
                     }
                     if (instContracts != null)
@@ -168,7 +194,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     var description = glaFyr.GlaDescription;
                     if (string.IsNullOrEmpty(description)) description = glaFyr.GlaRefNo;
                     if (string.IsNullOrEmpty(description)) description = glaFyr.Recordkey;
-                    GeneralLedgerActivity ledgerActivity = new GeneralLedgerActivity(glaFyr.RecordGuid, glaFyr.Recordkey, description, glaFyr.GlaSysDate, glaFyr.GlaTrDate, glaFyr.GlaDebit, glaFyr.GlaCredit);
+                    var ledgerActivity = new GeneralLedgerActivity(glaFyr.RecordGuid, glaFyr.Recordkey, description, glaFyr.GlaSysDate, glaFyr.GlaTrDate, glaFyr.GlaDebit, glaFyr.GlaCredit);
                     ledgerActivity.GlaSource = await BuildGlaSourceCode(glaFyr.GlaSource);
                     ledgerActivity.ReportingSegment = await BuildReportingSegment();
                     ledgerActivity.GlaRefNumber = glaFyr.GlaRefNo;
@@ -207,9 +233,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 }
             }
 
-            return (ledgerActivities != null && ledgerActivities.Any()) ? new Tuple<IEnumerable<GeneralLedgerActivity>, int>(ledgerActivities, glaFyrIds.Count()) :
+            return (ledgerActivities != null && ledgerActivities.Any()) ? new Tuple<IEnumerable<GeneralLedgerActivity>, int>(ledgerActivities, totalCount) :
                 new Tuple<IEnumerable<GeneralLedgerActivity>, int>(new List<GeneralLedgerActivity>(), 0);
-        }        
+        }
 
         /// <summary>
         /// Returns a single general ledger activity record.
@@ -223,11 +249,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 throw new ArgumentNullException("Guid is required.");
             }
             var recordInfo = await GetRecordInfoFromGuidAsync(guid);
-            if(recordInfo == null)
+            if (recordInfo == null)
             {
                 throw new KeyNotFoundException("General ledger activity not found for GUID " + guid);
             }
-            
+
             var glaFyr = await DataReader.ReadRecordAsync<GlaFyr>(recordInfo.Entity, recordInfo.PrimaryKey, true);
             var year = recordInfo.Entity.Split('.')[1].ToString();
             var glpFyrKeys = await DataReader.SelectAsync(string.Format("GLP.{0}", year), string.Format("WITH GLP.POOLEE.ACCTS.LIST = '{0}'", recordInfo.PrimaryKey));
@@ -290,9 +316,20 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             return ledgerActivity;
         }
 
-        #region build methods
+        /// <summary>
+        /// Return a Unidata Formatted Date string from an input argument of string type
+        /// </summary>
+        /// <param name="date">String representing a Date</param>
+        /// <returns>Unidata formatted Date string for use in Colleague Selection.</returns>
+        public async Task<string> GetUnidataFormattedDate(string date)
+        {
+            var internationalParameters = await InternationalParametersAsync();
+            var newDate = DateTime.Parse(date).Date;
+            return UniDataFormatter.UnidataFormatDate(newDate, internationalParameters.HostShortDateFormat, internationalParameters.HostDateDelimiter);
+        }
+        #endregion  
 
-        string institutionName = string.Empty;
+        #region private build methods    
         /// <summary>
         /// Builds reporting segment.
         /// </summary>
@@ -323,10 +360,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// </summary>
         /// <param name="source"></param>
         /// <returns></returns>
-        ApplValcodes sourceCodes = null;
         private async Task<string> BuildGlaSourceCode(string source)
         {
-            if(string.IsNullOrEmpty(source))
+            if (string.IsNullOrEmpty(source))
             {
                 throw new ArgumentNullException("GL source is required.");
             }
@@ -336,7 +372,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
 
             var sourceCode = sourceCodes.ValsEntityAssociation.FirstOrDefault(item => item.ValInternalCodeAssocMember.Equals(source, StringComparison.OrdinalIgnoreCase));
-            if(sourceCode == null)
+            if (sourceCode == null)
             {
                 throw new KeyNotFoundException(string.Format("GL source code not found for {0}.", source));
             }
@@ -344,9 +380,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             return string.Concat(sourceCode.ValInternalCodeAssocMember + asterix + sourceCode.ValActionCode2AssocMember); ;
         }
 
-        string hostCountry = null;
         /// <summary>
-        /// Builds hosy country.
+        /// Builds host country.
         /// </summary>
         /// <returns></returns>
         private async Task<string> BuildHostCountry()
@@ -361,7 +396,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
         #endregion
 
-        #region Helper methods
+        #region private helper methods
 
         /// <summary>
         /// Get the GL Source Codes from Colleague.
@@ -398,8 +433,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <returns></returns>
         private async Task<Base.DataContracts.Defaults> GetDefaults()
         {
-            return await GetOrAddToCacheAsync<Data.Base.DataContracts.Defaults>("CoreDefaults", 
-                async () =>  
+            return await GetOrAddToCacheAsync<Data.Base.DataContracts.Defaults>("CoreDefaults",
+                async () =>
                 {
                     var coreDefaults = await DataReader.ReadRecordAsync<Data.Base.DataContracts.Defaults>("CORE.PARMS", "DEFAULTS");
                     if (coreDefaults == null)
@@ -411,19 +446,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 }, Level1CacheTimeoutValue);
         }
 
-        /// <summary>
-        /// Return a Unidata Formatted Date string from an input argument of string type
-        /// </summary>
-        /// <param name="date">String representing a Date</param>
-        /// <returns>Unidata formatted Date string for use in Colleague Selection.</returns>
-        public async Task<string> GetUnidataFormattedDate(string date)
-        {
-            var internationalParameters = await InternationalParametersAsync();
-            var newDate = DateTime.Parse(date).Date;
-            return UniDataFormatter.UnidataFormatDate(newDate, internationalParameters.HostShortDateFormat, internationalParameters.HostDateDelimiter);
-        }
-
-        private Ellucian.Data.Colleague.DataContracts.IntlParams _internationalParameters;
         /// <summary>
         /// Gets international parameters.
         /// </summary>

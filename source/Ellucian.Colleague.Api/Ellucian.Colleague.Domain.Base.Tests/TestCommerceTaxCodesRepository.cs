@@ -27,7 +27,15 @@ namespace Ellucian.Colleague.Domain.Base.Tests
 
             for (int x = 0; x < items; x++)
             {
-                commerceTaxCodeList.Add(new CommerceTaxCode(commerceTaxCodes[x, 0], commerceTaxCodes[x, 1], commerceTaxCodes[x, 2]));
+                commerceTaxCodeList.Add(new CommerceTaxCode(commerceTaxCodes[x, 0], commerceTaxCodes[x, 1], commerceTaxCodes[x, 2])
+                {
+                    ApTaxEffectiveDates = new List<DateTime?>()
+                    {
+                       DateTime.Today,
+                       DateTime.Today.AddDays(-365),
+                       DateTime.Today.AddDays(-180),
+                    }
+                });
             }
             return commerceTaxCodeList;
         }

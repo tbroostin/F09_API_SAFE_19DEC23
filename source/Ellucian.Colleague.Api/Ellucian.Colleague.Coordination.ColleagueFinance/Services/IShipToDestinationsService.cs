@@ -1,4 +1,4 @@
-//Copyright 2017 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using System;
@@ -16,5 +16,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         Task<IEnumerable<Ellucian.Colleague.Dtos.ShipToDestinations>> GetShipToDestinationsAsync(bool bypassCache = false);
                
         Task<Ellucian.Colleague.Dtos.ShipToDestinations> GetShipToDestinationsByGuidAsync(string id);
+
+        Task<IEnumerable<Ellucian.Colleague.Dtos.ColleagueFinance.ShipToCode>> GetShipToCodesAsync();
+
     }
 }

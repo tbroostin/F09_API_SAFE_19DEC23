@@ -25,7 +25,12 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         /// </summary>
         public List<PersonIdentityDocuments> IdentityDocuments { get; set; }
         /// <summary>
-        /// Spoken Languages of a person
+        /// Language ISO codes of a person
+        ///
+        /// This property is used only for Put/Post of persons.  It is used because the UPDATE.PERSON.INTEGRATION CTX
+        /// was already written to take in Language ISO codes and convert to Colleague Language codes.
+        /// (Otherwise, the Put/post would instead convert/map to PrimaryLanguage and SecondaryLanguages in PersonBase entity.)
+        /// 
         /// </summary>
         public List<PersonLanguage> Languages { get; private set; }
         /// <summary>

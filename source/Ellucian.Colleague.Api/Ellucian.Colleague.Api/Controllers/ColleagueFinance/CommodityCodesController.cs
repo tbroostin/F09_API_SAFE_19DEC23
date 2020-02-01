@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -13,6 +13,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using System.Web.Http;
 
@@ -167,6 +168,30 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         {
             //Delete is not supported for Colleague but HEDM requires full crud support.
             throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
+        }
+
+
+        /// <summary>
+        /// Returns all CommodityCodes
+        /// </summary>
+        /// <returns>List of CommodityCodes DTO objects </returns>
+        /// <accessComments>
+        /// No permission is needed.
+        /// </accessComments>
+        [HttpGet]
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.ColleagueFinance.ProcurementCommodityCode>> GetAllCommodityCodesAsync()
+        {
+            try
+            {
+                var dtos = await _commodityCodesService.GetAllCommodityCodesAsync();
+                return dtos;
+            }
+            // Application exceptions will be caught below.
+            catch (Exception ex)
+            {
+                _logger.Error(ex, ex.Message);
+                throw CreateHttpResponseException("Unable to get Commodity Codes.", HttpStatusCode.BadRequest);
+            }
         }
     }
 }

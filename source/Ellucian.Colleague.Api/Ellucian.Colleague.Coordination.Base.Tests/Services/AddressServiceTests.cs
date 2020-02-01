@@ -19,6 +19,7 @@ using Ellucian.Data.Colleague;
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Dtos.DtoProperties;
 using Ellucian.Colleague.Coordination.Base.Tests.UserFactories;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 {
@@ -940,8 +941,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task AddressService_PutAddress2ById_InvalidOperationException()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task AddressService_PutAddress2ById_IntegrationApiException()
             {
                 var address = allAddresses.FirstOrDefault(ac => ac.Guid == usAddressGuid);
                 _addressRepositoryMock.Setup(x => x.UpdateAsync(address.AddressId, It.IsAny<Domain.Base.Entities.Address>())).Throws<ArgumentNullException>();

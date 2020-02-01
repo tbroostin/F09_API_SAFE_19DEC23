@@ -290,6 +290,8 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             if (CheckForEmptyFilterParameters())
                 return new PagedHttpActionResult<IEnumerable<Dtos.InstitutionJobs3>>(new List<Dtos.InstitutionJobs3>(), page, this.Request);
 
+            var filterQualifiers = GetFilterQualifiers(_logger);
+
             if (criteriaValues != null)
             {
                 if (criteriaValues.Person != null && !string.IsNullOrEmpty(criteriaValues.Person.Id))
@@ -314,7 +316,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             try
             {
                 var pageOfItems = await _institutionJobsService.GetInstitutionJobs3Async(page.Offset, page.Limit, person, employer, position,
-                    department, startOn, endOn, status, classification, preference, bypassCache);
+                    department, startOn, endOn, status, classification, preference, bypassCache, filterQualifiers);
 
                 AddEthosContextProperties(
                  await _institutionJobsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),

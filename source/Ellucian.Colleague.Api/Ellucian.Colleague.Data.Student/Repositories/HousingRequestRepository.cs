@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 //using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Transactions;
@@ -52,7 +52,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 List<HousingRequest> roomReqList = new List<HousingRequest>();
 
-                string criteria = "WITH RMAS.PERSON.ID NE '' AND WITH RMAS.START.DATE NE '' AND WITH RMAS.STATUS NE '' BY.EXP RMAS.INTG.KEY.IDX";
+                string criteria = "WITH RMAS.PERSON.ID NE '' AND WITH RMAS.START.DATE NE '' AND WITH RMAS.STATUS NE '' AND WITH RMAS.INTG.KEY.IDX NE '' BY.EXP RMAS.INTG.KEY.IDX";
                 var rmAssignmentIds = await DataReader.SelectAsync("ROOM.ASSIGNMENT", criteria);
 
                 var rmAssignmentIds2 = new List<string>();
@@ -61,8 +61,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     var perposKey = rmAssignmentId.Split(_VM)[0];
                     rmAssignmentIds2.Add(perposKey);
                 }
-
-                var criteria2 = "WITH RMAS.PERSON.ID NE '' AND WITH RMAS.START.DATE NE '' AND WITH RMAS.STATUS NE '' BY.EXP RMAS.INTG.KEY.IDX SAVING RMAS.INTG.KEY.IDX";
+                var criteria2 = "WITH RMAS.PERSON.ID NE '' AND WITH RMAS.START.DATE NE '' AND WITH RMAS.STATUS NE '' AND WITH RMAS.INTG.KEY.IDX NE '' BY.EXP RMAS.INTG.KEY.IDX SAVING RMAS.INTG.KEY.IDX";     
                 var rmAssignmentIdxs = await DataReader.SelectAsync("ROOM.ASSIGNMENT", criteria2);
 
                 var keys = new List<string>();
@@ -72,7 +71,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     keys.Add(String.Concat(rmAssignmentId2, "|", rmAssignmentIdxs.ElementAt(idx)));
                     idx++;
                 }
-
+                
                 var totalCount = keys.Count();
                 keys.Sort();
                 var keysSubList = keys.Skip(offset).Take(limit).Distinct().ToArray();

@@ -264,7 +264,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
             }
 
-            var responses = await _sectionRegistrationRepository.GetSectionRegistrations2Async(offset, limit, sectReg, acadPeriodNewValue, sectInstructorNewValue);
+            var responses = await _sectionRegistrationRepository.GetSectionRegistrations3Async(offset, limit, sectReg, acadPeriodNewValue, sectInstructorNewValue);
             //No records
             if (!responses.Item1.Any())
             {
@@ -461,20 +461,27 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (source.Ceus.HasValue || source.Credit.HasValue)
                 dto.Credit = ConvertResponseToSectionRegistrationCredit(source);
 
-            //gradingOption
-            var gradeSchemeGuid = ConvertCodeToGuid(await GradeSchemesAsync(), source.GradeScheme);
-            if (string.IsNullOrEmpty(gradeSchemeGuid))
+            // gradingOption
+            // Since courses and sections don't require grade schemes and an STC record may
+            // not have this data, we need to check for existance of a grade scheme before
+            // attempting to get the guid.
+            if (!string.IsNullOrEmpty(source.GradeScheme))
             {
-                IntegrationApiExceptionAddError(string.Format("Invalid Grade Scheme or missing GUID for grade scheme code '{0}'.",source.GradeScheme),
-                    "sectionRegistrations.gradeOption.gradeScheme.id", source.Guid, source.StudentAcadCredKey);
-            }
-            else
-            {
-                dto.GradingOption = new SectionRegistrationTranscript2()
+                var gradeScheme = (await GradeSchemesAsync()).Where(gs => gs != null && gs.Code == source.GradeScheme).FirstOrDefault();
+                var gradeSchemeGuid = gradeScheme != null ? gradeScheme.Guid : null;
+                if (string.IsNullOrEmpty(gradeSchemeGuid))
                 {
-                    GradeScheme = new GuidObject2(gradeSchemeGuid),
-                    Mode = ConvertToGradingOptionMode(source, bypassCache)
-                };
+                    IntegrationApiExceptionAddError(string.Format("Invalid Grade Scheme or missing GUID for grade scheme code '{0}'.", source.GradeScheme),
+                        "sectionRegistrations.gradeOption.gradeScheme.id", source.Guid, source.StudentAcadCredKey);
+                }
+                else
+                {
+                    dto.GradingOption = new SectionRegistrationTranscript2()
+                    {
+                        GradeScheme = new GuidObject2(gradeSchemeGuid),
+                        Mode = ConvertToGradingOptionMode(source, bypassCache)
+                    };
+                }
             }
 
             //Involvement 
@@ -1169,7 +1176,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var repoError = new RepositoryException("Errors Occurred in section-registrations update.");
                 foreach(var error in ex.Errors)
                 {
-                    repoError.AddError(new RepositoryError(error.Code, error.Message));
+                    var errorCode = string.IsNullOrEmpty(error.Code) ? "" : error.Code;
+                    repoError.AddError(new RepositoryError(errorCode, error.Message));
                 }
                 throw repoError;
             }
@@ -2331,6 +2339,17 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             if (registrationDto.SectionRegistrationGrades != null)
             {
+                var gradeTypeIds = registrationDto.SectionRegistrationGrades
+                   .Where(x => x.SectionGradeType != null && !string.IsNullOrEmpty(x.SectionGradeType.Id))
+                   .GroupBy(g => g.SectionGradeType.Id)
+                   .Where(w => w.Count() > 1)
+                   .ToList();
+
+                if (gradeTypeIds != null && gradeTypeIds.Any())
+                {
+                    throw new InvalidOperationException(string.Format("The grades array includes a duplicated grade type '{0}'.", gradeTypeIds.FirstOrDefault().Key));
+                }
+
                 foreach (var sectionRegistrationGrade in registrationDto.SectionRegistrationGrades)
                 {
                     //Check if the grades in registrationDto are valid
@@ -2605,6 +2624,17 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             if (registrationDto.SectionRegistrationGrades != null)
             {
+                var gradeTypeIds = registrationDto.SectionRegistrationGrades
+                   .Where(x => x.SectionGradeType != null && !string.IsNullOrEmpty(x.SectionGradeType.Id))
+                   .GroupBy(g => g.SectionGradeType.Id)
+                   .Where(w => w.Count() > 1)
+                   .ToList();
+
+                if (gradeTypeIds != null && gradeTypeIds.Any())
+                {
+                    throw new InvalidOperationException(string.Format("The grades array includes a duplicated grade type '{0}'.", gradeTypeIds.FirstOrDefault().Key));
+                }
+
                 foreach (var sectionRegistrationGrade in registrationDto.SectionRegistrationGrades)
                 {
                     //Check if the grades in registrationDto are valid
@@ -3314,7 +3344,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>SectionRegistration Object <see cref="Dtos.SectionRegistration2"/></returns>
         private async Task<Dtos.SectionRegistration2> ConvertResponsetoDto2(SectionRegistrationResponse source)
         {
-            var gradeSchemeGuid = ConvertCodeToGuid(await GradeSchemesAsync(), source.GradeScheme);
+            var gradeScheme = (await GradeSchemesAsync()).Where(gs => gs != null && gs.Code == source.GradeScheme).FirstOrDefault();
+            var gradeSchemeGuid = gradeScheme != null ? gradeScheme.Guid : null;
             var dto = new Dtos.SectionRegistration2();
             dto.Approvals = new List<Dtos.Approval2>() { new Dtos.Approval2() { ApprovalType = Dtos.ApprovalType2.All, ApprovalEntity = Dtos.ApprovalEntity.System } };
             dto.Id = source.Guid;
@@ -3384,7 +3415,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>SectionRegistration Object <see cref="Dtos.SectionRegistration2"/></returns>
         private async Task<Dtos.SectionRegistration3> ConvertResponsetoDto3(SectionRegistrationResponse source)
         {
-            var gradeSchemeGuid = ConvertCodeToGuid(await GradeSchemesAsync(), source.GradeScheme);
+            var gradeScheme = (await GradeSchemesAsync()).Where(gs => gs != null && gs.Code == source.GradeScheme).FirstOrDefault();
+            var gradeSchemeGuid = gradeScheme != null ? gradeScheme.Guid : null;
             var dto = new Dtos.SectionRegistration3();
             dto.Approvals = new List<Dtos.Approval2>() { new Dtos.Approval2() { ApprovalType = Dtos.ApprovalType2.All, ApprovalEntity = Dtos.ApprovalEntity.System } };
             dto.Id = source.Guid;

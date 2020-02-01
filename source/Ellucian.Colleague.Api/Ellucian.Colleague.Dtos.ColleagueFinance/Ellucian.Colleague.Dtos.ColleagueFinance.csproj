@@ -54,8 +54,25 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BaseGlComponentQueryCriteria.cs" />
     <Compile Include="BudgetAdjustmentPendingApprovalSummary.cs" />
     <Compile Include="BudgetAdjustmentApproval.cs" />
+    <Compile Include="NewLineItemDefaultAdditionalInformation.cs" />
+    <Compile Include="PurchaseOrderLinkSummary.cs" />
+    <Compile Include="RequisitionLinkSummary.cs" />
+    <Compile Include="TaxForm.cs" />
+    <Compile Include="ModifyRequisition.cs" />
+    <Compile Include="FixedAssetsFlag.cs" />
+    <Compile Include="ProcurementCommodityCode.cs" />
+    <Compile Include="FinanceQuery.cs" />
+    <Compile Include="FinanceQueryComponentSortCriteria.cs" />
+    <Compile Include="FinanceQueryCriteria.cs" />
+    <Compile Include="FinanceQueryGlAccount.cs" />
+    <Compile Include="FinanceQueryGlAccountLineItem.cs" />
+    <Compile Include="FinanceQuerySubtotal.cs" />
+    <Compile Include="GlAccount.cs" />
+    <Compile Include="GlFiscalYearConfiguration.cs" />
+    <Compile Include="LineItemReqTax.cs" />
     <Compile Include="NextApprover.cs" />
     <Compile Include="Approver.cs" />
     <Compile Include="AccountsPayableType.cs" />
@@ -90,6 +107,9 @@
     <Compile Include="GlBudgetPool.cs" />
     <Compile Include="GlBudgetPoolType.cs" />
     <Compile Include="GlClass.cs" />
+    <Compile Include="ColleagueFinanceWebConfiguration.cs" />
+    <Compile Include="PurchaseOrderSummary.cs" />
+    <Compile Include="PurchasingDefaults.cs" />
     <Compile Include="RecurringVoucher.cs" />
     <Compile Include="JournalEntry.cs" />
     <Compile Include="JournalEntryItem.cs" />
@@ -104,8 +124,15 @@
     <Compile Include="RecurringVoucherSchedule.cs" />
     <Compile Include="RecurringVoucherStatus.cs" />
     <Compile Include="Requisition.cs" />
+    <Compile Include="RequisitionCreateUpdateRequest.cs" />
+    <Compile Include="RequisitionCreateUpdateResponse.cs" />
     <Compile Include="RequisitionStatus.cs" />
+    <Compile Include="FinanceQuerySubtotalComponent.cs" />
+    <Compile Include="RequisitionSummary.cs" />
+    <Compile Include="ShipToCode.cs" />
     <Compile Include="TodaysFiscalYear.cs" />
+    <Compile Include="VendorSearchCriteria.cs" />
+    <Compile Include="VendorSearchResult.cs" />
     <Compile Include="Voucher.cs" />
     <Compile Include="Voucher2.cs" />
     <Compile Include="BudgetEntryStatus.cs" />

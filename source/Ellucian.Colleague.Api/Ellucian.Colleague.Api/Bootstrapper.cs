@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Converters;
 using Ellucian.Colleague.Configuration;
 using Ellucian.Colleague.Data.Base;
@@ -147,23 +147,6 @@ namespace Ellucian.Colleague.Api
                     }
                 }
                 logger.Error(e, "Unable to read API Settings from colleague. Profile Name: {0}", settings.ProfileName);
-            }
-            int bulkReadSize = 5000;
-            if (int.TryParse(WebConfigurationManager.AppSettings["BulkReadSize"], out bulkReadSize))
-            {
-                apiSettings.BulkReadSize = bulkReadSize;
-            }
-
-            bool includeLinkSelfHeaders = false;
-            if (bool.TryParse(WebConfigurationManager.AppSettings["IncludeLinkSelfHeaders"], out includeLinkSelfHeaders))
-            {
-                apiSettings.IncludeLinkSelfHeaders = includeLinkSelfHeaders;
-            }
-
-            bool enableBackupConfig = false;
-            if (bool.TryParse(WebConfigurationManager.AppSettings["EnableConfigBackup"], out enableBackupConfig))
-            {
-                apiSettings.EnableConfigBackup = enableBackupConfig;
             }
 
             container.RegisterInstance<ApiSettings>(apiSettings);

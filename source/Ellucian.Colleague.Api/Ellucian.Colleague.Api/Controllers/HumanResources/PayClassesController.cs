@@ -171,8 +171,9 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <returns>List of PayClasses <see cref="Dtos.PayClasses"/> objects representing matching payClasses</returns>
         [HttpGet, EedmResponseFilter]
-        [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
-        public async Task<IEnumerable<Ellucian.Colleague.Dtos.PayClasses2>> GetPayClasses2Async()
+        [ValidateQueryStringFilter()]
+        [QueryStringFilterFilter("criteria", typeof(Ellucian.Colleague.Dtos.PayClasses2))]
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.PayClasses2>> GetPayClasses2Async(QueryStringFilter criteria)
         {
             var bypassCache = false;
             if (Request.Headers.CacheControl != null)
@@ -184,7 +185,15 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             try
             {
+                var criteriaObj = GetFilterObject<Ellucian.Colleague.Dtos.PayClasses2>(_logger, "criteria");
+                if (CheckForEmptyFilterParameters())
+                    return new List<Ellucian.Colleague.Dtos.PayClasses2>(new List<Ellucian.Colleague.Dtos.PayClasses2>());
                 var payClassEntities = await _payClassesService.GetPayClasses2Async(bypassCache);
+                if (criteriaObj != null && !string.IsNullOrEmpty(criteriaObj.Code) && payClassEntities != null && payClassEntities.Any())
+                {
+                    var code = criteriaObj.Code;
+                    payClassEntities = payClassEntities.Where(c => c.Code == code);
+                }
 
                 AddEthosContextProperties(
                     await _payClassesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),

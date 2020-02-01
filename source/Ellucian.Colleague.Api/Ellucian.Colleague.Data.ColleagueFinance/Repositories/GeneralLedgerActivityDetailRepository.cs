@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -44,9 +44,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <param name="fiscalYear">The GL fiscal year.</param>
         /// <param name="costCenterStructure">List of objects with information to build the cost center definitions.</param>
         /// <param name="glClassConfiguration">GL configuration information.</param>
+        /// <param name="majorComponentStartPosition">List of the major component start positions.</param>
         /// <returns>Returns the list of activity detail posted to the GL account for the fiscal year.</returns>
         public async Task<GlAccountActivityDetail> QueryGlActivityDetailAsync(string glAccount, string fiscalYear,
-            CostCenterStructure costCenterStructure, GeneralLedgerClassConfiguration glClassConfiguration)
+            CostCenterStructure costCenterStructure, GeneralLedgerClassConfiguration glClassConfiguration, IList<string> majorComponentStartPosition)
         {
             var glAccountDomain = new GlAccountActivityDetail(glAccount);
 
@@ -322,7 +323,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 try
                 {
                     // Obtain the GL class for the GL account.
-                    glClass = GlAccountUtility.GetGlAccountGlClass(glAccountDomain.GlAccountNumber, glClassConfiguration);
+                    glClass = GlAccountUtility.GetGlAccountGlClass(glAccountDomain.GlAccountNumber, glClassConfiguration, majorComponentStartPosition);
                 }
                 catch (ApplicationException aex)
                 {

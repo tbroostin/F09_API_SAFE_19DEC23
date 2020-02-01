@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -42,7 +42,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             this.MockInitialize();
             testGlAccountRepository = new TestGlAccountRepository();
             testGeneralLedgerAccountRepository = new TestGeneralLedgerAccountRepository();
-            actualRepository = new GeneralLedgerAccountRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+            actualRepository = new GeneralLedgerAccountRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, null);
 
             glAccountRecord = new GlAccts();
             glAccountsDescriptionResponse = new GetGlAccountDescriptionResponse();
@@ -545,6 +545,75 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         #endregion
         #endregion
 
+        #region  GetGlComponentDescriptionsByIdsAndComponentTypeAsync
+
+        [TestMethod]
+        public async Task GetGlComponentDescriptionsByIdsAndComponentTypeAsync_FundType()
+        {
+            //For Subtotal Criteria with Fund Component types
+            var fdDescriptionsDictionaryResult = await actualRepository.GetGlComponentDescriptionsByIdsAndComponentTypeAsync(testGlAccountRepository.FundTypeGlNumbers.Distinct(), GeneralLedgerComponentType.Fund);
+            foreach (var item in fdDescriptionsDictionaryResult)
+            {
+                Assert.IsTrue(item.Value.Contains("Fund"));
+            }           
+        }
+
+        [TestMethod]
+        public async Task GetGlComponentDescriptionsByIdsAndComponentTypeAsync_LocationType()
+        {
+            //For Subtotal Criteria with Location Component types
+            var loDescriptionsDictionaryResult = await actualRepository.GetGlComponentDescriptionsByIdsAndComponentTypeAsync(testGlAccountRepository.LocationTypeGlNumbers.Distinct(), GeneralLedgerComponentType.Location);
+            foreach (var item in loDescriptionsDictionaryResult)
+            {
+                Assert.IsTrue(item.Value.Contains("Location"));
+            }
+        }
+
+        [TestMethod]
+        public async Task GetGlComponentDescriptionsByIdsAndComponentTypeAsync_SourceType()
+        {
+            //For Subtotal Criteria with Source Component types
+            var soDescriptionsDictionaryResult = await actualRepository.GetGlComponentDescriptionsByIdsAndComponentTypeAsync(testGlAccountRepository.SourceTypeGlNumbers.Distinct(), GeneralLedgerComponentType.Source);
+            foreach (var item in soDescriptionsDictionaryResult)
+            {
+                Assert.IsTrue(item.Value.Contains("Source"));
+            }
+        }
+
+        [TestMethod]
+        public async Task GetGlComponentDescriptionsByIdsAndComponentTypeAsync_FunctionType()
+        {
+            //For Subtotal Criteria with Function Component types
+            var fnDescriptionsDictionaryResult = await actualRepository.GetGlComponentDescriptionsByIdsAndComponentTypeAsync(testGlAccountRepository.FunctionTypeGlNumbers.Distinct(), GeneralLedgerComponentType.Function);
+            foreach (var item in fnDescriptionsDictionaryResult)
+            {
+                Assert.IsTrue(item.Value.Contains("Function"));
+            }
+        }
+
+       
+        [TestMethod]
+        public async Task GetGlComponentDescriptionsByIdsAndComponentTypeAsync_UnitType()
+        {
+            //For Subtotal Criteria with Unit Component types
+            var unDescriptionsDictionaryResult = await actualRepository.GetGlComponentDescriptionsByIdsAndComponentTypeAsync(testGlAccountRepository.UnitTypeGlNumbers.Distinct(), GeneralLedgerComponentType.Unit);
+            foreach (var item in unDescriptionsDictionaryResult)
+            {
+                Assert.IsTrue(item.Value.Contains("Unit"));
+            }
+        }
+        [TestMethod]
+        public async Task GetGlComponentDescriptionsByIdsAndComponentTypeAsync_ObjectType()
+        {
+            //For Subtotal Criteria with Object Component types
+            var obDescriptionsDictionaryResult = await actualRepository.GetGlComponentDescriptionsByIdsAndComponentTypeAsync(testGlAccountRepository.ObjectTypeGlNumbers.Distinct(), GeneralLedgerComponentType.Object);
+            foreach (var item in obDescriptionsDictionaryResult)
+            {
+                Assert.IsTrue(item.Value.Contains("Object"));
+            }
+        }
+
+        #endregion
         #region GetAsync
         [TestMethod]
         public async Task GetAsync_HappyPath()

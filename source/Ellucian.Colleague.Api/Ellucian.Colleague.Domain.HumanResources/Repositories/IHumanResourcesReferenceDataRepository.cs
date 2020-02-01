@@ -1,4 +1,5 @@
-﻿//Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
+
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -116,6 +117,14 @@ namespace Ellucian.Colleague.Domain.HumanResources.Repositories
         /// <param name="bypassCache">Boolean to bypass use of cached data and go directly to disk.</param>
         /// <returns>Collection of <see cref="EmploymentStatusEndingReason"/></returns>
         Task<IEnumerable<EmploymentStatusEndingReason>> GetEmploymentStatusEndingReasonsAsync(bool bypassCache);
+
+        /// <summary>
+        /// Get guid for employment status ending reasons code
+        /// </summary>
+        /// <param name="code">AcadCredentials code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetEmploymentStatusEndingReasonsGuidAsync(string code);
+
 
         ///// <summary>
         ///// Get a collection of institution job supervisors

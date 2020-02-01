@@ -678,7 +678,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             {
                 Ids = null,
                 FiscalYear = "2016",
-                ComponentCriteria = new List<Dtos.ColleagueFinance.CostCenterComponentQueryCriteria>() 
+                ComponentCriteria = new List<Dtos.ColleagueFinance.CostCenterComponentQueryCriteria>()
                 {
                     componentQueryCriteria
                 }
@@ -802,7 +802,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             {
                 Ids = null,
                 FiscalYear = "2016",
-                ComponentCriteria = new List<Dtos.ColleagueFinance.CostCenterComponentQueryCriteria>() 
+                ComponentCriteria = new List<Dtos.ColleagueFinance.CostCenterComponentQueryCriteria>()
                 {
                     componentQueryCriteria
                 }
@@ -832,7 +832,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             {
                 Ids = null,
                 FiscalYear = null,
-                ComponentCriteria = new List<Dtos.ColleagueFinance.CostCenterComponentQueryCriteria>() 
+                ComponentCriteria = new List<Dtos.ColleagueFinance.CostCenterComponentQueryCriteria>()
                 {
                     componentQueryCriteria
                 }

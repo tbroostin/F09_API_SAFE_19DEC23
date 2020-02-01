@@ -94,5 +94,11 @@ namespace Ellucian.Colleague.Dtos.Student
         /// open secctions have seats available.
         /// </summary>
         public Filter OpenSections = new Filter();
+
+        /// <summary>
+        /// this will control to filter sections that are open and waitlisted.
+        /// open secctions have seats available.
+        /// </summary>
+        public Filter OpenAndWaitlistSections { get; set; }
     }
 }

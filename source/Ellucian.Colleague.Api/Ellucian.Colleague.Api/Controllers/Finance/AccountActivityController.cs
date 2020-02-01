@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using System.ComponentModel;
 using System.Net;
 using System.Net.Http;
@@ -14,6 +14,7 @@ using Ellucian.Web.Security;
 using System;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using Ellucian.Colleague.Dtos.Finance;
 
 namespace Ellucian.Colleague.Api.Controllers.Finance
 {
@@ -214,5 +215,53 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
                 throw CreateHttpResponseException("Unknown error occurred while retrieving disbursement info. See log for more details.");
             }
         }
+
+        /// <summary>
+        /// Returns information about potentially untransmitted D7 financial aid, based on
+        /// current charges, credits, and awarded aid.
+        /// </summary>
+        /// <accessComments>
+        /// Users may request their own data. Additionally, users who have VIEW.STUDENT.ACCOUNT.ACTIVITY
+        /// permission or proxy permissions can request other users' data
+        /// </accessComments>
+        /// <param name="criteria">The <see cref="PotentialD7FinancialAidCriteria"/> criteria of
+        /// potential financial aid for which to search.</param>
+        /// <returns>Enumeration of <see cref="Dtos.Finance.AccountActivity.PotentialD7FinancialAid"/> 
+        /// awards and potential award amounts.</returns>
+        /// 
+        [HttpPost]
+        public async Task<IEnumerable<PotentialD7FinancialAid>> QueryStudentPotentialD7FinancialAidAsync([FromBody]PotentialD7FinancialAidCriteria criteria)
+        {
+            if (criteria == null)
+            {
+                throw CreateHttpResponseException("criteria cannot be null");
+            }
+
+            try
+            {
+                return await _service.GetPotentialD7FinancialAidAsync(criteria);
+            }
+            catch (ArgumentNullException ane)
+            {
+                _logger.Error(ane, ane.Message);
+                throw CreateHttpResponseException("One of the provided arguments is invalid. See log for details");
+            }
+            catch (PermissionsException pe)
+            {
+                _logger.Error(pe, pe.Message);
+                throw CreateHttpResponseException("Permission denied to retrieve finacial aid data. See log for details", System.Net.HttpStatusCode.Forbidden);
+            }
+            catch (ApplicationException ae)
+            {
+                _logger.Error(ae, ae.Message);
+                throw CreateHttpResponseException("Exception encountered while retrieving financial aid info. See log for details");
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, ex.Message);
+                throw CreateHttpResponseException("Unknown error occurred while retrieving financial info. See log for more details.");
+            }
+        }
     }
+
 }

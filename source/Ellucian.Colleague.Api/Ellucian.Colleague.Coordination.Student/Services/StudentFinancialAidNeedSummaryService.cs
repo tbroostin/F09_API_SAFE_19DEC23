@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -311,7 +311,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             // User is not allowed to read StudentFinancialAidNeedSummaries without the appropriate permissions
             if (!hasPermission)
             {
-                throw new PermissionsException(string.Format("User {0} does not have permission to view StudentFinancialAidNeedSummaries.", CurrentUser.UserId));
+                throw new PermissionsException(string.Format("User {0} does not have permission to view student-financial-aid-need-summaries.", CurrentUser.UserId));
             }
         }
     }

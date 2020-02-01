@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -29,6 +29,42 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>A <see cref="Dtos.Student.SectionRoster"/></returns>
         Task<Dtos.Student.SectionRoster> GetSectionRoster2Async(string sectionId);
 
+        /// <summary>
+        /// Get a<see cref="Dtos.Student.SectionWaitlist"/> for a given course section ID
+        /// </summary>
+        /// <param name="sectionId">Course section ID</param>
+        /// <returns>A <see cref="Dtos.Student.SectionWaitlist"/></returns>
+        Task<Dtos.Student.SectionWaitlist>GetSectionWaitlistAsync(string sectionId);
+
+        /// <summary>
+        /// Get a list of <see cref="Dtos.Student.SectionWaitlistStudent"/> for a given course section ID
+        /// </summary>
+        /// <param name="sectionId">Course section ID</param>
+        /// <returns>A list of<see cref="Dtos.Student.SectionWaitlistStudent"/></returns>
+        Task<IEnumerable<Dtos.Student.SectionWaitlistStudent>> GetSectionWaitlist2Async(string sectionId);
+
+        /// <summary>
+        /// Get a list of <see cref="Dtos.Student.StudentWaitlistStatus"/>
+        /// </summary>
+        /// <returns>A list of<see cref="Dtos.Student.StudentWaitlistStatus"/> </returns>
+        Task<IEnumerable<Dtos.Student.StudentWaitlistStatus>> GetStudentWaitlistStatusesAsync();
+
+
+        /// <summary>
+        /// Get a<see cref="Dtos.Student.SectionWaitlistConfig"/> for a given course section ID
+        /// </summary>
+        /// <param name="sectionId">Course section ID</param>
+        /// <returns>A <see cref="Dtos.Student.SectionWaitlistConfig"/></returns>
+        Task<Dtos.Student.SectionWaitlistConfig> GetSectionWaitlistConfigAsync(string sectionId);
+
+        /// <summary>
+        /// Gets the <see cref="Dtos.Student.StudentSectionWaitlistInfo"/> based on the student and section ID
+        /// </summary>
+        /// <param name="sectionId"></param>
+        /// <param name="studentId"></param>
+        /// <returns>StudentSectionWaitlistInfo</returns>
+        Task<Dtos.Student.StudentSectionWaitlistInfo> GetStudentSectionWaitlistsByStudentAndSectionIdAsync(string sectionId, string studentId);
+        
         /// <summary>
         /// Create a section
         /// </summary>
@@ -497,6 +533,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns></returns>
         Task<Ellucian.Colleague.Dtos.Base.EventsICal> GetSectionEventsICalAsync(IEnumerable<string> sectionIds, DateTime? startDate, DateTime? endDate);
 
+        Task<Dtos.Student.SectionMidtermGradingComplete> GetSectionMidtermGradingCompleteAsync(string sectionId);
 
+        Task<Dtos.Student.SectionMidtermGradingComplete> PostSectionMidtermGradingCompleteAsync(string sectionId, Dtos.Student.SectionMidtermGradingCompleteForPost sectionGradingComplete);
     }
 }

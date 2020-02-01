@@ -1,4 +1,4 @@
-﻿//Copyright 2014-2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -393,9 +393,11 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
                     }
                 }
             }
+            //Filter out awards/award periods that are not viewable
+            var filteredAwards = ApplyConfigurationService.FilterStudentAwards(updatedStudentAwards);
 
             var studentAwardDtoAdapter = _adapterRegistry.GetAdapter<Domain.FinancialAid.Entities.StudentAward, StudentAward>();
-            return updatedStudentAwards.Select(updatedSa => studentAwardDtoAdapter.MapToType(updatedSa));
+            return filteredAwards.Select(sa => studentAwardDtoAdapter.MapToType(sa));
         }
 
         /// <summary>

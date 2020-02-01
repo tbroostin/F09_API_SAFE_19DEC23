@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and i affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and i affiliates.
 
 using System.Collections.Generic;
 using System.Linq;
@@ -366,7 +366,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
 
             return await Task.Run(() => { return glAccountsList; });
         }
-
+        
         /// <summary>
         /// Retrieves a single general ledger account.
         /// </summary>
@@ -390,6 +390,28 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             {
                 return glAccountValidationResponses.Where(x => x.Id == generalLedgerAccountId).FirstOrDefault();
             });
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="generalLedgerComponentKeys"></param>
+        /// <param name="majorComponentType"></param>
+        /// <returns></returns>
+        public async Task<Dictionary<string, string>> GetGlComponentDescriptionsByIdsAndComponentTypeAsync(IEnumerable<string> generalLedgerComponentIds, GeneralLedgerComponentType glComponentType)
+        {
+            var glAccountComponentValuesDictionary = new Dictionary<string, string>();
+
+            for (int i = 0; i < generalLedgerComponentIds.Count(); i++)
+            {
+                glAccountComponentValuesDictionary.Add(generalLedgerComponentIds.ElementAt(i),"Description-" + generalLedgerComponentIds.ElementAt(i));
+            }
+            return await Task.Run(() => { return glAccountComponentValuesDictionary; });
+        }
+
+        public Task<IEnumerable<GlAccount>> GetUserGeneralLedgerAccountsAsync(IEnumerable<string> glAccounts, GeneralLedgerAccountStructure glAccountStructure)
+        {
+            throw new NotImplementedException();
         }
     }
 }

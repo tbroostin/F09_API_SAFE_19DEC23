@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,6 +24,11 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         public static ProxyWorkflowConstants CoreNotifications
         {
             get { return new ProxyWorkflowConstants("CONO"); }
+        }
+
+        public static ProxyWorkflowConstants CoreRequiredDocuments
+        {
+            get { return new ProxyWorkflowConstants("CORD"); }
         }
 
         #endregion

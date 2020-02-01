@@ -28,5 +28,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <param name="bypassCache">Flag to bypass cache</param>
         /// <returns>The <see cref="FixedAssets">fixedAssets</see></returns>
         Task<Dtos.FixedAssets> GetFixedAssetsByGuidAsync(string guid, bool bypassCache = true);
+
+        /// <summary>
+        /// Get Fixed Assets transfer flags
+        /// </summary>
+        /// <returns>Collection of <see cref="FxaTransferFlag">FixedAssetsFlag</see> objects</returns>
+        Task<IEnumerable<Dtos.ColleagueFinance.FixedAssetsFlag>> GetFixedAssetTransferFlagsAsync();
     }
 }

@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using Ellucian.Web.Http.Filters;
 using System.Linq;
+using Ellucian.Colleague.Dtos.Student;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -41,6 +42,41 @@ namespace Ellucian.Colleague.Api.Controllers
             _campusOrganizationService = campusOrganizationService;
             _adapterRegistry = adapterRegistry;
             _logger = logger;
+        }
+
+        /// <summary>
+        /// A qapi that retrieves CampusOrganization2 records matching the query criteria.
+        /// <param name="criteria">CampusOrganizationQueryCriteria criteria</param>
+        /// </summary>
+        /// <returns>CampusOrganization2 objects.</returns>
+        /// <remarks>This method is NOT intended for use with ELLUCIAN DATA MODEL and hence doesn't deal with GUIDs</remarks>
+        [HttpPost]
+        public async Task<IEnumerable<CampusOrganization2>> GetCampusOrganizations2Async([FromBody]CampusOrganizationQueryCriteria criteria)
+        {
+            if(criteria == null)
+            {
+                var message = "CampusOrganizationQueryCriteria object should not be null.";
+                _logger.Error(message);               
+                throw CreateHttpResponseException(message, System.Net.HttpStatusCode.BadRequest);
+            }
+
+            if (criteria.CampusOrganizationIds == null || !criteria.CampusOrganizationIds.Any())
+            {
+                var message = "CampusOrganizationIds must contain at least one campus organization id.";
+                _logger.Error(message);
+                throw CreateHttpResponseException(message, System.Net.HttpStatusCode.BadRequest);
+            }
+
+            try
+            {
+                return await _campusOrganizationService.GetCampusOrganizations2ByCampusOrgIdsAsync(criteria.CampusOrganizationIds);
+            }
+            catch (Exception ex)
+            {
+                var message = "Unexpected error occurred while fetching the requested CampusOrganization2 records.";
+                _logger.Error(ex.ToString());
+                throw CreateHttpResponseException(message, System.Net.HttpStatusCode.BadRequest);
+            }
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN DATA MODEL</remarks>

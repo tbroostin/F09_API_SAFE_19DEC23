@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using System.Linq;
@@ -24,6 +24,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
         private string glNumberValue = "";
 
         public static string FUND_CODE = "FUND";
+        public static string FUND_GROUP = "FUND.GROUP";
         public static string SOURCE_CODE = "SOURCE";
         public static string LOCATION_CODE = "LOCATION";
         public static string LOCATION_SUBCLASS_CODE = "LOCATION_SUBCLASS";
@@ -34,6 +35,86 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
         public static string GL_SUBSCLASS_CODE = "GL_SUBCLASS";
 
         public List<string> AllGlNumbers { get { return glNumbers.Distinct().ToList(); } }
+
+        public List<string> FundTypeGlNumbers
+        {
+            get
+            {
+                List<string> results = new List<string>();
+                var fundComponents = GlComponents.Where(x => x.ComponentType == GeneralLedgerComponentType.Fund);
+                foreach (var comp in fundComponents)
+                {
+                    results.AddRange(glNumbers.Select(x => x.Substring(comp.StartPosition, comp.ComponentLength)).ToList());
+                }
+                return results;
+            }
+        }
+
+        public List<string> LocationTypeGlNumbers {
+            get
+            {
+                List<string> results = new List<string>();
+                var locationComponents = GlComponents.Where(x => x.ComponentType == GeneralLedgerComponentType.Location);
+                foreach (var comp in locationComponents)
+                {
+                    results.AddRange(glNumbers.Select(x => x.Substring(comp.StartPosition, comp.ComponentLength)).ToList());
+                }
+                return results;
+            }
+        }
+
+        public List<string> FunctionTypeGlNumbers
+        {
+            get
+            {
+                List<string> results = new List<string>();
+                var functionComponents = GlComponents.Where(x => x.ComponentType == GeneralLedgerComponentType.Function);
+                foreach (var comp in functionComponents)
+                {
+                    results.AddRange(glNumbers.Select(x => x.Substring(comp.StartPosition, comp.ComponentLength)).ToList());
+                }
+                return results;
+            }
+        }
+
+        public List<string> UnitTypeGlNumbers {
+            get
+            {
+                List<string> results = new List<string>();
+                var unitComponents = GlComponents.Where(x => x.ComponentType == GeneralLedgerComponentType.Unit);
+                foreach (var comp in unitComponents)
+                {
+                    results.AddRange(glNumbers.Select(x => x.Substring(comp.StartPosition, comp.ComponentLength)).ToList());
+                }
+                return results;
+            }
+        }
+
+        public List<string> SourceTypeGlNumbers {
+            get
+            {
+                List<string> results = new List<string>();
+                var sourceComponents = GlComponents.Where(x => x.ComponentType == GeneralLedgerComponentType.Source);
+                foreach (var comp in sourceComponents)
+                {
+                    results.AddRange(glNumbers.Select(x => x.Substring(comp.StartPosition, comp.ComponentLength)).ToList());
+                }
+                return results;
+            }
+        }
+
+        public List<string> ObjectTypeGlNumbers {
+            get
+            {
+                List<string> results = new List<string>();
+                var objectComponents = GlComponents.Where(x => x.ComponentType == GeneralLedgerComponentType.Object);
+                foreach (var comp in objectComponents)
+                {
+                    results.AddRange(glNumbers.Select(x => x.Substring(comp.StartPosition, comp.ComponentLength)).ToList());
+                }
+                return results;
+            }
+        }
 
         public List<GeneralLedgerComponent> GlComponents { get { return glComponents; } }
 
@@ -46,6 +127,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             glComponents = new List<GeneralLedgerComponent>();
             //accountStructure.SetMajorComponentStartPositions(new List<string>() { "1", "4", "7", "10", "13", "19" });
             glComponents.Add(new GeneralLedgerComponent(FUND_CODE, true, GeneralLedgerComponentType.Fund, "1", "2"));
+            glComponents.Add(new GeneralLedgerComponent(FUND_GROUP, true, GeneralLedgerComponentType.Fund, "1", "1"));
             glComponents.Add(new GeneralLedgerComponent(SOURCE_CODE, true, GeneralLedgerComponentType.Source, "4", "2"));
             glComponents.Add(new GeneralLedgerComponent(LOCATION_CODE, true, GeneralLedgerComponentType.Location, "7", "2"));
             glComponents.Add(new GeneralLedgerComponent(LOCATION_SUBCLASS_CODE, true, GeneralLedgerComponentType.Location, "7", "1"));
@@ -62,6 +144,11 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             accountStructure.AddMajorComponent(glComponents.FirstOrDefault(x => x.ComponentName == FUNCTION_CODE));
             accountStructure.AddMajorComponent(glComponents.FirstOrDefault(x => x.ComponentName == UNIT_CODE));
             accountStructure.AddMajorComponent(glComponents.FirstOrDefault(x => x.ComponentName == OBJECT_CODE));
+
+            accountStructure.AddSubcomponent(glComponents.FirstOrDefault(x => x.ComponentName == FUND_GROUP));
+            accountStructure.AddSubcomponent(glComponents.FirstOrDefault(x => x.ComponentName == LOCATION_SUBCLASS_CODE));
+            accountStructure.AddSubcomponent(glComponents.FirstOrDefault(x => x.ComponentName == UNIT_SUBCLASS_CODE));
+            accountStructure.AddSubcomponent(glComponents.FirstOrDefault(x => x.ComponentName == GL_SUBSCLASS_CODE));
 
             costCenterStructure = new CostCenterStructure();
             costCenterStructure.AddCostCenterComponent(glComponents.FirstOrDefault(x => x.ComponentName == FUND_CODE));

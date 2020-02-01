@@ -52,13 +52,34 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <returns>Returns list of InstitutionEmployers <see cref="Dtos.InstitutionEmployers"/> objects representing matching institutionEmployers</returns>
         [HttpGet, EedmResponseFilter]
-        [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
-        public async Task<IEnumerable<Ellucian.Colleague.Dtos.InstitutionEmployers>> GetInstitutionEmployersAsync()
+        [ValidateQueryStringFilter()]
+        [QueryStringFilterFilter("criteria", typeof(Dtos.InstitutionEmployers))]
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.InstitutionEmployers>> GetInstitutionEmployersAsync(QueryStringFilter criteria)
         {
+            var bypassCache = false;
+            string code = string.Empty;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
             try
             {
-                AddDataPrivacyContextProperty((await _institutionEmployersService.GetDataPrivacyListByApi(GetRouteResourceName())).ToList());
-                return await _institutionEmployersService.GetInstitutionEmployersAsync();
+                var criteriaObj = GetFilterObject<Dtos.EmploymentDepartments>(_logger, "criteria");
+                if (CheckForEmptyFilterParameters())
+                    return new List<Dtos.InstitutionEmployers>(new List<Dtos.InstitutionEmployers>());
+                var items = await _institutionEmployersService.GetInstitutionEmployersAsync(bypassCache);
+                if (criteriaObj != null && !string.IsNullOrEmpty(criteriaObj.Code) && items != null && items.Any())
+                {
+                    code = criteriaObj.Code;
+                    items = items.Where(c => c.Code == code);
+                }
+                AddEthosContextProperties(await _institutionEmployersService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                                  await _institutionEmployersService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                                  items.Select(a => a.Id).ToList()));
+                return items;
             }
             catch (JsonSerializationException e)
             {

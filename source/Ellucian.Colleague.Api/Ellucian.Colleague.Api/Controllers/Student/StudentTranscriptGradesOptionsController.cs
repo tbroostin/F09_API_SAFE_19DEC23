@@ -52,6 +52,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="student">filter student</param>
         /// <returns>List of StudentTranscriptGradesOptions <see cref="Dtos.StudentTranscriptGradesOptions"/> objects representing matching StudentTranscriptGradesOptions</returns>
         [HttpGet, EedmResponseFilter]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("student", typeof(Dtos.Filters.StudentFilter))]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
@@ -95,7 +96,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -125,6 +126,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="guid">GUID to desired StudentTranscriptGradesOptions</param>
         /// <returns>A StudentTranscriptGradesOptions object <see cref="Dtos.StudentTranscriptGradesOptions"/> in EEDM format</returns>
         [HttpGet, EedmResponseFilter]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.StudentTranscriptGradesOptions> GetStudentTranscriptGradesOptionsByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -156,7 +158,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -191,6 +193,21 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             //Update is not supported for Colleague but HeDM requires full crud support.
             throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
 
-        }        
+        }
+
+        /// <summary>
+        /// Update (PUT) an existing StudentTranscriptGradesOptions
+        /// </summary>
+        /// <param name="guid">GUID of the StudentTranscriptGradesOptions to update</param>
+        /// <param name="StudentTranscriptGradesOptions">DTO of the updated studentTranscriptGrades</param>
+        /// <returns>A StudentTranscriptGradesOptions object <see cref="Dtos.StudentTranscriptGradesOptions"/> in EEDM format</returns>
+        [HttpPut]
+        public async Task<Dtos.StudentTranscriptGradesOptions> PutStudentTranscriptGradesOptionsAsync([FromUri] string guid, [FromBody] Dtos.StudentTranscriptGradesOptions StudentTranscriptGradesOptions)
+        {
+            //Update is not supported for Colleague but HeDM requires full crud support.
+            throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
+
+        }
+
     }
 }

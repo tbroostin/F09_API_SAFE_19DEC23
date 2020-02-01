@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Reflection;
 using Ellucian.Colleague.Domain.Student.Entities;
@@ -32,7 +32,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
             public void NumberOfPropertiesTest()
             {
                 var applicantProperties = typeof(Applicant).GetProperties(BindingFlags.Public | BindingFlags.Instance);
-                Assert.AreEqual(41, applicantProperties.Length);
+                Assert.AreEqual(43, applicantProperties.Length);
             }
 
             [TestMethod]

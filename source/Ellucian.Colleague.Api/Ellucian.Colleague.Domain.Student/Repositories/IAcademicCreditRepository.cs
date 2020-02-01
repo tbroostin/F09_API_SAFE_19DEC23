@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Student.Entities;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -60,6 +60,26 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         Task<Dictionary<string, List<AcademicCredit>>> GetSortedAcademicCreditsBySortSpecificationIdAsync(IEnumerable<AcademicCredit> acadCredits, IEnumerable<string> sortSpecIds);
 
         Task<CreditType> GetCreditTypeAsync(string typecode);
-        
+        /// <summary>
+        /// Retrieves all academic credits for specific section Ids. This will return all academic credits regardless of status.
+        /// This also returns collection of invalid academic credit Ids, Ids that are missing from STUDENT.ACAD.CRED file.
+        /// </summary>
+        /// <param name="sectionId">Section Id</param>
+        /// <returns>Tuple that contains List of AcademicCredit entities specific to the given sections and List of invalid academic credit Ids.</returns>
+        Task<AcademicCreditsWithInvalidKeys> GetAcademicCreditsBySectionIdsWithInvalidKeysAsync(IEnumerable<string> sectionIds);
+        /// <summary>
+        /// Filters and return academic credits based upon the criteria passed.
+        /// Criteria is passed as unidata_uniquery syntax.
+        /// Criteria will only be applied to STUDENT.ACAD.CRED records
+        /// Criteria syntax is like "WITH <STUDENT.ACAD.CRED><FIELD NAME>"
+        /// </summary>
+        /// <param name="academicCredits">List of academic credits</param>
+        /// <param name="criteria">criteria as per unidata_uniquery syntax</param>
+        /// <returns>Filtered Academic credits as per criteria
+        /// If no criteria is passed, returns all the academic credits
+        /// </returns>
+        Task<IEnumerable<AcademicCredit>> FilterAcademicCreditsAsync(IEnumerable<AcademicCredit> acadCredits, string criteria);
+
+
     }
 }

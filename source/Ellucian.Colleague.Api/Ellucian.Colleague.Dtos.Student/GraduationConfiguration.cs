@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
 
 namespace Ellucian.Colleague.Dtos.Student
@@ -71,9 +71,19 @@ namespace Ellucian.Colleague.Dtos.Student
         public bool RequireImmediatePayment { get; set; }
 
         /// <summary>
-        /// Hiding parameter for anticipateddate for a program
+        /// Hiding parameter for anticipated date for a program
         /// </summary>
         public bool HideAnticipatedCompletionDate { get; set; }
+
+        /// <summary>
+        /// Check if NP CP values has been set for the programs
+        /// </summary>
+        public bool IsNPCPValuesSetForPrograms { get; set; }
+
+        /// <summary>
+        /// Flag indicating whether or not users may edit previously submitted graduation applications
+        /// </summary>
+        public bool PreventGraduationApplicationEdits { get; set; }
 
         /// <summary>
         /// Default constructor

@@ -1,0 +1,292 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Ellucian.Web.Resource</name>
+    </assembly>
+    <members>
+        <member name="T:Ellucian.Web.Resource.ChangeLog">
+            <summary>
+            Object that constitutes the data within a change log file; object is serializable so it
+            can be saved off to disk as a JSON object
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Resource.ChangeLog.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Resource.ChangeLog"/> class.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Resource.ChangeLog.ResourceFileChanges">
+            <summary>
+            Gets or sets the list of resource file changes that apply to a particular resource file.
+            </summary>
+            <value>
+            The resource file changes.
+            </value>
+        </member>
+        <member name="T:Ellucian.Web.Resource.ChangeLogEntry">
+            <summary>
+            Object that constitutes a customized entry within a resource file; object is serializable so it
+            can be saved off to disk as a JSON object
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Resource.ChangeLogEntry.Key">
+            <summary>
+            Gets or sets the key of the customized resource file entry.
+            </summary>
+            <value>
+            The key.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Resource.ChangeLogEntry.NewValue">
+            <summary>
+            Gets or sets the new value for the customized resource file entry.
+            </summary>
+            <value>
+            The new value.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Resource.ChangeLogEntry.OriginalValue">
+            <summary>
+            Gets or sets the original value for the customized resource file entry.
+            </summary>
+            <value>
+            The original value.
+            </value>
+        </member>
+        <member name="T:Ellucian.Web.Resource.IResourceRepository">
+            <summary>
+            Interface for resource repositories.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Resource.IResourceRepository.GetResourceFilePaths(System.Boolean)">
+            <summary>
+            Gets a list of resource files at the base path specified for this repository; includes a recursive option.
+            </summary>
+            <param name="recursive">If true, perform recursive search within the search directory. Otherwise, return only resource files in the specified directory.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Resource.IResourceRepository.GetResourceFilePaths(System.String,System.Boolean)">
+            <summary>
+            Gets a list of resource files at a specified path; includes a recursive option.
+            </summary>
+            <param name="relativeSearchPath">The relative search path in which to search for resource files; this path is combined with the base resource file path established when this class was instantiated.</param>
+            <param name="recursive">If true, perform recursive search within the search directory. Otherwise, return only resource files in the specified directory.</param>
+            <returns></returns>
+            <exception cref="T:System.IO.DirectoryNotFoundException"></exception>
+        </member>
+        <member name="M:Ellucian.Web.Resource.IResourceRepository.GetResourceFile(System.String)">
+            <summary>
+            Get the contents of a locally hosted resource file provided a path to the resource.
+            </summary>
+            <param name="relativeResourceFilePath">The path to the resource file to be retrieved, relative to the base resource path when the class was instantiated. This path should include the file name of the resource file.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Resource.IResourceRepository.UpdateResourceFile(System.String,Ellucian.Web.Resource.ResourceFile)">
+            <summary>
+            Updates the contents of a locally hosted resource file provided a path to the resource.
+            </summary>
+            <param name="resourcePath">The path to the resource file to be updated.</param>
+            <param name="resourceFileToWrite">The resource file to write.</param>
+        </member>
+        <member name="P:Ellucian.Web.Resource.IResourceRepository.BaseResourcePath">
+            <summary>
+            Gets the base resource path within which all resource files being used
+            must exist.
+            </summary>
+            <value>
+            The base resource path.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Resource.IResourceRepository.ChangeLogPath">
+            <summary>
+            Gets the change log path (including the file name) which will be used as
+            the change log to track all changes made to resource file(s).
+            </summary>
+            <value>
+            The change log path.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Resource.IResourceRepository.UsingChangeLog">
+            <summary>
+            Gets a value indicating whether a change log is being used within this resource repository instance.
+            </summary>
+            <value>
+            True if a change log is being used. False otherwise.
+            </value>
+        </member>
+        <member name="T:Ellucian.Web.Resource.Repositories.LocalResourceRepository">
+            <summary>
+            Class for managing updates to resource files within locally hosted web applications
+            </summary>
+            <seealso cref="T:Ellucian.Web.Resource.IResourceRepository"/>
+        </member>
+        <member name="M:Ellucian.Web.Resource.Repositories.LocalResourceRepository.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Resource.Repositories.LocalResourceRepository"/> class.
+            </summary>
+            <param name="baseResourcePath">The base resource path. This is the path under which any resource files to access should be located.</param>
+            <exception cref="T:System.ArgumentNullException">baseResourcePath</exception>
+            <exception cref="T:System.IO.DirectoryNotFoundException"></exception>
+        </member>
+        <member name="M:Ellucian.Web.Resource.Repositories.LocalResourceRepository.#ctor(System.String,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Resource.Repositories.LocalResourceRepository"/> class.
+            </summary>
+            <param name="baseResourcePath">The base resource path. This is the path under which any resource files to access should be located.</param>
+            <param name="changeLogPath">The change log path, including the file name and extension. The change log allows resource file customizations to be tracked. The change log must be a JSON object (extension of .json).</param>
+            <exception cref="T:System.ArgumentNullException">
+            baseResourcePath
+            or
+            changeLogPath
+            </exception>
+            <exception cref="T:System.IO.DirectoryNotFoundException">
+            </exception>
+        </member>
+        <member name="M:Ellucian.Web.Resource.Repositories.LocalResourceRepository.GetResourceFilePaths(System.Boolean)">
+            <summary>
+            Gets a list of resource files at the base path specified for this repository; includes a recursive option.
+            </summary>
+            <param name="recursive">If true, perform recursive search within the search directory. Otherwise, return only resource files in the specified directory.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Resource.Repositories.LocalResourceRepository.GetResourceFilePaths(System.String,System.Boolean)">
+            <summary>
+            Gets a list of resource files at a specified path; includes a recursive option.
+            </summary>
+            <param name="relativeSearchPath">The relative search path in which to search for resource files; this path is combined with the base resource file path established when this class was instantiated.</param>
+            <param name="recursive">If true, perform recursive search within the search directory. Otherwise, return only resource files in the specified directory.</param>
+            <returns></returns>
+            <exception cref="T:System.IO.DirectoryNotFoundException"></exception>
+        </member>
+        <member name="M:Ellucian.Web.Resource.Repositories.LocalResourceRepository.GetResourceFile(System.String)">
+            <summary>
+            Get the contents of a locally hosted resource file provided a path to the resource.
+            </summary>
+            <param name="relativeResourceFilePath">The path to the resource file to be retrieved, relative to the base resource path when the class was instantiated. This path should include the file name of the resource file.</param>
+            <returns></returns>
+            <exception cref="T:System.ArgumentNullException">relativeResourceFilePath</exception>
+            <exception cref="T:System.IO.FileNotFoundException"></exception>
+            <exception cref="T:System.ArgumentException"></exception>
+        </member>
+        <member name="M:Ellucian.Web.Resource.Repositories.LocalResourceRepository.UpdateResourceFile(System.String,Ellucian.Web.Resource.ResourceFile)">
+            <summary>
+            Updates the contents of a locally hosted resource file provided a path to the resource.
+            </summary>
+            <param name="relativeResourceFilePath">The path to the resource file to be updated, relative to the base resource path when the class was instantiated. This path should include the file name of the resource file.</param>
+            <param name="resourceFileData">The resource file contents to write.</param>
+            <exception cref="T:System.ArgumentNullException">
+            relativeResourceFilePath
+            or
+            resourceFileData
+            </exception>
+            <exception cref="T:System.IO.FileNotFoundException"></exception>
+            <exception cref="T:System.ArgumentException"></exception>
+            <exception cref="T:System.InvalidOperationException">Additions of entries to resource files are not supported and should be managed through source control.</exception>
+        </member>
+        <member name="M:Ellucian.Web.Resource.Repositories.LocalResourceRepository.GetResourceChangeLog">
+            <summary>
+            Gets the change log for a resource file at the specified path.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Ellucian.Web.Resource.Repositories.LocalResourceRepository.UpdateResourceChangeLog(Ellucian.Web.Resource.ChangeLog)">
+            <summary>
+            Updates the resource file change log.
+            </summary>
+            <param name="updatedChangeLog">The contents of the updated change log.</param>
+            <exception cref="T:System.ArgumentNullException">updatedChangeLog</exception>
+        </member>
+        <member name="P:Ellucian.Web.Resource.Repositories.LocalResourceRepository.BaseResourcePath">
+            <summary>
+            Gets the base resource path within which all resource files being used
+            must exist.
+            </summary>
+            <value>
+            The base resource path.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Resource.Repositories.LocalResourceRepository.ChangeLogPath">
+            <summary>
+            Gets the change log path (including the file name) which will be used as
+            the change log to track all changes made to resource file(s).
+            </summary>
+            <value>
+            The change log path.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Resource.Repositories.LocalResourceRepository.UsingChangeLog">
+            <summary>
+            Gets a value indicating whether a change log is being used within this resource repository instance.
+            </summary>
+            <value>
+            True if a change log is being used. False otherwise.
+            </value>
+        </member>
+        <member name="T:Ellucian.Web.Resource.ResourceFile">
+            <summary>
+            Object that constitutes the data within a resource file; includes an object for
+            original value to allow for tracking custom changes made to resource file entries
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Resource.ResourceFile.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ellucian.Web.Resource.ResourceFile"/> class.
+            </summary>
+            <param name="resourceFileName">Name of the resource file.</param>
+        </member>
+        <member name="P:Ellucian.Web.Resource.ResourceFile.ResourceFileName">
+            <summary>
+            Gets or sets the name of the resource file.
+            </summary>
+            <value>
+            The name of the resource file.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Resource.ResourceFile.ResourceFileEntries">
+            <summary>
+            Gets or sets the resource file contents for this resource file.
+            </summary>
+            <value>
+            The resource file contents.
+            </value>
+        </member>
+        <member name="T:Ellucian.Web.Resource.ResourceFileEntry">
+            <summary>
+            Object that makes up the data for each entry within a resource file; includes an object for
+            original value to allow for tracking custom changes made to resource file entries
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Resource.ResourceFileEntry.Key">
+            <summary>
+            Gets or sets the value for the key in the resource file entry.
+            </summary>
+            <value>
+            The key.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Resource.ResourceFileEntry.Value">
+            <summary>
+            Gets or sets the value for the associated key in the resource file entry.
+            </summary>
+            <value>
+            The value.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Resource.ResourceFileEntry.OriginalValue">
+            <summary>
+            Gets or sets the original value for the associated key in the resource file entry.
+            </summary>
+            <value>
+            The original value.
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Resource.ResourceFileEntry.Comment">
+            <summary>
+            Gets or sets the comment for the associated key in the resource file entry.
+            </summary>
+            <value>
+            The comment.
+            </value>
+        </member>
+    </members>
+</doc>

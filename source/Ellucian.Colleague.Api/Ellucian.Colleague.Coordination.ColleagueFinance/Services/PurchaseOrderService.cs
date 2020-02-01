@@ -41,6 +41,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         private readonly IConfigurationRepository configurationRepository;
         private readonly IAccountFundsAvailableRepository accountFundAvailableRepository;
         IDictionary<string, string> _projectReferenceIds = null;
+        private IStaffRepository staffRepository;
 
         // Constructor to initialize the private attributes
         public PurchaseOrderService(IPurchaseOrderRepository purchaseOrderRepository,
@@ -56,6 +57,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             IAccountFundsAvailableRepository accountFundAvailableRepository,
             IPersonRepository personRepository,
             IRoleRepository roleRepository,
+            IStaffRepository staffRepository,
             ILogger logger)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger, configurationRepository: configurationRepository)
         {
@@ -69,6 +71,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             this.accountFundAvailableRepository = accountFundAvailableRepository;
             this.personRepository = personRepository;
             this.configurationRepository = configurationRepository;
+            this.staffRepository = staffRepository;
         }
 
 
@@ -316,7 +319,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
             catch (KeyNotFoundException ex)
             {
-                throw new KeyNotFoundException(string.Format("No Purchase Order was found for guid '{0}'.", guid), ex);
+                throw new KeyNotFoundException(ex.Message);
             }
             catch (InvalidOperationException ex)
             {
@@ -333,6 +336,68 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             catch (Exception ex)
             {
                 throw ex;
+            }
+        }
+
+        /// <summary>
+        /// Returns the list of Purchase Order summary object for the user
+        /// </summary>
+        /// <param name="id">Person ID</param>
+        /// <returns>Purchase Order Summary DTOs</returns>
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.ColleagueFinance.PurchaseOrderSummary>> GetPurchaseOrderSummaryByPersonIdAsync(string personId)
+        {
+            List<Ellucian.Colleague.Dtos.ColleagueFinance.PurchaseOrderSummary> purchaseOrderSummaryDtos = new List<Ellucian.Colleague.Dtos.ColleagueFinance.PurchaseOrderSummary>();
+
+            if (string.IsNullOrEmpty(personId))
+            {
+                throw new ArgumentNullException("personId", "Person ID must be specified.");
+            }
+            // check if personId passed is same currentuser
+            CheckIfUserIsSelf(personId);
+
+            //check if personId has staff record            
+            await CheckStaffRecordAsync(personId);
+
+            // Check the permission code to view a purchase order.
+            CheckPurchaseOrderViewPermission();
+
+            // Get the list of purchase order summary domain entity from the repository
+            var purchaseOrderSummaryDomainEntities = await purchaseOrderRepository.GetPurchaseOrderSummaryByPersonIdAsync(personId);
+
+            if (purchaseOrderSummaryDomainEntities == null || !purchaseOrderSummaryDomainEntities.Any())
+            {
+                return purchaseOrderSummaryDtos;
+            }
+
+            //sorting
+            var sortOrderSequence = new List<string> { PurchaseOrderStatus.InProgress.ToString(), PurchaseOrderStatus.NotApproved.ToString(), PurchaseOrderStatus.Outstanding.ToString(), PurchaseOrderStatus.Accepted.ToString(), PurchaseOrderStatus.Backordered.ToString(), PurchaseOrderStatus.Invoiced.ToString(), PurchaseOrderStatus.Paid.ToString(), PurchaseOrderStatus.Reconciled.ToString(), PurchaseOrderStatus.Closed.ToString(), PurchaseOrderStatus.Voided.ToString() };
+            purchaseOrderSummaryDomainEntities = purchaseOrderSummaryDomainEntities.OrderBy(item => sortOrderSequence.IndexOf(item.Status.ToString())).ThenByDescending(x => int.Parse(x.Id));
+
+
+            // Convert the purchase order summary and all its child objects into DTOs
+            var requisitionSummaryDtoAdapter = new PurchaseOrderSummaryEntityDtoAdapter(_adapterRegistry, logger);
+            foreach (var purchaseOrderDomainEntity in purchaseOrderSummaryDomainEntities)
+            {
+                purchaseOrderSummaryDtos.Add(requisitionSummaryDtoAdapter.MapToType(purchaseOrderDomainEntity));
+            }
+
+            return purchaseOrderSummaryDtos;
+        }
+
+
+        /// <summary>
+        /// Determine if personId is has staff record
+        /// </summary>
+        /// <param name="personId">ID of person from data</param>
+        /// <returns></returns>
+        private async Task CheckStaffRecordAsync(string personId)
+        {
+            var staffRecord = await staffRepository.GetAsync(personId);
+            if (staffRecord == null)
+            {
+                var message = string.Format("{0} does not have staff record.", CurrentUser.PersonId);
+                logger.Error(message);
+                throw new PermissionsException(message);
             }
         }
 
@@ -396,6 +461,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             if ((source.DeliveryDate != null && source.DeliveryDate.HasValue))
                 purchaseOrder.DeliveredBy = Convert.ToDateTime(source.DeliveryDate);
 
+            purchaseOrder.StatusDate = source.StatusDate;
             if ((source.VoidGlTranDate != null && source.VoidGlTranDate.HasValue))
                 purchaseOrder.StatusDate = Convert.ToDateTime(source.VoidGlTranDate);
 
@@ -1060,6 +1126,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     }
                     purchaseOrderEntity.AltShippingZip = place.Country.PostalCode;
                 }
+                if (purchaseOrder.OverrideShippingDestination.Contact != null)
+                {
+                    if (!string.IsNullOrEmpty(purchaseOrder.OverrideShippingDestination.Contact.Number))
+                        purchaseOrderEntity.AltShippingPhone = purchaseOrder.OverrideShippingDestination.Contact.Number;
+                    if (!string.IsNullOrEmpty(purchaseOrder.OverrideShippingDestination.Contact.Extension))
+                        purchaseOrderEntity.AltShippingPhoneExt = purchaseOrder.OverrideShippingDestination.Contact.Extension;
+                }
             }
 
             if (purchaseOrder.Vendor != null)
@@ -1181,15 +1254,19 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             if (purchaseOrder.Comments != null && purchaseOrder.Comments.Any())
             {
+                purchaseOrderEntity.Comments = string.Empty;
+                purchaseOrderEntity.InternalComments = string.Empty;
                 foreach (var comment in purchaseOrder.Comments)
                 {
                     switch (comment.Type)
                     {
                         case CommentTypes.NotPrinted:
-                            purchaseOrderEntity.InternalComments = comment.Comment;
+                            purchaseOrderEntity.InternalComments = !string.IsNullOrEmpty(purchaseOrderEntity.InternalComments) ?
+                                string.Concat(purchaseOrderEntity.InternalComments, " ", comment.Comment) : comment.Comment;
                             break;
                         case CommentTypes.Printed:
-                            purchaseOrderEntity.Comments = comment.Comment;
+                            purchaseOrderEntity.Comments = !string.IsNullOrEmpty(purchaseOrderEntity.Comments) ?
+                                string.Concat(purchaseOrderEntity.Comments, " ", comment.Comment) : comment.Comment;
                             break;
                     }
                 }
@@ -1249,10 +1326,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     }
                     if (lineItem.Comments != null && lineItem.Comments.Any())
                     {
-                        string comment = "";
+                        string comment = string.Empty;
                         foreach (var com in lineItem.Comments)
                         {
-                            comment = string.Concat(comment, com.Comment);
+                            comment = !string.IsNullOrEmpty(comment) ?
+                                string.Concat(comment, " ", com.Comment) : com.Comment;
                         }
                         apLineItem.Comments = comment;
                     }
@@ -1272,7 +1350,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     {
                         apLineItem.VendorPart = lineItem.PartNumber;
                     }
-                    apLineItem.DesiredDate = lineItem.DesiredDate;
+                    // Line items have both expected date and desired date.  We want to use expected date.
+                    // apLineItem.DesiredDate = lineItem.DesiredDate;
+                    apLineItem.ExpectedDeliveryDate = lineItem.DesiredDate;
 
 
                     var lineItemTaxCodes = new List<string>();
@@ -1332,6 +1412,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                             apLineItem.StatusDate = lineItem.AccountDetail[0].StatusDate;
                         }
                         var crntDetails = lineItem.AccountDetail[0].Status;
+                        var crntDetailsDate = lineItem.AccountDetail[0].StatusDate;
                         foreach (var accountDetails in lineItem.AccountDetail)
                         {
 
@@ -1366,6 +1447,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                                 if (crntDetails != accountDetails.Status)
                                 {
                                     throw new Exception("The LineItem accountDetails have conflicting status. Cannot have different status on the same LineItem");
+                                }
+                                if (crntDetailsDate != null && crntDetailsDate.HasValue && accountDetails.StatusDate != null && accountDetails.StatusDate.HasValue && crntDetailsDate != accountDetails.StatusDate)
+                                {
+                                    throw new Exception("The LineItem accountDetails have conflicting status date. Cannot have different status date on the same LineItem");
                                 }
                             }
 
@@ -1562,7 +1647,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             {
                 lineItem.PartNumber = sourceLineItem.VendorPart;
             }
-            lineItem.DesiredDate = sourceLineItem.DesiredDate;
+            // Line items have expected date and desired date however, we want to use expected date only.
+            // lineItem.DesiredDate = sourceLineItem.DesiredDate;
+            lineItem.DesiredDate = sourceLineItem.ExpectedDeliveryDate;
             lineItem.Quantity = sourceLineItem.Quantity;
 
             if (!string.IsNullOrEmpty(sourceLineItem.UnitOfIssue))
@@ -1808,13 +1895,14 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 source.AltShippingCity, source.AltShippingState, source.AltShippingZip,
                 source.HostCountry, source.AltShippingCountry, bypassCache);
 
-            if (!string.IsNullOrEmpty(source.AltShippingPhone))
+            if (!string.IsNullOrEmpty(source.AltShippingPhone) || !string.IsNullOrEmpty(source.AltShippingPhoneExt))
             {
-                overrideShippingDestinationDto.Contact = new PhoneDtoProperty()
-                {
-                    Number = source.AltShippingPhone,
-                    Extension = source.AltShippingPhoneExt
-                };
+                var contact = new PhoneDtoProperty();
+                if (!string.IsNullOrEmpty(source.AltShippingPhone))
+                    contact.Number = source.AltShippingPhone;
+                if (!string.IsNullOrEmpty(source.AltShippingPhoneExt))
+                    contact.Extension = source.AltShippingPhoneExt;
+                overrideShippingDestinationDto.Contact = contact;
             }
 
             if (overrideShippingDestinationDto != null &&
@@ -2166,7 +2254,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
         private void CheckPurchaseOrderViewPermission()
         {
-            var hasPermission = HasPermission(ColleagueFinancePermissionCodes.ViewPurchaseOrder);
+            var hasPermission = HasPermission(ColleagueFinancePermissionCodes.ViewPurchaseOrder) || HasPermission(ColleagueFinancePermissionCodes.CreateUpdatePurchaseOrder);
 
             if (!hasPermission)
             {

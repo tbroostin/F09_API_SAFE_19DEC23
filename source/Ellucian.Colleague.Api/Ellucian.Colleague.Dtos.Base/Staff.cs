@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,6 +25,10 @@ namespace Ellucian.Colleague.Dtos.Base
         /// The staff member's last name
         /// </summary>
         public string LastName { get; private set; }
+        /// <summary>
+        /// The staff member's initials
+        /// </summary>
+        public string StaffInitials { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Staff"/> class.

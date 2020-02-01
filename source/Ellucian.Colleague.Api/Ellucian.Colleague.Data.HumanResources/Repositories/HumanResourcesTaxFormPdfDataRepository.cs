@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
@@ -36,6 +36,23 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             : base(cacheProvider, transactionFactory, logger)
         {
             // nothing to do
+        }
+
+        /// <summary>
+        /// Gets the boolean value that indicates if the client is set up to use the Guam version of the W2 form.
+        /// </summary>
+        /// <returns>Boolean value where true = Guam and false = USA</returns>
+        public async Task<bool> GetW2GuamFlag()
+        {
+            var qtdYtdParameter = await DataReader.ReadRecordAsync<QtdYtdParameterW2Pdf>("HR.PARMS", "QTD.YTD.PARAMETER");
+            if( qtdYtdParameter != null && !string.IsNullOrWhiteSpace(qtdYtdParameter.QypW2UseGuamTemplate))
+            {
+                return qtdYtdParameter.QypW2UseGuamTemplate.ToUpper() == "Y";
+            }
+            else
+            {
+                return false;
+            }
         }
 
         /// <summary>
@@ -421,7 +438,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             domainEntityW2c.EmployeeId = dataContractW2c.Ww2coEmployeeId;
             domainEntityW2c.EmployeeFirstName = dataContractW2c.Ww2coFirstName;
             domainEntityW2c.EmployeeLastName = dataContractW2c.Ww2coLastName;
-            domainEntityW2c.EmployeeMiddleName = dataContractW2c.Ww2coMiddleName;
+            domainEntityW2c.EmployeeMiddleName = !string.IsNullOrEmpty(dataContractW2c.Ww2coMiddleName) ? dataContractW2c.Ww2coMiddleName.Substring(0,1) : string.Empty;
             domainEntityW2c.EmployeeSuffix = dataContractW2c.Ww2coSuffix;
             domainEntityW2c.EmployeeAddressLine1 = dataContractW2c.Ww2coEmplyeAddrLine1;
             domainEntityW2c.EmployeeAddressLine2 = dataContractW2c.Ww2coEmplyeAddrLine2;
@@ -473,9 +490,54 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             domainEntityW2c.Box12dCode = dataContractW2c.Ww2coCodeBoxCodeD;
             domainEntityW2c.Box12dAmount = W2cAmountStringToDecimal(dataContractW2c.Ww2coCodeBoxAmountD, recordId, dataContractW2c);
 
-            domainEntityW2c.Box13CheckBox1 = dataContractW2c.Ww2coCheckBox1 == "A" ? "x" : null;
-            domainEntityW2c.Box13CheckBox2 = dataContractW2c.Ww2coCheckBox3 == "A" ? "x" : null;
-            domainEntityW2c.Box13CheckBox3 = dataContractW2c.Ww2coCheckBox6 == "A" ? "x" : null;
+            if (dataContractW2c.Ww2coCheckBox1 == "A")
+            {
+                domainEntityW2c.Box13CheckBox1 = "x";
+                domainEntityW2c.Box13CheckBox1Prev = null;
+
+            } else if (dataContractW2c.Ww2coCheckBox1 == "R")
+            {
+                domainEntityW2c.Box13CheckBox1 = null;
+                domainEntityW2c.Box13CheckBox1Prev = "x";
+            } else
+            {
+                domainEntityW2c.Box13CheckBox1 = null;
+                domainEntityW2c.Box13CheckBox1Prev = null;
+            }
+
+            if (dataContractW2c.Ww2coCheckBox3 == "A")
+            {
+                domainEntityW2c.Box13CheckBox2 = "x";
+                domainEntityW2c.Box13CheckBox2Prev = null;
+
+            }
+            else if (dataContractW2c.Ww2coCheckBox3 == "R")
+            {
+                domainEntityW2c.Box13CheckBox2 = null;
+                domainEntityW2c.Box13CheckBox2Prev = "x";
+            }
+            else
+            {
+                domainEntityW2c.Box13CheckBox2 = null;
+                domainEntityW2c.Box13CheckBox3Prev = null;
+            }
+
+            if (dataContractW2c.Ww2coCheckBox6 == "A")
+            {
+                domainEntityW2c.Box13CheckBox3 = "x";
+                domainEntityW2c.Box13CheckBox3Prev = null;
+
+            }
+            else if (dataContractW2c.Ww2coCheckBox6 == "R")
+            {
+                domainEntityW2c.Box13CheckBox3 = null;
+                domainEntityW2c.Box13CheckBox3Prev = "x";
+            }
+            else
+            {
+                domainEntityW2c.Box13CheckBox3 = null;
+                domainEntityW2c.Box13CheckBox3Prev = null;
+            }
 
             if (!string.IsNullOrEmpty(dataContractW2c.Ww2coOtherBoxCodeE))
             {
@@ -630,7 +692,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             // Assign the previous W2 values
             if (dataContractW2c.Ww2coChangedSsnOrName == "Y")
             {
-                dataContractW2c.Ww2coChangedSsnOrName = "x";
+                domainEntityW2c.ChangesSsnOrName = "x";
                 string ssnPrev = "";
                 if (dataContractW2c != null && !string.IsNullOrEmpty(dataContractW2c.Ww2coSsnPrev))
                 {
@@ -701,10 +763,6 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             domainEntityW2c.Box12cAmountPrev = W2cAmountStringToDecimal(dataContractW2c.Ww2coCodeBoxAmntCPrev, recordId, dataContractW2c);
             domainEntityW2c.Box12dCodePrev = dataContractW2c.Ww2coCodeBoxCodeDPrev;
             domainEntityW2c.Box12dAmountPrev = W2cAmountStringToDecimal(dataContractW2c.Ww2coCodeBoxAmntDPrev, recordId, dataContractW2c);
-
-            domainEntityW2c.Box13CheckBox1Prev = dataContractW2c.Ww2coCheckBox1Prev == "A" ? "x" : null;
-            domainEntityW2c.Box13CheckBox2Prev = dataContractW2c.Ww2coCheckBox3Prev == "A" ? "x" : null;
-            domainEntityW2c.Box13CheckBox3Prev = dataContractW2c.Ww2coCheckBox6Prev == "A" ? "x" : null;
 
             if (!string.IsNullOrEmpty(dataContractW2c.Ww2coOtherBoxCodeEPrev))
             {

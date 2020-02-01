@@ -1,4 +1,5 @@
-﻿using Ellucian.Colleague.Data.Base.Tests.Repositories;
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates
+using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.Student.Repositories;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Data.Colleague;

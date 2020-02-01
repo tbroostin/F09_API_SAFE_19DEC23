@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using Ellucian.Colleague.Coordination.Base.Services;
@@ -48,7 +48,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <param name="personId">The Id of the person for whom to get correspondence requests</param>
         /// <returns>A list of Correspondence Request DTO objects</returns>
         /// <exception cref="ArgumentNullException">Thrown if studentId is null or empty</exception>
-        /// <exception cref="PermissionsException">Thrown if Current user is requesting data for a student other than self</exception>        
+        /// <exception cref="PermissionsException">Thrown if Current user is requesting data for someone whom they do not have access</exception>        
         public async Task<IEnumerable<Dtos.Base.CorrespondenceRequest>> GetCorrespondenceRequestsAsync(string personId)
         {
             if (string.IsNullOrEmpty(personId))
@@ -56,9 +56,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 throw new ArgumentNullException("studentId");
             }
 
-            if (!CurrentUser.IsPerson(personId))
+            if (!CurrentUser.IsPerson(personId) && !HasProxyAccessForPerson(personId, Domain.Base.Entities.ProxyWorkflowConstants.CoreRequiredDocuments))
             {
-                throw new PermissionsException(String.Format("Authenticated user (person ID {0}) does not match passed person ID {1}.", CurrentUser.PersonId, personId));
+                throw new PermissionsException(String.Format("Authenticated user (person ID {0}) does not have permission to view documents for given person ID {1}.", CurrentUser.PersonId, personId));
             }
 
             var correspondenceRequestEntityList = await correspondenceRequestsRepository.GetCorrespondenceRequestsAsync(personId);
@@ -68,7 +68,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             var correspondenceRequestDtoList = new List<Dtos.Base.CorrespondenceRequest>();
             if (correspondenceRequestEntityList == null)
             {
-                logger.Info("StudentDocumentRepository returned null from Get(string studentId).");
+                logger.Debug("CorrespondenceRequestsRepository returned null from GetCorrespondenceRequestsAsync(string personId).");
                 return correspondenceRequestDtoList;
             }
 

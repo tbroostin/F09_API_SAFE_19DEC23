@@ -1,9 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Student.Entities;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 
 namespace Ellucian.Colleague.Domain.Student.Tests.Entities
 {
@@ -73,6 +71,193 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
             public void GradeExcludeFromFacultyGrading_DefaultValue()
             {
                 Assert.IsFalse(grade.ExcludeFromFacultyGrading);
+            }
+
+            [TestMethod]
+            public void Grade_IncludeInWebFinalGradesList_DefaultValue()
+            {
+                Assert.IsFalse(grade.IncludeInWebFinalGradesList);
+            }
+
+            [TestMethod]
+            public void Grade_IncludeInWebFinalGradesList_DefaultValue_2()
+            {
+                grade = new Grade(letterGrade, desc, schema);
+                Assert.IsFalse(grade.IncludeInWebFinalGradesList);
+            }
+
+            [TestMethod]
+            public void Grade_IncludeInWebFinalGradesList_DefaultValue_3()
+            {
+                grade = new Grade(id, letterGrade, desc, schema);
+                Assert.IsFalse(grade.IncludeInWebFinalGradesList);
+            }
+
+            [TestMethod]
+            public void Grade_IncludeInWebFinalGradesList_False()
+            {
+                grade = new Grade(id, letterGrade, desc, schema, false);
+                Assert.IsFalse(grade.IncludeInWebFinalGradesList);
+            }
+
+            [TestMethod]
+            public void Grade_IncludeInWebFinalGradesList_False_2()
+            {
+                grade = new Grade(letterGrade, desc, schema, false);
+                Assert.IsFalse(grade.IncludeInWebFinalGradesList);
+            }
+
+            [TestMethod]
+            public void Grade_IncludeInWebFinalGradesList_False_3()
+            {
+                grade = new Grade(guid, id, letterGrade, credit, desc, schema, false);
+                Assert.IsFalse(grade.IncludeInWebFinalGradesList);
+            }
+
+            [TestMethod]
+            public void Grade_IncludeInWebFinalGradesList_True()
+            {
+                grade = new Grade(id, letterGrade, desc, schema, true);
+                Assert.IsTrue(grade.IncludeInWebFinalGradesList);
+            }
+
+            [TestMethod]
+            public void Grade_IncludeInWebFinalGradesList_True_2()
+            {
+                grade = new Grade(letterGrade, desc, schema, true);
+                Assert.IsTrue(grade.IncludeInWebFinalGradesList);
+            }
+
+            [TestMethod]
+            public void Grade_IncludeInWebFinalGradesList_True_3()
+            {
+                grade = new Grade(guid, id, letterGrade, credit, desc, schema, true);
+                Assert.IsTrue(grade.IncludeInWebFinalGradesList);
+            }
+
+            [TestMethod]
+            public void Grade_IncludeInWebMidtermGradesList_DefaultValue()
+            {
+                Assert.IsFalse(grade.IncludeInWebMidtermGradesList);
+            }
+
+            [TestMethod]
+            public void Grade_IncludeInWebMidtermGradesList_DefaultValue_2()
+            {
+                grade = new Grade(letterGrade, desc, schema);
+                Assert.IsFalse(grade.IncludeInWebMidtermGradesList);
+            }
+
+            [TestMethod]
+            public void Grade_IncludeInWebMidtermGradesList_DefaultValue_3()
+            {
+                grade = new Grade(id, letterGrade, desc, schema);
+                Assert.IsFalse(grade.IncludeInWebMidtermGradesList);
+            }
+
+            [TestMethod]
+            public void Grade_IncludeInWebMidtermGradesList_False()
+            {
+                grade = new Grade(id, letterGrade, desc, schema, true, false);
+                Assert.IsFalse(grade.IncludeInWebMidtermGradesList);
+            }
+
+            [TestMethod]
+            public void Grade_IncludeInWebMidtermGradesList_False_2()
+            {
+                grade = new Grade(letterGrade, desc, schema, true, false);
+                Assert.IsFalse(grade.IncludeInWebMidtermGradesList);
+            }
+
+            [TestMethod]
+            public void Grade_IncludeInWebMidtermGradesList_False_3()
+            {
+                grade = new Grade(guid, id, letterGrade, credit, desc, schema, true, false);
+                Assert.IsFalse(grade.IncludeInWebMidtermGradesList);
+            }
+
+            [TestMethod]
+            public void Grade_IncludeInWebMidtermGradesList_True()
+            {
+                grade = new Grade(id, letterGrade, desc, schema, false, true);
+                Assert.IsTrue(grade.IncludeInWebMidtermGradesList);
+            }
+
+            [TestMethod]
+            public void Grade_IncludeInWebMidtermGradesList_True_2()
+            {
+                grade = new Grade(letterGrade, desc, schema, false, true);
+                Assert.IsTrue(grade.IncludeInWebMidtermGradesList);
+            }
+
+            [TestMethod]
+            public void Grade_IncludeInWebMidtermGradesList_True_3()
+            {
+                grade = new Grade(guid, id, letterGrade, credit, desc, schema, false, true);
+                Assert.IsTrue(grade.IncludeInWebMidtermGradesList);
+            }
+
+            [TestMethod]
+            public void Grade_CanBeUsedAfterDropGradeRequiredDate_DefaultValue()
+            {
+                Assert.IsFalse(grade.CanBeUsedAfterDropGradeRequiredDate);
+            }
+
+            [TestMethod]
+            public void Grade_CanBeUsedAfterDropGradeRequiredDate_DefaultValue_2()
+            {
+                grade = new Grade(letterGrade, desc, schema);
+                Assert.IsFalse(grade.CanBeUsedAfterDropGradeRequiredDate);
+            }
+
+            [TestMethod]
+            public void Grade_CanBeUsedAfterDropGradeRequiredDate_DefaultValue_3()
+            {
+                grade = new Grade(id, letterGrade, desc, schema);
+                Assert.IsFalse(grade.CanBeUsedAfterDropGradeRequiredDate);
+            }
+
+            [TestMethod]
+            public void Grade_CanBeUsedAfterDropGradeRequiredDate_False()
+            {
+                grade = new Grade(id, letterGrade, desc, schema, true, true, false);
+                Assert.IsFalse(grade.CanBeUsedAfterDropGradeRequiredDate);
+            }
+
+            [TestMethod]
+            public void Grade_CanBeUsedAfterDropGradeRequiredDate_False_2()
+            {
+                grade = new Grade(letterGrade, desc, schema, true, true, false);
+                Assert.IsFalse(grade.CanBeUsedAfterDropGradeRequiredDate);
+            }
+
+
+            [TestMethod]
+            public void Grade_CanBeUsedAfterDropGradeRequiredDate_False_3()
+            {
+                grade = new Grade(guid, id, letterGrade, credit, desc, schema, true, true, false);
+                Assert.IsFalse(grade.CanBeUsedAfterDropGradeRequiredDate);
+            }
+
+            [TestMethod]
+            public void Grade_CanBeUsedAfterDropGradeRequiredDate_True()
+            {
+                grade = new Grade(id, letterGrade, desc, schema, false, false, true);
+                Assert.IsTrue(grade.CanBeUsedAfterDropGradeRequiredDate);
+            }
+
+            [TestMethod]
+            public void Grade_CanBeUsedAfterDropGradeRequiredDate_True_2()
+            {
+                grade = new Grade(letterGrade, desc, schema, false, false, true);
+                Assert.IsTrue(grade.CanBeUsedAfterDropGradeRequiredDate);
+            }
+
+            [TestMethod]
+            public void Grade_CanBeUsedAfterDropGradeRequiredDate_True_3()
+            {
+                grade = new Grade(guid, id, letterGrade, credit, desc, schema, false, false, true);
+                Assert.IsTrue(grade.CanBeUsedAfterDropGradeRequiredDate);
             }
 
             [TestMethod]
@@ -152,6 +337,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
                 Grade grade = new Grade(null, letterGrade, desc, schema);
                 grade.Id = "1";
             }
+
+
         }
 
         [TestClass]

@@ -2,6 +2,7 @@
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Dtos.EnumProperties;
@@ -351,7 +352,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 foreach (var registrationStatus in sectionRegistrationStatusEntities)            
                 {
-                    if (registrationStatus.Status.SectionRegistrationStatusReason != Colleague.Domain.Student.Entities.RegistrationStatusReason.Transfer)
+                    if (registrationStatus != null && registrationStatus.Status.SectionRegistrationStatusReason != Colleague.Domain.Student.Entities.RegistrationStatusReason.Transfer)
                     {
                         sectionRegistrationStatusCollection.Add(ConvertSectionRegistrationStatusEntityToDto2(registrationStatus));
                     }
@@ -367,18 +368,32 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>Collection of SectionRegistrationStatusItem3 DTO objects</returns>
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.SectionRegistrationStatusItem3>> GetSectionRegistrationStatuses3Async(bool bypassCache = false)
         {
-            var sectionRegistrationStatusCollection = new List<Ellucian.Colleague.Dtos.SectionRegistrationStatusItem3>();            
+            var sectionRegistrationStatusCollection = new List<Ellucian.Colleague.Dtos.SectionRegistrationStatusItem3>();
+            IEnumerable<Domain.Student.Entities.SectionRegistrationStatusItem> sectionRegistrationStatusEntities = new List<Domain.Student.Entities.SectionRegistrationStatusItem>();
+            List<string> headcountInclusionList = await _studentReferenceDataRepository.GetHeadcountInclusionListAsync(bypassCache);
+            try
+            {
+                sectionRegistrationStatusEntities = await _studentReferenceDataRepository.GetStudentAcademicCreditStatusesAsync(bypassCache);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }
 
-            var sectionRegistrationStatusEntities = await _studentReferenceDataRepository.GetStudentAcademicCreditStatusesAsync(bypassCache);
             if (sectionRegistrationStatusEntities != null && sectionRegistrationStatusEntities.Count() > 0)
             {
                 foreach (var registrationStatus in sectionRegistrationStatusEntities)
                 {    
-                    if (registrationStatus.Status.SectionRegistrationStatusReason != Colleague.Domain.Student.Entities.RegistrationStatusReason.Transfer)
+                    if (registrationStatus != null && registrationStatus.Status.SectionRegistrationStatusReason != Colleague.Domain.Student.Entities.RegistrationStatusReason.Transfer)
                     {
-                        sectionRegistrationStatusCollection.Add(ConvertSectionRegistrationStatusEntityToDto3(registrationStatus));
+                        sectionRegistrationStatusCollection.Add(ConvertSectionRegistrationStatusEntityToDto3(registrationStatus, headcountInclusionList));
                     }
                 }
+            }
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
             }
             return sectionRegistrationStatusCollection;
         }
@@ -393,18 +408,18 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             try
             {                
                 var statusItem = (await _studentReferenceDataRepository.GetStudentAcademicCreditStatusesAsync(true)).Where(srs => srs.Guid == id).First();
-                if (statusItem.Status.SectionRegistrationStatusReason != Colleague.Domain.Student.Entities.RegistrationStatusReason.Transfer)
+                if (statusItem != null && statusItem.Status.SectionRegistrationStatusReason != Colleague.Domain.Student.Entities.RegistrationStatusReason.Transfer)
                 {
                     return ConvertSectionRegistrationStatusEntityToDto2(statusItem);
                 }
                 else
                 {
-                    throw new ArgumentException("Section Registration Status not found for GUID " + id);
+                    throw new KeyNotFoundException("section-registration-statuses not found for GUID " + id);
                 }
             }
-            catch (InvalidOperationException ex)
+            catch (Exception)
             {
-                throw new KeyNotFoundException("Section Registration Status not found for GUID " + id, ex);
+                throw new KeyNotFoundException("section-registration-statuses not found for GUID " + id);
             }
         }
 
@@ -413,25 +428,33 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// Get a section registration status from its ID
         /// </summary>
         /// <returns>SectionRegistrationStatusItem3 DTO object</returns>
-        public async Task<Ellucian.Colleague.Dtos.SectionRegistrationStatusItem3> GetSectionRegistrationStatusById3Async(string id)
+        public async Task<Dtos.SectionRegistrationStatusItem3> GetSectionRegistrationStatusById3Async(string id)
         {
+            Dtos.SectionRegistrationStatusItem3 sectionRegistrationStatus = null;
             try
             {
                 var statusItem = (await _studentReferenceDataRepository.GetStudentAcademicCreditStatusesAsync(true)).Where(srs => srs.Guid == id).First();
-                if (statusItem.Status.SectionRegistrationStatusReason != Colleague.Domain.Student.Entities.RegistrationStatusReason.Transfer)
+                List<string> headcountInclusionList = await _studentReferenceDataRepository.GetHeadcountInclusionListAsync(true);
+                if (statusItem != null && statusItem.Status.SectionRegistrationStatusReason != Colleague.Domain.Student.Entities.RegistrationStatusReason.Transfer)
                 {
-                    return ConvertSectionRegistrationStatusEntityToDto3(statusItem);
+                    sectionRegistrationStatus = ConvertSectionRegistrationStatusEntityToDto3(statusItem, headcountInclusionList);
                 }
                 else
                 {
-                    throw new ArgumentException("Section Registration Status not found for GUID " + id);
+                    throw new KeyNotFoundException("section-registration-statuses not found for GUID " + id);
                 }
 
             }
-            catch (InvalidOperationException ex)
+            catch (Exception)
             {
-                throw new KeyNotFoundException("Section Registration Status not found for GUID " + id, ex);
+                throw new KeyNotFoundException("section-registration-statuses not found for GUID " + id);
             }
+
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
+            return sectionRegistrationStatus;
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM Version 6</remarks>
@@ -907,7 +930,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <param name="source">SectionRegistrationStatusItem domain entity</param>
         /// <returns>SectionRegistrationStatusItem3 DTO</returns>
-        private Ellucian.Colleague.Dtos.SectionRegistrationStatusItem3 ConvertSectionRegistrationStatusEntityToDto3(Ellucian.Colleague.Domain.Student.Entities.SectionRegistrationStatusItem source)
+        private Ellucian.Colleague.Dtos.SectionRegistrationStatusItem3 ConvertSectionRegistrationStatusEntityToDto3(Ellucian.Colleague.Domain.Student.Entities.SectionRegistrationStatusItem source, List<string> headcountInclusionList)
         {
             var sectionRegistrationStatus = new Ellucian.Colleague.Dtos.SectionRegistrationStatusItem3();
 
@@ -915,22 +938,30 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             sectionRegistrationStatus.Code = source.Code;
             sectionRegistrationStatus.Title = source.Description;
             sectionRegistrationStatus.Description = source.Description;
-            sectionRegistrationStatus.Status = new Dtos.SectionRegistrationStatusItemStatus() { RegistrationStatus = new Dtos.RegistrationStatus2(), SectionRegistrationStatusReason = new Dtos.RegistrationStatusReason2() };
+            sectionRegistrationStatus.Status = new Dtos.SectionRegistrationStatusItemStatus()
+            {
+                RegistrationStatus = new Dtos.RegistrationStatus2(),
+                SectionRegistrationStatusReason = new Dtos.RegistrationStatusReason2()
+            };
 
             switch (source.Status.RegistrationStatus)
             {
                 case Domain.Student.Entities.RegistrationStatus.Registered:
                     {
                         sectionRegistrationStatus.Status.RegistrationStatus = Dtos.RegistrationStatus2.Registered;
-                        sectionRegistrationStatus.HeadCountStatus = Dtos.HeadCountStatus.Include;
                         break;
                     }
                 case Domain.Student.Entities.RegistrationStatus.NotRegistered:
                     {
-                        sectionRegistrationStatus.Status.RegistrationStatus = Dtos.RegistrationStatus2.NotRegistered; 
-                        sectionRegistrationStatus.HeadCountStatus = Dtos.HeadCountStatus.Exclude;
+                        sectionRegistrationStatus.Status.RegistrationStatus = Dtos.RegistrationStatus2.NotRegistered;
                         break;
                     }
+            }
+
+            sectionRegistrationStatus.HeadCountStatus = Dtos.HeadCountStatus.Exclude;
+            if (headcountInclusionList != null && headcountInclusionList.Any() && headcountInclusionList.Contains(source.Code))
+            {
+                sectionRegistrationStatus.HeadCountStatus = Dtos.HeadCountStatus.Include;
             }
 
             switch (source.Status.SectionRegistrationStatusReason)

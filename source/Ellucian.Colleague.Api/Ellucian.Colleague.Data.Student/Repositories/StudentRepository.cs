@@ -1,8 +1,9 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Transactions;
+using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Entities.Transcripts;
@@ -48,11 +49,13 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         private Data.Base.DataContracts.IntlParams internationalParameters;
         private readonly string colleagueTimeZone;
         private string studentCache = "Student";
+        private RepositoryException exception;
 
         public StudentRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings apiSettings)
             : base(cacheProvider, transactionFactory, logger, apiSettings)
         {
             colleagueTimeZone = apiSettings.ColleagueTimeZone;
+            exception = new RepositoryException();
         }
 
         #region Validation Tables
@@ -62,8 +65,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             if (StudentProgramStatuses != null)
             {
                 return StudentProgramStatuses;
-            }
-
+            }            
             StudentProgramStatuses = await GetOrAddToCacheAsync<ApplValcodes>("StudentProgramStatuses",
                 async () =>
                 {
@@ -372,10 +374,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// </summary>
         /// <param name="studentIds">List of Student IDs</param>
         /// <returns>Student Object</returns>
-        public async Task<IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Student>> GetStudentsByIdAsync(IEnumerable<string> studentIds, Term termData, IEnumerable<CitizenshipStatus> citizenshipStatusData, bool inheritFromPerson = true, bool getDegreePlan = true, bool filterAdvisorsByTerm = false, bool filterEndedAdvisements = false)
+        public async Task<IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Student>> GetStudentsByIdAsync(IEnumerable<string> rawStudentIds, Term termData, IEnumerable<CitizenshipStatus> citizenshipStatusData, bool inheritFromPerson = true, bool getDegreePlan = true, bool filterAdvisorsByTerm = false, bool filterEndedAdvisements = false)
         {
             IEnumerable<Domain.Student.Entities.Student> studentEntities = new List<Domain.Student.Entities.Student>();
-
+            IEnumerable<string> studentIds = rawStudentIds != null ? rawStudentIds.Where(r=>!string.IsNullOrEmpty(r)) : null;
             if (studentIds != null && studentIds.Count() > 0)
             {
                 // get students data
@@ -753,7 +755,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
             }
 
-            return new RegistrationResponse(outputMessages, updateResponse.IpcRegId);
+            return new RegistrationResponse(outputMessages, updateResponse.IpcRegId, updateResponse.RegisteredSectionIds);
         }
 
 
@@ -1326,7 +1328,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 logger.Info("Unable to find name address hierarchy with ID " + stWebDefaults.StwebDisplayNameHierarchy + ". Not calculating hierarchy name.");
 
                             }
-
                         }
 
                         if (inheritFromPerson)
@@ -1357,7 +1358,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             studentEntity.BirthNameLast = cachedStudentEntity.BirthNameLast;
                             studentEntity.MailLabelNameOverride = cachedStudentEntity.MailLabelNameOverride;
                             studentEntity.PreferredNameOverride = cachedStudentEntity.PreferredNameOverride;
-                            studentEntity.PersonalPronounCode = cachedStudentEntity.PersonalPronounCode;
+                            studentEntity.PersonalPronounCode = cachedStudentEntity.PersonalPronounCode;                            
+
                             if (cachedStudentEntity.FormattedNames != null && cachedStudentEntity.FormattedNames.Any())
                             {
                                 foreach (var fname in cachedStudentEntity.FormattedNames)
@@ -1391,7 +1393,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             studentEntity.BirthNameFirst = personContract.BirthNameFirst;
                             studentEntity.BirthNameMiddle = personContract.BirthNameMiddle;
                             studentEntity.BirthNameLast = personContract.BirthNameLast;
-                            studentEntity.PersonalPronounCode = personContract.PersonalPronoun;
+                            studentEntity.PersonalPronounCode = personContract.PersonalPronoun;                           
 
                             // Take the mail label name or preferred name override values from the data contract (which could be either a name or a coded entry) and 
                             // convert it into simply a name override - where the coded entries are convered into their actual results.
@@ -1674,7 +1676,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 foreach (var raceCode in personContract.PerRaces)
                                 {
                                     var ethnicOrigin = EthnicOrigin.Unknown;
-                                    var codeAssoc = (await GetRacesAsync()).ValsEntityAssociation.Where(v => v.ValInternalCodeAssocMember == raceCode).FirstOrDefault();
+                                    var codeAssoc = (await GetRacesAsync()).ValsEntityAssociation.Where(v => v != null && v.ValInternalCodeAssocMember == raceCode).FirstOrDefault();
                                     if (codeAssoc != null)
                                     {
                                         switch (codeAssoc.ValActionCode1AssocMember)
@@ -1751,7 +1753,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             }
 
                             studentEntity.AcademicLevelCodes = students.StuAcadLevels;
-                            studentEntity.ClassLevelCodes = new List<string>();
+                            studentEntity.PhoneTypesHierarchy = stWebDefaults.StwebProfilePhoneType;
+                            studentEntity.ClassLevelCodes = new List<string>();                           
                             studentEntity.AdmitTerms = new List<string>();
                             studentEntity.IsLegacyStudent = await IsStudentLegacyAsync(personContract, personData);
                             studentEntity.IsInternationalStudent = IsStudentInternational(studentId, foreignPersonData, personData, citizenshipStatusData);
@@ -1898,8 +1901,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             }
                             // If studentIsTransfer set from academic program or academic level, set it for
                             // for the student Entity.
-                            studentEntity.IsTransfer = studentIsTransfer;
-
+                            studentEntity.IsTransfer = studentIsTransfer;                          
 
                             //Add the financial aid counselor id if it exists
                             if (financialAidData != null && financialAidData.Count() > 0)
@@ -3231,152 +3233,78 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <param name="cohort"></param>
         /// <param name="residency"></param>
         /// <returns>List of Student Entities</returns>
-        public async Task<Tuple<IEnumerable<Domain.Student.Entities.Student>, int>> GetDataModelStudents2Async(int offset, int limit,
-            bool bypassCache = false, string personFilter = "", string person = "", List<string> types = null, List<string> cohorts = null, List<string> residencies = null)
+        public async Task<Tuple<IEnumerable<Domain.Student.Entities.Student>, int>> GetDataModelStudents2Async(int offset, int limit, bool bypassCache = false,
+            string[] filterPersonIds = null, string person = "", List<string> types = null, List<string> residencies = null)
         {
-            try
+            string[] limitingKeys = null;
+
+            var personGuids = new List<string>();
+            List<string> outIds = new List<string>();
+
+            if (filterPersonIds != null && filterPersonIds.ToList().Any())
             {
-                string[] limitingKeys = null;
-                
-                var personGuids = new List<string>();
-                string personFilterKey = string.Empty;
-                List<string> outIds = new List<string>();
-
-                if (!string.IsNullOrEmpty(personFilter))
+                // Set limiting keys to previously retrieved personIds from SAVE.LIST.PARMS
+                limitingKeys = filterPersonIds;
+            }
+            
+            // criteria filters
+            var criteria = "";
+            if (!string.IsNullOrEmpty(person))
+            {
+                if (limitingKeys != null && limitingKeys.Any())
                 {
-                    var idDict = await DataReader.SelectAsync(new GuidLookup[] { new GuidLookup(personFilter) });
-                    if (idDict == null || idDict.Count == 0)
-                    {
-                        return new Tuple<IEnumerable<Domain.Student.Entities.Student>, int>(new List<Domain.Student.Entities.Student>(), 0);
-                    }
-
-                    var foundEntry = idDict.FirstOrDefault();
-                    if (foundEntry.Value == null)
-                    {
-                        return new Tuple<IEnumerable<Domain.Student.Entities.Student>, int>(new List<Domain.Student.Entities.Student>(), 0);
-                    }
-
-                    if (foundEntry.Value.Entity != "SAVE.LIST.PARMS")
-                    {
-                        return new Tuple<IEnumerable<Domain.Student.Entities.Student>, int>(new List<Domain.Student.Entities.Student>(), 0);
-                    }
-                    personFilterKey = foundEntry.Value.PrimaryKey;
-                    
-                    var request = new GetStudentsPersonFilterResultsRequest()
-                    {
-                        SaveListParmsId = personFilterKey,
-                        Offset = offset,
-                        Limit = limit,
-                        PersonIds = outIds
-                    };
-                    // Execute request
-                    var response = await transactionInvoker.ExecuteAsync<GetStudentsPersonFilterResultsRequest, GetStudentsPersonFilterResultsResponse>(request);
-
-                    if (response.ErrorMessages.Any())
-                    {
-                        var errorMessage = "Error(s) occurred retrieving person data: ";
-                        var exception = new RepositoryException(errorMessage);
-                        foreach (var errMsg in response.ErrorMessages)
-                        {
-                            response.LogStmt.ForEach(i =>
-                            {
-                                logger.Info(i);
-                            });
-                            exception.AddError(new Domain.Entities.RepositoryError("person.filter", errMsg));
-                            errorMessage += string.Join(Environment.NewLine, errMsg);
-                        }
-                        throw exception;
-                    }
-
-                    if (response.PersonIds == null || !response.PersonIds.Any())
-                    {
-                        return new Tuple<IEnumerable<Domain.Student.Entities.Student>, int>(new List<Domain.Student.Entities.Student>(), 0);
-                    }
-
-                    Array.Sort(response.PersonIds.ToArray());
-                    var personIds = response.PersonIds;
-                    limitingKeys = personIds.ToArray();                    
-                }
-                
-                // criteria filters
-                var criteria = "";
-                if (!string.IsNullOrEmpty(person))
-                {
-                    if (limitingKeys.Any())
-                    {
-                        if (limitingKeys.Contains(person))
-                        {
-                            limitingKeys = new string[] { person };
-                        }
-                        else
-                        {
-                            return new Tuple<IEnumerable<Domain.Student.Entities.Student>, int>(new List<Domain.Student.Entities.Student>(), 0);
-                        }
-                    }
-                    else
+                    if (limitingKeys.Contains(person))
                     {
                         limitingKeys = new string[] { person };
                     }
-                    
-                }
-
-                if ((types != null) && (types.Any()))
-                {
-                    foreach (var type in types)
+                    else
                     {
-                        if (!string.IsNullOrEmpty(criteria))
-                            criteria += " AND ";
-                        criteria += "WITH STU.TYPES EQ '" + type + "'";
+                        return new Tuple<IEnumerable<Domain.Student.Entities.Student>, int>(new List<Domain.Student.Entities.Student>(), 0);
                     }
                 }
-                
-                if ((residencies != null) && (residencies.Any()))
+                else
                 {
-                    foreach (var residency in residencies)
-                    {
-                        if (!string.IsNullOrEmpty(criteria))
-                            criteria += " AND ";
-                        criteria += "WITH STU.RESIDENCY.STATUS EQ '" + residency + "'";
-                    }
+                    limitingKeys = new string[] { person };
                 }
-                
-                var studentsIds = await DataReader.SelectAsync("STUDENTS", limitingKeys, criteria);
-
-                if ((cohorts != null) && (cohorts.Any()))
-                {
-                    var cohortStudentIds = await GetCohortStudentIdsAsync(cohorts, studentsIds);
-                    if (cohortStudentIds.Any())
-                    {
-                        studentsIds = studentsIds.Intersect(cohortStudentIds.ToArray()).ToArray();
-                    }
-                }                
-
-                var totalCount = studentsIds.Count();
-
-                Array.Sort(studentsIds);
-                var sublist = studentsIds.Skip(offset).Take(limit);
-
-                if (sublist != null && !sublist.Any())
-                {
-                    return new Tuple<IEnumerable<Domain.Student.Entities.Student>, int>(new List<Domain.Student.Entities.Student>(), 0);
-                }
-
-                IEnumerable<Domain.Student.Entities.Student> studentsList = null;
-                try
-                {
-                    studentsList = await GetDataModelStudents2Async(sublist.ToArray());
-                }
-                catch (Exception ex)
-                {
-                    throw new RepositoryException(ex.Message);
-                }
-                return new Tuple<IEnumerable<Domain.Student.Entities.Student>, int>(studentsList, totalCount);
 
             }
-            catch (RepositoryException e)
+
+            if ((types != null) && (types.Any()))
             {
-                throw e;
+                foreach (var type in types)
+                {
+                    if (!string.IsNullOrEmpty(criteria))
+                        criteria += " AND ";
+                    criteria += "WITH STU.TYPES EQ '" + type + "'";
+                }
             }
+
+            if ((residencies != null) && (residencies.Any()))
+            {
+                foreach (var residency in residencies)
+                {
+                    if (!string.IsNullOrEmpty(criteria))
+                        criteria += " AND ";
+                    criteria += "WITH STU.RESIDENCY.STATUS EQ '" + residency + "'";
+                }
+            }
+
+            var studentsIds = await DataReader.SelectAsync("STUDENTS", limitingKeys, criteria);
+
+            var totalCount = studentsIds.Count();
+
+            Array.Sort(studentsIds);
+            var sublist = studentsIds.Skip(offset).Take(limit);
+
+            if (sublist != null && !sublist.Any())
+            {
+                return new Tuple<IEnumerable<Domain.Student.Entities.Student>, int>(new List<Domain.Student.Entities.Student>(), 0);
+            }
+
+            IEnumerable<Domain.Student.Entities.Student> studentsList = null;
+
+            studentsList = await GetDataModelStudents2Async(sublist.ToArray());
+            return new Tuple<IEnumerable<Domain.Student.Entities.Student>, int>(studentsList, totalCount);
         }
 
         private async Task<List<string>> GetCohortStudentIds(string cohort)
@@ -3502,29 +3430,28 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 throw new ArgumentNullException("guid");
             }
-
-            var idDict = await DataReader.SelectAsync(new GuidLookup[] {new GuidLookup(guid)});
-            if (idDict == null || idDict.Count == 0)
+            var ldmEntity = await DataReader.ReadRecordAsync<LdmGuid>("LDM.GUID", guid);
+            if (ldmEntity == null)
             {
-                throw new KeyNotFoundException("Student GUID " + guid + " not found.");
+                throw new KeyNotFoundException(string.Concat("STUDENTS '", guid, "' not found."));
             }
 
-            var foundEntry = idDict.FirstOrDefault();
-            if (foundEntry.Value == null)
+            if (!ldmEntity.LdmGuidLdmName.Equals("STUDENTS", StringComparison.OrdinalIgnoreCase)) 
             {
-                throw new KeyNotFoundException("Student GUID " + guid + " lookup failed.");
-            }
-
-            if (foundEntry.Value.Entity != "STUDENTS")
-            {
-                var errorMessage = string.Format("GUID {0} has different entity, {1}, than expected, STUDENTS", guid, foundEntry.Value.Entity);
+                var errorMessage = string.Format("GUID {0} has different entity, {1}, than expected, STUDENTS", guid, ldmEntity.LdmGuidEntity);
                 logger.Error(errorMessage);
                 var exception = new RepositoryException(errorMessage);
                 exception.AddError(new RepositoryError("invalid.guid", errorMessage));
                 throw exception;
             }
 
-            return foundEntry.Value.PrimaryKey;
+            var studentId = ldmEntity.LdmGuidPrimaryKey;
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new RepositoryException(string.Format("No student was found for guid '{0}'", guid));
+            }
+
+            return ldmEntity.LdmGuidPrimaryKey;
         }
 
         
@@ -3845,6 +3772,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     studentResults.Add(studentEntity);
                 }
                 catch (Exception e)
+                /// ??? skip student or allow exception to get issued?
                 {
                     logger.Error(string.Format("Failed to build student {0}", studentId));
                     logger.Error(e.GetBaseException().Message);
@@ -3890,31 +3818,34 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         {
                             foreach (var acadProgramId in students.StuAcadPrograms)
                             {
-                                var studentProgram = studentProgramData.FirstOrDefault(sp => sp.Recordkey == (studentId + "*" + acadProgramId));
-                                if (studentProgram != null)
+                                if (studentProgramData != null)
                                 {
-                                    // If the program is withdrawn or dropped/changed-mind, skip it.
-                                    if (studentProgram.StprStatus.Count > 0)
+                                    var studentProgram = studentProgramData.FirstOrDefault(sp => sp.Recordkey == (studentId + "*" + acadProgramId));
+                                    if (studentProgram != null)
                                     {
-                                        var codeAssoc = (await GetStudentProgramStatusesAsync()).ValsEntityAssociation.FirstOrDefault(v => v.ValInternalCodeAssocMember == studentProgram.StprStatus.ElementAt(0));
-                                        if (codeAssoc != null && (codeAssoc.ValActionCode1AssocMember == "4" || codeAssoc.ValActionCode1AssocMember == "5"))
+                                        // If the program is withdrawn or dropped/changed-mind, skip it.
+                                        if (studentProgram.StprStatus.Count > 0)
+                                        {
+                                            var codeAssoc = (await GetStudentProgramStatusesAsync()).ValsEntityAssociation.FirstOrDefault(v => v.ValInternalCodeAssocMember == studentProgram.StprStatus.ElementAt(0));
+                                            if (codeAssoc != null && (codeAssoc.ValActionCode1AssocMember == "4" || codeAssoc.ValActionCode1AssocMember == "5"))
+                                            {
+                                                continue;
+                                            }
+                                        }
+                                        // If student program has ended, skip it.
+                                        if (studentProgram.StprEndDate != null && studentProgram.StprEndDate.Count > 0 && studentProgram.StprEndDate.ElementAt(0) < DateTime.Today)
                                         {
                                             continue;
                                         }
-                                    }
-                                    // If student program has ended, skip it.
-                                    if (studentProgram.StprEndDate != null && studentProgram.StprEndDate.Count > 0 && studentProgram.StprEndDate.ElementAt(0) < DateTime.Today)
-                                    {
-                                        continue;
-                                    }
-                                    // If the program doesn't have a start date, skip it.
-                                    if (studentProgram.StprStartDate != null && studentProgram.StprStartDate.Count == 0)
-                                    {
-                                        continue;
-                                    }
-                                    // STUDENT.PROGRAMS key is multi-part.  Only save the program portion (second part) to the Student domain entity
-                                    programIds.Add(studentProgram.Recordkey.Split('*')[1]);
+                                        // If the program doesn't have a start date, skip it.
+                                        if (studentProgram.StprStartDate != null && studentProgram.StprStartDate.Count == 0)
+                                        {
+                                            continue;
+                                        }
+                                        // STUDENT.PROGRAMS key is multi-part.  Only save the program portion (second part) to the Student domain entity
+                                        programIds.Add(studentProgram.Recordkey.Split('*')[1]);
 
+                                    }
                                 }
                             }
                         }
@@ -3927,19 +3858,25 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     // Sort Student Types by Date and take the newest
                     if (students.StuTypes != null && students.StuTypes.Any())
                     {
-                        studentEntity.StudentTypeCode = students.StuTypeInfoEntityAssociation
-                            .OrderByDescending(g => g.StuTypeDatesAssocMember)
-                            .Select(g => g.StuTypesAssocMember).FirstOrDefault();
+                        if (students.StuTypeInfoEntityAssociation != null)
+                        {
+                            studentEntity.StudentTypeCode = students.StuTypeInfoEntityAssociation
+                                .OrderByDescending(g => g.StuTypeDatesAssocMember)
+                                .Select(g => g.StuTypesAssocMember).FirstOrDefault();
+                        }
                     }
 
                     var studentTypeInfo = new List<StudentTypeInfo>();
-                    foreach (var studentType in students.StuTypeInfoEntityAssociation)
+                    if (students.StuTypeInfoEntityAssociation != null)
                     {
-                        var type = new StudentTypeInfo(studentType.StuTypesAssocMember, studentType.StuTypeDatesAssocMember);
-                        studentTypeInfo.Add(type);
+                        foreach (var studentType in students.StuTypeInfoEntityAssociation)
+                        {
+                            var type = new StudentTypeInfo(studentType.StuTypesAssocMember, studentType.StuTypeDatesAssocMember);
+                            studentTypeInfo.Add(type);
+                        }
                     }
                     studentEntity.StudentTypeInfo = studentTypeInfo;
-
+                    
                     // Add Student Residencies
                     if (students != null && students.StuResidenciesEntityAssociation != null && students.StuResidenciesEntityAssociation.Count() > 0)
                     {
@@ -4110,12 +4047,71 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return students;
         }
 
+        // <summary>
+        /// Finds students given a last, first, middle name. First selects PERSON by comparing values against
+        /// PERSON.SORT.NAME and first name against nickname. Then limits by selecting person list of ids against STUDENTS.
+        /// </summary>
+        /// <param name="lastName"></param>
+        /// <param name="firstName"></param>
+        /// <param name="middleName"></param>
+        /// <returns>list of Student Ids</returns>
+        public async Task<IEnumerable<Domain.Student.Entities.Student>> GetStudentSearchByNameForExactMatchAsync(string lastName, string firstName = null, string middleName = null, int pageSize = int.MaxValue, int pageIndex = 1)
+        {
+            if (string.IsNullOrEmpty(lastName) && string.IsNullOrEmpty(firstName) && string.IsNullOrEmpty(middleName))
+            {
+                return new List<Domain.Student.Entities.Student>();
+            }
+
+            var watch = new Stopwatch();
+            watch.Start();
+
+            // Search PERSON using the given last, first, middle names
+            var studentIds = await base.SearchByNameForExactMatchAsync(lastName, firstName, middleName);
+
+            watch.Stop();
+            logger.Info("  STEP5.1 SearchByName(base)... completed in " + watch.ElapsedMilliseconds.ToString());
+
+            watch.Restart();
+            // Filter to only return students
+            studentIds = await base.FilterByEntityAsync("STUDENTS", studentIds);
+            watch.Stop();
+            logger.Info("  STEP5.2 FilterByEntity(base)... completed in " + watch.ElapsedMilliseconds.ToString());
+            if (studentIds != null)
+            {
+                logger.Info("  STEP5.2 Filtered PERSONS to " + studentIds.Count() + " STUDENTS.");
+            }
+
+            watch.Restart();
+
+            var currentPageStudents = await this.GetCurrentPageAsync(studentIds, pageSize, pageIndex);
+
+            watch.Stop();
+            logger.Info("  STEP5.3 GetCurrentPage... completed in " + watch.ElapsedMilliseconds.ToString());
+
+            watch.Restart();
+
+            var studentsUnsorted = currentPageStudents.Count() > 0 ? (await GetStudentsSearchAsync(currentPageStudents)).ToList() : new List<Domain.Student.Entities.Student>();
+
+            // GetCurrentPage returns the advisee IDs sorted.  base.Get does not.
+            // So, sort advisee entities in the order supplied by GetCurrentPage
+            var students = new List<Domain.Student.Entities.Student>();
+            foreach (var id in currentPageStudents)
+            {
+                students.Add(studentsUnsorted.First(x => x.Id == id));
+            }
+
+            watch.Stop();
+            logger.Info("  STEP5.4 Get(currentPageStudents)(base)... completed in " + watch.ElapsedMilliseconds.ToString());
+
+            return students;
+        }
+
         private async Task<IEnumerable<string>> GetCurrentPageAsync(IEnumerable<string> adviseeIds, int pageSize = int.MaxValue, int pageIndex = 1)
         {
             // Get the student IDs for any advisees that have requested review/approval,
             // then sort those IDs by PERSON-SORT.NAME
             // Advisee performance diagnostics
-            logger.Info("Start AdviseeRepository GetCurrentPage ");
+            logger.Info("Start StudentRepository GetCurrentPage ");
 
             // Returns empty list if no ids passed in
             if (adviseeIds == null || adviseeIds.Count() == 0)
@@ -4196,17 +4192,12 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 var studentEntities = new List<Domain.Student.Entities.Student>();
                 var studentsNotInCache = new List<string>();
 
-                var configuration = await GetConfigurationAsync();
-                if (configuration == null)
-                {
-                    throw new ConfigurationException("Default configuration setup not complete.");
-                }
                 // For each requested student, first check for an entry in the cache.
                 // If found, get it and add to return set.
                 // Otherwise, add student ID to list of non-cached records to build/cache/return
                 foreach (var id in ids)
                 {
-                    studentsNotInCache.Add(PadPersonIdWithZeroes(id, configuration.DfltsFixedLenPerson));
+                    studentsNotInCache.Add(await PadIdPerPid2ParamsAsync(id));
                 }
 
                 // If any requested students not found in the cache, retrieve the data and build them now.
@@ -4231,7 +4222,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     if (studentAdvisementIds != null && studentAdvisementIds.Count() > 0)
                     {
                         // Limit the advisements returned to current, exclude any that are ended.
-                        string criteria = string.Format("WITH STAD.END.DATE GE '{0}' OR STAD.END.DATE EQ ''", DateTime.Today.ToShortDateString());
+                        var date = await GetUnidataFormatDateAsync(DateTime.Today);
+                        string criteria = string.Format("WITH STAD.END.DATE GE '{0}' OR STAD.END.DATE EQ ''", date);
                         studentAdvisementIds = (await DataReader.SelectAsync("STUDENT.ADVISEMENT", studentAdvisementIds.ToArray(), criteria)).ToList();
                         if (studentAdvisementIds != null && studentAdvisementIds.Count() > 0)
                         {
@@ -4310,7 +4302,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         }
                         catch (Exception ex)
                         {
-                            logger.Info("Unable to build Student object for student Id " + student.Recordkey + ". Error: " + ex.Message);
+                            logger.Error(ex, "Unable to build Student object for student Id " + student.Recordkey);
                         }
                     }
                 }
@@ -4367,7 +4359,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     if (student != null && student.StuAcadLevels != null && student.StuAcadLevels.Count > 0)
                     {
                         // Gather this student's academic level data.
-                        if (studentAcadLevelsData != null)
+                        if (studentAcadLevelsData != null && studentAcadLevelsData.Any())
                         {
                             studentEntity.ClassLevelCodes = new List<string>();
                             foreach (var acadLevel in student.StuAcadLevels)

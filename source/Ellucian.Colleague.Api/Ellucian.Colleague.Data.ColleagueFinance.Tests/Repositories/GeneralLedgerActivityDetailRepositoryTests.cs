@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -54,7 +54,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         private List<string> glAssetValues = new List<string>() { "1" };
         private List<string> glLiabilityValues = new List<string>() { "2" };
         private List<string> glFundBalValues = new List<string>() { "3" };
-        
+
+        IList<string> majorComponentStartPosition = new List<string>() { "1", "4", "7", "10", "13", "19" };
+
         [TestInitialize]
         public void Initialize()
         {
@@ -2996,7 +2998,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         private async Task<GlAccountActivityDetail> QueryGlActivityDetailAsync()
         {
             GeneralLedgerClassConfiguration glClassConfiguration = new GeneralLedgerClassConfiguration(glClassName, glExpenseValues, glRevenueValues, glAssetValues, glLiabilityValues, glFundBalValues);
-            return await glaRepository.QueryGlActivityDetailAsync(this.param1_glAccount, this.param2_fiscalYear, this.param3_costCenterStructure, glClassConfiguration);
+            return await glaRepository.QueryGlActivityDetailAsync(this.param1_glAccount, this.param2_fiscalYear, this.param3_costCenterStructure, glClassConfiguration,
+                majorComponentStartPosition);
             // Task.Run(() => new GlAccountActivityDetail("12"));
             
         }

@@ -1,4 +1,4 @@
-﻿//Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -518,7 +518,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                 var emptyDtoList = await studentAwardService.GetStudentAwardsAsync(studentId, studentAwardYearEntity.Code);
                 Assert.AreEqual(0, emptyDtoList.Count());
                 loggerMock.Verify(l => l.Info(string.Format("FA Office {0} filtered out all StudentAwards for student {1} awardYear {2}", studentAwardYearEntity.CurrentOffice.Id, studentId, studentAwardYearEntity.Code)));
-            }
+            }       
 
         }
 
@@ -619,8 +619,6 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                 get { return studentAwardEntitiesForYear.Select(studentAwardEntity => studentAwardDtoAdapter.MapToType(studentAwardEntity)).ToList(); }
             }
 
-            public IEnumerable<Dtos.FinancialAid.StudentAward> actualStudentAwards;
-            
             public List<Dtos.FinancialAid.StudentAward> inputStudentAwards;
 
             public List<Domain.Base.Entities.Communication> submittedCommunications;
@@ -939,11 +937,33 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
 
             }
 
+            [TestMethod]
+            public async Task ExcludePeriodFromView_PeriodNotReturnedTest()
+            {
+                financialAidOfficeRepository.officeParameterRecordData.ForEach(o => o.AwardPeriodsToExcludeFromView = new List<string>() { "13/SP" });
+                financialAidOfficeRepositoryMock.Setup(r => r.GetFinancialAidOfficesAsync())
+            .Returns(financialAidOfficeRepository.GetFinancialAidOfficesAsync());
+                var studentAwardWithExcludedPeriod = new Dtos.FinancialAid.StudentAward() {
+                    AwardId = "Goofy",
+                    AwardYearId = "2012",
+                    StudentAwardPeriods = new List<Dtos.FinancialAid.StudentAwardPeriod>()
+                    {
+                        new Dtos.FinancialAid.StudentAwardPeriod() {AwardPeriodId = "13/SP", AwardAmount=2354, AwardId = "Goofy", AwardYearId = "2012", AwardStatusId = "P"},
+                        new Dtos.FinancialAid.StudentAwardPeriod() {AwardPeriodId = "12/FA", AwardAmount=2354, AwardId = "Goofy", AwardYearId = "2012", AwardStatusId = "P"}
+                    },
+                    StudentId = "0003914"
+                };
+                var updatedAwards = await studentAwardService.UpdateStudentAwardsAsync(studentId, studentAwardYearEntity.Code, new List<Dtos.FinancialAid.StudentAward> { studentAwardWithExcludedPeriod });
+                Assert.IsTrue(updatedAwards.Any());
+                Assert.IsTrue(updatedAwards.First().StudentAwardPeriods.Count == 1);
+                Assert.IsTrue(updatedAwards.First().StudentAwardPeriods.First().AwardPeriodId != "13/SP");
+            }
+
         }
 
         [TestClass]
         public class StudentAwardService_UpdateStudentAward : StudentAwardServiceTests
-        {
+        { 
             public Domain.FinancialAid.Entities.StudentAwardYear studentAwardYearEntity
             {
                 get { return studentAwardYearEntities.First(); }

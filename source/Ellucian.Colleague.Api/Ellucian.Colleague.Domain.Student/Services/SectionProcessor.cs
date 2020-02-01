@@ -1,4 +1,4 @@
-﻿// Copyright 2014 - 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014 - 2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,7 +14,7 @@ namespace Ellucian.Colleague.Domain.Student.Services
     /// </summary>
     public static class SectionProcessor
     {
-        private static ILogger _logger = null;
+        private static ILogger _logger = NOPLogger.Instance;
 
         /// <summary>
         /// Initialize the logger for this class to use.  Note that only the logger first used
@@ -356,7 +356,7 @@ namespace Ellucian.Colleague.Domain.Student.Services
                             string message = string.IsNullOrEmpty(meeting.Id) ? 
                                 "Unable to calculate faculty load factor for the new section meeting" :
                                 "Unable to calculate faculty load factor for section meeting " +  meeting.Id;
-                            _logger.Info(message + "for section " + meeting.SectionId + ": " + ex.Message);
+                            _logger.Error(message + "for section " + meeting.SectionId + ": " + ex.Message);
                         }
                     }
 
@@ -593,8 +593,9 @@ namespace Ellucian.Colleague.Domain.Student.Services
         /// <param name="registrationGroup">The registration Group</param>
         /// <param name="sections">Sections for which registration group section date overrides are requested. </param>
         /// <param name="registrationTerms">All registration term entities.</param>
+        /// <param name="considerUsersGroup">This is set to true if the registration group should be considered for dates calculation, otherwise set to false</param>
         /// <returns>Applicable SectionRegistrationDates entities for the provided sections</returns>
-        public static IEnumerable<SectionRegistrationDate> GetSectionRegistrationDates(RegistrationGroup registrationGroup, IEnumerable<Section> sections, IEnumerable<Term> registrationTerms)
+        public static IEnumerable<SectionRegistrationDate> GetSectionRegistrationDates(RegistrationGroup registrationGroup, IEnumerable<Section> sections, IEnumerable<Term> registrationTerms, bool considerUsersGroup = true)
         {
             if (registrationGroup == null)
             {
@@ -636,20 +637,24 @@ namespace Ellucian.Colleague.Domain.Student.Services
             }
             foreach (var section in filteredSections)
             {
-                // First see if there is a registration User Section for this combination.
-                var sectionOverride = registrationGroup.SectionRegistrationDates.Where(s => s.SectionId == section.Id).FirstOrDefault();
-                if (sectionOverride != null)
+                //if consider users group is false don't consider this
+                if (considerUsersGroup)
                 {
-                    _logger.Info(string.Format("Section {0} registration dates determined by section override for registration user (RGUS > RGUD > RGUC) for registration user {1}.", section.Id, registrationGroup.Id));
-                    sectionRegistrationDatesEntities.Add(sectionOverride);
-                    continue;
+                    // First see if there is a registration User Section for this combination.
+                    var sectionOverride = registrationGroup.SectionRegistrationDates.Where(s => s.SectionId == section.Id).FirstOrDefault();
+                    if (sectionOverride != null)
+                    {
+                        _logger.Debug(string.Format("Section {0} registration dates determined by section override for registration user (RGUS > RGUD > RGUC) for registration user {1}.", section.Id, registrationGroup.Id));
+                        sectionRegistrationDatesEntities.Add(sectionOverride);
+                        continue;
+                    }
                 }
 
                 // Next try the section itself 
 
                 if (section.RegistrationDateOverrides != null)
                 {
-                    _logger.Info(string.Format("Section {0} registration dates determined by section override (SRGD).", section.Id));
+                    _logger.Debug(string.Format("Section {0} registration dates determined by section override (SRGD).", section.Id));
                     sectionRegistrationDatesEntities.Add(new SectionRegistrationDate(section.Id, 
                         section.Location,
                         section.RegistrationDateOverrides.RegistrationStartDate,
@@ -673,13 +678,17 @@ namespace Ellucian.Colleague.Domain.Student.Services
                     // Next, if the section has a location check the RegUserTermLocs file. (REGUSER+TERM+LOCATION)
                     if (!string.IsNullOrEmpty(section.Location))
                     {
-                        var termLocationDates = registrationGroup.TermLocationRegistrationDates.Where(t => t.TermId == section.TermId && t.Location == section.Location).FirstOrDefault();
-                        if (termLocationDates != null)
+                        //if consider users group is false don't consider this
+                        if (considerUsersGroup)
                         {
-                            _logger.Info(string.Format("Section {0} registration dates determined by term/location override (RGUS > RGUD > RGUL) for registration user {1}, term {2}, location {3}.", section.Id, registrationGroup.Id, section.TermId, section.Location));
-                            var sectionRegistrationDates = new SectionRegistrationDate(section.Id, section.Location, termLocationDates.RegistrationStartDate, termLocationDates.RegistrationEndDate, termLocationDates.PreRegistrationStartDate, termLocationDates.PreRegistrationEndDate, termLocationDates.AddStartDate, termLocationDates.AddEndDate, termLocationDates.DropStartDate, termLocationDates.DropEndDate, termLocationDates.DropGradeRequiredDate, termLocationDates.CensusDates);
-                            sectionRegistrationDatesEntities.Add(sectionRegistrationDates);
-                            continue;
+                            var termLocationDates = registrationGroup.TermLocationRegistrationDates.Where(t => t.TermId == section.TermId && t.Location == section.Location).FirstOrDefault();
+                            if (termLocationDates != null)
+                            {
+                                _logger.Debug(string.Format("Section {0} registration dates determined by term/location override (RGUS > RGUD > RGUL) for registration user {1}, term {2}, location {3}.", section.Id, registrationGroup.Id, section.TermId, section.Location));
+                                var sectionRegistrationDates = new SectionRegistrationDate(section.Id, section.Location, termLocationDates.RegistrationStartDate, termLocationDates.RegistrationEndDate, termLocationDates.PreRegistrationStartDate, termLocationDates.PreRegistrationEndDate, termLocationDates.AddStartDate, termLocationDates.AddEndDate, termLocationDates.DropStartDate, termLocationDates.DropEndDate, termLocationDates.DropGradeRequiredDate, termLocationDates.CensusDates);
+                                sectionRegistrationDatesEntities.Add(sectionRegistrationDates);
+                                continue;
+                            }
                         }
 
                         // Next, see if there is a Term RegistrationDate item available with this section's particular location. (TERM+LOCATION)
@@ -688,7 +697,7 @@ namespace Ellucian.Colleague.Domain.Student.Services
                             var termLocation = sectionTerm.RegistrationDates.Where(r => r.Location == section.Location).FirstOrDefault();
                             if (termLocation != null)
                             {
-                                _logger.Info(string.Format("Section {0} registration dates determined by term/location override (RYAT > ACTM > TLOC) for term {1}, location {2}.", section.Id, section.TermId, section.Location));
+                                _logger.Debug(string.Format("Section {0} registration dates determined by term/location override (RYAT > ACTM > TLOC) for term {1}, location {2}.", section.Id, section.TermId, section.Location));
                                 sectionRegistrationDatesEntities.Add(new SectionRegistrationDate(
                                     section.Id,
                                     section.Location,
@@ -707,13 +716,17 @@ namespace Ellucian.Colleague.Domain.Student.Services
                             }
                         }
                     }
-                    // Next see if there is an item in RegUserTerms for this term and user. (REGUSER+TERM)
-                    var termDates = registrationGroup.TermRegistrationDates.Where(t => t.TermId == section.TermId).FirstOrDefault();
-                    if (termDates != null)
+                    //if consider users group is false don't consider this
+                    if (considerUsersGroup)
                     {
-                        _logger.Info(string.Format("Section {0} registration dates determined by term override (RGUS > RGUD > RGUT) for registration user {1}, term {2}.", section.Id, registrationGroup.Id, section.TermId));
-                        sectionRegistrationDatesEntities.Add(new SectionRegistrationDate(section.Id, section.Location, termDates.RegistrationStartDate, termDates.RegistrationEndDate, termDates.PreRegistrationStartDate, termDates.PreRegistrationEndDate, termDates.AddStartDate, termDates.AddEndDate, termDates.DropStartDate, termDates.DropEndDate, termDates.DropGradeRequiredDate, termDates.CensusDates));
-                        continue;
+                        // Next see if there is an item in RegUserTerms for this term and user. (REGUSER+TERM)
+                        var termDates = registrationGroup.TermRegistrationDates.Where(t => t.TermId == section.TermId).FirstOrDefault();
+                        if (termDates != null)
+                        {
+                            _logger.Debug(string.Format("Section {0} registration dates determined by term override (RGUS > RGUD > RGUT) for registration user {1}, term {2}.", section.Id, registrationGroup.Id, section.TermId));
+                            sectionRegistrationDatesEntities.Add(new SectionRegistrationDate(section.Id, section.Location, termDates.RegistrationStartDate, termDates.RegistrationEndDate, termDates.PreRegistrationStartDate, termDates.PreRegistrationEndDate, termDates.AddStartDate, termDates.AddEndDate, termDates.DropStartDate, termDates.DropEndDate, termDates.DropGradeRequiredDate, termDates.CensusDates));
+                            continue;
+                        }
                     }
 
                     // Last, just use the term's registration dates for this term (TERM) with no location.
@@ -722,7 +735,7 @@ namespace Ellucian.Colleague.Domain.Student.Services
                         var termRegDates = sectionTerm.RegistrationDates.Where(r => string.IsNullOrEmpty(r.Location)).FirstOrDefault();
                         if (termRegDates != null)
                         {
-                            _logger.Info(string.Format("Section {0} registration dates determined by term (ACTM) for term {1}.", section.Id, section.TermId));
+                            _logger.Debug(string.Format("Section {0} registration dates determined by term (ACTM) for term {1}.", section.Id, section.TermId));
                             sectionRegistrationDatesEntities.Add(new SectionRegistrationDate(
                                 section.Id,
                                 section.Location,
@@ -742,7 +755,7 @@ namespace Ellucian.Colleague.Domain.Student.Services
                     }
                 }
                 // If we haven't found registration date information for this section in any of the above tests we will not return an item for this section. 
-                _logger.Info(string.Format("Registration dates could not be determined for section {0}.", section.Id));
+                _logger.Error(string.Format("Registration dates could not be determined for section {0}.", section.Id));
             }
             return sectionRegistrationDatesEntities;
         }

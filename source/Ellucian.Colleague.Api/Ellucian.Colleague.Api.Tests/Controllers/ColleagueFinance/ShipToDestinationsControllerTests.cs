@@ -1,4 +1,4 @@
-//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,6 +15,7 @@ using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
+using Ellucian.Colleague.Dtos.ColleagueFinance;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 {
@@ -29,13 +30,15 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
         private Mock<IShipToDestinationsService> shipToDestinationsServiceMock;
         private Mock<ILogger> loggerMock;
-        private ShipToDestinationsController shipToDestinationsController;      
+        private ShipToDestinationsController shipToDestinationsController;
         private IEnumerable<Domain.ColleagueFinance.Entities.ShipToDestination> allShipToCodes;
+        private IEnumerable<Domain.ColleagueFinance.Entities.ShipToCode> allShipToCodeList;
         private List<Dtos.ShipToDestinations> shipToDestinationsCollection;
+        private List<ShipToCode> shipToCodesCollection;
         private string expectedGuid = "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc";
 
         [TestInitialize]
-        public void Initialize() 
+        public void Initialize()
         {
             LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
             EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.DeploymentDirectory, "App_Data"));
@@ -50,7 +53,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                     new Domain.ColleagueFinance.Entities.ShipToDestination("849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "AC", "Academic"),
                     new Domain.ColleagueFinance.Entities.ShipToDestination("d2253ac7-9931-4560-b42f-1fccd43c952e", "CU", "Cultural")
                 };
-            
+
             foreach (var source in allShipToCodes)
             {
                 var shipToDestinations = new Ellucian.Colleague.Dtos.ShipToDestinations
@@ -61,6 +64,24 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                     Description = null
                 };
                 shipToDestinationsCollection.Add(shipToDestinations);
+            }
+
+            shipToCodesCollection = new List<ShipToCode>();
+
+            allShipToCodeList = new List<Domain.ColleagueFinance.Entities.ShipToCode>(){
+                    new Domain.ColleagueFinance.Entities.ShipToCode("CD","Datatel - Central Dist. Office"),
+                    new Domain.ColleagueFinance.Entities.ShipToCode("DT","Datatel - Downtown"),
+                    new Domain.ColleagueFinance.Entities.ShipToCode("EC","Datatel - Extension Center"),
+                    new Domain.ColleagueFinance.Entities.ShipToCode("MC","Datatel - Main Campus")
+            };
+            foreach (var source in allShipToCodeList)
+            {
+                var shipToCode = new ShipToCode
+                {
+                    Code = source.Code,
+                    Description = source.Description
+                };
+                shipToCodesCollection.Add(shipToCode);
             }
 
             shipToDestinationsController = new ShipToDestinationsController(shipToDestinationsServiceMock.Object, loggerMock.Object)
@@ -85,9 +106,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         {
             shipToDestinationsController.Request.Headers.CacheControl =
                  new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
-            
+
             shipToDestinationsServiceMock.Setup(x => x.GetShipToDestinationsAsync(false)).ReturnsAsync(shipToDestinationsCollection);
-       
+
             var sourceContexts = (await shipToDestinationsController.GetShipToDestinationsAsync()).ToList();
             Assert.AreEqual(shipToDestinationsCollection.Count, sourceContexts.Count);
             for (var i = 0; i < sourceContexts.Count; i++)
@@ -104,7 +125,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task ShipToDestinationsController_GetShipToDestinations_ValidateFields_Cache()
         {
             shipToDestinationsController.Request.Headers.CacheControl =
-                new System.Net.Http.Headers.CacheControlHeaderValue {NoCache = true};
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
 
             shipToDestinationsServiceMock.Setup(x => x.GetShipToDestinationsAsync(true)).ReturnsAsync(shipToDestinationsCollection);
 
@@ -120,7 +141,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             }
         }
 
-         [TestMethod]
+        [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task ShipToDestinationsController_GetShipToDestinations_KeyNotFoundException()
         {
@@ -134,7 +155,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         [ExpectedException(typeof(HttpResponseException))]
         public async Task ShipToDestinationsController_GetShipToDestinations_PermissionsException()
         {
-            
+
             shipToDestinationsServiceMock.Setup(x => x.GetShipToDestinationsAsync(false))
                 .Throws<PermissionsException>();
             await shipToDestinationsController.GetShipToDestinationsAsync();
@@ -144,7 +165,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         [ExpectedException(typeof(HttpResponseException))]
         public async Task ShipToDestinationsController_GetShipToDestinations_ArgumentException()
         {
-            
+
             shipToDestinationsServiceMock.Setup(x => x.GetShipToDestinationsAsync(false))
                 .Throws<ArgumentException>();
             await shipToDestinationsController.GetShipToDestinationsAsync();
@@ -154,7 +175,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         [ExpectedException(typeof(HttpResponseException))]
         public async Task ShipToDestinationsController_GetShipToDestinations_RepositoryException()
         {
-            
+
             shipToDestinationsServiceMock.Setup(x => x.GetShipToDestinationsAsync(false))
                 .Throws<RepositoryException>();
             await shipToDestinationsController.GetShipToDestinationsAsync();
@@ -164,7 +185,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         [ExpectedException(typeof(HttpResponseException))]
         public async Task ShipToDestinationsController_GetShipToDestinations_IntegrationApiException()
         {
-            
+
             shipToDestinationsServiceMock.Setup(x => x.GetShipToDestinationsAsync(false))
                 .Throws<IntegrationApiException>();
             await shipToDestinationsController.GetShipToDestinationsAsync();
@@ -188,7 +209,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task ShipToDestinationsController_GetShipToDestinations_Exception()
         {
             shipToDestinationsServiceMock.Setup(x => x.GetShipToDestinationsAsync(false)).Throws<Exception>();
-            await shipToDestinationsController.GetShipToDestinationsAsync();       
+            await shipToDestinationsController.GetShipToDestinationsAsync();
         }
 
         [TestMethod]
@@ -218,7 +239,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         }
 
         [TestMethod]
-        [ExpectedException(typeof (HttpResponseException))]
+        [ExpectedException(typeof(HttpResponseException))]
         public async Task ShipToDestinationsController_GetShipToDestinationsByGuid_ArgumentException()
         {
             shipToDestinationsServiceMock.Setup(x => x.GetShipToDestinationsByGuidAsync(It.IsAny<string>()))
@@ -273,6 +294,41 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task ShipToDestinationsController_DeleteShipToDestinationsAsync_Exception()
         {
             await shipToDestinationsController.DeleteShipToDestinationsAsync(shipToDestinationsCollection.FirstOrDefault().Id);
+        }
+
+        [TestMethod]
+        public async Task ShipToDestinationsController_GetShipToCodesAsync_ValidTests()
+        {
+            shipToDestinationsServiceMock.Setup(x => x.GetShipToCodesAsync()).ReturnsAsync(shipToCodesCollection);
+
+            var sourceContexts = (await shipToDestinationsController.GetShipToCodesAsync()).ToList();
+            Assert.AreEqual(shipToCodesCollection.Count, sourceContexts.Count);
+            for (var i = 0; i < sourceContexts.Count; i++)
+            {
+                var expected = shipToCodesCollection[i];
+                var actual = sourceContexts[i];
+                Assert.AreEqual(expected.Code, actual.Code, "Code, Index=" + i.ToString());
+                Assert.AreEqual(expected.Description, actual.Description, "Description, Index=" + i.ToString());
+            }
+        }
+        
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task ShipToDestinationsController_GetShipToCodes_KeyNotFoundException()
+        {
+            shipToDestinationsServiceMock.Setup(x => x.GetShipToCodesAsync())
+                .Throws<KeyNotFoundException>();
+            await shipToDestinationsController.GetShipToCodesAsync();
+        }
+       
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task ShipToDestinationsController_GetShipToCodes_PermissionsException()
+        {
+
+            shipToDestinationsServiceMock.Setup(x => x.GetShipToCodesAsync())
+                .Throws<PermissionsException>();
+            await shipToDestinationsController.GetShipToCodesAsync();
         }
     }
 }

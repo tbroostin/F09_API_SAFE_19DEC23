@@ -1,7 +1,8 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
-
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Colleague.Dtos.Student;
+using Ellucian.Colleague.Dtos.Student.DegreePlans;
+using Ellucian.Colleague.Dtos.Student.QuickRegistration;
 using Ellucian.Colleague.Dtos.Student.Requirements;
 using Ellucian.Rest.Client.Exceptions;
 using Ellucian.Web.Http.TestUtil;
@@ -23,6 +24,15 @@ namespace Ellucian.Colleague.Api.Client.Tests
     [TestClass]
     public class ColleagueApiClientStudentTests
     {
+        #region Constants
+        private const string _serviceUrl = "http://service.url";
+        private const string _contentType = "application/json";
+        private const string _studentId = "123456";
+        #endregion
+
+        private Mock<ILogger> _loggerMock;
+        private ILogger _logger;
+
         [TestClass]
         public class CoursesAndSections
         {
@@ -1747,7 +1757,6 @@ namespace Ellucian.Colleague.Api.Client.Tests
 
         }
 
-
         [TestClass]
         public class GetGraduationApplicationAsync
         {
@@ -2585,7 +2594,6 @@ namespace Ellucian.Colleague.Api.Client.Tests
             }
         }
 
-
         [TestClass]
         public class AddStudentEnrollmentRequest
         {
@@ -3075,7 +3083,6 @@ namespace Ellucian.Colleague.Api.Client.Tests
             }
         }
 
-
         [TestClass]
         public class QueryAcademicCreditsAsync
         {
@@ -3385,6 +3392,237 @@ namespace Ellucian.Colleague.Api.Client.Tests
         }
 
         [TestClass]
+        public class QueryAcademicCredits3Async
+        {
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+            private const string _token = "1234567890";
+
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+
+                _logger = _loggerMock.Object;
+            }
+
+            [TestMethod]
+            public async Task Client_QueryAcademicCredits3Async_ReturnsSerializedRequest()
+            {
+                // Arrange
+                List<Dtos.Student.AcademicCredit3> academicCredits = new List<Dtos.Student.AcademicCredit3>();
+                var credit1 = new Dtos.Student.AcademicCredit3()
+                {
+                    Id = "1",
+                    CourseId = "100",
+                    Credit = 3.0m,
+                    Status = CreditStatus.Add.ToString(),
+                    SectionId = "3000",
+                    StudentId = "1111111",
+                    AdjustedCredit = 3m
+
+                };
+                academicCredits.Add(credit1);
+                var credit2 = new Dtos.Student.AcademicCredit3()
+                {
+                    Id = "2",
+                    CourseId = "100",
+                    Credit = 3.0m,
+                    Status = CreditStatus.Dropped.ToString(),
+                    SectionId = "3000",
+                    StudentId = "1111112",
+                    AdjustedCredit = null
+
+                };
+                academicCredits.Add(credit2);
+
+                AcademicCreditQueryCriteria criteria = new AcademicCreditQueryCriteria() { SectionIds = new List<string>() { "3000" } };
+                AcademicCreditsWithInvalidKeys academicCreditsWithInvalidKeys = new AcademicCreditsWithInvalidKeys(academicCredits, new List<string>() { "not found" });
+                var serializedResponse = JsonConvert.SerializeObject(academicCreditsWithInvalidKeys);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
+
+                // Assert that the expected items are returned
+                Assert.IsNotNull(clientResponse);
+                foreach (var credit in academicCredits)
+                {
+                    var responseItem = clientResponse.AcademicCredits.Where(cr => cr.Id == credit.Id).FirstOrDefault();
+                    Assert.IsNotNull(responseItem);
+                    Assert.AreEqual(credit.StudentId, responseItem.StudentId);
+                    Assert.AreEqual(credit.CourseId, responseItem.CourseId);
+                    Assert.AreEqual(credit.Credit, responseItem.Credit);
+                    Assert.AreEqual(credit.SectionId, responseItem.SectionId);
+                    Assert.AreEqual(credit.Status, responseItem.Status);
+                    Assert.AreEqual(credit.AdjustedCredit, responseItem.AdjustedCredit);
+                }
+                Assert.AreEqual("not found", clientResponse.InvalidAcademicCreditIds.ToList()[0]);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task Client_QueryAcademicCredits3Async_Null_Criteria_throws_Exception()
+            {
+                // Arrange
+                List<Dtos.Student.AcademicCredit3> academicCredits = new List<Dtos.Student.AcademicCredit3>();
+                var credit1 = new Dtos.Student.AcademicCredit3()
+                {
+                    Id = "1",
+                    CourseId = "100",
+                    Credit = 3.0m,
+                    Status = CreditStatus.Add.ToString(),
+                    SectionId = "3000",
+                    StudentId = "1111111",
+                    AdjustedCredit = 3m
+
+                };
+                academicCredits.Add(credit1);
+                var credit2 = new Dtos.Student.AcademicCredit3()
+                {
+                    Id = "2",
+                    CourseId = "100",
+                    Credit = 3.0m,
+                    Status = CreditStatus.Dropped.ToString(),
+                    SectionId = "3000",
+                    StudentId = "1111112",
+                    AdjustedCredit = null
+
+                };
+                academicCredits.Add(credit2);
+
+                AcademicCreditQueryCriteria criteria = new AcademicCreditQueryCriteria() { SectionIds = new List<string>() { "3000" } };
+                AcademicCreditsWithInvalidKeys academicCreditsWithInvalidKeys = new AcademicCreditsWithInvalidKeys(academicCredits, new List<string>() { "not found" });
+                var serializedResponse = JsonConvert.SerializeObject(academicCreditsWithInvalidKeys);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.QueryAcademicCreditsWithInvalidKeysAsync(null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task Client_QueryAcademicCredits3Async_Null_Criteria_SectionIds_throws_Exception()
+            {
+                // Arrange
+                List<Dtos.Student.AcademicCredit3> academicCredits = new List<Dtos.Student.AcademicCredit3>();
+                var credit1 = new Dtos.Student.AcademicCredit3()
+                {
+                    Id = "1",
+                    CourseId = "100",
+                    Credit = 3.0m,
+                    Status = CreditStatus.Add.ToString(),
+                    SectionId = "3000",
+                    StudentId = "1111111",
+                    AdjustedCredit = 3m
+
+                };
+                academicCredits.Add(credit1);
+                var credit2 = new Dtos.Student.AcademicCredit3()
+                {
+                    Id = "2",
+                    CourseId = "100",
+                    Credit = 3.0m,
+                    Status = CreditStatus.Dropped.ToString(),
+                    SectionId = "3000",
+                    StudentId = "1111112",
+                    AdjustedCredit = null
+
+                };
+                academicCredits.Add(credit2);
+
+                AcademicCreditQueryCriteria criteria = new AcademicCreditQueryCriteria() { SectionIds = null };
+
+                AcademicCreditsWithInvalidKeys academicCreditsWithInvalidKeys = new AcademicCreditsWithInvalidKeys(academicCredits, new List<string>() { "not found" });
+                var serializedResponse = JsonConvert.SerializeObject(academicCreditsWithInvalidKeys);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task Client_QueryAcademicCredits3Async_Empty_Criteria_SectionIds_throws_Exception()
+            {
+                // Arrange
+                List<Dtos.Student.AcademicCredit3> academicCredits = new List<Dtos.Student.AcademicCredit3>();
+                var credit1 = new Dtos.Student.AcademicCredit3()
+                {
+                    Id = "1",
+                    CourseId = "100",
+                    Credit = 3.0m,
+                    Status = CreditStatus.Add.ToString(),
+                    SectionId = "3000",
+                    StudentId = "1111111",
+                    AdjustedCredit = 3m
+
+                };
+                academicCredits.Add(credit1);
+                var credit2 = new Dtos.Student.AcademicCredit3()
+                {
+                    Id = "2",
+                    CourseId = "100",
+                    Credit = 3.0m,
+                    Status = CreditStatus.Dropped.ToString(),
+                    SectionId = "3000",
+                    StudentId = "1111112",
+                    AdjustedCredit = null
+
+                };
+                academicCredits.Add(credit2);
+
+                AcademicCreditQueryCriteria criteria = new AcademicCreditQueryCriteria() { SectionIds = new List<string>() };
+
+                AcademicCreditsWithInvalidKeys academicCreditsWithInvalidKeys = new AcademicCreditsWithInvalidKeys(academicCredits, new List<string>() { "not found" });
+                var serializedResponse = JsonConvert.SerializeObject(academicCreditsWithInvalidKeys);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
+            }
+        }
+
+        [TestClass]
         public class GetFacultyGradingConfigurationAsync
         {
             private const string _serviceUrl = "http://service.url";
@@ -3435,7 +3673,6 @@ namespace Ellucian.Colleague.Api.Client.Tests
                 Assert.IsTrue(clientResponse.IncludeDroppedWithdrawnStudents);
                 Assert.AreEqual(facultyGradingConfiguration.AllowedGradingTerms.Count(), clientResponse.AllowedGradingTerms.Count());
             }
-
         }
 
         [TestClass]
@@ -3487,7 +3724,6 @@ namespace Ellucian.Colleague.Api.Client.Tests
                 Assert.IsTrue(clientResponse.EnforceTranscriptRestriction);
                 Assert.AreEqual(transcriptAccess.TranscriptRestrictions.Count(), clientResponse.TranscriptRestrictions.Count());
             }
-
         }
 
         [TestClass]
@@ -3537,7 +3773,6 @@ namespace Ellucian.Colleague.Api.Client.Tests
                 Assert.AreEqual(testResults.Count(), clientResponse.Count());
                 Assert.IsInstanceOfType(clientResponse.ElementAt(0), typeof(TestResult2));
             }
-
         }
 
         [TestClass]
@@ -3589,7 +3824,6 @@ namespace Ellucian.Colleague.Api.Client.Tests
                 Assert.AreEqual(searchEndDate, clientResponse.LatestSearchDate);
 
             }
-
         }
 
         [TestClass]
@@ -3639,9 +3873,7 @@ namespace Ellucian.Colleague.Api.Client.Tests
                 Assert.IsNotNull(clientResponse);
                 Assert.IsTrue(clientResponse.RequireFacultyAddAuthorization);
                 Assert.AreEqual(3, clientResponse.AddAuthorizationStartOffsetDays);
-
             }
-
         }
 
         [TestClass]
@@ -3831,7 +4063,6 @@ namespace Ellucian.Colleague.Api.Client.Tests
                 // Act
                 var clientResponse = await client.GetStudentRestrictions2Async(string.Empty);
             }
-
         }
 
         [TestClass]
@@ -4044,8 +4275,6 @@ namespace Ellucian.Colleague.Api.Client.Tests
                 Assert.IsNotNull(clientResponse);
                 Assert.IsInstanceOfType(clientResponse, typeof(Section3));
             }
-
-
         }
 
         [TestClass]
@@ -4562,7 +4791,6 @@ namespace Ellucian.Colleague.Api.Client.Tests
             }
         }
 
-
         [TestClass]
         public class GetAttendanceCategoriesAsync
         {
@@ -4692,8 +4920,6 @@ namespace Ellucian.Colleague.Api.Client.Tests
                 Assert.IsNotNull(clientResponse);
                 Assert.IsInstanceOfType(clientResponse, typeof(StudentAttendance));
             }
-
-
         }
 
         [TestClass]
@@ -5164,7 +5390,6 @@ namespace Ellucian.Colleague.Api.Client.Tests
                 var clientResponse = await client.QueryNonacademicEventsByIdsAsync(eventIds);
                 _loggerMock.Verify();
             }
-
         }
 
         [TestClass]
@@ -5287,8 +5512,6 @@ namespace Ellucian.Colleague.Api.Client.Tests
                 Assert.AreEqual("12345", clientResponse.SectionId);
                 Assert.IsInstanceOfType(clientResponse.MeetingInstance, typeof(SectionMeetingInstance));
             }
-
-
         }
 
         [TestClass]
@@ -5582,8 +5805,6 @@ namespace Ellucian.Colleague.Api.Client.Tests
                 Assert.IsNotNull(clientResponse);
                 Assert.IsInstanceOfType(clientResponse, typeof(AddAuthorization));
             }
-
-
         }
 
         [TestClass]
@@ -5776,7 +5997,6 @@ namespace Ellucian.Colleague.Api.Client.Tests
             public void Initialize()
             {
                 _loggerMock = MockLogger.Instance;
-
                 _logger = _loggerMock.Object;
             }
 
@@ -5984,6 +6204,120 @@ namespace Ellucian.Colleague.Api.Client.Tests
                 // Act
                 var clientResponse = await client.GetAddAuthorizationAsync("authId");
                 _loggerMock.Verify();
+            }
+        }
+
+        [TestClass]
+        public class GetStudentAddAuthorizationsAsync
+        {
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+                _logger = _loggerMock.Object;
+            }
+
+            [TestMethod]
+            public async Task GetStudentAddAuthorizationsAsync_ReturnSerializedAddAuthorizations()
+            {
+                //Arrange
+                List<AddAuthorization> addAuthorizationDtos = new List<Dtos.Student.AddAuthorization>();
+                string sectionId = "section/Id";
+                var addAuthorizationDto1 = new Dtos.Student.AddAuthorization()
+                {
+                    StudentId = "studentId1",
+                    SectionId = "section/Id",
+                    Id = "authID1",
+                    AddAuthorizationCode = "addCode",
+                    AssignedBy = "facultyId"
+                };
+                addAuthorizationDtos.Add(addAuthorizationDto1);
+                var addAuthorizationDto2 = new Dtos.Student.AddAuthorization()
+                {
+                    StudentId = "studentId2",
+                    SectionId = "section/Id",
+                    Id = "authID2",
+                    AddAuthorizationCode = "addCode",
+                    AssignedBy = "facultyId"
+                };
+                addAuthorizationDtos.Add(addAuthorizationDto2);
+
+                var serializedResponse = JsonConvert.SerializeObject(addAuthorizationDtos.AsEnumerable());
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetStudentAddAuthorizationsAsync(sectionId);
+
+                // Assert that theitem is returned and each item property is found in the response
+                Assert.IsNotNull(clientResponse);
+                Assert.IsInstanceOfType(clientResponse, typeof(IEnumerable<AddAuthorization>));
+                Assert.AreEqual(addAuthorizationDtos.Count(), clientResponse.Count());
+                foreach (var resultDto in clientResponse)
+                {
+                    var expectedDto = addAuthorizationDtos.Where(aa => aa.Id == resultDto.Id).FirstOrDefault();
+                    Assert.AreEqual(expectedDto.StudentId, resultDto.StudentId);
+                    Assert.AreEqual(expectedDto.SectionId, resultDto.SectionId);
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetStudentAddAuthorizationsAsyncc_null_StudentId_throws_exception()
+            {
+                // Arrange
+                var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
+                response.Content = new StringContent(string.Empty, Encoding.UTF8, _contentType);
+                response.RequestMessage = new HttpRequestMessage(HttpMethod.Get, "http://test");
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetStudentAddAuthorizationsAsync(null);
+                _loggerMock.Verify(l => l.Error("Student ID must be provided to retrieve student add authorizations."));
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpRequestFailedException))]
+            public async Task GetStudentAddAuthorizationsAsyncc_rethrows_caught_exceptions()
+            {
+                //Arrange
+                var studentId = "123";
+
+                // Arrange
+                var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
+                response.Content = new StringContent(string.Empty, Encoding.UTF8, _contentType);
+                response.RequestMessage = new HttpRequestMessage(HttpMethod.Get, "http://test");
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetStudentAddAuthorizationsAsync(studentId);
+                _loggerMock.Verify(l => l.Error(It.IsAny<Exception>(), string.Format("Unable to get add authorizations for student {0}", studentId)));
             }
         }
 
@@ -6414,7 +6748,7 @@ namespace Ellucian.Colleague.Api.Client.Tests
             public async Task ServiceClient_QuerySectionEventsICalAsync_empty_sectionIds_throws_Exception()
             {
                 SectionEventsICalQueryCriteria criteria = new SectionEventsICalQueryCriteria();
-                criteria.SectionIds = new List<string> ();
+                criteria.SectionIds = new List<string>();
                 // Arrange
                 var mockHandler = new MockHandler();
                 var testHttpClient = new HttpClient(mockHandler);
@@ -6430,7 +6764,7 @@ namespace Ellucian.Colleague.Api.Client.Tests
             public async Task ServiceClient_QuerySectionEventsICalAsync_bad_request_returns_emptyString()
             {
                 SectionEventsICalQueryCriteria criteria = new SectionEventsICalQueryCriteria();
-                criteria.SectionIds = new List<string>() {"s001" };
+                criteria.SectionIds = new List<string>() { "s001" };
                 // Arrange
                 var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
                 response.Content = new StringContent(string.Empty, Encoding.UTF8, _contentType);
@@ -6448,7 +6782,7 @@ namespace Ellucian.Colleague.Api.Client.Tests
                 Assert.AreEqual(string.Empty, clientResponse);
             }
 
-         
+
 
             [TestMethod]
             public async Task ServiceClient_QQuerySectionEventsICalAsync_Success()
@@ -6469,11 +6803,10 @@ namespace Ellucian.Colleague.Api.Client.Tests
 
                 // Assert that theitem is returned and each item property is found in the response
                 Assert.IsNotNull(clientResponse);
-                Assert.IsInstanceOfType(clientResponse, typeof(string) );
+                Assert.IsInstanceOfType(clientResponse, typeof(string));
                 Assert.AreEqual("raw ical", clientResponse);
             }
         }
-
 
         [TestClass]
         public class ServiceClient_QueryGraduationApplicationEligibilityAsync_Tests
@@ -6511,7 +6844,7 @@ namespace Ellucian.Colleague.Api.Client.Tests
             [ExpectedException(typeof(ArgumentNullException))]
             public async Task ServiceClient_QueryGraduationApplicationEligibilityAsync_EmptyStudentId_throws_Exception()
             {
- 
+
                 // Arrange
                 var mockHandler = new MockHandler();
                 var testHttpClient = new HttpClient(mockHandler);
@@ -6573,8 +6906,6 @@ namespace Ellucian.Colleague.Api.Client.Tests
 
             }
 
-
-
             [TestMethod]
             public async Task ServiceClient_QueryGraduationApplicationEligibilityAsync_Success()
             {
@@ -6613,7 +6944,1422 @@ namespace Ellucian.Colleague.Api.Client.Tests
             }
         }
 
-    }
+        #region Add Degree Plan Tests
+        [TestMethod]
+        public void AddDegreePlan()
+        {
+            _loggerMock = MockLogger.Instance;
+            _logger = _loggerMock.Object;
 
+            // Arrange
+            var degreePlanResponse = new DegreePlan()
+            {
+                Id = 12345,
+                NonTermPlannedCourses = new List<PlannedCourse>(),
+                PersonId = "12345",
+                Terms = new List<DegreePlanTerm>(),
+                Version = 1
+            };
+
+            var serializedResponse = JsonConvert.SerializeObject(degreePlanResponse);
+
+            var response = new HttpResponseMessage(HttpStatusCode.OK);
+            response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+            var mockHandler = new MockHandler();
+            mockHandler.Responses.Enqueue(response);
+
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+            var client = new ColleagueApiClient(testHttpClient, _logger);
+
+            // Act
+            var result = client.AddDegreePlan(_studentId);
+
+            // Assert
+            Assert.AreEqual(degreePlanResponse.Id, result.Id);
+            Assert.AreEqual(degreePlanResponse.PersonId, result.PersonId);
+            Assert.AreEqual(degreePlanResponse.Version, result.Version);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public void AddDegreePlan_NullStudentId()
+        {
+            _loggerMock = MockLogger.Instance;
+            _logger = _loggerMock.Object;
+
+            // Arrange
+            var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
+            response.Content = new StringContent(string.Empty, Encoding.UTF8, _contentType);
+            var mockHandler = new MockHandler();
+            mockHandler.Responses.Enqueue(response);
+
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+            var client = new ColleagueApiClient(testHttpClient, _logger);
+
+            // Act
+            var result = client.AddDegreePlan(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(InvalidOperationException))]
+        public void AddDegreePlan_BadRequest()
+        {
+            _loggerMock = MockLogger.Instance;
+            _logger = _loggerMock.Object;
+
+            // Arrange
+            var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
+            response.Content = new StringContent(string.Empty, Encoding.UTF8, _contentType);
+            response.RequestMessage = new HttpRequestMessage(HttpMethod.Get, "http://test");
+            var mockHandler = new MockHandler();
+            mockHandler.Responses.Enqueue(response);
+
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+            var client = new ColleagueApiClient(testHttpClient, _logger);
+
+            // Act
+            var result = client.AddDegreePlan(_studentId);
+            _loggerMock.Verify();
+        }
+
+        [TestMethod]
+        public async Task AddDegreePlan4Async()
+        {
+            _loggerMock = MockLogger.Instance;
+            _logger = _loggerMock.Object;
+
+            // Arrange
+            var degreePlanResponse = new DegreePlan4()
+            {
+                Id = 12345,
+                NonTermPlannedCourses = new List<PlannedCourse4>(),
+                PersonId = "12345",
+                Terms = new List<DegreePlanTerm4>(),
+                Version = 1
+            };
+
+            var academicHistoryResponse = new AcademicHistory2()
+            {
+                StudentId = "12345",
+                AcademicTerms = new List<AcademicTerm2>(),
+            };
+
+            var degreePlanAcademicHistoryResponse = new DegreePlanAcademicHistory()
+            {
+                DegreePlan = degreePlanResponse,
+                AcademicHistory = academicHistoryResponse
+            };
+            var serializedResponse = JsonConvert.SerializeObject(degreePlanAcademicHistoryResponse);
+
+            var response = new HttpResponseMessage(HttpStatusCode.OK);
+            response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+            var mockHandler = new MockHandler();
+            mockHandler.Responses.Enqueue(response);
+
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+            var client = new ColleagueApiClient(testHttpClient, _logger);
+
+            // Act
+            var result = await client.AddDegreePlan4Async(_studentId);
+
+            // Assert
+            Assert.AreEqual(degreePlanResponse.Id, result.DegreePlan.Id);
+            Assert.AreEqual(degreePlanResponse.PersonId, result.DegreePlan.PersonId);
+            Assert.AreEqual(degreePlanResponse.Version, result.DegreePlan.Version);
+            Assert.AreEqual(academicHistoryResponse.StudentId, result.AcademicHistory.StudentId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task AddDegreePlan4Async_NullStudentId()
+        {
+            _loggerMock = MockLogger.Instance;
+            _logger = _loggerMock.Object;
+
+            // Arrange
+            var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
+            response.Content = new StringContent(string.Empty, Encoding.UTF8, _contentType);
+            var mockHandler = new MockHandler();
+            mockHandler.Responses.Enqueue(response);
+
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+            var client = new ColleagueApiClient(testHttpClient, _logger);
+
+            // Act
+            var result = await client.AddDegreePlan4Async(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(InvalidOperationException))]
+        public async Task AddDegreePlan4Async_BadRequest()
+        {
+            _loggerMock = MockLogger.Instance;
+            _logger = _loggerMock.Object;
+
+            // Arrange
+            var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
+            response.Content = new StringContent(string.Empty, Encoding.UTF8, _contentType);
+            response.RequestMessage = new HttpRequestMessage(HttpMethod.Get, "http://test");
+            var mockHandler = new MockHandler();
+            mockHandler.Responses.Enqueue(response);
+
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+            var client = new ColleagueApiClient(testHttpClient, _logger);
+
+            // Act
+            var result = await client.AddDegreePlan4Async(_studentId);
+            _loggerMock.Verify();
+        }
+
+        [TestClass]
+        public class AddDegreePlan5Async_Tests : ColleagueApiClientStudentTests
+        {
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+                _logger = _loggerMock.Object;
+            }
+
+            [TestMethod]
+            public async Task AddDegreePlan5Async()
+            {
+                // Arrange
+                var degreePlanResponse = new DegreePlan4()
+                {
+                    Id = 12345,
+                    NonTermPlannedCourses = new List<PlannedCourse4>(),
+                    PersonId = "12345",
+                    Terms = new List<DegreePlanTerm4>(),
+                    Version = 1
+                };
+
+                var academicHistoryResponse = new AcademicHistory3()
+                {
+                    StudentId = "12345",
+                    AcademicTerms = new List<AcademicTerm3>(),
+                };
+
+                var degreePlanAcademicHistoryResponse = new DegreePlanAcademicHistory2()
+                {
+                    DegreePlan = degreePlanResponse,
+                    AcademicHistory = academicHistoryResponse
+                };
+                var serializedResponse = JsonConvert.SerializeObject(degreePlanAcademicHistoryResponse);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var result = await client.AddDegreePlan5Async(_studentId);
+
+                // Assert
+                Assert.AreEqual(degreePlanResponse.Id, result.DegreePlan.Id);
+                Assert.AreEqual(degreePlanResponse.PersonId, result.DegreePlan.PersonId);
+                Assert.AreEqual(degreePlanResponse.Version, result.DegreePlan.Version);
+                Assert.AreEqual(academicHistoryResponse.StudentId, result.AcademicHistory.StudentId);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task AddDegreePlan5Async_NullStudentId()
+            {
+                // Arrange
+                var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
+                response.Content = new StringContent(string.Empty, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var result = await client.AddDegreePlan5Async(null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(InvalidOperationException))]
+            public async Task AddDegreePlan5Async_BadRequest()
+            {
+                // Arrange
+                var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
+                response.Content = new StringContent(string.Empty, Encoding.UTF8, _contentType);
+                response.RequestMessage = new HttpRequestMessage(HttpMethod.Get, "http://test");
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var result = await client.AddDegreePlan5Async(_studentId);
+                _loggerMock.Verify();
+            }
+        }
+
+        [TestClass]
+        public class AddDegreePlan6Async_Tests : ColleagueApiClientStudentTests
+        {
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+                _logger = _loggerMock.Object;
+            }
+
+            [TestMethod]
+            public async Task AddDegreePlan6Async()
+            {
+                // Arrange
+                var degreePlanResponse = new DegreePlan4()
+                {
+                    Id = 12345,
+                    NonTermPlannedCourses = new List<PlannedCourse4>(),
+                    PersonId = "12345",
+                    Terms = new List<DegreePlanTerm4>(),
+                    Version = 1
+                };
+
+                var academicHistoryResponse = new AcademicHistory4()
+                {
+                    StudentId = "12345",
+                    AcademicTerms = new List<AcademicTerm4>(),
+                };
+
+                var degreePlanAcademicHistoryResponse = new DegreePlanAcademicHistory3()
+                {
+                    DegreePlan = degreePlanResponse,
+                    AcademicHistory = academicHistoryResponse
+                };
+                var serializedResponse = JsonConvert.SerializeObject(degreePlanAcademicHistoryResponse);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var result = await client.AddDegreePlan6Async(_studentId);
+
+                // Assert
+                Assert.AreEqual(degreePlanResponse.Id, result.DegreePlan.Id);
+                Assert.AreEqual(degreePlanResponse.PersonId, result.DegreePlan.PersonId);
+                Assert.AreEqual(degreePlanResponse.Version, result.DegreePlan.Version);
+                Assert.AreEqual(academicHistoryResponse.StudentId, result.AcademicHistory.StudentId);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task AddDegreePlan6Async_NullStudentId()
+            {
+                // Arrange
+                var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
+                response.Content = new StringContent(string.Empty, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var result = await client.AddDegreePlan6Async(null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(InvalidOperationException))]
+            public async Task AddDegreePlan6Async_BadRequest()
+            {
+                // Arrange
+                var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
+                response.Content = new StringContent(string.Empty, Encoding.UTF8, _contentType);
+                response.RequestMessage = new HttpRequestMessage(HttpMethod.Get, "http://test");
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var result = await client.AddDegreePlan6Async(_studentId);
+                _loggerMock.Verify();
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(Api.Client.Exceptions.DegreePlanException))]
+            public async Task AddDegreePlan6Async_Conflict()
+            {
+                // Arrange
+                var response = new HttpResponseMessage(HttpStatusCode.Conflict);
+                response.Content = new StringContent(string.Empty, Encoding.UTF8, _contentType);
+                response.RequestMessage = new HttpRequestMessage(HttpMethod.Get, "http://test");
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var result = await client.AddDegreePlan6Async(_studentId);
+                _loggerMock.Verify();
+            }
+        }
+
+        [TestMethod]
+        public async Task UpdateDegreePlan4Async()
+        {
+            _loggerMock = MockLogger.Instance;
+            _logger = _loggerMock.Object;
+
+            // Arrange
+            var degreePlan = new DegreePlan4()
+            {
+                Id = 12345,
+                NonTermPlannedCourses = new List<PlannedCourse4>(),
+                PersonId = "12345",
+                Terms = new List<DegreePlanTerm4>(),
+                Version = 1
+            };
+
+            var academicHistoryResponse = new AcademicHistory2()
+            {
+                StudentId = "12345",
+                AcademicTerms = new List<AcademicTerm2>(),
+            };
+
+            var degreePlanAcademicHistoryResponse = new DegreePlanAcademicHistory()
+            {
+                DegreePlan = degreePlan,
+                AcademicHistory = academicHistoryResponse
+            };
+            var serializedResponse = JsonConvert.SerializeObject(degreePlanAcademicHistoryResponse);
+
+            var response = new HttpResponseMessage(HttpStatusCode.OK);
+            response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+            var mockHandler = new MockHandler();
+            mockHandler.Responses.Enqueue(response);
+
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+            var client = new ColleagueApiClient(testHttpClient, _logger);
+
+            // Act
+            var result = await client.UpdateDegreePlan4Async(degreePlan);
+
+            // Assert
+            Assert.AreEqual(degreePlan.Id, result.DegreePlan.Id);
+            Assert.AreEqual(degreePlan.PersonId, result.DegreePlan.PersonId);
+            Assert.AreEqual(degreePlan.Version, result.DegreePlan.Version);
+            Assert.AreEqual(academicHistoryResponse.StudentId, result.AcademicHistory.StudentId);
+        }
+
+        [TestMethod]
+        public async Task UpdateDegreePlan5Async()
+        {
+            _loggerMock = MockLogger.Instance;
+            _logger = _loggerMock.Object;
+
+            // Arrange
+            var degreePlan = new DegreePlan4()
+            {
+                Id = 12345,
+                NonTermPlannedCourses = new List<PlannedCourse4>(),
+                PersonId = "12345",
+                Terms = new List<DegreePlanTerm4>(),
+                Version = 1
+            };
+
+            var academicHistoryResponse = new AcademicHistory3()
+            {
+                StudentId = "12345",
+                AcademicTerms = new List<AcademicTerm3>(),
+            };
+
+            var degreePlanAcademicHistoryResponse = new DegreePlanAcademicHistory2()
+            {
+                DegreePlan = degreePlan,
+                AcademicHistory = academicHistoryResponse
+            };
+            var serializedResponse = JsonConvert.SerializeObject(degreePlanAcademicHistoryResponse);
+
+            var response = new HttpResponseMessage(HttpStatusCode.OK);
+            response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+            var mockHandler = new MockHandler();
+            mockHandler.Responses.Enqueue(response);
+
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+            var client = new ColleagueApiClient(testHttpClient, _logger);
+
+            // Act
+            var result = await client.UpdateDegreePlan5Async(degreePlan);
+
+            // Assert
+            Assert.AreEqual(degreePlan.Id, result.DegreePlan.Id);
+            Assert.AreEqual(degreePlan.PersonId, result.DegreePlan.PersonId);
+            Assert.AreEqual(degreePlan.Version, result.DegreePlan.Version);
+            Assert.AreEqual(academicHistoryResponse.StudentId, result.AcademicHistory.StudentId);
+        }
+
+        [TestMethod]
+        public async Task UpdateDegreePlan6Async()
+        {
+            _loggerMock = MockLogger.Instance;
+            _logger = _loggerMock.Object;
+
+            // Arrange
+            var degreePlan = new DegreePlan4()
+            {
+                Id = 12345,
+                NonTermPlannedCourses = new List<PlannedCourse4>(),
+                PersonId = "12345",
+                Terms = new List<DegreePlanTerm4>(),
+                Version = 1
+            };
+
+            var academicHistoryResponse = new AcademicHistory4()
+            {
+                StudentId = "12345",
+                AcademicTerms = new List<AcademicTerm4>(),
+            };
+
+            var degreePlanAcademicHistoryResponse = new DegreePlanAcademicHistory3()
+            {
+                DegreePlan = degreePlan,
+                AcademicHistory = academicHistoryResponse
+            };
+
+            var serializedResponse = JsonConvert.SerializeObject(degreePlanAcademicHistoryResponse);
+
+            var response = new HttpResponseMessage(HttpStatusCode.OK);
+            response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+            var mockHandler = new MockHandler();
+            mockHandler.Responses.Enqueue(response);
+
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+            var client = new ColleagueApiClient(testHttpClient, _logger);
+
+            // Act
+            var result = await client.UpdateDegreePlan6Async(degreePlan);
+
+            // Assert
+            Assert.AreEqual(degreePlan.Id, result.DegreePlan.Id);
+            Assert.AreEqual(degreePlan.PersonId, result.DegreePlan.PersonId);
+            Assert.AreEqual(degreePlan.Version, result.DegreePlan.Version);
+            Assert.AreEqual(academicHistoryResponse.StudentId, result.AcademicHistory.StudentId);
+        }
+
+        [TestMethod]
+        public void GetDegreePlan4()
+        {
+            _loggerMock = MockLogger.Instance;
+            _logger = _loggerMock.Object;
+
+            // Arrange
+            var degreePlan = new DegreePlan4()
+            {
+                Id = 12345,
+                NonTermPlannedCourses = new List<PlannedCourse4>(),
+                PersonId = "12345",
+                Terms = new List<DegreePlanTerm4>(),
+                Version = 1
+            };
+
+            var academicHistoryResponse = new AcademicHistory2()
+            {
+                StudentId = "12345",
+                AcademicTerms = new List<AcademicTerm2>(),
+            };
+
+            var degreePlanAcademicHistoryResponse = new DegreePlanAcademicHistory()
+            {
+                DegreePlan = degreePlan,
+                AcademicHistory = academicHistoryResponse
+            };
+
+            var serializedResponse = JsonConvert.SerializeObject(degreePlanAcademicHistoryResponse);
+
+            var response = new HttpResponseMessage(HttpStatusCode.OK);
+            response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+            var mockHandler = new MockHandler();
+            mockHandler.Responses.Enqueue(response);
+
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+            var client = new ColleagueApiClient(testHttpClient, _logger);
+
+            // Act
+            var result = client.GetDegreePlan4(degreePlan.Id.ToString());
+
+            // Assert
+            Assert.AreEqual(degreePlan.Id, result.DegreePlan.Id);
+            Assert.AreEqual(degreePlan.PersonId, result.DegreePlan.PersonId);
+            Assert.AreEqual(degreePlan.Version, result.DegreePlan.Version);
+            Assert.AreEqual(academicHistoryResponse.StudentId, result.AcademicHistory.StudentId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public void GetDegreePlan4_NullId()
+        {
+            _loggerMock = MockLogger.Instance;
+            _logger = _loggerMock.Object;
+
+            // Arrange
+            var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
+            response.Content = new StringContent(string.Empty, Encoding.UTF8, _contentType);
+            var mockHandler = new MockHandler();
+            mockHandler.Responses.Enqueue(response);
+
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+            var client = new ColleagueApiClient(testHttpClient, _logger);
+
+            // Act
+            var result = client.GetDegreePlan4(null);
+        }
+
+        [TestMethod]
+        public void GetDegreePlan4_ValidateFalse()
+        {
+            _loggerMock = MockLogger.Instance;
+            _logger = _loggerMock.Object;
+
+            // Arrange
+            var degreePlan = new DegreePlan4()
+            {
+                Id = 12345,
+                NonTermPlannedCourses = new List<PlannedCourse4>(),
+                PersonId = "12345",
+                Terms = new List<DegreePlanTerm4>(),
+                Version = 1
+            };
+
+            var academicHistoryResponse = new AcademicHistory2()
+            {
+                StudentId = "12345",
+                AcademicTerms = new List<AcademicTerm2>(),
+            };
+
+            var degreePlanAcademicHistoryResponse = new DegreePlanAcademicHistory()
+            {
+                DegreePlan = degreePlan,
+                AcademicHistory = academicHistoryResponse
+            };
+
+            var serializedResponse = JsonConvert.SerializeObject(degreePlanAcademicHistoryResponse);
+
+            var response = new HttpResponseMessage(HttpStatusCode.OK);
+            response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+            var mockHandler = new MockHandler();
+            mockHandler.Responses.Enqueue(response);
+
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+            var client = new ColleagueApiClient(testHttpClient, _logger);
+
+            // Act
+            var result = client.GetDegreePlan4(degreePlan.Id.ToString(), false);
+
+            // Assert
+            Assert.AreEqual(degreePlan.Id, result.DegreePlan.Id);
+            Assert.AreEqual(degreePlan.PersonId, result.DegreePlan.PersonId);
+            Assert.AreEqual(degreePlan.Version, result.DegreePlan.Version);
+            Assert.AreEqual(academicHistoryResponse.StudentId, result.AcademicHistory.StudentId);
+        }
+
+        [TestMethod]
+        public async Task GetDegreePlan5Async()
+        {
+            _loggerMock = MockLogger.Instance;
+            _logger = _loggerMock.Object;
+
+            // Arrange
+            var degreePlan = new DegreePlan4()
+            {
+                Id = 12345,
+                NonTermPlannedCourses = new List<PlannedCourse4>(),
+                PersonId = "12345",
+                Terms = new List<DegreePlanTerm4>(),
+                Version = 1
+            };
+
+            var academicHistoryResponse = new AcademicHistory3()
+            {
+                StudentId = "12345",
+                AcademicTerms = new List<AcademicTerm3>(),
+            };
+
+            var degreePlanAcademicHistoryResponse = new DegreePlanAcademicHistory2()
+            {
+                DegreePlan = degreePlan,
+                AcademicHistory = academicHistoryResponse
+            };
+
+            var serializedResponse = JsonConvert.SerializeObject(degreePlanAcademicHistoryResponse);
+
+            var response = new HttpResponseMessage(HttpStatusCode.OK);
+            response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+            var mockHandler = new MockHandler();
+            mockHandler.Responses.Enqueue(response);
+
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+            var client = new ColleagueApiClient(testHttpClient, _logger);
+
+            // Act
+            var result = await client.GetDegreePlan5Async(degreePlan.Id.ToString());
+
+            // Assert
+            Assert.AreEqual(degreePlan.Id, result.DegreePlan.Id);
+            Assert.AreEqual(degreePlan.PersonId, result.DegreePlan.PersonId);
+            Assert.AreEqual(degreePlan.Version, result.DegreePlan.Version);
+            Assert.AreEqual(academicHistoryResponse.StudentId, result.AcademicHistory.StudentId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetDegreePlan5_NullId()
+        {
+            _loggerMock = MockLogger.Instance;
+            _logger = _loggerMock.Object;
+
+            // Arrange
+            var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
+            response.Content = new StringContent(string.Empty, Encoding.UTF8, _contentType);
+            var mockHandler = new MockHandler();
+            mockHandler.Responses.Enqueue(response);
+
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+            var client = new ColleagueApiClient(testHttpClient, _logger);
+
+            // Act
+            var result = await client.GetDegreePlan5Async(null);
+        }
+
+        [TestMethod]
+        public async Task GetDegreePlan5_ValidateFalse()
+        {
+            _loggerMock = MockLogger.Instance;
+            _logger = _loggerMock.Object;
+
+            // Arrange
+            var degreePlan = new DegreePlan4()
+            {
+                Id = 12345,
+                NonTermPlannedCourses = new List<PlannedCourse4>(),
+                PersonId = "12345",
+                Terms = new List<DegreePlanTerm4>(),
+                Version = 1
+            };
+
+            var academicHistoryResponse = new AcademicHistory3()
+            {
+                StudentId = "12345",
+                AcademicTerms = new List<AcademicTerm3>(),
+            };
+
+            var degreePlanAcademicHistoryResponse = new DegreePlanAcademicHistory2()
+            {
+                DegreePlan = degreePlan,
+                AcademicHistory = academicHistoryResponse
+            };
+
+            var serializedResponse = JsonConvert.SerializeObject(degreePlanAcademicHistoryResponse);
+
+            var response = new HttpResponseMessage(HttpStatusCode.OK);
+            response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+            var mockHandler = new MockHandler();
+            mockHandler.Responses.Enqueue(response);
+
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+            var client = new ColleagueApiClient(testHttpClient, _logger);
+
+            // Act
+            var result = await client.GetDegreePlan5Async(degreePlan.Id.ToString(), false);
+
+            // Assert
+            Assert.AreEqual(degreePlan.Id, result.DegreePlan.Id);
+            Assert.AreEqual(degreePlan.PersonId, result.DegreePlan.PersonId);
+            Assert.AreEqual(degreePlan.Version, result.DegreePlan.Version);
+            Assert.AreEqual(academicHistoryResponse.StudentId, result.AcademicHistory.StudentId);
+        }
+
+        [TestClass]
+        public class GetDegreePlan6_Tests : ColleagueApiClientStudentTests
+        {
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+                _logger = _loggerMock.Object;
+            }
+
+            [TestMethod]
+            public async Task GetDegreePlan6Async()
+            {
+                // Arrange
+                var degreePlan = new DegreePlan4()
+                {
+                    Id = 12345,
+                    NonTermPlannedCourses = new List<PlannedCourse4>(),
+                    PersonId = "12345",
+                    Terms = new List<DegreePlanTerm4>(),
+                    Version = 1
+                };
+
+                var academicHistoryResponse = new AcademicHistory4()
+                {
+                    StudentId = "12345",
+                    AcademicTerms = new List<AcademicTerm4>(),
+                };
+
+                var degreePlanAcademicHistoryResponse = new DegreePlanAcademicHistory3()
+                {
+                    DegreePlan = degreePlan,
+                    AcademicHistory = academicHistoryResponse
+                };
+
+                bool includeDrops = true;
+
+                var serializedResponse = JsonConvert.SerializeObject(degreePlanAcademicHistoryResponse);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var result = await client.GetDegreePlan6Async(degreePlan.Id.ToString(), includeDrops);
+
+                // Assert
+                Assert.AreEqual(degreePlan.Id, result.DegreePlan.Id);
+                Assert.AreEqual(degreePlan.PersonId, result.DegreePlan.PersonId);
+                Assert.AreEqual(degreePlan.Version, result.DegreePlan.Version);
+                Assert.AreEqual(academicHistoryResponse.StudentId, result.AcademicHistory.StudentId);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpRequestFailedException))]
+            public async Task GetDegreePlan6Async_BadRequest()
+            {
+                // Arrange
+                var degreePlan = new DegreePlan4()
+                {
+                    Id = 12345,
+                    NonTermPlannedCourses = new List<PlannedCourse4>(),
+                    PersonId = "12345",
+                    Terms = new List<DegreePlanTerm4>(),
+                    Version = 1
+                };
+
+                var academicHistoryResponse = new AcademicHistory4()
+                {
+                    StudentId = "12345",
+                    AcademicTerms = new List<AcademicTerm4>(),
+                };
+
+                var degreePlanAcademicHistoryResponse = new DegreePlanAcademicHistory3()
+                {
+                    DegreePlan = degreePlan,
+                    AcademicHistory = academicHistoryResponse
+                };
+
+                var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
+                response.Content = new StringContent(string.Empty, Encoding.UTF8, _contentType);
+                response.RequestMessage = new HttpRequestMessage(HttpMethod.Get, "http://test");
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var result = await client.GetDegreePlan6Async(degreePlan.Id.ToString());
+            }
+        }
+
+        #endregion Add Degree Plan Tests
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public void RegisterFromPlan_ZeroPlanId()
+        {
+            var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
+            response.Content = new StringContent(string.Empty, Encoding.UTF8, _contentType);
+            var mockHandler = new MockHandler();
+            mockHandler.Responses.Enqueue(response);
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+            var client = new ColleagueApiClient(testHttpClient, _logger);
+            var result = client.RegisterFromPlan(0, "test");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public void RegisterFromPlan_NullTermId()
+        {
+            var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
+            response.Content = new StringContent(string.Empty, Encoding.UTF8, _contentType);
+            var mockHandler = new MockHandler();
+            mockHandler.Responses.Enqueue(response);
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+            var client = new ColleagueApiClient(testHttpClient, _logger);
+            var result = client.RegisterFromPlan(12345, null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public void RegisterFromPlan_EmptyTermId()
+        {
+            var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
+            response.Content = new StringContent(string.Empty, Encoding.UTF8, _contentType);
+            var mockHandler = new MockHandler();
+            mockHandler.Responses.Enqueue(response);
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+            var client = new ColleagueApiClient(testHttpClient, _logger);
+            var result = client.RegisterFromPlan(12345, "");
+        }
+
+        [TestClass]
+        public class GetGradeSchemeByIdAsync
+        {
+
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+            private const string _token = "1234567890";
+
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+
+                _logger = _loggerMock.Object;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetGradeSchemeByIdAsync_Null_ThrowsException()
+            {
+                // Arrange
+                var scheme = new GradeScheme()
+                {
+                    Code = "UG",
+                    Description = "Undergraduate",
+                    GradeCodes = new List<string>() { "A", "B", "C" }
+                };
+
+                var serializedResponse = JsonConvert.SerializeObject(scheme);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetGradeSchemeByIdAsync(null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetGradeSchemeByIdAsync_Empty_ThrowsException()
+            {
+                // Arrange
+                var scheme = new GradeScheme()
+                {
+                    Code = "UG",
+                    Description = "Undergraduate",
+                    GradeCodes = new List<string>() { "A", "B", "C" }
+                };
+
+                var serializedResponse = JsonConvert.SerializeObject(scheme);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetGradeSchemeByIdAsync(string.Empty);
+            }
+
+            [TestMethod]
+            public async Task GetGradeSchemeByIdAsync_Valid_Returns_Serialized_GradeScheme()
+            {
+                // Arrange
+                var scheme = new GradeScheme()
+                {
+                    Code = "UG",
+                    Description = "Undergraduate",
+                    GradeCodes = new List<string>() { "A", "B", "C" }
+                };
+
+                var serializedResponse = JsonConvert.SerializeObject(scheme);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetGradeSchemeByIdAsync("UG");
+
+                // Assert
+                Assert.AreEqual(scheme.Code, clientResponse.Code);
+                Assert.AreEqual(scheme.Description, clientResponse.Description);
+                CollectionAssert.AreEqual(scheme.GradeCodes.ToList(), clientResponse.GradeCodes.ToList());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ApplicationException))]
+            public async Task GetGradeSchemeByIdAsync_Invalid_Throws_ApplicationException()
+            {
+                // Arrange
+                var scheme = new GradeScheme()
+                {
+                    Code = "UG",
+                    Description = "Undergraduate",
+                    GradeCodes = new List<string>() { "A", "B", "C" }
+                };
+
+                var serializedResponse = JsonConvert.SerializeObject(scheme);
+
+                var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetGradeSchemeByIdAsync("UG");
+            }
+        }
+
+        [TestClass]
+        public class GetGradeSubschemeByIdAsync
+        {
+
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+            private const string _token = "1234567890";
+
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+
+                _logger = _loggerMock.Object;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetGradeSubschemeByIdAsync_Null_ThrowsException()
+            {
+                // Arrange
+                var subscheme = new GradeSubscheme()
+                {
+                    Code = "UG",
+                    Description = "Undergraduate",
+                    GradeCodes = new List<string>() { "A", "B", "C" }
+                };
+
+                var serializedResponse = JsonConvert.SerializeObject(subscheme);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetGradeSubschemeByIdAsync(null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetGradeSubschemeByIdAsync_Empty_ThrowsException()
+            {
+                // Arrange
+                var subscheme = new GradeSubscheme()
+                {
+                    Code = "UG",
+                    Description = "Undergraduate",
+                    GradeCodes = new List<string>() { "A", "B", "C" }
+                };
+
+                var serializedResponse = JsonConvert.SerializeObject(subscheme);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetGradeSubschemeByIdAsync(string.Empty);
+            }
+
+            [TestMethod]
+            public async Task GetGradeSubschemeByIdAsync_Valid_Returns_Serialized_GradeSubscheme()
+            {
+                // Arrange
+                var subscheme = new GradeSubscheme()
+                {
+                    Code = "UG",
+                    Description = "Undergraduate",
+                    GradeCodes = new List<string>() { "A", "B", "C" }
+                };
+
+                var serializedResponse = JsonConvert.SerializeObject(subscheme);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetGradeSubschemeByIdAsync("UG");
+
+                // Assert
+                Assert.AreEqual(subscheme.Code, clientResponse.Code);
+                Assert.AreEqual(subscheme.Description, clientResponse.Description);
+                CollectionAssert.AreEqual(subscheme.GradeCodes.ToList(), clientResponse.GradeCodes.ToList());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ApplicationException))]
+            public async Task GetGradeSubschemeByIdAsync_Invalid_Throws_ApplicationException()
+            {
+                // Arrange
+                var subscheme = new GradeSubscheme()
+                {
+                    Code = "UG",
+                    Description = "Undergraduate",
+                    GradeCodes = new List<string>() { "A", "B", "C" }
+                };
+
+                var serializedResponse = JsonConvert.SerializeObject(subscheme);
+
+                var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetGradeSubschemeByIdAsync("UG");
+            }
+        }
+
+        [TestClass]
+        public class GetSectionMidtermGradingCompleteAsync_Tests
+        {
+
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+            private const string _token = "1234567890";
+
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+
+                _logger = _loggerMock.Object;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetSectionMidtermGradingCompleteAsync_NullSectionId()
+            {
+                var midtermGradeComplete = new SectionMidtermGradingComplete();
+                midtermGradeComplete.SectionId = "123";
+                var serializedResponse = JsonConvert.SerializeObject(midtermGradeComplete);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                var clientResponse = await client.GetSectionMidtermGradingCompleteAsync(null);
+            }
+
+            [TestMethod]
+            public async Task GetSectionMidtermGradingCompleteAsync_ReturnDeserializedObject()
+            {
+                // Create the dto that the mock API call will return
+                var midtermGradeComplete = new Dtos.Student.SectionMidtermGradingComplete();
+                midtermGradeComplete.SectionId = "123";
+                List<GradingCompleteIndication> midtermGradingComplete1 = new List<GradingCompleteIndication>();
+                midtermGradingComplete1.Add(new GradingCompleteIndication { CompleteOperator = "Oper1", DateAndTime = new DateTimeOffset(2010, 1, 1, 1, 1, 1, new TimeSpan(-3, 0, 0)) });
+                midtermGradingComplete1.Add(new GradingCompleteIndication { CompleteOperator = "Oper2", DateAndTime = new DateTimeOffset(2010, 1, 2, 1, 1, 2, new TimeSpan(-3, 0, 0)) });
+                midtermGradeComplete.MidtermGrading1Complete = midtermGradingComplete1;
+
+                List<GradingCompleteIndication> midtermGradingComplete2 = new List<GradingCompleteIndication>();
+                List<GradingCompleteIndication> midtermGradingComplete3 = new List<GradingCompleteIndication>();
+                List<GradingCompleteIndication> midtermGradingComplete4 = new List<GradingCompleteIndication>();
+                List<GradingCompleteIndication> midtermGradingComplete5 = new List<GradingCompleteIndication>();
+                List<GradingCompleteIndication> midtermGradingComplete6 = new List<GradingCompleteIndication>();
+                midtermGradeComplete.MidtermGrading2Complete = midtermGradingComplete2;
+                midtermGradeComplete.MidtermGrading3Complete = midtermGradingComplete3;
+                midtermGradeComplete.MidtermGrading4Complete = midtermGradingComplete4;
+                midtermGradeComplete.MidtermGrading5Complete = midtermGradingComplete5;
+                midtermGradeComplete.MidtermGrading6Complete = midtermGradingComplete6;
+
+
+                // Serialize to the format the HTTP request will return
+                var serializedResponse = JsonConvert.SerializeObject(midtermGradeComplete);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                var clientResponse = await client.GetSectionMidtermGradingCompleteAsync("123");
+
+                // Compare the returned object to the original
+                Assert.AreEqual(clientResponse.SectionId, midtermGradeComplete.SectionId);
+                Assert.AreEqual(clientResponse.MidtermGrading1Complete.Count(), midtermGradeComplete.MidtermGrading1Complete.Count());
+                Assert.AreEqual(clientResponse.MidtermGrading2Complete.Count(), midtermGradeComplete.MidtermGrading2Complete.Count());
+                Assert.AreEqual(clientResponse.MidtermGrading3Complete.Count(), midtermGradeComplete.MidtermGrading3Complete.Count());
+                Assert.AreEqual(clientResponse.MidtermGrading4Complete.Count(), midtermGradeComplete.MidtermGrading4Complete.Count());
+                Assert.AreEqual(clientResponse.MidtermGrading5Complete.Count(), midtermGradeComplete.MidtermGrading5Complete.Count());
+                Assert.AreEqual(clientResponse.MidtermGrading6Complete.Count(), midtermGradeComplete.MidtermGrading6Complete.Count());
+                Assert.AreEqual(clientResponse.MidtermGrading1Complete.ElementAt(0).CompleteOperator, midtermGradeComplete.MidtermGrading1Complete.ElementAt(0).CompleteOperator);
+                Assert.AreEqual(clientResponse.MidtermGrading1Complete.ElementAt(0).DateAndTime, midtermGradeComplete.MidtermGrading1Complete.ElementAt(0).DateAndTime);
+                Assert.AreEqual(clientResponse.MidtermGrading1Complete.ElementAt(1).CompleteOperator, midtermGradeComplete.MidtermGrading1Complete.ElementAt(1).CompleteOperator);
+                Assert.AreEqual(clientResponse.MidtermGrading1Complete.ElementAt(1).DateAndTime, midtermGradeComplete.MidtermGrading1Complete.ElementAt(1).DateAndTime);
+
+            }
+        }
+
+        [TestClass]
+        public class GetStudentQuickRegistrationSectionsAsync_Tests
+        {
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+            private const string _token = "1234567890";
+
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+
+                _logger = _loggerMock.Object;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetStudentQuickRegistrationSectionsAsync_null_StudentId()
+            {
+                var sqr = new StudentQuickRegistration();
+                var serializedResponse = JsonConvert.SerializeObject(sqr);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                var clientResponse = await client.GetStudentQuickRegistrationSectionsAsync(null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetStudentQuickRegistrationSectionsAsync_empty_StudentId()
+            {
+                var sqr = new StudentQuickRegistration();
+                var serializedResponse = JsonConvert.SerializeObject(sqr);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                var clientResponse = await client.GetStudentQuickRegistrationSectionsAsync(string.Empty);
+            }
+
+            [TestMethod]
+            public async Task GetStudentQuickRegistrationSectionsAsync_valid()
+            {
+                var sqr = new StudentQuickRegistration()
+                {
+                    StudentId = "0001234",
+                    Terms = new List<Dtos.Student.QuickRegistration.QuickRegistrationTerm>()
+                    {
+                        new QuickRegistrationTerm()
+                        {
+                            TermCode = "2019/FA",
+                            Sections = new List<QuickRegistrationSection>()
+                            {
+                                new QuickRegistrationSection() { SectionId = "123", Credits = 3m, GradingType = Dtos.Student.GradingType.Graded },
+                                new QuickRegistrationSection() { SectionId = "234", Credits = 4m, GradingType = Dtos.Student.GradingType.Audit },
+                                new QuickRegistrationSection() { SectionId = "345", Credits = 4m, GradingType = Dtos.Student.GradingType.PassFail }
+                            }
+                        }
+                    }
+                };
+                var serializedResponse = JsonConvert.SerializeObject(sqr);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                var clientResponse = await client.GetStudentQuickRegistrationSectionsAsync(sqr.StudentId);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpRequestFailedException))]
+            public async Task GetStudentQuickRegistrationSectionsAsync_BadRequest()
+            {
+                //Arrange
+                var studentId = "0001234";
+
+                // Arrange
+                var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
+                response.Content = new StringContent(string.Empty, Encoding.UTF8, _contentType);
+                response.RequestMessage = new HttpRequestMessage(HttpMethod.Get, "http://test");
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetStudentQuickRegistrationSectionsAsync(studentId);
+            }
+        }
+    }
 }
 

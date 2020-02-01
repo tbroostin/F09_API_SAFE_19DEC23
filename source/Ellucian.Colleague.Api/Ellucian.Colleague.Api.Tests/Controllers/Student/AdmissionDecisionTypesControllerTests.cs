@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Controllers.Student;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -127,7 +127,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
 
             var expected = admissionDecisionTypes2Collection.FirstOrDefault();
-            admissionDecisionTypesServiceMock.Setup(x => x.GetAdmissionDecisionTypesByGuidAsync(expected.Id)).ReturnsAsync(expected);
+            admissionDecisionTypesServiceMock.Setup(x => x.GetAdmissionDecisionTypesByGuidAsync(expected.Id, It.IsAny<bool>())).ReturnsAsync(expected);
 
             var actual = await admissionDecisionTypesController.GetAdmissionDecisionTypeByGuid2Async(expected.Id);
 
@@ -202,7 +202,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         [ExpectedException(typeof(HttpResponseException))]
         public async Task AdmissionDecisionTypesController_GetAdmissionDecisionTypeByGuid2Async_KeyNotFoundException()
         {
-            admissionDecisionTypesServiceMock.Setup(x => x.GetAdmissionDecisionTypesByGuidAsync(It.IsAny<string>())).Throws<KeyNotFoundException>();
+            admissionDecisionTypesServiceMock.Setup(x => x.GetAdmissionDecisionTypesByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<KeyNotFoundException>();
             await admissionDecisionTypesController.GetAdmissionDecisionTypeByGuid2Async("1234");
         }
 
@@ -210,7 +210,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         [ExpectedException(typeof(HttpResponseException))]
         public async Task AdmissionDecisionTypesController_GetAdmissionDecisionTypeByGuid2Async_PermissionsException()
         {
-            admissionDecisionTypesServiceMock.Setup(x => x.GetAdmissionDecisionTypesByGuidAsync(It.IsAny<string>())).Throws<PermissionsException>();
+            admissionDecisionTypesServiceMock.Setup(x => x.GetAdmissionDecisionTypesByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<PermissionsException>();
             await admissionDecisionTypesController.GetAdmissionDecisionTypeByGuid2Async("1234");
         }
 
@@ -218,7 +218,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         [ExpectedException(typeof(HttpResponseException))]
         public async Task AdmissionDecisionTypesController_GetAdmissionDecisionTypeByGuid2Async_ArgumentException()
         {
-            admissionDecisionTypesServiceMock.Setup(x => x.GetAdmissionDecisionTypesByGuidAsync(It.IsAny<string>())).Throws<ArgumentException>();
+            admissionDecisionTypesServiceMock.Setup(x => x.GetAdmissionDecisionTypesByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<ArgumentException>();
             await admissionDecisionTypesController.GetAdmissionDecisionTypeByGuid2Async("1234");
         }
 
@@ -226,7 +226,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         [ExpectedException(typeof(HttpResponseException))]
         public async Task AdmissionDecisionTypesController_GetAdmissionDecisionTypeByGuid2Async_RepositoryException()
         {
-            admissionDecisionTypesServiceMock.Setup(x => x.GetAdmissionDecisionTypesByGuidAsync(It.IsAny<string>())).Throws<RepositoryException>();
+            admissionDecisionTypesServiceMock.Setup(x => x.GetAdmissionDecisionTypesByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<RepositoryException>();
             await admissionDecisionTypesController.GetAdmissionDecisionTypeByGuid2Async("1234");
         }
 
@@ -234,7 +234,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         [ExpectedException(typeof(HttpResponseException))]
         public async Task AdmissionDecisionTypesController_GetAdmissionDecisionTypeByGuid2Async_IntegrationApiException()
         {
-            admissionDecisionTypesServiceMock.Setup(x => x.GetAdmissionDecisionTypesByGuidAsync(It.IsAny<string>())).Throws<IntegrationApiException>();
+            admissionDecisionTypesServiceMock.Setup(x => x.GetAdmissionDecisionTypesByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<IntegrationApiException>();
             await admissionDecisionTypesController.GetAdmissionDecisionTypeByGuid2Async("1234");
         }
 
@@ -242,7 +242,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         [ExpectedException(typeof(HttpResponseException))]
         public async Task AdmissionDecisionTypesController_GetAdmissionDecisionTypeByGuid2Async_Exception()
         {
-            admissionDecisionTypesServiceMock.Setup(x => x.GetAdmissionDecisionTypesByGuidAsync(It.IsAny<string>())).Throws<Exception>();
+            admissionDecisionTypesServiceMock.Setup(x => x.GetAdmissionDecisionTypesByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<Exception>();
             await admissionDecisionTypesController.GetAdmissionDecisionTypeByGuid2Async("1234");
         }
 
@@ -250,7 +250,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         [ExpectedException(typeof(HttpResponseException))]
         public async Task AdmissionDecisionTypesController_GetAdmissionDecisionTypeByGuidAsync_NoId_Exception()
         {
-            admissionDecisionTypesServiceMock.Setup(x => x.GetAdmissionDecisionTypesByGuidAsync(It.IsAny<string>())).Throws<Exception>();
+            admissionDecisionTypesServiceMock.Setup(x => x.GetAdmissionDecisionTypesByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<Exception>();
             await admissionDecisionTypesController.GetAdmissionDecisionTypeByGuidAsync("");
         }
 
@@ -258,7 +258,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         [ExpectedException(typeof(HttpResponseException))]
         public async Task AdmissionDecisionTypesController_GetAdmissionDecisionTypeByGuidAsync_Exception()
         {
-            admissionDecisionTypesServiceMock.Setup(x => x.GetAdmissionDecisionTypesByGuidAsync(It.IsAny<string>())).Throws<Exception>();
+            admissionDecisionTypesServiceMock.Setup(x => x.GetAdmissionDecisionTypesByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<Exception>();
             await admissionDecisionTypesController.GetAdmissionDecisionTypeByGuidAsync("1234");
         }
 

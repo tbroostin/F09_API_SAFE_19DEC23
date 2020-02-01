@@ -1,4 +1,4 @@
-﻿//Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.Student.DataContracts;
@@ -165,13 +165,14 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentNullException))]
-        public async Task StudentTranscriptGradesRepository_GET_KeyNotFoundException()
+        public async Task StudentTranscriptGradesRepository_GET_EmptySet()
         {
             dataAccessorMock.Setup(repo => repo.SelectAsync("STUDENT.ACAD.CRED", It.IsAny<string>())).ReturnsAsync(new[] { "1", "200" });
             dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.StudentAcadCred>("STUDENT.ACAD.CRED", It.IsAny<string[]>(), true)).ReturnsAsync(null);
 
             var results = await _StudentTranscriptGradesRepository.GetStudentTranscriptGradesAsync(It.IsAny<int>(), It.IsAny<int>());
+            Assert.IsNotNull(results);
+            Assert.AreEqual(results.Item2, 0);
         }
 
         [TestMethod]
@@ -244,7 +245,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentNullException))]
+        [ExpectedException(typeof(RepositoryException))]
         public async Task StudentTranscriptGradesRepository_GETById_StwebDefaults_Null()
         {
            
@@ -262,7 +263,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentNullException))]
+        [ExpectedException(typeof(RepositoryException))]
         public async Task StudentTranscriptGradesRepository_GETById_RecordKeyLookup_null()
         {
 
@@ -318,7 +319,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             dataAccessorMock.Setup(dr => dr.BulkReadRecordAsync<StudentCourseSec>(It.IsAny<string[]>(), It.IsAny<bool>()))
                 .ReturnsAsync( new Collection<StudentCourseSec>() {
                     new StudentCourseSec() { Recordkey = studentAcadCredRecord.StcStudentCourseSec, ScsCourseSection = scsCourseSection } } );
-
+            dataAccessorMock.Setup(dr => dr.ReadRecordAsync<StudentCourseSec>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
+               .ReturnsAsync(new StudentCourseSec() { Recordkey = studentAcadCredRecord.StcStudentCourseSec, ScsCourseSection = scsCourseSection });
 
             var results = await _StudentTranscriptGradesRepository.GetStudentTranscriptGradesByGuidAsync(guid);
             Assert.IsNotNull(results);
@@ -423,6 +425,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             dataAccessorMock.Setup(dr => dr.BulkReadRecordAsync<StudentCourseSec>(It.IsAny<string[]>(), It.IsAny<bool>()))
                 .ReturnsAsync(new Collection<StudentCourseSec>() {
                     new StudentCourseSec() { Recordkey = studentAcadCredRecord.StcStudentCourseSec, ScsCourseSection = scsCourseSection } });
+            dataAccessorMock.Setup(dr => dr.ReadRecordAsync<StudentCourseSec>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
+                .ReturnsAsync(new StudentCourseSec() { Recordkey = studentAcadCredRecord.StcStudentCourseSec, ScsCourseSection = scsCourseSection });
 
             var results = await _StudentTranscriptGradesRepository.UpdateStudentTranscriptGradesAdjustmentsAsync(_studentTranscriptGradesAdjustmentsCollection.FirstOrDefault());
 

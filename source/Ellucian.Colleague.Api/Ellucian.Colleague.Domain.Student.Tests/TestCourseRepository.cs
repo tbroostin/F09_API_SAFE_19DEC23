@@ -161,7 +161,16 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                 // Added for testing sections' attendance tracking type 
                 {"94","7434","COMM-123","COMM","Communications", "100","UG", "Communications 123","" },
                 //test data for retake and replace testing
-                {"95","7435","MATH-300BB","MATH","Mathematics","300","GR","Calculus AP","" }
+                {"95","7435","MATH-300BB","MATH","Mathematics","300","GR","Calculus AP","" },
+                //test data for release extra courses from one requirement to other tests
+                 //index, courseId, subj-number, dept, title, course level, acad level, description, location
+                  {"97","7437","DANC-101","PERF","dance-101","100","UG","LOCAL Dance 2","" },
+                   {"98","7438","DANC-102","PERF","dance-102","100","UG","LOCAL Dance 3","" },
+                    {"99","7439","ENGL-201","ENGL","ENGLISH-201","200","UG","ENGLISH II","" },
+
+                 // test data for course constructor failure (missing short title)
+                 {"100","7440","ENGL-201BAD","ENGL","","200","UG","ENGLISH II","" },
+
                 };
 
         public TestCourseRepository(ICacheProvider cacheProvider = null, IColleagueTransactionFactory transactionFactory = null, ILogger logger = null) : base(new Mock<ICacheProvider>().Object, new Mock<IColleagueTransactionFactory>().Object, logger)
@@ -529,6 +538,21 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         }
 
         public Task<Dictionary<string, string>> GetGuidsCollectionAsync(IEnumerable<string> ids, string filename)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Course> GetCourseByGuid2Async(string guid, bool addToCollection = false)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Tuple<IEnumerable<Course>, int>> GetPagedCoursesAsync(int offset, int limit, string subject, string number, List<string> academicLevel, List<string> owningInstitutionUnit, string title, List<string> instructionalMethods, string startOn, string endOn, string topic = "", string category = "", bool addToCollection = false)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Tuple<IEnumerable<Course>, int>> GetPagedCoursesAsync(int offset, int limit, string subject, string number, List<string> academicLevel, List<string> owningInstitutionUnit, List<string> titles, List<string> instructionalMethods, string startOn, string endOn, string topic = "", List<string> categories = null, string activeOn = "", bool addToCollection = false)
         {
             throw new NotImplementedException();
         }

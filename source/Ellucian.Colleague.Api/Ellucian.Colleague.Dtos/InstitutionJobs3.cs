@@ -40,7 +40,7 @@ namespace Ellucian.Colleague.Dtos
         public GuidObject2 Position { get; set; }
 
         /// <summary>
-        /// he department or organization of the institution to which the job belongs
+        /// The department or organization of the institution to which the job belongs
         /// </summary>
         [DataMember(Name = "department")]
         [FilterProperty("criteria")]
@@ -50,7 +50,7 @@ namespace Ellucian.Colleague.Dtos
         /// The first day of the job.
         /// </summary>
         [JsonConverter(typeof(DateOnlyConverter))]
-        [FilterProperty("criteria")]
+        [FilterProperty("criteria",  new string[] { "$eq", "$gte", "$lte" })]
         [DataMember(Name = "startOn")]
         public DateTime StartOn { get; set; }
 
@@ -59,7 +59,7 @@ namespace Ellucian.Colleague.Dtos
         /// </summary>
         [DataMember(Name = "endOn", EmitDefaultValue = false)]
         [JsonConverter(typeof(DateOnlyConverter))]
-        [FilterProperty("criteria")]
+        [FilterProperty("criteria", new string[] { "$eq", "$gte", "$lte" })]
         public DateTime? EndOn { get; set; }
 
         /// <summary>

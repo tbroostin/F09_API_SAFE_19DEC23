@@ -46,12 +46,10 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="Ellucian.Web.Adapters, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\Ellucian.Web.Adapters.1.0.0.177\lib\net451\Ellucian.Web.Adapters.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>..\packages\Ellucian.Web.Adapters.1.0.0.180\lib\net451\Ellucian.Web.Adapters.dll</HintPath>
     </Reference>
     <Reference Include="Ellucian.Web.Dependency, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\Ellucian.Web.Dependency.1.0.0.187\lib\net451\Ellucian.Web.Dependency.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>..\packages\Ellucian.Web.Dependency.1.0.0.190\lib\net451\Ellucian.Web.Dependency.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Practices.ServiceLocation, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\CommonServiceLocator.1.0\lib\NET35\Microsoft.Practices.ServiceLocation.dll</HintPath>
@@ -116,16 +114,19 @@
     <Compile Include="AwardLetterConfiguration.cs" />
     <Compile Include="AwardLetterGroup.cs" />
     <Compile Include="AwardLetterAwardPeriod.cs" />
+    <Compile Include="AwardLetterHistoryCost.cs" />
     <Compile Include="AwardLetterReport.cs" />
     <Compile Include="AwardPackageChangeRequest.cs" />
     <Compile Include="AwardPackageChangeRequestStatus.cs" />
     <Compile Include="AwardPeriod.cs" />
     <Compile Include="AwardPeriodChangeRequest.cs" />
+    <Compile Include="AwardPeriodTotal.cs" />
     <Compile Include="AwardStatus.cs" />
     <Compile Include="AwardStatusCategory.cs" />
     <Compile Include="AwardType.cs" />
     <Compile Include="AwardYear.cs" />
     <Compile Include="BudgetComponent.cs" />
+    <Compile Include="BudgetComponentCostType.cs" />
     <Compile Include="ChecklistItemControlStatus.cs" />
     <Compile Include="ChecklistItem.cs" />
     <Compile Include="ChecklistItemType.cs" />
@@ -151,6 +152,7 @@
     <Compile Include="LoanRequest.cs" />
     <Compile Include="LoanRequestPeriod.cs" />
     <Compile Include="LoanRequestStatus.cs" />
+    <Compile Include="OfferLetterHousingEnrollmentItem.cs" />
     <Compile Include="OutsideAward.cs" />
     <Compile Include="ProfileApplication.cs" />
     <Compile Include="ShoppingSheet.cs" />

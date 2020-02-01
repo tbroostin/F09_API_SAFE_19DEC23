@@ -10,6 +10,6 @@ namespace Ellucian.Colleague.Domain.HumanResources.Repositories
     public interface IInstitutionEmployersRepository
     {
         Task<InstitutionEmployers> GetInstitutionEmployerByGuidAsync(string guid);
-        Task<IEnumerable<InstitutionEmployers>> GetInstitutionEmployersAsync();
+        Task<IEnumerable<InstitutionEmployers>> GetInstitutionEmployersAsync(bool bypassCache = false);
     }
 }

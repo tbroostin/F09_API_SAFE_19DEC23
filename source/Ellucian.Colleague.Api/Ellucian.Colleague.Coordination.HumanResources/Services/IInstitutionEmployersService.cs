@@ -12,7 +12,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
     /// </summary>
     public interface IInstitutionEmployersService : IBaseService
     {
-        Task<IEnumerable<Ellucian.Colleague.Dtos.InstitutionEmployers>> GetInstitutionEmployersAsync();
+        Task<IEnumerable<Ellucian.Colleague.Dtos.InstitutionEmployers>> GetInstitutionEmployersAsync(bool bypassCache = false);
         Task<Ellucian.Colleague.Dtos.InstitutionEmployers> GetInstitutionEmployersByGuidAsync(string guid);
     }
 }

@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,6 +16,9 @@ using Ellucian.Web.Adapters;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
+using Ellucian.Web.Http.Filters;
+using Ellucian.Web.Http.Models;
+using System.Web.Http.Controllers;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Base
 {
@@ -52,12 +55,15 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             private IReferenceDataRepository ReferenceRepository;
             private IAdapterRegistry AdapterRegistry;
             private IEnumerable<Ellucian.Colleague.Domain.Base.Entities.PersonFilter> allPersonFilterEntities;
-            ILogger logger = new Mock<ILogger>().Object;
+            private ILogger logger = new Mock<ILogger>().Object;
             private Mock<IDemographicService> demographicServiceMock;
             private IDemographicService demographicService;
-            List<PersonFilter> PersonFilterList;
+            private List<PersonFilter> PersonFilterList;
             private string personFiltersGuid = "625c69ff-280b-4ed3-9474-662a43616a8a";
- 
+            private string contextSuffix = "criteria";
+            private string contextPrefix = "FilterObject";
+            private QueryStringFilter queryStringFilter;
+
             [TestInitialize]
             public void Initialize()
             {
@@ -88,6 +94,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                     PersonFilterList.Add(target);
                 }
                 ReferenceRepositoryMock.Setup(x => x.GetPersonFiltersAsync(It.IsAny<bool>())).ReturnsAsync(allPersonFilterEntities);
+
+                queryStringFilter = new QueryStringFilter(contextSuffix, "");
+
             }
 
             [TestCleanup]
@@ -110,6 +119,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                 Assert.AreEqual(thisPersonFilter.Description, personFilter.Description);
             }
 
+            #region v6
             [TestMethod]
             public async Task PersonFiltersController_GetHedmAsync()
             {
@@ -196,6 +206,180 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                     Assert.AreEqual(expected.Title, actual.Description);
                 }
             }
+            #endregion
+
+
+            #region v6_1_0
+            [TestMethod]
+            public async Task PersonFiltersController_GetHedmAsync_6_1_0()
+            {
+                demographicServiceMock.Setup(gc => gc.GetPersonFiltersAsync(It.IsAny<bool>())).ReturnsAsync(PersonFilterList);
+
+                var result = await PersonFiltersController.GetPersonFilters2Async(queryStringFilter);
+                Assert.AreEqual(result.Count(), allPersonFilterEntities.Count());
+
+                int count = allPersonFilterEntities.Count();
+                for (int i = 0; i < count; i++)
+                {
+                    var expected = PersonFilterList[i];
+                    var actual = allPersonFilterEntities.ToList()[i];
+
+                    Assert.AreEqual(expected.Id, actual.Guid);
+                    Assert.AreEqual(expected.Code, actual.Code);
+                    Assert.AreEqual(expected.Title, actual.Description);
+                }
+            }
+
+            [TestMethod]
+            public async Task PersonFiltersController_GetHedmAsync_6_1_0_CacheControlNotNull()
+            {
+                PersonFiltersController.Request.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue();
+                demographicServiceMock.Setup(gc => gc.GetPersonFiltersAsync(It.IsAny<bool>())).ReturnsAsync(PersonFilterList);
+
+                var result = await PersonFiltersController.GetPersonFilters2Async(queryStringFilter);
+                Assert.AreEqual(result.Count(), allPersonFilterEntities.Count());
+
+                int count = allPersonFilterEntities.Count();
+                for (int i = 0; i < count; i++)
+                {
+                    var expected = PersonFilterList[i];
+                    var actual = allPersonFilterEntities.ToList()[i];
+
+                    Assert.AreEqual(expected.Id, actual.Guid);
+                    Assert.AreEqual(expected.Code, actual.Code);
+                    Assert.AreEqual(expected.Title, actual.Description);
+                }
+            }
+
+            [TestMethod]
+            public async Task PersonFiltersController_GetHedmAsync_6_1_0_NoCache()
+            {
+                PersonFiltersController.Request.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue();
+                PersonFiltersController.Request.Headers.CacheControl.NoCache = true;
+
+                demographicServiceMock.Setup(gc => gc.GetPersonFiltersAsync(It.IsAny<bool>())).ReturnsAsync(PersonFilterList);
+
+                var result = await PersonFiltersController.GetPersonFilters2Async(queryStringFilter);
+                Assert.AreEqual(result.Count(), allPersonFilterEntities.Count());
+
+                int count = allPersonFilterEntities.Count();
+                for (int i = 0; i < count; i++)
+                {
+                    var expected = PersonFilterList[i];
+                    var actual = allPersonFilterEntities.ToList()[i];
+
+                    Assert.AreEqual(expected.Id, actual.Guid);
+                    Assert.AreEqual(expected.Code, actual.Code);
+                    Assert.AreEqual(expected.Title, actual.Description);
+                }
+            }
+
+            [TestMethod]
+            public async Task PersonFiltersController_GetHedmAsync_6_1_0_Cache()
+            {
+                PersonFiltersController.Request.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue();
+                PersonFiltersController.Request.Headers.CacheControl.NoCache = false;
+
+                demographicServiceMock.Setup(gc => gc.GetPersonFiltersAsync(It.IsAny<bool>())).ReturnsAsync(PersonFilterList);
+
+                var result = await PersonFiltersController.GetPersonFilters2Async(queryStringFilter);
+                Assert.AreEqual(result.Count(), allPersonFilterEntities.Count());
+
+                int count = allPersonFilterEntities.Count();
+                for (int i = 0; i < count; i++)
+                {
+                    var expected = PersonFilterList[i];
+                    var actual = allPersonFilterEntities.ToList()[i];
+
+                    Assert.AreEqual(expected.Id, actual.Guid);
+                    Assert.AreEqual(expected.Code, actual.Code);
+                    Assert.AreEqual(expected.Title, actual.Description);
+                }
+            }
+
+
+            public async Task PersonFiltersController_GetHedmAsync_6_1_0_Filter_Code()
+            {
+                demographicServiceMock.Setup(gc => gc.GetPersonFiltersAsync(It.IsAny<bool>())).ReturnsAsync(PersonFilterList);
+
+                var queryStringCriteria = new QueryStringFilter(contextSuffix, "{'code':'BFEDLIST'}");
+                var contextPropertyName = string.Format("{0}{1}", contextPrefix, contextSuffix);
+                var queryStringFilter = new QueryStringFilterFilter(contextSuffix, typeof(Dtos.PersonFilter));
+
+                var controllerContext = PersonFiltersController.ControllerContext;
+                var actionDescriptor = PersonFiltersController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+
+                _context.ActionArguments.Add(contextSuffix, queryStringCriteria);
+
+                await queryStringFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                var result = await PersonFiltersController.GetPersonFilters2Async(queryStringCriteria);
+
+                Object filterObject;
+                PersonFiltersController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+
+                Assert.IsNotNull(filterObject);
+
+                var expectedEntities = PersonFilterList.Where(pf => pf.Code.Equals("BFEDLIST", StringComparison.OrdinalIgnoreCase));
+                Assert.AreEqual(result.Count(), expectedEntities.Count());
+
+
+                int count = expectedEntities.Count();
+                for (int i = 0; i < count; i++)
+                {
+                    var expected = PersonFilterList[i];
+                    var actual = allPersonFilterEntities.FirstOrDefault(a=>a.Guid == expected.Id);
+
+                    Assert.AreEqual(expected.Id, actual.Guid);
+                    Assert.AreEqual(expected.Code, actual.Code);
+                    Assert.AreEqual(expected.Title, actual.Description);
+                }
+            }
+
+            public async Task PersonFiltersController_GetHedmAsync_6_1_0_Filter_Title()
+            {
+                demographicServiceMock.Setup(gc => gc.GetPersonFiltersAsync(It.IsAny<bool>())).ReturnsAsync(PersonFilterList);
+
+                var queryStringCriteria = new QueryStringFilter(contextSuffix, "{'title':'Description1'}");
+                var contextPropertyName = string.Format("{0}{1}", contextPrefix, contextSuffix);
+                var queryStringFilter = new QueryStringFilterFilter(contextSuffix, typeof(Dtos.PersonFilter));
+
+                var controllerContext = PersonFiltersController.ControllerContext;
+                var actionDescriptor = PersonFiltersController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+
+                _context.ActionArguments.Add(contextSuffix, queryStringCriteria);
+
+                await queryStringFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                var result = await PersonFiltersController.GetPersonFilters2Async(queryStringCriteria);
+
+                Object filterObject;
+                PersonFiltersController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+
+                Assert.IsNotNull(filterObject);
+
+                var expectedEntities = PersonFilterList.Where(pf => pf.Description.Equals("Description1", StringComparison.OrdinalIgnoreCase));
+                Assert.AreEqual(result.Count(), expectedEntities.Count());
+
+
+                int count = expectedEntities.Count();
+                for (int i = 0; i < count; i++)
+                {
+                    var expected = PersonFilterList[i];
+                    var actual = allPersonFilterEntities.FirstOrDefault(a => a.Guid == expected.Id);
+
+                    Assert.AreEqual(expected.Id, actual.Guid);
+                    Assert.AreEqual(expected.Code, actual.Code);
+                    Assert.AreEqual(expected.Title, actual.Description);
+                }
+            }
+            #endregion
 
             [TestMethod]
             public async Task PersonFiltersController_GetByIdHedmAsync()

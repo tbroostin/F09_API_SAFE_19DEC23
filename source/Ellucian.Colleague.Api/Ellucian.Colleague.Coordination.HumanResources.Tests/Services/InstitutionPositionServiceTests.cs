@@ -2,6 +2,7 @@
 using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.HumanResources;
+using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Web.Adapters;
@@ -130,7 +131,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 
                 };
                 positionEntityTuple = new Tuple<IEnumerable<Domain.HumanResources.Entities.Position>, int>(positionEntities, 0);
-                positionRepositoryMock.Setup(i => i.GetPositionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),
+                positionRepositoryMock.Setup(i => i.GetPositionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(positionEntityTuple);
                 var actualsTuple = await institutionPositionService.GetInstitutionPositionsAsync(offset, limit, It.IsAny<string>(),
@@ -144,7 +145,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             public async Task InstitutionPositions_GETAllAsync_NoItmsInTuple()
             {
                 positionEntityTuple = null;
-                positionRepositoryMock.Setup(i => i.GetPositionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),
+                positionRepositoryMock.Setup(i => i.GetPositionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(positionEntityTuple);
                 var actualsTuple = await institutionPositionService.GetInstitutionPositionsAsync(offset, limit, It.IsAny<string>(),
@@ -329,7 +330,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                     }
                 };
                 positionEntityTuple = new Tuple<IEnumerable<Domain.HumanResources.Entities.Position>, int>(positionEntities, positionEntities.Count());
-                positionRepositoryMock.Setup(i => i.GetPositionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),
+                positionRepositoryMock.Setup(i => i.GetPositionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(positionEntityTuple);
                 var actualsTuple = await institutionPositionService.GetInstitutionPositionsAsync(offset, limit, It.IsAny<string>(),
@@ -350,7 +351,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                     }
                 };
                 positionEntityTuple = new Tuple<IEnumerable<Domain.HumanResources.Entities.Position>, int>(positionEntities, positionEntities.Count());
-                positionRepositoryMock.Setup(i => i.GetPositionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),
+                positionRepositoryMock.Setup(i => i.GetPositionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(positionEntityTuple);
                 var actualsTuple = await institutionPositionService.GetInstitutionPositionsAsync(offset, limit, It.IsAny<string>(),
@@ -515,7 +516,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                     }
                 };
                 positionEntityTuple = new Tuple<IEnumerable<Domain.HumanResources.Entities.Position>, int>(positionEntities, positionEntities.Count());
-                positionRepositoryMock.Setup(i => i.GetPositionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),
+                positionRepositoryMock.Setup(i => i.GetPositionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(positionEntityTuple);
 
@@ -634,7 +635,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 
                 };
                 positionEntityTuple = new Tuple<IEnumerable<Domain.HumanResources.Entities.Position>, int>(positionEntities, 0);
-                positionRepositoryMock.Setup(i => i.GetPositionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),
+                positionRepositoryMock.Setup(i => i.GetPositionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(positionEntityTuple);
                 var actualsTuple = await institutionPositionService.GetInstitutionPositions2Async(offset, limit, It.IsAny<string>(),
@@ -648,7 +649,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             public async Task InstitutionPositions_GETAll2Async_NoItmsInTuple()
             {
                 positionEntityTuple = null;
-                positionRepositoryMock.Setup(i => i.GetPositionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),
+                positionRepositoryMock.Setup(i => i.GetPositionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(positionEntityTuple);
                 var actualsTuple = await institutionPositionService.GetInstitutionPositions2Async(offset, limit, It.IsAny<string>(),
@@ -833,7 +834,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                     }
                 };
                 positionEntityTuple = new Tuple<IEnumerable<Domain.HumanResources.Entities.Position>, int>(positionEntities, positionEntities.Count());
-                positionRepositoryMock.Setup(i => i.GetPositionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),
+                positionRepositoryMock.Setup(i => i.GetPositionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(positionEntityTuple);
                 var actualsTuple = await institutionPositionService.GetInstitutionPositions2Async(offset, limit, It.IsAny<string>(),
@@ -854,7 +855,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                     }
                 };
                 positionEntityTuple = new Tuple<IEnumerable<Domain.HumanResources.Entities.Position>, int>(positionEntities, positionEntities.Count());
-                positionRepositoryMock.Setup(i => i.GetPositionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),
+                positionRepositoryMock.Setup(i => i.GetPositionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(positionEntityTuple);
                 var actualsTuple = await institutionPositionService.GetInstitutionPositions2Async(offset, limit, It.IsAny<string>(),
@@ -1027,7 +1028,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                     }
                 };
                 positionEntityTuple = new Tuple<IEnumerable<Domain.HumanResources.Entities.Position>, int>(positionEntities, positionEntities.Count());
-                positionRepositoryMock.Setup(i => i.GetPositionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),
+                positionRepositoryMock.Setup(i => i.GetPositionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(positionEntityTuple);
 
@@ -1114,7 +1115,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             {
                 var actualsTuple =
                     await
-                        institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(),
+                        institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
 
@@ -1146,10 +1147,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 
                 };
                 positionEntityTuple = new Tuple<IEnumerable<Domain.HumanResources.Entities.Position>, int>(positionEntities, 0);
-                positionRepositoryMock.Setup(i => i.GetPositionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),
+                positionRepositoryMock.Setup(i => i.GetPositionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(positionEntityTuple);
-                var actualsTuple = await institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(),
+                var actualsTuple = await institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
 
@@ -1160,10 +1161,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             public async Task InstitutionPositions_GETAll3Async_NoItmsInTuple()
             {
                 positionEntityTuple = null;
-                positionRepositoryMock.Setup(i => i.GetPositionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),
+                positionRepositoryMock.Setup(i => i.GetPositionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(positionEntityTuple);
-                var actualsTuple = await institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(),
+                var actualsTuple = await institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
 
@@ -1175,7 +1176,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             {
                 var actualsTuple =
                     await
-                        institutionPositionService.GetInstitutionPositions3Async(offset, limit, "e43e7195-6eca-451d-b6c3-1e52fe540083",
+                        institutionPositionService.GetInstitutionPositions3Async(offset, limit, "", "e43e7195-6eca-451d-b6c3-1e52fe540083",
                             It.IsAny<string>(), "d5f5eafb-3192-4479-8dca-6fe79bbde6e4", new List<string>() { "50aadc94-3b09-4bec-bca6-a9c588ee8c11" }, It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
 
@@ -1204,7 +1205,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             {
                 var actualsTuple =
                     await
-                        institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(),
+                        institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), "2012-07-01", It.IsAny<string>(), It.IsAny<bool>());
 
@@ -1233,7 +1234,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             {
                 var actualsTuple =
                     await
-                        institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(),
+                        institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), "2012-07-01", It.IsAny<bool>());
 
@@ -1276,13 +1277,12 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 Assert.AreEqual(expected.Title, actual.Title);
             }
 
-
             [TestMethod]
             [ExpectedException(typeof(ArgumentException))]
             public async Task InstitutionPositions_GETAll3Async_NoPermissions_Exception()
             {
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
-                var actualsTuple = await institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(),
+                var actualsTuple = await institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
             }
@@ -1293,7 +1293,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             {
                 loggerMock.Setup(l => l.IsErrorEnabled).Returns(true);
                 referenceDataRepositoryMock.Setup(i => i.GetLocationsAsync(It.IsAny<bool>())).ThrowsAsync(new Exception());
-                var actualsTuple = await institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(),
+                var actualsTuple = await institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
             }
@@ -1305,7 +1305,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 referenceDataRepositoryMock.Setup(i => i.GetUnidataFormattedDate(It.IsAny<string>())).ThrowsAsync(new Exception());
                 var actualsTuple =
                     await
-                        institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(),
+                        institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), "2012-07-01", It.IsAny<bool>());
             }
@@ -1315,7 +1315,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             {
                 loggerMock.Setup(l => l.IsErrorEnabled).Returns(true);
                 positionRepositoryMock.Setup(i => i.GetPositionGuidFromIdAsync(It.IsAny<string>())).ThrowsAsync(new ArgumentOutOfRangeException());
-                var actualsTuple = await institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(),
+                var actualsTuple = await institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
             }
@@ -1326,7 +1326,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 loggerMock.Setup(l => l.IsErrorEnabled).Returns(true);
                 positionRepositoryMock.Setup(i => i.GetPositionGuidFromIdAsync("1")).ReturnsAsync("50aadc94-3b09-4bec-bca6-a9c588ee8c11");
                 positionRepositoryMock.Setup(i => i.GetPositionGuidFromIdAsync("2")).ThrowsAsync(new ArgumentOutOfRangeException());
-                var actualsTuple = await institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(),
+                var actualsTuple = await institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
             }
@@ -1345,10 +1345,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                     }
                 };
                 positionEntityTuple = new Tuple<IEnumerable<Domain.HumanResources.Entities.Position>, int>(positionEntities, positionEntities.Count());
-                positionRepositoryMock.Setup(i => i.GetPositionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),
+                positionRepositoryMock.Setup(i => i.GetPositionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(positionEntityTuple);
-                var actualsTuple = await institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(),
+                var actualsTuple = await institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
             }
@@ -1366,10 +1366,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                     }
                 };
                 positionEntityTuple = new Tuple<IEnumerable<Domain.HumanResources.Entities.Position>, int>(positionEntities, positionEntities.Count());
-                positionRepositoryMock.Setup(i => i.GetPositionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),
+                positionRepositoryMock.Setup(i => i.GetPositionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(positionEntityTuple);
-                var actualsTuple = await institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(),
+                var actualsTuple = await institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
             }
@@ -1539,7 +1539,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                     }
                 };
                 positionEntityTuple = new Tuple<IEnumerable<Domain.HumanResources.Entities.Position>, int>(positionEntities, positionEntities.Count());
-                positionRepositoryMock.Setup(i => i.GetPositionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),
+                positionRepositoryMock.Setup(i => i.GetPositionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(positionEntityTuple);
 

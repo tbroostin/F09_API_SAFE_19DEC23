@@ -49,7 +49,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             _roleRepositoryMock = new Mock<IRoleRepository>();
             _configurationRepoMock = new Mock<IConfigurationRepository>();
 
-            _currentUserFactory = new GenericUserFactory.PersonRelationshipUserFactory();
+            _currentUserFactory = new GenericUserFactory.PersonalRelationshipUserFactory();
 
             viewAnyPersonRelationshipRole = new Ellucian.Colleague.Domain.Entities.Role(1, "VIEW.NONPERSON.RELATIONSHIPS");
             viewAnyPersonRelationshipRole.AddPermission(new Domain.Entities.Permission(Domain.Base.BasePermissionCodes.ViewAnyNonPersonRelationship));

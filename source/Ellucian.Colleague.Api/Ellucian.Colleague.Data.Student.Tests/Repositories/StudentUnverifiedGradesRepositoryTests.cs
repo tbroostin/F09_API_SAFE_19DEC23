@@ -393,7 +393,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 var result = await studentUnverifiedGradesRepo.UpdateStudentUnverifiedGradesSubmissionsAsync(studentUnverifiedGrade);
             }
             [TestMethod]
-            [ExpectedException(typeof(InvalidOperationException))]
+            [ExpectedException(typeof(RepositoryException))]
             public async Task StudentUnverifiedGradeRepository_UpdateStudentUnverifiedGradesSubmissionsAsync_CTXError()
             {
                 var studentUnverifiedGrade = allStudentUnverifiedGrades.FirstOrDefault(x => x.Guid == StudentUnverifiedGradesGuid);
@@ -408,15 +408,15 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 var updateResponse = new ImportGrades2Response()
                 {
                     Guid = StudentUnverifiedGradesGuid,
-                    GradeMessages =
-                    new List<GradeMessages>() { new GradeMessages() { ErrorMessge = "ERROR", StatusCode = "FAILURE" } }
+                    GradeMessages2 =
+                    new List<GradeMessages2>() { new GradeMessages2() { ErrorMessge = "ERROR", StatusCode = "FAILURE" } }
                 };
                 transManagerMock.Setup(i => i.ExecuteAsync<ImportGrades2Request, ImportGrades2Response>(It.IsAny<ImportGrades2Request>())).ReturnsAsync(updateResponse);
                 await studentUnverifiedGradesRepo.UpdateStudentUnverifiedGradesSubmissionsAsync(studentUnverifiedGrade);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(InvalidOperationException))]
+            [ExpectedException(typeof(RepositoryException))]
             public async Task StudentUnverifiedGradeRepository_UpdateStudentUnverifiedGradesSubmissionsAsync_Update_StudentAcadCredEmpty()
             {
                 var studentUnverifiedGrade = allStudentUnverifiedGrades.FirstOrDefault(x => x.Guid == StudentUnverifiedGradesGuid);
@@ -432,8 +432,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 var updateResponse = new ImportGrades2Response()
                 {
                     Guid = StudentUnverifiedGradesGuid,
-                    GradeMessages =
-                    new List<GradeMessages>() { new GradeMessages() { ErrorMessge = "ERROR", StatusCode = "FAILURE" } }
+                    GradeMessages2 =
+                    new List<GradeMessages2>() { new GradeMessages2() { ErrorMessge = "ERROR", StatusCode = "FAILURE" } }
                 };
                 transManagerMock.Setup(i => i.ExecuteAsync<ImportGrades2Request, ImportGrades2Response>(It.IsAny<ImportGrades2Request>())).ReturnsAsync(updateResponse);
                 await studentUnverifiedGradesRepo.UpdateStudentUnverifiedGradesSubmissionsAsync(studentUnverifiedGrade);

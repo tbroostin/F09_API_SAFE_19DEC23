@@ -85,6 +85,269 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         }
 
         [TestMethod]
+        public async Task AcademicPeriodService_GetAcademicPeriods4Async()
+        {
+            var term = _termCollection.FirstOrDefault(x => x.Code == _termCode);
+
+            _termRepositoryMock.Setup(repo => repo.GetAsync(It.IsAny<string>()))
+                  .ReturnsAsync(term);
+            _termRepositoryMock.Setup(repo => repo.GetAcademicPeriods(_termCollection))
+              .Returns(_academicPeriodCollection);
+
+            var results = await _academicPeriodService.GetAcademicPeriods4Async(false);
+            Assert.IsTrue(results is IEnumerable<Dtos.AcademicPeriod4>);
+            Assert.IsNotNull(results);
+        }
+
+        [TestMethod]
+        public async Task AcademicPeriodService_GetAcademicPeriods4Async_Start_End_On_Filters()
+        {
+            var term = _termCollection.FirstOrDefault(x => x.Code == _termCode);
+
+            _termRepositoryMock.Setup(repo => repo.GetAsync(It.IsAny<string>()))
+                  .ReturnsAsync(term);
+            _termRepositoryMock.Setup(repo => repo.GetAcademicPeriods(_termCollection))
+              .Returns(_academicPeriodCollection);
+
+            DateTime? startOn = new DateTime(2018, 12, 27);
+            DateTime? endOn = new DateTime(2019, 1, 31);
+
+            var results = await _academicPeriodService.GetAcademicPeriods4Async(false, startOn: startOn, endOn: endOn);
+            Assert.IsTrue(results is IEnumerable<Dtos.AcademicPeriod4>);
+            Assert.IsNotNull(results);
+        }
+
+        //StartOn
+        [TestMethod]
+        public async Task AcademicPeriodService_GetAcademicPeriods4Async_Start_On_GE_Filters()
+        {
+            var term = _termCollection.FirstOrDefault(x => x.Code == _termCode);
+
+            _termRepositoryMock.Setup(repo => repo.GetAsync(It.IsAny<string>()))
+                  .ReturnsAsync(term);
+            _termRepositoryMock.Setup(repo => repo.GetAcademicPeriods(_termCollection))
+              .Returns(_academicPeriodCollection);
+
+            DateTime? startOn = new DateTime(2000, 5, 21);
+            Dictionary<string, string> filterQualifiers = new Dictionary<string, string>();
+            filterQualifiers.Add("StartOn", "GE");
+
+            var results = await _academicPeriodService.GetAcademicPeriods4Async(false, startOn: startOn, filterQualifiers: filterQualifiers);
+            Assert.IsTrue(results is IEnumerable<Dtos.AcademicPeriod4>);
+            Assert.IsNotNull(results);
+        }
+
+        [TestMethod]
+        public async Task AcademicPeriodService_GetAcademicPeriods4Async_Start_On_GT_Filters()
+        {
+            var term = _termCollection.FirstOrDefault(x => x.Code == _termCode);
+
+            _termRepositoryMock.Setup(repo => repo.GetAsync(It.IsAny<string>()))
+                  .ReturnsAsync(term);
+            _termRepositoryMock.Setup(repo => repo.GetAcademicPeriods(_termCollection))
+              .Returns(_academicPeriodCollection);
+
+            DateTime? startOn = new DateTime(2000, 5, 21);
+            Dictionary<string, string> filterQualifiers = new Dictionary<string, string>();
+            filterQualifiers.Add("StartOn", "GT");
+
+            var results = await _academicPeriodService.GetAcademicPeriods4Async(false, startOn: startOn, filterQualifiers: filterQualifiers);
+            Assert.IsTrue(results is IEnumerable<Dtos.AcademicPeriod4>);
+            Assert.IsNotNull(results);
+        }
+
+        [TestMethod]
+        public async Task AcademicPeriodService_GetAcademicPeriods4Async_Start_On_LT_Filters()
+        {
+            var term = _termCollection.FirstOrDefault(x => x.Code == _termCode);
+
+            _termRepositoryMock.Setup(repo => repo.GetAsync(It.IsAny<string>()))
+                  .ReturnsAsync(term);
+            _termRepositoryMock.Setup(repo => repo.GetAcademicPeriods(_termCollection))
+              .Returns(_academicPeriodCollection);
+
+            DateTime? startOn = new DateTime(2000, 5, 21);
+            Dictionary<string, string> filterQualifiers = new Dictionary<string, string>();
+            filterQualifiers.Add("StartOn", "LT");
+
+            var results = await _academicPeriodService.GetAcademicPeriods4Async(false, startOn: startOn, filterQualifiers: filterQualifiers);
+            Assert.IsTrue(results is IEnumerable<Dtos.AcademicPeriod4>);
+            Assert.IsNotNull(results);
+        }
+
+        [TestMethod]
+        public async Task AcademicPeriodService_GetAcademicPeriods4Async_Start_On_LE_Filters()
+        {
+            var term = _termCollection.FirstOrDefault(x => x.Code == _termCode);
+
+            _termRepositoryMock.Setup(repo => repo.GetAsync(It.IsAny<string>()))
+                  .ReturnsAsync(term);
+            _termRepositoryMock.Setup(repo => repo.GetAcademicPeriods(_termCollection))
+              .Returns(_academicPeriodCollection);
+
+            DateTime? startOn = new DateTime(2000, 5, 21);
+            Dictionary<string, string> filterQualifiers = new Dictionary<string, string>();
+            filterQualifiers.Add("StartOn", "LE");
+
+            var results = await _academicPeriodService.GetAcademicPeriods4Async(false, startOn: startOn, filterQualifiers: filterQualifiers);
+            Assert.IsTrue(results is IEnumerable<Dtos.AcademicPeriod4>);
+            Assert.IsNotNull(results);
+        }
+
+        [TestMethod]
+        public async Task AcademicPeriodService_GetAcademicPeriods4Async_Start_On_NE_Filters()
+        {
+            var term = _termCollection.FirstOrDefault(x => x.Code == _termCode);
+
+            _termRepositoryMock.Setup(repo => repo.GetAsync(It.IsAny<string>()))
+                  .ReturnsAsync(term);
+            _termRepositoryMock.Setup(repo => repo.GetAcademicPeriods(_termCollection))
+              .Returns(_academicPeriodCollection);
+
+            DateTime? startOn = new DateTime(2000, 5, 21);
+            Dictionary<string, string> filterQualifiers = new Dictionary<string, string>();
+            filterQualifiers.Add("StartOn", "NE");
+
+            var results = await _academicPeriodService.GetAcademicPeriods4Async(false, startOn: startOn, filterQualifiers: filterQualifiers);
+            Assert.IsTrue(results is IEnumerable<Dtos.AcademicPeriod4>);
+            Assert.IsNotNull(results);
+        }
+
+        [TestMethod]
+        public async Task AcademicPeriodService_GetAcademicPeriods4Async_Start_On_EQ_Filters()
+        {
+            var term = _termCollection.FirstOrDefault(x => x.Code == _termCode);
+
+            _termRepositoryMock.Setup(repo => repo.GetAsync(It.IsAny<string>()))
+                  .ReturnsAsync(term);
+            _termRepositoryMock.Setup(repo => repo.GetAcademicPeriods(_termCollection))
+              .Returns(_academicPeriodCollection);
+
+            DateTime? startOn = new DateTime(2000, 5, 21);
+            Dictionary<string, string> filterQualifiers = new Dictionary<string, string>();
+            filterQualifiers.Add("StartOn", "EQ");
+
+            var results = await _academicPeriodService.GetAcademicPeriods4Async(false, startOn: startOn, filterQualifiers: filterQualifiers);
+            Assert.IsTrue(results is IEnumerable<Dtos.AcademicPeriod4>);
+            Assert.IsNotNull(results);
+        }
+
+        //EndOn
+        [TestMethod]
+        public async Task AcademicPeriodService_GetAcademicPeriods4Async_End_On_GE_Filters()
+        {
+            var term = _termCollection.FirstOrDefault(x => x.Code == _termCode);
+
+            _termRepositoryMock.Setup(repo => repo.GetAsync(It.IsAny<string>()))
+                  .ReturnsAsync(term);
+            _termRepositoryMock.Setup(repo => repo.GetAcademicPeriods(_termCollection))
+              .Returns(_academicPeriodCollection);
+
+            DateTime? endOn = new DateTime(2019, 1, 31);
+            Dictionary<string, string> filterQualifiers = new Dictionary<string, string>();
+            filterQualifiers.Add("EndOn", "GE");
+
+            var results = await _academicPeriodService.GetAcademicPeriods4Async(false, endOn: endOn, filterQualifiers: filterQualifiers);
+            Assert.IsTrue(results is IEnumerable<Dtos.AcademicPeriod4>);
+            Assert.IsNotNull(results);
+        }
+
+        [TestMethod]
+        public async Task AcademicPeriodService_GetAcademicPeriods4Async_End_On_GT_Filters()
+        {
+            var term = _termCollection.FirstOrDefault(x => x.Code == _termCode);
+
+            _termRepositoryMock.Setup(repo => repo.GetAsync(It.IsAny<string>()))
+                  .ReturnsAsync(term);
+            _termRepositoryMock.Setup(repo => repo.GetAcademicPeriods(_termCollection))
+              .Returns(_academicPeriodCollection);
+
+            DateTime? endOn = new DateTime(2019, 1, 31);
+            Dictionary<string, string> filterQualifiers = new Dictionary<string, string>();
+            filterQualifiers.Add("EndOn", "GT");
+
+            var results = await _academicPeriodService.GetAcademicPeriods4Async(false, endOn: endOn, filterQualifiers: filterQualifiers);
+            Assert.IsTrue(results is IEnumerable<Dtos.AcademicPeriod4>);
+            Assert.IsNotNull(results);
+        }
+
+        [TestMethod]
+        public async Task AcademicPeriodService_GetAcademicPeriods4Async_End_On_LT_Filters()
+        {
+            var term = _termCollection.FirstOrDefault(x => x.Code == _termCode);
+
+            _termRepositoryMock.Setup(repo => repo.GetAsync(It.IsAny<string>()))
+                  .ReturnsAsync(term);
+            _termRepositoryMock.Setup(repo => repo.GetAcademicPeriods(_termCollection))
+              .Returns(_academicPeriodCollection);
+
+            DateTime? endOn = new DateTime(2019, 1, 31);
+            Dictionary<string, string> filterQualifiers = new Dictionary<string, string>();
+            filterQualifiers.Add("EndOn", "LT");
+
+            var results = await _academicPeriodService.GetAcademicPeriods4Async(false, endOn: endOn, filterQualifiers: filterQualifiers);
+            Assert.IsTrue(results is IEnumerable<Dtos.AcademicPeriod4>);
+            Assert.IsNotNull(results);
+        }
+
+        [TestMethod]
+        public async Task AcademicPeriodService_GetAcademicPeriods4Async_End_On_LE_Filters()
+        {
+            var term = _termCollection.FirstOrDefault(x => x.Code == _termCode);
+
+            _termRepositoryMock.Setup(repo => repo.GetAsync(It.IsAny<string>()))
+                  .ReturnsAsync(term);
+            _termRepositoryMock.Setup(repo => repo.GetAcademicPeriods(_termCollection))
+              .Returns(_academicPeriodCollection);
+
+            DateTime? endOn = new DateTime(2019, 1, 31);
+            Dictionary<string, string> filterQualifiers = new Dictionary<string, string>();
+            filterQualifiers.Add("EndOn", "LE");
+
+            var results = await _academicPeriodService.GetAcademicPeriods4Async(false, endOn: endOn, filterQualifiers: filterQualifiers);
+            Assert.IsTrue(results is IEnumerable<Dtos.AcademicPeriod4>);
+            Assert.IsNotNull(results);
+        }
+
+        [TestMethod]
+        public async Task AcademicPeriodService_GetAcademicPeriods4Async_End_On_NE_Filters()
+        {
+            var term = _termCollection.FirstOrDefault(x => x.Code == _termCode);
+
+            _termRepositoryMock.Setup(repo => repo.GetAsync(It.IsAny<string>()))
+                  .ReturnsAsync(term);
+            _termRepositoryMock.Setup(repo => repo.GetAcademicPeriods(_termCollection))
+              .Returns(_academicPeriodCollection);
+
+            DateTime? endOn = new DateTime(2019, 1, 31);
+            Dictionary<string, string> filterQualifiers = new Dictionary<string, string>();
+            filterQualifiers.Add("EndOn", "NE");
+
+            var results = await _academicPeriodService.GetAcademicPeriods4Async(false, endOn: endOn, filterQualifiers: filterQualifiers);
+            Assert.IsTrue(results is IEnumerable<Dtos.AcademicPeriod4>);
+            Assert.IsNotNull(results);
+        }
+
+        [TestMethod]
+        public async Task AcademicPeriodService_GetAcademicPeriods4Async_End_On_EQ_Filters()
+        {
+            var term = _termCollection.FirstOrDefault(x => x.Code == _termCode);
+
+            _termRepositoryMock.Setup(repo => repo.GetAsync(It.IsAny<string>()))
+                  .ReturnsAsync(term);
+            _termRepositoryMock.Setup(repo => repo.GetAcademicPeriods(_termCollection))
+              .Returns(_academicPeriodCollection);
+
+            DateTime? endOn = new DateTime(2019, 1, 31);
+            Dictionary<string, string> filterQualifiers = new Dictionary<string, string>();
+            filterQualifiers.Add("EndOn", "EQ");
+
+            var results = await _academicPeriodService.GetAcademicPeriods4Async(false, endOn: endOn, filterQualifiers: filterQualifiers);
+            Assert.IsTrue(results is IEnumerable<Dtos.AcademicPeriod4>);
+            Assert.IsNotNull(results);
+        }
+
+        [TestMethod]
         public async Task AcademicPeriodService_GetAcademicPeriodsAsync_Count()
         {
             var term = _termCollection.FirstOrDefault(x => x.Code == _termCode);

@@ -1,10 +1,9 @@
-﻿//Copyright 2014 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
 using System.Linq;
 using Ellucian.Colleague.Domain.FinancialAid.Entities;
 using Ellucian.Colleague.Domain.FinancialAid.Repositories;
 using System.Threading.Tasks;
-using System;
 
 namespace Ellucian.Colleague.Domain.FinancialAid.Tests
 {
@@ -73,7 +72,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                 awardStatus = "P",
                 awardStatusCategory = AwardStatusCategory.Pending,
                 xmitAmount = null
-            },
+            },            
 
             new TestAwardPeriodRecord()
             {   //modifiable
@@ -200,6 +199,47 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                 awardStatus = "P",
                 awardStatusCategory = AwardStatusCategory.Pending,
                 xmitAmount = null
+            },
+            new TestAwardPeriodRecord()
+            {  
+                year = "2017",
+                award = "SNEEZY",
+                awardPeriod = "17/FA",
+                awardAmount = (decimal)5467.89,
+                awardStatus = "P",
+                awardStatusCategory = AwardStatusCategory.Pending,
+                xmitAmount = null
+            },
+            new TestAwardPeriodRecord()
+            {
+                year = "2017",
+                award = "SNEEZY",
+                awardPeriod = "18/SP",
+                awardAmount = (decimal)5467.89,
+                awardStatus = "P",
+                awardStatusCategory = AwardStatusCategory.Pending,
+                xmitAmount = null
+            },
+            new TestAwardPeriodRecord()
+            {   //not modifiable - not a loan
+                year = "2012",
+                award = "Goofy",
+                awardPeriod = "12/FA",
+                awardAmount = 256,
+                awardStatus = "P",
+                awardStatusCategory = AwardStatusCategory.Pending,
+                xmitAmount = null
+            },
+
+            new TestAwardPeriodRecord()
+            {   //not modifiable - not a loan
+                year = "2012",
+                award = "Goofy",
+                awardPeriod = "13/SP",
+                awardAmount = 345,
+                awardStatus = "P",
+                awardStatusCategory = AwardStatusCategory.Pending,
+                xmitAmount = null
             }
         };
         #endregion
@@ -214,11 +254,12 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
             public string awardYear;
             public List<string> awardCodes;
             public List<TestAwardPeriodAssociationData> periodAssociation;
+            public string supressLoanMax;
 
             public class TestAwardPeriodAssociationData
             {
                 public string awardPeriodId;
-                public bool isFrozenOnAttendancePattern;
+                public bool isFrozenOnAttendancePattern;                
             }
         }
 
@@ -231,14 +272,15 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
             new TestAwardRecord()
             {
                 awardYear = "2012",
-                awardCodes = new List<string>() {"PELL", "SUB1", "UNSUB1", "GPLUS1"},
+                awardCodes = new List<string>() {"PELL", "SUB1", "UNSUB1", "GPLUS1", "Goofy"},
                 periodAssociation = new List<TestAwardRecord.TestAwardPeriodAssociationData>()
                 {
                     new TestAwardRecord.TestAwardPeriodAssociationData() {awardPeriodId = "12/FA", isFrozenOnAttendancePattern = false},
                     new TestAwardRecord.TestAwardPeriodAssociationData() {awardPeriodId = "12/WI", isFrozenOnAttendancePattern = false},
                     new TestAwardRecord.TestAwardPeriodAssociationData() {awardPeriodId = "13/SP", isFrozenOnAttendancePattern = false},
                     new TestAwardRecord.TestAwardPeriodAssociationData() {awardPeriodId = "13/SU", isFrozenOnAttendancePattern = false}
-                }
+                },
+                supressLoanMax = ""
             },
             new TestAwardRecord()
             {
@@ -247,7 +289,8 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                 periodAssociation = new List<TestAwardRecord.TestAwardPeriodAssociationData>()
                 {
                     new TestAwardRecord.TestAwardPeriodAssociationData() {awardPeriodId = "13/WI", isFrozenOnAttendancePattern = false}
-                }                
+                },
+                supressLoanMax = "N"
             },
             new TestAwardRecord()
             {
@@ -256,7 +299,8 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                 periodAssociation = new List<TestAwardRecord.TestAwardPeriodAssociationData>()
                 {
                     new TestAwardRecord.TestAwardPeriodAssociationData() {awardPeriodId = "14/FA", isFrozenOnAttendancePattern = false}
-                }
+                },
+                supressLoanMax = ""
             },
             new TestAwardRecord()
             {
@@ -265,17 +309,19 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                 periodAssociation = new List<TestAwardRecord.TestAwardPeriodAssociationData>()
                 {
                     new TestAwardRecord.TestAwardPeriodAssociationData() {awardPeriodId = "14/FA", isFrozenOnAttendancePattern = false}
-                }
+                },
+                supressLoanMax = "N"
             },
             new TestAwardRecord()
             {
                 awardYear = "2017",
-                awardCodes = new List<string>() {"SUBDL", "UNSUB1", "UNSUB2"},
+                awardCodes = new List<string>() {"SUBDL", "UNSUB1", "UNSUB2", "SNEEZY"},
                 periodAssociation = new List<TestAwardRecord.TestAwardPeriodAssociationData>()
                 {
                     new TestAwardRecord.TestAwardPeriodAssociationData() {awardPeriodId = "17/FA", isFrozenOnAttendancePattern = false},
                     new TestAwardRecord.TestAwardPeriodAssociationData() {awardPeriodId = "18/SP", isFrozenOnAttendancePattern = false}
-                }
+                },
+                supressLoanMax = ""
             }
         };
 
@@ -383,6 +429,12 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
             {
                 awardYear = "2017",
                 awardId = "UNSUB2",
+                anticipatedDisbursementAwardPeriodIds = new List<string>() {"17/FA", "18/SP"}
+            },
+            new TestLoanRecord()
+            {
+                awardYear = "2017",
+                awardId = "SNEEZY",
                 anticipatedDisbursementAwardPeriodIds = new List<string>() {"17/FA", "18/SP"}
             }
         };

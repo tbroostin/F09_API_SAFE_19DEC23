@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -55,7 +55,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             switch (taxForm)
             {
                 case TaxForms.Form1098:
-                    statements = ( await Get1098TaxStatements(personId) ).ToList();
+                    statements = (await Get1098TaxStatements(personId)).ToList();
                     break;
                 case TaxForms.FormT2202A:
                     statements = (await GetT2202aTaxStatements(personId)).ToList();
@@ -80,7 +80,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             var form1098Criteria = "TF98F.STUDENT EQ '" + personId + "' AND WITH TF98F.TAX.FORM EQ '" + parm1098Contract.P1098TTaxForm +
                 "' OR TF98F.TAX.FORM EQ '" + parm1098Contract.P1098ETaxForm + "'";
             var form1098StatementRecords = await DataReader.BulkReadRecordAsync<TaxForm1098Forms>(form1098Criteria);
-          
+
             if (form1098StatementRecords != null)
             {
                 // Sort the statements.
@@ -134,7 +134,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 // Sort the statements.
                 var sortedT2202aStatementRecords = formT2202aStatementRecords.Where(x => x != null).OrderByDescending(x => x.T2ReposYear);
 
-                // Loop through each tax year. We do not need to remove duplicate years because there may be multiple institutions issuing 1098s.
+                // Loop through each tax year. We do not need to remove duplicate years because there may be multiple institutions issuing T2202s.
                 foreach (var formT2202aStatement in sortedT2202aStatementRecords)
                 {
                     try
@@ -148,6 +148,13 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         {
                             var statementT2202a = new TaxFormStatement2(formT2202aStatement.T2ReposStudent,
                                 formT2202aStatement.T2ReposYear.ToString(), TaxForms.FormT2202A, formT2202aStatement.Recordkey);
+
+                            // Set notation as cancelled if the status flag is "C" or if the cancelled flag is "Y".
+                            if ((formT2202aStatement.T2CancelFlag != null && formT2202aStatement.T2CancelFlag.Equals("Y", StringComparison.InvariantCultureIgnoreCase))
+                                || (formT2202aStatement.T2Status != null && formT2202aStatement.T2Status.Equals("C", StringComparison.InvariantCultureIgnoreCase) && !(formT2202aStatement.T2AmendedFlag != null && formT2202aStatement.T2AmendedFlag.Equals("Y", StringComparison.InvariantCultureIgnoreCase))))
+                            {
+                                statementT2202a.Notation = TaxFormNotations.Cancelled;
+                            }
 
                             // Add the statement to the list
                             statements.Add(statementT2202a);
@@ -165,7 +172,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         private TaxForms GetCurrent1098TaxFormFromRecord(string taxForm, Parm1098 parm1098)
         {
             TaxForms currentTaxForm = TaxForms.Form1098;
-            if(taxForm== parm1098.P1098TTaxForm)
+            if (taxForm == parm1098.P1098TTaxForm)
             {
                 currentTaxForm = TaxForms.Form1098T;
             }

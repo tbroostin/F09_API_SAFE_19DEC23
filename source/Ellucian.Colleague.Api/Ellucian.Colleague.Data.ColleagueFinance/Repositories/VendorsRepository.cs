@@ -77,7 +77,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 int i = 0;
                 foreach (var classification in classifications)
                 {
-                    if ( i == 0)
+                    if (i == 0)
                         criteriaBuilder.Append("WITH ");
                     else
                         criteriaBuilder.Append(" AND ");
@@ -102,7 +102,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         case "approved":
                             if (criteriaBuilder.Length > 0) criteriaBuilder.Append(" AND ");
                             criteriaBuilder.Append("WITH VEN.APPROVAL.FLAG = 'Y'");
-                           break;
+                            break;
                     }
                 }
             }
@@ -220,6 +220,41 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         }
 
         /// <summary>
+        /// Get the list of vendors based on keyword search.
+        /// </summary>
+        /// <param name="searchCriteria"> The search criteria containing keyword for vendor search.</param>
+        /// <returns> The vendor search results</returns> 
+        public async Task<IEnumerable<VendorSearchResult>> SearchByKeywordAsync(string searchCriteria)
+        {
+            List<VendorSearchResult> vendorSearchResults = new List<VendorSearchResult>();
+            if (string.IsNullOrEmpty(searchCriteria))
+                throw new ArgumentNullException("searchCriteria", "search criteria required to query");
+
+            var searchRequest = new GetActiveVendorResultsRequest();
+            searchRequest.ASearchCriteria = searchCriteria;
+
+            var searchResponse = await transactionInvoker.ExecuteAsync<GetActiveVendorResultsRequest, GetActiveVendorResultsResponse>(searchRequest);
+            if (searchResponse == null)
+            {
+                throw new InvalidOperationException("An error occurred during person matching");
+            }
+            if (searchResponse.AlErrorMessages.Count() > 0)
+            {
+                var errorMessage = "Error(s) occurred during vendor search:";
+                errorMessage += string.Join(Environment.NewLine, searchResponse.AlErrorMessages);
+                logger.Error(errorMessage);
+                throw new InvalidOperationException("An error occurred during vendor search");
+            }
+
+            if (searchResponse.VendorSearchResults != null && searchResponse.VendorSearchResults.Any())
+            {
+                vendorSearchResults = searchResponse.VendorSearchResults.Select(x => new VendorSearchResult(x.AlVendorIds) { VendorName = x.AlVendorNames, VendorAddress = x.AlVendorAddresses }).ToList();
+            }
+
+            return vendorSearchResults.AsEnumerable();
+        }
+
+        /// <summary>
         /// Update an existing Vendors domain entity
         /// </summary>
         /// <param name="vendorsEntity">Vendors domain entity</param>
@@ -235,7 +270,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             var vendorsId = await this.GetVendorIdFromGuidAsync(vendorsEntity.Guid);
             if (!string.IsNullOrEmpty(vendorsId))
             {
-                
+
                 var updateRequest = await BuildVendorsUpdateRequestAsync(vendorsEntity);
 
                 var extendedDataTuple = GetEthosExtendedDataLists();
@@ -252,7 +287,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 {
                     var errorMessage = string.Format("Error(s) occurred updating vendors '{0}':", vendorsEntity.Guid);
                     var exception = new RepositoryException(errorMessage);
-                    updateResponse.Errors.ForEach(e => exception.AddError(new RepositoryError(e.ErrorCodes, e.ErrorMessages)));
+                    updateResponse.Errors.ForEach(e => exception.AddError(new RepositoryError(string.IsNullOrEmpty(e.ErrorCodes) ? "" : e.ErrorCodes, e.ErrorMessages)));
                     logger.Error(errorMessage);
                     throw exception;
                 }
@@ -263,7 +298,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             // perform a create instead
             return await CreateVendorsAsync(vendorsEntity);
-       
+
         }
 
         /// <summary>
@@ -292,13 +327,13 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             {
                 var errorMessage = string.Format("Error(s) occurred updating vendors '{0}':", vendorsEntity.Guid);
                 var exception = new RepositoryException(errorMessage);
-                createResponse.Errors.ForEach(e => exception.AddError(new RepositoryError(e.ErrorCodes, e.ErrorMessages)));
+                createResponse.Errors.ForEach(e => exception.AddError(new RepositoryError(string.IsNullOrEmpty(e.ErrorCodes) ? "" : e.ErrorCodes, e.ErrorMessages)));
                 logger.Error(errorMessage);
                 throw exception;
             }
 
             // get the newly created record from the database
-            return await GetVendorsByGuidAsync(createResponse.VendorGuid); 
+            return await GetVendorsByGuidAsync(createResponse.VendorGuid);
         }
 
         /// <summary>
@@ -313,7 +348,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 throw new ArgumentNullException("guid");
             }
 
-            var idDict = await DataReader.SelectAsync(new GuidLookup[] {new GuidLookup(guid)});
+            var idDict = await DataReader.SelectAsync(new GuidLookup[] { new GuidLookup(guid) });
             if (idDict == null || idDict.Count == 0)
             {
                 throw new KeyNotFoundException("Vendors GUID " + guid + " not found.");
@@ -361,11 +396,39 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
 
             var corpRecord = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Corp>("PERSON", id);
-            
+
             // Build the vendor data
             vendor = BuildVendors(record, personRecord, corpRecord);
 
             return vendor;
+        }
+
+        /// <summary>
+        /// Vendor default Tax form information
+        /// </summary>
+        /// <param name="vendorId">vendor id</param>
+        /// <param name="apType">ap type</param>
+        /// <returns>vendor default tax info entity</returns>
+        public async Task<VendorDefaultTaxFormInfo> GetVendorDefaultTaxInfo(string vendorId, string apType)
+        {
+            
+            if (string.IsNullOrEmpty(vendorId))
+                throw new ArgumentNullException("vendorId", "vendorId is required");
+
+            VendorDefaultTaxFormInfo taxFormInfo = new VendorDefaultTaxFormInfo(vendorId);
+            var request = new GetVendDefaultTaxInfoRequest();
+            request.AVendorId = vendorId;
+            request.AApType = apType;
+
+            var response = await transactionInvoker.ExecuteAsync<GetVendDefaultTaxInfoRequest, GetVendDefaultTaxInfoResponse>(request);
+            if (response == null)
+            {
+                throw new InvalidOperationException("An error occurred while getting vendor tax form");
+            }
+            taxFormInfo.TaxForm = response.ATaxForm;
+            taxFormInfo.TaxFormCode = response.ATaxFormCode;
+            taxFormInfo.TaxFormLoc = response.ATaxFormLoc;
+            return taxFormInfo;
         }
 
         /// <summary>
@@ -384,7 +447,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             foreach (var source in sources)
             {
                 var person = persons.FirstOrDefault(p => p.Recordkey == source.Recordkey);
-                if ( corp != null)
+                if (corp != null)
                     cor = corp.FirstOrDefault(p => p.Recordkey == source.Recordkey);
                 vendorCollection.Add(BuildVendors(source, person, cor));
             }
@@ -481,7 +544,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             request.ClassificationsId = vendorEntity.Types;
             request.Comments = vendorEntity.Comments;
             request.DefaultCurrency = vendorEntity.CurrencyCode;
-            
+
             request.PaymentSourcesId = vendorEntity.ApTypes;
             request.PaymentTermsId = vendorEntity.Terms;
 
@@ -496,10 +559,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             request.Statuses = vendorStatuses;
             request.VendorGuid = vendorEntity.Guid;
 
-            if ( vendorEntity.IntgHoldReasons != null && vendorEntity.IntgHoldReasons.Any())
+            if (vendorEntity.IntgHoldReasons != null && vendorEntity.IntgHoldReasons.Any())
                 request.VendorHoldReasonsId = vendorEntity.IntgHoldReasons;
 
-            request.VendorTypes = vendorEntity.Categories;   
+            request.VendorTypes = vendorEntity.Categories;
 
             request.VendorId = vendorEntity.Id;
             return request;

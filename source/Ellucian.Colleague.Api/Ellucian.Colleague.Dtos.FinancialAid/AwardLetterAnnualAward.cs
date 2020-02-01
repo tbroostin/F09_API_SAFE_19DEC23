@@ -41,5 +41,15 @@ namespace Ellucian.Colleague.Dtos.FinancialAid
         /// </summary>
         public List<AwardLetterAwardPeriod> AwardLetterAwardPeriods { get; set; }
 
+        /// <summary>
+        /// Flag that determines if the award is renewable
+        /// </summary>
+        public string AwRenewableFlag { get; set; }
+
+        /// <summary>
+        /// Renewable text for the selected award
+        /// </summary>
+        public string AwRenewableText { get; set; }
+
     }
 }

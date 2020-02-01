@@ -441,7 +441,6 @@
                         <rd:FormatSymbolCulture>en-US</rd:FormatSymbolCulture>
                       </Style>
                     </Textbox>
-                    <rd:Selected>true</rd:Selected>
                   </CellContents>
                 </TablixCell>
                 <TablixCell>
@@ -660,7 +659,7 @@
                         <Paragraph>
                           <TextRuns>
                             <TextRun>
-                              <Value>=First(Fields!YearToDateGrossPay.Value, "PayStatementReport")</Value>
+                              <Value>=Sum(Fields!YearToDatePaymentAmount.Value)</Value>
                               <Style>
                                 <FontSize>9pt</FontSize>
                                 <Format>'$'#,0.00;('$'#,0.00)</Format>
@@ -3606,6 +3605,9 @@
             <Height>0.20833in</Height>
             <Width>1.66224in</Width>
             <ZIndex>2</ZIndex>
+            <Visibility>
+              <Hidden>=IIf(First(Fields!Apply2020W4Rules.Value, "PayStatementReport"), True, False)</Hidden>
+            </Visibility>
             <Style>
               <Border>
                 <Style>None</Style>
@@ -3642,6 +3644,9 @@
             <Height>0.20833in</Height>
             <Width>0.76383in</Width>
             <ZIndex>3</ZIndex>
+            <Visibility>
+              <Hidden>=IIf(First(Fields!Apply2020W4Rules.Value, "PayStatementReport"), True, False)</Hidden>
+            </Visibility>
             <Style>
               <Border>
                 <Style>None</Style>
@@ -3800,7 +3805,7 @@
               <Paragraph>
                 <TextRuns>
                   <TextRun>
-                    <Value>Federal Exemptions:</Value>
+                    <Value EvaluationMode="Constant">Federal Exemptions:</Value>
                     <Style>
                       <FontSize>8pt</FontSize>
                       <FontWeight>Bold</FontWeight>
@@ -3818,6 +3823,9 @@
             <Height>0.20833in</Height>
             <Width>1.66224in</Width>
             <ZIndex>8</ZIndex>
+            <Visibility>
+              <Hidden>=IIf(First(Fields!Apply2020W4Rules.Value, "PayStatementReport"), True, False)</Hidden>
+            </Visibility>
             <Style>
               <Border>
                 <Style>None</Style>
@@ -3853,6 +3861,9 @@
             <Height>0.20833in</Height>
             <Width>0.76384in</Width>
             <ZIndex>9</ZIndex>
+            <Visibility>
+              <Hidden>=IIf(First(Fields!Apply2020W4Rules.Value, "PayStatementReport"), True, False)</Hidden>
+            </Visibility>
             <Style>
               <Border>
                 <Style>None</Style>
@@ -4147,7 +4158,7 @@
                         <Paragraph>
                           <TextRuns>
                             <TextRun>
-                              <Value>=Fields!YearToDateNetPay.Value</Value>
+                              <Value>=(Sum(Fields!YearToDatePaymentAmount.Value, "PayStatementEarnings")) - (Sum(Fields!EmployeeYearToDateAmount.Value, "PayStatementDeductions"))</Value>
                               <Style>
                                 <FontSize>9pt</FontSize>
                                 <Format>'$'#,0.00</Format>
@@ -4983,6 +4994,10 @@
           <DataField>InstitutionName</DataField>
           <rd:TypeName>System.String</rd:TypeName>
         </Field>
+        <Field Name="Apply2020W4Rules">
+          <DataField>Apply2020W4Rules</DataField>
+          <rd:TypeName>System.Boolean</rd:TypeName>
+        </Field>
         <Field Name="PaycheckReferenceId">
           <DataField>PaycheckReferenceId</DataField>
           <rd:TypeName>System.String</rd:TypeName>
@@ -5035,7 +5050,7 @@
       <rd:DataSetInfo>
         <rd:DataSetName>Ellucian.Colleague.Dtos.HumanResources</rd:DataSetName>
         <rd:TableName>PayStatementReport</rd:TableName>
-        <rd:ObjectDataSourceType>Ellucian.Colleague.Dtos.HumanResources.PayStatementReport, Ellucian.Colleague.Dtos.HumanResources, Version=1.17.0.0, Culture=neutral, PublicKeyToken=ae97a4731ec4dfa9</rd:ObjectDataSourceType>
+        <rd:ObjectDataSourceType>Ellucian.Colleague.Dtos.HumanResources.PayStatementReport, Ellucian.Colleague.Dtos.HumanResources, Version=1.25.0.0, Culture=neutral, PublicKeyToken=ae97a4731ec4dfa9</rd:ObjectDataSourceType>
       </rd:DataSetInfo>
     </DataSet>
     <DataSet Name="PayStatementEarnings">

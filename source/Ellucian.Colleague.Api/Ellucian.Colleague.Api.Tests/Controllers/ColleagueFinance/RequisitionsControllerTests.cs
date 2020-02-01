@@ -18,6 +18,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Newtonsoft.Json.Linq;
 using slf4net;
+using Ellucian.Colleague.Dtos.ColleagueFinance;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 {
@@ -34,8 +35,11 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         private Mock<ILogger> loggerMock;
         private RequisitionsController requisitionsController;
         private List<Dtos.Requisitions> requisitionsCollection;
+        private List<RequisitionSummary> requisitionsSummaryCollection;
         private Tuple<IEnumerable<Dtos.Requisitions>, int> requisiotionsCollectionTuple;
         private string expectedGuid = "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc";
+        private string expectedId = "1";
+        private string personId = "0000100";
         int offset = 0;
         int limit = 2;
 
@@ -50,8 +54,10 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             requisitionsServiceMock = new Mock<IRequisitionService>();
             loggerMock = new Mock<ILogger>();
             requisitionsCollection = new List<Dtos.Requisitions>();
+            requisitionsSummaryCollection = new List<RequisitionSummary>();
 
             BuildData();
+            BuildRequisitionSummaryData();
 
             requisitionsController = new RequisitionsController(requisitionsServiceMock.Object, loggerMock.Object)
             {
@@ -124,9 +130,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                                           Value = 5.75m
                                       }
                                   },
-                                  BudgetCheck = Dtos.EnumProperties.PurchaseOrdersAccountBudgetCheck.Override
+                                  BudgetCheck = Dtos.EnumProperties.AccountBudgetCheck.Override
                               }
-                          },                          
+                          },
                           AdditionalAmount = new Dtos.DtoProperties.Amount2DtoProperty()
                           {
                               Currency = Dtos.EnumProperties.CurrencyIsoCode.USD,
@@ -139,7 +145,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                           CommodityCode = new GuidObject2("8cdcd418-ddbe-4ade-b724-144af2590b56"),
                           Description = "Description 1",
                           DesiredDate = DateTime.Today.AddDays(1),
-                          DiscountAmount = "10",                          
+                          DiscountAmount = "10",
                           LineItemNumber = "1",
                           PartNumber = "25",
                           Quantity = 1,
@@ -185,7 +191,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                               PostalTitle = "PostalTitle",
                               Region = new AddressRegion() {Code = "Code1", Title = "Title1" }
                           }
-                      }                      
+                      }
                    },
                    PaymentTerms = new GuidObject2("7fdffea9-6a2b-4eb4-9835-339bc0a7c3ba"),
                    ReferenceNumber = "ReferenceNumber 1",
@@ -260,7 +266,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                                           Value = 5.75m
                                       }
                                   },
-                                  BudgetCheck = Dtos.EnumProperties.PurchaseOrdersAccountBudgetCheck.Override
+                                  BudgetCheck = Dtos.EnumProperties.AccountBudgetCheck.Override
                               }
                           },
                           AdditionalAmount = new Dtos.DtoProperties.Amount2DtoProperty()
@@ -305,6 +311,59 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             requisitionsServiceMock.Setup(s => s.GetRequisitionsByGuidAsync(It.IsAny<string>(), true)).ReturnsAsync(requisitionsCollection.FirstOrDefault());
         }
 
+        private void BuildRequisitionSummaryData()
+        {
+            requisitionsSummaryCollection = new List<RequisitionSummary>()
+            {
+                new RequisitionSummary()
+                {
+                   Id = "1",
+                   Date = DateTime.Today.AddDays(2),
+                   InitiatorName = "Test User",
+                   RequestorName = "Test User",
+                   Status = RequisitionStatus.InProgress,
+                   StatusDate = DateTime.Today.AddDays(2),
+                   VendorId = "0000190",
+                   VendorName = "Basic Office Supply",
+                   Amount = 10.00m,
+                   Number = "0000001",
+                   PurchaseOrders = new List<PurchaseOrderLinkSummary>()
+                   {
+                       new PurchaseOrderLinkSummary()
+                       {
+                           Id = "1",
+                           Number = "0000001"
+                       }
+                   }
+
+                },
+                new RequisitionSummary()
+                {
+                     Id = "2",
+                   Date = DateTime.Today.AddDays(2),
+                   InitiatorName = "Test User",
+                   RequestorName = "Test User",
+                   Status = RequisitionStatus.InProgress,
+                   StatusDate = DateTime.Today.AddDays(2),
+                   VendorId = "0000190",
+                   VendorName = "Basic Office Supply",
+                   Amount = 10.00m,
+                   Number = "0000002",
+                   PurchaseOrders = new List<PurchaseOrderLinkSummary>()
+                   {
+                       new PurchaseOrderLinkSummary()
+                       {
+                           Id = "2",
+                           Number = "0000002"
+                       }
+                   }
+                }
+
+            };
+            requisitionsServiceMock.Setup(r => r.GetRequisitionsSummaryByPersonIdAsync(It.IsAny<string>())).ReturnsAsync(requisitionsSummaryCollection);
+
+        }
+
         [TestCleanup]
         public void Cleanup()
         {
@@ -333,7 +392,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             var actuals = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.Requisitions>>)httpResponseMessage.Content)
                 .Value as IEnumerable<Dtos.Requisitions>;
 
-            Assert.AreEqual(requisitionsCollection.Count, actuals.Count());            
+            Assert.AreEqual(requisitionsCollection.Count, actuals.Count());
         }
 
         [TestMethod]
@@ -355,7 +414,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             Assert.IsNotNull(actuals);
 
             Assert.AreEqual(requisitionsCollection.Count, actuals.Count());
-        }
+        }        
 
         [TestMethod]
         public async Task RequisitionsController_GetRequisitionsByGuidAsync_ValidateFields()
@@ -437,7 +496,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task RequisitionsController_GetRequisitions_KeyNotFoundException()
-        {            
+        {
             requisitionsServiceMock.Setup(x => x.GetRequisitionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>()))
                 .Throws<KeyNotFoundException>();
             await requisitionsController.GetRequisitionsAsync(It.IsAny<Web.Http.Models.Paging>());
@@ -479,7 +538,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             requisitionsServiceMock.Setup(x => x.GetRequisitionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>()))
                 .Throws<IntegrationApiException>();
             await requisitionsController.GetRequisitionsAsync(It.IsAny<Web.Http.Models.Paging>());
-        }       
+        }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
@@ -601,6 +660,54 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             Assert.IsNotNull(result);
         }
 
+        [TestMethod]
+        public async Task RequisitionsController_GetRequisitionsSummaryByPersonIdAsync()
+        {
+            var expected = requisitionsSummaryCollection.AsEnumerable();
+            requisitionsServiceMock.Setup(r => r.GetRequisitionsSummaryByPersonIdAsync(It.IsAny<string>())).ReturnsAsync(expected);
+            var requisitions = await requisitionsController.GetRequisitionsSummaryByPersonIdAsync(personId);
+            Assert.AreEqual(requisitions.ToList().Count, expected.Count());
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_GetRequisitionsSummaryByPersonIdAsync_PersonId_Null()
+        {
+            await requisitionsController.GetRequisitionsSummaryByPersonIdAsync(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_GetRequisitionsSummaryByPersonIdAsync_ArgumentNullException()
+        {
+            requisitionsServiceMock.Setup(r => r.GetRequisitionsSummaryByPersonIdAsync(It.IsAny<string>())).ThrowsAsync(new ArgumentNullException());
+            await requisitionsController.GetRequisitionsSummaryByPersonIdAsync(personId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_GetRequisitionsSummaryByPersonIdAsync_Exception()
+        {
+            requisitionsServiceMock.Setup(r => r.GetRequisitionsSummaryByPersonIdAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
+            await requisitionsController.GetRequisitionsSummaryByPersonIdAsync(personId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_GetRequisitionsSummaryByPersonIdAsync_KeyNotFoundException()
+        {
+            requisitionsServiceMock.Setup(r => r.GetRequisitionsSummaryByPersonIdAsync(It.IsAny<string>())).ThrowsAsync(new KeyNotFoundException());
+            await requisitionsController.GetRequisitionsSummaryByPersonIdAsync(personId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_GetRequisitionsSummaryByPersonIdAsync_ApplicationException()
+        {
+            requisitionsServiceMock.Setup(r => r.GetRequisitionsSummaryByPersonIdAsync(It.IsAny<string>())).ThrowsAsync(new ApplicationException());
+            await requisitionsController.GetRequisitionsSummaryByPersonIdAsync(personId);
+        }
+        
         #endregion
 
         #region Delete
@@ -610,7 +717,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         {
             System.Net.Http.HttpResponseMessage httpResponseMessage = new HttpResponseMessage() {StatusCode = System.Net.HttpStatusCode.OK };
             requisitionsServiceMock.Setup(x => x.DeleteRequisitionAsync("1234")).Returns(Task.FromResult(httpResponseMessage));
-            await requisitionsController.DeleteRequisitionsAsync("1234");                
+            await requisitionsController.DeleteRequisitionsAsync("1234");
         }
 
         [TestMethod]

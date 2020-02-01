@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Student.Entities;
 using System;
@@ -13,6 +13,6 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
     public interface IFinancialAidApplicationOutcomeRepository
     {
         Task<Fafsa> GetByIdAsync(string id);
-        Task<Tuple<IEnumerable<Fafsa>, int>> GetAsync(int offset, int limit, bool bypassCache, List<string> faSuiteYears);        
+        Task<Tuple<IEnumerable<Fafsa>, int>> GetAsync(int offset, int limit, bool bypassCache, string applicantId, string aidYear, List<string> faSuiteYears);        
     }
 }

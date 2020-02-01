@@ -123,13 +123,24 @@ namespace Ellucian.Web.Http.Controllers
 
 
         /// <summary>
-        /// Throw unsupported mediatype exception
+        /// Throw NotAcceptable exception
+        /// </summary>
+        [System.Web.Http.HttpGet, System.Web.Http.HttpPut, System.Web.Http.HttpPost]
+        public void NotAcceptableStatusException()
+        {
+            throw CreateHttpResponseException(new IntegrationApiException("",
+                new IntegrationApiError("Global.Internal.Error", "Unspecified Error on the system which prevented execution.", "The requested version is not supported.", HttpStatusCode.NotAcceptable)));
+
+        }
+
+        /// <summary>
+        /// Throw UnsupportedMediaType exception
         /// </summary>
         [System.Web.Http.HttpGet, System.Web.Http.HttpPut, System.Web.Http.HttpPost]
         public void UnsupportedMediaTypeException()
         {
             throw CreateHttpResponseException(new IntegrationApiException("",
-                new IntegrationApiError("Global.Internal.Error", "Unspecified Error on the system which prevented execution.", "The requested version is not supported.", HttpStatusCode.NotAcceptable)));
+                new IntegrationApiError("Global.Internal.Error", "Unspecified Error on the system which prevented execution.", "The requested media type is not supported.", HttpStatusCode.UnsupportedMediaType)));
 
         }
 
@@ -562,8 +573,13 @@ namespace Ellucian.Web.Http.Controllers
             {
                 throw new InvalidOperationException(string.Concat("Update on ", GetRouteResourceName(), " has been rejected for attempting to update restricted properties."));
             }
-            var updateRequestJObject = DataPrivacy.RemoveOrReplaceEmptyProperties((JObject)updateRequest, logger, true);
+            //var updateRequestJObject = DataPrivacy.RemoveOrReplaceEmptyProperties((JObject)updateRequest, logger, true);
+            //var orig = JObject.FromObject(origType);
             var orig = JObject.FromObject(origType);
+
+            var updateRequestWithProtectedArrayItemsIncluded = DataPrivacy.ReinsertProtectedArrayItems(orig, (JObject)updateRequest, dpList, logger);
+
+            var updateRequestJObject = DataPrivacy.RemoveOrReplaceEmptyProperties((JObject)updateRequestWithProtectedArrayItemsIncluded, logger, true);
 
             //json merge settings of array is to replace, new array set coming in replaces existing one
             //json merge settings of nulls is to merge, nulls coming in set exiting ones to null to unset them
@@ -658,6 +674,115 @@ namespace Ellucian.Web.Http.Controllers
 
             return (T)Activator.CreateInstance(typeof(T), false);
         }
+
+        /// <summary>
+        /// Get Filter Properties.
+        /// </summary>
+        /// <param name="logger"></param>
+        /// <returns></returns>
+        public IEnumerable<Tuple<string, Colleague.Dtos.Converters.FilterConverter.FilterMemberInfo>> GetFilterProperties(ILogger logger)
+        {
+            try
+            {
+                var contextPropertyName = "FilterProperties";
+
+                Object filterObject;
+                ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                if (filterObject != null)
+                {
+                    var orig = (List<Tuple<string, Colleague.Dtos.Converters.FilterConverter.FilterMemberInfo>>)filterObject;
+                    return orig;
+                }
+
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Failed attempting to perform extract filter.");
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Get all filters with query qualifiers, such as GE, EQ, LT, etc.
+        /// </summary>
+        /// <param name="logger"></param>
+        /// <returns></returns>
+        public Dictionary<string, string> GetFilterQualifiers(ILogger logger)
+        {
+            var filterProperties = GetFilterProperties(logger);
+            Dictionary<string, string> qualifiers = new Dictionary<string, string>();
+            if (filterProperties != null && filterProperties.Any())
+            {
+                foreach (var prop in filterProperties)
+                {
+                    if (!qualifiers.ContainsKey(prop.Item1) && prop.Item2 != null && !string.IsNullOrEmpty(prop.Item2.FilterCriteria))
+                    {
+                        string filterCriteriaOperation = "";
+                        switch (prop.Item2.FilterCriteria)
+                        {
+                            case "$eq":
+                                filterCriteriaOperation = "EQ";
+                                break;
+                            case "$=":
+                                filterCriteriaOperation = "EQ";
+                                break;
+                            case "$ne":
+                                filterCriteriaOperation = "NE";
+                                break;
+                            case "$<>":
+                                filterCriteriaOperation = "NE";
+                                break;
+                            case "$!=":
+                                filterCriteriaOperation = "NE";
+                                break;
+                            case "$lt":
+                                filterCriteriaOperation = "LT";
+                                break;
+                            case "$<":
+                                filterCriteriaOperation = "LT";
+                                break;
+                            case "$gt":
+                                filterCriteriaOperation = "GT";
+                                break;
+                            case "$>":
+                                filterCriteriaOperation = "GT";
+                                break;
+                            case "$le":
+                                filterCriteriaOperation = "LE";
+                                break;
+                            case "$lte":
+                                filterCriteriaOperation = "LE";
+                                break;
+                            case "$<=":
+                                filterCriteriaOperation = "LE";
+                                break;
+                            case "$ge":
+                                filterCriteriaOperation = "GE";
+                                break;
+                            case "$gte":
+                                filterCriteriaOperation = "GE";
+                                break;
+                            case "$>=":
+                                filterCriteriaOperation = "GE";
+                                break;
+                            case "$or":
+                                filterCriteriaOperation = "OR";
+                                break;
+                            case "$and":
+                                filterCriteriaOperation = "AND";
+                                break;
+                            default:
+                                filterCriteriaOperation = "LIKE";
+                                break;
+                        }
+                        qualifiers.Add(prop.Item1, filterCriteriaOperation);
+                    }
+                }
+            }
+            return qualifiers;
+        }
+
         /// <summary>
         /// Convert list of GUID object Ids to list of strings
         /// </summary>

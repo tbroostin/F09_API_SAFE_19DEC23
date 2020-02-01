@@ -977,7 +977,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
                 institutionPositionsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
                 institutionPositionsController.Request.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
 
-                institutionPositionsService.Setup(x => x.GetInstitutionPositions3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),
+                institutionPositionsService.Setup(x => x.GetInstitutionPositions3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(institutionPositionDtoTuple);
                 var actuals = await institutionPositionsController.GetInstitutionPositions3Async(It.IsAny<Paging>(), criteriaFilter);
@@ -1113,7 +1113,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             [ExpectedException(typeof(HttpResponseException))]
             public async Task InstitutionPositionsController_GET_All3_PermissionsException()
             {
-                institutionPositionsService.Setup(x => x.GetInstitutionPositions3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),
+                institutionPositionsService.Setup(x => x.GetInstitutionPositions3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
                 var actuals = await institutionPositionsController.GetInstitutionPositions3Async(It.IsAny<Paging>(), criteriaFilter);
@@ -1123,7 +1123,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             [ExpectedException(typeof(HttpResponseException))]
             public async Task InstitutionPositionsController_GET_All3_ArgumentException()
             {
-                institutionPositionsService.Setup(x => x.GetInstitutionPositions3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),
+                institutionPositionsService.Setup(x => x.GetInstitutionPositions3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new ArgumentException());
                 var actuals = await institutionPositionsController.GetInstitutionPositions3Async(It.IsAny<Paging>(), criteriaFilter);
@@ -1133,7 +1133,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             [ExpectedException(typeof(HttpResponseException))]
             public async Task InstitutionPositionsController_GET_All3_RepositoryException()
             {
-                institutionPositionsService.Setup(x => x.GetInstitutionPositions3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),
+                institutionPositionsService.Setup(x => x.GetInstitutionPositions3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new RepositoryException());
                 var actuals = await institutionPositionsController.GetInstitutionPositions3Async(It.IsAny<Paging>(), criteriaFilter);
@@ -1143,7 +1143,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             [ExpectedException(typeof(HttpResponseException))]
             public async Task InstitutionPositionsController_GET_All3_IntegrationApiException()
             {
-                institutionPositionsService.Setup(x => x.GetInstitutionPositions3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),
+                institutionPositionsService.Setup(x => x.GetInstitutionPositions3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new IntegrationApiException());
                 var actuals = await institutionPositionsController.GetInstitutionPositions3Async(It.IsAny<Paging>(), criteriaFilter);
@@ -1153,7 +1153,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             [ExpectedException(typeof(HttpResponseException))]
             public async Task InstitutionPositionsController_GET_All3_Exception()
             {
-                institutionPositionsService.Setup(x => x.GetInstitutionPositions3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),
+                institutionPositionsService.Setup(x => x.GetInstitutionPositions3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new Exception());
                 var actuals = await institutionPositionsController.GetInstitutionPositions3Async(It.IsAny<Paging>(), criteriaFilter);

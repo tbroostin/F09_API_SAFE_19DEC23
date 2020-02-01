@@ -1,4 +1,4 @@
-//Copyright 2017 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using System;
@@ -13,14 +13,19 @@ namespace Ellucian.Colleague.Coordination.Student.Services
     /// </summary>
     public interface IAdmissionDecisionsService : IBaseService
     {
-                /// <summary>
+        /// <summary>
         /// Gets all admission-decisions
         /// </summary>
         /// <param name="offset">Offset for paging results</param>
         /// <param name="limit">Limit for paging results</param>
+        /// <param name="applicationId">The admission application, on which this decision was made.</param>
+        /// <param name="decidedOn">The date of the decision on the admission application.</param>
+        /// <param name="filterQualifiers">KeyValuePair of advanced filter criteria.</param>
+        /// <param name="personFilterValue">Person filter criteria.</param>
         /// <param name="bypassCache">Flag to bypass cache</param>
         /// <returns>Collection of <see cref="AdmissionDecisions">admissionDecisions</see> objects</returns>          
-         Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.AdmissionDecisions>, int>> GetAdmissionDecisionsAsync(int offset, int limit, string applicationId, bool bypassCache = false);
+        Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.AdmissionDecisions>, int>> GetAdmissionDecisionsAsync(int offset, int limit, 
+             string applicationId, DateTimeOffset? decidedOn, Dictionary<string, string> filterQualifiers, string personFilterValue, bool bypassCache = false);
              
         /// <summary>
         /// Get a admissionDecisions by guid.

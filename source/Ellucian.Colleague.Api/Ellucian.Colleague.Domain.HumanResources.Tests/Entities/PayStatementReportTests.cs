@@ -87,8 +87,8 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             sourceData_0 = new PayStatementSourceData("14301", employeeId, employeeName, employeeSSN, mailingLabel, "12010", "ref-009", payDate.AddMonths(-1), periodEndDate.AddMonths(-1), periodGrossPay, periodNetPay, ytdGrossPay, ytdNetPay, comments);
             yearToDateSourceEntities = new List<PayStatementSourceData>() { sourceData_0, sourceData };
 
-            payrollRegisterEntry = new PayrollRegisterEntry("54321", employeeId, periodEndDate.AddMonths(-1).AddDays(1), periodEndDate, "PC", 1, "ref", "ref-008");
-            payrollRegisterEntry_0 = new PayrollRegisterEntry("54322", employeeId, periodEndDate.AddMonths(-2).AddDays(1), periodEndDate.AddMonths(-1), "PC", 1, "12010", "ref-009");
+            payrollRegisterEntry = new PayrollRegisterEntry("54321", employeeId, periodEndDate.AddMonths(-1).AddDays(1), periodEndDate, "PC", 1, "ref", "ref-008", false);
+            payrollRegisterEntry_0 = new PayrollRegisterEntry("54322", employeeId, periodEndDate.AddMonths(-2).AddDays(1), periodEndDate.AddMonths(-1), "PC", 1, "12010", "ref-009", true);
 
             benefitDeductionId = "401k";
             enrollmentDate = new DateTime(2017, 1, 1);
@@ -1000,9 +1000,9 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
 
                 // add some earnings for prior period including stipend earnings
                 payrollRegisterEntry_0.EarningsEntries.Add(new PayrollRegisterEarningsEntry(regEarningsTypeId, 400m, 400, 0, 40, 10m, HourlySalaryIndicator.Salary));
-                payrollRegisterEntry_0.EarningsEntries.Add(new PayrollRegisterEarningsEntry(regEarningsTypeId, "STIP001", 300m, 300, 0,30, 10m, HourlySalaryIndicator.Salary));
+                payrollRegisterEntry_0.EarningsEntries.Add(new PayrollRegisterEarningsEntry(regEarningsTypeId, "STIP001", 300m, 300, 0, 30, 10m, HourlySalaryIndicator.Salary));
                 payrollRegisterEntry_0.EarningsEntries.Add(new PayrollRegisterEarningsEntry(adjEarningsTypeId, 1000m, 1000, 0, 10, null, HourlySalaryIndicator.Salary));
-                payrollRegisterEntry_0.EarningsEntries.Add(new PayrollRegisterEarningsEntry(adjEarningsTypeId, "STIP002", 750m, 750,0,10, null, HourlySalaryIndicator.Salary));
+                payrollRegisterEntry_0.EarningsEntries.Add(new PayrollRegisterEarningsEntry(adjEarningsTypeId, "STIP002", 750m, 750, 0, 10, null, HourlySalaryIndicator.Salary));
 
                 List<PayStatementReportEarnings> expectedPayStatementEarningsItems;
                 expectedPayStatementEarningsItems = new List<PayStatementReportEarnings>()

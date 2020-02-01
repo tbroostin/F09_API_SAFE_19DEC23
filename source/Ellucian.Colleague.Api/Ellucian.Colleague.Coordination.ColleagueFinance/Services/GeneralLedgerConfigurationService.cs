@@ -139,5 +139,32 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             return enabledDto;
         }
+
+        /// <summary>
+        /// Get fiscal year configuration information necessary to validate fiscal year dates used in finance query.
+        /// </summary>
+        /// <returns>GlFiscalYearConfiguration DTO</returns>
+        public async Task<GlFiscalYearConfiguration> GetGlFiscalYearConfigurationAsync()
+        {
+            var glFiscalYearConfiguration = new GlFiscalYearConfiguration();
+
+            // Get the fiscal year configuraton info.
+            var fiscalYearConfigurationEntity = await generalLedgerConfigurationRepository.GetFiscalYearConfigurationAsync();
+            if (fiscalYearConfigurationEntity == null)
+            {
+                throw new ConfigurationException("Fiscal year configuration must be defined.");
+            }
+
+            // Parameters to validate the actuals start & end date in finance query.
+            glFiscalYearConfiguration.StartOfFiscalYear = fiscalYearConfigurationEntity.StartOfFiscalYear;
+            glFiscalYearConfiguration.EndOfFiscalYear = fiscalYearConfigurationEntity.EndOfFiscalYear;
+            glFiscalYearConfiguration.StartMonth = fiscalYearConfigurationEntity.StartMonth;
+            glFiscalYearConfiguration.CurrentFiscalMonth = fiscalYearConfigurationEntity.CurrentFiscalMonth;
+            glFiscalYearConfiguration.CurrentFiscalYear = fiscalYearConfigurationEntity.CurrentFiscalYear;
+            glFiscalYearConfiguration.ExtendedEndOfFiscalYear = fiscalYearConfigurationEntity.ExtendedEndOfFiscalYear;
+            glFiscalYearConfiguration.NumberOfFuturePeriods = fiscalYearConfigurationEntity.NumberOfFuturePeriods;
+            glFiscalYearConfiguration.OpenFiscalYears = await generalLedgerConfigurationRepository.GetAllOpenFiscalYears();
+            return glFiscalYearConfiguration;
+        }
     }
 }

@@ -1,7 +1,8 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Tests.UserFactories;
+using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.ColleagueFinance;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
@@ -23,6 +24,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
     public class DraftBudgetAdjustmentServiceTests
     {
         #region Initialize and Cleanup
+        public Mock<IAdapterRegistry> draftAdapterRegistryMock;
+        public Mock<ILogger> loggerMock;
+
         private DraftBudgetAdjustmentService service;
         private DraftBudgetAdjustmentService getDraftService;
         private DraftBudgetAdjustmentService deleteDraftService;
@@ -51,6 +55,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         private Domain.ColleagueFinance.Entities.DraftBudgetAdjustment adjustmentSuccessEntity;
         private Domain.ColleagueFinance.Entities.DraftBudgetAdjustment adjustmentErrorEntity;
 
+        private TestGeneralLedgerConfigurationRepository testGlConfigurationRepository = new TestGeneralLedgerConfigurationRepository();
+
         [TestInitialize]
         public void Initialize()
         {
@@ -68,12 +74,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { glUserRoleAllPermissions });
             roleRepository = roleRepositoryMock.Object;
 
-            // Build the service object.
-            service = new DraftBudgetAdjustmentService(repositoryMock.Object, new Mock<IAdapterRegistry>().Object,
-                userFactory, roleRepository, new Mock<ILogger>().Object);
-
             // Mock the return of the adjustment entity.
-            repositoryMock.Setup(x => x.SaveAsync(It.IsAny<Domain.ColleagueFinance.Entities.DraftBudgetAdjustment>())).Returns((Domain.ColleagueFinance.Entities.DraftBudgetAdjustment adjustmentEntity) =>
+            var majorComponentStartPositions = testGlConfigurationRepository.accountStructure.MajorComponentStartPositions;
+            repositoryMock.Setup(x => x.SaveAsync(It.IsAny<Domain.ColleagueFinance.Entities.DraftBudgetAdjustment>(), majorComponentStartPositions))
+                .Returns((Domain.ColleagueFinance.Entities.DraftBudgetAdjustment adjustmentEntity, IEnumerable<string> majorComponentStartPosition) =>
             {
                 if (adjustmentEntity.Initiator == null)
                 {
@@ -104,26 +108,30 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             testDraftBaRepositoryDeleteMock.Setup(x => x.DeleteAsync(It.IsAny<string>())).Returns(Task.FromResult(""));
             testDraftBaRepositoryNullDomainMock.Setup(y => y.GetAsync(It.IsAny<string>())).ReturnsAsync(null as DraftBudgetAdjustment);
 
-            var loggerMock = new Mock<ILogger>().Object;
-            var draftAdapterRegistryMock = new Mock<IAdapterRegistry>();
-            var draftEntityToDtoAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.DraftBudgetAdjustment, Dtos.ColleagueFinance.DraftBudgetAdjustment>(draftAdapterRegistryMock.Object, loggerMock);
+            loggerMock = new Mock<ILogger>();
+            draftAdapterRegistryMock = new Mock<IAdapterRegistry>();
+            var draftEntityToDtoAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.DraftBudgetAdjustment, Dtos.ColleagueFinance.DraftBudgetAdjustment>(draftAdapterRegistryMock.Object, loggerMock.Object);
             draftAdapterRegistryMock.Setup(x => x.GetAdapter<Domain.ColleagueFinance.Entities.DraftBudgetAdjustment, Dtos.ColleagueFinance.DraftBudgetAdjustment>()).Returns(draftEntityToDtoAdapter);
-            var adjustmentLineToDtoAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.DraftAdjustmentLine, Dtos.ColleagueFinance.DraftAdjustmentLine>(draftAdapterRegistryMock.Object, loggerMock);
+            var adjustmentLineToDtoAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.DraftAdjustmentLine, Dtos.ColleagueFinance.DraftAdjustmentLine>(draftAdapterRegistryMock.Object, loggerMock.Object);
             draftAdapterRegistryMock.Setup(x => x.GetAdapter<Domain.ColleagueFinance.Entities.DraftAdjustmentLine, Dtos.ColleagueFinance.DraftAdjustmentLine>()).Returns(adjustmentLineToDtoAdapter);
-            var nextApproverToDtoAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.NextApprover, Dtos.ColleagueFinance.NextApprover>(draftAdapterRegistryMock.Object, loggerMock);
+            var nextApproverToDtoAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.NextApprover, Dtos.ColleagueFinance.NextApprover>(draftAdapterRegistryMock.Object, loggerMock.Object);
             draftAdapterRegistryMock.Setup(x => x.GetAdapter<Domain.ColleagueFinance.Entities.NextApprover, Dtos.ColleagueFinance.NextApprover>()).Returns(nextApproverToDtoAdapter);
 
+            // Build the service object.
+            service = new DraftBudgetAdjustmentService(repositoryMock.Object, testGlConfigurationRepository, new Mock<IAdapterRegistry>().Object,
+                userFactory, roleRepository, new Mock<ILogger>().Object);
+
             // Build a service to delete draft budget adjustments.
-            deleteDraftService = new DraftBudgetAdjustmentService(testDraftBaRepositoryDeleteMock.Object, draftAdapterRegistryMock.Object, userFactory, roleRepository, loggerMock);
+            deleteDraftService = new DraftBudgetAdjustmentService(testDraftBaRepositoryDeleteMock.Object, testGlConfigurationRepository, draftAdapterRegistryMock.Object, userFactory, roleRepository, loggerMock.Object);
 
             // Build a service to get a draft budgt adjustment.
-            getDraftService = new DraftBudgetAdjustmentService(testDraftBudgetAdjustmentRepository, draftAdapterRegistryMock.Object, userFactory, roleRepository, loggerMock);
+            getDraftService = new DraftBudgetAdjustmentService(testDraftBudgetAdjustmentRepository, testGlConfigurationRepository, draftAdapterRegistryMock.Object, userFactory, roleRepository, loggerMock.Object);
 
             // Build a service for a user that has no permissions.
-            serviceForNoPermission = new DraftBudgetAdjustmentService(testDraftBaRepositoryDeleteMock.Object, draftAdapterRegistryMock.Object, noPermissionsUser, roleRepository, loggerMock);
+            serviceForNoPermission = new DraftBudgetAdjustmentService(testDraftBaRepositoryDeleteMock.Object, testGlConfigurationRepository, draftAdapterRegistryMock.Object, noPermissionsUser, roleRepository, loggerMock.Object);
 
             // Build a service for an empty budget adjustment domain entity.
-            nullDomainDraftService = new DraftBudgetAdjustmentService(testDraftBaRepositoryNullDomainMock.Object, draftAdapterRegistryMock.Object, userFactory, roleRepository, loggerMock);
+            nullDomainDraftService = new DraftBudgetAdjustmentService(testDraftBaRepositoryNullDomainMock.Object, testGlConfigurationRepository, draftAdapterRegistryMock.Object, userFactory, roleRepository, loggerMock.Object);
         }
 
         [TestCleanup]
@@ -147,12 +155,14 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             glUserRoleAllPermissions = null;
             glUserRoleDeletePermissions = null;
             glUserRoleViewPermissions = null;
+            userFactory = null;
         }
         #endregion
 
-        #region CreateDraftBudgetAdjustmentAsync
+        #region SaveDraftBudgetAdjustmentAsync
+
         [TestMethod]
-        public async Task CreateDraftBudgetAdjustmentAsync_Success()
+        public async Task SaveDraftBudgetAdjustmentAsync_Success()
         {
             // Initialize the DTO to return.
             var adjustmentLineDtos = new List<Dtos.ColleagueFinance.DraftAdjustmentLine>();
@@ -196,6 +206,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             adjustmentSuccessEntity.Id = "1";
 
             var adjustmentDto = await service.SaveDraftBudgetAdjustmentAsync(inputDto);
+
             Assert.AreEqual(adjustmentSuccessEntity.Id, adjustmentDto.Id);
             Assert.AreEqual(inputDto.Comments, adjustmentDto.Comments);
             Assert.AreEqual(inputDto.Initiator, adjustmentDto.Initiator);
@@ -212,7 +223,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        public async Task CreateDraftBudgetAdjustmentAsync_NullInputDto()
+        public async Task SaveDraftBudgetAdjustmentAsync_NullInputDto()
         {
             var expectedParam = "draftBudgetAdjustmentDto";
             var actualParam = "";
@@ -228,7 +239,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        public async Task CreateBudgetAdjustmentAsync_RepositoryReturnsNull()
+        public async Task SaveDraftBudgetAdjustmentAsync_RepositoryReturnsNull()
         {
             // Initialize the DTO to return.
             var adjustmentLineDtos = new List<Dtos.ColleagueFinance.DraftAdjustmentLine>();
@@ -283,7 +294,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        public async Task CreateBudgetAdjustmentAsync_RepositoryReturnsEntityWithNoId()
+        public async Task SaveDraftBudgetAdjustmentAsync_RepositoryReturnsEntityWithNoId()
         {
             // Initialize the DTO to return.
             var adjustmentLineDtos = new List<Dtos.ColleagueFinance.DraftAdjustmentLine>();
@@ -333,7 +344,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        public async Task CreateDraftBudgetAdjustmentAsync_FailErrorMessages()
+        public async Task SaveDraftBudgetAdjustmentAsync_FailErrorMessages()
         {
             // Initialize the DTO to return.
             var adjustmentLineDtos = new List<Dtos.ColleagueFinance.DraftAdjustmentLine>();
@@ -386,6 +397,280 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
             Assert.AreEqual(String.Join("<>", adjustmentErrorEntity.ErrorMessages), actualMessage);
         }
+
+        [TestMethod]
+        public async Task SaveDraftBudgetAdjustmentAsync_NullGlAccountStructure()
+        {
+            var adjustmentLineDtos = new List<Dtos.ColleagueFinance.DraftAdjustmentLine>();
+            adjustmentLineDtos.Add(new Dtos.ColleagueFinance.DraftAdjustmentLine()
+            {
+                GlNumber = "10_11_12_13_33333_51001",
+                FromAmount = 100m,
+                ToAmount = 0m
+            });
+
+            adjustmentLineDtos.Add(new Dtos.ColleagueFinance.DraftAdjustmentLine()
+            {
+                GlNumber = "10_12_12_13_33333_51001",
+                FromAmount = 0m,
+                ToAmount = 100m
+            });
+
+            var inputDto = new Dtos.ColleagueFinance.DraftBudgetAdjustment()
+            {
+                AdjustmentLines = adjustmentLineDtos,
+                Comments = "additional justificaton",
+                Id = null,
+                Initiator = "Pass",
+                Reason = "need more money",
+                TransactionDate = DateTime.Now,
+                NextApprovers = new List<Dtos.ColleagueFinance.NextApprover>()
+            };
+
+            // Set up the entity to be returned response entities.
+            var adjustmentLines = new List<Domain.ColleagueFinance.Entities.DraftAdjustmentLine>();
+            foreach (var adjustmentLineDto in adjustmentLineDtos)
+            {
+                adjustmentLines.Add(new Domain.ColleagueFinance.Entities.DraftAdjustmentLine() { GlNumber = adjustmentLineDto.GlNumber, FromAmount = adjustmentLineDto.FromAmount, ToAmount = adjustmentLineDto.ToAmount });
+            }
+
+            adjustmentSuccessEntity = new Domain.ColleagueFinance.Entities.DraftBudgetAdjustment(inputDto.Reason);
+            adjustmentSuccessEntity.AdjustmentLines = adjustmentLines;
+            adjustmentSuccessEntity.Comments = inputDto.Comments;
+            adjustmentSuccessEntity.Initiator = inputDto.Initiator;
+            adjustmentSuccessEntity.TransactionDate = inputDto.TransactionDate;
+            adjustmentSuccessEntity.Id = "1";
+
+            testGlConfigurationRepository.accountStructure = null;
+            service = new DraftBudgetAdjustmentService(repositoryMock.Object, testGlConfigurationRepository, new Mock<IAdapterRegistry>().Object,
+                        userFactory, roleRepository, new Mock<ILogger>().Object);
+
+            var expectedMessage = "Account structure must be defined.";
+            var actualMessage = "";
+            try
+            {
+                await service.SaveDraftBudgetAdjustmentAsync(inputDto);
+            }
+            catch (ConfigurationException cfex)
+            {
+                actualMessage = cfex.Message;
+            }
+            Assert.AreEqual(expectedMessage, actualMessage);
+        }
+
+        [TestMethod]
+        public async Task SaveDraftBudgetAdjustmentAsync_EmptyGlAccountStructure()
+        {
+            var adjustmentLineDtos = new List<Dtos.ColleagueFinance.DraftAdjustmentLine>();
+            adjustmentLineDtos.Add(new Dtos.ColleagueFinance.DraftAdjustmentLine()
+            {
+                GlNumber = "10_11_12_13_33333_51001",
+                FromAmount = 100m,
+                ToAmount = 0m
+            });
+
+            adjustmentLineDtos.Add(new Dtos.ColleagueFinance.DraftAdjustmentLine()
+            {
+                GlNumber = "10_12_12_13_33333_51001",
+                FromAmount = 0m,
+                ToAmount = 100m
+            });
+
+            var inputDto = new Dtos.ColleagueFinance.DraftBudgetAdjustment()
+            {
+                AdjustmentLines = adjustmentLineDtos,
+                Comments = "additional justificaton",
+                Id = null,
+                Initiator = "Pass",
+                Reason = "need more money",
+                TransactionDate = DateTime.Now,
+                NextApprovers = new List<Dtos.ColleagueFinance.NextApprover>()
+            };
+
+            // Set up the entity to be returned response entities.
+            var adjustmentLines = new List<Domain.ColleagueFinance.Entities.DraftAdjustmentLine>();
+            foreach (var adjustmentLineDto in adjustmentLineDtos)
+            {
+                adjustmentLines.Add(new Domain.ColleagueFinance.Entities.DraftAdjustmentLine() { GlNumber = adjustmentLineDto.GlNumber, FromAmount = adjustmentLineDto.FromAmount, ToAmount = adjustmentLineDto.ToAmount });
+            }
+
+            testGlConfigurationRepository.accountStructure = new GeneralLedgerAccountStructure();
+            service = new DraftBudgetAdjustmentService(repositoryMock.Object, testGlConfigurationRepository, new Mock<IAdapterRegistry>().Object,
+                        userFactory, roleRepository, new Mock<ILogger>().Object);
+
+            var expectedMessage = "Account structure must be defined.";
+            var actualMessage = "";
+            try
+            {
+                await service.SaveDraftBudgetAdjustmentAsync(inputDto);
+            }
+            catch (ConfigurationException cfex)
+            {
+                actualMessage = cfex.Message;
+            }
+            Assert.AreEqual(expectedMessage, actualMessage);
+        }
+
+        [TestMethod]
+        public async Task SaveDraftBudgetAdjustmentAsync_NoPermission()
+        {
+            // Initialize the DTO to return.
+            var adjustmentLineDtos = new List<Dtos.ColleagueFinance.DraftAdjustmentLine>();
+            adjustmentLineDtos.Add(new Dtos.ColleagueFinance.DraftAdjustmentLine()
+            {
+                GlNumber = "10_11_12_13_33333_51001",
+                FromAmount = 100m,
+                ToAmount = 0m
+            });
+
+            adjustmentLineDtos.Add(new Dtos.ColleagueFinance.DraftAdjustmentLine()
+            {
+                GlNumber = "10_12_12_13_33333_51001",
+                FromAmount = 0m,
+                ToAmount = 100m
+            });
+
+            var inputDto = new Dtos.ColleagueFinance.DraftBudgetAdjustment()
+            {
+                AdjustmentLines = adjustmentLineDtos,
+                Comments = "additional justificaton",
+                Id = null,
+                Initiator = "Pass",
+                Reason = "need more money",
+                TransactionDate = DateTime.Now,
+                NextApprovers = new List<Dtos.ColleagueFinance.NextApprover>()
+            };
+
+            // Set up the entity to be returned response entities.
+            var adjustmentLines = new List<Domain.ColleagueFinance.Entities.DraftAdjustmentLine>();
+            foreach (var adjustmentLineDto in adjustmentLineDtos)
+            {
+                adjustmentLines.Add(new Domain.ColleagueFinance.Entities.DraftAdjustmentLine() { GlNumber = adjustmentLineDto.GlNumber, FromAmount = adjustmentLineDto.FromAmount, ToAmount = adjustmentLineDto.ToAmount });
+            }
+
+            var expectedMessage = string.Format("{0} does not have permission to create or update budget adjustments.", noPermissionsUser.CurrentUser.PersonId);
+            var actualMessage = "";
+            try
+            {
+                await serviceForNoPermission.SaveDraftBudgetAdjustmentAsync(inputDto);
+            }
+            catch (PermissionsException cfex)
+            {
+                actualMessage = cfex.Message;
+            }
+            Assert.AreEqual(expectedMessage, actualMessage);
+        }
+
+        [TestMethod]
+        public async Task SaveDraftBudgetAdjustmentAsync_GetAsyncReturnsNoEntity()
+        {
+            // Initialize the DTO to return.
+            var adjustmentLineDtos = new List<Dtos.ColleagueFinance.DraftAdjustmentLine>();
+            adjustmentLineDtos.Add(new Dtos.ColleagueFinance.DraftAdjustmentLine()
+            {
+                GlNumber = "10_11_12_13_33333_51001",
+                FromAmount = 100m,
+                ToAmount = 0m
+            });
+
+            adjustmentLineDtos.Add(new Dtos.ColleagueFinance.DraftAdjustmentLine()
+            {
+                GlNumber = "10_12_12_13_33333_51001",
+                FromAmount = 0m,
+                ToAmount = 100m
+            });
+
+            var inputDto = new Dtos.ColleagueFinance.DraftBudgetAdjustment()
+            {
+                AdjustmentLines = adjustmentLineDtos,
+                Comments = "additional justificaton",
+                Id = "1",
+                Initiator = null,
+                Reason = "need more money",
+                TransactionDate = DateTime.Now,
+                NextApprovers = new List<Dtos.ColleagueFinance.NextApprover>()
+            };
+
+            // Set up the entity to be returned response entities.
+            var adjustmentLines = new List<Domain.ColleagueFinance.Entities.DraftAdjustmentLine>();
+            foreach (var adjustmentLineDto in adjustmentLineDtos)
+            {
+                adjustmentLines.Add(new Domain.ColleagueFinance.Entities.DraftAdjustmentLine() { GlNumber = adjustmentLineDto.GlNumber, FromAmount = adjustmentLineDto.FromAmount, ToAmount = adjustmentLineDto.ToAmount });
+            }
+
+            var expectedMessage = "Unable to verify person Id for the draft budget adjustment.";
+            var actualMessage = "";
+            try
+            {
+                await service.SaveDraftBudgetAdjustmentAsync(inputDto);
+            }
+            catch (ApplicationException cfex)
+            {
+                actualMessage = cfex.Message;
+            }
+            Assert.AreEqual(expectedMessage, actualMessage);
+        }
+
+        [TestMethod]
+        public async Task SaveDraftBudgetAdjustmentAsync_GetAsyncEntityPersonIdDoesNotMatch()
+        {
+            var adjustmentLineDtos = new List<Dtos.ColleagueFinance.DraftAdjustmentLine>();
+            adjustmentLineDtos.Add(new Dtos.ColleagueFinance.DraftAdjustmentLine()
+            {
+                GlNumber = "10_11_12_13_33333_51001",
+                FromAmount = 100m,
+                ToAmount = 0m
+            });
+
+            adjustmentLineDtos.Add(new Dtos.ColleagueFinance.DraftAdjustmentLine()
+            {
+                GlNumber = "10_12_12_13_33333_51001",
+                FromAmount = 0m,
+                ToAmount = 100m
+            });
+
+            var inputDto = new Dtos.ColleagueFinance.DraftBudgetAdjustment()
+            {
+                AdjustmentLines = adjustmentLineDtos,
+                Comments = "additional justificaton",
+                Id = "1",
+                Initiator = "TGL",
+                Reason = "need more money",
+                TransactionDate = DateTime.Now,
+                NextApprovers = new List<Dtos.ColleagueFinance.NextApprover>()
+            };
+
+            // Set up the entity to be returned response entities.
+            var adjustmentLines = new List<Domain.ColleagueFinance.Entities.DraftAdjustmentLine>();
+            foreach (var adjustmentLineDto in adjustmentLineDtos)
+            {
+                adjustmentLines.Add(new Domain.ColleagueFinance.Entities.DraftAdjustmentLine() { GlNumber = adjustmentLineDto.GlNumber, FromAmount = adjustmentLineDto.FromAmount, ToAmount = adjustmentLineDto.ToAmount });
+            }
+
+            adjustmentSuccessEntity = new Domain.ColleagueFinance.Entities.DraftBudgetAdjustment(inputDto.Reason);
+            adjustmentSuccessEntity.AdjustmentLines = adjustmentLines;
+            adjustmentSuccessEntity.Comments = inputDto.Comments;
+            adjustmentSuccessEntity.Initiator = inputDto.Initiator;
+            adjustmentSuccessEntity.PersonId = "7777777";
+            adjustmentSuccessEntity.Id = "1";
+
+            var expectedMessage = "The draft budget adjustment person ID is not the same as the person ID of the current user.";
+            var actualMessage = "";
+
+            repositoryMock.Setup(y => y.GetAsync(It.IsAny<string>())).ReturnsAsync(adjustmentSuccessEntity);
+            getDraftService = new DraftBudgetAdjustmentService(testDraftBudgetAdjustmentRepository, testGlConfigurationRepository, draftAdapterRegistryMock.Object, noPermissionsUser, roleRepository, loggerMock.Object);
+
+            try
+            {
+                await service.SaveDraftBudgetAdjustmentAsync(inputDto);
+            }
+            catch (PermissionsException cfex)
+            {
+                actualMessage = cfex.Message;
+            }
+            Assert.AreEqual(expectedMessage, actualMessage);
+        }
+
         #endregion
 
         #region Get a draft budget adjustment

@@ -64,6 +64,11 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         public bool ShowCourseSectionFeeInformation { get; set; }
 
         /// <summary>
+        /// Indicates whether or not course section book information should be visible in the course catalog's section detail.
+        /// </summary>
+        public bool ShowCourseSectionBookInformation { get; set; }
+
+        /// <summary>
         /// Constructor for CourseCatalogConfiguration
         /// </summary>
         public CourseCatalogConfiguration(DateTime? earliestSearchDate, DateTime? latestSearchDate)

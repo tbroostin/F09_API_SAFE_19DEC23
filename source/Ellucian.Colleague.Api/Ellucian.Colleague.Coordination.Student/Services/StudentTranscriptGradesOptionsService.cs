@@ -1,4 +1,4 @@
-﻿//Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -14,6 +14,7 @@ using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Dtos;
+using Ellucian.Colleague.Domain.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
@@ -55,7 +56,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="limit">Limit for paging results</param>
         /// <param name="bypassCache">Flag to bypass cache</param>
         /// <returns>Collection of <see cref="StudentTranscriptGradesOptions">StudentTranscriptGrade</see> objects</returns>          
-        public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.StudentTranscriptGradesOptions>, int>> GetStudentTranscriptGradesOptionsAsync(int offset, 
+        public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.StudentTranscriptGradesOptions>, int>> GetStudentTranscriptGradesOptionsAsync(int offset,
             int limit, Dtos.Filters.StudentFilter studentFilter, bool bypassCache = false)
         {
             if (!await CheckViewStudentTranscriptGradesPermission())
@@ -75,30 +76,42 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 try
                 {
                     studentId = await _personRepository.GetPersonIdFromGuidAsync(studentGuid);
+                    if (string.IsNullOrEmpty(studentId))
+                        return new Tuple<IEnumerable<Dtos.StudentTranscriptGradesOptions>, int>(new List<Dtos.StudentTranscriptGradesOptions>(), 0);
                 }
                 catch
                 {
                     return new Tuple<IEnumerable<Dtos.StudentTranscriptGradesOptions>, int>(new List<Dtos.StudentTranscriptGradesOptions>(), 0);
                 }
-                if (string.IsNullOrEmpty(studentId))
-                    return new Tuple<IEnumerable<Dtos.StudentTranscriptGradesOptions>, int>(new List<Dtos.StudentTranscriptGradesOptions>(), 0);
+
             }
 
             var StudentTranscriptGradesOptions = new List<Dtos.StudentTranscriptGradesOptions>();
+
+            Tuple<IEnumerable<Ellucian.Colleague.Domain.Student.Entities.StudentTranscriptGradesOptions>, int> StudentTranscriptGradesOptionsEntities = null;
+
             try
             {
-                var StudentTranscriptGradesOptionsEntities = await _StudentTranscriptGradesOptionsRepository.GetStudentTranscriptGradesOptionsAsync(offset, limit, studentId, bypassCache);
-                if (StudentTranscriptGradesOptionsEntities != null && StudentTranscriptGradesOptionsEntities.Item1.Any())
-                {
-                    StudentTranscriptGradesOptions = (await BuildStudentTranscriptGradesOptionsDtoAsync(StudentTranscriptGradesOptionsEntities.Item1, bypassCache)).ToList();
-                }
-                return StudentTranscriptGradesOptions.Any() ? new Tuple<IEnumerable<Dtos.StudentTranscriptGradesOptions>, int>(StudentTranscriptGradesOptions, StudentTranscriptGradesOptionsEntities.Item2) :
-                    new Tuple<IEnumerable<Dtos.StudentTranscriptGradesOptions>, int>(new List<Dtos.StudentTranscriptGradesOptions>(), 0);
+                StudentTranscriptGradesOptionsEntities = await _StudentTranscriptGradesOptionsRepository.GetStudentTranscriptGradesOptionsAsync(offset, limit, studentId, bypassCache);
             }
-            catch (Exception)
+            catch (RepositoryException ex)
             {
-                throw;
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
             }
+
+            if (StudentTranscriptGradesOptionsEntities != null && StudentTranscriptGradesOptionsEntities.Item1.Any())
+            {
+                StudentTranscriptGradesOptions = (await BuildStudentTranscriptGradesOptionsDtoAsync(StudentTranscriptGradesOptionsEntities.Item1, bypassCache)).ToList();
+            }
+
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+
+            return StudentTranscriptGradesOptions.Any() ? new Tuple<IEnumerable<Dtos.StudentTranscriptGradesOptions>, int>(StudentTranscriptGradesOptions, StudentTranscriptGradesOptionsEntities.Item2) :
+                new Tuple<IEnumerable<Dtos.StudentTranscriptGradesOptions>, int>(new List<Dtos.StudentTranscriptGradesOptions>(), 0);
         }
 
         /// <summary>
@@ -121,9 +134,27 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             try
             {
-                var StudentTranscriptGradesOptionsEntity = await _StudentTranscriptGradesOptionsRepository.GetStudentTranscriptGradesOptionsByGuidAsync(guid);
-                var StudentTranscriptGradesOptions = (await BuildStudentTranscriptGradesOptionsDtoAsync(new List<Domain.Student.Entities.StudentTranscriptGradesOptions>()
+                Ellucian.Colleague.Domain.Student.Entities.StudentTranscriptGradesOptions StudentTranscriptGradesOptionsEntity = null;
+
+                try
+                {
+                    StudentTranscriptGradesOptionsEntity = await _StudentTranscriptGradesOptionsRepository.GetStudentTranscriptGradesOptionsByGuidAsync(guid);
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex, guid: guid);
+                    throw IntegrationApiException;
+                }
+
+                IEnumerable<Dtos.StudentTranscriptGradesOptions> StudentTranscriptGradesOptions = null;
+
+                StudentTranscriptGradesOptions = (await BuildStudentTranscriptGradesOptionsDtoAsync(new List<Domain.Student.Entities.StudentTranscriptGradesOptions>()
                 { StudentTranscriptGradesOptionsEntity }, bypassCache));
+
+                if (IntegrationApiException != null)
+                {
+                    throw IntegrationApiException;
+                }
 
                 return StudentTranscriptGradesOptions != null ? StudentTranscriptGradesOptions.FirstOrDefault() : null;
             }
@@ -148,6 +179,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             foreach (var source in sources)
             {
+                
                 studentTranscriptGradeOptions.Add(await ConvertStudentTranscriptGradesOptionsEntityToDtoAsync(source, bypassCache));
 
             }
@@ -179,23 +211,27 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 return null;
             }
-
+            var gradeSchemeObject = new StudentTranscriptGradesOptionsGradeSchemeDtoProperty();
             var entity = await this.GetGradeSchemesAsync(bypassCache);
             if (entity == null || !entity.Any())
             {
-                throw new InvalidOperationException("Grade schemes are not defined.");
+                //throw new InvalidOperationException("Grade schemes are not defined.");
+                IntegrationApiExceptionAddError("Grade schemes are not defined.", "Bad.Data", source.Id, source.Guid);
             }
-
-            var gradeSchemes = entity.FirstOrDefault(i => i.Code.Equals(source.GradeSchemeCode, StringComparison.OrdinalIgnoreCase));
-            if (gradeSchemes == null)
+            else
             {
-                throw new KeyNotFoundException(string.Format("Grade Scheme not found for key: {0}. Guid: {1}", source.GradeSchemeCode, source.Guid));
+                var gradeSchemes = entity.FirstOrDefault(i => i.Code.Equals(source.GradeSchemeCode, StringComparison.OrdinalIgnoreCase));
+                if (gradeSchemes == null)
+                {
+                    //throw new KeyNotFoundException(string.Format("Grade Scheme not found for key: {0}. Guid: {1}", source.GradeSchemeCode, source.Guid));
+                    IntegrationApiExceptionAddError(string.Format("Grade Scheme not found for key: '{0}'.", source.GradeSchemeCode), "Record.Not.Found", source.Id, source.Guid);
+                }
+                else
+                {
+                    gradeSchemeObject.Detail = new GuidObject2(gradeSchemes.Guid);
+                    gradeSchemeObject.Title = gradeSchemes.Description;
+                }
             }
-
-            var gradeSchemeObject = new StudentTranscriptGradesOptionsGradeSchemeDtoProperty();
-            gradeSchemeObject.Detail = new GuidObject2(gradeSchemes.Guid);
-            gradeSchemeObject.Title = gradeSchemes.Description;
-
             return gradeSchemeObject;
         }
 
@@ -206,31 +242,36 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 return null;
             }
+            var gradesCollection = new List<StudentTranscriptGradesOptionsGradesDtoProperty>();
 
             var entity = await this.GetGradeDefinitionsAsync(bypassCache);
             if (entity == null || !entity.Any())
             {
-                throw new InvalidOperationException("Grades are not defined.");
+                //throw new InvalidOperationException("Grades are not defined.");
+                IntegrationApiExceptionAddError("Grades are not defined.", "Bad.Data", source.Id, source.Guid);
             }
-
-            var grades = entity.Where(i => i.GradeSchemeCode.Equals(source.GradeSchemeCode, StringComparison.OrdinalIgnoreCase));
-            if (grades == null || !grades.Any())
+            else
             {
-                throw new KeyNotFoundException(string.Format("Grades not found for grade scheme: {0}. Guid: {1}", source.GradeSchemeCode, source.Guid));
-            }
-
-            var gradesCollection = new List<StudentTranscriptGradesOptionsGradesDtoProperty>();            
-            foreach (var grade in grades)
-            {
-                var gradesObject = new StudentTranscriptGradesOptionsGradesDtoProperty();
-                if (!string.IsNullOrEmpty(grade.Guid))
+                var grades = entity.Where(i => i.GradeSchemeCode.Equals(source.GradeSchemeCode, StringComparison.OrdinalIgnoreCase));
+                if (grades == null || !grades.Any())
                 {
-                    gradesObject.Grade = new GuidObject2(grade.Guid);
-                    gradesObject.Value = grade.LetterGrade;
-                    gradesCollection.Add(gradesObject);
-                }          
-            }   
-
+                    //throw new KeyNotFoundException(string.Format("Grades not found for grade scheme: {0}. Guid: {1}", source.GradeSchemeCode, source.Guid));
+                    IntegrationApiExceptionAddError(string.Format("Grades not found for grade scheme: '{0}'.", source.GradeSchemeCode), "Record.Not.Found", source.Id, source.Guid);
+                }
+                else
+                {
+                    foreach (var grade in grades)
+                    {
+                        var gradesObject = new StudentTranscriptGradesOptionsGradesDtoProperty();
+                        if (!string.IsNullOrEmpty(grade.Guid))
+                        {
+                            gradesObject.Grade = new GuidObject2(grade.Guid);
+                            gradesObject.Value = grade.LetterGrade;
+                            gradesCollection.Add(gradesObject);
+                        }
+                    }
+                }
+            }
             return gradesCollection;
         }        
 

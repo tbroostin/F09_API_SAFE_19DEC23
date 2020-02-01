@@ -1,4 +1,4 @@
-﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2019 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
@@ -141,7 +141,11 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     try
                     {
                         var posPay = posPayRecords.ContainsKey(perposwgRecord.PpwgPospayId) ? posPayRecords[perposwgRecord.PpwgPospayId] : null;
-                        personPositionWageEntities.Add(BuildPersonPositionWage(perposwgRecord, posPay));
+                        var personPositionWage = BuildPersonPositionWage(perposwgRecord, posPay);
+                        if (personPositionWage != null)
+                        {
+                            personPositionWageEntities.Add(personPositionWage);
+                        }
                     }
                     catch (Exception e)
                     {
@@ -207,21 +211,27 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 fundingSources.Add(fundingSource);
             }
 
-            var personPositionWage = new PersonPositionWage(perposwgRecord.Recordkey,
-                perposwgRecord.PpwgHrpId,
-                perposwgRecord.PpwgPositionId,
-                perposwgRecord.PpwgPerposId,
-                perposwgRecord.PpwgPospayId,
-                perposwgRecord.PpwgPayclassId,
-                perposwgRecord.PpwgPaycycleId,
-                perposwgRecord.PpwgBaseEt,
-                perposwgRecord.PpwgStartDate.Value,
-                earningsTypeGroupId)
+            PersonPositionWage personPositionWage = null;
+            //Determine whether this is a regular wage - if not do not create a PersonPositionWage object
+            bool isRegularWage = !string.IsNullOrEmpty(perposwgRecord.PpwgType) && perposwgRecord.PpwgType.Equals("W", StringComparison.InvariantCultureIgnoreCase);
+            if (isRegularWage)
             {
-                EndDate = perposwgRecord.PpwgEndDate,
-                IsPaySuspended = !string.IsNullOrEmpty(perposwgRecord.PpwgSuspendPayFlag) && perposwgRecord.PpwgSuspendPayFlag.Equals("Y", StringComparison.InvariantCultureIgnoreCase),
-                FundingSources = fundingSources
-            };
+                personPositionWage = new PersonPositionWage(perposwgRecord.Recordkey,
+                    perposwgRecord.PpwgHrpId,
+                    perposwgRecord.PpwgPositionId,
+                    perposwgRecord.PpwgPerposId,
+                    perposwgRecord.PpwgPospayId,
+                    perposwgRecord.PpwgPayclassId,
+                    perposwgRecord.PpwgPaycycleId,
+                    perposwgRecord.PpwgBaseEt,
+                    perposwgRecord.PpwgStartDate.Value,
+                    earningsTypeGroupId)
+                {
+                    EndDate = perposwgRecord.PpwgEndDate,
+                    IsPaySuspended = !string.IsNullOrEmpty(perposwgRecord.PpwgSuspendPayFlag) && perposwgRecord.PpwgSuspendPayFlag.Equals("Y", StringComparison.InvariantCultureIgnoreCase),
+                    FundingSources = fundingSources
+                };
+            }
 
             return personPositionWage;
         }

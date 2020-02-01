@@ -90,7 +90,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             catch (Exception ex)
             {
                 var message = "Exception occurred while trying to get student attendances for section " + criteria.SectionId;
-                logger.Info(ex, message);
+                logger.Error(ex, message);
                 throw;
             }
         }
@@ -167,7 +167,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             catch (Exception ex)
             {
                 var message = "Exception occurred while trying to update student attendance for student " + studentAttendance.StudentId;
-                logger.Info(ex, message);
+                logger.Error(ex, message);
                 throw;
             }
 
@@ -276,7 +276,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             catch (Exception ex)
             {
                 var message = "Exception occurred while trying to update student attendance information for section " + sectionAttendance.SectionId;
-                logger.Info(ex, message);
+                logger.Error(ex, message);
                 throw;
             }
 

@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.ComponentModel;
 using System.Net;
@@ -220,7 +220,7 @@ namespace Ellucian.Colleague.Api.Controllers
         }
 
         #region backup configuration
-        
+
         /// <summary>
         /// Writes a new configuration data record to Colleague 
         /// </summary>
@@ -438,6 +438,25 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 logger.Error("Error occurred while retrieving Required Document Configuration: " + ex.Message);
                 throw CreateHttpResponseException("Could not retrieve Required Document Configuration", HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Gets the Session Configuration
+        /// </summary>
+        /// <accessComments>Session Configuration is available anonymously</accessComments>
+        /// <returns><see cref="SessionConfiguration">Session Configuration</see></returns>
+        [AllowAnonymous]
+        public async Task<SessionConfiguration> GetSessionConfigurationAsync()
+        {
+            try
+            {
+                return await configurationService.GetSessionConfigurationAsync();
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Error occurred while retrieving Session Configuration.");
+                throw CreateHttpResponseException("Could not retrieve Session Configuration", HttpStatusCode.BadRequest);
             }
         }
     }

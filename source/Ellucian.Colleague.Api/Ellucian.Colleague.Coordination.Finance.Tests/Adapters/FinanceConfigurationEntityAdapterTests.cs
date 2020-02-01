@@ -102,7 +102,8 @@ namespace Ellucian.Colleague.Coordination.Finance.Tests.Adapters
                 StatementTitle = "Student Statement",
                 UseGuaranteedChecks = true,
                 StatementMessage = new List<string>() { "Statement message line 1", "Statement message line 2"},
-                UserPaymentPlanCreationEnabled = true
+                UserPaymentPlanCreationEnabled = true,
+                DisplayPotentialD7Amounts = true,
             };
             financeConfigurationEntity.AddDisplayedReceivableType(new Domain.Finance.Entities.PayableReceivableType("01", true));
             financeConfigurationEntity.AddDisplayedReceivableType(new Domain.Finance.Entities.PayableReceivableType("03", false));
@@ -312,5 +313,13 @@ namespace Ellucian.Colleague.Coordination.Finance.Tests.Adapters
             Assert.AreEqual(financeConfigurationEntity.TermPaymentPlanRequirements.Count, financeConfigurationDto.TermPaymentPlanRequirements.Count());
         }
 
+        /// <summary>
+        /// Verify conversion of DisplayPotentialD7Amounts
+        /// </summary>
+        [TestMethod]
+        public void FinanceConfigurationEntityAdapterTests_DisplayPotentialD7Amounts()
+        {
+            Assert.AreEqual(financeConfigurationEntity.DisplayPotentialD7Amounts, financeConfigurationDto.DisplayPotentialD7Amounts);
+        }
     }
 }

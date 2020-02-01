@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Student.Entities;
@@ -14,14 +14,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="recordId">The record ID where the 1098 pdf data is stored</param>
         /// <returns>Form1098PdfData domain entity</returns>
         Task<Form1098PdfData> Get1098TaxFormData(string personId, string recordId);
-
-        /// <summary>
-        /// Populates the 1098 PDF with the supplied data.
-        /// </summary>
-        /// <param name="pdfData">1098 PDF data</param>
-        /// <param name="documentPath">Path to the PDF template</param>
-        /// <returns>Byte array containing PDF data for the 1098 tax form</returns>
-        byte[] Populate1098Pdf(Form1098PdfData pdfData, string documentPath);
 
         /// <summary>
         /// Populates the 1098 PDF with the supplied data using an RDLC template.

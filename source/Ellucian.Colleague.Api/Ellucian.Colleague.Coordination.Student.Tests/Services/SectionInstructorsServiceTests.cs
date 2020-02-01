@@ -19,6 +19,7 @@ using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Coordination.Student.Tests.UserFactories;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 {
@@ -124,12 +125,21 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             #endregion
 
             [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionInstructorsService_GetSectionInstructorsAsync_PermissionException()
             {
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
 
-                await service.GetSectionInstructorsAsync(offset, limit, "", "", new List<string>());
+                try
+                {
+                    await service.GetSectionInstructorsAsync(offset, limit, "", "", new List<string>());
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("User 'StudentPO' is not authorized to create or view section-instructors.", ex.Errors[0].Message);
+                    throw;
+                }
             }
 
             [TestMethod]
@@ -142,30 +152,31 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionInstructorsService_GetSectionInstructorsByGuidAsync_PermissionException()
             {
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
 
-                await service.GetSectionInstructorsByGuidAsync(guid);
+                try
+                {
+                    await service.GetSectionInstructorsByGuidAsync(guid);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("User 'StudentPO' is not authorized to create or view section-instructors.", ex.Errors[0].Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task SectionInstructorsService_GetSectionInstructorsByGuidAsync_KeyNotFoundException()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task SectionInstructorsService_GetSectionInstructorsByGuidAsync_IntegrationApiException()
             {
-                sectionRepositoryMock.Setup(s => s.GetSectionFacultyByGuidAsync(It.IsAny<string>())).ThrowsAsync(new KeyNotFoundException());
+                sectionRepositoryMock.Setup(s => s.GetSectionFacultyByGuidAsync(It.IsAny<string>())).ThrowsAsync(new IntegrationApiException());
                 await service.GetSectionInstructorsByGuidAsync(guid);
             }
-
-            [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task SectionInstructorsService_GetSectionInstructorsByGuidAsync_InvalidOperationException()
-            {
-                sectionRepositoryMock.Setup(s => s.GetSectionFacultyByGuidAsync(It.IsAny<string>())).ThrowsAsync(new InvalidOperationException());
-                await service.GetSectionInstructorsByGuidAsync(guid);
-            }
-
+            
             [TestMethod]
             public async Task SectionInstructorsService_GetSectionInstructorsByGuidAsync()
             {
@@ -286,67 +297,130 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             #endregion
 
             [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task SectionInstructorsService_CreateSectionInstructorsAsync_PermissionException()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task SectionInstructorsService_CreateSectionInstructorsAsync_IntegrationApiException()
             {
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
-
-                await service.CreateSectionInstructorsAsync(sectionInstructor);
+                try
+                {
+                    await service.CreateSectionInstructorsAsync(sectionInstructor);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("User StudentPO does not have permission to create or update section-instructors.", ex.Errors[0].Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task SectionInstructorsService_CreateSectionInstructorsAsync_ArgumentNullException_SectionInstructor_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task SectionInstructorsService_CreateSectionInstructorsAsync_IntegrationApiException_SectionInstructor_Null()
             {
-                await service.CreateSectionInstructorsAsync(null);
+                try
+                {
+                    await service.CreateSectionInstructorsAsync(null);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("SectionInstructors body is required in PUT or POST request. ", ex.Errors[0].Message);
+                    Assert.AreEqual("The section instructors is a required parameter for updates/creates.", ex.Errors[1].Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task SectionInstructorsService_CreateSectionInstructorsAsync_ArgumentNullException_InstructorMethod_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task SectionInstructorsService_CreateSectionInstructorsAsync_IntegrationApiException_InstructorMethod_Null()
             {
                 sectionInstructor.InstructionalMethod = null;
                 sectionInstructor.InstructionalEvents = new List<GuidObject2>() { };
-
-                await service.CreateSectionInstructorsAsync(sectionInstructor);
+                try
+                {
+                    await service.CreateSectionInstructorsAsync(sectionInstructor);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("The instructional Method is required for updates/creates.", ex.Errors[0].Message);
+                    Assert.AreEqual("Section faculty record $NEW for section 1 missing instructional method\r\nParameter name: instrMethod", ex.Errors[1].Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task SectionInstructorsService_CreateSectionInstructorsAsync_ArgumentNullException_Section_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task SectionInstructorsService_CreateSectionInstructorsAsync_IntegrationApiException_Section_Null()
             {
                 sectionInstructor.Section = null;
 
-                await service.CreateSectionInstructorsAsync(sectionInstructor);
+                try
+                {
+                    await service.CreateSectionInstructorsAsync(sectionInstructor);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("The section id is a required parameter for updates/creates.", ex.Errors[0].Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task SectionInstructorsService_CreateSectionInstructorsAsync_ArgumentNullException_InstructorId_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task SectionInstructorsService_CreateSectionInstructorsAsync_IntegrationApiException_InstructorId_Null()
             {
                 sectionInstructor.Instructor.Id = null;
-
-                await service.CreateSectionInstructorsAsync(sectionInstructor);
+                try
+                {
+                    await service.CreateSectionInstructorsAsync(sectionInstructor);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("The instructor id is a required parameter for updates/creates.", ex.Errors[0].Message);
+                    Assert.AreEqual("Instructor is a required property.", ex.Errors[1].Message);
+                    Assert.AreEqual("Error processing section faculty record $NEW for section 1: missing faculty ID \r\nParameter name: facultyId", ex.Errors[2].Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(RepositoryException))]
-            public async Task SectionInstructorsService_CreateSectionInstructorsAsync_DtoToEntity_RepositoryException_InstMethods_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task SectionInstructorsService_CreateSectionInstructorsAsync_DtoToEntity_IntegrationApiException_InstMethods_Null()
             {
                 referenceDataRepositoryMock.Setup(s => s.GetInstructionalMethodsAsync(false)).ReturnsAsync(null);
-
-                await service.CreateSectionInstructorsAsync(sectionInstructor);
+                try
+                {
+                    await service.CreateSectionInstructorsAsync(sectionInstructor);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("Instructional Methods call returns no values.  Required for updates/creates.", ex.Errors[0].Message);
+                    Assert.AreEqual("Section faculty record $NEW for section 1 missing instructional method\r\nParameter name: instrMethod", ex.Errors[1].Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task SectionInstructorsService_CreateSectionInstructorsAsync_EntityToDto_ArgumentNullException_SectionFaculty_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task SectionInstructorsService_CreateSectionInstructorsAsync_EntityToDto_IntegrationApiException_SectionFaculty_Null()
             {
                 sectionInstructor.InstructionalMethod = null;
 
                 sectionRepositoryMock.Setup(s => s.PostSectionFacultyAsync(It.IsAny<SectionFaculty>(), It.IsAny<string>())).ReturnsAsync(null);
-
-                await service.CreateSectionInstructorsAsync(sectionInstructor);
+                try
+                {
+                    await service.CreateSectionInstructorsAsync(sectionInstructor);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("SectionFaculty Entity is a required parameter.", ex.Errors[0].Message);
+                    throw;
+                }
             }
 
             [TestMethod]
@@ -471,67 +545,131 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             #endregion
 
             [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task SectionInstructorsService_UpdateSectionInstructorsAsync_PermissionException()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task SectionInstructorsService_UpdateSectionInstructorsAsync_IntegrationApiException()
             {
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
-
-                await service.UpdateSectionInstructorsAsync(guid, sectionInstructor);
+                try
+                {
+                    await service.UpdateSectionInstructorsAsync(guid, sectionInstructor);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("User StudentPO does not have permission to create or update section-instructors.", ex.Errors[0].Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task SectionInstructorsService_UpdateSectionInstructorsAsync_ArgumentNullException_SectionInstructor_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task SectionInstructorsService_UpdateSectionInstructorsAsync_IntegrationApiException_SectionInstructor_Null()
             {
-                await service.UpdateSectionInstructorsAsync(guid, null);
+                try
+                {
+                    await service.UpdateSectionInstructorsAsync(guid, null);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("SectionInstructors body is required in PUT or POST request. ", ex.Errors[0].Message);
+                    Assert.AreEqual("The section instructors is a required parameter for updates/creates.", ex.Errors[1].Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task SectionInstructorsService_UpdateSectionInstructorsAsync_ArgumentNullException_InstructorMethod_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task SectionInstructorsService_UpdateSectionInstructorsAsync_IntegrationApiException_InstructorMethod_Null()
             {
                 sectionInstructor.InstructionalMethod.Id = null;
                 sectionInstructor.InstructionalEvents = new List<GuidObject2>() { };
-
-                await service.UpdateSectionInstructorsAsync(guid, sectionInstructor);
+                try
+                {
+                    await service.UpdateSectionInstructorsAsync(guid, sectionInstructor);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("The instructional Method is required for updates/creates.", ex.Errors[0].Message);
+                    Assert.AreEqual("Instructional method not found for GUID ''.", ex.Errors[1].Message);
+                    Assert.AreEqual("Section faculty record $NEW for section 1 missing instructional method\r\nParameter name: instrMethod", ex.Errors[2].Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task SectionInstructorsService_UpdateSectionInstructorsAsync_ArgumentNullException_Section_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task SectionInstructorsService_UpdateSectionInstructorsAsync_IntegrationApiException_Section_Null()
             {
                 sectionInstructor.Section.Id = null;
-
-                await service.UpdateSectionInstructorsAsync(guid, sectionInstructor);
+                try
+                {
+                    await service.UpdateSectionInstructorsAsync(guid, sectionInstructor);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("The section id is a required parameter for updates/creates.", ex.Errors[0].Message);
+                    Assert.AreEqual("Section is a required property.", ex.Errors[1].Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task SectionInstructorsService_UpdateSectionInstructorsAsync_ArgumentNullException_InstructorId_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task SectionInstructorsService_UpdateSectionInstructorsAsync_IntegrationApiException_InstructorId_Null()
             {
                 sectionInstructor.Instructor = null;
-
-                await service.UpdateSectionInstructorsAsync(guid, sectionInstructor);
+                try
+                {
+                    await service.UpdateSectionInstructorsAsync(guid, sectionInstructor);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("The instructor id is a required parameter for updates/creates.", ex.Errors[0].Message);
+                    Assert.AreEqual("Instructor is a required property.", ex.Errors[1].Message);
+                    Assert.AreEqual("Error processing section faculty record $NEW for section 1: missing faculty ID \r\nParameter name: facultyId", ex.Errors[2].Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(RepositoryException))]
-            public async Task SectionInstructorsService_UpdateSectionInstructorsAsync_DtoToEntity_RepositoryException_InstMethods_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task SectionInstructorsService_UpdateSectionInstructorsAsync_DtoToEntity_IntegrationApiException_InstMethods_Null()
             {
                 referenceDataRepositoryMock.Setup(s => s.GetInstructionalMethodsAsync(false)).ReturnsAsync(null);
-
-                await service.UpdateSectionInstructorsAsync(guid, sectionInstructor);
+                try
+                {
+                    await service.UpdateSectionInstructorsAsync(guid, sectionInstructor);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("Instructional Methods call returns no values.  Required for updates/creates.", ex.Errors[0].Message);
+                    Assert.AreEqual("Section faculty record $NEW for section 1 missing instructional method\r\nParameter name: instrMethod", ex.Errors[1].Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task SectionInstructorsService_UpdateSectionInstructorsAsync_EntityToDto_ArgumentNullException_SectionFaculty_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task SectionInstructorsService_UpdateSectionInstructorsAsync_EntityToDto_IntegrationApiException_SectionFaculty_Null()
             {
                 sectionInstructor.InstructionalMethod = null;
 
                 sectionRepositoryMock.Setup(s => s.PutSectionFacultyAsync(It.IsAny<SectionFaculty>(), It.IsAny<string>())).ReturnsAsync(null);
-
-                await service.UpdateSectionInstructorsAsync(guid, sectionInstructor);
+                try
+                {
+                    await service.UpdateSectionInstructorsAsync(guid, sectionInstructor);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("SectionFaculty Entity is a required parameter.", ex.Errors[0].Message);
+                    throw;
+                }
             }
 
             [TestMethod]

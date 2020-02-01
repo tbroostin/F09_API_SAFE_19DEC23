@@ -18,16 +18,16 @@ namespace Ellucian.Colleague.Domain.Base.Tests
                                             {"e9e6837f-2c51-431b-9069-4ac4c0da3041", "D", "Description"}
                                       };
 
-        public IEnumerable<PersonalRelationshipStatus> GetPersonalRelationshipStatuses()
+        public IEnumerable<RelationshipStatus> GetPersonalRelationshipStatuses()
         {
-            var personalRelationshipStatusList = new List<PersonalRelationshipStatus>();
+            var personalRelationshipStatusList = new List<RelationshipStatus>();
 
             // There are 3 fields for each personal relationship status in the array
             var items = personalRelationshipStatuses.Length / 3;
 
             for (int x = 0; x < items; x++)
             {
-                personalRelationshipStatusList.Add(new PersonalRelationshipStatus(personalRelationshipStatuses[x, 0], personalRelationshipStatuses[x, 1], personalRelationshipStatuses[x, 2]));
+                personalRelationshipStatusList.Add(new RelationshipStatus(personalRelationshipStatuses[x, 0], personalRelationshipStatuses[x, 1], personalRelationshipStatuses[x, 2]));
             }
             return personalRelationshipStatusList;
         }

@@ -302,11 +302,11 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             [TestMethod]
             public async Task PositionRepository_GET_ALL()
             {
-                dataReaderMock.Setup(dr => dr.SelectAsync("POSITION", criteria)).ReturnsAsync(new List<string>() { "0000071813", "0000071913", "0000072013", "0000072113" }.ToArray());
+                dataReaderMock.Setup(dr => dr.SelectAsync("POSITION", It.IsAny<string[]>(), criteria)).ReturnsAsync(new List<string>() { "0000071813", "0000071913", "0000072013", "0000072113" }.ToArray());
                 dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<DataContracts.Position>("POSITION", new string[] { "0000071813", "0000071913", "0000072013", "0000072113" }, It.IsAny<bool>())).ReturnsAsync(positions);
                 var actuals =
                     await
-                        positionRepository.GetPositionsAsync(offset, limit, It.IsAny<string>(), It.IsAny<string>(),
+                        positionRepository.GetPositionsAsync(offset, limit, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
 
@@ -338,11 +338,11 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             [TestMethod]
             public async Task PositionRepository_GET_ALL_Filtered()
             {
-                dataReaderMock.Setup(dr => dr.SelectAsync("POSITION", It.IsAny<string>())).ReturnsAsync(new List<string>() { "0000071813", "0000071913", "0000072013", "0000072113" }.ToArray());
+                dataReaderMock.Setup(dr => dr.SelectAsync("POSITION", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(new List<string>() { "0000071813", "0000071913", "0000072013", "0000072113" }.ToArray());
                 dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<DataContracts.Position>("POSITION", new string[] { "0000071813", "0000071913", "0000072013", "0000072113" }, It.IsAny<bool>())).ReturnsAsync(positions);
                 var actuals =
                     await
-                        positionRepository.GetPositionsAsync(offset, limit, "campus", "active",
+                        positionRepository.GetPositionsAsync(offset, limit, It.IsAny<string>(), "campus", "active",
                             "bargainingUnit", new List<string>() { "reportsToPosition" }, "exempt", "salary",
                             "startOn", "endOn", It.IsAny<bool>());
 
@@ -374,11 +374,11 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             [TestMethod]
             public async Task PositionRepository_GET_ALL_Filtered_2()
             {
-                dataReaderMock.Setup(dr => dr.SelectAsync("POSITION", It.IsAny<string>())).ReturnsAsync(new List<string>() { "0000071813", "0000071913", "0000072013", "0000072113" }.ToArray());
+                dataReaderMock.Setup(dr => dr.SelectAsync("POSITION", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(new List<string>() { "0000071813", "0000071913", "0000072013", "0000072113" }.ToArray());
                 dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<DataContracts.Position>("POSITION", new string[] { "0000071813", "0000071913", "0000072013", "0000072113" }, It.IsAny<bool>())).ReturnsAsync(positions);
                 var actuals =
                     await
-                        positionRepository.GetPositionsAsync(offset, limit, "campus", "inactive",
+                        positionRepository.GetPositionsAsync(offset, limit, It.IsAny<string>(), "campus", "inactive",
                             "bargainingUnit", new List<string>() { "reportsToPosition" }, "nonexempt", "wages",
                             "startOn", "endOn", It.IsAny<bool>());
 
@@ -410,11 +410,11 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             [TestMethod]
             public async Task PositionRepository_GET_ALL_Filtered_3()
             {
-                dataReaderMock.Setup(dr => dr.SelectAsync("POSITION", It.IsAny<string>())).ReturnsAsync(new List<string>() { "0000071813", "0000071913", "0000072013", "0000072113" }.ToArray());
+                dataReaderMock.Setup(dr => dr.SelectAsync("POSITION", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(new List<string>() { "0000071813", "0000071913", "0000072013", "0000072113" }.ToArray());
                 dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<DataContracts.Position>("POSITION", new string[] { "0000071813", "0000071913", "0000072013", "0000072113" }, It.IsAny<bool>())).ReturnsAsync(positions);
                 var actuals =
                     await
-                        positionRepository.GetPositionsAsync(offset, limit, "campus", "cancelled",
+                        positionRepository.GetPositionsAsync(offset, limit, It.IsAny<string>(), "campus", "cancelled",
                             "bargainingUnit", new List<string>() { "reportsToPosition" }, "nonexempt", "wages",
                             "startOn", "endOn", It.IsAny<bool>());
 
@@ -446,11 +446,11 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             [TestMethod]
             public async Task PositionRepository_GET_ALL_Filtered_4()
             {
-                dataReaderMock.Setup(dr => dr.SelectAsync("POSITION", It.IsAny<string>())).ReturnsAsync(new List<string>() { "0000071813", "0000071913", "0000072013", "0000072113" }.ToArray());
+                dataReaderMock.Setup(dr => dr.SelectAsync("POSITION", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(new List<string>() { "0000071813", "0000071913", "0000072013", "0000072113" }.ToArray());
                 dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<DataContracts.Position>("POSITION", new string[] { "0000071813", "0000071913", "0000072013", "0000072113" }, It.IsAny<bool>())).ReturnsAsync(positions);
                 var actuals =
                     await
-                        positionRepository.GetPositionsAsync(offset, limit, "campus", "defaultStatus",
+                        positionRepository.GetPositionsAsync(offset, limit, It.IsAny<string>(), "campus", "defaultStatus",
                             "bargainingUnit", new List<string>() { "reportsToPosition" }, "defaultExemption", "defaultCompensation",
                             "startOn", "endOn", It.IsAny<bool>());
 
@@ -662,8 +662,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             [ExpectedExceptionAttribute(typeof(RepositoryException))]
             public async Task PositionRepository_GET_ALL_RepositoryException()
             {
-                dataReaderMock.Setup(dr => dr.SelectAsync("POSITION", criteria)).ThrowsAsync(new RepositoryException());
-                var actuals = await positionRepository.GetPositionsAsync(offset, limit, It.IsAny<string>(),
+                dataReaderMock.Setup(dr => dr.SelectAsync("POSITION", It.IsAny<string[]>(), criteria)).ThrowsAsync(new RepositoryException());
+                var actuals = await positionRepository.GetPositionsAsync(offset, limit, It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
             }
@@ -672,10 +672,10 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             [ExpectedExceptionAttribute(typeof(ArgumentNullException))]
             public async Task PositionRepository_GET_ALL_NUllEntity_RepositoryException()
             {
-                dataReaderMock.Setup(dr => dr.SelectAsync("POSITION", criteria)).ReturnsAsync(new List<string>() { "0000071813", "0000071913", "0000072013", "0000072113" }.ToArray());
+                dataReaderMock.Setup(dr => dr.SelectAsync("POSITION", It.IsAny<string[]>(), criteria)).ReturnsAsync(new List<string>() { "0000071813", "0000071913", "0000072013", "0000072113" }.ToArray());
                 dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<DataContracts.Position>("POSITION", new string[] { "0000071813", "0000071913", "0000072013", "0000072113" }, It.IsAny<bool>()))
                     .ReturnsAsync(new Collection<DataContracts.Position>() { null });
-                var actuals = await positionRepository.GetPositionsAsync(offset, limit, It.IsAny<string>(),
+                var actuals = await positionRepository.GetPositionsAsync(offset, limit, It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
             }

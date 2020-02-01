@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using System.Collections.Generic;
@@ -15,16 +15,18 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
         /// Create a new budget adjustment.
         /// </summary>
         /// <param name="budgetAdjustment">Budget adjustment.</param>
+        /// <param name="majorComponentStartPosition">List of the major component start positions.</param>
         /// <returns>Budget adjustment response</returns>
-        Task<BudgetAdjustment> CreateAsync(BudgetAdjustment budgetAdjustment);
+        Task<BudgetAdjustment> CreateAsync(BudgetAdjustment budgetAdjustment, IList<string> majorComponentStartPosition);
 
         /// <summary>
         /// Update an existing budget adjustment.
         /// </summary>
         /// <param name="id">The ID of the budget adjustment to update.</param>
         /// <param name="budgetAdjustment">The new budget adjustment data.</param>
+        /// <param name="majorComponentStartPosition">List of the major component start positions.</param>
         /// <returns>The updated budget adjustment.</returns>
-        Task<BudgetAdjustment> UpdateAsync(string id, BudgetAdjustment budgetAdjustment);
+        Task<BudgetAdjustment> UpdateAsync(string id, BudgetAdjustment budgetAdjustment, IList<string> majorComponentStartPosition);
 
         /// <summary>
         /// Get a budget adjustment.
@@ -51,7 +53,8 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
         /// Validates the budget adjustment entity using a Colleague Transaction.
         /// </summary>
         /// <param name="budgetAdjustmentEntity">The entity to validate.</param>
+        /// <param name="majorComponentStartPosition">List of the major component start positions.</param>
         /// <returns>List of strings that contain error messages from Colleague.</returns>
-        Task<List<string>> ValidateBudgetAdjustmentAsync(BudgetAdjustment budgetAdjustmentEntity);
+        Task<List<string>> ValidateBudgetAdjustmentAsync(BudgetAdjustment budgetAdjustmentEntity, IList<string> majorComponentStartPosition);
     }
 }

@@ -17,8 +17,7 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <param name="id"></param>
         /// <returns></returns>
         Task<Bank> GetBankAsync(string id);
-
-        Task<Dictionary<string, Bank>> GetAllBanksAsync(bool updateCache);
-
+                
+        Task<Dictionary<string, Bank>> GetAllBanksAsync();
     }
 }

@@ -1,9 +1,10 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Domain.Student.Entities;
@@ -206,6 +207,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             coursePage.LatestTime = criteria.LatestTime;
             coursePage.OnlineCategories = BuildOnlineCategoryFilter(filterBasis.Sections, criteria);
             coursePage.OpenSections = BuildOpenSectionsFilter(filterBasis.Sections, criteria);
+            coursePage.OpenAndWaitlistSections = BuildOpenAndWaitlistSectionsFilter(filterBasis.Sections, criteria);
             return coursePage;
         }
 
@@ -389,8 +391,19 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             //filter sections that are open 
             if (criteria.OpenSections)
             {
-                var sectionsDict = filterResult.Sections.ToDictionary(s => s.Id, s => s);
+                //Filter sections which are ended. When open sections filter is selected, We need to get sections which are active.
+                var sectionsDict = filterResult.Sections.Where(s => (s.EndDate.HasValue && s.EndDate.Value >= DateTime.Now) || !s.EndDate.HasValue).ToDictionary(s => s.Id, s => s);
                 await FilterOpenSectionsOnlyAsync(sectionsDict);
+                filterResult.Sections = sectionsDict.Select(s => s.Value).ToList();
+                sectionFiltersUsed = true;
+            }
+
+            if (criteria.OpenAndWaitlistSections)
+            {
+                //Filter sections which are ended. When open sections filter is selected, We need to get sections which are active.
+                filterResult.Sections.RemoveAll(s => (s.EndDate.HasValue && s.EndDate.Value < DateTime.Now));
+                var sectionsDict = filterResult.Sections.ToDictionary(s => s.Id, s => s);
+                await FilterOpenAndWaitlistSectionsAsync(sectionsDict);
                 filterResult.Sections = sectionsDict.Select(s => s.Value).ToList();
                 sectionFiltersUsed = true;
             }
@@ -623,11 +636,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                                      from mtg in sec.Meetings
                                      from dayOfWk in mtg.Days
                                      select new { dayOfWk, sec })
-                                    .Union
-                                    (from sec in sectionCollection
-                                     from mtg in sec.PrimarySectionMeetings
-                                     from dayOfWk in mtg.Days
-                                     select new { dayOfWk, sec });
+                                     .Union
+                                     (from sec in sectionCollection
+                                      from mtg in sec.PrimarySectionMeetings
+                                      from dayOfWk in mtg.Days
+                                      select new { dayOfWk, sec });
+
 
                 foreach (var day in daysOfWeek)
                 {
@@ -838,7 +852,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     {
                         foreach (string sec in missingSectionIds.ToList())
                         {
-                            sectionDict.Remove(sec);
+                                sectionDict.Remove(sec);
                         }
                     }
                 }
@@ -847,7 +861,32 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 return;
         }
 
-
+        private async Task FilterOpenAndWaitlistSectionsAsync(Dictionary<string, Ellucian.Colleague.Domain.Student.Entities.Section> sectionDict)
+        {
+            List<Ellucian.Colleague.Domain.Student.Entities.Section> openSections = new List<Ellucian.Colleague.Domain.Student.Entities.Section>();
+            if (sectionDict != null)
+            {
+                List<string> sectionIds = sectionDict.Keys.ToList();
+                if (sectionIds != null && sectionIds.Count > 0)
+                {
+                    // Open sections are those with available seats greater than 0.
+                    var sectionSeats = (await _sectionRepository.GetSectionsSeatsAsync(sectionIds)).Where(s => (s.Value.Available == null || s.Value.Available > 0)).ToList();
+                    //find the sections that were not open to remove from incoming/original list
+                    IEnumerable<string> missingSectionIds = sectionIds.Except(sectionSeats.Select(s => s.Key));
+                    if (missingSectionIds != null)
+                    {
+                        foreach (string sec in missingSectionIds.ToList())
+                        {
+                            if (!(sectionDict[sec].AllowWaitlist && sectionDict[sec].WaitlistAvailable))
+                                sectionDict.Remove(sec);
+                        }
+                    }
+                }
+            }
+            else
+                return;
+        }
+    
         #endregion
 
         #region Build Outbound Search Filters
@@ -988,39 +1027,59 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
         private IEnumerable<Ellucian.Colleague.Dtos.Base.Filter> BuildDayOfWeekFilter(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sections, CourseSearchCriteria criteria)
         {
+            var sw = new Stopwatch();
             var filter = new List<Ellucian.Colleague.Dtos.Base.Filter>();
-
-            // Get the unique list of faculty from all courses and sections
-
-            var allTheMeetings = sections.SelectMany(s => s.Meetings).Union(sections.SelectMany(s => s.PrimarySectionMeetings));
-            var daysOfWeek = allTheMeetings.SelectMany(m => m.Days).Distinct().ToList();
-
-
-            // Build collection of section/day
-            var dayCollection = from sec in sections
-                                from mtg in allTheMeetings
-                                from dayOfWk in mtg.Days
-                                select new { dayOfWk, sec.CourseId };
-
-
-            // Count the courses with this faculty
-            foreach (var day in daysOfWeek)
+            ILookup<DayOfWeek, string> groupedDays = null;
+            if(sections==null)
             {
-                int filterValueCount = 0;
-                // Count course Ids for all sections found with this dayOfWeek
-                if ((dayCollection != null) && (dayCollection.Any()))
-                {
-                    filterValueCount = dayCollection.Where(d => d.dayOfWk == day).Select(d => d.CourseId).Distinct().Count();
-                }
-                // Add filter detail line for this faculty
-                var filterDetail = new Ellucian.Colleague.Dtos.Base.Filter()
-                {
-                    Count = filterValueCount,
-                    Value = ((int)day).ToString(),
-                    Selected = criteria.DaysOfWeek != null ? criteria.DaysOfWeek.Contains(((int)day).ToString()) : false
-                };
-                filter.Add(filterDetail);
+                logger.Info("There were no sections passed to build day of week filter");
+                return filter;
             }
+            sw.Start();
+            try
+            {
+                // Build collection of section/day
+                var dayCollection = (from sec in sections
+                                     from mtg in sec.Meetings
+                                     from dayOfWk in mtg.Days
+                                     select new { dayOfWk = dayOfWk, CourseId = sec.CourseId })
+                                     .Union
+                                     (from sec in sections
+                                      from mtg in sec.PrimarySectionMeetings
+                                      from dayOfWk in mtg.Days
+                                      select new { dayOfWk = dayOfWk, CourseId = sec.CourseId });
+
+                //convert dayCollection to lookup
+                groupedDays = dayCollection.ToLookup(s => s.dayOfWk, s => s.CourseId);
+                // Count the courses with this Day of week
+                foreach (var day in groupedDays)
+                {
+                    try
+                    {
+                        int filterValueCount = 0;
+                        filterValueCount = groupedDays[day.Key].Count();
+                        // Add filter detail line for this day of week
+                        var filterDetail = new Ellucian.Colleague.Dtos.Base.Filter()
+                        {
+                            Count = filterValueCount,
+                            Value = ((int)day.Key).ToString(),
+                            Selected = criteria.DaysOfWeek != null ? criteria.DaysOfWeek.Contains(((int)day.Key).ToString()) : false
+                        };
+                        filter.Add(filterDetail);
+                    }
+                    catch(Exception ex)
+                    {
+                        logger.Error(ex, "Exception occured while enumerating through grouped days of week while building days of week filter for course search");
+                    }
+                }
+                
+            }
+            catch(Exception ex)
+            {
+                logger.Error(ex, "Exception occured while building day of week filter for course search");
+            }
+            sw.Stop();
+            logger.Info("Build day of week filter elapsed time " + sw.ElapsedMilliseconds + "ms");
             return filter;
         }
 
@@ -1168,7 +1227,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         }
         private Ellucian.Colleague.Dtos.Base.Filter BuildOpenSectionsFilter(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sections, CourseSearchCriteria criteria)
         {
-            // count the sections 
+            // count the sections
             var sectionCount = sections == null ? 0 : sections.Count();
             // Add filter detail. Set as selected if this filter is in the criteria.
             var filter = new Ellucian.Colleague.Dtos.Base.Filter()
@@ -1176,6 +1235,21 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 Value = null,
                 Count = sectionCount,
                 Selected = criteria.OpenSections
+            };
+
+            return filter;
+        }
+
+        private Ellucian.Colleague.Dtos.Base.Filter BuildOpenAndWaitlistSectionsFilter(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sections, CourseSearchCriteria criteria)
+        {
+            // count the sections 
+            var sectionCount = sections == null ? 0 : sections.Count();
+            // Add filter detail. Set as selected if this filter is in the criteria.
+            var filter = new Ellucian.Colleague.Dtos.Base.Filter()
+            {
+                Value = null,
+                Count = sectionCount,
+                Selected = criteria.OpenAndWaitlistSections
             };
 
             return filter;
@@ -1329,8 +1403,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             // Dictionary that contains ALL fields to be searched, with their boost values
             // Lucene allows the assigning of weights (boost values) to each field that is being searched.
-            // In the course name has highest weight, then title, then subject, then everything else.
+            // The synonym has highest weight, then course name, then subject, then title, then everything else.
             var FieldBoosts = new Dictionary<string, float>();
+            FieldBoosts.Add("synonym", 50f);
             FieldBoosts.Add("name", 20f);
             FieldBoosts.Add("subject", 15f);
             FieldBoosts.Add("title", 5f);
@@ -1605,6 +1680,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     fieldString += " " + course.SubjectCode + CourseDelimiter + course.Number + CourseDelimiter + section.Number;
                     // Append to the whole section string
                     sectionString.Append(fieldString);
+
+                    // Synonym used as an alternative short ID for easy sharing and searching (Append to whole Section string)
+                    fieldString += " " + section.Synonym;
+                    sectionString.Append(fieldString);
+                    f = new Field("synonym", section.Synonym ?? string.Empty, Field.Store.YES, Field.Index.ANALYZED);
+                    doc.Add(f);
+
                     // Add Name field to the document
                     f = new Field("name", fieldString, Field.Store.YES, Field.Index.ANALYZED);
                     doc.Add(f);
@@ -4880,7 +4962,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var courseCollection = new List<Dtos.Course5>();
             int totalCount = 0;
             List<string> newAcademicLevel = null, newOwningInstitutionUnit = null, newInstructionalMethods = null, newCategories = null;
-            string newSubject = string.Empty, newTopic = string.Empty;
+            string newSubject = string.Empty, newTopic = string.Empty, newStartOn = string.Empty, newEndOn = string.Empty, newActiveOn = string.Empty;
+
             try
             {
                 if (!string.IsNullOrEmpty(subject))
@@ -4891,9 +4974,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         return new Tuple<IEnumerable<Course5>, int>(new List<Course5>(), 0);
                     }
                 }
-                var newStartOn = (string.IsNullOrEmpty(schedulingStartOn) ? string.Empty : await ConvertDateArgument(schedulingStartOn));
-                var newEndOn = (string.IsNullOrEmpty(schedulingEndOn) ? string.Empty : await ConvertDateArgument(schedulingEndOn));
-                var newActiveOn = (string.IsNullOrEmpty(activeOn) ? string.Empty : await ConvertDateArgument(activeOn));
+                newStartOn = (string.IsNullOrEmpty(schedulingStartOn) ? string.Empty : await ConvertDateArgument(schedulingStartOn));
+                newEndOn = (string.IsNullOrEmpty(schedulingEndOn) ? string.Empty : await ConvertDateArgument(schedulingEndOn));
+                newActiveOn = (string.IsNullOrEmpty(activeOn) ? string.Empty : await ConvertDateArgument(activeOn));
 
                 if (academicLevel != null && academicLevel.Any())
                 {
@@ -4935,32 +5018,66 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         return new Tuple<IEnumerable<Course5>, int>(new List<Course5>(), 0);
                     }
                 }
-
-                var courseEntities = await _courseRepository.GetPagedCoursesAsync(offset, limit, newSubject, number, newAcademicLevel, newOwningInstitutionUnit, titles, newInstructionalMethods, newStartOn, newEndOn, newTopic, newCategories, newActiveOn);
-                totalCount = courseEntities.Item2;
-                foreach (var course in courseEntities.Item1)
-                {
-                    courseCollection.Add(await ConvertCourseEntityToDto5Async(course, false));
-                }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                throw new Exception("An error occurred retrieving courses: " + ex.Message, ex.InnerException);
+                return new Tuple<IEnumerable<Course5>, int>(new List<Course5>(), 0);
             }
+
+            Tuple<IEnumerable<Domain.Student.Entities.Course>, int> courseEntities = null;
+
+            try
+            {
+                courseEntities = await _courseRepository.GetPagedCoursesAsync(offset, limit, newSubject, number, newAcademicLevel, newOwningInstitutionUnit, titles, newInstructionalMethods, newStartOn, newEndOn, newTopic, newCategories, newActiveOn, true);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }
+
+            if (courseEntities == null)
+            {
+                return new Tuple<IEnumerable<Course5>, int>(new List<Course5>(), 0);
+            }
+
+            totalCount = courseEntities.Item2;
+            foreach (var course in courseEntities.Item1)
+            {
+                courseCollection.Add(await ConvertCourseEntityToDto5Async(course, false));
+            }
+
+            if (IntegrationApiException != null)
+                throw IntegrationApiException;
+
             return courseCollection.Any() ? new Tuple<IEnumerable<Course5>, int>(courseCollection, totalCount) :
                     new Tuple<IEnumerable<Course5>, int>(new List<Course5>(), 0);
         }
 
         /// <summary>
-        /// Gets a course by id
+        /// Gets a course by guid
         /// </summary>
         /// <param name="id"></param>
         /// <returns>Dtos.Course4</returns>
         public async Task<Dtos.Course5> GetCourseByGuid5Async(string id)
         {
-            var course = await _courseRepository.GetCourseByGuidAsync(id);
 
-            var courseDto = await ConvertCourseEntityToDto5Async(course, true);
+            Domain.Student.Entities.Course course = null;
+            try
+            {
+                course = await _courseRepository.GetCourseByGuid2Async(id, true);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex, guid: id);
+                throw IntegrationApiException;
+            }
+
+            Course5 courseDto = await ConvertCourseEntityToDto5Async(course, true);
+
+            if (IntegrationApiException != null)
+                throw IntegrationApiException;
+
             return courseDto;
         }
 
@@ -4984,12 +5101,25 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             // Confirm that user has permissions to update course
             CheckCoursePermission();
 
+            _courseRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
+
             //Convert the DTO to an entity, update the course, convert the resulting entity back to a DTO, and return it
             var courseEntity = await ConvertCourseDtoToEntity5Async(course, bypassCache);
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+
             var source = course.MetadataObject != null ? course.MetadataObject.CreatedBy : null;
             var version = "16";
             var updatedCourseEntity = await _courseRepository.UpdateCourseAsync(courseEntity, source, version);
-            return await ConvertCourseEntityToDto5Async(updatedCourseEntity, true);
+            var convertedEntity = await ConvertCourseEntityToDto5Async(updatedCourseEntity, bypassCache);
+
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+            return convertedEntity;
         }
 
         /// <summary>
@@ -5001,13 +5131,26 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             // Confirm that user has permissions to create course
             CheckCoursePermission();
+            _courseRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
             //Convert the DTO to an entity, create the course, convert the resulting entity back to a DTO, and return it
             var courseEntity = await ConvertCourseDtoToEntity5Async(course, bypassCache);
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+
             var source = course.MetadataObject != null ? course.MetadataObject.CreatedBy : null;
             var version = "16";
             var createdCourseEntity = await _courseRepository.CreateCourseAsync(courseEntity, source, version);
-            return await ConvertCourseEntityToDto5Async(createdCourseEntity, true);
+
+            var convertedEntity = await ConvertCourseEntityToDto5Async(createdCourseEntity, bypassCache);
+
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+            return convertedEntity;
         }
 
         /// <summary>
@@ -5020,24 +5163,34 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             if (source == null)
             {
-                throw new ArgumentNullException("source", "A course must be supplied.");
+                IntegrationApiExceptionAddError("A course must be supplied.");
+                return null;
             }
 
             if (_contactMeasures == null)
             {
                 _contactMeasures = (await _studentReferenceDataRepository.GetContactMeasuresAsync(false)).ToList();
             }
-            
-            var course = new Ellucian.Colleague.Dtos.Course5();
 
+            var course = new Ellucian.Colleague.Dtos.Course5();
             course.Id = source.Guid;
+
             //get subject
             if (!string.IsNullOrEmpty(source.SubjectCode))
             {
-                var subject = await _studentReferenceDataRepository.GetSubjectGuidAsync(source.SubjectCode);
+                var subject = string.Empty;
+                try
+                {
+                    subject = await _studentReferenceDataRepository.GetSubjectGuidAsync(source.SubjectCode);
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
+                }
                 if (!string.IsNullOrEmpty(subject))
                     course.Subject = new Dtos.GuidObject2(subject);
             }
+
             //get course levels
             course.CourseLevels = new List<Dtos.GuidObject2>();
             if (source.CourseLevelCodes != null && source.CourseLevelCodes.Count > 0)
@@ -5047,7 +5200,15 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     if (!string.IsNullOrEmpty(courseLevelCode))
                     {
-                        var courseLevel = await _studentReferenceDataRepository.GetCourseLevelGuidAsync(courseLevelCode);
+                        var courseLevel = string.Empty;
+                        try
+                        {
+                            courseLevel = await _studentReferenceDataRepository.GetCourseLevelGuidAsync(courseLevelCode);
+                        }
+                        catch (RepositoryException ex)
+                        {
+                            IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
+                        }
                         if (!string.IsNullOrEmpty(courseLevel))
                             courseLevelGuids.Add(new Dtos.GuidObject2(courseLevel));
                     }
@@ -5058,20 +5219,24 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
             }
 
-            // New object InstructionalMethodDetails with v16
-
             course.InstructionalMethodDetails = new List<InstructionalMethodDetail>();
             if (source.InstructionalMethodCodes != null && source.InstructionalMethodCodes.Any())
             {
-
-                // var administrativeInstructionalMethods = await GetAdministrativeInstructionalMethodsAsync(bypassCache);
 
                 foreach (var instrMethodCode in source.InstructionalMethodCodes)
                 {
                     if (!string.IsNullOrEmpty(instrMethodCode))
                     {
                         var position = source.InstructionalMethodCodes.IndexOf(instrMethodCode);
-                        var instructionalMethod = await _studentReferenceDataRepository.GetInstructionalMethodGuidAsync(instrMethodCode);
+                        var instructionalMethod = string.Empty;
+                        try
+                        {
+                            instructionalMethod = await _studentReferenceDataRepository.GetInstructionalMethodGuidAsync(instrMethodCode);
+                        }
+                        catch (RepositoryException ex)
+                        {
+                            IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
+                        }
                         ContactHoursPeriod instrMethodPeriod = ContactHoursPeriod.NotSet;
                         decimal? instrMethodHours = null;
 
@@ -5094,7 +5259,15 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                             {
                                 instrMethodHours = source.InstructionalMethodContactHours[position];
                             }
-                            var administrativeInstructionalMethod = await _studentReferenceDataRepository.GetAdministrativeInstructionalMethodGuidAsync(instrMethodCode);
+                            var administrativeInstructionalMethod = string.Empty;
+                            try
+                            {
+                                administrativeInstructionalMethod = await _studentReferenceDataRepository.GetAdministrativeInstructionalMethodGuidAsync(instrMethodCode);
+                            }
+                            catch (RepositoryException ex)
+                            {
+                                IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
+                            }
                             if (!string.IsNullOrEmpty(administrativeInstructionalMethod) && instrMethodHours != null)
                             {
                                 var instrMethodHoursDetail = new CoursesHoursDtoProperty()
@@ -5123,14 +5296,31 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             //get academic levels
             if (!(string.IsNullOrEmpty(source.AcademicLevelCode)))
             {
-                var acadLevel = await _studentReferenceDataRepository.GetAcademicLevelsGuidAsync(source.AcademicLevelCode);
+                var acadLevel = string.Empty;
+                try
+                {
+                    acadLevel = await _studentReferenceDataRepository.GetAcademicLevelsGuidAsync(source.AcademicLevelCode);
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
+                }
                 if (!string.IsNullOrEmpty(acadLevel))
                     course.AcademicLevels = new List<Dtos.GuidObject2>() { new Dtos.GuidObject2(acadLevel) };
             }
 
+
             if (!string.IsNullOrEmpty(source.GradeSchemeCode))
             {
-                var gradeScheme = await _studentReferenceDataRepository.GetGradeSchemeGuidAsync(source.GradeSchemeCode);
+                var gradeScheme = string.Empty;
+                try
+                {
+                    gradeScheme = await _studentReferenceDataRepository.GetGradeSchemeGuidAsync(source.GradeSchemeCode);
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
+                }
                 if (!string.IsNullOrEmpty(gradeScheme))
                 {
                     course.GradeSchemes = new List<GradeSchemesDtoProperty>()
@@ -5145,26 +5335,37 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
             course.Titles = new List<CoursesTitlesDtoProperty>();
-            var shortEntity = await _studentReferenceDataRepository.GetCourseTitleTypeGuidAsync("SHORT");
+            var shortEntity = string.Empty;
+            try
+            {
+                shortEntity = await _studentReferenceDataRepository.GetCourseTitleTypeGuidAsync("SHORT");
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
+            }
             if (!string.IsNullOrEmpty(shortEntity))
             {
                 var shortTitle = new CoursesTitlesDtoProperty() { Type = new GuidObject2(shortEntity), Value = source.Title };
                 course.Titles.Add(shortTitle);
             }
-            else
+
+            var longEntity = string.Empty;
+            try
             {
-                throw new ArgumentNullException("titles.type", "The record 'SHORT' or it's GUID is missing from course title types. ");
+                longEntity = await _studentReferenceDataRepository.GetCourseTitleTypeGuidAsync("LONG");
             }
-            var longEntity = await _studentReferenceDataRepository.GetCourseTitleTypeGuidAsync("LONG");
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
+            }
+
             if (!string.IsNullOrEmpty(longEntity))
             {
                 var longTitle = new CoursesTitlesDtoProperty() { Type = new GuidObject2(longEntity), Value = source.LongTitle };
                 course.Titles.Add(longTitle);
             }
-            else
-            {
-                throw new ArgumentNullException("titles.type", "The record 'LONG' or it's GUID is missing from course title types. ");
-            }
+
 
             if (!string.IsNullOrWhiteSpace(source.Description))
                 course.Description = source.Description;
@@ -5177,7 +5378,15 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 foreach (var offeringDept in source.Departments)
                 {
-                    var academicDepartment = await _referenceDataRepository.GetDepartments2GuidAsync(offeringDept.AcademicDepartmentCode);
+                    var academicDepartment = string.Empty;
+                    try
+                    {
+                        academicDepartment = await _referenceDataRepository.GetDepartments2GuidAsync(offeringDept.AcademicDepartmentCode);
+                    }
+                    catch (RepositoryException ex)
+                    {
+                        IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
+                    }
                     if (!string.IsNullOrEmpty(academicDepartment))
                     {
                         var department = new Ellucian.Colleague.Dtos.OwningInstitutionUnit
@@ -5201,7 +5410,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             // Determine the Credit information for the course
             course.Credits = new List<Dtos.Credit3>();
-            var creditCategories = await GetCreditCategoriesAsync(bypassCache);
+            List<CreditCategory> creditCategories = null;
+            try
+            {
+                creditCategories = (await GetCreditCategoriesAsync(bypassCache)).ToList();
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
+            }
+
             if ((creditCategories != null) && (creditCategories.Any()))
             {
                 var creditType = creditCategories.FirstOrDefault(ct => ct.Code == source.LocalCreditType);
@@ -5266,7 +5484,15 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             if (!string.IsNullOrEmpty(source.TopicCode))
             {
-                var topicGuid = await _studentReferenceDataRepository.GetTopicCodeGuidAsync(source.TopicCode);
+                var topicGuid = string.Empty;
+                try
+                {
+                    topicGuid = await _studentReferenceDataRepository.GetTopicCodeGuidAsync(source.TopicCode);
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
+                }
                 if (!string.IsNullOrEmpty(topicGuid))
                 {
                     course.Topic = new GuidObject2(topicGuid);
@@ -5278,24 +5504,41 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     if (!string.IsNullOrEmpty(cat))
                     {
-                        var TypeGuid = await _studentReferenceDataRepository.GetCourseTypeGuidAsync(cat);
-                        if (!string.IsNullOrEmpty(TypeGuid))
+                        var typeGuid = string.Empty;
+                        try
+                        {
+                            typeGuid = await _studentReferenceDataRepository.GetCourseTypeGuidAsync(cat);
+                        }
+                        catch (RepositoryException ex)
+                        {
+                            IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
+                        }
+                        if (!string.IsNullOrEmpty(typeGuid))
                         {
                             if (course.Categories == null)
                                 course.Categories = new List<GuidObject2>();
 
-                            course.Categories.Add(new GuidObject2(TypeGuid));
+                            course.Categories.Add(new GuidObject2(typeGuid));
                         }
                     }
                 }
-                
+
             }
             if (source.CourseApprovals != null && source.CourseApprovals.Any())
             {
                 var approval = source.CourseApprovals.ElementAtOrDefault(0);
                 if (approval != null && !string.IsNullOrEmpty(approval.StatusCode))
                 {
-                    var courseStatusGuid = await _studentReferenceDataRepository.GetCourseStatusGuidAsync(approval.StatusCode);
+                    var courseStatusGuid = string.Empty;
+                    try
+                    {
+                        courseStatusGuid = await _studentReferenceDataRepository.GetCourseStatusGuidAsync(approval.StatusCode);
+                    }
+                    catch (RepositoryException ex)
+                    {
+                        IntegrationApiExceptionAddError(ex, "Bad.Data", source.Guid, source.Id);
+                    }
+
                     if (!string.IsNullOrEmpty(courseStatusGuid))
                         course.Status = new GuidObject2(courseStatusGuid);
                 }
@@ -5315,43 +5558,48 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>A<see cref="Course">Course</see> domain entity</returns>
         private async Task<Domain.Student.Entities.Course> ConvertCourseDtoToEntity5Async(Dtos.Course5 course, bool bypassCache)
         {
-
             if (course == null)
             {
-                throw new ArgumentNullException("The request body for course is invalid or missing. ", "courses");
+                throw new ArgumentNullException("The request body for course is invalid or missing.", "courses");
             }
             if (course.Titles == null || !course.Titles.Any())
             {
-                throw new ArgumentException("At least one course title must be provided. ", "titles.value");
+                IntegrationApiExceptionAddError("At least one course title must be provided.", "Validation.Exception", course.Id);
             }
-            foreach (var title in course.Titles)
+            else
             {
-                if (string.IsNullOrEmpty(title.Value))
+                foreach (var title in course.Titles)
                 {
-                    throw new ArgumentException("The title value must be provided for the title object. ", "titles.value");
+                    if (string.IsNullOrEmpty(title.Value))
+                    {
+                        IntegrationApiExceptionAddError("The title value must be provided for the title object.", "Validation.Exception", course.Id);
+                    }
                 }
             }
             if (course.Status == null || string.IsNullOrEmpty(course.Status.Id))
             {
-                throw new ArgumentException("Status is required; no Id supplied. ", "status.id");
+                IntegrationApiExceptionAddError("Status is required; no Id supplied.", "Validation.Exception", course.Id);
             }
             if (course.Subject == null || string.IsNullOrEmpty(course.Subject.Id))
             {
-                throw new ArgumentException("Subject is required; no Id supplied. ", "subject.id");
+                IntegrationApiExceptionAddError("Subject is required; no Id supplied.", "Validation.Exception", course.Id);
             }
             if (string.IsNullOrEmpty(course.Number))
             {
-                throw new ArgumentException("Course number is required. ", "number");
+                IntegrationApiExceptionAddError("Course number is required.", "Validation.Exception", course.Id);
             }
-            if (course.Number.Length > 7)
+            else
             {
-                throw new ArgumentException("Course number cannot be longer than 7 characters. ", "number");
+                if (course.Number.Length > 7)
+                {
+                    IntegrationApiExceptionAddError("Course number cannot be longer than 7 characters.", "Validation.Exception", course.Id);
+                }
             }
             if (course.EffectiveStartDate != null && course.EffectiveEndDate != null)
             {
                 if (course.EffectiveEndDate < course.EffectiveStartDate)
                 {
-                    throw new ArgumentException("schedulingEndOn cannot be earlier than schedulingStartOn. ", "schedulingStartOn");
+                    IntegrationApiExceptionAddError("schedulingEndOn cannot be earlier than schedulingStartOn.", "Validation.Exception", course.Id);
                 }
             }
 
@@ -5361,7 +5609,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     if (string.IsNullOrEmpty(level.Id))
                     {
-                        throw new ArgumentException("Course Level id is a required field when Course Levels are defined. ", "courseLevels.id");
+                        IntegrationApiExceptionAddError("Course Level id is a required field when Course Levels are defined.", "Validation.Exception", course.Id);
                     }
                 }
             }
@@ -5372,7 +5620,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     if (scheme.GradeScheme == null || string.IsNullOrEmpty(scheme.GradeScheme.Id))
                     {
-                        throw new ArgumentException("Grade Scheme id is a required field when Grade Schemes are defined. ", "gradeSchemes.gradeScheme.id");
+                        IntegrationApiExceptionAddError("Grade Scheme id is a required field when Grade Schemes are defined.", "Validation.Exception", course.Id);
                     }
                 }
             }
@@ -5383,12 +5631,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     if (org.InstitutionUnit == null || string.IsNullOrEmpty(org.InstitutionUnit.Id))
                     {
-                        throw new ArgumentException("Institution Unit id is a required field when Owning Organizations are defined. ", "owningInstitutionUnits.institutionUnit.id");
+                        IntegrationApiExceptionAddError("Institution Unit id is a required field when Owning Organizations are defined.", "Validation.Exception", course.Id);
                     }
 
                     if (org.OwnershipPercentage == 0)
                     {
-                        throw new ArgumentException("Ownership Percentage is a required field when Owning Organizations are defined. ", "owningInstitutionUnits.ownershipPercentage");
+                        IntegrationApiExceptionAddError("Ownership Percentage is a required field when Owning Organizations are defined.", "Validation.Exception", course.Id);
                     }
                 }
             }
@@ -5397,73 +5645,78 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 if (course.Credits.Count() > 2)
                 {
-                    throw new ArgumentException("A maximum of 2 entries are allowed in the Credits array. ", "course.credits");
+                    IntegrationApiExceptionAddError("A maximum of 2 entries are allowed in the Credits array.", "Validation.Exception", course.Id);
                 }
                 if (course.Credits.Count() == 2)
                 {
                     if (course.Credits.Any() && course.Credits.ElementAt(0).CreditCategory != null && course.Credits.ElementAt(1).CreditCategory != null &&
                         course.Credits.ElementAt(0).CreditCategory.CreditType != course.Credits.ElementAt(1).CreditCategory.CreditType)
                     {
-                        throw new ArgumentException("The same Credit Type must be used for each entry in the Credits array. ", "credits.creditCategory.creditType");
+                        IntegrationApiExceptionAddError("The same Credit Type must be used for each entry in the Credits array.", "Validation.Exception", course.Id);
                     }
-                    if (!(course.Credits.ElementAt(0).Measure == CreditMeasure2.CEU && course.Credits.ElementAt(1).Measure == CreditMeasure2.Credit)
-                        && !(course.Credits.ElementAt(0).Measure == CreditMeasure2.Credit && course.Credits.ElementAt(1).Measure == CreditMeasure2.CEU)
-                        && !(course.Credits.ElementAt(0).Measure == CreditMeasure2.CEU && course.Credits.ElementAt(1).Measure == CreditMeasure2.Hours)
-                        && !(course.Credits.ElementAt(0).Measure == CreditMeasure2.Hours && course.Credits.ElementAt(1).Measure == CreditMeasure2.CEU))
+                    else
                     {
-                        throw new ArgumentException("Invalid combination of measures '" + course.Credits.ElementAt(0).Measure
-                            + "' and '" + course.Credits.ElementAt(1).Measure + "'. ", "credits.measure");
+                        if (!(course.Credits.ElementAt(0).Measure == CreditMeasure2.CEU && course.Credits.ElementAt(1).Measure == CreditMeasure2.Credit)
+                            && !(course.Credits.ElementAt(0).Measure == CreditMeasure2.Credit && course.Credits.ElementAt(1).Measure == CreditMeasure2.CEU)
+                            && !(course.Credits.ElementAt(0).Measure == CreditMeasure2.CEU && course.Credits.ElementAt(1).Measure == CreditMeasure2.Hours)
+                            && !(course.Credits.ElementAt(0).Measure == CreditMeasure2.Hours && course.Credits.ElementAt(1).Measure == CreditMeasure2.CEU))
+                        {
+                            IntegrationApiExceptionAddError("Invalid combination of measures '" + course.Credits.ElementAt(0).Measure
+                                + "' and '" + course.Credits.ElementAt(1).Measure + "'.", "Validation.Exception", course.Id);
+                        }
                     }
                 }
                 foreach (var credit in course.Credits)
                 {
                     if (credit.CreditCategory == null)
                     {
-                        throw new ArgumentException("Credit Category is required if Credits are defined. ", "credit.creditCategory");
+                        IntegrationApiExceptionAddError("Credit Category is required if Credits are defined.", "Validation.Exception", course.Id);
                     }
+                    else
+                    {
+                        if (credit.CreditCategory.CreditType == null)
+                        {
+                            IntegrationApiExceptionAddError("Credit Type is required for Credit Categories if Credits are defined.", "Validation.Exception", course.Id);
+                        }
 
-                    if (credit.CreditCategory.CreditType == null)
-                    {
-                        throw new ArgumentException("Credit Type is required if for Credit Categories if Credits are defined. ", "credit.creditCategory.creditType");
+                        if (credit.CreditCategory.Detail != null && string.IsNullOrEmpty(credit.CreditCategory.Detail.Id))
+                        {
+                            IntegrationApiExceptionAddError("Credit Category id within the detail object is required if Credit Category is defined.", "Validation.Exception", course.Id);
+                        }
+                        //if (credit.Increment == null && credit.Maximum != null)
+                        //{
+                        //    throw new ArgumentException("Credit Increment is required when Credit Maximum exists. ", "credit.maximum");
+                        //}
+                        if (credit.Maximum == null && credit.Increment != null)
+                        {
+                            IntegrationApiExceptionAddError("Credit Maximum is required when Credit Increment exists.", "Validation.Exception", course.Id);
+                        }
+                        if ((credit.Maximum != null || credit.Increment != null) && credit.Measure == CreditMeasure2.CEU)
+                        {
+                            IntegrationApiExceptionAddError("Credit Maximum/Increment cannot exist when Credit Measure is 'ceu'.", "Validation.Exception", course.Id);
+                        }
+                        //if (credit.Increment != null && credit.Measure == CreditMeasure2.CEU)
+                        //{
+                        //    throw new ArgumentException("Credit Increment cannot exist when Credit Measure is 'ceu'. ", "credit.measure");
+                        //}
                     }
-
-                    if (credit.CreditCategory.Detail != null && string.IsNullOrEmpty(credit.CreditCategory.Detail.Id))
-                    {
-                        throw new ArgumentException("Credit Category id is required within the detail section of Credit Category is defined. ", "credit.creditCategory.detail.id");
-                    }
-                    //if (credit.Increment == null && credit.Maximum != null)
-                    //{
-                    //    throw new ArgumentException("Credit Increment is required when Credit Maximum exists. ", "credit.maximum");
-                    //}
-                    if (credit.Maximum == null && credit.Increment != null)
-                    {
-                        throw new ArgumentException("Credit Maximum is required when Credit Increment exists. ", "credit.increment");
-                    }
-                    if ((credit.Maximum != null || credit.Increment != null) && credit.Measure == CreditMeasure2.CEU)
-                    {
-                        throw new ArgumentException("Credit Maximum/Increment cannot exist when Credit Measure is 'ceu'. ", "credit.measure");
-                    }
-                    //if (credit.Increment != null && credit.Measure == CreditMeasure2.CEU)
-                    //{
-                    //    throw new ArgumentException("Credit Increment cannot exist when Credit Measure is 'ceu'. ", "credit.measure");
-                    //}
                 }
 
                 if (course.Billing != null && course.Billing.Minimum < 0)
                 {
-                    throw new ArgumentException("Billing credits minimum cannot be less than zero. ", "billing.minimum");
+                    IntegrationApiExceptionAddError("Billing credits minimum cannot be less than zero.", "Validation.Exception", course.Id);
                 }
                 if (course.Billing != null && course.Billing.Maximum != null && course.Billing.Minimum != course.Billing.Maximum)
                 {
-                    throw new ArgumentException("Billing minimum and maximum credits must be equal. ", "billing.minimum");
+                    IntegrationApiExceptionAddError("Billing minimum and maximum credits must be equal.", "Validation.Exception", course.Id);
                 }
                 if (course.Billing != null && course.Billing.Increment != null && course.Billing.Increment != 0)
                 {
-                    throw new ArgumentException("Billing credits increment must be zero. ", "billing.increment");
+                    IntegrationApiExceptionAddError("Billing credits increment must be zero.", "Validation.Exception", course.Id);
                 }
                 if (course.Topic != null && string.IsNullOrEmpty(course.Topic.Id))
                 {
-                    throw new ArgumentException("Id must be supplied for a Topic. ", "topic.id");
+                    IntegrationApiExceptionAddError("Id must be supplied for a Topic.", "Validation.Exception", course.Id);
                 }
             }
             // Check for duplicates in the instructionalMethodDetails array
@@ -5476,9 +5729,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     {
                         if (testInstructionalMethods.Contains(detail.InstructionalMethod.Id))
                         {
-                            throw new ArgumentException(string.Format("Duplicate instructional method '{0}' is not allowed. ", detail.InstructionalMethod.Id), "instructionalMethodDetail.instructionalMethod.id");
+                            IntegrationApiExceptionAddError(string.Format("Duplicate instructional method '{0}' is not allowed.", detail.InstructionalMethod.Id), "Validation.Exception", course.Id);
                         }
-                        testInstructionalMethods.Add(detail.InstructionalMethod.Id);
+                        else
+                        {
+                            testInstructionalMethods.Add(detail.InstructionalMethod.Id);
+                        }
                     }
                 }
             }
@@ -5492,12 +5748,15 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     {
                         if (testInstructionalMethods.Contains(hours.AdministrativeInstructionalMethod.Id))
                         {
-                            throw new ArgumentException(string.Format("Duplicate instructional method '{0}' is not allowed. ", hours.AdministrativeInstructionalMethod.Id), "hours.administrativeInstructionalMethod.id");
+                            IntegrationApiExceptionAddError(string.Format("Duplicate instructional method '{0}' is not allowed.", hours.AdministrativeInstructionalMethod.Id), "Validation.Exception", course.Id);
                         }
-                        testInstructionalMethods.Add(hours.AdministrativeInstructionalMethod.Id);
-                        if (hours.Minimum == null)
+                        else
                         {
-                            throw new ArgumentException(string.Format("hours minimum is required for administrativeInstructionalMethod '{0}'. ", hours.AdministrativeInstructionalMethod.Id), "hours.minimum");
+                            testInstructionalMethods.Add(hours.AdministrativeInstructionalMethod.Id);
+                            if (hours.Minimum == null)
+                            {
+                                IntegrationApiExceptionAddError(string.Format("hours minimum is required for administrativeInstructionalMethod '{0}'.", hours.AdministrativeInstructionalMethod.Id), "Validation.Exception", course.Id);
+                            }
                         }
                     }
                 }
@@ -5510,11 +5769,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             VerifyCurriculumConfiguration(courseConfig);
 
             // Set the subject based on the supplied GUID
-            var subjectCode = ConvertGuidToCode(_subjects, course.Subject.Id);
-
-            if (subjectCode == null)
+            string subjectCode = string.Empty;
+            if (course.Subject != null && !string.IsNullOrEmpty(course.Subject.Id))
             {
-                throw new ArgumentException(string.Concat("Subject for id '", course.Subject.Id.ToString(), "' was not found. Valid Subject is required. "), "subject.id");
+                subjectCode = ConvertGuidToCode(_subjects, course.Subject.Id);
+            }
+
+            if (string.IsNullOrEmpty(subjectCode))
+            {
+                var subjectId = course.Subject != null && !string.IsNullOrEmpty(course.Subject.Id) ? course.Subject.Id.ToString() : string.Empty;
+                IntegrationApiExceptionAddError(string.Concat("Subject for id '", subjectId, "' was not found. Valid Subject is required."), "Validation.Exception", course.Id);
             }
 
             // Set the list of departments/shares
@@ -5525,25 +5789,28 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 foreach (var owningInstitutionUnit in course.OwningInstitutionUnits)
                 {
-                    var division = (await _referenceDataRepository.GetDivisionsAsync(bypassCache))
-                                            .FirstOrDefault(div => div.Guid.Equals(owningInstitutionUnit.InstitutionUnit.Id, StringComparison.OrdinalIgnoreCase));
-                    if (division != null)
+                    if (owningInstitutionUnit != null && owningInstitutionUnit.InstitutionUnit != null && !string.IsNullOrEmpty(owningInstitutionUnit.InstitutionUnit.Id))
                     {
-                        throw new InvalidOperationException("Owning institution unit of type 'division' is not supported.");
-                    }
+                        var division = (await _referenceDataRepository.GetDivisionsAsync(bypassCache))
+                                                .FirstOrDefault(div => div.Guid.Equals(owningInstitutionUnit.InstitutionUnit.Id, StringComparison.OrdinalIgnoreCase));
+                        if (division != null)
+                        {
+                            IntegrationApiExceptionAddError("Owning institution unit of type 'division' is not supported.", "Validation.Exception", course.Id);
+                        }
 
-                    var school = (await _referenceDataRepository.GetSchoolsAsync(bypassCache))
-                                            .FirstOrDefault(div => div.Guid.Equals(owningInstitutionUnit.InstitutionUnit.Id, StringComparison.OrdinalIgnoreCase));
-                    if (school != null)
-                    {
-                        throw new InvalidOperationException("Owning institution unit of type 'school' is not supported.");
-                    }
+                        var school = (await _referenceDataRepository.GetSchoolsAsync(bypassCache))
+                                                .FirstOrDefault(div => div.Guid.Equals(owningInstitutionUnit.InstitutionUnit.Id, StringComparison.OrdinalIgnoreCase));
+                        if (school != null)
+                        {
+                            IntegrationApiExceptionAddError("Owning institution unit of type 'school' is not supported.", "Validation.Exception", course.Id);
+                        }
 
-                    var department = _departments.Where(d => d.Guid == owningInstitutionUnit.InstitutionUnit.Id).FirstOrDefault();
-                    var academicDepartment = department != null ? _academicDepartments.FirstOrDefault(ad => ad.Code == department.Code) : null;
-                    if (academicDepartment != null)
-                    {
-                        offeringDepartments.Add(new OfferingDepartment(academicDepartment.Code, owningInstitutionUnit.OwnershipPercentage));
+                        var department = _departments.Where(d => d.Guid == owningInstitutionUnit.InstitutionUnit.Id).FirstOrDefault();
+                        var academicDepartment = department != null ? _academicDepartments.FirstOrDefault(ad => ad.Code == department.Code) : null;
+                        if (academicDepartment != null)
+                        {
+                            offeringDepartments.Add(new OfferingDepartment(academicDepartment.Code, owningInstitutionUnit.OwnershipPercentage));
+                        }
                     }
                 }
             }
@@ -5578,7 +5845,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             // Department could not be determined from supplied subject or owning organization
             if (offeringDepartments.Count == 0)
             {
-                throw new ArgumentException("Department could not be determined for subject '" + subjectCode + "'. ", "subject.id");
+                IntegrationApiExceptionAddError("Department could not be determined for subject '" + subjectCode + "'.", "Validation.Exception", course.Id);
             }
 
             // Set the academic level code based on the supplied GUID or the default if one is not supplied
@@ -5588,36 +5855,39 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 int counter = 1;
                 foreach (var acadLevel in course.AcademicLevels)
                 {
-                    try
+                    //Colleague only permits a single academic level for a course, so a POST or PUT request w/ multiple academic levels should respond with an error.
+                    if (counter > 1)
                     {
-                        //Colleague only permits a single academic level for a course, so a POST or PUT request w/ multiple academic levels should respond with an error.
-                        if (counter > 1)
-                        {
-                            throw new InvalidOperationException("A single academic level is permitted.");
-                        }
+                        IntegrationApiExceptionAddError("A single academic level is permitted.", "Validation.Exception", course.Id);
+                    }
 
-                        if (string.IsNullOrEmpty(acadLevel.Id))
-                        {
-                            throw new ArgumentException("Academic Level id is a required field when Academic Levels are defined. ", "academicLevels.id");
-                        }
+                    if (string.IsNullOrEmpty(acadLevel.Id))
+                    {
+                        IntegrationApiExceptionAddError("Academic Level id is a required field when Academic Levels are defined.", "Validation.Exception", course.Id);
+                    }
+                    else
+                    {
 
                         var acadLvl = _academicLevels.Where(al => al.Guid == acadLevel.Id).FirstOrDefault();
                         if (acadLvl == null)
                         {
-                            throw new ArgumentNullException("Invalid Id '" + acadLevel.Id + "' supplied for academicLevels. ", "academicLevels.id");
+                            IntegrationApiExceptionAddError("Invalid Id '" + acadLevel.Id + "' supplied for academicLevels.", "Validation.Exception", course.Id);
                         }
-                        acadLevelCode = acadLvl.Code;
-                        counter++;
+                        else
+                        {
+                            acadLevelCode = acadLvl.Code;
+                        }
                     }
-                    catch (Exception)
-                    {
-                        throw;
-                    }
+                    counter++;
                 }
             }
             else
             {
                 acadLevelCode = courseConfig.DefaultAcademicLevelCode;
+            }
+            if (string.IsNullOrEmpty(acadLevelCode))
+            {
+                IntegrationApiExceptionAddError("The academicLevels property is required in Colleague.", "Validation.Exception", course.Id);
             }
 
             // Set the list of course level codes based on the supplied GUIDs or the default if one is not supplied
@@ -5632,13 +5902,17 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                     catch
                     {
-                        throw new ArgumentException("Invalid Id '" + courseLevel.Id + "' supplied for courseLevels. ", "courseLevels.id");
+                        IntegrationApiExceptionAddError("Invalid Id '" + courseLevel.Id + "' supplied for courseLevels.", "Validation.Exception", course.Id);
                     }
                 }
             }
             else
             {
                 courseLevelCodes.Add(courseConfig.DefaultCourseLevelCode);
+            }
+            if (courseLevelCodes.Count() == 0)
+            {
+                IntegrationApiExceptionAddError("At least one course level required.", "Validation.Exception", course.Id);
             }
 
             // Set the list of course approvals based on the supplied GUIDs
@@ -5655,25 +5929,36 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var statusEntity = _courseStatuses.FirstOrDefault(sc => sc.Guid == course.Status.Id);
                 if (statusEntity == null)
                 {
-                    throw new ArgumentException(string.Format("Status id '{0}' is invalid. ", course.Status.Id), "status.id");
+                    IntegrationApiExceptionAddError(string.Format("Status id '{0}' is invalid.", course.Status.Id), "Validation.Exception", course.Id);
                 }
-                if (string.IsNullOrEmpty(statusEntity.Code))
-                    throw new ArgumentException(string.Format("Status id '{0}' is invalid. ", course.Status.Id), "status.id");
-                statusCode = statusEntity.Code;
-                statusTitle = statusEntity.Description;
-                status = statusEntity.Status;
+                else
+                {
+                    if (string.IsNullOrEmpty(statusEntity.Code))
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Status id '{0}' is invalid.", course.Status.Id), "Validation.Exception", course.Id);
+                    }
+                    else
+                    {
+                        statusCode = statusEntity.Code;
+                        statusTitle = statusEntity.Description;
+                        status = statusEntity.Status;
+                    }
+                }
             }
             if (status == CourseStatus.Terminated)
             {
                 if (course.EffectiveEndDate == null)
                 {
-                    throw new ArgumentException(string.Format("The scheduling end on date must have a value when using a status of '{0}'. ", course.Status.Id), "schedulingEndOn");
+                    IntegrationApiExceptionAddError(string.Format("The scheduling end on date must have a value when using a status of '{0}'.", course.Status.Id), "Validation.Exception", course.Id);
                 }
             }
-            courseApprovals.Add(new CourseApproval(statusCode, DateTime.Today, approvingAgencyId, approverId, DateTime.Today)
+            if (status != CourseStatus.Unknown && !string.IsNullOrEmpty(statusCode))
             {
-                Status = status
-            });
+                courseApprovals.Add(new CourseApproval(statusCode, DateTime.Today, approvingAgencyId, approverId, DateTime.Today)
+                {
+                    Status = status
+                });
+            }
 
             // Set the list of grade scheme codes based on the supplied GUIDs
             string gradeSchemeCode = null;
@@ -5685,7 +5970,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 catch
                 {
-                    throw new ArgumentException("Invalid Id '" + course.GradeSchemes.ToList()[0].GradeScheme.Id + "' supplied for gradeSchemes. ", "gradeSchemes.gradeScheme.id");
+                    IntegrationApiExceptionAddError("Invalid Id '" + course.GradeSchemes.ToList()[0].GradeScheme.Id + "' supplied for gradeSchemes.", "Validation.Exception", course.Id);
                 }
             }
 
@@ -5700,7 +5985,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 creditCategory = _creditCategories.FirstOrDefault(ct => ct.Guid == course.Credits.ToList()[0].CreditCategory.Detail.Id);
                 if (creditCategory == null)
                 {
-                    throw new ArgumentException("Invalid Id '" + course.Credits.ToList()[0].CreditCategory.Detail.Id + "' supplied for creditCategory. ", "credits.creditCategory.detail.id");
+                    IntegrationApiExceptionAddError("Invalid Id '" + course.Credits.ToList()[0].CreditCategory.Detail.Id + "' supplied for creditCategory.", "Validation.Exception", course.Id);
                 }
             }
             // If we don't have a GUID then check for a CreditType enumeration value
@@ -5713,7 +5998,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 if (course.Credits.ToList()[0].CreditCategory.CreditType == CreditCategoryType3.Exam ||
                     course.Credits.ToList()[0].CreditCategory.CreditType == CreditCategoryType3.WorkLifeExperience)
                 {
-                    throw new InvalidOperationException("Credit category type 'exam' or 'workLifeExperience' are not supported. ");
+                    IntegrationApiExceptionAddError("Credit category type 'exam' or 'workLifeExperience' are not supported.", "Validation.Exception", course.Id);
                 }
 
                 // Find the credit category that matches the enumeration
@@ -5747,7 +6032,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             //If creditCategory is null then throw an exception
             if (creditCategory == null)
             {
-                throw new ArgumentException(string.Format("Credit category {0} was not found. ", courseConfig.DefaultCreditTypeCode), "credits.creditCategory.creditType");
+                IntegrationApiExceptionAddError(string.Format("Credit category {0} was not found.", courseConfig.DefaultCreditTypeCode), "Validation.Exception", course.Id);
             }
 
 
@@ -5779,6 +6064,23 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                 }
             }
+
+            if (minCredits == null && ceus == null)
+            {
+                IntegrationApiExceptionAddError("Either Course Min Credits or CEUs is required ", "Validation.Exception", course.Id);
+            }
+            else
+            {
+                if (minCredits != null && minCredits < 0)
+                {
+                    IntegrationApiExceptionAddError("Minimum Credit cannot be less than zero.", "Validation.Exception", course.Id);
+                }
+                if (ceus != null && ceus < 0)
+                {
+                    IntegrationApiExceptionAddError("CEUs cannot be less than zero.", "Validation.Exception", course.Id);
+                }
+            }
+
             var courseDelimeter = !string.IsNullOrEmpty(courseConfig.CourseDelimiter) ? courseConfig.CourseDelimiter : CourseDelimiter;
 
             //Handle GUID requiredness
@@ -5797,15 +6099,18 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 if (string.IsNullOrEmpty(course.Topic.Id))
                 {
-                    throw new ArgumentException("Course topic must contain a valid Id. ", "topic.id");
+                    IntegrationApiExceptionAddError("Course topic must contain a valid Id.", "Validation.Exception", course.Id);
                 }
-                try
+                else
                 {
-                    topicCode = (_topicCodes.FirstOrDefault(cc => cc.Guid == course.Topic.Id)).Code;
-                }
-                catch
-                {
-                    throw new ArgumentException("Invalid Id '" + course.Topic.Id + "' supplied for topic. ", "topic.id");
+                    try
+                    {
+                        topicCode = (_topicCodes.FirstOrDefault(cc => cc.Guid == course.Topic.Id)).Code;
+                    }
+                    catch
+                    {
+                        IntegrationApiExceptionAddError("Invalid Id '" + course.Topic.Id + "' supplied for topic.", "Validation.Exception", course.Id);
+                    }
                 }
             }
 
@@ -5817,15 +6122,20 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     if (string.IsNullOrEmpty(cat.Id))
                     {
-                        throw new ArgumentException("Course category must contain a valid Id. ", "categories.id");
+                        IntegrationApiExceptionAddError("Course category must contain a valid Id.", "Validation.Exception", course.Id);
                     }
-
-                    var catEntity = _courseCategories.FirstOrDefault(cc => cc.Guid == cat.Id);
-                    if (catEntity == null)
+                    else
                     {
-                        throw new ArgumentException("Invalid Id '" + cat.Id + "' supplied for course category. ", "categories.id");
+                        var catEntity = _courseCategories.FirstOrDefault(cc => cc.Guid == cat.Id);
+                        if (catEntity == null)
+                        {
+                            IntegrationApiExceptionAddError("Invalid Id '" + cat.Id + "' supplied for course category.", "Validation.Exception", course.Id);
+                        }
+                        else
+                        {
+                            if (!courseTypeCodes.Contains(catEntity.Code)) courseTypeCodes.Add(catEntity.Code);
+                        }
                     }
-                    if (!courseTypeCodes.Contains(catEntity.Code)) courseTypeCodes.Add(catEntity.Code);
                 }
             }
 
@@ -5842,50 +6152,58 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     if (mthd.AdministrativeInstructionalMethod == null || string.IsNullOrEmpty(mthd.AdministrativeInstructionalMethod.Id))
                     {
-                        throw new ArgumentException("Instructional Method detail requires an instructional method Id. ", "hours.administrativeInstructionalMethod.id");
-                    }
-                    var method = _administrativeInstructionalMethods.FirstOrDefault(im => im.Guid.Equals(mthd.AdministrativeInstructionalMethod.Id, StringComparison.OrdinalIgnoreCase));
-                    if (method != null)
-                    {
-                        if (contactMethodCodes == null)
-                        {
-                            contactMethodCodes = new List<string>();
-                            contactPeriods = new List<string>();
-                            contactHours = new List<decimal?>();
-                        }
-                        contactMethodCodes.Add(method.Code);
+                        IntegrationApiExceptionAddError("Administrative Instructional Method detail requires the Id property.", "Validation.Exception", course.Id);
                     }
                     else
                     {
-                        throw new ArgumentException("Instructional method GUID '" + mthd.AdministrativeInstructionalMethod.Id + "' could not be found. ", "hours.administrativeInstructionalMethod.id");
-                    }
-                    if (mthd.Minimum.HasValue)
-                    {
-                        contactHours.Add(mthd.Minimum);
+                        var method = _administrativeInstructionalMethods.FirstOrDefault(im => im.Guid.Equals(mthd.AdministrativeInstructionalMethod.Id, StringComparison.OrdinalIgnoreCase));
 
-                        ContactMeasure contactPeriod = null;
-                        if ((mthd.Interval != null) && (mthd.Interval != ContactHoursPeriod.NotSet))
+                        if (method == null)
                         {
-
-                            contactPeriod = _contactMeasures.FirstOrDefault(cm => cm.ContactPeriod.ToString() == mthd.Interval.ToString().ToLowerInvariant());
-
-                            if (contactPeriod == null)
-                            {
-                                throw new ArgumentException("Hours interval value '" + mthd.Interval.ToString() + "' could not be matched to a contact measure. ", "hours.interval");
-                            }
-                            contactPeriods.Add(contactPeriod.Code);
+                            IntegrationApiExceptionAddError("Administrative Instructional method GUID '" + mthd.AdministrativeInstructionalMethod.Id + "' could not be found.", "Validation.Exception", course.Id);
                         }
                         else
                         {
-                            contactPeriods.Add(null);
+                            if (contactMethodCodes == null)
+                            {
+                                contactMethodCodes = new List<string>();
+                                contactPeriods = new List<string>();
+                                contactHours = new List<decimal?>();
+                            }
+                            contactMethodCodes.Add(method.Code);
+
+                            if (mthd.Minimum.HasValue)
+                            {
+                                contactHours.Add(mthd.Minimum);
+
+                                ContactMeasure contactPeriod = null;
+                                if ((mthd.Interval != null) && (mthd.Interval != ContactHoursPeriod.NotSet))
+                                {
+
+                                    contactPeriod = _contactMeasures.FirstOrDefault(cm => cm.ContactPeriod.ToString() == mthd.Interval.ToString().ToLowerInvariant());
+
+                                    if (contactPeriod == null)
+                                    {
+                                        IntegrationApiExceptionAddError("Hours interval value '" + mthd.Interval.ToString() + "' could not be matched to a contact measure.", "Validation.Exception", course.Id);
+                                    }
+                                    else
+                                    {
+                                        contactPeriods.Add(contactPeriod.Code);
+                                    }
+                                }
+                                else
+                                {
+                                    contactPeriods.Add(null);
+                                }
+                                // Maximum and Increment are not published or consumed by Colleague per spec
+                                // but if they were they'd go here.
+                            }
+                            else
+                            {
+                                contactHours.Add(null);
+                                contactPeriods.Add(null);
+                            }
                         }
-                        // Maximum and Increment are not published or consumed by Colleague per spec
-                        // but if they were they'd go here.
-                    }
-                    else
-                    {
-                        contactHours.Add(null);
-                        contactPeriods.Add(null);
                     }
                 }
             }
@@ -5910,7 +6228,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         }
                         else
                         {
-                            throw new ArgumentException("Instructional method GUID '" + mthd.InstructionalMethod.Id + "' could not be found. ", "instructionalMethodDetails.instructionalMethod.id");
+                            IntegrationApiExceptionAddError("Instructional method GUID '" + mthd.InstructionalMethod.Id + "' could not be found.", "Validation.Exception", course.Id);
                         }
                     }
                 }
@@ -5922,23 +6240,29 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var shortEntity = _courseTitleTypes.FirstOrDefault(ctt => ctt.Code.ToLower() == "short");
                 if (shortEntity == null || string.IsNullOrEmpty(shortEntity.Guid))
                 {
-                    throw new ArgumentNullException("titles.type", "The record 'SHORT' or it's GUID is missing from course title types. ");
+                    IntegrationApiExceptionAddError("The record 'SHORT' or it's GUID is missing from course title types.", "Validation.Exception", course.Id);
                 }
-                var longEntity = _courseTitleTypes.FirstOrDefault(ctt => ctt.Code.ToLower() == "long");
-                if (longEntity == null || string.IsNullOrEmpty(longEntity.Guid))
+                else
                 {
-                    throw new ArgumentNullException("titles.type", "The record 'LONG' or it's GUID is missing from course title types. ");
-                }
-                foreach (var title in course.Titles)
-                {
-                    if (title.Type != null && !string.IsNullOrEmpty(title.Type.Id) && !string.IsNullOrEmpty(title.Value))
+                    var longEntity = _courseTitleTypes.FirstOrDefault(ctt => ctt.Code.ToLower() == "long");
+                    if (longEntity == null || string.IsNullOrEmpty(longEntity.Guid))
                     {
-                        if (title.Type.Id.Equals(shortEntity.Guid, StringComparison.OrdinalIgnoreCase)) shortTitle = title.Value;
-                        if (title.Type.Id.Equals(longEntity.Guid, StringComparison.OrdinalIgnoreCase)) longTitle = title.Value;
+                        IntegrationApiExceptionAddError("The record 'LONG' or it's GUID is missing from course title types.", "Validation.Exception", course.Id);
                     }
-                    if (!string.IsNullOrEmpty(title.Value))
+                    else
                     {
-                        defaultTitle = title.Value;
+                        foreach (var title in course.Titles)
+                        {
+                            if (title.Type != null && !string.IsNullOrEmpty(title.Type.Id) && !string.IsNullOrEmpty(title.Value))
+                            {
+                                if (title.Type.Id.Equals(shortEntity.Guid, StringComparison.OrdinalIgnoreCase)) shortTitle = title.Value;
+                                if (title.Type.Id.Equals(longEntity.Guid, StringComparison.OrdinalIgnoreCase)) longTitle = title.Value;
+                            }
+                            if (!string.IsNullOrEmpty(title.Value))
+                            {
+                                defaultTitle = title.Value;
+                            }
+                        }
                     }
                 }
             }
@@ -5950,57 +6274,73 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 shortTitle = defaultTitle;
                 longTitle = defaultTitle;
             }
-
-            // Build the course entity
-            var courseEntity = new Ellucian.Colleague.Domain.Student.Entities.Course(null, shortTitle, longTitle, offeringDepartments,
-                subjectCode, course.Number, acadLevelCode, courseLevelCodes, minCredits, ceus, courseApprovals)
+            
+            if (string.IsNullOrEmpty(shortTitle))
             {
-                LocalCreditType = creditTypeCode,
-                Description = course.Description,
-                Guid = guid,
-                GradeSchemeCode = gradeSchemeCode,
-                StartDate = course.EffectiveStartDate,
-                EndDate = course.EffectiveEndDate,
-                Name = subjectCode + courseDelimeter + course.Number,
-                MaximumCredits = maxCredits,
-                VariableCreditIncrement = varIncrCredits,
-                AllowPassNoPass = courseConfig.AllowPassNoPass,
-                AllowAudit = courseConfig.AllowAudit,
-                OnlyPassNoPass = courseConfig.OnlyPassNoPass,
-                AllowWaitlist = courseConfig.AllowWaitlist,
-                IsInstructorConsentRequired = courseConfig.IsInstructorConsentRequired,
-                WaitlistRatingCode = courseConfig.WaitlistRatingCode,
-                AllowWaitlistMultipleSections = waitlistMultiSections,
-                TopicCode = topicCode,
-                CourseTypeCodes = courseTypeCodes,
-            };
-
-            // Add billing credits if they exist
-            if (course.Billing != null)
-            {
-                courseEntity.BillingCredits = course.Billing.Minimum;
+                IntegrationApiExceptionAddError("The titles property must contain a short title type.  Short title is a required property for a course.", "Validation.Exception", course.Id);
             }
 
-
-            // Add instructional method data if supplied
-
-            if (contactMethodCodes != null)
+            Domain.Student.Entities.Course courseEntity = null;
+            try
             {
-                contactMethodCodes.ForEach(cm => courseEntity.AddInstructionalMethodCode(cm));
-            }
-            if (contactPeriods != null)
-            {
-                contactPeriods.ForEach(cp => courseEntity.AddInstructionalMethodPeriod(cp));
-            }
-            if (contactHours != null)
-            {
-                contactHours.ForEach(ch => courseEntity.AddInstructionalMethodHours(ch));
-            }
+                // Build the course entity
+                courseEntity = new Ellucian.Colleague.Domain.Student.Entities.Course(null, shortTitle, longTitle, offeringDepartments,
+                    subjectCode, course.Number, acadLevelCode, courseLevelCodes, minCredits, ceus, courseApprovals)
+                {
+                    LocalCreditType = creditTypeCode,
+                    Description = course.Description,
+                    Guid = guid,
+                    GradeSchemeCode = gradeSchemeCode,
+                    StartDate = course.EffectiveStartDate,
+                    EndDate = course.EffectiveEndDate,
+                    Name = subjectCode + courseDelimeter + course.Number,
+                    MaximumCredits = maxCredits,
+                    VariableCreditIncrement = varIncrCredits,
+                    AllowPassNoPass = courseConfig.AllowPassNoPass,
+                    AllowAudit = courseConfig.AllowAudit,
+                    OnlyPassNoPass = courseConfig.OnlyPassNoPass,
+                    AllowWaitlist = courseConfig.AllowWaitlist,
+                    IsInstructorConsentRequired = courseConfig.IsInstructorConsentRequired,
+                    WaitlistRatingCode = courseConfig.WaitlistRatingCode,
+                    AllowWaitlistMultipleSections = waitlistMultiSections,
+                    TopicCode = topicCode,
+                    CourseTypeCodes = courseTypeCodes,
+                };
+
+                // Add billing credits if they exist
+                if (course.Billing != null)
+                {
+                    courseEntity.BillingCredits = course.Billing.Minimum;
+                }
 
 
-            // Verify that all the data in the entity is valid
-            CourseProcessor.ValidateCourseData(courseEntity, _academicLevels, _courseLevels, null, _creditCategories, _academicDepartments,
-                _gradeSchemes, _instructionalMethods, _subjects, _locations, _topicCodes);
+                // Add instructional method data if supplied
+
+                if (contactMethodCodes != null)
+                {
+                    contactMethodCodes.ForEach(cm => courseEntity.AddInstructionalMethodCode(cm));
+                }
+                if (contactPeriods != null)
+                {
+                    contactPeriods.ForEach(cp => courseEntity.AddInstructionalMethodPeriod(cp));
+                }
+                if (contactHours != null)
+                {
+                    contactHours.ForEach(ch => courseEntity.AddInstructionalMethodHours(ch));
+                }
+
+
+                // Verify that all the data in the entity is valid
+                CourseProcessor.ValidateCourseData(courseEntity, _academicLevels, _courseLevels, null, _creditCategories, _academicDepartments,
+                    _gradeSchemes, _instructionalMethods, _subjects, _locations, _topicCodes);
+            }
+            catch (Exception ex)
+            {
+                if (IntegrationApiException == null)
+                {
+                    IntegrationApiExceptionAddError(ex.Message, "Validation.Exception", course.Id);
+                }
+            }
 
             return courseEntity;
         }

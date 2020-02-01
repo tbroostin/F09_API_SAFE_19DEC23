@@ -200,7 +200,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             if (!string.IsNullOrEmpty(corresReceivedAssignDate))
                 corresReceivedDate = DmiString.PickDateToDateTime(Convert.ToInt16(corresReceivedAssignDate));
 
-            var admissionApplicationSupportingItem = await GetAdmissionApplicationSupportingItemsByIdAsync(applicationId, corresReceivedCode, corresReceivedDate, corresReceivedInstance);
+            var admissionApplicationSupportingItem = await GetAdmissionApplicationSupportingItemsByIdAsync(guid, applicationId, corresReceivedCode, corresReceivedDate, corresReceivedInstance);
 
             return admissionApplicationSupportingItem;
         }
@@ -210,11 +210,15 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// </summary>
         /// <param name="id">The id</param>
         /// <returns>AdmissionApplicationSupportingItems domain entity object</returns>
-        public async Task<Domain.Student.Entities.AdmissionApplicationSupportingItem> GetAdmissionApplicationSupportingItemsByIdAsync(string id, string corresReceivedCode, DateTime? CorresReceivedAssignDate, string CorresReceivedInstance)
+        public async Task<Domain.Student.Entities.AdmissionApplicationSupportingItem> GetAdmissionApplicationSupportingItemsByIdAsync(string guid, string id, string corresReceivedCode, DateTime? CorresReceivedAssignDate, string CorresReceivedInstance)
         {
              if (string.IsNullOrEmpty(id))
             {
                 throw new ArgumentNullException("id", "ID is required to get a AdmissionApplicationSupportingItems.");
+            }
+            if (string.IsNullOrEmpty(guid))
+            {
+                throw new ArgumentNullException("guid", "guid is required to get a AdmissionApplicationSupportingItems.");
             }
             var applicationDataContract = await DataReader.ReadRecordAsync<Applications>(id);
             if (applicationDataContract == null)
@@ -251,7 +255,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 coreqData = (await DataReader.BulkReadRecordAsync<Coreq>("COREQ", coreqIds.ToArray())).ToList();
             }
 
-            return await BuildAdmissionApplicationSupportingItem(mailingId, id, mailingCorrReceived, commentData, coreqData);
+            return await BuildAdmissionApplicationSupportingItem(guid, mailingId, applicationDataContract.RecordGuid, mailingCorrReceived, commentData, coreqData);
         }
 
         /// <summary>
@@ -263,48 +267,64 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns>Collection of AdmissionApplicationSupportingItems domain entities</returns>
         public async Task<Tuple<IEnumerable<Domain.Student.Entities.AdmissionApplicationSupportingItem>, int>> GetAdmissionApplicationSupportingItemsAsync(int offset, int limit, bool bypassCache = false)
         {
-            var criteria = string.Empty;
-            string[] applStatusesNoSpCodeIds;
-            criteria = "WITH APPL.STATUS.DATE NE '' AND WITH APPL.STATUS.TIME NE '' AND WITH APPL.STATUS EQ '?'";
-            applStatusesNoSpCodeIds = await DataReader.SelectAsync("APPLICATION.STATUSES", "WITH APPS.SPECIAL.PROCESSING.CODE NE ''");
+            string[] suppItemIds = null;
+            string criteria = string.Empty;
+            string suppItemsKeysCacheKey = string.Concat("AllApplicationSupportingItemsKeys");
 
-            var applicationIds = await DataReader.SelectAsync("APPLICATIONS", criteria, applStatusesNoSpCodeIds, "?");
+            if (offset == 0 && ContainsKey(BuildFullCacheKey(suppItemsKeysCacheKey)))
+            {
+                ClearCache(new List<string> { suppItemsKeysCacheKey });
+            }
+            suppItemIds = await GetOrAddToCacheAsync<string[]>(suppItemsKeysCacheKey,
+                async () =>
+                {
+                    string[] applStatusesNoSpCodeIds;
+                    criteria = "WITH APPL.STATUS.DATE NE '' AND WITH APPL.STATUS.TIME NE '' AND WITH APPL.STATUS EQ '?'";
+                    applStatusesNoSpCodeIds = await DataReader.SelectAsync("APPLICATION.STATUSES", "WITH APPS.SPECIAL.PROCESSING.CODE NE ''");
 
-            if (applicationIds == null || !applicationIds.Any())
-            {
-                return new Tuple<IEnumerable<Domain.Student.Entities.AdmissionApplicationSupportingItem>, int>(new List<Domain.Student.Entities.AdmissionApplicationSupportingItem>(), 0);
-            }
-            criteria = "WITH APPL.APPLICANT NE '' SAVING APPL.APPLICANT";
-            var applicantIds = await DataReader.SelectAsync("APPLICATIONS", criteria, applicationIds);
-            if (applicantIds == null || !applicantIds.Any())
-            {
-                return new Tuple<IEnumerable<Domain.Student.Entities.AdmissionApplicationSupportingItem>, int>(null, 0);
-            }
+                    var applicationIds = await DataReader.SelectAsync("APPLICATIONS", criteria, applStatusesNoSpCodeIds, "?");
 
-            criteria = "WITH MAILING.ADM.APP.SI.IDX NE '' BY.EXP MAILING.ADM.APP.SI.IDX SAVING MAILING.ADM.APP.SI.IDX";
-            var supportingItemIds = await DataReader.SelectAsync("MAILING", criteria, applicantIds);
-            if (supportingItemIds == null || !supportingItemIds.Any())
-            {
-                return new Tuple<IEnumerable<Domain.Student.Entities.AdmissionApplicationSupportingItem>, int>(null, 0);
-            }
-            // In Unidata, we get the mailing ID, @VM, supporting Item Idx
-            var supportingItemIds2 = new List<string>();
-            foreach (var supportingItemId in supportingItemIds)
-            {
-                var supportingItemKey = supportingItemId;
-                if (supportingItemId.Contains(_VM))
-                    supportingItemKey = supportingItemId.Split(_VM)[1];
-                supportingItemIds2.Add(supportingItemKey);
-            }
+                    if (applicationIds == null || !applicationIds.Any())
+                    {
+                        return null;
+                    }
+                    criteria = "WITH APPL.APPLICANT NE '' SAVING UNIQUE APPL.APPLICANT";
+                    var applicantIds = await DataReader.SelectAsync("APPLICATIONS", applicationIds, criteria);
+                    if (applicantIds == null || !applicantIds.Any())
+                    {
+                        return null;
+                    }
+                    criteria = "WITH MAILING.ADM.APP.SI.IDX NE '' BY.EXP MAILING.ADM.APP.SI.IDX SAVING MAILING.ADM.APP.SI.IDX";
+                    var supportingItemIds = await DataReader.SelectAsync("MAILING", applicantIds, criteria);
+                    if (supportingItemIds == null || !supportingItemIds.Any())
+                    {
+                        return null;
+                    }
+                    // In Unidata, we get the mailing ID, @VM, supporting Item Idx
+                    var supportingItemIds2 = new List<string>();
+                    foreach (var supportingItemId in supportingItemIds)
+                    {
+                        var supportingItemKey = supportingItemId;
+                        if (supportingItemId.Contains(_VM))
+                            supportingItemKey = supportingItemId.Split(_VM)[1];
+                        supportingItemIds2.Add(supportingItemKey);
+                    }
 
-            var suppItemIds = supportingItemIds2.Where(ab => applicationIds.Contains(ab.Split('*')[0])).ToArray();
+                    suppItemIds = supportingItemIds2.Where(ab => applicationIds.Contains(ab.Split('*')[0])).Distinct().ToArray();
+                    if (suppItemIds == null || !suppItemIds.Any())
+                    {
+                        return null;
+                    }
+                    Array.Sort(suppItemIds);
+                    return suppItemIds;
+                });
+
             if (suppItemIds == null || !suppItemIds.Any())
             {
                 return new Tuple<IEnumerable<Domain.Student.Entities.AdmissionApplicationSupportingItem>, int>(null, 0);
             }
 
             var totalCount = suppItemIds.Count();
-            Array.Sort(suppItemIds);
             var subList = suppItemIds.Skip(offset).Take(limit).ToArray();
 
             var applIds = subList.Select(ab => ab.Split('*')[0]).Distinct().ToArray();
@@ -344,6 +364,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             Collection<Applications> applicationsData, Collection<Mailing> mailingData,
             Collection<CcComments> commentData, Collection<Coreq> coreqData)
         {
+            var repositoryErrors = new RepositoryException();
             var admissionApplicationSupportingItemCollection = new List<Domain.Student.Entities.AdmissionApplicationSupportingItem>();
             foreach (var supportingItemId in applItemIds)
             {
@@ -357,10 +378,21 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 if (!string.IsNullOrEmpty(corresReceivedAssignDate))
                     corresReceivedDate = DmiString.PickDateToDateTime(Convert.ToInt16(corresReceivedAssignDate));
                 var application = applicationsData.Where(a => a.Recordkey == applicationId).FirstOrDefault();
-                if (application != null)
+                if (application == null)
+                {
+                    repositoryErrors.AddError(new RepositoryError("application.id", "Mailing index '" + supportingItemId + "' is referencing an invalid application."));  
+                }
+                else
                 {
                     var mailing = mailingData.Where(m => m.Recordkey == application.ApplApplicant).FirstOrDefault();
-                    if (mailing != null)
+                    if (mailing == null)
+                    {
+                        repositoryErrors.AddError(new RepositoryError("application.ApplApplicant", "Mailing index '" + supportingItemId + "' is referencing an invalid application.")
+                        {
+                            SourceId = application.ApplApplicant
+                        });
+                    }
+                    else
                     {
                         List<Coreq> coreqRecords = new List<Coreq>();
                         foreach (var cr in mailing.MailingCurrentCrcCode)
@@ -375,32 +407,65 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             c => c.MailingCorrReceivedAssocMember == corresReceivedCode &&
                             c.MailingCorrRecvdAsgnDtAssocMember == corresReceivedDate &&
                             c.MailingCorrRecvdInstanceAssocMember == corresReceivedInstance);
-                        if (corresReceived != null)
+                        if (corresReceived == null)
                         {
-                            var comment = commentData.FirstOrDefault(cd => cd.Recordkey == corresReceived.MailingCorrRecvdCommentAssocMember);
-                            var supportingItem = await BuildAdmissionApplicationSupportingItem(mailing.Recordkey, application.Recordkey, corresReceived, comment, coreqRecords);
-                            if (supportingItem != null)
+                            repositoryErrors.AddError(new RepositoryError("mailing.corresReceived", "Mailing index '" + supportingItemId + "' is referencing an invalid application supporting item.")
                             {
-                                admissionApplicationSupportingItemCollection.Add(supportingItem);
+                                SourceId = mailing.Recordkey
+                            });
+                        }
+                        else
+                        {
+                            var guid = await GetAdmissionApplicationSupportingItemsGuidFromIdAsync(applicationId, mailing.Recordkey,
+                                corresReceived.MailingCorrReceivedAssocMember,
+                                corresReceived.MailingCorrRecvdAsgnDtAssocMember,
+                                corresReceived.MailingCorrRecvdInstanceAssocMember);
+
+                            if (string.IsNullOrEmpty(guid))
+                            {
+                                repositoryErrors.AddError(new RepositoryError("mailing.corresReceived", string.Format("Guid not found for application supporting item '{0}'.", supportingItemId)));
+                            }
+                            var comment = commentData.FirstOrDefault(cd => cd.Recordkey == corresReceived.MailingCorrRecvdCommentAssocMember);
+                            try
+                            {
+                                var supportingItem = await BuildAdmissionApplicationSupportingItem(guid, mailing.Recordkey, application.RecordGuid, corresReceived, comment, coreqRecords);
+                                if (supportingItem == null)
+                                {
+                                    repositoryErrors.AddError(new RepositoryError("mailing.id", "Mailing index '" + supportingItemId + "' is referencing an invalid application supporting item.")
+                                    {
+                                        SourceId = mailing.Recordkey
+                                    });
+                                }
+                                else
+                                {
+                                    admissionApplicationSupportingItemCollection.Add(supportingItem);
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                repositoryErrors.AddError(new RepositoryError("mailing.id", ex.Message)
+                                {
+                                    SourceId = mailing.Recordkey
+                                });
                             }
                         }
                     }
                 }
             }
+            if (repositoryErrors.Errors != null && repositoryErrors.Errors.Any())
+            {
+                throw repositoryErrors;
+            }
             return admissionApplicationSupportingItemCollection.AsEnumerable();
         }
 
-        private async Task<Domain.Student.Entities.AdmissionApplicationSupportingItem> BuildAdmissionApplicationSupportingItem(string id, string applicationId, MailingChCorr corresReceived, CcComments commentData, List<Coreq> coreqData)
+        private async Task<Domain.Student.Entities.AdmissionApplicationSupportingItem> BuildAdmissionApplicationSupportingItem(string guid, string id, string applicationId, MailingChCorr corresReceived, CcComments commentData, List<Coreq> coreqData)
         {
             Domain.Student.Entities.AdmissionApplicationSupportingItem admissionApplicationSupportingItem = null;
             if (corresReceived == null)
             {
                 throw new ArgumentNullException("corresReceived", "BuildAdmissionApplicationSupportingItem called with null paramter. ");
             }
-            var guid = await GetAdmissionApplicationSupportingItemsGuidFromIdAsync(applicationId, id,
-                corresReceived.MailingCorrReceivedAssocMember,
-                corresReceived.MailingCorrRecvdAsgnDtAssocMember,
-                corresReceived.MailingCorrRecvdInstanceAssocMember);
             if (!string.IsNullOrEmpty(guid) &&
                 corresReceived.MailingCorrRecvdAsgnDtAssocMember.HasValue &&
                 !string.IsNullOrEmpty(corresReceived.MailingCorrReceivedAssocMember))
@@ -484,7 +549,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 {
                     var errorMessage = string.Format("Error(s) occurred updating admission application supporting item '{0}':", admissionApplictaionSupportingItem.Guid);
                     var exception = new RepositoryException(errorMessage);
-                    updateResponse.UpdateAdmApplSupportingItemsErrors.ForEach(e => exception.AddError(new RepositoryError(e.ErrorCodes, e.ErrorMessages)));
+                    updateResponse.UpdateAdmApplSupportingItemsErrors.ForEach(e => exception.AddError(new RepositoryError(string.IsNullOrEmpty(e.ErrorCodes) ? "" : e.ErrorCodes, e.ErrorMessages)));
                     logger.Error(errorMessage);
                     throw exception;
                 }
@@ -515,7 +580,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 var errorMessage = string.Format("Error(s) occurred creating new admission application supporting item for person '{0}', application '{1}', item type '{2}': ",createResponse.PersonId, admissionApplictaionSupportingItem.ApplicationId, admissionApplictaionSupportingItem.ReceivedCode);
                 var exception = new RepositoryException(errorMessage);
-                createResponse.UpdateAdmApplSupportingItemsErrors.ForEach(e => exception.AddError(new RepositoryError(e.ErrorCodes, e.ErrorMessages)));
+                createResponse.UpdateAdmApplSupportingItemsErrors.ForEach(e => exception.AddError(new RepositoryError(string.IsNullOrEmpty(e.ErrorCodes) ? "" : e.ErrorCodes, e.ErrorMessages)));
                 logger.Error(errorMessage);
                 throw exception;
             }

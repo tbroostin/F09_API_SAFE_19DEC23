@@ -6,6 +6,7 @@ using Newtonsoft.Json;
 using Ellucian.Colleague.Dtos.Interfaces;
 using Ellucian.Colleague.Dtos.Converters;
 using Ellucian.Colleague.Dtos.DtoProperties;
+using Ellucian.Colleague.Dtos.Attributes;
 
 namespace Ellucian.Colleague.Dtos
 {
@@ -19,36 +20,42 @@ namespace Ellucian.Colleague.Dtos
         /// The person to whom a meal plan is assigned.
         /// </summary>
         [JsonProperty("person", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        [FilterProperty("criteria")]
         public GuidObject2 Person { get; set; }
 
         /// <summary>
         /// The meal plan assigned to the person.
         /// </summary>
         [JsonProperty("mealPlan", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        [FilterProperty("criteria")]
         public GuidObject2 MealPlan { get; set; }
 
         /// <summary>
         /// The academic period for the meal plan assignment.
         /// </summary>
         [JsonProperty("academicPeriod", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        [FilterProperty("criteria")]
         public GuidObject2 AcademicPeriod { get; set; }
 
         /// <summary>
         /// The start date when the meal plan assignments become effective.
         /// </summary>
         [JsonProperty("startOn", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        [FilterProperty("criteria")]
         public DateTimeOffset? StartOn { get; set; }
 
         /// <summary>
         /// The end date of the meal plan assignment.
         /// </summary>
         [JsonProperty("endOn", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        [FilterProperty("criteria")]
         public DateTimeOffset? EndOn { get; set; }
 
         /// <summary>
         /// The status of the meal plan assignment.
         /// </summary>
         [JsonProperty("status", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        [FilterProperty("criteria")]
         public StudentMealPlansStatus? Status { get; set; }
 
         /// <summary>

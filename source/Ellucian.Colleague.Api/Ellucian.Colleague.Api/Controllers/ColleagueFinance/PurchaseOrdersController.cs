@@ -718,6 +718,55 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 
         }
 
+
+        /// <summary>
+        /// Retrieves list of Purchase Order summary
+        /// </summary>
+        /// <param name="personId">ID logged in user</param>
+        /// <returns>list of Purchase Order Summary DTO</returns>
+        /// <accessComments>
+        /// Requires permission VIEW.PURCHASE.ORDER, and requires access to at least one of the
+        /// general ledger numbers on the purchase order line items.
+        /// </accessComments>
+        [HttpGet]
+        public async Task<IEnumerable<PurchaseOrderSummary>> GetPurchaseOrderSummaryByPersonIdAsync(string personId)
+        {
+            if (string.IsNullOrEmpty(personId))
+            {
+                string message = "person Id must be specified.";
+                logger.Error(message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
+            }
+
+            try
+            {
+                var purchaseOrder = await purchaseOrderService.GetPurchaseOrderSummaryByPersonIdAsync(personId);
+                return purchaseOrder;
+            }
+            catch (PermissionsException peex)
+            {
+                logger.Error(peex.Message);
+                throw CreateHttpResponseException("Insufficient permissions to get the purchase order.", HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentNullException anex)
+            {
+                logger.Error(anex, anex.Message);
+                throw CreateHttpResponseException("Invalid argument.", HttpStatusCode.BadRequest);
+            }
+            catch (KeyNotFoundException knfex)
+            {
+                logger.Error(knfex, knfex.Message);
+                throw CreateHttpResponseException("Record not found.", HttpStatusCode.NotFound);
+            }
+            // Application exceptions will be caught below.
+            catch (Exception ex)
+            {
+                logger.Error(ex, ex.Message);
+                throw CreateHttpResponseException("Unable to get the purchase order.", HttpStatusCode.BadRequest);
+            }           
+        }
+
+
         private CurrencyIsoCode? checkCurrency(CurrencyIsoCode? defaultValue, CurrencyIsoCode? newValue)
         {
             if (defaultValue != null && defaultValue != newValue && newValue != null)

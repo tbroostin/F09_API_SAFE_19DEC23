@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Entities;
@@ -121,7 +121,6 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 configurationRepositoryMock = new Mock<IConfigurationRepository>();
                 configurationRepository = configurationRepositoryMock.Object;
-
                 service = new StudentProgramService(adapterRegistry, studentRepository, studentProgramRepository, termRepository, currentUserFactory, roleRepository, logger, configurationRepository);
             }
 
@@ -159,7 +158,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 // Test
                 var programs = await service.GetStudentProgramsByIdsAsync(studentIds);
                 CollectionAssert.AreEqual(new List<Dtos.Student.StudentProgram2>(), programs.ToList());
-                loggerMock.Verify(l => l.Info(It.IsAny<PermissionsException>(), "Unable to retrieve student academic program data."));
+                loggerMock.Verify(l => l.Error(It.IsAny<PermissionsException>(), "Unable to retrieve student academic program data."));
             }
 
             /// <summary>
@@ -174,7 +173,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 advisorAnyAdviseeRole.AddPermission(new Permission(PlanningPermissionCodes.ReviewAnyAdvisee));
                 advisorAnyAdviseeRole.AddPermission(new Permission(PlanningPermissionCodes.UpdateAnyAdvisee));
                 advisorAnyAdviseeRole.AddPermission(new Permission(PlanningPermissionCodes.UpdateAssignedAdvisees));
-                roleRepositoryMock.Setup(rr => rr.Roles).Returns(new List<Domain.Entities.Role>() { advisorAnyAdviseeRole});
+                roleRepositoryMock.Setup(rr => rr.Roles).Returns(new List<Domain.Entities.Role>() { advisorAnyAdviseeRole });
                 roleRepositoryMock.Setup(rr => rr.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { advisorAnyAdviseeRole });
 
                 studentPrograms = new List<StudentProgram>()
@@ -277,7 +276,314 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 // Test
                 var programs = await service.GetStudentProgramsByIdsAsync(studentIds);
                 Assert.AreEqual(0, programs.Count());
-                loggerMock.Verify(l => l.Info(It.IsAny<PermissionsException>(), "Unable to retrieve student academic program data."));
+                loggerMock.Verify(l => l.Error(It.IsAny<PermissionsException>(), "Unable to retrieve student academic program data."));
+            }
+        }
+
+        [TestClass]
+        public class StudentProgramServiceTest_AddStudentProgram_Tests : StudentProgramServiceTests
+        {
+            private Dtos.Student.StudentAcademicProgram addProgram;
+
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private IAdapterRegistry adapterRegistry;
+
+            private StudentProgram studentProgram;
+            private Mock<IStudentRepository> studentRepositoryMock;
+            private IStudentRepository studentRepository;
+
+            private Mock<IStudentProgramRepository> studentProgramRepositoryMock;
+            private IStudentProgramRepository studentProgramRepository;
+
+            private Mock<ITermRepository> termRepositoryMock;
+            private ITermRepository termRepository;
+
+            private ICurrentUserFactory currentUserFactory;
+
+            private Mock<IRoleRepository> roleRepositoryMock;
+            private IRoleRepository roleRepository;
+
+            private Mock<ILogger> loggerMock;
+            private ILogger logger;
+
+            private Mock<IConfigurationRepository> configurationRepositoryMock;
+            private IConfigurationRepository configurationRepository;
+
+            private StudentProgramService service;
+
+            [TestInitialize]
+            public void StudentProgramService_AddStudentProgram_Initialize()
+            {
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+
+                studentRepositoryMock = new Mock<IStudentRepository>();
+                studentRepository = studentRepositoryMock.Object;
+
+                loggerMock = new Mock<ILogger>();
+                logger = loggerMock.Object;
+
+                var addProgramDtoAdapter = new Student.Adapters.StudentAcademicProgramEntityAdapter(adapterRegistryMock.Object, loggerMock.Object);
+                adapterRegistryMock.Setup(ar => ar.GetAdapter<Dtos.Student.StudentAcademicProgram, StudentAcademicProgram>()).Returns(addProgramDtoAdapter);
+
+                var programDtoAdapter = new AutoMapperAdapter<StudentProgram, Dtos.Student.StudentProgram2>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(ar => ar.GetAdapter<StudentProgram, Dtos.Student.StudentProgram2>()).Returns(programDtoAdapter);
+
+                studentProgramRepositoryMock = new Mock<IStudentProgramRepository>();
+                studentProgramRepository = studentProgramRepositoryMock.Object;
+
+                termRepositoryMock = new Mock<ITermRepository>();
+                termRepository = termRepositoryMock.Object;
+
+                currentUserFactory = new CurrentUserSetup.AdvisorUserFactory();
+
+                roleRepositoryMock = new Mock<IRoleRepository>();
+                roleRepository = roleRepositoryMock.Object;
+
+                configurationRepositoryMock = new Mock<IConfigurationRepository>();
+                configurationRepository = configurationRepositoryMock.Object;
+
+                studentProgram = new StudentProgram("0001234", "PROG", "2018")
+                {
+                    ProgramName = "No Start Date",
+                    StartDate = null,
+                    EndDate = DateTime.Today.AddMonths(6)
+                };
+                //studentProgramRepositoryMock.Setup(spr => spr.GetAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(studentProgram);
+
+                // Mock return from the repo
+                studentProgramRepositoryMock.Setup(repo => repo.AddStudentProgram(It.IsAny<StudentAcademicProgram>(), It.IsAny<List<string>>(), It.IsAny<List<string>>())).ReturnsAsync(studentProgram);
+
+                service = new StudentProgramService(adapterRegistryMock.Object, studentRepository, studentProgramRepository, termRepository, currentUserFactory, roleRepository, logger, configurationRepository);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                service = null;
+                adapterRegistryMock = null;
+                adapterRegistry = null;
+                logger = null;
+                roleRepositoryMock = null;
+                roleRepository = null;
+                currentUserFactory = null;
+                studentProgramRepositoryMock = null;
+                studentProgramRepository = null;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task AddStudentProgramAsync_NullArgument()
+            {
+                var serviceResult = await service.AddStudentProgram(null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task AddStudentProgramAsync_InvalidArgument_NullSectionId()
+            {
+                var serviceResult = await service.AddStudentProgram(new Dtos.Student.StudentAcademicProgram() { StudentId = "" });
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task AddStudentProgramAsync_NoPermission()
+            {
+                addProgram = new Dtos.Student.StudentAcademicProgram
+                {
+                    StudentId = "studentId",
+                    AcadamicProgramId = "AddProg1",
+                    ActivePrograms = null,
+                    CatalogYear = "2012",
+                    Department = "",
+                    Location = "",
+                    StartDate = DateTime.Now.ToShortDateString()
+                };
+
+                // Setup
+                roleRepositoryMock.Setup(rr => rr.Roles).Returns(new List<Domain.Entities.Role>());
+                roleRepositoryMock.Setup(rr => rr.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>());
+                // Test
+                var programs = await service.AddStudentProgram(addProgram);
+            }
+
+            [TestMethod]
+            public async Task AddStudentProgram_Success()
+            {
+                // Setup
+                advisorAnyAdviseeRole.AddPermission(new Permission(PlanningPermissionCodes.AllAccessAnyAdvisee));
+                advisorAnyAdviseeRole.AddPermission(new Permission(PlanningPermissionCodes.ReviewAnyAdvisee));
+                advisorAnyAdviseeRole.AddPermission(new Permission(PlanningPermissionCodes.UpdateAnyAdvisee));
+                advisorAnyAdviseeRole.AddPermission(new Permission(PlanningPermissionCodes.UpdateAssignedAdvisees));
+                roleRepositoryMock.Setup(rr => rr.Roles).Returns(new List<Domain.Entities.Role>() { advisorAnyAdviseeRole });
+                roleRepositoryMock.Setup(rr => rr.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { advisorAnyAdviseeRole });
+
+                addProgram = new Dtos.Student.StudentAcademicProgram
+                {
+                    StudentId = "studentId",
+                    AcadamicProgramId = "AddProg1",
+                    ActivePrograms = null,
+                    CatalogYear = "2012",
+                    Department = "",
+                    Location = "",
+                    StartDate = DateTime.Now.ToShortDateString()
+                };
+
+                var serviceResult = await service.AddStudentProgram(addProgram);
+                Assert.IsNotNull(serviceResult);
+                Assert.AreEqual("PROG", serviceResult.ProgramCode);
+            }
+        }
+
+        [TestClass]
+        public class StudentProgramServiceTest_UpdateStudentProgram_Tests : StudentProgramServiceTests
+        {
+            private Dtos.Student.StudentAcademicProgram updateProgram;
+
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private IAdapterRegistry adapterRegistry;
+
+            private StudentProgram studentProgram;
+            private Mock<IStudentRepository> studentRepositoryMock;
+            private IStudentRepository studentRepository;
+
+            private Mock<IStudentProgramRepository> studentProgramRepositoryMock;
+            private IStudentProgramRepository studentProgramRepository;
+
+            private Mock<ITermRepository> termRepositoryMock;
+            private ITermRepository termRepository;
+
+            private ICurrentUserFactory currentUserFactory;
+
+            private Mock<IRoleRepository> roleRepositoryMock;
+            private IRoleRepository roleRepository;
+
+            private Mock<ILogger> loggerMock;
+            private ILogger logger;
+
+            private Mock<IConfigurationRepository> configurationRepositoryMock;
+            private IConfigurationRepository configurationRepository;
+
+            private StudentProgramService service;
+
+            [TestInitialize]
+            public void StudentProgramService_UpdateStudentProgram_Initialize()
+            {
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+
+                studentRepositoryMock = new Mock<IStudentRepository>();
+                studentRepository = studentRepositoryMock.Object;
+
+                loggerMock = new Mock<ILogger>();
+                logger = loggerMock.Object;
+
+                var addProgramDtoAdapter = new Student.Adapters.StudentAcademicProgramEntityAdapter(adapterRegistryMock.Object, loggerMock.Object);
+                adapterRegistryMock.Setup(ar => ar.GetAdapter<Dtos.Student.StudentAcademicProgram, StudentAcademicProgram>()).Returns(addProgramDtoAdapter);
+
+                var programDtoAdapter = new AutoMapperAdapter<StudentProgram, Dtos.Student.StudentProgram2>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(ar => ar.GetAdapter<StudentProgram, Dtos.Student.StudentProgram2>()).Returns(programDtoAdapter);
+
+                studentProgramRepositoryMock = new Mock<IStudentProgramRepository>();
+                studentProgramRepository = studentProgramRepositoryMock.Object;
+
+                termRepositoryMock = new Mock<ITermRepository>();
+                termRepository = termRepositoryMock.Object;
+
+                currentUserFactory = new CurrentUserSetup.AdvisorUserFactory();
+
+                roleRepositoryMock = new Mock<IRoleRepository>();
+                roleRepository = roleRepositoryMock.Object;
+
+                configurationRepositoryMock = new Mock<IConfigurationRepository>();
+                configurationRepository = configurationRepositoryMock.Object;
+                studentProgram = new StudentProgram("0001234", "PROG", "2018")
+                {
+                    ProgramName = "No Start Date",
+                    StartDate = null,
+                    EndDate = DateTime.Today.AddMonths(6)
+                };
+                //studentProgramRepositoryMock.Setup(spr => spr.GetAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(studentProgram);
+
+                // Mock return from the repo
+                studentProgramRepositoryMock.Setup(repo => repo.UpdateStudentProgram(It.IsAny<StudentAcademicProgram>(), It.IsAny<List<string>>(), It.IsAny<List<string>>())).ReturnsAsync(studentProgram);
+              
+                service = new StudentProgramService(adapterRegistryMock.Object, studentRepository, studentProgramRepository, termRepository, currentUserFactory, roleRepository, logger, configurationRepository);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                service = null;
+                adapterRegistryMock = null;
+                adapterRegistry = null;
+                logger = null;
+                roleRepositoryMock = null;
+                roleRepository = null;
+                currentUserFactory = null;
+                studentProgramRepositoryMock = null;
+                studentProgramRepository = null;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task UpdateStudentProgramAsync_NullArgument()
+            {
+                var serviceResult = await service.UpdateStudentProgram(null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task UpdatetudentProgramAsync_InvalidArgument_NullSectionId()
+            {
+                var serviceResult = await service.UpdateStudentProgram(new Dtos.Student.StudentAcademicProgram() { StudentId = "" });
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task UpdateStudentProgramAsync_NoPermission()
+            {
+                updateProgram = new Dtos.Student.StudentAcademicProgram
+                {
+                    StudentId = "studentId",
+                    AcadamicProgramId = "AddProg1",
+                    ActivePrograms = null,
+                    CatalogYear = "2012",
+                    Department = "",
+                    Location = "",
+                    StartDate = DateTime.Now.ToShortDateString()
+                };
+
+                // Setup
+                roleRepositoryMock.Setup(rr => rr.Roles).Returns(new List<Domain.Entities.Role>());
+                roleRepositoryMock.Setup(rr => rr.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>());
+                // Test
+                var programs = await service.UpdateStudentProgram(updateProgram);
+            }
+
+            [TestMethod]
+            public async Task UpdateStudentProgram_Success()
+            {
+                // Setup
+                advisorAnyAdviseeRole.AddPermission(new Permission(PlanningPermissionCodes.AllAccessAnyAdvisee));
+                advisorAnyAdviseeRole.AddPermission(new Permission(PlanningPermissionCodes.ReviewAnyAdvisee));
+                advisorAnyAdviseeRole.AddPermission(new Permission(PlanningPermissionCodes.UpdateAnyAdvisee));
+                advisorAnyAdviseeRole.AddPermission(new Permission(PlanningPermissionCodes.UpdateAssignedAdvisees));
+                roleRepositoryMock.Setup(rr => rr.Roles).Returns(new List<Domain.Entities.Role>() { advisorAnyAdviseeRole });
+                roleRepositoryMock.Setup(rr => rr.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { advisorAnyAdviseeRole });
+
+                updateProgram = new Dtos.Student.StudentAcademicProgram
+                {
+                    StudentId = "studentId",
+                    AcadamicProgramId = "AddProg1",
+                    ActivePrograms = null,
+                    CatalogYear = "2011",
+                    Department = "",
+                    Location = "",
+                    StartDate = DateTime.Now.ToShortDateString()
+                };
+
+                var serviceResult = await service.UpdateStudentProgram(updateProgram);
+                Assert.IsNotNull(serviceResult);
+                Assert.AreEqual("PROG", serviceResult.ProgramCode);
             }
         }
     }

@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Controllers;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base.Services;
@@ -353,6 +353,34 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             configurationController = new ConfigurationController(adapterRegistry, configService, proxyService, logger);
             var config = await configurationController.GetRequiredDocumentConfigurationAsync();
             loggerMock.Verify(l => l.Error(It.IsAny<Exception>(), "Error occurred while retrieving Required Document Configuration."));
+        }
+
+        [TestMethod]
+        public async Task ConfigurationController_GetSessionConfigurationAsync_Valid()
+        {
+            var configuration = new SessionConfiguration()
+            {
+                PasswordResetEnabled = true,
+                UsernameRecoveryEnabled = true
+            };
+            configServiceMock.Setup(x => x.GetSessionConfigurationAsync()).ReturnsAsync(configuration);
+            configurationController = new ConfigurationController(adapterRegistry, configService, proxyService, logger);
+
+            var config = await configurationController.GetSessionConfigurationAsync();
+
+            Assert.IsNotNull(config);
+            Assert.AreEqual(configuration.PasswordResetEnabled, config.PasswordResetEnabled);
+            Assert.AreEqual(configuration.UsernameRecoveryEnabled, config.UsernameRecoveryEnabled);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task ConfigurationController_GetSessionConfigurationAsync_BadRequest()
+        {
+            configServiceMock.Setup(x => x.GetSessionConfigurationAsync()).ThrowsAsync(new ApplicationException());
+            configurationController = new ConfigurationController(adapterRegistry, configService, proxyService, logger);
+            var config = await configurationController.GetSessionConfigurationAsync();
+            loggerMock.Verify(l => l.Error(It.IsAny<Exception>(), "Error occurred while retrieving Session Configuration."));
         }
     }
 }

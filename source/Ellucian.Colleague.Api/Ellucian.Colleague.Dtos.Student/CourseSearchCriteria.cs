@@ -126,8 +126,13 @@ namespace Ellucian.Colleague.Dtos.Student
         public DateTime? SectionEndDate { get; set; }
 
         /// <summary>
-        /// display sections that are open - have seats available
+        /// display sections that are open Only - have seats available
         /// </summary>
         public bool OpenSections { get; set; }
+
+        /// <summary>
+        /// display sections that are open and waitlisted - have seats available
+        /// </summary>
+        public bool OpenAndWaitlistSections { get; set; }
     }
 }

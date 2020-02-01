@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2014 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -181,9 +181,15 @@ namespace Ellucian.Colleague.Domain.Student.Tests
             return Task.FromResult<IEnumerable<Student.Entities.StudentProgram>>(studentProgEntities);
         }
 
+        public Task<StudentProgram> AddStudentProgram(StudentAcademicProgram studentAcademicProgram, List<string> activePrograms, List<string> endDates)
+        {
+            throw new NotImplementedException();
+        }
 
-
-
+        Task<StudentProgram> IStudentProgramRepository.UpdateStudentProgram(StudentAcademicProgram studentAcademicProgram, List<string> activePrograms, List<string> endDates)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
 

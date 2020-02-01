@@ -1,24 +1,16 @@
-﻿// Copyright 2012-2015 Ellucian Company L.P. and its affiliates.
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Globalization;
-using System.Threading;
-using System.Threading.Tasks;
-using Ellucian.Colleague.Data.Base.Transactions;
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
-using Ellucian.Data.Colleague.DataContracts;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
-using Ellucian.Web.Cache;
-using slf4net;
-using Ellucian.Web.Dependency;
-using Ellucian.Web.Utility;
 using Ellucian.Dmi.Runtime;
+using Ellucian.Web.Cache;
+using Ellucian.Web.Dependency;
+using slf4net;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.Base.Repositories
 {
@@ -71,13 +63,13 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// </summary>
         /// <param name="personIds"></param>
         /// <returns>PhoneNumber Objects for a list of persons</returns>
-        public IEnumerable<PhoneNumber> GetPersonPhonesByIds(List<string> personIds)
+        public async Task<IEnumerable<PhoneNumber>> GetPersonPhonesByIdsAsync(List<string> personIds)
         {
             List<PhoneNumber> phoneNumbers = new List<PhoneNumber>();
             var error = false;
 
-            ICollection<Ellucian.Colleague.Data.Base.DataContracts.Person> personData = DataReader.BulkReadRecord<Ellucian.Colleague.Data.Base.DataContracts.Person>("PERSON", personIds.ToArray());
-            ICollection<Ellucian.Colleague.Data.Base.DataContracts.Address> addressesData = DataReader.BulkReadRecord<Ellucian.Colleague.Data.Base.DataContracts.Address>("ADDRESS", personData.SelectMany(p => p.PersonAddresses).Distinct().ToArray());
+            ICollection<Ellucian.Colleague.Data.Base.DataContracts.Person> personData = await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>("PERSON", personIds.ToArray());
+            ICollection<Ellucian.Colleague.Data.Base.DataContracts.Address> addressesData = await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Address>("ADDRESS", personData.SelectMany(p => p.PersonAddresses).Distinct().ToArray());
 
             if (personData == null)
             {

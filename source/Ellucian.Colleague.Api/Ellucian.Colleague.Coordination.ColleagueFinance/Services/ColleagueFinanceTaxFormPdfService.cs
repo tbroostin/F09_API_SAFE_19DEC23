@@ -138,73 +138,84 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 throw new ArgumentNullException("pathToReport");
             }
 
+            byte[] renderedBytes;
             var report = new LocalReport();
-            report.ReportPath = documentPath;
-            report.SetBasePermissionsForSandboxAppDomain(new System.Security.PermissionSet(System.Security.Permissions.PermissionState.Unrestricted));
-            report.EnableExternalImages = true;
 
-            // Specify the report parameters
-            var utility = new ReportUtility();
-            var parameters = new List<ReportParameter>();
-            parameters.Add(utility.BuildReportParameter("TaxYear", pdfData.TaxYear));
-            parameters.Add(utility.BuildReportParameter("Amended", pdfData.Amended));
-            parameters.Add(utility.BuildReportParameter("PayersName", pdfData.PayerName));
-            parameters.Add(utility.BuildReportParameter("RecipientAccountNumber", pdfData.RecipientAccountNumber));
-            parameters.Add(utility.BuildReportParameter("SocialInsuranceNumber", pdfData.Sin));
-            parameters.Add(utility.BuildReportParameter("RecipientsName", pdfData.RecipientsName));
-            parameters.Add(utility.BuildReportParameter("RecipientAddress1", pdfData.RecipientAddr1));
-            parameters.Add(utility.BuildReportParameter("RecipientAddress2", pdfData.RecipientAddr2));
-            parameters.Add(utility.BuildReportParameter("RecipientAddress3", pdfData.RecipientAddr3));
-            parameters.Add(utility.BuildReportParameter("RecipientAddress4", pdfData.RecipientAddr4));
-
-            parameters.Add(utility.BuildReportParameter("Pension", ConvertDecimalToString(pdfData.Pension)));
-            parameters.Add(utility.BuildReportParameter("LumpSumPayment", ConvertDecimalToString(pdfData.LumpSumPayment)));
-            parameters.Add(utility.BuildReportParameter("SelfEmployedCommissions", ConvertDecimalToString(pdfData.SelfEmployedCommissions)));
-            parameters.Add(utility.BuildReportParameter("IncomeTaxDeducted", ConvertDecimalToString(pdfData.IncomeTaxDeducted)));
-            parameters.Add(utility.BuildReportParameter("Annuities", ConvertDecimalToString(pdfData.Annuities)));
-            parameters.Add(utility.BuildReportParameter("FeesForServices", ConvertDecimalToString(pdfData.FeesForServices)));
-
-            // Populate the first 12 "dynamic" boxes.
-            for (int i = 0; i < 12; i++)
+            try
             {
-                int boxNumber = i + 1;
-                var box = pdfData.TaxFormBoxesList.ElementAtOrDefault(i);
-                if (box != null)
+                report.ReportPath = documentPath;
+                report.SetBasePermissionsForSandboxAppDomain(new System.Security.PermissionSet(System.Security.Permissions.PermissionState.Unrestricted));
+                report.EnableExternalImages = true;
+
+                // Specify the report parameters
+                var utility = new ReportUtility();
+                var parameters = new List<ReportParameter>();
+                parameters.Add(utility.BuildReportParameter("TaxYear", pdfData.TaxYear));
+                parameters.Add(utility.BuildReportParameter("Amended", pdfData.Amended));
+                parameters.Add(utility.BuildReportParameter("PayersName", pdfData.PayerName));
+                parameters.Add(utility.BuildReportParameter("RecipientAccountNumber", pdfData.RecipientAccountNumber));
+                parameters.Add(utility.BuildReportParameter("SocialInsuranceNumber", pdfData.Sin));
+                parameters.Add(utility.BuildReportParameter("RecipientsName", pdfData.RecipientsName));
+                parameters.Add(utility.BuildReportParameter("RecipientAddress1", pdfData.RecipientAddr1));
+                parameters.Add(utility.BuildReportParameter("RecipientAddress2", pdfData.RecipientAddr2));
+                parameters.Add(utility.BuildReportParameter("RecipientAddress3", pdfData.RecipientAddr3));
+                parameters.Add(utility.BuildReportParameter("RecipientAddress4", pdfData.RecipientAddr4));
+
+                parameters.Add(utility.BuildReportParameter("Pension", ConvertDecimalToString(pdfData.Pension)));
+                parameters.Add(utility.BuildReportParameter("LumpSumPayment", ConvertDecimalToString(pdfData.LumpSumPayment)));
+                parameters.Add(utility.BuildReportParameter("SelfEmployedCommissions", ConvertDecimalToString(pdfData.SelfEmployedCommissions)));
+                parameters.Add(utility.BuildReportParameter("IncomeTaxDeducted", ConvertDecimalToString(pdfData.IncomeTaxDeducted)));
+                parameters.Add(utility.BuildReportParameter("Annuities", ConvertDecimalToString(pdfData.Annuities)));
+                parameters.Add(utility.BuildReportParameter("FeesForServices", ConvertDecimalToString(pdfData.FeesForServices)));
+
+                // Populate the first 12 "dynamic" boxes.
+                for (int i = 0; i < 12; i++)
                 {
-                    parameters.Add(utility.BuildReportParameter("Box" + boxNumber, box.BoxNumber));
-                    parameters.Add(utility.BuildReportParameter("Amount" + boxNumber, ConvertDecimalToString(box.Amount)));
+                    int boxNumber = i + 1;
+                    var box = pdfData.TaxFormBoxesList.ElementAtOrDefault(i);
+                    if (box != null)
+                    {
+                        parameters.Add(utility.BuildReportParameter("Box" + boxNumber, box.BoxNumber));
+                        parameters.Add(utility.BuildReportParameter("Amount" + boxNumber, ConvertDecimalToString(box.Amount)));
+                    }
+                    else
+                    {
+                        parameters.Add(utility.BuildReportParameter("Box" + boxNumber, ""));
+                        parameters.Add(utility.BuildReportParameter("Amount" + boxNumber, ""));
+                    }
                 }
-                else
-                {
-                    parameters.Add(utility.BuildReportParameter("Box" + boxNumber, ""));
-                    parameters.Add(utility.BuildReportParameter("Amount" + boxNumber, ""));
-                }
+
+                // Set the report parameters
+                report.SetParameters(parameters);
+
+                // Set up some options for the report
+                string mimeType = string.Empty;
+                string encoding;
+                string fileNameExtension;
+                Warning[] warnings;
+                string[] streams;
+
+                // Render the report as a byte array
+                renderedBytes = report.Render(
+                    ReportType,
+                    DeviceInfo,
+                    out mimeType,
+                    out encoding,
+                    out fileNameExtension,
+                    out streams,
+                    out warnings);
             }
-
-            // Set the report parameters
-            report.SetParameters(parameters);
-
-            // Set up some options for the report
-            string mimeType = string.Empty;
-            string encoding;
-            string fileNameExtension;
-            Warning[] warnings;
-            string[] streams;
-
-            // Render the report as a byte array
-            var renderedBytes = report.Render(
-                ReportType,
-                DeviceInfo,
-                out mimeType,
-                out encoding,
-                out fileNameExtension,
-                out streams,
-                out warnings);
-
-            report.DataSources.Clear();
-            report.ReleaseSandboxAppDomain();
-            report.Dispose();
-
+            catch
+            {
+                // Rethrow exception
+                throw;
+            }
+            finally
+            {
+                report.DataSources.Clear();
+                report.ReleaseSandboxAppDomain();
+                report.Dispose();
+            }
             return renderedBytes;
         }
 
@@ -225,7 +236,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 throw new ArgumentNullException("pathToReport");
             }
 
+            byte[] renderedBytes;
             var report = new LocalReport();
+
             try
             {
                 report.ReportPath = documentPath;
@@ -291,15 +304,14 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 string[] streams;
 
                 // Render the report as a byte array
-                var renderedBytes = report.Render(
+                renderedBytes = report.Render(
                     ReportType,
                     DeviceInfo,
                     out mimeType,
                     out encoding,
                     out fileNameExtension,
                     out streams,
-                    out warnings);
-                return renderedBytes;
+                    out warnings);   
             }
             catch (Exception ex)
             {
@@ -312,6 +324,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 report.ReleaseSandboxAppDomain();
                 report.Dispose();
             }
+            return renderedBytes;
         }
 
         /// <summary>

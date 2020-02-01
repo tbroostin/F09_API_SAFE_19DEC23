@@ -1,21 +1,18 @@
-﻿// Copyright 2012-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Data.Base.Repositories;
+using Ellucian.Colleague.Data.Student.DataContracts;
+using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Colleague.Domain.Student.Entities;
+using Ellucian.Colleague.Domain.Student.Repositories;
+using Ellucian.Data.Colleague;
+using Ellucian.Web.Cache;
+using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Configuration;
+using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using Ellucian.Colleague.Data.Base.DataContracts;
-using Ellucian.Colleague.Data.Base.Repositories;
-using Ellucian.Colleague.Domain.Base.Entities;
-using Ellucian.Colleague.Domain.Student.Repositories;
-using Ellucian.Data.Colleague;
-using Ellucian.Dmi.Runtime;
-using slf4net;
-using Ellucian.Colleague.Domain.Student.Entities;
-using Ellucian.Colleague.Data.Student.DataContracts;
-using Ellucian.Web.Dependency;
-using Ellucian.Web.Cache;
-using Ellucian.Web.Utility;
-using Ellucian.Web.Http.Configuration;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -24,8 +21,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class FacultyRepository : PersonRepository, IFacultyRepository
     {
-        public static char _SM = Convert.ToChar(DynamicArray.SM);
-
         // Sets the maximum number of records to bulk read at one time
         readonly int readSize;
 
@@ -72,14 +67,15 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             Ellucian.Colleague.Domain.Student.Entities.Faculty facultyEntity;
             if (string.IsNullOrEmpty(id))
             {
-                throw new ArgumentNullException("id", "Must provide the id of the faculty to retrieve.");
+                throw new ArgumentNullException("id", "Must provide the ID of the faculty to retrieve.");
             }
             try
             {
                 facultyEntity = (await GetAllFacultyAsync())[id];
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                logger.Error(ex, string.Format("Unable to retrieve faculty information for ID {0}.", id));
                 throw new KeyNotFoundException("Faculty not found for Id " + id);
             }
             return facultyEntity;
@@ -111,10 +107,47 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             if (!string.IsNullOrEmpty(idsNotFound))
             {
-                string errorMessage = "The following requested faculty ids were not found: " + idsNotFound;
-                logger.Info(errorMessage);
+                string errorMessage = string.Format("Unable to retrieve faculty information for IDs {0}.", idsNotFound);
+                logger.Error(errorMessage);
             }
             return facultyEntities;
+        }
+
+        /// <summary>
+        /// Gets faculty office hours for the given list of faculty Ids
+        /// </summary>
+        /// <param name="facultyIds">List of faculty person Ids</param>
+        /// <returns>List of faculty office hours objects</returns>
+        public async Task<IEnumerable<Domain.Student.Entities.FacultyOfficeHours>> GetFacultyOfficeHoursByIdsAsync(IEnumerable<string> facultyIds)
+        {
+            var facultyofficeHoursList = new List<Ellucian.Colleague.Domain.Student.Entities.FacultyOfficeHours>();
+            string idsNotFound = "";
+            if ((facultyIds != null) && (facultyIds.Any()))
+            {                                
+                foreach (var id in facultyIds)
+                {
+                    try
+                    {
+                        var officeHours = await GetFacultyOfficeHoursAsync(id);
+                        Domain.Student.Entities.FacultyOfficeHours facOfficeHours = new Domain.Student.Entities.FacultyOfficeHours()
+                        {
+                            FacultyId = id,
+                            OfficeHours = officeHours
+                        };
+                        facultyofficeHoursList.Add(facOfficeHours);
+                    }
+                    catch (Exception)
+                    {
+                        idsNotFound += " " + id;
+                    }
+                }
+            }
+            if (!string.IsNullOrEmpty(idsNotFound))
+            {
+                string errorMessage = string.Format("Unable to retrieve faculty information for IDs {0}.", idsNotFound);
+                logger.Error(errorMessage);
+            }
+            return facultyofficeHoursList;
         }
 
         /// <summary>
@@ -129,7 +162,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             string idsNotFound = "";
             if ((ids != null) && (ids.Count() != 0))
             {
-                var allFaculty = await GetAllFacultyAsync();
+                var allFaculty = await GetAllFacultyAsync();               
                 foreach (var id in ids)
                 {
                     try
@@ -145,10 +178,143 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             if (!string.IsNullOrEmpty(idsNotFound))
             {
                 string errorMessage = "The following requested faculty ids were not found: " + idsNotFound;
-                logger.Info(errorMessage);
+                logger.Error(errorMessage);
             }
             return facultyEntities;
         }
+
+        private async Task<List<OfficeHours>> GetFacultyOfficeHoursAsync(string facultyId)
+        {           
+               List<OfficeHours> officeHoursdata = new List<OfficeHours>();
+               var query = "FACULTY.ID EQ " + facultyId;
+               Collection<DataContracts.Faculty> facultyBulkData = await DataReader.BulkReadRecordAsync<DataContracts.Faculty>("FACULTY", query);
+               if (facultyBulkData != null && facultyBulkData.FirstOrDefault() != null)
+               {
+                   var facultyData = facultyBulkData.First();
+                   List<string> officeBuildings = new List<string>();
+                   List<string> officeRooms = new List<string>();
+                   List<DateTime?> officeStartDates = new List<DateTime?>();
+                   List<DateTime?> officeEndDates = new List<DateTime?>();
+                   List<DateTime?> officeStartTimes = new List<DateTime?>();
+                   List<DateTime?> officeEndTimes = new List<DateTime?>();
+                   List<string> officeFrequency = new List<string>();
+                   List<string> officeMonday = new List<string>();
+                   List<string> officeTuesday = new List<string>();
+                   List<string> officeWednesday = new List<string>();
+                   List<string> officeThursday = new List<string>();
+                   List<string> officeFriday = new List<string>();
+                   List<string> officeSaturday = new List<string>();
+                   List<string> officeSunday = new List<string>();
+
+                   int rowCount = 0;
+                   if (facultyData.FacOfficeStartDate != null && facultyData.FacOfficeStartDate.Any())
+                   {
+                       rowCount = facultyData.FacOfficeStartDate.Count();
+                       officeStartDates = facultyData.FacOfficeStartDate;
+                   }
+                   if (facultyData.FacOfficeEndDate != null && facultyData.FacOfficeEndDate.Any())
+                   {
+                       officeEndDates = facultyData.FacOfficeEndDate;
+                   }
+                   if (facultyData.FacOfficeBldg != null && facultyData.FacOfficeBldg.Any())
+                   {
+                       officeBuildings = facultyData.FacOfficeBldg;
+                   }
+                   if (facultyData.FacOfficeRoom != null && facultyData.FacOfficeRoom.Any())
+                   {
+                       officeRooms = facultyData.FacOfficeRoom;
+                   }
+                   if (facultyData.FacOfficeStartTime != null && facultyData.FacOfficeStartTime.Any())
+                   {
+                       officeStartTimes = facultyData.FacOfficeStartTime;
+                   }
+                   if (facultyData.FacOfficeEndTime != null && facultyData.FacOfficeEndTime.Any())
+                   {
+                       officeEndTimes = facultyData.FacOfficeEndTime;
+                   }
+                   if (facultyData.FacOfficeRepeat != null && facultyData.FacOfficeRepeat.Any())
+                   {
+                       officeFrequency = facultyData.FacOfficeRepeat;
+                   }
+                   if (facultyData.FacOfficeMonday != null && facultyData.FacOfficeMonday.Any())
+                   {
+                       officeMonday = facultyData.FacOfficeMonday;
+                   }
+                   if (facultyData.FacOfficeTuesday != null && facultyData.FacOfficeTuesday.Any())
+                   {
+                       officeTuesday = facultyData.FacOfficeTuesday;
+                   }
+                   if (facultyData.FacOfficeWednesday != null && facultyData.FacOfficeWednesday.Any())
+                   {
+                       officeWednesday = facultyData.FacOfficeWednesday;
+                   }
+                   if (facultyData.FacOfficeThursday != null && facultyData.FacOfficeThursday.Any())
+                   {
+                       officeThursday = facultyData.FacOfficeThursday;
+                   }
+                   if (facultyData.FacOfficeFriday != null && facultyData.FacOfficeFriday.Any())
+                   {
+                       officeFriday = facultyData.FacOfficeFriday;
+                   }
+                   if (facultyData.FacOfficeSaturday != null && facultyData.FacOfficeSaturday.Any())
+                   {
+                       officeSaturday = facultyData.FacOfficeSaturday;
+                   }
+                   if (facultyData.FacOfficeSunday != null && facultyData.FacOfficeSunday.Any())
+                   {
+                       officeSunday = facultyData.FacOfficeSunday;
+                   }
+                   for (int i = 0; i < rowCount; i++)
+                   {
+                       OfficeHours officeHours = new OfficeHours();
+                       if (officeBuildings.Count() > i)
+                       {
+                           officeHours.OfficeBuilding = officeBuildings[i];
+                       }
+                       if (officeRooms.Count() > i)
+                       {
+                           officeHours.OfficeRoom = officeRooms[i];
+                       }
+                       if (officeStartDates.Count() > i)
+                       {
+                           officeHours.OfficeStartDate = officeStartDates[i];
+                       }
+                       if (officeEndDates.Count() > i)
+                       {
+                           officeHours.OfficeEndDate = officeEndDates[i];
+                       }
+                       if (officeStartTimes.Count() > i)
+                       {
+                           officeHours.OfficeStartTime = officeStartTimes[i];
+                       }
+                       if (officeEndTimes.Count() > i)
+                       {
+                           officeHours.OfficeEndTime = officeEndTimes[i];
+                       }
+                       if (officeFrequency.Count() > i)
+                       {
+                           officeHours.OfficeFrequency = officeFrequency[i];
+                       }
+                        officeHours.DaysOfWeek = new List<DayOfWeek>();
+                        if (officeSunday.Count() > i && officeSunday[i].ToUpperInvariant() == "Y")
+                            officeHours.DaysOfWeek.Add(DayOfWeek.Sunday);
+                        if (officeMonday.Count() > i && officeMonday[i].ToUpperInvariant() == "Y")
+                            officeHours.DaysOfWeek.Add(DayOfWeek.Monday);
+                        if (officeTuesday.Count() > i && officeTuesday[i].ToUpperInvariant() == "Y")
+                            officeHours.DaysOfWeek.Add(DayOfWeek.Tuesday);
+                        if (officeWednesday.Count() > i && officeWednesday[i].ToUpperInvariant() == "Y")
+                            officeHours.DaysOfWeek.Add(DayOfWeek.Wednesday);
+                        if (officeThursday.Count() > i && officeThursday[i].ToUpperInvariant() == "Y")
+                            officeHours.DaysOfWeek.Add(DayOfWeek.Thursday);
+                        if (officeFriday.Count() > i && officeFriday[i].ToUpperInvariant() == "Y")
+                            officeHours.DaysOfWeek.Add(DayOfWeek.Friday);
+                        if (officeSaturday.Count() > i && officeSaturday[i].ToUpperInvariant() == "Y")
+                            officeHours.DaysOfWeek.Add(DayOfWeek.Saturday);                    
+                    officeHoursdata.Add(officeHours);
+                   }
+               }
+               return officeHoursdata;                 
+        }        
 
         /// <summary>
         /// Used to retrieve all faculty records and put them into cache. Following the philosophy that we pull faculty into cache 
@@ -159,28 +325,56 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns>A dictionary of faculty entities.</returns>
         private async Task<IDictionary<string, Ellucian.Colleague.Domain.Student.Entities.Faculty>> GetAllFacultyAsync()
         {
+            logger.Info("Entering FacultyRepository.GetAllFacultyAsync...");
             var facultyDict = await GetOrAddToCacheAsync<Dictionary<string, Ellucian.Colleague.Domain.Student.Entities.Faculty>>("AllFaculty",
                 async () =>
                 {
-                    var facultyIds = await DataReader.SelectAsync("FACULTY", "");
+                    string[] facultyIds = new string[] { };
+                    try
+                    {
+                        facultyIds = await DataReader.SelectAsync("FACULTY", "");
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.Debug(ex, "An error occurred in DataReader.SelectAsync for the FACULTY file");
+                    }
 
                     // Bulk read the faculty PERSON records in chunks from the database.
                     var personData = new List<Ellucian.Colleague.Data.Base.DataContracts.Person>();
                     for (int i = 0; i < facultyIds.Count(); i += readSize)
                     {
                         var subList = facultyIds.Skip(i).Take(readSize).ToArray();
-                        var bulkData = await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>("PERSON", subList);
-                        personData.AddRange(bulkData);
+                        try
+                        {
+                            logger.Debug(string.Join("Reading PERSON file for records: {0}...", string.Join(",", subList)));
+                            var bulkData = await DataReader.BulkReadRecordWithInvalidKeysAndRecordsAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>("PERSON", subList);
+                            if (bulkData.BulkRecordsRead == null || !bulkData.BulkRecordsRead.Any())
+                            {
+                                logger.Debug("Bulk data retrieval complete for PERSON file did not return any valid records.");
+                            }
+                            if (bulkData.InvalidKeys != null && bulkData.InvalidKeys.Any())
+                            {
+                                logger.Debug(string.Format("Bulk data retrieval complete for PERSON file returned one or more invalid records: {0}", string.Join(",", bulkData.InvalidKeys)));
+                            }
+                            if (bulkData.BulkRecordsRead != null && bulkData.BulkRecordsRead.Any())
+                            {
+                                personData.AddRange(bulkData.BulkRecordsRead);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.Debug(ex, "An error occurred in DataReader.BulkReadRecordAsync for the PERSON file for IDs {0}", string.Join(",", subList));
+                        }
                     }
 
                     // Bulk read the associated faculty addresses - needed for associated phone information.
                     var addressGroups = personData.Select(pa => pa.PersonAddresses).Where(a => a.Any(x => x.Length > 0));
                     List<string> addressIds = new List<string>();
-                    if (addressGroups != null & addressGroups.Count() > 0)
+                    if (addressGroups != null & addressGroups.Any())
                     {
                         foreach (var address in addressGroups)
                         {
-                            if (address != null && address.Count() > 0)
+                            if (address != null && address.Any())
                             {
                                 addressIds.AddRange(address);
                             }
@@ -190,8 +384,27 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     for (int i = 0; i < addressIds.Count(); i += readSize)
                     {
                         var subList = addressIds.Skip(i).Take(readSize).ToArray();
-                        var bulkData = await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Address>("ADDRESS", subList);
-                        facultyAddressData.AddRange(bulkData);
+                        try
+                        {
+                            logger.Debug(string.Join("Reading ADDRESS file for records: {0}...", string.Join(",", subList)));
+                            var bulkData = await DataReader.BulkReadRecordWithInvalidKeysAndRecordsAsync<Ellucian.Colleague.Data.Base.DataContracts.Address>("ADDRESS", subList);
+                            if (bulkData.BulkRecordsRead == null || !bulkData.BulkRecordsRead.Any())
+                            {
+                                logger.Debug("Bulk data retrieval complete for ADDRESS file did not return any valid records.");
+                            }
+                            if (bulkData.InvalidKeys != null && bulkData.InvalidKeys.Any())
+                            {
+                                logger.Debug(string.Format("Bulk data retrieval complete for ADDRESS file returned one or more invalid records: {0}", string.Join(",", bulkData.InvalidKeys)));
+                            }
+                            if (bulkData.BulkRecordsRead != null && bulkData.BulkRecordsRead.Any())
+                            {
+                                facultyAddressData.AddRange(bulkData.BulkRecordsRead);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.Debug(ex, "An error occurred in DataReader.BulkReadRecordAsync for the ADDRESS file for IDs {0}", string.Join(",", subList));
+                        }
                     }
 
                     // Send all the info to BuildFaculty
@@ -200,17 +413,28 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     return facultyEntities;
                 }
             );
+            logger.Info("FacultyRepository.GetAllFacultyAsync complete.");
             return facultyDict;
         }
 
         private async Task<Dictionary<string, Ellucian.Colleague.Domain.Student.Entities.Faculty>> BuildFacultyAsync(List<Base.DataContracts.Person> personData,
                                                                                                      List<Base.DataContracts.Address> facultyAddressData)
         {
+            logger.Info("Entering FacultyRepository.BuildFacultyAsync...");
             var facultyResults = new Dictionary<string, Ellucian.Colleague.Domain.Student.Entities.Faculty>();
 
             if (personData != null)
             {
-                var facultyAddressDataLookup = facultyAddressData.ToLookup(x => x.Recordkey);
+                ILookup<string, Base.DataContracts.Address> facultyAddressDataLookup = null;
+                try
+                {
+                    facultyAddressDataLookup = facultyAddressData.ToLookup(x => x.Recordkey);
+                }
+                catch (Exception ex)
+                {
+                    logger.Debug(ex, "An error occurred in FacultyRepository.BuildFacultyAsync while building a lookup of faculty ADDRESS data.");
+                    throw ex;
+                }
                 foreach (var person in personData)
                 {
                     try
@@ -233,7 +457,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 }
                                 catch (Exception ex)
                                 {
-                                    LogDataError("Person email address for person ID " + person.Recordkey, emailData.PersonEmailAddressesAssocMember, emailData, ex);
+                                    logger.Error(ex, string.Format("An error occurred adding an email address for faculty {0}", person.Recordkey));
                                 }
                             }
                         }
@@ -249,14 +473,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 }
                                 catch (Exception ex)
                                 {
-                                    LogDataError("Person personal phone for person ID " + person.Recordkey, phoneData.PersonalPhoneNumberAssocMember, phoneData, ex);
+                                    logger.Error(ex, string.Format("An error occurred adding a phone number for faculty {0}", person.Recordkey));
                                 }
                             }
                         }
                         // Next get the local address phone information from the PSEASON association in person
                         if (person.PseasonEntityAssociation != null && person.PseasonEntityAssociation.Count() > 0)
                         {
-                            var currentAddresses = person.PseasonEntityAssociation.Where(pa => pa.AddrEffectiveStartAssocMember == null || pa.AddrEffectiveStartAssocMember <= DateTime.Now);
+                            var currentAddresses = person.PseasonEntityAssociation.Where(pa => pa != null && (pa.AddrEffectiveStartAssocMember == null || pa.AddrEffectiveStartAssocMember <= DateTime.Now));
                             if (currentAddresses != null && currentAddresses.Count() > 0)
                             {
                                 foreach (var personAddressData in currentAddresses)
@@ -275,9 +499,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                                 Phone personalPhone = new Phone(localPhones[i], localPhoneTypes[i], localPhoneExts[i]);
                                                 fac.AddPhone(personalPhone);
                                             }
-                                            catch (Exception)
+                                            catch (Exception ex)
                                             {
-                                                // Not bother logging these. Likely just dupicate phones.
+                                                logger.Debug(ex, "Error occurred while adding phone number for faculty member.");
                                             }
                                         }
                                     }
@@ -294,20 +518,23 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                         {
                                             foreach (var addrPhone in addr.AdrPhonesEntityAssociation)
                                             {
-                                                try
+                                                if (addrPhone != null)
                                                 {
-                                                    Phone addressPhone = new Phone(addrPhone.AddressPhonesAssocMember, addrPhone.AddressPhoneTypeAssocMember, addrPhone.AddressPhoneExtensionAssocMember);
-                                                    fac.AddPhone(addressPhone);
-                                                }
-                                                catch (Exception)
-                                                {
-                                                    // This is an invalid or duplicate phone and not worth logging.
+                                                    try
+                                                    {
+                                                        Phone addressPhone = new Phone(addrPhone.AddressPhonesAssocMember, addrPhone.AddressPhoneTypeAssocMember, addrPhone.AddressPhoneExtensionAssocMember);
+                                                        fac.AddPhone(addressPhone);
+                                                    }
+                                                    catch (Exception ex)
+                                                    {
+                                                        logger.Debug(ex, "Error occurred while adding phone number for faculty member from address.");
+                                                    }
                                                 }
                                             }
                                         }
                                         try
                                         {
-                                            var assoc = currentAddresses.Where(p => p.PersonAddressesAssocMember == addressId).FirstOrDefault();
+                                            var assoc = currentAddresses.Where(p => p != null && p.PersonAddressesAssocMember == addressId).FirstOrDefault();
                                             if (assoc != null)
                                             {
                                                 var facultyAddress = new Domain.Base.Entities.Address(addressId, person.Recordkey);
@@ -356,9 +583,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                                 fac.AddAddress(facultyAddress);
                                             }
                                         }
-                                        catch (Exception)
+                                        catch (Exception ex)
                                         {
-                                            // This is an invalid or duplicate address and not worth logging.
+                                            logger.Debug(ex, "Error occurred while adding address for faculty member.");
                                         }
                                     }
                                 }
@@ -369,10 +596,16 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     catch (Exception ex)
                     {
                         // Unable to create a faculty entity for this person. Maybe last name is missing?
-                        LogDataError("Faculty", person.Recordkey, person, ex);
+                        logger.Error(ex, string.Format("An error occurred building faculty information faculty {0}", person.Recordkey));
                     }
                 }
             }
+            else
+            {
+                logger.Debug("Person data passed into FacultyRepository.BuildFacultyAsync was null.");
+            }
+            logger.Info("FacultyRepository.BuildFacultyAsync complete.");
+
             return facultyResults;
         }
         /// <summary>

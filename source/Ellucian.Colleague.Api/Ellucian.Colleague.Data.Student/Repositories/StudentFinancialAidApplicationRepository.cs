@@ -190,6 +190,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         {
             var applicationIds = new List<string>();
             var aidYears = new List<string>();
+
+            if(faSuiteYears == null || !faSuiteYears.Any())
+            {
+                throw new ArgumentNullException("faSuiteYears", "financial-aid-years has not been configured yet. Please complete your FA file suite setup.");
+            }
             //if there is a Aid year then use that otherwise get it from 2006
             if (!string.IsNullOrEmpty(aidYear))
                 //if no suite file for that year then return empty

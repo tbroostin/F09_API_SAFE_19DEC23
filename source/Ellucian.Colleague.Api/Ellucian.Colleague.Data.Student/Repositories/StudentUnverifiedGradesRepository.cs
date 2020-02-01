@@ -455,7 +455,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         public async Task<StudentUnverifiedGrades> UpdateStudentUnverifiedGradesSubmissionsAsync(StudentUnverifiedGrades request)
         {
             ImportGrades2Request importGradesRequest = new ImportGrades2Request();
-            importGradesRequest.Grades = new List<Transactions.Grades>();
             importGradesRequest.Guid = request.Guid;
             importGradesRequest.SectionRegId = request.StudentAcadaCredId;
 
@@ -466,7 +465,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 gradeDataContract = await DataReader.ReadRecordAsync<DataContracts.Grades>(request.FinalGrade);
                 if (gradeDataContract == null)
                 {
-                    throw new RepositoryException(string.Format("Unable to locate final grade: {0}", request.FinalGrade));
+                    throw new RepositoryException(string.Format("Unable to locate final grade: '{0}'", request.FinalGrade));
                 }
             }
             else if (!string.IsNullOrEmpty(request.MidtermGrade1))
@@ -474,7 +473,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 gradeDataContract = await DataReader.ReadRecordAsync<DataContracts.Grades>(request.MidtermGrade1);
                 if (gradeDataContract == null)
                 {
-                    throw new RepositoryException(string.Format("Unable to locate midterm grade 1: {0}", request.MidtermGrade1));
+                    throw new RepositoryException(string.Format("Unable to locate midterm grade 1: '{0}'", request.MidtermGrade1));
                 }
             }
             else if (!string.IsNullOrEmpty(request.MidtermGrade2))
@@ -482,7 +481,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 gradeDataContract = await DataReader.ReadRecordAsync<DataContracts.Grades>(request.MidtermGrade2);
                 if (gradeDataContract == null)
                 {
-                    throw new RepositoryException(string.Format("Unable to locate midterm grade 2: {0}", request.MidtermGrade2));
+                    throw new RepositoryException(string.Format("Unable to locate midterm grade 2: '{0}'", request.MidtermGrade2));
                 }
             }
             else if (!string.IsNullOrEmpty(request.MidtermGrade3))
@@ -490,7 +489,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 gradeDataContract = await DataReader.ReadRecordAsync<DataContracts.Grades>(request.MidtermGrade3);
                 if (gradeDataContract == null)
                 {
-                    throw new RepositoryException(string.Format("Unable to locate midterm grade 3: {0}", request.MidtermGrade3));
+                    throw new RepositoryException(string.Format("Unable to locate midterm grade 3: '{0}'", request.MidtermGrade3));
                 }
             }
             else if (!string.IsNullOrEmpty(request.MidtermGrade4))
@@ -498,7 +497,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 gradeDataContract = await DataReader.ReadRecordAsync<DataContracts.Grades>(request.MidtermGrade4);
                 if (gradeDataContract == null)
                 {
-                    throw new RepositoryException(string.Format("Unable to locate midterm grade 4: {0}", request.MidtermGrade4));
+                    throw new RepositoryException(string.Format("Unable to locate midterm grade 4: '{0}'", request.MidtermGrade4));
                 }
             }
             else if (!string.IsNullOrEmpty(request.MidtermGrade5))
@@ -506,7 +505,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 gradeDataContract = await DataReader.ReadRecordAsync<DataContracts.Grades>(request.MidtermGrade5);
                 if (gradeDataContract == null)
                 {
-                    throw new RepositoryException(string.Format("Unable to locate midterm grade 5: {0}", request.MidtermGrade5));
+                    throw new RepositoryException(string.Format("Unable to locate midterm grade 5: '{0}'", request.MidtermGrade5));
                 }
             }
             else if (!string.IsNullOrEmpty(request.MidtermGrade6))
@@ -514,31 +513,21 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 gradeDataContract = await DataReader.ReadRecordAsync<DataContracts.Grades>(request.MidtermGrade6);
                 if (gradeDataContract == null)
                 {
-                    throw new RepositoryException(string.Format("Unable to locate midterm grade 6: {0}", request.MidtermGrade6));
+                    throw new RepositoryException(string.Format("Unable to locate midterm grade 6: '{0}'", request.MidtermGrade6));
                 }
             }
-           
-            /*
-            if (gradeDataContract == null)
-            {
-                throw new RepositoryException("Unable to locate grade");
-            }
-            */
-            Transactions.Grades finalGrade = new Transactions.Grades
-            {
-                GradeKey = request.GradeId,
-                GradeType = request.GradeType,
-                Grade = gradeDataContract != null ? gradeDataContract.GrdGrade : string.Empty,
-                NeverAttend = request.HasNeverAttended ? "Y" : "N",
-                LastDayAttendDate = request.LastAttendDate.HasValue
-                            ? request.LastAttendDate.Value.ToString("yyyy/MM/dd")
-                            : string.Empty,
-                GradeExpiry = request.FinalGradeDate.HasValue ?
-                            request.FinalGradeDate.Value.ToString("yyyy/MM/dd")
-                             : string.Empty
-            };
-            importGradesRequest.Grades.Add(finalGrade);
 
+            importGradesRequest.Grade = request.GradeId;
+            importGradesRequest.GradeType = request.GradeType;
+            importGradesRequest.Grade = gradeDataContract != null ? gradeDataContract.GrdGrade : string.Empty;
+            importGradesRequest.NeverAttend = request.HasNeverAttended ? "Y" : "N";
+            importGradesRequest.LastDayAttendDate = request.LastAttendDate.HasValue
+                        ? request.LastAttendDate.Value.ToString("yyyy/MM/dd")
+                        : string.Empty;
+            importGradesRequest.GradeExpiry = request.FinalGradeDate.HasValue ?
+                        request.FinalGradeDate.Value.ToString("yyyy/MM/dd")
+                         : string.Empty;
+            
             var extendedDataTuple = GetEthosExtendedDataLists();
             if (extendedDataTuple != null && extendedDataTuple.Item1 != null && extendedDataTuple.Item2 != null)
             {
@@ -549,26 +538,20 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             var importGradesResponse = await transactionInvoker.ExecuteAsync<ImportGrades2Request, ImportGrades2Response>(importGradesRequest);
 
             // If there is any error message - throw an exception
-            if (importGradesResponse.GradeMessages != null && importGradesResponse.GradeMessages.Any(m => m.StatusCode.Equals("FAILURE", StringComparison.OrdinalIgnoreCase)))
+            if (importGradesResponse.GradeMessages2 != null && importGradesResponse.GradeMessages2.Any())
             {
-                var errorMessage = string.Empty;
-                var failureMessage = string.Empty;
-                foreach (var message in importGradesResponse.GradeMessages)
-                {
-                    errorMessage = string.Format("Error occurred updating grade for Student: '{0}' and AcadCredId: '{1}': ", request.StudentId, request.StudentAcadaCredId);
-                    errorMessage += string.Join(Environment.NewLine, message.ErrorMessge);
-                    logger.Error(errorMessage);
-
+                var errorMessage = string.Format("Error occurred updating grade for Student: '{0}' and AcadCredId: '{1}': ", request.StudentId, request.StudentAcadaCredId);
+                logger.Error(errorMessage);
+                var repositoryException = new RepositoryException();
+                foreach (var message in importGradesResponse.GradeMessages2)
+                { 
                     //collect all the failure messages
-                    if (message != null && message.StatusCode != null && message.StatusCode.Equals("FAILURE", StringComparison.OrdinalIgnoreCase))
+                    if (message != null && !string.IsNullOrEmpty(message.ErrorMessge))
                     {
-                        failureMessage += string.Concat(message.ErrorMessge, Environment.NewLine);
+                        repositoryException.AddError(new RepositoryError(string.IsNullOrEmpty(message.StatusCode) ? "" : message.StatusCode, message.ErrorMessge) { Id = importGradesResponse.Guid, SourceId = request.StudentCourseSecId });
                     }
                 }
-                if (!string.IsNullOrEmpty(failureMessage))
-                {
-                    throw new InvalidOperationException(failureMessage);
-                }
+                throw repositoryException;
             }
         
             return await GetStudentUnverifiedGradesByIdAsync(await GetStudentUnverifiedGradesIdFromGuidAsync(importGradesResponse.Guid));
@@ -633,7 +616,42 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
             }
             return retVal;
-                  
+        }
+
+        /// <summary>
+        /// Get the grade scheme for a StudentAcadCred using its ID
+        /// </summary>
+        /// <param name="id">StudentAcadCred ID</param>
+        /// <returns>grade scheme code</returns>
+        public async Task<Tuple<string, string, string>> GetStudentAcadCredDataFromIdAsync(string id)
+        {
+            var retVal = new Tuple<string, string, string>(string.Empty, string.Empty, string.Empty);
+            var stcPersonId = string.Empty;
+            var stcStudentCourseSec = string.Empty;
+            var stcGradeScheme = string.Empty;
+
+            try
+            {
+                var data = await DataReader.BatchReadRecordColumnsAsync("STUDENT.ACAD.CRED", new string[] { id }, new string[] { "STC.PERSON.ID", "STC.STUDENT.COURSE.SEC", "STC.GRADE.SCHEME" });
+                if (data != null && data.Any())
+                {
+                    var dataValues = data.FirstOrDefault().Value;
+                    foreach (var studentAcadCred in dataValues)
+                    {
+                        if (studentAcadCred.Key == "STC.PERSON.ID")
+                            stcPersonId = studentAcadCred.Value;
+                        if (studentAcadCred.Key == "STC.STUDENT.COURSE.SEC")
+                            stcStudentCourseSec = studentAcadCred.Value;
+                        if (studentAcadCred.Key == "STC.GRADE.SCHEME")
+                            stcGradeScheme = studentAcadCred.Value;
+                    }
+                }
+                return new Tuple<string, string, string>(stcPersonId, stcStudentCourseSec, stcGradeScheme);
+            }
+            catch (Exception)
+            {
+                throw new RepositoryException(string.Format("Unexpected error encountered when trying to read STUDENT.ACAD.CRED '{0}'.", id));
+            }    
         }
 
     }

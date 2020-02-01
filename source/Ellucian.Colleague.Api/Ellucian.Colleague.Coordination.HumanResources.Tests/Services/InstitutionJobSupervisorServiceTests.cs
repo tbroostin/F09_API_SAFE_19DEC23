@@ -153,7 +153,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 
                 };
                 institutionJobEntityTuple = new Tuple<IEnumerable<Domain.HumanResources.Entities.InstitutionJobs>, int>(institutionJobEntities, 0);
-                institutionJobRepositoryMock.Setup(i => i.GetInstitutionJobsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(institutionJobEntityTuple);
+                institutionJobRepositoryMock.Setup(i => i.GetInstitutionJobsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<Dictionary<string, string>>())).ReturnsAsync(institutionJobEntityTuple);
                 var actualsTuple = await institutionJobSupervisorService.GetInstitutionJobSupervisorsAsync(offset, limit, It.IsAny<bool>());
 
                 Assert.AreEqual(0, actualsTuple.Item1.Count());
@@ -264,7 +264,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                     }
                 };
                 institutionJobEntityTuple = new Tuple<IEnumerable<Domain.HumanResources.Entities.InstitutionJobs>, int>(institutionJobEntities, institutionJobEntities.Count());
-                institutionJobRepositoryMock.Setup(i => i.GetInstitutionJobsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(institutionJobEntityTuple);
+                institutionJobRepositoryMock.Setup(i => i.GetInstitutionJobsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<Dictionary<string, string>>())).ReturnsAsync(institutionJobEntityTuple);
                 institutionJobRepositoryMock.Setup(i => i.GetInstitutionJobsByGuidAsync(It.IsAny<string>())).ReturnsAsync(institutionJobEntities.ToList()[0]);
                 personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("db8f690b-071f-4d98-8da8-d4312511a4c2");
                 positionRepositoryMock.Setup(i => i.GetPositionGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("db8f690b-071f-4d98-8da8-d4312511a4c2");

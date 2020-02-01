@@ -85,7 +85,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if(!HasPermission(StudentPermissionCodes.ViewStudentInformation))
             {
                 var message = "User does not have permissions to access student terms gpa.";
-                logger.Info(message);
+                logger.Error(message);
                 throw new PermissionsException(message);
             }
             var studentAcadCreds = await _academicCreditRepository.GetPilotAcademicCreditsByStudentIdsAsync(studentIds, AcademicCreditDataSubset.None, false, false, term);           

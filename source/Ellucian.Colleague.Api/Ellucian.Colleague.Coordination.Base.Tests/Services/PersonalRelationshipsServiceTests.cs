@@ -42,7 +42,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             private People people;
             private IEnumerable<Ellucian.Colleague.Domain.Base.Entities.Relationship> relationshipEnities;
             private Tuple<IEnumerable<Ellucian.Colleague.Domain.Base.Entities.Relationship>, int> relationshipEnityTuple;
-            private IEnumerable<Domain.Base.Entities.PersonalRelationshipStatus> allPersonalRelationshipStatuses;
+            private IEnumerable<Domain.Base.Entities.RelationshipStatus> allPersonalRelationshipStatuses;
             private IEnumerable<Ellucian.Colleague.Domain.Base.Entities.RelationType> relationTypes;
             private IPersonalRelationshipsService personalRelationshipsService;
             private List<string> guardianRelationshipType;
@@ -113,7 +113,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 guardianRelationshipType = new List<string>() { "Parent" };
                 relationshipRepositoryMock.Setup(i => i.GetDefaultGuardianRelationshipTypesAsync(It.IsAny<bool>())).ReturnsAsync(guardianRelationshipType);
                 referenceDataRepositoryMock.Setup(rt => rt.GetRelationTypesAsync(It.IsAny<bool>())).ReturnsAsync(relationTypes);
-                referenceDataRepositoryMock.Setup(s => s.GetPersonalRelationshipStatusesAsync(It.IsAny<bool>())).ReturnsAsync(allPersonalRelationshipStatuses);
+                referenceDataRepositoryMock.Setup(s => s.GetRelationshipStatusesAsync(It.IsAny<bool>())).ReturnsAsync(allPersonalRelationshipStatuses);
             }
 
             [TestCleanup]

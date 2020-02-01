@@ -22,6 +22,7 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         Task<string> GetStudentAcadCredGuidFromIdAsync(string id);
         Task<string> GetStudentAcademicCredIdFromGuidAsync(string guid);
         Task<string> GetStudentAcadCredGradeSchemeFromIdAsync(string id);
+        Task<Tuple<string, string, string>> GetStudentAcadCredDataFromIdAsync(string id);
 
 
     }

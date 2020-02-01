@@ -69,7 +69,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 application = new Applications()
                 {
                     ApplApplicant = "1",
-                    Recordkey = "1"
+                    Recordkey = "1",
+                    RecordGuid = Guid.NewGuid().ToString()
                 };
 
                 mailing = new Mailing()
@@ -133,10 +134,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataReaderMock.Setup(d => d.BulkReadRecordAsync<Coreq>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(coreqCollection);
                 dataReaderMock.Setup(d => d.SelectAsync("LDM.GUID", It.IsAny<string>())).ReturnsAsync(new string[] { guid });
                 dataReaderMock.Setup(d => d.ReadRecordAsync<ApplValcodes>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(applValcodes);
-                dataReaderMock.Setup(d => d.SelectAsync("APPLICATION.STATUSES", "WITH APPS.SPECIAL.PROCESSING.CODE NE ''")).ReturnsAsync(new string[] { "1", "2" });
                 dataReaderMock.Setup(d => d.SelectAsync("APPLICATIONS", It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>(), true, It.IsAny<int>())).ReturnsAsync(new string[] { "1", "2" });
-                dataReaderMock.Setup(d => d.SelectAsync("APPLICATIONS", It.IsAny<string>(), It.IsAny<string[]>(), "?", true, It.IsAny<int>())).ReturnsAsync(new string[] { "1", "2" });
-                dataReaderMock.Setup(d => d.SelectAsync("MAILING", It.IsAny<string>(), It.IsAny<string[]>(), "?", true, It.IsAny<int>())).ReturnsAsync(new string[]
+                dataReaderMock.Setup(d => d.SelectAsync("MAILING", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(new string[]
                 { "1ý1*1*" + (new DateTime(1967, 12, 31) - DateTime.Today).TotalDays.ToString() + "*1", "2ý2*2*" + (new DateTime(1967, 12, 31) - DateTime.Today).TotalDays.ToString() + "*2" });
                 dataReaderMock.Setup(d => d.SelectAsync("APPLICATIONS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(new string[] { "1", "2" });
             }
@@ -229,7 +228,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [ExpectedException(typeof(ArgumentNullException))]
             public async Task GetAdmissionApplicationSupportingItemsByIdAsync_ArgumentNullException()
             {
-                await admissionApplicationSupportingItemsRepository.GetAdmissionApplicationSupportingItemsByIdAsync(null, "1", DateTime.Today, "1");
+                await admissionApplicationSupportingItemsRepository.GetAdmissionApplicationSupportingItemsByIdAsync(guid, null, "1", DateTime.Today, "1");
             }
 
             [TestMethod]
@@ -237,7 +236,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public async Task GetAdmissionApplicationSupportingItemsByIdAsync_Application_KeyNotFoundException()
             {
                 dataReaderMock.Setup(d => d.ReadRecordAsync<Applications>(It.IsAny<string>(), true)).ReturnsAsync(null);
-                await admissionApplicationSupportingItemsRepository.GetAdmissionApplicationSupportingItemsByIdAsync("1", "1", DateTime.Today, "1");
+                await admissionApplicationSupportingItemsRepository.GetAdmissionApplicationSupportingItemsByIdAsync(guid, "1", "1", DateTime.Today, "1");
             }
 
             [TestMethod]
@@ -245,7 +244,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public async Task GetAdmissionApplicationSupportingItemsByIdAsync_MailingId_KeyNotFoundException()
             {
                 dataReaderMock.Setup(d => d.ReadRecordAsync<Mailing>(It.IsAny<string>(), true)).ReturnsAsync(null);
-                await admissionApplicationSupportingItemsRepository.GetAdmissionApplicationSupportingItemsByIdAsync("1", "1", DateTime.Today, "1");
+                await admissionApplicationSupportingItemsRepository.GetAdmissionApplicationSupportingItemsByIdAsync(guid, "1", "1", DateTime.Today, "1");
             }
 
             [TestMethod]
@@ -258,20 +257,17 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     MailingCurrentCrcCode = new List<string>() { }
                 };
                 dataReaderMock.Setup(d => d.ReadRecordAsync<Mailing>(It.IsAny<string>(), true)).ReturnsAsync(mailing);
-                await admissionApplicationSupportingItemsRepository.GetAdmissionApplicationSupportingItemsByIdAsync("1", "1", DateTime.Today, "1");
+                await admissionApplicationSupportingItemsRepository.GetAdmissionApplicationSupportingItemsByIdAsync(guid, "1", "1", DateTime.Today, "1");
             }
 
             [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
             public async Task GetAdmissionApplicationSupportingItemsByIdAsync_Record_NotExist()
             {
                 /* This test helps to cover the code when there is no record exists in LDM.GUID table for the given id*/
 
                 var dateInput = new DateTime(1967, 12, 31).AddDays((new DateTime(1967, 12, 31) - DateTime.Today).TotalDays);
-
-                dataReaderMock.Setup(d => d.SelectAsync("LDM.GUID", It.IsAny<string>())).ReturnsAsync(null);
-                var result = await admissionApplicationSupportingItemsRepository.GetAdmissionApplicationSupportingItemsByIdAsync("1", "1", dateInput, "1");
-
-                Assert.IsNull(result);
+                var result = await admissionApplicationSupportingItemsRepository.GetAdmissionApplicationSupportingItemsByIdAsync(null, "1", "1", dateInput, "1");
             }
 
             [TestMethod]
@@ -280,7 +276,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 var dateInput = new DateTime(1967, 12, 31).AddDays((new DateTime(1967, 12, 31) - DateTime.Today).TotalDays);
                 dataReaderMock.Setup(d => d.ReadRecordAsync<ApplValcodes>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(null);
-                await admissionApplicationSupportingItemsRepository.GetAdmissionApplicationSupportingItemsByIdAsync("1", "1", dateInput, "1");
+                await admissionApplicationSupportingItemsRepository.GetAdmissionApplicationSupportingItemsByIdAsync(guid, "1", "1", dateInput, "1");
             }
 
             [TestMethod]
@@ -288,7 +284,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 var dateInput = new DateTime(1967, 12, 31).AddDays((new DateTime(1967, 12, 31) - DateTime.Today).TotalDays);
 
-                var result = await admissionApplicationSupportingItemsRepository.GetAdmissionApplicationSupportingItemsByIdAsync("1", "1", dateInput, "1");
+                var result = await admissionApplicationSupportingItemsRepository.GetAdmissionApplicationSupportingItemsByIdAsync(guid, "1", "1", dateInput, "1");
 
                 Assert.IsNotNull(result);
                 Assert.AreEqual(result.Guid, guid);
@@ -319,51 +315,9 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
-            public async Task GetAdmissionApplicationSupportingItemsAsync_Returns_ApplicationIds_Null()
-            {
-                dataReaderMock.Setup(d => d.SelectAsync("APPLICATIONS", It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>(), true, It.IsAny<int>())).ReturnsAsync(null);
-
-                var result = await admissionApplicationSupportingItemsRepository.GetAdmissionApplicationSupportingItemsAsync(0, 2);
-
-                Assert.IsNotNull(result);
-                Assert.AreEqual(result.Item2, 0);
-            }
-
-            [TestMethod]
-            public async Task GetAdmissionApplicationSupportingItemsAsync_Returns_ApplicationIds_Empty()
-            {
-                dataReaderMock.Setup(d => d.SelectAsync("APPLICATIONS", It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>(), true, It.IsAny<int>())).ReturnsAsync(new string[] { });
-
-                var result = await admissionApplicationSupportingItemsRepository.GetAdmissionApplicationSupportingItemsAsync(0, 2);
-
-                Assert.IsNotNull(result);
-                Assert.AreEqual(result.Item2, 0);
-            }
-
-            [TestMethod]
-            public async Task GetAdmissionApplicationSupportingItemsAsync_Returns_ApplicantIds_Null()
-            {
-                dataReaderMock.Setup(d => d.SelectAsync("APPLICATIONS", It.IsAny<string>(), It.IsAny<string[]>(), "?", true, It.IsAny<int>())).ReturnsAsync(null);
-                var result = await admissionApplicationSupportingItemsRepository.GetAdmissionApplicationSupportingItemsAsync(0, 2);
-
-                Assert.IsNotNull(result);
-                Assert.AreEqual(result.Item2, 0);
-            }
-
-            [TestMethod]
-            public async Task GetAdmissionApplicationSupportingItemsAsync_Returns_ApplicantIds_Empty()
-            {
-                dataReaderMock.Setup(d => d.SelectAsync("APPLICATIONS", It.IsAny<string>(), It.IsAny<string[]>(), "?", true, It.IsAny<int>())).ReturnsAsync(new string[] { });
-                var result = await admissionApplicationSupportingItemsRepository.GetAdmissionApplicationSupportingItemsAsync(0, 2);
-
-                Assert.IsNotNull(result);
-                Assert.AreEqual(result.Item2, 0);
-            }
-
-            [TestMethod]
             public async Task GetAdmissionApplicationSupportingItemsAsync_Returns_SupportingItemIds_Null()
             {
-                dataReaderMock.Setup(d => d.SelectAsync("MAILING", It.IsAny<string>(), It.IsAny<string[]>(), "?", true, It.IsAny<int>())).ReturnsAsync(null);
+                dataReaderMock.Setup(d => d.SelectAsync("MAILING", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(null);
                 var result = await admissionApplicationSupportingItemsRepository.GetAdmissionApplicationSupportingItemsAsync(0, 2);
 
                 Assert.IsNotNull(result);
@@ -373,7 +327,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [TestMethod]
             public async Task GetAdmissionApplicationSupportingItemsAsync_Returns_SupportingItemIds_Empty()
             {
-                dataReaderMock.Setup(d => d.SelectAsync("MAILING", It.IsAny<string>(), It.IsAny<string[]>(), "?", true, It.IsAny<int>())).ReturnsAsync(new string[] { });
+                dataReaderMock.Setup(d => d.SelectAsync("MAILING", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(new string[] { });
                 var result = await admissionApplicationSupportingItemsRepository.GetAdmissionApplicationSupportingItemsAsync(0, 2);
 
                 Assert.IsNotNull(result);
@@ -404,6 +358,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [TestMethod]
             public async Task GetAdmissionApplicationSupportingItemsAsync()
             {
+                dataReaderMock.Setup(d => d.SelectAsync("MAILING", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(new string[]
+                { "1ý1*1*" + (new DateTime(1967, 12, 31) - DateTime.Today).TotalDays.ToString() + "*1"});
                 dataReaderMock.Setup(d => d.BulkReadRecordAsync<Applications>("APPLICATIONS", It.IsAny<string[]>(), true)).ReturnsAsync(new Collection<Applications>() { application });
                 dataReaderMock.Setup(d => d.BulkReadRecordAsync<Mailing>("MAILING", It.IsAny<string[]>(), true)).ReturnsAsync(new Collection<Mailing>() { mailing });
                 dataReaderMock.Setup(d => d.BulkReadRecordAsync<CcComments>("CC.COMMENTS", It.IsAny<string[]>(), true)).ReturnsAsync(new Collection<CcComments>() { comments });
@@ -412,7 +368,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 var result = await admissionApplicationSupportingItemsRepository.GetAdmissionApplicationSupportingItemsAsync(0, 2);
 
                 Assert.IsNotNull(result);
-                Assert.AreEqual(result.Item2, 2);
+                Assert.AreEqual(result.Item2, 1);
                 Assert.AreEqual(result.Item1.FirstOrDefault().Guid, guid);
             }
         }
@@ -470,7 +426,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 application = new Applications()
                 {
                     ApplApplicant = "1",
-                    Recordkey = "1"
+                    Recordkey = "1",
+                    RecordGuid = Guid.NewGuid().ToString()
                 };
 
                 mailing = new Mailing()

@@ -23,7 +23,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         Task<Tuple<IEnumerable<Dtos.InstitutionPosition>, int>> GetInstitutionPositions2Async(int offset, int limit, string campus = "", string status = "", string bargainingUnit = "",
             List<string> reportsToPositions = null, string exemptionType = "", string compensationType = "", string startOn = "", string endOn = "", bool bypassCache = false);
 
-        Task<Tuple<IEnumerable<Dtos.InstitutionPosition2>, int>> GetInstitutionPositions3Async(int offset, int limit, string campus = "", string status = "", string bargainingUnit = "",
+        Task<Tuple<IEnumerable<Dtos.InstitutionPosition2>, int>> GetInstitutionPositions3Async(int offset, int limit, string code, string campus = "", string status = "", string bargainingUnit = "",
             List<string> reportsToPositions = null, string exemptionType = "", string compensationType = "", string startOn = "", string endOn = "", bool bypassCache = false);
 
     }

@@ -1,8 +1,10 @@
 ﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Hosting;
@@ -18,6 +20,7 @@ using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using Newtonsoft.Json.Linq;
 using slf4net;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Base
@@ -398,15 +401,690 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         }
         #endregion
 
-        #region DELETE
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task PersonalRelationshipsController_DeletePersonRelationshipAsync_Exception()
-        {
-            await personalRelationshipsController.DeletePersonRelationshipAsync(It.IsAny<string>());
-        }
-        #endregion
+        
 
         #endregion
+    }
+
+    [TestClass]
+    public class PersonalRelationshipsControllerv16Tests
+    {
+        /// <summary>
+        ///Gets or sets the test context which provides
+        ///information about and functionality for the current test run.
+        ///</summary>
+        public TestContext TestContext { get; set; }
+
+        private Mock<IPersonalRelationshipsService> personalRelationshipsServiceMock;
+        private Mock<ILogger> loggerMock;
+        IAdapterRegistry AdapterRegistry;
+        private PersonalRelationshipsController personalRelationshipsController;
+        private IEnumerable<Domain.Base.Entities.Relationship> allRelationship;
+        private List<Dtos.PersonalRelationships2> personalRelationshipsCollection;
+        private string expectedGuid = "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc";
+
+        [TestInitialize]
+        public void Initialize()
+        {
+            LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+            EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.DeploymentDirectory, "App_Data"));
+            personalRelationshipsServiceMock = new Mock<IPersonalRelationshipsService>();
+            loggerMock = new Mock<ILogger>();
+            HashSet<ITypeAdapter> adapters = new HashSet<ITypeAdapter>();
+            AdapterRegistry = new AdapterRegistry(adapters, loggerMock.Object);
+            var testAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Base.Entities.Restriction, RestrictionType2>(AdapterRegistry, loggerMock.Object);
+            AdapterRegistry.AddAdapter(testAdapter);
+            personalRelationshipsCollection = new List<Dtos.PersonalRelationships2>();
+
+            allRelationship = new List<Domain.Base.Entities.Relationship>()
+                {
+                    new Domain.Base.Entities.Relationship("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "d2253ac7-9931-4560-b42f-1fccd43c952e", "Athletic", false, DateTime.Now, DateTime.Now) { Guid = "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", SubjectPersonGuid = "d2253ac7-9931-4560-b42f-1fccd43c952e", RelationPersonGuid = "d2253ac7-9931-4560-b42f-1fccd43c952e"},
+                    new Domain.Base.Entities.Relationship("849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "Academic", true, DateTime.Now, DateTime.Now) { Guid = "849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", SubjectPersonGuid = "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", RelationPersonGuid = "d2253ac7-9931-4560-b42f-1fccd43c952e"},
+                    new Domain.Base.Entities.Relationship("d2253ac7-9931-4560-b42f-1fccd43c952e", "849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "Cultural", true, DateTime.Now, DateTime.Now) { Guid = "d2253ac7-9931-4560-b42f-1fccd43c952e", SubjectPersonGuid = "849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", RelationPersonGuid = "d2253ac7-9931-4560-b42f-1fccd43c952e"}
+                };
+
+            foreach (var source in allRelationship)
+            {
+                var personalRelationships = new Ellucian.Colleague.Dtos.PersonalRelationships2
+                {
+                    Id = source.Guid,
+                    SubjectPerson = new GuidObject2(source.SubjectPersonGuid),
+                    Related = new PersonalRelationshipsRelatedPerson() { person = new GuidObject2(source.RelationPersonGuid) },
+                    StartOn = DateTime.Now,
+                    EndOn = DateTime.Now
+                };
+                personalRelationshipsCollection.Add(personalRelationships);
+            }
+            personalRelationshipsController = new PersonalRelationshipsController(AdapterRegistry, personalRelationshipsServiceMock.Object, loggerMock.Object)
+            {
+                Request = new HttpRequestMessage() { RequestUri = new Uri("http://localhost") }
+            };
+            personalRelationshipsController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
+        }
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            personalRelationshipsController = null;
+            allRelationship = null;
+            personalRelationshipsCollection = null;
+            loggerMock = null;
+            personalRelationshipsServiceMock = null;
+            AdapterRegistry = null;
+        }
+
+        [TestMethod]
+        public async Task PersonalRelationshipsController_GetPersonalRelationships2_ValidateFields_Nocache()
+        {
+            personalRelationshipsController.Request.Headers.CacheControl = new CacheControlHeaderValue
+            {
+                NoCache = false,
+                Public = true
+            };
+
+            int Offset = 0;
+            int Limit = 4;
+            var PersonalRelationshipsTuple =
+                new Tuple<IEnumerable<Dtos.PersonalRelationships2>, int>(personalRelationshipsCollection.Take(4), personalRelationshipsCollection.Count());
+
+            personalRelationshipsServiceMock.Setup(i => i.GetPersonalRelationships2Async(Offset, Limit, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(PersonalRelationshipsTuple);
+
+            Paging paging = new Paging(Limit, Offset);
+            var actuals = await personalRelationshipsController.GetPersonalRelationships2Async(paging);
+
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            System.Net.Http.HttpResponseMessage httpResponseMessage = await actuals.ExecuteAsync(cancelToken);
+
+            IEnumerable<Dtos.PersonalRelationships2> results = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.PersonalRelationships2>>)httpResponseMessage.Content).Value as IEnumerable<Dtos.PersonalRelationships2>;
+
+            Assert.IsNotNull(results);
+            Assert.AreEqual(3, results.Count());
+
+            foreach (var actual in results)
+            {
+                var expected = personalRelationshipsCollection.FirstOrDefault(i => i.Id.Equals(actual.Id));
+                Assert.AreEqual(expected.Id, actual.Id);
+                Assert.AreEqual(expected.SubjectPerson, actual.SubjectPerson);
+                Assert.AreEqual(expected.Related.person.Id, actual.Related.person.Id);
+
+                if (expected.StartOn.Value != null)
+                {
+                    Assert.AreEqual(expected.StartOn.Value, actual.StartOn.Value);
+                }
+                if (expected.EndOn.Value != null)
+                {
+                    Assert.AreEqual(expected.EndOn.Value, actual.EndOn.Value);
+                }
+            }
+        }
+
+        [TestMethod]
+        public async Task PersonalRelationshipsController_GetPersonalRelationships2_ValidateFields_Cache()
+        {
+            personalRelationshipsController.Request.Headers.CacheControl = new CacheControlHeaderValue
+            {
+                NoCache = true,
+                Public = true
+            };
+
+            int Offset = 0;
+            int Limit = 4;
+            var PersonalRelationshipsTuple =
+                new Tuple<IEnumerable<Dtos.PersonalRelationships2>, int>(personalRelationshipsCollection.Take(4), personalRelationshipsCollection.Count());
+
+            personalRelationshipsServiceMock.Setup(i => i.GetPersonalRelationships2Async(Offset, Limit, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(PersonalRelationshipsTuple);
+
+            Paging paging = new Paging(Limit, Offset);
+            var actuals = await personalRelationshipsController.GetPersonalRelationships2Async(paging);
+
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            System.Net.Http.HttpResponseMessage httpResponseMessage = await actuals.ExecuteAsync(cancelToken);
+
+            IEnumerable<Dtos.PersonalRelationships2> results = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.PersonalRelationships2>>)httpResponseMessage.Content).Value as IEnumerable<Dtos.PersonalRelationships2>;
+
+            Assert.IsNotNull(results);
+            Assert.AreEqual(3, results.Count());
+
+            foreach (var actual in results)
+            {
+                var expected = personalRelationshipsCollection.FirstOrDefault(i => i.Id.Equals(actual.Id));
+                Assert.AreEqual(expected.Id, actual.Id);
+                Assert.AreEqual(expected.SubjectPerson, actual.SubjectPerson);
+                Assert.AreEqual(expected.Related.person.Id, actual.Related.person.Id);
+
+                if (expected.StartOn.Value != null)
+                {
+                    Assert.AreEqual(expected.StartOn.Value, actual.StartOn.Value);
+                }
+                if (expected.EndOn.Value != null)
+                {
+                    Assert.AreEqual(expected.EndOn.Value, actual.EndOn.Value);
+                }
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalRelationshipsController_GetPersonalRelationships2_KeyNotFoundException()
+        {
+            //
+            personalRelationshipsServiceMock.Setup(x => x.GetPersonalRelationships2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
+                .Throws<KeyNotFoundException>();
+            await personalRelationshipsController.GetPersonalRelationships2Async(It.IsAny<Paging>());
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalRelationshipsController_GetPersonalRelationships2_PermissionsException()
+        {
+
+            personalRelationshipsServiceMock.Setup(x => x.GetPersonalRelationships2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
+                .Throws<PermissionsException>();
+            await personalRelationshipsController.GetPersonalRelationships2Async(It.IsAny<Paging>());
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalRelationshipsController_GetPersonalRelationships2_ArgumentException()
+        {
+
+            personalRelationshipsServiceMock.Setup(x => x.GetPersonalRelationships2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
+                .Throws<ArgumentException>();
+            await personalRelationshipsController.GetPersonalRelationships2Async(It.IsAny<Paging>());
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalRelationshipsController_GetPersonalRelationships2_RepositoryException()
+        {
+
+            personalRelationshipsServiceMock.Setup(x => x.GetPersonalRelationships2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
+                .Throws<RepositoryException>();
+            await personalRelationshipsController.GetPersonalRelationships2Async(It.IsAny<Paging>());
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalRelationshipsController_GetPersonalRelationships2_IntegrationApiException()
+        {
+
+            personalRelationshipsServiceMock.Setup(x => x.GetPersonalRelationships2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
+                .Throws<IntegrationApiException>();
+            await personalRelationshipsController.GetPersonalRelationships2Async(It.IsAny<Paging>());
+        }
+
+        [TestMethod]
+        public async Task PersonalRelationshipsController_GetPersonalRelationships2ByGuidAsync_ValidateFields()
+        {
+            var expected = personalRelationshipsCollection.FirstOrDefault();
+            personalRelationshipsServiceMock.Setup(x => x.GetPersonalRelationships2ByGuidAsync(expected.Id, It.IsAny<bool>())).ReturnsAsync(expected);
+
+            var actual = await personalRelationshipsController.GetPersonalRelationships2ByGuidAsync(expected.Id);
+
+            Assert.AreEqual(expected.Id, actual.Id);
+            Assert.AreEqual(expected.SubjectPerson, actual.SubjectPerson);
+            Assert.AreEqual(expected.Related.person.Id, actual.Related.person.Id);
+
+            if (expected.StartOn.Value != null)
+            {
+                Assert.AreEqual(expected.StartOn.Value, actual.StartOn.Value);
+            }
+            if (expected.EndOn.Value != null)
+            {
+                Assert.AreEqual(expected.EndOn.Value, actual.EndOn.Value);
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalRelationshipsController_GetPersonalRelationships2_Exception()
+        {
+            personalRelationshipsServiceMock.Setup(x => x.GetPersonalRelationships2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<Exception>();
+            await personalRelationshipsController.GetPersonalRelationships2Async(It.IsAny<Paging>());
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalRelationshipsController_GetPersonalRelationships2ByGuidAsync_Exception()
+        {
+            personalRelationshipsServiceMock.Setup(x => x.GetPersonalRelationships2ByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<Exception>();
+            await personalRelationshipsController.GetPersonalRelationships2ByGuidAsync(string.Empty);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalRelationshipsController_GetPersonalRelationships2ByGuid_KeyNotFoundException()
+        {
+            personalRelationshipsServiceMock.Setup(x => x.GetPersonalRelationships2ByGuidAsync(It.IsAny<string>(), It.IsAny<bool>()))
+                .Throws<KeyNotFoundException>();
+            await personalRelationshipsController.GetPersonalRelationships2ByGuidAsync(expectedGuid);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalRelationshipsController_GetPersonalRelationships2ByGuid_PermissionsException()
+        {
+            personalRelationshipsServiceMock.Setup(x => x.GetPersonalRelationships2ByGuidAsync(It.IsAny<string>(), It.IsAny<bool>()))
+                .Throws<PermissionsException>();
+            await personalRelationshipsController.GetPersonalRelationships2ByGuidAsync(expectedGuid);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalRelationshipsController_GetPersonalRelationships2ByGuid_ArgumentException()
+        {
+            personalRelationshipsServiceMock.Setup(x => x.GetPersonalRelationships2ByGuidAsync(It.IsAny<string>(), It.IsAny<bool>()))
+                .Throws<ArgumentException>();
+            await personalRelationshipsController.GetPersonalRelationships2ByGuidAsync(expectedGuid);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalRelationshipsController_GetPersonalRelationships2ByGuid_RepositoryException()
+        {
+            personalRelationshipsServiceMock.Setup(x => x.GetPersonalRelationships2ByGuidAsync(It.IsAny<string>(), It.IsAny<bool>()))
+                .Throws<RepositoryException>();
+            await personalRelationshipsController.GetPersonalRelationships2ByGuidAsync(expectedGuid);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalRelationshipsController_GetPersonalRelationships2ByGuid_IntegrationApiException()
+        {
+            personalRelationshipsServiceMock.Setup(x => x.GetPersonalRelationships2ByGuidAsync(It.IsAny<string>(), It.IsAny<bool>()))
+                .Throws<IntegrationApiException>();
+            await personalRelationshipsController.GetPersonalRelationships2ByGuidAsync(expectedGuid);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalRelationshipsController_GetPersonalRelationships2ByGuid_Exception()
+        {
+            personalRelationshipsServiceMock.Setup(x => x.GetPersonalRelationships2ByGuidAsync(It.IsAny<string>(), It.IsAny<bool>()))
+                .Throws<Exception>();
+            await personalRelationshipsController.GetPersonalRelationships2ByGuidAsync(expectedGuid);
+        }
+    }
+
+    [TestClass]
+    public class PersonalRelationshipsControllerTests_POST_V16
+    {
+        #region DECLARATION
+
+        public TestContext TestContext { get; set; }
+
+        private Mock<IPersonalRelationshipsService> personalRelationshipsServiceMock;
+        private Mock<ILogger> loggerMock;
+        IAdapterRegistry AdapterRegistry;
+        private PersonalRelationshipsController personalRelationshipsController;
+
+        private PersonalRelationships2 personalRelationships;
+
+        private string guid = "1adc2629-e8a7-410e-b4df-572d02822f8b";
+
+        #endregion
+
+        #region TEST SETUP
+
+        [TestInitialize]
+        public void Initialize()
+        {
+            LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+            EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+            loggerMock = new Mock<ILogger>();
+            HashSet<ITypeAdapter> adapters = new HashSet<ITypeAdapter>();
+            AdapterRegistry = new AdapterRegistry(adapters, loggerMock.Object);
+            var testAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Base.Entities.Restriction, RestrictionType2>(AdapterRegistry, loggerMock.Object);
+            AdapterRegistry.AddAdapter(testAdapter);
+            personalRelationshipsServiceMock = new Mock<IPersonalRelationshipsService>();
+
+            InitializeTestData();
+
+            personalRelationshipsServiceMock.Setup(s => s.GetDataPrivacyListByApi(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(new List<string>());
+
+            personalRelationshipsController = new PersonalRelationshipsController(AdapterRegistry, personalRelationshipsServiceMock.Object, loggerMock.Object)
+            {
+                Request = new HttpRequestMessage()
+            };
+        }
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            loggerMock = null;
+            personalRelationshipsServiceMock = null;
+            personalRelationshipsController = null;
+            AdapterRegistry = null;
+        }
+
+        private void InitializeTestData()
+        {
+            personalRelationships = new PersonalRelationships2()
+            {
+                Id = guid
+            };
+        }
+
+        #endregion        
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonRelController_PostPersonalRelationships2Async_KeyNotFoundException()
+        {
+            personalRelationshipsServiceMock.Setup(s => s.CreatePersonalRelationships2Async(It.IsAny<PersonalRelationships2>())).ThrowsAsync(new KeyNotFoundException());
+            await personalRelationshipsController.PostPersonalRelationships2Async(new PersonalRelationships2() { Id = Guid.Empty.ToString() });
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonRelController_PostPersonalRelationships2Async_PermissionsException()
+        {
+            personalRelationshipsServiceMock.Setup(s => s.CreatePersonalRelationships2Async(It.IsAny<PersonalRelationships2>())).ThrowsAsync(new PermissionsException());
+            await personalRelationshipsController.PostPersonalRelationships2Async(new PersonalRelationships2() { Id = Guid.Empty.ToString() });
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonRelController_PostPersonalRelationships2Async_ArgumentException()
+        {
+            personalRelationshipsServiceMock.Setup(s => s.CreatePersonalRelationships2Async(It.IsAny<PersonalRelationships2>())).ThrowsAsync(new ArgumentException());
+            await personalRelationshipsController.PostPersonalRelationships2Async(new PersonalRelationships2() { Id = Guid.Empty.ToString() });
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonRelController_PostPersonalRelationships2Async_RepositoryException()
+        {
+            personalRelationshipsServiceMock.Setup(s => s.CreatePersonalRelationships2Async(It.IsAny<PersonalRelationships2>())).ThrowsAsync(new RepositoryException());
+            await personalRelationshipsController.PostPersonalRelationships2Async(new PersonalRelationships2() { Id = Guid.Empty.ToString() });
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonRelController_PostPersonalRelationships2Async_IntegrationApiException()
+        {
+            personalRelationshipsServiceMock.Setup(s => s.CreatePersonalRelationships2Async(It.IsAny<PersonalRelationships2>())).ThrowsAsync(new IntegrationApiException());
+            await personalRelationshipsController.PostPersonalRelationships2Async(new PersonalRelationships2() { Id = Guid.Empty.ToString() });
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonRelController_PostPersonalRelationships2Async_ConfigurationException()
+        {
+            personalRelationshipsServiceMock.Setup(s => s.CreatePersonalRelationships2Async(It.IsAny<PersonalRelationships2>())).ThrowsAsync(new ConfigurationException());
+            await personalRelationshipsController.PostPersonalRelationships2Async(new PersonalRelationships2() { Id = Guid.Empty.ToString() });
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonRelController_PostPersonalRelationships2Async_Exception()
+        {
+            personalRelationshipsServiceMock.Setup(s => s.CreatePersonalRelationships2Async(It.IsAny<PersonalRelationships2>())).ThrowsAsync(new Exception());
+            await personalRelationshipsController.PostPersonalRelationships2Async(new PersonalRelationships2() { Id = Guid.Empty.ToString() });
+        }
+
+        [TestMethod]
+        public async Task PersonRelController_PostPersonalRelationships2Async()
+        {
+            personalRelationshipsServiceMock.Setup(s => s.CreatePersonalRelationships2Async(It.IsAny<PersonalRelationships2>())).ReturnsAsync(personalRelationships);
+            var result = await personalRelationshipsController.PostPersonalRelationships2Async(new PersonalRelationships2() { Id = Guid.Empty.ToString() });
+
+            Assert.IsNotNull(result);
+            Assert.AreEqual(guid, result.Id);
+        }
+    }
+
+    [TestClass]
+    public class PersonalRelationshipsControllerTests_PUT_V16
+    {
+        #region DECLARATION
+
+        public TestContext TestContext { get; set; }
+
+        private Mock<IPersonalRelationshipsService> personalRelationshipsServiceMock;
+        private Mock<ILogger> loggerMock;
+        IAdapterRegistry AdapterRegistry;
+        private PersonalRelationshipsController personalRelationshipsController;
+
+        private PersonalRelationships2 personalRelationships;
+
+        private string guid = "1adc2629-e8a7-410e-b4df-572d02822f8b";
+
+        #endregion
+
+        #region TEST SETUP
+
+        [TestInitialize]
+        public void Initialize()
+        {
+            LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+            EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+            loggerMock = new Mock<ILogger>();
+            HashSet<ITypeAdapter> adapters = new HashSet<ITypeAdapter>();
+            AdapterRegistry = new AdapterRegistry(adapters, loggerMock.Object);
+            var testAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Base.Entities.Restriction, RestrictionType2>(AdapterRegistry, loggerMock.Object);
+            AdapterRegistry.AddAdapter(testAdapter);
+            personalRelationshipsServiceMock = new Mock<IPersonalRelationshipsService>();
+
+            InitializeTestData();
+
+            personalRelationshipsServiceMock.Setup(s => s.GetDataPrivacyListByApi(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(new List<string>());
+
+            personalRelationshipsController = new PersonalRelationshipsController(AdapterRegistry, personalRelationshipsServiceMock.Object, loggerMock.Object)
+            {
+                Request = new HttpRequestMessage()
+            };
+            personalRelationshipsController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
+            personalRelationshipsController.Request.Properties.Add("PartialInputJsonObject", JObject.FromObject(personalRelationships));
+        }
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            loggerMock = null;
+            personalRelationshipsServiceMock = null;
+            personalRelationshipsController = null;
+            AdapterRegistry = null;
+        }
+
+        private void InitializeTestData()
+        {
+            personalRelationships = new PersonalRelationships2()
+            {
+                Id = guid,
+                Comment = "Comment"
+            };
+        }
+
+        #endregion
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonRelController_PutPersonalRelationships2Async_PermissionsException()
+        {
+            personalRelationshipsServiceMock.Setup(s => s.UpdatePersonalRelationships2Async(It.IsAny<PersonalRelationships2>())).ThrowsAsync(new PermissionsException());
+            await personalRelationshipsController.PutPersonalRelationships2Async(guid, new PersonalRelationships2() { });
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonRelController_PutPersonalRelationships2Async_ArgumentException()
+        {
+            personalRelationshipsServiceMock.Setup(s => s.UpdatePersonalRelationships2Async(It.IsAny<PersonalRelationships2>())).ThrowsAsync(new ArgumentException());
+            await personalRelationshipsController.PutPersonalRelationships2Async(guid, new PersonalRelationships2() { Id = guid });
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonRelController_PutPersonalRelationshipsAsync_RepositoryException()
+        {
+            personalRelationshipsServiceMock.Setup(s => s.UpdatePersonalRelationships2Async(It.IsAny<PersonalRelationships2>())).ThrowsAsync(new RepositoryException());
+            await personalRelationshipsController.PutPersonalRelationships2Async(guid, new PersonalRelationships2() { Id = guid });
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonRelController_PutPersonalRelationshipsAsync_IntegrationApiException()
+        {
+            personalRelationshipsServiceMock.Setup(s => s.UpdatePersonalRelationships2Async(It.IsAny<PersonalRelationships2>())).ThrowsAsync(new IntegrationApiException());
+            await personalRelationshipsController.PutPersonalRelationships2Async(guid, new PersonalRelationships2() { Id = guid });
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonRelController_PutPersonalRelationshipsAsync_ConfigurationException()
+        {
+            personalRelationshipsServiceMock.Setup(s => s.UpdatePersonalRelationships2Async(It.IsAny<PersonalRelationships2>())).ThrowsAsync(new ConfigurationException());
+            await personalRelationshipsController.PutPersonalRelationships2Async(guid, new PersonalRelationships2() { Id = guid });
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonRelController_PutPersonalRelationshipsAsync_KeyNotFoundException()
+        {
+            personalRelationshipsServiceMock.Setup(s => s.UpdatePersonalRelationships2Async(It.IsAny<PersonalRelationships2>())).ThrowsAsync(new KeyNotFoundException());
+            await personalRelationshipsController.PutPersonalRelationships2Async(guid, new PersonalRelationships2() { Id = guid });
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonRelController_PutPersonalRelationshipsAsync_Exception()
+        {
+            personalRelationshipsServiceMock.Setup(s => s.UpdatePersonalRelationships2Async(It.IsAny<PersonalRelationships2>())).ThrowsAsync(new Exception());
+            await personalRelationshipsController.PutPersonalRelationships2Async(guid, new PersonalRelationships2() { Id = guid });
+        }
+
+        [TestMethod]
+        public async Task PersonRelController_PutPersonalRelationshipsAsync()
+        {
+            personalRelationships.Comment = "Updated Comment";
+            personalRelationshipsServiceMock.Setup(s => s.UpdatePersonalRelationships2Async(It.IsAny<PersonalRelationships2>())).ReturnsAsync(personalRelationships);
+
+            var result = await personalRelationshipsController.PutPersonalRelationships2Async(guid, new PersonalRelationships2() { Id = guid });
+
+            Assert.IsNotNull(result);
+            Assert.AreEqual(guid, result.Id);
+            Assert.AreEqual("Updated Comment", result.Comment);
+        }
+    }
+
+    [TestClass]
+    public class PersonalRelationshipsControllerTests_DELETE_V16
+    {
+        #region DECLARATION
+
+        public TestContext TestContext { get; set; }
+
+        private Mock<IPersonalRelationshipsService> personalRelationshipsServiceMock;
+        private Mock<ILogger> loggerMock;
+        IAdapterRegistry AdapterRegistry;
+        private PersonalRelationshipsController personalRelationshipsController;
+
+        private PersonalRelationships2 personalRelationships;
+
+        private string guid = "1adc2629-e8a7-410e-b4df-572d02822f8b";
+
+        #endregion
+
+        #region TEST SETUP
+
+        [TestInitialize]
+        public void Initialize()
+        {
+            LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+            EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+            loggerMock = new Mock<ILogger>();
+            HashSet<ITypeAdapter> adapters = new HashSet<ITypeAdapter>();
+            AdapterRegistry = new AdapterRegistry(adapters, loggerMock.Object);
+            var testAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Base.Entities.Restriction, RestrictionType2>(AdapterRegistry, loggerMock.Object);
+            AdapterRegistry.AddAdapter(testAdapter);
+            personalRelationshipsServiceMock = new Mock<IPersonalRelationshipsService>();
+
+            personalRelationshipsServiceMock.Setup(s => s.GetDataPrivacyListByApi(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(new List<string>());
+
+            personalRelationshipsController = new PersonalRelationshipsController(AdapterRegistry, personalRelationshipsServiceMock.Object, loggerMock.Object)
+            {
+                Request = new HttpRequestMessage()
+            };
+        }
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            loggerMock = null;
+            personalRelationshipsServiceMock = null;
+            personalRelationshipsController = null;
+            AdapterRegistry = null;
+        }
+
+        #endregion
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonRelController_DeletePersonalRelationshipsAsync_Guid_Null()
+        {
+            await personalRelationshipsController.DeletePersonalRelationshipsAsync(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonRelController_DeletePersonalRelationshipsAsync_PermissionsException()
+        {
+            personalRelationshipsServiceMock.Setup(s => s.DeletePersonalRelationshipsAsync(It.IsAny<String>())).Throws(new PermissionsException());
+            await personalRelationshipsController.DeletePersonalRelationshipsAsync(guid);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonRelController_DeletePersonalRelationshipsAsync_KeyNotFoundException()
+        {
+            personalRelationshipsServiceMock.Setup(s => s.DeletePersonalRelationshipsAsync(It.IsAny<String>())).Throws(new KeyNotFoundException());
+            await personalRelationshipsController.DeletePersonalRelationshipsAsync(guid);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonRelController_DeletePersonalRelationshipsAsync_IntegrationApiException()
+        {
+            personalRelationshipsServiceMock.Setup(s => s.DeletePersonalRelationshipsAsync(It.IsAny<String>())).Throws(new IntegrationApiException());
+            await personalRelationshipsController.DeletePersonalRelationshipsAsync(guid);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonRelController_DeletePersonalRelationshipsAsync_ArgumentException()
+        {
+            personalRelationshipsServiceMock.Setup(s => s.DeletePersonalRelationshipsAsync(It.IsAny<String>())).Throws(new ArgumentException());
+            await personalRelationshipsController.DeletePersonalRelationshipsAsync(guid);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonRelController_DeletePersonalRelationshipsAsync_InvalidOperationException()
+        {
+            personalRelationshipsServiceMock.Setup(s => s.DeletePersonalRelationshipsAsync(It.IsAny<String>())).Throws(new InvalidOperationException());
+            await personalRelationshipsController.DeletePersonalRelationshipsAsync(guid);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonRelController_DeletePersonalRelationshipsAsync_RepositoryException()
+        {
+            personalRelationshipsServiceMock.Setup(s => s.DeletePersonalRelationshipsAsync(It.IsAny<String>())).Throws(new RepositoryException());
+            await personalRelationshipsController.DeletePersonalRelationshipsAsync(guid);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonRelController_DeletePersonalRelationshipsAsync_Exception()
+        {
+            personalRelationshipsServiceMock.Setup(s => s.DeletePersonalRelationshipsAsync(It.IsAny<String>())).Throws(new Exception());
+            await personalRelationshipsController.DeletePersonalRelationshipsAsync(guid);
+        }
     }
 }

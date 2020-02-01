@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -1188,7 +1188,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
                 var expectedPool = expectedSubtotal.BudgetPools.First();
                 var actualPool = actualSubtotal.Pools.First();
-                Assert.IsFalse(actualPool.IsUmbrellaVisible);
+                Assert.IsTrue(actualPool.IsUmbrellaVisible);
 
                 // Check the umbrella properties
                 Assert.AreEqual(expectedBudget, actualPool.Umbrella.BudgetAmount);
@@ -1284,7 +1284,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
                 var expectedPool = expectedSubtotal.BudgetPools.First();
                 var actualPool = actualSubtotal.Pools.First();
-                Assert.IsFalse(actualPool.IsUmbrellaVisible);
+                Assert.IsTrue(actualPool.IsUmbrellaVisible);
 
                 // Check the umbrella properties
                 Assert.AreEqual(expectedBudget, actualPool.Umbrella.BudgetAmount);

@@ -67,7 +67,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 if (criteria.Person != null && !string.IsNullOrEmpty(criteria.Person.Id))
                 {
-                    personId = await _personRepository.GetPersonIdFromGuidAsync(criteria.Person.Id);
+                    try
+                    {
+                        personId = await _personRepository.GetPersonIdFromGuidAsync(criteria.Person.Id);
+                    }
+                    catch (KeyNotFoundException)
+                    {
+                        return new Tuple<IEnumerable<StudentFinancialAidAcademicProgressStatuses>, int>(new List<Dtos.StudentFinancialAidAcademicProgressStatuses>(), 0);
+                    }
                     if(string.IsNullOrEmpty(personId))
                     {
                         return new Tuple<IEnumerable<StudentFinancialAidAcademicProgressStatuses>, int>(new List<Dtos.StudentFinancialAidAcademicProgressStatuses>(), 0);

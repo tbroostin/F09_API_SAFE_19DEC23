@@ -122,17 +122,17 @@ namespace Ellucian.Colleague.Api.Controllers
             }
             try
             {
-                var building = await _curriculumService.GetInstructionalMethodById2Async(id);
+                var instructionalMethod = await _curriculumService.GetInstructionalMethodById2Async(id);
 
-                if (building != null)
+                if (instructionalMethod != null)
                 {
 
                     AddEthosContextProperties(await _curriculumService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                               await _curriculumService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
-                              new List<string>() { building.Id }));
+                              new List<string>() { instructionalMethod.Id }));
                 }
 
-                return building;
+                return instructionalMethod;
             }
             catch (Exception ex)
             {

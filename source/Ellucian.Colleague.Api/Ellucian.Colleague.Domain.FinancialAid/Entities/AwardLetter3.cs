@@ -34,6 +34,11 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
         public List<string> StudentAddress { get; set; }
 
         /// <summary>
+        /// The Award Letter Type (ALTR/OLTR) for the given Award Letter.
+        /// </summary>
+        public string AwardLetterHistoryType { get; set; }
+
+        /// <summary>
         /// The AwardLetterYear that this award letter describes
         /// </summary>
         public string AwardLetterYear { get { return _AwardLetterYear; } }
@@ -88,6 +93,76 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
         public string ClosingParagraph { get; set; }
 
         /// <summary>
+        /// Freeform text that displays before the awards table
+        /// </summary>
+        public string PreAwardText { get; set; }
+
+        /// <summary>
+        /// Freeform text that displays after the award table
+        /// </summary>
+        public string PostAwardText { get; set; }
+
+        /// <summary>
+        /// The text that displays after the closing text
+        /// </summary>
+        public string PostClosingText { get; set; }
+
+        /// <summary>
+        /// List of enrollment statuses associated with a user's award history
+        /// </summary>
+        public List<string> AlhEnrollmentStatus { get; set; }
+
+        /// <summary>
+        /// A list of values associated with the housing arrangement for a given award period
+        /// </summary>
+        public List<string> AlhHousingInd { get; set; }
+
+        /// <summary>
+        /// A list of descriptions associated with the housing arrangement for a given award period
+        /// </summary>
+        public List<string> AlhHousingDesc { get; set; }
+
+        /// <summary>
+        /// Contains the descriptions for housing and enrollment to display in a table in ConfigurableOfferLetter.rdlc
+        /// </summary>
+        public List<OfferLetterHousingEnrollmentItem> OfferLetterHousingEnrollmentItem { get; set; }
+
+        /// <summary>
+        /// List of descriptions associated with a direct cost to be displayed
+        /// </summary>
+        public List<string> AlhDirectCostDesc { get; set; }
+
+        /// <summary>
+        /// List of amounts associated with a direct cost to be displayed
+        /// </summary>
+        public List<int> AlhDirectCostAmount { get; set; }
+
+        /// <summary>
+        /// List of Direct Cost comps
+        /// </summary>
+        public List<string> AlhDirectCostComp { get; set; }
+
+        /// <summary>
+        /// List of descriptions associated with an indirect cost to be displayed
+        /// </summary>
+        public List<string> AlhIndirectCostDesc { get; set; }
+
+        /// <summary>
+        /// List of amounts associated with an indirect cost to be displayed
+        /// </summary>
+        public List<int> AlhIndirectCostAmount { get; set; }
+
+        /// <summary>
+        /// List of Indirect Cost comps
+        /// </summary>
+        public List<string> AlhIndirectCostComp { get; set; }
+
+        /// <summary>
+        /// A list of indirect and direct costs for use in the RDLC
+        /// </summary>
+        public List<AwardLetterHistoryCost> AwardLetterHistoryCosts { get; set; }
+
+        /// <summary>
         /// The student's Financial Aid Budget (Cost of school as known to FA)
         /// </summary>
         public int BudgetAmount { get; set; }
@@ -121,6 +196,16 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
         /// List of the Groups used for this award letter
         /// </summary>
         public List<AwardLetterGroup2> AwardLetterGroups { get; set; }
+
+        /// <summary>
+        /// List of total amounts for each award period on an award letter
+        /// </summary>
+        public List<AwardPeriodTotal> AwardPeriodTotals { get; set; }
+
+        /// <summary>
+        /// List of Pell Entitlements to be displayed on an OLTR offer letter
+        /// </summary>
+        public List<string> AlhPellEntitlementList { get; set; }
 
         /// <summary>
         /// Default constructor

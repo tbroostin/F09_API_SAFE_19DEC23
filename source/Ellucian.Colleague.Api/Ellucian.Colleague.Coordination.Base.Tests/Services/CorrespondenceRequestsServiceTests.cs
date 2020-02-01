@@ -1,4 +1,4 @@
-﻿//Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,6 +23,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
     {
         public class StudentUserFactory : ICurrentUserFactory
         {
+            public string PersonId { get; set; }
+            public ProxySubjectClaims ProxySubjectClaims { get; set; }
             public ICurrentUser CurrentUser
             {
                 get
@@ -31,37 +33,13 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     {
                         ControlId = "123",
                         Name = "Matt",
-                        PersonId = "0003914",
+                        PersonId = PersonId ?? "0003914",
                         SecurityToken = "321",
                         SessionTimeout = 30,
                         UserName = "Student",
                         Roles = new List<string>() { "FINANCIAL AID COUNSELOR" },
-                        SessionFixationId = "abc123"
-                    });
-                }
-            }
-        }
-
-        public class StudentUserFactoryWithProxy : ICurrentUserFactory
-        {
-            public ICurrentUser CurrentUser
-            {
-                get
-                {
-                    return new CurrentUser(new Claims()
-                    {
-                        ControlId = "123",
-                        Name = "Gregory",
-                        PersonId = "0013914",
-                        SecurityToken = "321",
-                        SessionTimeout = 30,
-                        UserName = "Student",
-                        Roles = new List<string>() { },
                         SessionFixationId = "abc123",
-                        ProxySubjectClaims = new ProxySubjectClaims()
-                        {
-                            PersonId = "0003914"
-                        }
+                        ProxySubjectClaims = ProxySubjectClaims
                     });
                 }
             }
@@ -155,13 +133,17 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 CorrespondenceRequestsService = null;
             }
 
-            private void BuildService()
+            private void BuildService(ICurrentUserFactory userFactory = null)
             {
+                if (userFactory == null)
+                {
+                    userFactory = currentUserFactory;
+                }
                 CorrespondenceRequestsService = new CorrespondenceRequestsService(adapterRegistryMock.Object,
                                     CorrespondenceRequestsRepositoryMock.Object,
                                     baseConfigurationRepository,
                                     null,
-                                    currentUserFactory,
+                                    userFactory,
                                     roleRepositoryMock.Object,
                                     loggerMock.Object);
             }
@@ -225,11 +207,64 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [ExpectedException(typeof(PermissionsException))]
             public async Task CurrentUserIsNotSelf_CannotAccessDataTest()
             {
-                currentUserFactory = new StudentUserFactoryWithProxy();
+                var userFactory = new StudentUserFactory()
+                {
+                    PersonId = "0000001",
+                };
 
-                BuildService();
+                BuildService(userFactory);
 
                 await CorrespondenceRequestsService.GetCorrespondenceRequestsAsync(personId);
+
+            }
+
+
+            /// <summary>
+            /// User is proxy but does not have proper proxy permission
+            /// </summary>
+            /// <returns></returns>
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task CurrentUserIsProxyWithoutCordPermission_CannotAccessDataTest()
+            {
+                var userFactory = new StudentUserFactory()
+                {
+                    PersonId = "0000001",
+                    ProxySubjectClaims = new ProxySubjectClaims
+                    {
+                        PersonId = personId
+                    }
+                };
+
+                BuildService(userFactory);
+
+
+                await CorrespondenceRequestsService.GetCorrespondenceRequestsAsync(personId);
+
+            }
+
+            /// <summary>
+            /// User is proxy with proper proxy permission and retrieves the data
+            /// </summary>
+            /// <returns></returns>
+            [TestMethod]
+            public async Task CurrentUserIsProxyWithCordPermission_RetrievesData()
+            {
+                var userFactory = new StudentUserFactory()
+                {
+                    PersonId = "0000001",
+                    ProxySubjectClaims = new ProxySubjectClaims
+                    {
+                        PersonId = personId,
+                        Permissions = new List<string> { Domain.Base.Entities.ProxyWorkflowConstants.CoreRequiredDocuments.Value }
+                    }
+                };
+
+                BuildService(userFactory);
+
+                var actualCorrespondenceRequests = await CorrespondenceRequestsService.GetCorrespondenceRequestsAsync(personId);
+                Assert.IsNotNull(actualCorrespondenceRequests);
+                Assert.AreEqual(8, actualCorrespondenceRequests.Count());
 
             }
         }

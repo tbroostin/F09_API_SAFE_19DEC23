@@ -55,5 +55,12 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <returns></returns>
         Task<IEnumerable<string>> GetInstitutionIdsFromListAsync(string[] subList);
 
+        /// <summary>
+        /// Get the record key from a GUID
+        /// </summary>
+        /// <param name="guid">The GUID</param>
+        /// <returns>Primary key</returns>
+        Task<string> GetInstitutionFromGuidAsync(string guid);
+
     }
 }

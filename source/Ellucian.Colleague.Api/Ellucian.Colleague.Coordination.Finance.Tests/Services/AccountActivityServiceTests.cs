@@ -1,24 +1,23 @@
-﻿// Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Coordination.Finance.Adapters;
+using Ellucian.Colleague.Coordination.Finance.Services;
+using Ellucian.Colleague.Data.Finance.Tests;
+using Ellucian.Colleague.Domain.Entities;
+using Ellucian.Colleague.Domain.Finance;
+using Ellucian.Colleague.Domain.Finance.Entities;
+using Ellucian.Colleague.Domain.Finance.Entities.AccountActivity;
+using Ellucian.Colleague.Domain.Finance.Repositories;
+using Ellucian.Colleague.Domain.Finance.Tests;
+using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Web.Adapters;
+using Ellucian.Web.Security;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
+using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Ellucian.Colleague.Coordination.Finance.Services;
-using Moq;
-using Ellucian.Web.Adapters;
-using Ellucian.Web.Security;
-using Ellucian.Colleague.Domain.Repositories;
-using Ellucian.Colleague.Domain.Finance.Tests;
-using slf4net;
-using Ellucian.Colleague.Domain.Finance.Repositories;
-using Ellucian.Colleague.Coordination.Finance.Adapters;
-
-using Ellucian.Colleague.Domain.Finance.Entities.AccountActivity;
 using System.Threading.Tasks;
-using Ellucian.Colleague.Domain.Finance;
-using Ellucian.Colleague.Data.Finance.Tests;
-using Ellucian.Colleague.Domain.Finance.Entities;
-using Ellucian.Colleague.Domain.Entities;
 
 namespace Ellucian.Colleague.Coordination.Finance.Tests.Services
 {
@@ -32,6 +31,7 @@ namespace Ellucian.Colleague.Coordination.Finance.Tests.Services
         private Mock<IAccountsReceivableRepository> arRepoMock;
         private IAccountsReceivableRepository arRepo;
         private Mock<Domain.Finance.Repositories.IFinancialAidReferenceDataRepository> faRefRepoMock;
+        private Mock<Domain.Finance.Repositories.IFinancialAidRepository> faRepoMock;
         private Mock<IAdapterRegistry> adapterRegistryMock;
         private IAdapterRegistry adapterRegistry;
         private Mock<ILogger> loggerMock;
@@ -52,6 +52,15 @@ namespace Ellucian.Colleague.Coordination.Finance.Tests.Services
         private string awardId;
         private string awardYearCode;
 
+        // D7 data
+        private string d7Award1 = "Award1";
+        private string d7AwardDesc1 = "Award Description 1";
+        private decimal d7Amount1 = 50m;
+        private string d7Award2 = "Award2";
+        private string d7AwardDesc2 = "Award Description 2";
+        private decimal d7Amount2 = 100m;
+        private List<PotentialD7FinancialAid> potentialD7s;
+
         [TestInitialize]
         public void Initialize()
         {
@@ -70,7 +79,7 @@ namespace Ellucian.Colleague.Coordination.Finance.Tests.Services
 
         private void BuildService()
         {
-            service = new AccountActivityService(adapterRegistry, aaRepo, arRepo, faRefRepoMock.Object, userFactory, roleRepo, loggerMock.Object);
+            service = new AccountActivityService(adapterRegistry, aaRepo, arRepo, faRefRepoMock.Object, faRepoMock.Object, userFactory, roleRepo, loggerMock.Object);
         }
 
         [TestCleanup]
@@ -82,6 +91,8 @@ namespace Ellucian.Colleague.Coordination.Finance.Tests.Services
             aaRepo = null;
             arRepoMock = null;
             arRepo = null;
+            faRefRepoMock = null;
+            faRepoMock = null;
             userFactory = null;
             service = null;
         }
@@ -577,7 +588,7 @@ namespace Ellucian.Colleague.Coordination.Finance.Tests.Services
                 bool exceptionCaught = false;
                 aaRepoMock.Setup(repo => repo.GetStudentAwardDisbursementInfoAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<TIVAwardCategory>()))
                     .Throws(new ArgumentNullException());
-                service = new AccountActivityService(adapterRegistry, aaRepo, arRepoMock.Object, faRefRepoMock.Object, userFactory, roleRepo, loggerMock.Object);
+                service = new AccountActivityService(adapterRegistry, aaRepo, arRepoMock.Object, faRefRepoMock.Object, faRepoMock.Object, userFactory, roleRepo, loggerMock.Object);
                 try
                 {
                     await service.GetStudentAwardDisbursementInfoAsync(userFactory.CurrentUser.PersonId, awardYearCode, disbursementInfo.AwardCode);
@@ -595,7 +606,7 @@ namespace Ellucian.Colleague.Coordination.Finance.Tests.Services
                 bool exceptionCaught = false;
                 aaRepoMock.Setup(repo => repo.GetStudentAwardDisbursementInfoAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<TIVAwardCategory>()))
                     .Throws(new KeyNotFoundException());
-                service = new AccountActivityService(adapterRegistry, aaRepo, arRepoMock.Object, faRefRepoMock.Object, userFactory, roleRepo, loggerMock.Object);
+                service = new AccountActivityService(adapterRegistry, aaRepo, arRepoMock.Object, faRefRepoMock.Object, faRepoMock.Object, userFactory, roleRepo, loggerMock.Object);
                 try
                 {
                     await service.GetStudentAwardDisbursementInfoAsync(userFactory.CurrentUser.PersonId, awardYearCode, disbursementInfo.AwardCode);
@@ -613,7 +624,7 @@ namespace Ellucian.Colleague.Coordination.Finance.Tests.Services
                 bool exceptionCaught = false;
                 aaRepoMock.Setup(repo => repo.GetStudentAwardDisbursementInfoAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<TIVAwardCategory>()))
                     .Throws(new Exception());
-                service = new AccountActivityService(adapterRegistry, aaRepo, arRepoMock.Object, faRefRepoMock.Object, userFactory, roleRepo, loggerMock.Object);
+                service = new AccountActivityService(adapterRegistry, aaRepo, arRepoMock.Object, faRefRepoMock.Object, faRepoMock.Object, userFactory, roleRepo, loggerMock.Object);
                 try
                 {
                     await service.GetStudentAwardDisbursementInfoAsync(userFactory.CurrentUser.PersonId, awardYearCode, disbursementInfo.AwardCode);
@@ -626,6 +637,187 @@ namespace Ellucian.Colleague.Coordination.Finance.Tests.Services
             }
         }
 
+        [TestClass]
+        public class AccountActivityService_GetPotentialD7FinancialAidAsyncTests : AccountActivityServiceTests
+        {
+            private Dtos.Finance.PotentialD7FinancialAidCriteria validCriteria = new Dtos.Finance.PotentialD7FinancialAidCriteria()
+            {
+                StudentId = "0000895",
+                TermId = "Term",
+                AwardPeriodAwardsToEvaluate = new List<Dtos.Finance.AwardPeriodAwardTransmitExcessStatus>(),
+            };
+
+            /// <summary>
+            /// Null input parameter throws an exception
+            /// </summary>
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task AccountActivityService_GetPotentialD7FinancialAidAsync_NullCriteria()
+            {
+                await service.GetPotentialD7FinancialAidAsync(null);
+            }
+
+            /// <summary>
+            /// Null student id in criteria throws an exception
+            /// </summary>
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task AccountActivityService_GetPotentialD7FinancialAidAsync_NullStudentId()
+            {
+                await service.GetPotentialD7FinancialAidAsync(new Dtos.Finance.PotentialD7FinancialAidCriteria()
+                {
+                    StudentId = null,
+                    TermId = "TERM",
+                    AwardPeriodAwardsToEvaluate = new List<Dtos.Finance.AwardPeriodAwardTransmitExcessStatus>(),
+                });
+            }
+
+            /// <summary>
+            /// Empty student id in criteria throws an exception
+            /// </summary>
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task AccountActivityService_GetPotentialD7FinancialAidAsync_EmptyStudentId()
+            {
+                await service.GetPotentialD7FinancialAidAsync(new Dtos.Finance.PotentialD7FinancialAidCriteria()
+                {
+                    StudentId = string.Empty,
+                    TermId = "TERM",
+                    AwardPeriodAwardsToEvaluate = new List<Dtos.Finance.AwardPeriodAwardTransmitExcessStatus>(),
+                });
+            }
+
+            /// <summary>
+            /// Null term id in criteria throws an exception
+            /// </summary>
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task AccountActivityService_GetPotentialD7FinancialAidAsync_NullTermId()
+            {
+                await service.GetPotentialD7FinancialAidAsync(new Dtos.Finance.PotentialD7FinancialAidCriteria()
+                {
+                    StudentId = "Valid",
+                    TermId = null,
+                    AwardPeriodAwardsToEvaluate = new List<Dtos.Finance.AwardPeriodAwardTransmitExcessStatus>(),
+                });
+            }
+
+            /// <summary>
+            /// Empty term id in criteria throws an exception
+            /// </summary>
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task AccountActivityService_GetPotentialD7FinancialAidAsync_EmptyTermId()
+            {
+                await service.GetPotentialD7FinancialAidAsync(new Dtos.Finance.PotentialD7FinancialAidCriteria()
+                {
+                    StudentId = "Valid",
+                    TermId = string.Empty,
+                    AwardPeriodAwardsToEvaluate = new List<Dtos.Finance.AwardPeriodAwardTransmitExcessStatus>(),
+                });
+            }
+
+            /// <summary>
+            /// Null award list in criteria throws an exception
+            /// </summary>
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task AccountActivityService_GetPotentialD7FinancialAidAsync_NullAwardList()
+            {
+                await service.GetPotentialD7FinancialAidAsync(new Dtos.Finance.PotentialD7FinancialAidCriteria()
+                {
+                    StudentId = "Valid",
+                    TermId = "Term",
+                    AwardPeriodAwardsToEvaluate = null,
+                });
+            }
+
+            /// <summary>
+            /// Permissions issue throws an exception
+            /// </summary>
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task AccountActivityService_GetPotentialD7FinancialAidAsync_UnauthorizedUser()
+            {
+                validCriteria.StudentId = "0003943";
+                try
+                {
+                    await service.GetPotentialD7FinancialAidAsync(validCriteria);
+                }
+                catch
+                {
+                    loggerMock.Verify(l => l.Info(userFactory.CurrentUser + " does not have permission code " + FinancePermissionCodes.ViewStudentAccountActivity));
+                    throw;
+                }
+            }
+
+            /// <summary>
+            /// User is admin is valid
+            /// </summary>
+            [TestMethod]
+            public async Task AccountActivityService_GetPotentialD7FinancialAidAsync_UserIsAdmin()
+            {
+                userFactory = new FinanceCoordinationTests.CurrentUserFactory();
+                financeAdminRole.AddPermission(new Permission(FinancePermissionCodes.ViewStudentAccountActivity));
+                roleRepoMock.Setup(r => r.Roles).Returns(new List<Domain.Entities.Role>() { financeAdminRole });
+                BuildService();
+                var response = await service.GetPotentialD7FinancialAidAsync(validCriteria);
+                Assert.AreEqual(d7Award1, response.ElementAt(0).AwardPeriodAward);
+                Assert.AreEqual(d7AwardDesc1, response.ElementAt(0).AwardDescription);
+                Assert.AreEqual(d7Amount1, response.ElementAt(0).AwardAmount);
+                Assert.AreEqual(d7Award2, response.ElementAt(1).AwardPeriodAward);
+                Assert.AreEqual(d7AwardDesc2, response.ElementAt(1).AwardDescription);
+                Assert.AreEqual(d7Amount2, response.ElementAt(1).AwardAmount);
+            }
+
+            /// <summary>
+            /// User is proxy is valid
+            /// </summary>
+            [TestMethod]
+            public async Task AccountActivityService_GetPotentialD7FinancialAidAsync_UserIsProxy()
+            {
+                userFactory = new FinanceCoordinationTests.StudentUserFactoryWithProxy();
+                BuildService();
+                // Set to a proxy
+                validCriteria.StudentId = "0003315";
+                var response = await service.GetPotentialD7FinancialAidAsync(validCriteria);
+                Assert.AreEqual(d7Award1, response.ElementAt(0).AwardPeriodAward);
+                Assert.AreEqual(d7AwardDesc1, response.ElementAt(0).AwardDescription);
+                Assert.AreEqual(d7Amount1, response.ElementAt(0).AwardAmount);
+                Assert.AreEqual(d7Award2, response.ElementAt(1).AwardPeriodAward);
+                Assert.AreEqual(d7AwardDesc2, response.ElementAt(1).AwardDescription);
+                Assert.AreEqual(d7Amount2, response.ElementAt(1).AwardAmount);
+            }
+
+            /// <summary>
+            /// User is proxy for a different person throws an exception
+            /// </summary>
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task AccountActivityService_GetPotentialD7FinancialAidAsync_UserIsProxyForDifferentPerson()
+            {
+                userFactory = new FinanceCoordinationTests.StudentUserFactoryWithDifferentProxy();
+                BuildService();
+                var response = await service.GetPotentialD7FinancialAidAsync(validCriteria);
+            }
+
+            /// <summary>
+            /// User is self is valid
+            /// </summary>
+            [TestMethod]
+            public async Task AccountActivityService_GetPotentialD7FinancialAidAsync_Valid()
+            {
+                validCriteria.StudentId = "0000895";
+
+                var response = await service.GetPotentialD7FinancialAidAsync(validCriteria);
+                Assert.AreEqual(d7Award1, response.ElementAt(0).AwardPeriodAward);
+                Assert.AreEqual(d7AwardDesc1, response.ElementAt(0).AwardDescription);
+                Assert.AreEqual(d7Amount1, response.ElementAt(0).AwardAmount);
+                Assert.AreEqual(d7Award2, response.ElementAt(1).AwardPeriodAward);
+                Assert.AreEqual(d7AwardDesc2, response.ElementAt(1).AwardDescription);
+                Assert.AreEqual(d7Amount2, response.ElementAt(1).AwardAmount);
+            }
+        }
         private void SetupAdapters()
         {
             adapterRegistryMock = new Mock<IAdapterRegistry>();
@@ -722,6 +914,18 @@ namespace Ellucian.Colleague.Coordination.Finance.Tests.Services
             adapterRegistryMock.Setup(r => r.GetAdapter<Domain.Finance.Entities.AccountActivity.StudentAwardDisbursementInfo, Dtos.Finance.AccountActivity.StudentAwardDisbursementInfo>())
                 .Returns(studentAwardDisbursementInfoEntityToDtoAdapter);
 
+            var financialAidEntityToDtoAdapter = 
+                new AutoMapperAdapter<Domain.Finance.Entities.AccountActivity.PotentialD7FinancialAid,
+                Dtos.Finance.AccountActivity.PotentialD7FinancialAid>(adapterRegistryMock.Object, loggerMock.Object);
+            adapterRegistryMock.Setup(r => r.GetAdapter<Domain.Finance.Entities.AccountActivity.PotentialD7FinancialAid,
+               Dtos.Finance.AccountActivity.PotentialD7FinancialAid>())
+                .Returns(financialAidEntityToDtoAdapter);
+
+            var potentialD7FinancialAidCriteriaDtoToEntityAdapter =
+                new PotentialD7FinancialAidCriteriaToEntityAdapter(adapterRegistryMock.Object, loggerMock.Object);
+            adapterRegistryMock.Setup(r => r.GetAdapter<Dtos.Finance.PotentialD7FinancialAidCriteria,
+                Domain.Finance.Entities.PotentialD7FinancialAidCriteria>())
+                .Returns(potentialD7FinancialAidCriteriaDtoToEntityAdapter);
         }
 
         private void SetupData()
@@ -1337,12 +1541,19 @@ namespace Ellucian.Colleague.Coordination.Finance.Tests.Services
             accountHolder.AddEmailAddress(new Domain.Base.Entities.EmailAddress("firstname.lastname@ellucian.edu", "PRI") { IsPreferred = true });
             accountHolder.AddPersonAlt(new Domain.Base.Entities.PersonAlt("0001235", "ALT"));
 
-            awardYearCode = "2017";           
+            awardYearCode = "2017";
+
+            potentialD7s = new List<PotentialD7FinancialAid>()
+            {
+                new PotentialD7FinancialAid(d7Award1, d7AwardDesc1, d7Amount1),
+                new PotentialD7FinancialAid(d7Award2, d7AwardDesc2, d7Amount2),
+            };
         }
 
         private void SetupRepositories()
         {
             faRefRepoMock = new Mock<IFinancialAidReferenceDataRepository>();
+            faRepoMock = new Mock<IFinancialAidRepository>();
 
             testAccountActivityRepository = new TestAccountActivityRepository();
             disbursementInfo = (testAccountActivityRepository.GetStudentAwardDisbursementInfoAsync("0000895", awardYearCode, awardId, TIVAwardCategory.Loan)).Result;
@@ -1367,6 +1578,10 @@ namespace Ellucian.Colleague.Coordination.Finance.Tests.Services
             arRepoMock.Setup(repo => repo.GetAccountHolder(It.IsAny<string>())).Returns(accountHolder);            
 
             faRefRepoMock.Setup(repo => repo.GetFinancialAidAwardsAsync()).ReturnsAsync(awards.AsEnumerable());
+            faRepoMock.Setup(repo => repo.GetPotentialD7FinancialAidAsync(
+                It.IsAny<Domain.Finance.Entities.PotentialD7FinancialAidCriteria>()
+                ))
+                .ReturnsAsync(potentialD7s);
 
             userFactoryMock = new Mock<ICurrentUserFactory>();
             userFactory = userFactoryMock.Object;          

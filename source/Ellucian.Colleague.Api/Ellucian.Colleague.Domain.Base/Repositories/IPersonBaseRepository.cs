@@ -3,7 +3,7 @@ using Ellucian.Colleague.Domain.Base.Entities;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-
+using Ellucian.Data.Colleague.DataContracts;
 namespace Ellucian.Colleague.Domain.Base.Repositories
 {
     public interface IPersonBaseRepository
@@ -60,5 +60,10 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <param name="useCache">True if you want to use cached data</param>
         /// <returns>An enumeration of <see cref="PersonBase">PersonBase</see> information</returns>
         Task<IEnumerable<PersonBase>> SearchByIdsOrNamesAsync(IEnumerable<string> ids, string keyword, bool useCache = true);
+
+        /// <summary>
+        /// Gets languages from valcodes
+        /// </summary>
+        Task<ApplValcodes> GetLanguagesAsync();
     }
 }

@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -8,6 +8,7 @@ using Ellucian.Colleague.Api.Controllers.Base;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Web.Adapters;
+using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
@@ -93,6 +94,22 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                 statusCode = e.Response.StatusCode;
             }
             Assert.AreEqual(HttpStatusCode.BadRequest, statusCode);
+        }
+
+        [TestMethod]
+        public async Task GetOrganizationalPersonPositionAsync_PermissionFailure_Causes403()
+        {
+            HttpStatusCode statusCode = HttpStatusCode.Unused;
+            organizationalPersonPositionServiceMock.Setup(s => s.GetOrganizationalPersonPositionByIdAsync("OPP0")).Throws(new PermissionsException());
+            try
+            {
+                await organizationalPersonPositionsController.GetOrganizationalPersonPositionAsync("OPP0");
+            }
+            catch (HttpResponseException e)
+            {
+                statusCode = e.Response.StatusCode;
+            }
+            Assert.AreEqual(HttpStatusCode.Forbidden, statusCode);
         }
 
     }

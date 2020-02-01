@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
@@ -58,7 +58,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests
 
         public async Task<IEnumerable<Section>> GetAsync()
         {
-            return await  BuildSectionsAsync();
+            return await BuildSectionsAsync();
         }
 
 
@@ -198,6 +198,11 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         }
 
         public async Task<Section> GetSectionByGuidAsync(string guid)
+        {
+            return (await GetAsync()).FirstOrDefault(x => x.Guid == guid);
+        }
+
+        public async Task<Section> GetSectionByGuid2Async(string guid, bool addToErrorCollection = false)
         {
             return (await GetAsync()).FirstOrDefault(x => x.Guid == guid);
         }
@@ -488,6 +493,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                         nonTermSec.SectionRequisites = nonTermSectionRequisites;
                         nonTermSec.FirstMeetingDate = nonTermSec.StartDate;
                         nonTermSec.LastMeetingDate = nonTermSec.EndDate;
+                        nonTermSec.Synonym = "7966696";
                         // Add section to the returned list
                         sections.Add(nonTermSec);
                     }
@@ -953,11 +959,11 @@ namespace Ellucian.Colleague.Domain.Student.Tests
             string JsonString = Newtonsoft.Json.JsonConvert.SerializeObject(sections, Newtonsoft.Json.Formatting.None);
 
             return sections;
-            
+
         }
 
 
- 
+
 
         private ICollection<SectionMeeting> BuildMeetingTimes(string sectionId, DateTime startDate, DateTime? endDate)
         {
@@ -1242,6 +1248,62 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         }
 
         public Task<IEnumerable<Event>> GetSectionEventsICalAsync(string calendarScheduleType, IEnumerable<string> calendarSchedulePointers, DateTime? startDate, DateTime? endDate)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<SectionWaitlist> GetSectionWaitlistAsync(string sectionId)
+        {
+            throw new NotImplementedException();
+        }
+        public Task<IEnumerable<SectionWaitlistStudent>> GetSectionWaitlist2Async(string sectionId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<SectionWaitlistConfig> GetSectionWaitlistConfigAsync(string sectionId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<StudentSectionWaitlistInfo> GetStudentSectionWaitlistsByStudentAndSectionIdAsync(string sectionId, string studentId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<SectionMidtermGradingComplete> GetSectionMidtermGradingCompleteAsync(string sectionId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<SectionMidtermGradingComplete> PostSectionMidtermGradingCompleteAsync(string sectionId, int? midtermGradeNumber, string completeOperator, DateTimeOffset? dateAndTime)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<StudentWaitlistStatus>> GetStudentWaitlistStatusesAsync()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Tuple<IEnumerable<SectionMeeting>, int>> GetSectionMeeting2Async(int offset, int limit, string section, string startDate, string endDate, string startTime, string endTime, List<string> buildings, List<string> rooms, List<string> instructors, string term)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Tuple<IEnumerable<Section>, int>> GetSections2Async(int offset, int limit, string title = "", string startDate = "", string endDate = "", string code = "", string number = "", 
+            string learningProvider = "", string termId = "", string reportingTermId = "", List<string> academicLevels = null, string course = "", string location = "", string status = "", 
+            List<string> departments = null, string subject = "", List<string> instructors = null, string scheduleTermId = "", bool addToErrorCollection = false)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Tuple<IEnumerable<Section>, int>> GetSectionsSearchable1Async(int offset, int limit, string searchable = "", bool addToCollection = false)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Tuple<IEnumerable<Section>, int>> GetSectionsKeyword1Async(int offset, int limit, string keyword, bool bypassCache = false, bool caseSensitive = false, bool addToCollection = false)
         {
             throw new NotImplementedException();
         }

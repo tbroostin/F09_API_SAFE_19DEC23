@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
@@ -36,20 +36,18 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// Create a new budget adjustment.
         /// </summary>
         /// <param name="budgetAdjustmentInput">Budget adjustment.</param>
+        /// <param name="majorComponentStartPosition">List of the major component start positions.</param>
         /// <returns>Budget adjustment response</returns>
-        public async Task<BudgetAdjustment> CreateAsync(BudgetAdjustment budgetAdjustmentInput)
+        public async Task<BudgetAdjustment> CreateAsync(BudgetAdjustment budgetAdjustmentInput, IList<string> majorComponentStartPosition)
         {
             // Set up the CTX request and execute.
             var glNumbers = new List<string>();
             foreach (var adjustmentLine in budgetAdjustmentInput.AdjustmentLines)
             {
-                if (adjustmentLine.GlNumber.Replace("-", "").Length > 15)
+                if (!(string.IsNullOrEmpty(adjustmentLine.GlNumber)))
                 {
-                    glNumbers.Add(adjustmentLine.GlNumber.Replace("-", "_"));
-                }
-                else
-                {
-                    glNumbers.Add(adjustmentLine.GlNumber.Replace("-", ""));
+                    var internalGlNumber = GlAccountUtility.ConvertGlAccountToInternalFormat(adjustmentLine.GlNumber, majorComponentStartPosition);
+                    glNumbers.Add(internalGlNumber);
                 }
             }
 
@@ -142,8 +140,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// </summary>
         /// <param name="id">The ID of the budget adjustment to be updated.</param>
         /// <param name="budgetAdjustment">The new budget adjustment data.</param>
+        /// <param name="majorComponentStartPosition">List of the major component start positions.</param>
         /// <returns>The updated budget adjustment entity</returns>
-        public async Task<BudgetAdjustment> UpdateAsync(string id, BudgetAdjustment budgetAdjustmentInput)
+        public async Task<BudgetAdjustment> UpdateAsync(string id, BudgetAdjustment budgetAdjustmentInput, IList<string> majorComponentStartPosition)
         {
             if (string.IsNullOrEmpty(id))
             {
@@ -157,15 +156,13 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             // Set up the CTX request and execute.
             var glNumbers = new List<string>();
+
             foreach (var adjustmentLine in budgetAdjustmentInput.AdjustmentLines)
             {
-                if (adjustmentLine.GlNumber.Replace("-", "").Length > 15)
+                if (!(string.IsNullOrEmpty(adjustmentLine.GlNumber)))
                 {
-                    glNumbers.Add(adjustmentLine.GlNumber.Replace("-", "_"));
-                }
-                else
-                {
-                    glNumbers.Add(adjustmentLine.GlNumber.Replace("-", ""));
+                    var internalGlNumber = GlAccountUtility.ConvertGlAccountToInternalFormat(adjustmentLine.GlNumber, majorComponentStartPosition);
+                    glNumbers.Add(internalGlNumber);
                 }
             }
 
@@ -915,10 +912,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// Validates the budget adjustment entity using a Colleague Transaction.
         /// </summary>
         /// <param name="budgetAdjustmentEntity">The entity to validate.</param>
+        /// <param name="majorComponentStartPosition">List of the major component start positions.</param>
         /// <returns>List of strings that contain error messages from Colleague.</returns>
-        public async Task<List<string>> ValidateBudgetAdjustmentAsync(BudgetAdjustment budgetAdjustmentEntity)
+        public async Task<List<string>> ValidateBudgetAdjustmentAsync(BudgetAdjustment budgetAdjustmentEntity, IList<string> majorComponentStartPosition)
         {
-            if(budgetAdjustmentEntity == null)
+            if (budgetAdjustmentEntity == null)
             {
                 throw new ArgumentNullException("budgetAdjustmentEntity");
             }
@@ -933,7 +931,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             List<DateTime?> approvalDates = new List<DateTime?>();
             List<string> approvalIds = new List<string>();
-            if(budgetAdjustmentEntity.Approvers != null)
+            if (budgetAdjustmentEntity.Approvers != null)
             {
                 foreach (var approver in budgetAdjustmentEntity.Approvers)
                 {
@@ -945,7 +943,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             request.AlApprovalIds = approvalIds;
 
             List<string> nextApproverIds = new List<string>();
-            if(budgetAdjustmentEntity.NextApprovers != null)
+            if (budgetAdjustmentEntity.NextApprovers != null)
             {
                 foreach (var nextApprover in budgetAdjustmentEntity.NextApprovers)
                 {
@@ -957,13 +955,13 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             List<string> credits = new List<string>();
             List<string> debits = new List<string>();
             List<string> glAccounts = new List<string>();
-            if(budgetAdjustmentEntity.AdjustmentLines != null)
+            if (budgetAdjustmentEntity.AdjustmentLines != null)
             {
                 foreach (var adjustmentLine in budgetAdjustmentEntity.AdjustmentLines)
                 {
                     if (adjustmentLine != null && adjustmentLine.GlNumber != null)
                     {
-                        glAccounts.Add(GlAccountUtility.ConvertToInternalFormat(adjustmentLine.GlNumber));
+                        glAccounts.Add(GlAccountUtility.ConvertGlAccountToInternalFormat(adjustmentLine.GlNumber, majorComponentStartPosition));
                         credits.Add(adjustmentLine.FromAmount == 0 ? "" : adjustmentLine.FromAmount.ToString());
                         debits.Add(adjustmentLine.ToAmount == 0 ? "" : adjustmentLine.ToAmount.ToString());
                     }
@@ -972,7 +970,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             request.AlCredits = credits;
             request.AlDebits = debits;
             request.AlGlAccounts = glAccounts;
-            
+
             var response = await transactionInvoker.ExecuteAsync<TxValidateBudgetAdjustmentRequest, TxValidateBudgetAdjustmentResponse>(request);
 
             if (response == null)

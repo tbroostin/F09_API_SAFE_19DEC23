@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -61,6 +61,19 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         }
 
         public async Task<StudentAcademicProgram> UpdateStudentAcademicProgramAsync(StudentAcademicProgram acadProgEnroll, string defaultInstitutionId)
+        {
+            StudentAcademicProgram sp1 = new StudentAcademicProgram("0001731", "MATH.BA", "2012", "6ceb37da-b617-4b4c-8737-a9cec24a548f", DateTime.Parse("01/06/2016"), "active");
+            return sp1;
+        }
+
+        public async Task<StudentAcademicProgram> CreateStudentAcademicProgram2Async(StudentAcademicProgram acadProgEnroll, string defaultInstitutionId)
+        {
+            StudentAcademicProgram sp1 = new StudentAcademicProgram("0001731", "MATH.BA", "2012", "6ceb37da-b617-4b4c-8737-a9cec24a548f", DateTime.Parse("01/06/2016"), "active");
+            return sp1;
+
+        }
+
+        public async Task<StudentAcademicProgram> UpdateStudentAcademicProgram2Async(StudentAcademicProgram acadProgEnroll, string defaultInstitutionId)
         {
             StudentAcademicProgram sp1 = new StudentAcademicProgram("0001731", "MATH.BA", "2012", "6ceb37da-b617-4b4c-8737-a9cec24a548f", DateTime.Parse("01/06/2016"), "active");
             return sp1;
@@ -133,6 +146,36 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         }
 
         public Task<Tuple<IEnumerable<StudentAcademicProgram>, int>> GetStudentAcademicPrograms3Async(string defaultInstitutionId, int offset, int limit, bool bypassCache = false, string Program = "", string StartOn = "", string EndOn = "", string Student = "", string Catalog = "", string Status = "", string programOwner = "", string site = "", string academicLevel = "", string graduatedOn = "", List<string> ccdCredential = null, List<string> degreeCredential = null, string graduatedAcademicPeriod = "", string completeStatus = "", CurriculumObjectiveCategory curriculumObjective = CurriculumObjectiveCategory.NotSet)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Dictionary<string, string>> GetStudentAcademicProgramGuidsCollectionAsync(IEnumerable<string> ids)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> GetStudentAcademicProgramIdFromGuidAsync(string guid)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Tuple<IEnumerable<StudentAcademicProgram>, int>> GetStudentAcademicPrograms3Async(string defaultInstitutionId, int offset, int limit, bool bypassCache = false, string Program = "", string StartOn = "", string EndOn = "", string Student = "", string Catalog = "", string Status = "", string programOwner = "", string site = "", string academicLevel = "", string graduatedOn = "", List<string> ccdCredential = null, List<string> degreeCredential = null, string graduatedAcademicPeriod = "", string completeStatus = "", CurriculumObjectiveCategory curriculumObjective = CurriculumObjectiveCategory.NotSet, bool includeAcadCredentials = true)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<StudentAcademicProgram> GetStudentAcademicProgramByGuid2Async(string id, string defaultInstitutionId, bool includeAcadCredentials = true)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Tuple<IEnumerable<StudentAcademicProgram>, int>> GetStudentAcademicProgramsPersonFilterAsync(int offset, int limit, string[] filterPersonIds = null, string personFilter = "", bool bypassCache = false)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Tuple<IEnumerable<StudentAcademicProgram>, int>> GetStudentAcademicPrograms4Async(string defaultInstitutionId, int offset, int limit, bool bypassCache = false, string Program = "", string StartOn = "", string EndOn = "", string Student = "", string Catalog = "", string Status = "", string programOwner = "", string site = "", string academicLevel = "", string graduatedOn = "", List<string> ccdCredential = null, List<string> degreeCredential = null, string graduatedAcademicPeriod = "", string completeStatus = "", CurriculumObjectiveCategory curriculumObjective = CurriculumObjectiveCategory.NotSet, bool includeAcadCredentials = true)
         {
             throw new NotImplementedException();
         }

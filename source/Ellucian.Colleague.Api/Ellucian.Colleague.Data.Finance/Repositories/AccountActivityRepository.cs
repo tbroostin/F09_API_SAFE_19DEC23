@@ -928,6 +928,7 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
                     newItem.LoanFee = finAidItem.FaAwardLoanFee;
                     newItem.OtherTermAmount = finAidItem.FaAwardOtherAmt;
                     newItem.PeriodAward = finAidItem.FaAwardPeriodAward;
+                    newItem.TransmitAwardExcess = finAidItem.FaAwardTransmitExcessInd;
 
                     if (anticipatedAidTerms != null)
                     {

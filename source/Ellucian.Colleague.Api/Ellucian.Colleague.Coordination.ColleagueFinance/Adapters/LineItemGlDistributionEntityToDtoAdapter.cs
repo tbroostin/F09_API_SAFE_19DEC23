@@ -41,6 +41,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
                 lineItemGlDistributionDto.ProjectLineItemCode = null;
                 lineItemGlDistributionDto.Quantity = 0.00m;
                 lineItemGlDistributionDto.Amount = 0.00m;
+                lineItemGlDistributionDto.GlAccountDescription = null;
             }
             else
             {
@@ -50,8 +51,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
                 lineItemGlDistributionDto.ProjectLineItemCode = Source.ProjectLineItemCode;
                 lineItemGlDistributionDto.Quantity = Source.Quantity;
                 lineItemGlDistributionDto.Amount = Source.Amount;
+                lineItemGlDistributionDto.GlAccountDescription = Source.GlAccountDescription;
             }
 
+            lineItemGlDistributionDto.IsMasked = Source.Masked;
             return lineItemGlDistributionDto;
         }
     }

@@ -145,14 +145,14 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             Tuple<IEnumerable<AccountingStringComponentValues>, int> accountStringComponentValuesTuple =
                 new Tuple<IEnumerable<AccountingStringComponentValues>, int>(_accountStringComponentValuesCollection, _accountStringComponentValuesCollection.Count);
 
-            _referenceRepositoryMock.Setup(repo => repo.GetAccountingStringComponentValuesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
-                .ReturnsAsync(accountStringComponentValuesTuple);
+            //_referenceRepositoryMock.Setup(repo => repo.GetAccountingStringComponentValuesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
+            //    .ReturnsAsync(accountStringComponentValuesTuple);
 
-            _referenceRepositoryMock.Setup(repo => repo.GetAccountingStringComponentValues2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
+            _referenceRepositoryMock.Setup(repo => repo.GetAccountingStringComponentValues2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
                 .ReturnsAsync(accountStringComponentValuesTuple);
 
             _referenceRepositoryMock.Setup(repo => repo.GetAccountingStringComponentValues3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), 
-                It.IsAny<List<string>>(), default(DateTime?), It.IsAny<bool>())).ReturnsAsync(accountStringComponentValuesTuple);
+                It.IsAny<List<string>>(), default(DateTime?))).ReturnsAsync(accountStringComponentValuesTuple);
 
 
 
@@ -527,6 +527,22 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
+        public async Task AccountingStringService_GetAccountingStringComponentValues3_WithTypeFundInactive()
+        {
+            AccountingStringComponentValues3 criteria = new AccountingStringComponentValues3()
+            {
+                Component = new GuidObject2("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc"),
+                Status = Dtos.EnumProperties.Status.Inactive
+            };
+            var actualsTuple =
+                await
+                    _accountingStringService.GetAccountingStringComponentValues3Async(offset, limit, criteria, It.IsAny<DateTime?>(), It.IsAny<bool>());
+
+            Assert.IsNotNull(actualsTuple);
+            Assert.AreEqual(0, actualsTuple.Item2);
+        }
+
+        [TestMethod]
         public async Task AccountingStringService_GetAccountingStringComponentValues3_WithNoGrants()
         {
             AccountingStringComponentValues3 criteria = new AccountingStringComponentValues3()
@@ -553,13 +569,23 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         {
             AccountingStringComponentValues3 criteria = new AccountingStringComponentValues3()
             {
-                Component = new GuidObject2("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbb"),
-                Status = Dtos.EnumProperties.Status.Inactive,
-                Type = new AccountingStringComponentValuesType()
-                {
-                    Account = Dtos.EnumProperties.AccountingTypeAccount.asset,
-                },
-                Grants = new List<GuidObject2>() { new GuidObject2("1f5e7bdb-7998-456c-9436-c77eaca180da") }
+                Component = new GuidObject2("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbb")
+            };
+
+            var actualsTuple =
+                await
+                    _accountingStringService.GetAccountingStringComponentValues3Async(offset, limit, criteria, It.IsAny<DateTime?>(), It.IsAny<bool>());
+
+            Assert.IsNotNull(actualsTuple);
+            Assert.AreEqual(0, actualsTuple.Item2);
+        }
+
+        [TestMethod]
+        public async Task AccountingStringService_GetAccountingStringComponentValues3_WithComponent()
+        {
+            AccountingStringComponentValues3 criteria = new AccountingStringComponentValues3()
+            {
+                Component = new GuidObject2("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc")
             };
 
             var actualsTuple =

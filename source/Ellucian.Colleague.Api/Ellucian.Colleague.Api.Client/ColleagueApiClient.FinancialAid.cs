@@ -1,4 +1,4 @@
-﻿/*Copyright 2014-2018 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2014-2019 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -1098,7 +1098,7 @@ namespace Ellucian.Colleague.Api.Client
         /// <param name="studentId"></param>
         /// <param name="changeRequest"></param>
         /// <returns>AwardPackageChangeRequest dto</returns>
-        public async Task<AwardPackageChangeRequest> CreateAwardPackageChangeRequestAsync(string studentId, AwardPackageChangeRequest changeRequest)
+        public async Task<AwardPackageChangeRequest> CreateAwardPackageChangeRequestAsync(string studentId, AwardPackageChangeRequest changeRequest, bool updateAllAwards = false)
         {
             if (string.IsNullOrEmpty(studentId))
             {
@@ -3088,6 +3088,39 @@ namespace Ellucian.Colleague.Api.Client
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
                 var response = await ExecuteGetRequestWithResponseAsync(combinedUrl, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<Dtos.FinancialAid.StudentBudgetComponent>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get student financial aid budget components");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get all of a student's Financial Aid budget components for the specified year
+        /// </summary>
+        /// <param name="studentId">Colleague PERSON id of student for whom to get budget components</param>
+        /// <param name="awardYear">award year to retrieve budget for</param>
+        /// <returns></returns>
+        public async Task<IEnumerable<Dtos.FinancialAid.StudentBudgetComponent>> GetStudentBudgetComponentsForYearAsync(string studentId, string awardYear)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("studentId");
+            }
+            if (string.IsNullOrEmpty(awardYear))
+            {
+                throw new ArgumentNullException("awardYear");
+            }
+
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _financialAidBudgetComponentsPath, awardYear);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<Dtos.FinancialAid.StudentBudgetComponent>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }

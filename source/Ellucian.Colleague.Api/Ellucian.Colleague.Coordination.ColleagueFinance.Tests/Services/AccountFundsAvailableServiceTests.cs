@@ -132,7 +132,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     new AccountFundsAvailable_Transactionstransactions2()
                     {
                         TransactionDate = DateTime.Today.AddDays(-10),
-                        Type = Dtos.EnumProperties.AccountFundsAvailable_TransactionsType.generalEncumbranceCreate,
+                        Type = Dtos.EnumProperties.AccountFundsAvailable_TransactionsType2.generalEncumbranceCreate,
                         TransactionDetailLines = new List<AccountFundsAvailable_TransactionstransactionDetailLines2>()
                         {
                            new AccountFundsAvailable_TransactionstransactionDetailLines2()
@@ -157,7 +157,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                      new AccountFundsAvailable_Transactionstransactions2()
                     {
                         TransactionDate = DateTime.Today.AddDays(-10),
-                        Type = Dtos.EnumProperties.AccountFundsAvailable_TransactionsType.purchaseJournal,
+                        Type = Dtos.EnumProperties.AccountFundsAvailable_TransactionsType2.purchaseJournal,
                         TransactionDetailLines = new List<AccountFundsAvailable_TransactionstransactionDetailLines2>()
                         {
                            new AccountFundsAvailable_TransactionstransactionDetailLines2()
@@ -221,7 +221,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             viewAccountFundsAvailableRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.ColleagueFinance.ColleagueFinancePermissionCodes.ViewAccountFundsAvailable));
             roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewAccountFundsAvailableRole });
             personRepositoryMock.Setup(rep => rep.GetPersonIdFromGuidAsync("1")).ReturnsAsync("GUID123");
-            accountFundsAvailableRepositoryMock.Setup(repo => repo.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            accountFundsAvailableRepositoryMock.Setup(repo => repo.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
                 .ReturnsAsync(af);
             var actual = await accountFundsAvailableService.GetAccountFundsAvailableByFilterCriteriaAsync("11_00_01_00_20603_52010", 10, new System.DateTime(2016, 12, 31), "1");
             Assert.IsNotNull(actual);
@@ -241,7 +241,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             viewAccountFundsAvailableRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.ColleagueFinance.ColleagueFinancePermissionCodes.ViewAccountFundsAvailable));
             roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewAccountFundsAvailableRole });
             personRepositoryMock.Setup(rep => rep.GetPersonIdFromGuidAsync("1")).ReturnsAsync("GUID123");
-            accountFundsAvailableRepositoryMock.Setup(repo => repo.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            accountFundsAvailableRepositoryMock.Setup(repo => repo.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
                 .ReturnsAsync(af);
             var actual = await accountFundsAvailableService.GetAccountFundsAvailableByFilterCriteriaAsync("11_00_01_00_20603_52010", 100, new System.DateTime(2016, 12, 31), "1");
             Assert.IsNotNull(actual);
@@ -261,7 +261,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             viewAccountFundsAvailableRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.ColleagueFinance.ColleagueFinancePermissionCodes.ViewAccountFundsAvailable));
             roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewAccountFundsAvailableRole });
             personRepositoryMock.Setup(rep => rep.GetPersonIdFromGuidAsync("1")).ReturnsAsync("GUID123");
-            accountFundsAvailableRepositoryMock.Setup(repo => repo.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            accountFundsAvailableRepositoryMock.Setup(repo => repo.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
                 .ReturnsAsync(af);
 
             var actual = await accountFundsAvailableService.GetAccountFundsAvailableByFilterCriteriaAsync("11_00_01_00_20603_52010*1234", 10, DateTime.Now.AddDays(-5), "1");
@@ -277,7 +277,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             viewAccountFundsAvailableRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.ColleagueFinance.ColleagueFinancePermissionCodes.ViewAccountFundsAvailable));
             roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewAccountFundsAvailableRole });
             personRepositoryMock.Setup(rep => rep.GetPersonIdFromGuidAsync("1")).ReturnsAsync("GUID123");
-            accountFundsAvailableRepositoryMock.Setup(repo => repo.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            accountFundsAvailableRepositoryMock.Setup(repo => repo.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
                 .ThrowsAsync(new RepositoryException());
             var actual = await accountFundsAvailableService.GetAccountFundsAvailableByFilterCriteriaAsync("11_00_01_00_20603_52010", 10, new System.DateTime(2016, 12, 31), "1");
         }
@@ -295,7 +295,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 };
             viewAccountFundsAvailableRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.ColleagueFinance.ColleagueFinancePermissionCodes.ViewAccountFundsAvailable));
             roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewAccountFundsAvailableRole });
-            accountFundsAvailableRepositoryMock.Setup(repo => repo.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            accountFundsAvailableRepositoryMock.Setup(repo => repo.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
                 .ReturnsAsync(af);
             var actual = await accountFundsAvailableService.GetAccountFundsAvailableByFilterCriteriaAsync("11_00_01_00_20603_52010", 10, new System.DateTime(2016, 12, 31), "");
             Assert.IsNotNull(actual);
@@ -337,7 +337,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 Sequence = "1"
             });
 
-            accountFundsAvailableRepositoryMock.Setup(repo => repo.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(),"","","", ""))
+            accountFundsAvailableRepositoryMock.Setup(repo => repo.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(),"","","", "", ""))
                 .ReturnsAsync(fundsAvailableResult);
 
 
@@ -383,7 +383,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 
             });
 
-            accountFundsAvailableRepositoryMock.Setup(repo => repo.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), "", "", "", ""))
+            accountFundsAvailableRepositoryMock.Setup(repo => repo.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), "", "", "", "", ""))
                 .ReturnsAsync(fundsAvailableResult);
 
 
@@ -409,7 +409,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             generalLedgerUserRepositoryMock.Setup(repo => repo.GetGeneralLedgerUserAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IEnumerable<string>>())).ReturnsAsync(glUser);
             personRepositoryMock.Setup(repo => repo.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
 
-            accountFundsAvailableRepositoryMock.Setup(repo => repo.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), "", "", "", ""))
+            accountFundsAvailableRepositoryMock.Setup(repo => repo.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), "", "", "", "", ""))
                 .ThrowsAsync(new RepositoryException());
 
             await accountFundsAvailableService.CheckAccountFundsAvailable_Transactions2Async(acctFundsAvailabaleTransDto);
@@ -434,7 +434,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             generalLedgerUserRepositoryMock.Setup(repo => repo.GetGeneralLedgerUserAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IEnumerable<string>>())).ReturnsAsync(glUser);
             personRepositoryMock.Setup(repo => repo.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
 
-            accountFundsAvailableRepositoryMock.Setup(repo => repo.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), "", "", "", ""))
+            accountFundsAvailableRepositoryMock.Setup(repo => repo.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), "", "", "", "", ""))
                 .ThrowsAsync(new RepositoryException());
 
             await accountFundsAvailableService.CheckAccountFundsAvailable_Transactions3Async(acctFundsAvailabaleTrans2Dto);
@@ -467,7 +467,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             viewAccountFundsAvailableRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.ColleagueFinance.ColleagueFinancePermissionCodes.ViewAccountFundsAvailable));
             roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewAccountFundsAvailableRole });
             personRepositoryMock.Setup(rep => rep.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("");
-            accountFundsAvailableRepositoryMock.Setup(repo => repo.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            accountFundsAvailableRepositoryMock.Setup(repo => repo.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
                 .ReturnsAsync(af);
             var actual = await accountFundsAvailableService.GetAccountFundsAvailableByFilterCriteriaAsync("11_00_01_00_20603_52010", 10, new System.DateTime(2016, 12, 31), "1");
         }
@@ -492,7 +492,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             viewAccountFundsAvailableRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.ColleagueFinance.ColleagueFinancePermissionCodes.ViewAccountFundsAvailable));
             roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewAccountFundsAvailableRole });
             personRepositoryMock.Setup(rep => rep.GetPersonIdFromGuidAsync("1")).ReturnsAsync("GUID123");
-            accountFundsAvailableRepositoryMock.Setup(repo => repo.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            accountFundsAvailableRepositoryMock.Setup(repo => repo.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
                 .ThrowsAsync(new Exception());
             
             var actual = await accountFundsAvailableService.GetAccountFundsAvailableByFilterCriteriaAsync("11_00_01_00_20603_52010", 10, new System.DateTime(2016, 12, 31), "1");

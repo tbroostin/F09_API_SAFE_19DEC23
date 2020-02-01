@@ -2,6 +2,7 @@
 
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Repositories;
+using Ellucian.Colleague.Domain.Base.Transactions;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Tests;
 using Ellucian.Data.Colleague;
@@ -24,6 +25,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
     {
         #region SETUP
         Mock<IColleagueTransactionFactory> transFactoryMock;
+        Mock<IColleagueTransactionInvoker> transManagerMock;
+        IColleagueTransactionInvoker transManager;
         Mock<ICacheProvider> cacheProviderMock;
         Mock<IColleagueDataReader> dataReaderMock;
         Mock<ILogger> loggerMock;
@@ -50,7 +53,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         public async Task<Tuple<IEnumerable<StudentFinancialAidAward>, int>> getActualStudentFinancialAidAwards()
         {
             return await awardRepo.GetAsync(0, 10, false, false, new List<string>() { "FUND1", "FUND2" }, new List<string>() { "YEAR1", "YEAR2" } );
-        }
+        }        
 
         public async Task<StudentFinancialAidAward> getActualStudentFinancialAidAwardsById(string id)
         {
@@ -62,6 +65,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         {
             loggerMock = new Mock<ILogger>();
             apiSettings = new ApiSettings("TEST");
+
+         
 
             allFinancialAidAwards = new TestStudentFinancialAidAwardRepository().GetStudentFinancialAidAwardsAsync(false).Result;
             allStudentAwardHistoryByPeriods = new TestStudentFinancialAidAwardRepository().GetStudentAwardHistoryByPeriodsAsync().Result;
@@ -94,6 +99,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             //fundYears = new List<string>() {"2008"};
             testDataRepository = new TestStudentFinancialAidAwardRepository();
 
+        
             awardRepo = BuildValidFundRepository();
         }
 
@@ -111,6 +117,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         {
             // transaction factory mock
             transFactoryMock = new Mock<IColleagueTransactionFactory>();
+            transManagerMock = new Mock<IColleagueTransactionInvoker>();
+            transManager = transManagerMock.Object;
 
             // Cache Provider Mock
             cacheProviderMock = new Mock<ICacheProvider>();
@@ -121,13 +129,44 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
             // Set up dataAccessorMock as the object for the DataAccessor
             transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataReaderMock.Object);
-                        
+            transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManager);
+
             cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
              x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
              .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
                        
             dataReaderMock.Setup(acc => acc.SelectAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(studentFinancialAidAwardIds);
-           
+
+            var ids = new List<string>();
+            GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+            {
+                Offset = 0,
+                Limit = 1,
+                CacheName = "AllStudentAcademicPrograms:",
+                Entity = "STUDENT.PROGRAMSs",
+                Sublist = ids.ToList(),
+                TotalCount = ids.ToList().Count,
+                KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    },
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 7625,
+                        KeyCacheMin = 5906,
+                        KeyCachePart = "001",
+                        KeyCacheSize = 1720
+                    }
+                }
+            };
+            transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                .ReturnsAsync(resp);
+
             var tcAcyrRecords = new Collection<DataContracts.TcAcyr>();
             foreach (var item in allFinancialAidAwards)
             {
@@ -207,7 +246,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
         #endregion
 
-        #region GetStudentFinancialAidAwardsTests
+       
         [TestClass]
         public class GetStudentFinancialAidAwardsTests : StudentFinancialAidAwardRepositoryTests
         {
@@ -248,8 +287,198 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
             }
 
+            [TestMethod]
+            public async Task getActualStudentFinancialAidAwards_WithStudentId()
+            {
+                StudentFinancialAidAward award = new StudentFinancialAidAward("studentId");
+                var actual = await awardRepo.GetAsync(0, 10, false, false, new List<string>() { "FUND1", "FUND2" }, new List<string>() { "YEAR1", "YEAR2" }, award);
+                Assert.IsNotNull(actual);
+                Assert.AreEqual(0, actual.Item2);
+            }
+
+            [TestMethod]
+            public async Task getActualStudentFinancialAidAwards_WithStudentId_Result()
+            {
+                FinAid fa = new FinAid();
+                dataReaderMock.Setup(repo => repo.ReadRecordAsync<FinAid>("FIN.AID", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(fa);
+                StudentFinancialAidAward award = new StudentFinancialAidAward("studentId");
+                var actual = await awardRepo.GetAsync(0, 10, false, false, new List<string>() { "FUND1", "FUND2" }, new List<string>() { "YEAR1", "YEAR2" }, 
+                    award);
+
+                Assert.IsNotNull(actual);
+                Assert.AreEqual(0, actual.Item2);
+            }
+
+            [TestMethod]
+            public async Task getActualStudentFinancialAidAwards_WithYears()
+            {
+                FinAid fa = new FinAid() { FaSaYears = new List<string>() { "2012", "2013", "2014" } };
+                dataReaderMock.Setup(repo => repo.ReadRecordAsync<FinAid>("FIN.AID", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(fa);
+                StudentFinancialAidAward award = new StudentFinancialAidAward("studentId", "", "2012");
+                var actual = await awardRepo.GetAsync(0, 10, false, false, new List<string>() { "FUND1", "FUND2" }, new List<string>() { "YEAR1", "YEAR2" },
+                    award);
+
+                Assert.IsNotNull(actual);
+                //Assert.AreEqual(0, actual.Item2);
+            }
+
+            [TestMethod]
+            public async Task getActualStudentFinancialAidAwards_WithNoYearMatch()
+            {
+                FinAid fa = new FinAid() { FaSaYears = new List<string>() { "2012", "2013", "2014" } };
+                dataReaderMock.Setup(repo => repo.ReadRecordAsync<FinAid>("FIN.AID", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(fa);
+                StudentFinancialAidAward award = new StudentFinancialAidAward("studentId", "", "2010");
+                var actual = await awardRepo.GetAsync(0, 10, false, false, new List<string>() { "FUND1", "FUND2" }, new List<string>() { "YEAR1", "YEAR2" },
+                    award);
+
+                Assert.IsNotNull(actual);
+                Assert.AreEqual(0, actual.Item2);
+            }
+
+            [TestMethod]
+            public async Task getActualStudentFinancialAidAwards_WithJustAidYear()
+            {
+                //FinAid fa = new FinAid() { FaSaYears = new List<string>() { "2012", "2013", "2014" } };
+                dataReaderMock.Setup(repo => repo.SelectAsync("FIN.AID", It.IsAny<string>())).ReturnsAsync(new string[] { });
+                StudentFinancialAidAward award = new StudentFinancialAidAward("", "", "2010");
+                var actual = await awardRepo.GetAsync(0, 10, false, false, new List<string>() { "FUND1", "FUND2" }, new List<string>() { "YEAR1", "YEAR2" },
+                    award);
+
+                Assert.IsNotNull(actual);
+                Assert.AreEqual(0, actual.Item2);
+            }
+
+            [TestMethod]
+            public async Task getActualStudentFinancialAidAwards_WithAidYearAndAwardFund()
+            {
+                FinAid fa = new FinAid() { FaSaYears = new List<string>() { "2012", "2013", "2014" } };
+                dataReaderMock.Setup(repo => repo.ReadRecordAsync<FinAid>("FIN.AID", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(fa);
+                StudentFinancialAidAward award = new StudentFinancialAidAward("studentId", "Fund1", "2012");
+                var actual = await awardRepo.GetAsync(0, 10, false, false, new List<string>() { "FUND1", "FUND2" }, new List<string>() { "YEAR1", "YEAR2" },
+                    award);
+
+                Assert.IsNotNull(actual);
+            }
+
+            [TestMethod]
+            public async Task getActualStudentFinancialAidAwards_WithAwardFundNoStudentId()
+            {
+                FinAid fa = new FinAid() { FaSaYears = new List<string>() { "2012", "2013", "2014" } };
+                dataReaderMock.Setup(repo => repo.ReadRecordAsync<FinAid>("FIN.AID", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(fa);
+                StudentFinancialAidAward award = new StudentFinancialAidAward("", "Fund1", "2012");
+                var actual = await awardRepo.GetAsync(0, 10, false, false, new List<string>() { "FUND1", "FUND2" }, new List<string>() { "YEAR1", "YEAR2" },
+                    award);
+
+                Assert.IsNotNull(actual);
+            }
+
             #endregion
         }
+
+
+        [TestClass]
+        public class GetStudentFinancialAidAwardsTests2 : StudentFinancialAidAwardRepositoryTests
+        {
+            [TestInitialize]
+            public void Initialize()
+            {
+                MockInitialize();
+
+              
+
+            }
+
+            #region TESTS FOR FUNCTIONALITY
+           
+     
+            [TestMethod]
+            public async Task getActualStudentFinancialAidAwards2_WithStudentId()
+            {
+                StudentFinancialAidAward award = new StudentFinancialAidAward("studentId");
+                var actual = await awardRepo.Get2Async(0, 10, false, false, new List<string>() { "FUND1", "FUND2" }, new List<string>() { "YEAR1", "YEAR2" }, award);
+                Assert.IsNotNull(actual);
+                Assert.AreEqual(0, actual.Item2);
+            }
+
+            [TestMethod]
+            public async Task getActualStudentFinancialAidAwards2_WithStudentId_Result()
+            {
+                FinAid fa = new FinAid();
+                dataReaderMock.Setup(repo => repo.ReadRecordAsync<FinAid>("FIN.AID", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(fa);
+                StudentFinancialAidAward award = new StudentFinancialAidAward("studentId");
+                var actual = await awardRepo.Get2Async(0, 10, false, false, new List<string>() { "FUND1", "FUND2" }, new List<string>() { "YEAR1", "YEAR2" },
+                    award);
+
+                Assert.IsNotNull(actual);
+                Assert.AreEqual(0, actual.Item2);
+            }
+
+            [TestMethod]
+            public async Task getActualStudentFinancialAidAwards2_WithYears()
+            {
+                FinAid fa = new FinAid() { FaSaYears = new List<string>() { "2012", "2013", "2014" } };
+                dataReaderMock.Setup(repo => repo.ReadRecordAsync<FinAid>("FIN.AID", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(fa);
+                StudentFinancialAidAward award = new StudentFinancialAidAward("studentId", "", "2012");
+                var actual = await awardRepo.Get2Async(0, 10, false, false, new List<string>() { "FUND1", "FUND2" }, new List<string>() { "YEAR1", "YEAR2" },
+                    award);
+
+                Assert.IsNotNull(actual);
+                //Assert.AreEqual(0, actual.Item2);
+            }
+
+            [TestMethod]
+            public async Task getActualStudentFinancialAidAwards2_WithNoYearMatch()
+            {
+                FinAid fa = new FinAid() { FaSaYears = new List<string>() { "2012", "2013", "2014" } };
+                dataReaderMock.Setup(repo => repo.ReadRecordAsync<FinAid>("FIN.AID", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(fa);
+                StudentFinancialAidAward award = new StudentFinancialAidAward("studentId", "", "2010");
+                var actual = await awardRepo.Get2Async(0, 10, false, false, new List<string>() { "FUND1", "FUND2" }, new List<string>() { "YEAR1", "YEAR2" },
+                    award);
+
+                Assert.IsNotNull(actual);
+                Assert.AreEqual(0, actual.Item2);
+            }
+
+            [TestMethod]
+            public async Task getActualStudentFinancialAidAwards2_WithJustAidYear()
+            {
+                //FinAid fa = new FinAid() { FaSaYears = new List<string>() { "2012", "2013", "2014" } };
+                dataReaderMock.Setup(repo => repo.SelectAsync("FIN.AID", It.IsAny<string>())).ReturnsAsync(new string[] { });
+                StudentFinancialAidAward award = new StudentFinancialAidAward("", "", "2010");
+                var actual = await awardRepo.Get2Async(0, 10, false, false, new List<string>() { "FUND1", "FUND2" }, new List<string>() { "YEAR1", "YEAR2" },
+                    award);
+
+                Assert.IsNotNull(actual);
+                Assert.AreEqual(0, actual.Item2);
+            }
+
+            [TestMethod]
+            public async Task getActualStudentFinancialAidAwards2_WithAidYearAndAwardFund()
+            {
+                FinAid fa = new FinAid() { FaSaYears = new List<string>() { "2012", "2013", "2014" } };
+                dataReaderMock.Setup(repo => repo.ReadRecordAsync<FinAid>("FIN.AID", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(fa);
+                StudentFinancialAidAward award = new StudentFinancialAidAward("studentId", "Fund1", "2012");
+                var actual = await awardRepo.Get2Async(0, 10, false, false, new List<string>() { "FUND1", "FUND2" }, new List<string>() { "YEAR1", "YEAR2" },
+                    award);
+
+                Assert.IsNotNull(actual);
+            }
+
+            [TestMethod]
+            public async Task getActualStudentFinancialAidAwards2_WithAwardFundNoStudentId()
+            {
+                FinAid fa = new FinAid() { FaSaYears = new List<string>() { "2012", "2013", "2014" } };
+                dataReaderMock.Setup(repo => repo.ReadRecordAsync<FinAid>("FIN.AID", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(fa);
+                StudentFinancialAidAward award = new StudentFinancialAidAward("", "Fund1", "2012");
+                var actual = await awardRepo.Get2Async(0, 10, false, false, new List<string>() { "FUND1", "FUND2" }, new List<string>() { "YEAR1", "YEAR2" },
+                    award);
+
+                Assert.IsNotNull(actual);
+            }
+
+           
+        }
+
         #endregion
 
     }

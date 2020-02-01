@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -457,6 +457,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="id">The GUID of the course</param>
         /// <returns>The requested <see cref="Dtos.Course5">Course.</see></returns>
         [EedmResponseFilter]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Ellucian.Colleague.Dtos.Course5> GetHedmCourse5ByIdAsync(string id)
         {
             var bypassCache = false;
@@ -483,7 +484,7 @@ namespace Ellucian.Colleague.Api.Controllers
             }
             catch (PermissionsException e)
             {
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
@@ -704,6 +705,7 @@ namespace Ellucian.Colleague.Api.Controllers
         ///  <param name="activeOn">named query</param>
         /// <returns>Filtered <see cref="Dtos.Course5">Courses.</see></returns>
         [HttpGet]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [ValidateQueryStringFilter()]
         [QueryStringFilterFilter("criteria", typeof(Dtos.Course5))]
         [QueryStringFilterFilter("activeOn", typeof(Dtos.Filters.ActiveOnFilter))]
@@ -809,7 +811,12 @@ namespace Ellucian.Colleague.Api.Controllers
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (ArgumentNullException e)
             {
@@ -1025,6 +1032,16 @@ namespace Ellucian.Colleague.Api.Controllers
             catch (ConfigurationException e)
             {
                 throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (Exception ex)
             {
@@ -1301,6 +1318,16 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(e.Message, HttpStatusCode.Forbidden);
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (Exception e)
             {

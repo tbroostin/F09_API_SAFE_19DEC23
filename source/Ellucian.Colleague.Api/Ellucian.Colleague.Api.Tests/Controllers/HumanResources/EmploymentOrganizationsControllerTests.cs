@@ -23,6 +23,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 
         private Mock<ILogger> loggerMock;
         private EmploymentOrganizationsController employmentOrganizationsController;
+        private Ellucian.Web.Http.Models.QueryStringFilter criteriaFilter = new Web.Http.Models.QueryStringFilter("criteria", "");
 
 
         [TestInitialize]
@@ -48,12 +49,10 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 
         }
 
-
-
         [TestMethod]
         public async Task EmploymentOrganizationsController_GetAll()
         {
-            var employmentOrganizations = await employmentOrganizationsController.GetEmploymentOrganizationsAsync();
+            var employmentOrganizations = await employmentOrganizationsController.GetEmploymentOrganizationsAsync(criteriaFilter);
 
             Assert.IsTrue(employmentOrganizations.Count().Equals(0));
         }

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -2732,6 +2732,90 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(null);
                 var result = await facultyService.GetFacultyPermissions2Async();
+            }
+        }
+
+        [TestClass]
+        public class SearchFacultyIdsAsync:CurrentUserSetup
+        {
+            private FacultyService facultyService;
+            private Mock<IFacultyRepository> facultyRepoMock;
+            private IFacultyRepository facultyRepo;
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private IAdapterRegistry adapterRegistry;
+            private Mock<IStudentConfigurationRepository> configRepoMock;
+            private IStudentConfigurationRepository configRepo;
+            private Mock<ISectionRepository> sectionRepoMock;
+            private ISectionRepository sectionRepo;
+            private Mock<ITermRepository> termRepoMock;
+            private ITermRepository termRepo;
+            private Mock<IReferenceDataRepository> referenceRepoMock;
+            private IReferenceDataRepository referenceRepo;
+            private ILogger logger;
+            private Mock<IRoleRepository> roleRepoMock;
+            private IRoleRepository roleRepo;
+            private ICurrentUserFactory currentUserFactory;
+
+            [TestInitialize]
+            public async void Initialize()
+            {
+                facultyRepoMock = new Mock<IFacultyRepository>();
+                facultyRepo = facultyRepoMock.Object;
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                adapterRegistry = adapterRegistryMock.Object;
+                configRepoMock = new Mock<IStudentConfigurationRepository>();
+                configRepo = configRepoMock.Object;
+                sectionRepoMock = new Mock<ISectionRepository>();
+                sectionRepo = sectionRepoMock.Object;
+                termRepoMock = new Mock<ITermRepository>();
+                termRepo = termRepoMock.Object;
+                referenceRepoMock = new Mock<IReferenceDataRepository>();
+                referenceRepo = referenceRepoMock.Object;
+                roleRepoMock = new Mock<IRoleRepository>();
+                roleRepo = roleRepoMock.Object;
+                logger = new Mock<ILogger>().Object;
+
+                // Set up current user
+                currentUserFactory = new CurrentUserSetup.FacultyUserFactory();
+                //mock faculty repo SearchFacultyIdsAsync method
+                facultyRepoMock.Setup(frm => frm.SearchFacultyIdsAsync(It.IsAny<bool>(), It.IsAny<bool>())).ReturnsAsync(new List<string>() { "0001", "0002" });
+                facultyService = new FacultyService(adapterRegistry, facultyRepo, configRepo, sectionRepo, termRepo, referenceRepo, null, currentUserFactory, roleRepo, logger);
+            }
+
+            //user have VIEW.ANY.ADVISEE permission
+            [TestMethod]
+            public async Task FacultyHaveViewAdviseePermission()
+            {
+                //assign permission to current user
+                facultyRole.AddPermission(new Permission(PlanningPermissionCodes.ViewAnyAdvisee));
+                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { facultyRole });
+                var result = await facultyService.SearchFacultyIdsAsync(true, false);
+                Assert.IsNotNull(result);
+                Assert.AreEqual(2, result.Count());
+                Assert.AreEqual("0001", result.ToList()[0]);
+
+
+            }
+            //user does not have VIEW.ANY.ADVISEE permission
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task FacultyDoesNotHaveViewAdviseePermission()
+            {
+                //assign permission to current user
+                facultyRole.AddPermission(new Permission(PlanningPermissionCodes.ViewAssignedAdvisees));
+                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { facultyRole });
+                var result = await facultyService.SearchFacultyIdsAsync(false, false);
+               
+            }
+            //when permission is empty or null
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task FacultyDoesNotHaveAnyPermissions()
+            {
+                //assign permission to current user
+                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { facultyRole });
+                var result = await facultyService.SearchFacultyIdsAsync(false, true);
+
             }
         }
     }

@@ -121,5 +121,24 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Entities
             Assert.IsTrue(ap.IneligibilityReasons.Any());
             Assert.AreEqual(expectedReasons.Count, ap.IneligibilityReasons.Count);
         }
+
+        /// <summary>
+        /// Validate TransmitAwardExcess initializes to false
+        /// </summary>
+        [TestMethod]
+        public void ActivityFinancialAidItem_TransmitAwardExcess_DefaultTest()
+        {
+            Assert.IsFalse(ap.TransmitAwardExcess);
+        }
+
+        /// <summary>
+        /// Validate TransmitAwardExcess setter
+        /// </summary>
+        [TestMethod]
+        public void ActivityFinancialAidItem_TransmitAwardExcess_GetSetTest()
+        {
+            ap.TransmitAwardExcess = true;
+            Assert.IsTrue(ap.TransmitAwardExcess);
+        }
     }
 }

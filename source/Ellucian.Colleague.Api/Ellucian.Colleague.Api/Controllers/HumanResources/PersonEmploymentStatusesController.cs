@@ -42,6 +42,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <summary>
         /// Get personEmploymentStatus objects. This endpoint returns objects based on the current
         /// user's/user with proxy's permissions.
+        /// Example: If the current user is an admin, this endpoint returns the personEmploymentStatuses for the effectivePersonId
         /// Example: If the current user/user with proxy is an employee, this endpoint returns that employee's/proxied employee's personEmploymentStatuses
         /// Example: If the current user/user with proxy is a manager, this endpoint returns all the personEmploymentStatuses of the employees reporting to the manager
         /// </summary>

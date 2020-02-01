@@ -1,11 +1,8 @@
-﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2019 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
 {
@@ -26,6 +23,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
         public List<PositionFundingSource> fundingSources;
         public string earningsTypeGroupId;
         public List<EarningsTypeGroup> earnTypeGrouping;
+        public bool isRegularWage;
 
 
         public PersonPositionWage personPositionWage;
@@ -47,10 +45,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
                 new PositionFundingSource("f", 1) {ProjectId = "12345"}
             };
             earningsTypeGroupId = "ADMIN";
-            //earnTypeGrouping = new List<EarningsTypeGroup>()
-            //{
-            //    new EarningsTypeGroup("ADMIN", "PER", "Personal Pay Leave")
-            //};
+            
         }
 
         [TestClass]
@@ -66,6 +61,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             [TestInitialize]
             public void Initialize()
             {
+                isRegularWage = true;
                 PersonPositionWageTestsInitialize();
             }
 
@@ -77,9 +73,18 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
-            public void IdRequiredTest()
+            public void RegularWage_IdRequiredTest()
             {
                 id = "";
+                var error = personPositionWage;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public void Stipend_IdRequiredTest()
+            {
+                id = "";
+                isRegularWage = false;
                 var error = personPositionWage;
             }
 
@@ -91,9 +96,18 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
-            public void PersonIdRequiredTest()
+            public void RegularWage_PersonIdRequiredTest()
             {
                 personId = "";
+                var error = personPositionWage;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public void Stipend_PersonIdRequiredTest()
+            {
+                personId = "";
+                isRegularWage = false;
                 var error = personPositionWage;
             }
 
@@ -105,12 +119,13 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
-            public void PositionIdRequiredTest()
+            public void RegularWage_PositionIdRequiredTest()
             {
                 positionId = "";
                 var error = personPositionWage;
             }
 
+            
             [TestMethod]
             public void PersonPositionIdTest()
             {
@@ -119,12 +134,13 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
-            public void PersonPositionIdRequiredTest()
+            public void RegularWage_PersonPositionIdRequiredTest()
             {
                 personPositionId = "";
                 var error = personPositionWage;
             }
 
+            
             [TestMethod]
             public void PositionPayDefaultsIdTest()
             {
@@ -133,12 +149,13 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
-            public void PositionPayDefaultIdRequiredTest()
+            public void RegularWage_PositionPayDefaultIdRequiredTest()
             {
                 positionPayDefaultId = "";
                 var error = personPositionWage;
             }
 
+            
             [TestMethod]
             public void PayClassIdTest()
             {
@@ -147,12 +164,13 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
-            public void PayClassIdRequiredTest()
+            public void RegularWage_PayClassIdRequiredTest()
             {
                 payClassId = "";
                 var error = personPositionWage;
             }
 
+            
             [TestMethod]
             public void PayCycleIdTest()
             {
@@ -161,9 +179,18 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
-            public void PayCycleIdRequiredTest()
+            public void RegularWage_PayCycleIdRequiredTest()
             {
                 payCycleId = "";
+                var error = personPositionWage;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public void Stipend_PayCycleIdRequiredTest()
+            {
+                payCycleId = "";
+                isRegularWage = false;
                 var error = personPositionWage;
             }
 
@@ -175,11 +202,13 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
-            public void RegularWorkEarningsTypeIdRequiredTest()
+            public void RegularWage_RegularWorkEarningsTypeIdRequiredTest()
             {
                 regularWorkEarningsTypeId = "";
                 var error = personPositionWage;
             }
+
+            
 
             [TestMethod]
             public void StartDateTest()
@@ -199,11 +228,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
                 Assert.AreEqual(earningsTypeGroupId, personPositionWage.EarningsTypeGroupId);
             }
 
-            //[TestMethod]
-            //public void EarnTypeGroupingTest()
-            //{
-            //    Assert.AreEqual(earnTypeGrouping, personPositionWage.EarningsTypeGroupEntries);
-            //}
+            
         }
 
         [TestClass]
@@ -212,6 +237,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             [TestInitialize]
             public void Initialize()
             {
+                isRegularWage = true;
                 PersonPositionWageTestsInitialize();
                 personPositionWage = new PersonPositionWage(id, personId, positionId, personPositionId, positionPayDefaultId, payClassId, payCycleId, regularWorkEarningsTypeId, startDate, earningsTypeGroupId);
             }
@@ -274,6 +300,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
         {
             public PersonPositionWage buildPersonPositionWage()
             {
+                isRegularWage = true;
                 return new PersonPositionWage(id, personId, positionId, personPositionId, positionPayDefaultId, payClassId, payCycleId, regularWorkEarningsTypeId, startDate, earningsTypeGroupId);
             }
 

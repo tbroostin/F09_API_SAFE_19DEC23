@@ -47,5 +47,8 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         public string DecisionType { get; private set; }
         public DateTime DecidedOnDate { get; private set; }
         public DateTime DecidedOnTime { get; private set; }
+
+        public DateTimeOffset DecidedOn { get; set; }
+
     }
 }

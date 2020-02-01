@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Student.Entities;
 using System;
 using System.Collections.Generic;
@@ -53,6 +53,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="criteria">Criteria that contains a list of sections and some other options</param>
         /// <returns>List of AcademicCredit3 Dtos</returns>
         Task<IEnumerable<Dtos.Student.AcademicCredit3>> QueryAcademicCredits2Async(Dtos.Student.AcademicCreditQueryCriteria criteria);
+        /// <summary>
+        /// Returns a list of academic credits records for the specified section Ids in the criteria
+        /// Also returns list of invalid academic credits Ids that are missing from STUDENT.ACAD.CRED file.
+        /// </summary>
+        /// <param name="criteria">Criteria that contains a list of sections and some other options</param>
+        /// <returns><see cref="AcademicCreditsWithInvalidKeys">AcademicCreditsWithInvalidKeys</see> Dtos</returns>
+        Task<Dtos.Student.AcademicCreditsWithInvalidKeys> QueryAcademicCreditsWithInvalidKeysAsync(Dtos.Student.AcademicCreditQueryCriteria criteria);
 
 
     }

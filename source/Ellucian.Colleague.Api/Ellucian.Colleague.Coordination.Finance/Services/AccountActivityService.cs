@@ -1,9 +1,7 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Finance;
+using Ellucian.Colleague.Domain.Finance.Entities.AccountActivity;
 using Ellucian.Colleague.Domain.Finance.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos.Finance;
@@ -12,9 +10,10 @@ using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
 using slf4net;
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Ellucian.Colleague.Domain.Finance.Entities.AccountActivity;
 
 namespace Ellucian.Colleague.Coordination.Finance.Services
 {
@@ -24,14 +23,18 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
         private IAccountActivityRepository _activityRepository;
         private IAccountsReceivableRepository _arRepository;
         private IFinancialAidReferenceDataRepository faReferenceDataRepository;
+        private IFinancialAidRepository _faRepository;
 
-        public AccountActivityService(IAdapterRegistry adapterRegistry, IAccountActivityRepository activityRepository, IAccountsReceivableRepository arRepository,
-            IFinancialAidReferenceDataRepository faReferenceDataRepository, ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, ILogger logger)
+        public AccountActivityService(IAdapterRegistry adapterRegistry, IAccountActivityRepository activityRepository,
+            IAccountsReceivableRepository arRepository, IFinancialAidReferenceDataRepository faReferenceDataRepository,
+            IFinancialAidRepository faRepository, ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository,
+            ILogger logger)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger)
         {
             _activityRepository = activityRepository;
             _arRepository = arRepository;
             this.faReferenceDataRepository = faReferenceDataRepository;
+            _faRepository = faRepository;
         }
 
         private void CheckPermission(string studentId)
@@ -262,6 +265,52 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
                 logger.Error(ex, ex.Message);
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Returns information about potentially untransmitted D7 financial aid, based on
+        /// current charges, credits, and awarded aid.
+        /// </summary>
+        /// <param name="criteria">The <see cref="PotentialD7FinancialAidCriteria"/> criteria of
+        /// potential financial aid for which to search.</param>
+        /// <returns>Enumeration of <see cref="Dtos.Finance.AccountActivity.PotentialD7FinancialAid"/>  
+        /// awards and potential award amounts.</returns>
+        public async Task<IEnumerable<Dtos.Finance.AccountActivity.PotentialD7FinancialAid>> GetPotentialD7FinancialAidAsync(PotentialD7FinancialAidCriteria criteria)
+        {
+            if (criteria == null)
+            {
+                throw new ArgumentNullException("criteria");
+            }
+            if (string.IsNullOrEmpty(criteria.StudentId))
+            {
+                throw new ArgumentNullException("StudentId");
+            }
+            if (string.IsNullOrEmpty(criteria.TermId))
+            {
+                throw new ArgumentNullException("TermId");
+            }
+            if (criteria.AwardPeriodAwardsToEvaluate == null)
+            {
+                throw new ArgumentNullException("awardsToEvaluate");
+            }
+            // criteria contains a list of tuples.  The first field of the tuple is a string
+            // and cannot be null or empty
+            if (criteria.AwardPeriodAwardsToEvaluate
+                .Where(x => string.IsNullOrEmpty(x.AwardPeriodAward))
+                .ToList()
+                .Any() )
+            {
+                throw new ArgumentException("Received a null award to evaluate.");
+            }
+
+            CheckPermission(criteria.StudentId);
+
+            var dtoAdapter = _adapterRegistry.GetAdapter<Dtos.Finance.PotentialD7FinancialAidCriteria, Domain.Finance.Entities.PotentialD7FinancialAidCriteria>();
+            var entityCriteria = dtoAdapter.MapToType(criteria);
+            var d7Entity = await _faRepository.GetPotentialD7FinancialAidAsync(entityCriteria);
+            var adapter = _adapterRegistry.GetAdapter<Domain.Finance.Entities.AccountActivity.PotentialD7FinancialAid, Dtos.Finance.AccountActivity.PotentialD7FinancialAid>();
+            var d7Dto = d7Entity.Select(x => adapter.MapToType(x));
+            return d7Dto.ToList();
         }
     }
 }

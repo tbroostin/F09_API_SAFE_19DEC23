@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -41,6 +41,17 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// Institution's third name and address line.
         /// </summary>
         public string InstitutionNameAddressLine3 { get; set; }
+
+        /// <summary>
+        /// Institution's school type.
+        /// </summary>
+        public string SchoolType { get; set; }
+
+        /// <summary>
+        /// Institution's flying club designation.
+        /// </summary>
+        public string FlyingClub { get; set; }
+
         #endregion
 
         #region Student attributes
@@ -98,7 +109,18 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// Student's Box C total amount.
         /// </summary>
         public int StudentBoxCTotal { get { return SessionPeriods.Where(x => x.BoxCHours.HasValue).Sum(x => x.BoxCHours.Value); } }
+
+        /// <summary>
+        /// Student's Social Insurance Number.
+        /// </summary>
+        public string SocialInsuranceNumber { get; set; }
+
         #endregion
+
+        /// <summary>
+        /// The cancellation status of the T2202 form.
+        /// </summary>
+        public bool Cancelled { get; set; }
 
         public FormT2202aPdfData(string taxYear, string studentId)
         {

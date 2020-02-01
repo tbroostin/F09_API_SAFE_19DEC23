@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2018 Ellucian Company L.P. and its affiliates
+﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates
 
 using System;
 using System.Collections.Generic;
@@ -43,7 +43,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         private readonly IPersonService _personService;
         private readonly IEmergencyInformationService _emergencyInformationService;
         private readonly IAdapterRegistry _adapterRegistry;
-        private readonly ILogger _logger;        
+        private readonly ILogger _logger;
 
         /// <summary>
         /// Initializes a new instance of the PersonsController class.
@@ -63,7 +63,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         }
 
         #region Get Methods
-        
+
         /// <summary>
         /// Gets a subset of person credentials.
         /// </summary>
@@ -231,7 +231,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 criteriaObject.Credentials.ToString() : string.Empty;
 
                 var pageOfItems = await _personService.GetAllPersonCredentials3Async(page.Offset, page.Limit, criteriaObject, bypassCache);
-                
+
                 AddEthosContextProperties(await _personService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                               await _personService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
                               pageOfItems.Item1.Select(a => a.Id).ToList()));
@@ -626,7 +626,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             {
                 return await _personService.GetPersonProxyDetailsAsync(personId);
             }
-             catch (ArgumentNullException anex)
+            catch (ArgumentNullException anex)
             {
                 _logger.Error(anex.ToString());
                 throw CreateHttpResponseException("Person ID cannot be null", HttpStatusCode.BadRequest);
@@ -678,7 +678,20 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <param name="personId">Pass in a person ID</param>
         /// <returns>Returns all the emergency information for the specified person</returns>
         /// <accessComments>
-        /// Only the current user can access their emergency information.
+        /// The current user can access all their emergency information.
+        ///
+        /// Permissions can be granted to allow full or partial access to others' information:
+        /// * Users with VIEW.PERSON.EMERGENCY.CONTACTS can see others' Emergency Contacts and Opt Out status
+        /// * Users with VIEW.PERSON.HEALTH.CONDITIONS can see others' Health Conditions
+        /// * Users with VIEW.PERSON.OTHER.EMERGENCY.INFORMATION can see others' Insurance Information, Hospital Preference, and Additional Information
+        ///
+        /// Users with one or more of the above permissions can see other properties not listed as well (such as name and person ID).
+        ///
+        /// If the requested person has a privacy code restriction, the requesting user will need the corresponding privacy code access in addition
+        /// to the permission(s).
+        ///
+        /// Lacking one or more of the above permissions or privacy code access will result in some properties being null and the
+        /// "X-Content-Restricted" header being set to "partial"
         /// </accessComments>
         public async Task<Ellucian.Colleague.Dtos.Base.EmergencyInformation> GetEmergencyInformation2Async(string personId)
         {
@@ -765,7 +778,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
         }
-        
+
         /// <summary>
         /// Return a list of Person objects based on selection criteria.
         /// </summary>
@@ -789,7 +802,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             [FromUri] string lastNamePrefix = "", [FromUri] string lastName = "", [FromUri] string pedigree = "", [FromUri] string preferredName = "",
             [FromUri] string role = "", [FromUri] string credentialType = "", [FromUri] string credentialValue = "", [FromUri] string personFilter = "")
         {
-            if ( title == null || firstName == null || middleName == null || lastNamePrefix == null || lastName == null || pedigree == null || preferredName == null || role == null || credentialType == null || credentialValue == null || personFilter == null)
+            if (title == null || firstName == null || middleName == null || lastNamePrefix == null || lastName == null || pedigree == null || preferredName == null || role == null || credentialType == null || credentialValue == null || personFilter == null)
             {
                 return new PagedHttpActionResult<IEnumerable<Dtos.Person2>>(new List<Dtos.Person2>(), page, 0, this.Request);
             }
@@ -837,7 +850,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             {
                 var roleTypeValue = GetEnumFromEnumMemberAttribute(role, Dtos.EnumProperties.PersonRoleType.NotSet);
                 if (roleTypeValue == Dtos.EnumProperties.PersonRoleType.NotSet)
-                      throw new ArgumentException("role", string.Concat(role, " is not a valid role."));
+                    throw new ArgumentException("role", string.Concat(role, " is not a valid role."));
             }
             if (CheckForEmptyFilterParameters())
                 return new PagedHttpActionResult<IEnumerable<Dtos.Person2>>(new List<Dtos.Person2>(), page, 0, this.Request);
@@ -914,7 +927,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                     await _personService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                     await _personService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
                         new List<string>() { guid }));
-                
+
                 return await _personService.GetPerson3ByGuidAsync(guid, bypassCache);
             }
             catch (PermissionsException e)
@@ -946,7 +959,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
         }
-                
+
         /// <summary>
         /// Return a list of Person objects based on selection criteria.
         /// </summary>
@@ -976,7 +989,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         public async Task<IHttpActionResult> GetPerson3Async(Paging page, QueryStringFilter criteria, QueryStringFilter personFilter, QueryStringFilter preferredName)
         {
             var bypassCache = false;
-         
+
             if (Request.Headers.CacheControl != null)
             {
                 if (Request.Headers.CacheControl.NoCache)
@@ -1006,7 +1019,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 }
 
                 var criteriaObj = GetFilterObject<Dtos.Filters.PersonFilter>(_logger, "criteria");
-                
+
                 if (criteriaObj != null)
                 {
                     //check for old filter and convert them to new format
@@ -1055,7 +1068,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                         {
                             if (cred.Type == CredentialType2.Sin || cred.Type == CredentialType2.Ssn || cred.Type == CredentialType2.BannerId
                                 || cred.Type == CredentialType2.BannerSourcedId || cred.Type == CredentialType2.BannerUdcId || cred.Type == CredentialType2.BannerSourcedId ||
-                                cred.Type == CredentialType2.BannerUserName || cred.Type == CredentialType2.ColleagueUserName || cred.Type == CredentialType2.NotSet)
+                                cred.Type == CredentialType2.BannerUserName || cred.Type == CredentialType2.NotSet)
                             {
                                 throw new ArgumentException("credentialType", string.Concat("Credential Type filter of '", cred.Type, "' is not supported."));
                             }
@@ -1230,7 +1243,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                     personFilterValue = personFilterObj.personFilterId != null ? personFilterObj.personFilterId : null;
                 }
                 var criteriaObject = GetFilterObject<Dtos.Person4>(_logger, "criteria");
-                 if (CheckForEmptyFilterParameters())
+                if (CheckForEmptyFilterParameters())
                     return new PagedHttpActionResult<IEnumerable<Dtos.Person4>>(new List<Dtos.Person4>(), page, 0, this.Request);
                 //we need to validate the credentials
                 if (criteriaObject.Credentials != null && criteriaObject.Credentials.Any())
@@ -1254,7 +1267,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                         }
                     }
                 }
-                
+
                 var pageOfItems = await _personService.GetPerson4NonCachedAsync(page.Offset, page.Limit, bypassCache, criteriaObject, personFilterValue);
                 AddEthosContextProperties(
                     await _personService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
@@ -1264,7 +1277,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 return new PagedHttpActionResult<IEnumerable<Dtos.Person4>>(pageOfItems.Item1, page, pageOfItems.Item2, this.Request);
 
             }
-            catch(JsonSerializationException e)
+            catch (JsonSerializationException e)
             {
                 _logger.Error(e.ToString());
 
@@ -1319,7 +1332,8 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         ///  If the request header "Cache-Control" attribute is set to "no-cache" the data returned will be pulled fresh from the database, otherwise cached data is returned.
         /// </summary>
         /// <param name="guid">Guid of the person to get</param>
-        /// <returns>The requested <see cref="Person4">Person</see></returns>
+        /// <returns>The requested <see cref="Person5">Person</see></returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [EedmResponseFilter]
         public async Task<Dtos.Person5> GetPerson5ByIdAsync(string guid)
         {
@@ -1388,11 +1402,12 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// alternativeCredentialsType - alternativeCredentials Type 
         /// alternativeCredentialsValue -alternativeCredentials equal to
         /// personFilter - Selection from SaveListParms definition or person-filters</param>
-        /// <returns>List of Person3 <see cref="Dtos.Person3"/> objects representing matching persons</returns>
+        /// <returns>List of Person5 <see cref="Dtos.Person5"/> objects representing matching persons</returns>
         [HttpGet]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("criteria", typeof(Dtos.Person5))]
-        [QueryStringFilterFilter("personFilter", typeof(Dtos.Filters.PersonFilterFilter))]
+        [QueryStringFilterFilter("personFilter", typeof(Dtos.Filters.PersonFilterFilter2))]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
         public async Task<IHttpActionResult> GetPerson5Async(Paging page, QueryStringFilter personFilter, QueryStringFilter criteria)
         {
@@ -1412,11 +1427,12 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                     page = new Paging(100, 0);
                 }
                 string personFilterValue = string.Empty;
-                var personFilterObj = GetFilterObject<Dtos.Filters.PersonFilterFilter>(_logger, "personFilter");
-                if (personFilterObj != null)
+                var personFilterObj = GetFilterObject<Dtos.Filters.PersonFilterFilter2>(_logger, "personFilter");
+                if (personFilterObj != null && personFilterObj.personFilter != null)
                 {
-                    personFilterValue = personFilterObj.personFilterId != null ? personFilterObj.personFilterId : null;
+                    personFilterValue = personFilterObj.personFilter.Id != null ? personFilterObj.personFilter.Id : null;
                 }
+
                 var criteriaObject = GetFilterObject<Dtos.Person5>(_logger, "criteria");
                 if (CheckForEmptyFilterParameters())
                     return new PagedHttpActionResult<IEnumerable<Dtos.Person5>>(new List<Dtos.Person5>(), page, 0, this.Request);
@@ -1738,12 +1754,14 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// </summary>
         /// <param name="person">DTO of the new person</param>
         /// <returns>A person object <see cref="Person5"/> in HeDM format</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpPost, EedmResponseFilter]
         public async Task<Person5> PostPerson5Async([ModelBinder(typeof(EedmModelBinder))] Person5 person)
         {
             if (person == null)
             {
-                throw CreateHttpResponseException("Request body must contain a valid Person.", HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException(new IntegrationApiException("person",
+                     IntegrationApiUtility.GetDefaultApiError("Request body must contain a valid Person.")));
             }
             if (string.IsNullOrEmpty(person.Id))
             {
@@ -1752,13 +1770,14 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             if (person.Id != Guid.Empty.ToString())
             {
-                throw new ArgumentNullException("person", "Nil GUID must be used in POST operation.");
+                throw CreateHttpResponseException(new IntegrationApiException("person",
+                    IntegrationApiUtility.GetDefaultApiError("Nil GUID must be used in POST operation.")));
             }
 
             try
             {
                 // Check citizenship fields
-                var xx = await _personService.CheckCitizenshipfields(person.CitizenshipStatus, person.CitizenshipCountry, null, null);
+                await _personService.CheckCitizenshipfields2(person.CitizenshipStatus, person.CitizenshipCountry, null, null);
 
                 //call import extend method that needs the extracted extension data and the config
                 await _personService.ImportExtendedEthosData(await ExtractExtendedData(await _personService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
@@ -1780,7 +1799,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -2000,7 +2019,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                     originalPersonCitizenshipStatus = originalPerson.CitizenshipStatus;
                     originalPersonCitizenshipCountry = originalPerson.CitizenshipCountry;
                 }
-                                
+
                 // check citizenship fields
                 var xx = await _personService.CheckCitizenshipfields(mergedPerson.CitizenshipStatus, mergedPerson.CitizenshipCountry, originalPersonCitizenshipStatus, originalPersonCitizenshipCountry);
 
@@ -2081,7 +2100,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 throw CreateHttpResponseException(new IntegrationApiException("GUID mismatch",
                     IntegrationApiUtility.GetDefaultApiError("GUID not the same as in request body.")));
             }
-                        
+
             try
             {
                 //get Data Privacy List
@@ -2111,17 +2130,17 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 {
                     originalPerson = null;
                 }
-                
+
                 var mergedPerson = await PerformPartialPayloadMerge(person, originalPerson, dpList, _logger);
 
                 PersonCitizenshipDtoProperty originalPersonCitizenshipStatus = null;
                 string originalPersonCitizenshipCountry = null;
                 if (originalPerson != null)
-                {                    
+                {
                     originalPersonCitizenshipStatus = originalPerson.CitizenshipStatus;
                     originalPersonCitizenshipCountry = originalPerson.CitizenshipCountry;
                 }
- 
+
                 // Check citizenship fields
                 var xx = await _personService.CheckCitizenshipfields(mergedPerson.CitizenshipStatus, mergedPerson.CitizenshipCountry, originalPersonCitizenshipStatus, originalPersonCitizenshipCountry);
 
@@ -2178,22 +2197,24 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <param name="guid">GUID of the person to update</param>
         /// <param name="person">DTO of the updated person</param>
         /// <returns>A Person2 object <see cref="Dtos.Person5"/> in HeDM format</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpPut, EedmResponseFilter]
         public async Task<Dtos.Person5> PutPerson5Async([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.Person5 person)
         {
             if (string.IsNullOrEmpty(guid))
             {
-                throw CreateHttpResponseException(new IntegrationApiException("Null guid argument",
+                throw CreateHttpResponseException(new IntegrationApiException("Null person.id",
                     IntegrationApiUtility.GetDefaultApiError("The GUID must be specified in the request URL.")));
             }
             if (person == null)
             {
-                throw CreateHttpResponseException(new IntegrationApiException("Null person argument",
-                    IntegrationApiUtility.GetDefaultApiError("The request body is required.")));
+                throw CreateHttpResponseException(new IntegrationApiException("person",
+                    IntegrationApiUtility.GetDefaultApiError("Request body must contain a valid Person.")));
             }
             if (guid.Equals(Guid.Empty.ToString(), StringComparison.OrdinalIgnoreCase))
             {
-                throw CreateHttpResponseException("Nil GUID cannot be used in PUT operation.", HttpStatusCode.BadRequest);
+                throw CreateHttpResponseException(new IntegrationApiException("person.id",
+                    IntegrationApiUtility.GetDefaultApiError("Nil GUID cannot be used in PUT operation.")));
             }
             if (string.IsNullOrEmpty(person.Id))
             {
@@ -2201,7 +2222,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             else if (!string.Equals(guid, person.Id, StringComparison.InvariantCultureIgnoreCase))
             {
-                throw CreateHttpResponseException(new IntegrationApiException("GUID mismatch",
+                throw CreateHttpResponseException(new IntegrationApiException("person.id",
                     IntegrationApiUtility.GetDefaultApiError("GUID not the same as in request body.")));
             }
 
@@ -2246,8 +2267,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 }
 
                 // Check citizenship fields
-                var xx = await _personService.CheckCitizenshipfields(mergedPerson.CitizenshipStatus, mergedPerson.CitizenshipCountry, originalPersonCitizenshipStatus, originalPersonCitizenshipCountry);
-
+                await _personService.CheckCitizenshipfields2(mergedPerson.CitizenshipStatus, mergedPerson.CitizenshipCountry, originalPersonCitizenshipStatus, originalPersonCitizenshipCountry, guid);
 
                 //do update with partial logic
                 var personReturn = await _personService.UpdatePerson5Async(mergedPerson);
@@ -2266,7 +2286,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -2580,8 +2600,9 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <summary>
         /// Queries a person by post.
         /// </summary>
-        /// <param name="person"><see cref="Person4">Person</see> to use for querying</param>
-        /// <returns>List of matching <see cref="Person4">persons</see></returns>
+        /// <param name="person"><see cref="Person5">Person</see> to use for querying</param>
+        /// <returns>List of matching <see cref="Person5">persons</see></returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpPost, EedmResponseFilter]
         public async Task<IEnumerable<Person5>> QueryPerson5ByPostAsync([FromBody] Person5 person)
         {
@@ -2608,6 +2629,16 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             catch (PermissionsException pex)
             {
                 throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (Exception ex)
             {
@@ -2670,7 +2701,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 _logger.Error(ex.ToString());
                 throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
             }
-            
+
         }
 
         #endregion

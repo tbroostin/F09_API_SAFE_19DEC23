@@ -31,7 +31,7 @@ namespace Ellucian.Colleague.Dtos.DtoProperties
         /// An indication if budget checking should be enforced or overridden.
         /// </summary>
         [DataMember(Name = "budgetCheck", EmitDefaultValue = false)]
-        public PurchaseOrdersAccountBudgetCheck? BudgetCheck { get; set; }
+        public AccountBudgetCheck? BudgetCheck { get; set; }
 
        
     }

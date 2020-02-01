@@ -17,7 +17,7 @@ namespace Ellucian.Colleague.Dtos.HumanResources
         /// <summary>
         /// The EmployeeId
         /// </summary>
-        public string EmployeeId  { get; set; }
+        public string EmployeeId { get; set; }
 
         /// <summary>
         /// The name of the employee to be printed on the report
@@ -154,5 +154,10 @@ namespace Ellucian.Colleague.Dtos.HumanResources
         /// Comments specified by the payroll office
         /// </summary>
         public string Comments { get; set; }
+
+        /// <summary>
+        /// Boolean to indicate if this record is using the 2020 W4 calculation rules.
+        /// </summary>
+        public bool Apply2020W4Rules { get; set; }
     }
 }

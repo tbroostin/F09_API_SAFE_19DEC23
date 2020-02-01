@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Student.Entities;
@@ -72,6 +72,13 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// </summary>
         Task<IEnumerable<AdvisorType>> GetAdvisorTypesAsync(bool ignoreCache = false);
 
+        /// <summary>
+        /// Get guid for AdvisorTypesGuid code
+        /// </summary>
+        /// <param name="code"></param>
+        /// <returns></returns>
+        Task<string> GetAdvisorTypeGuidAsync(string code);
+
         ///// <summary>
         ///// Get a collection of AdvisorTypes
         ///// </summary>
@@ -97,10 +104,24 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         Task<IEnumerable<AcademicLevel>> GetAcademicLevelsAsync(bool ignoreCache);
 
         /// <summary>
-        /// Task to return accounting codes
+        /// Task to return AccountReceivableType
         /// </summary>
         /// <returns></returns>
         Task<IEnumerable<AccountReceivableType>> GetAccountReceivableTypesAsync(bool ignoreCache);
+
+        /// <summary>
+        /// Get guid for AccountReceivableTypes code
+        /// </summary>
+        /// <param name="code">AccountReceivableTypes code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetAccountReceivableTypesGuidAsync(string code);
+
+        /// <summary>
+        /// Get code for AccountReceivableType guid
+        /// </summary>
+        /// <param name="code">AccountReceivableType guid</param>
+        /// <returns>code</returns>
+        Task<string> GetAccountReceivableTypesCodeFromGuidAsync(string guid);
 
         /// <summary>
         /// Admmission Application Types (Standard (only current entry in INTG.APPLICATION.TYPES))
@@ -369,6 +390,11 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         Task<string> GetGradeSchemeGuidAsync(string code);
 
         /// <summary>
+        /// Grade subschemes.
+        /// </summary>
+        Task<IEnumerable<GradeSubscheme>> GetGradeSubschemesAsync();
+
+        /// <summary>
         /// Instructional methods.
         /// </summary>
         Task<IEnumerable<InstructionalMethod>> GetInstructionalMethodsAsync();
@@ -427,6 +453,13 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// <param name="ignoreCache">Bypass cache flag</param>
         /// <returns>Collection of MealPlan</returns>
         Task<IEnumerable<MealPlan>> GetMealPlansAsync(bool ignoreCache = false);
+
+        /// <summary>
+        /// Get guid for MealPlan code
+        /// </summary>
+        /// <param name="code">MealPlan code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetMealPlanGuidAsync(string code);
 
         /// <summary>
         /// Get a collection of MealType
@@ -687,10 +720,24 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         Task<IEnumerable<AccountingCode>> GetAccountingCodesAsync(bool ignoreCache);
 
         /// <summary>
-        /// Task to return accounting codes
+        /// Task to return DistributionMethod
         /// </summary>
         /// <returns></returns>
         Task<IEnumerable<DistributionMethod>> GetDistrMethodCodesAsync(bool ignoreCache);
+
+        /// <summary>
+        /// Get guid for DistributionMethod code
+        /// </summary>
+        /// <param name="code">DistributionMethod code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetDistrMethodGuidAsync(string code);
+
+        /// <summary>
+        /// Get code for DistributionMethod guid
+        /// </summary>
+        /// <param name="code">DistributionMethod guid</param>
+        /// <returns>code</returns>
+        Task<string> GetDistrMethodCodeFromGuidAsync(string guid);
 
         /// <summary>
         /// Gets all student cohorts
@@ -698,6 +745,13 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// <param name="bypassCache"></param>
         /// <returns></returns>
         Task<IEnumerable<StudentCohort>> GetAllStudentCohortAsync(bool bypassCache);
+
+        /// <summary>
+        /// Gets student cohort guid based the code.
+        /// </summary>
+        /// <param name="code"></param>
+        /// <returns></returns>
+        Task<string> GetStudentCohortGuidAsync(string code);
         /// <summary>
         /// Gets all student classifications
         /// </summary>
@@ -739,6 +793,13 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// <param name="bypassCache"></param>
         /// <returns></returns>
         Task<IEnumerable<AdmissionDecisionType>> GetAdmissionDecisionTypesAsync(bool bypassCache);
+
+        /// <summary>
+        /// Get an admission decision type by Guid
+        /// </summary>
+        /// <param name="guid"></param>
+        /// <returns></returns>
+        Task<AdmissionDecisionType> GetAdmissionDecisionTypeByGuidAsync(string guid);
 
         /// <summary>
         /// Get guid for AdmissionDecisionTypes
@@ -861,12 +922,25 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         Task<IEnumerable<SectionTitleType>> GetSectionTitleTypesAsync(bool ignoreCache);
 
         /// <summary>
+        /// Get a GUID for SectionTitleType.
+        /// </summary>
+        /// <param name="code"></param>
+        /// <returns></returns>
+        Task<string> GetSectionTitleTypesGuidAsync(string code);
+
+        /// <summary>
         /// Get a collection of SectionDescriptionType
         /// </summary>
         /// <param name="ignoreCache">Bypass cache flag</param>
         /// <returns>Collection of SectionDescriptionType</returns>
         Task<IEnumerable<SectionDescriptionType>> GetSectionDescriptionTypesAsync(bool ignoreCache);
 
+        /// <summary>
+        /// Gets a GUID for SectionDescriptionType.
+        /// </summary>
+        /// <param name="code"></param>
+        /// <returns></returns>
+        Task<string> GetSectionDescriptionTypesGuidAsync(string code);
 
         /// <summary>
         /// Get a collection of financial aid fund categories
@@ -916,5 +990,19 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// <param name="bypassCache"></param>
         /// <returns></returns>
         Task<IEnumerable<GradingTerm>> GetGradingTermsAsync(bool bypassCache = false);
+
+        /// <summary>
+        /// Get Unidata formatted date for filters.
+        /// </summary>   
+        /// <param name="date">date </param>
+        /// <returns>date in undiata format</returns>
+        Task<string> GetUnidataFormattedDate(string date);
+
+        /// <summary>
+        /// Get the LDM.DEFAULTS value for LDMD.INCLUDE.ENRL.HEADCOUNTS
+        /// </summary>
+        /// <param name="ignoreCache"></param>
+        /// <returns>List of section-registration-statuses to be included in headcounts</returns>
+        Task<List<string>> GetHeadcountInclusionListAsync(bool ignoreCache = false);
     }
 }

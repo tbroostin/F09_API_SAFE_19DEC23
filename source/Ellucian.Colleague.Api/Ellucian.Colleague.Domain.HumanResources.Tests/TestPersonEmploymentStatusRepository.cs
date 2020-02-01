@@ -68,6 +68,15 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                 startDate = new DateTime(1805,1,2),
                 endDate = null
             },
+             new PersonEmploymentStatusRecord()
+            {
+                id = "006",
+                personId = "0003916",
+                primaryPositionId = "PRINT SHOP ASSISTANT",
+                personPositionId = "420",
+                startDate = new DateTime(2000,1,2),
+                endDate = null
+            },
         };
 
 

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -20,19 +20,21 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         private IStudentRepository _studentRepository;
         private readonly IConfigurationRepository _configurationRepository;
 
-        protected StudentCoordinationService(IAdapterRegistry adapterRegistry, ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, ILogger logger, IStudentRepository studentRepository, IConfigurationRepository configurationRepository, IStaffRepository staffRepository = null)
+        protected StudentCoordinationService(IAdapterRegistry adapterRegistry, ICurrentUserFactory currentUserFactory, 
+            IRoleRepository roleRepository, ILogger logger, IStudentRepository studentRepository, IConfigurationRepository 
+            configurationRepository, IStaffRepository staffRepository = null)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger, staffRepository, configurationRepository)
         {
             _studentRepository = studentRepository;
             _configurationRepository = configurationRepository;
-        }
+    }
 
-        /// <summary>
-        /// Confirms that the user is the student being accessed
-        /// </summary>
-        /// <param name="studentId"></param>
-        /// <returns></returns>
-        protected bool UserIsSelf(string studentId)
+    /// <summary>
+    /// Confirms that the user is the student being accessed
+    /// </summary>
+    /// <param name="studentId"></param>
+    /// <returns></returns>
+    protected bool UserIsSelf(string studentId)
         {
             // Access is Ok if the current user is this student
             if (CurrentUser.IsPerson(studentId))
@@ -152,7 +154,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
             // User does not have permissions and error needs to be thrown and logged
-            logger.Info(CurrentUser + " does not have permissions to register for this student");
+            logger.Error("User" + CurrentUser.PersonId + " does not have permissions to register for this student");
             throw new PermissionsException();
         }
 
@@ -207,5 +209,81 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             throw new PermissionsException(error);
 
         }
+
+        /// <summary>
+        /// Determines if the user has permission to view the student's degree plan
+        /// </summary>
+        /// <param name="student">Student who plan is being viewed.</param>
+        protected async Task CheckViewPlanPermissionsAsync(string studentId, Domain.Student.Entities.Student student = null)
+        {
+            // If user is self, access is ok
+            if (UserIsSelf(studentId))
+            {
+                return;
+            }
+
+            // Get user permissions
+            IEnumerable<string> userPermissions = await GetUserPermissionCodesAsync();
+
+            // Access is Ok if this is an advisor with all access, update access or review access to any student.
+            if (userPermissions.Contains(Domain.Student.PlanningPermissionCodes.AllAccessAnyAdvisee) ||
+                userPermissions.Contains(Domain.Student.PlanningPermissionCodes.UpdateAnyAdvisee) ||
+                userPermissions.Contains(Domain.Student.PlanningPermissionCodes.ReviewAnyAdvisee) ||
+                userPermissions.Contains(Domain.Student.PlanningPermissionCodes.ViewAnyAdvisee))
+            {
+                return;
+            }
+
+            // Access is also OK if this is an advisor with all access, update access or review access to their assigned advisees and this is an assigned advisee.
+            bool userIsAssignedAdvisor = await UserIsAssignedAdvisorAsync(studentId, (student == null ? null : student.ConvertToStudentAccess()));
+            if (userIsAssignedAdvisor &&
+                (userPermissions.Contains(Domain.Student.PlanningPermissionCodes.AllAccessAssignedAdvisees) ||
+                userPermissions.Contains(Domain.Student.PlanningPermissionCodes.UpdateAssignedAdvisees) ||
+                userPermissions.Contains(Domain.Student.PlanningPermissionCodes.ReviewAssignedAdvisees) ||
+                userPermissions.Contains(Domain.Student.PlanningPermissionCodes.ViewAssignedAdvisees)))
+            {
+                return;
+            }
+
+            // User does not have permissions and error needs to be thrown and logged
+            logger.Error("User " + CurrentUser.PersonId + " does not have permissions to view this degree plan");
+            throw new PermissionsException();
+        }
+
+        /// <summary>
+        /// Determines if the user has permission to create a degree plan for this student - will throw a PermissionException if not permitted.
+        /// </summary>
+        /// <param name="student">Student for whom the degree plan is being created</param>
+        protected async Task CheckCreatePlanPermissionsAsync(Domain.Student.Entities.Student student)
+        {
+            // Access is Ok if the current user is this student
+            if (UserIsSelf(student.Id)) { return; }
+
+            bool userIsAssignedAdvisor = await UserIsAssignedAdvisorAsync(student.Id, student.ConvertToStudentAccess()); //TODO
+
+            // Get user permissions
+            IEnumerable<string> userPermissions = await GetUserPermissionCodesAsync();
+
+            // Access is Ok if this is an advisor with all access, update access, review access or view access to any student.  
+            // Access is also OK if this is an advisor with all access, update access, review or view access to their assigned advisees and this is an assigned advisee.
+            // Need to allow advisors with view access to be able to create a plan because if a student doesn't have a plan one must be created.
+            if (userPermissions.Contains(
+                Domain.Student.PlanningPermissionCodes.AllAccessAnyAdvisee) ||
+                userPermissions.Contains(Domain.Student.PlanningPermissionCodes.UpdateAnyAdvisee) ||
+                userPermissions.Contains(Domain.Student.PlanningPermissionCodes.ReviewAnyAdvisee) ||
+                userPermissions.Contains(Domain.Student.PlanningPermissionCodes.ViewAnyAdvisee) ||
+                (userPermissions.Contains(Domain.Student.PlanningPermissionCodes.AllAccessAssignedAdvisees) && userIsAssignedAdvisor) ||
+                (userPermissions.Contains(Domain.Student.PlanningPermissionCodes.UpdateAssignedAdvisees) && userIsAssignedAdvisor) ||
+                (userPermissions.Contains(Domain.Student.PlanningPermissionCodes.ReviewAssignedAdvisees) && userIsAssignedAdvisor) ||
+                (userPermissions.Contains(Domain.Student.PlanningPermissionCodes.ViewAssignedAdvisees) && userIsAssignedAdvisor))
+            {
+                return;
+            }
+
+            // User does not have permissions and error needs to be thrown and logged
+            logger.Error("User " + CurrentUser.PersonId + " does not have permissions to update this degree plan");
+            throw new PermissionsException();
+        }
+
     }
 }

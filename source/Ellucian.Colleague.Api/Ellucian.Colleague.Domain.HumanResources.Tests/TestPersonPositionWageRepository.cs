@@ -1,11 +1,10 @@
-﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2019 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Domain.HumanResources.Tests
@@ -28,6 +27,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
             public List<PayItemRecord> payItems;
             public string earnTypeGroupingId;
             public List<string> earnTypeGroupings;
+            public string wageType;
         }
 
         public class PayItemRecord
@@ -99,7 +99,8 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                 {
                     new PayItemRecord() {fundSourceId = "COMP"},
                     new PayItemRecord() {fundSourceId = "COMP"}
-                }
+                },
+                wageType = "W"
             },
             new PersonPositionWageRecord() {
                 id = "6",
@@ -117,7 +118,8 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                 {
                     new PayItemRecord() {fundSourceId = "COMP"},
                     new PayItemRecord() {fundSourceId = "PROJ", projectId = "11"}
-                }
+                },
+                wageType = "W"
             },
 
             new PersonPositionWageRecord() {
@@ -136,7 +138,8 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                 {
                     new PayItemRecord() {fundSourceId = "COMP"},
                     new PayItemRecord() {fundSourceId = "COMP"}
-                }
+                },
+                wageType = "W"
             },
 
             new PersonPositionWageRecord() {
@@ -154,7 +157,26 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                 {
                     new PayItemRecord() {fundSourceId = "COMP"},
                     new PayItemRecord() {fundSourceId = "COMP"}
-                }
+                },
+                wageType = "W"
+            },
+             new PersonPositionWageRecord() {
+                id = "9",
+                personId = "0003916",
+                positionId = "PRINT SHOP ASSISTANT",
+                personPositionId = "67676",
+                payClassId = "CK",
+                payCycleId = "MW",
+                PpwgPospayId = "143",
+                startDate = new DateTime(2010, 1, 1),
+                endDate = null,
+                regularWorkEarningsType = "REG",
+                payItems = new List<PayItemRecord>()
+                {
+                    new PayItemRecord() {fundSourceId = "COMP"},
+                    new PayItemRecord() {fundSourceId = "COMP"}
+                },
+                wageType = "W"
             },
         };
 
@@ -204,7 +226,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                 {
                     try
                     {
-                        return BuildPersonPositionWage(r, positionPayRecords, earnTypeGroupingEntities);
+                        return BuildPersonPositionWage(r, positionPayRecords);
                     }
                     catch (Exception)
                     {
@@ -216,15 +238,15 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
             return await Task.FromResult(personPositionWages);
         }
 
-        public PersonPositionWage BuildPersonPositionWage(PersonPositionWageRecord record, List<Pospay> posPayRecords, List<EarningsTypeGroup> earnTypeGroupingsEntities)
+        public PersonPositionWage BuildPersonPositionWage(PersonPositionWageRecord record, List<Pospay> posPayRecords)
         {
             if (record == null)
             {
                 throw new ArgumentNullException("record");
             }
             var earningsTypeGroupId = posPayRecords.Where(rec => record.PpwgPospayId == rec.Recordkey).Select(rec => rec.PospayEarntypeGrouping).First().ToString();
-            var earningsTypeGroupEntries = earnTypeGroupingsEntities.Where(entry => entry.EarningsTypeGroupId == earningsTypeGroupId).ToList();
-
+            //var earningsTypeGroupEntries = earnTypeGroupingsEntities.Where(entry => entry.EarningsTypeGroupId == earningsTypeGroupId).ToList();
+            bool isRegularWage = !string.IsNullOrEmpty(record.wageType) && record.wageType.Equals("W", StringComparison.InvariantCultureIgnoreCase);
             return new PersonPositionWage(record.id, record.personId, record.positionId, record.personPositionId, record.PpwgPospayId, record.payClassId, record.payCycleId,
                 record.regularWorkEarningsType, record.startDate.Value, earningsTypeGroupId)
             {

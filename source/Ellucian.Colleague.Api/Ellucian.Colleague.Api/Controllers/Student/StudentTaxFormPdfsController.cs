@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.ComponentModel;
@@ -84,19 +84,8 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 {
                     pdfTemplatePath = GetPdfTemplatePath(pdfData);
                 }
-
-                var pdfBytes = new byte[0];
-
-                bool useRdlc = pdfTemplatePath.EndsWith(".rdlc", StringComparison.CurrentCultureIgnoreCase);
-
-                if (useRdlc)
-                {
-                    pdfBytes = taxFormPdfService.Populate1098Report(pdfData, pdfTemplatePath);
-                }
-                else
-                {
-                    pdfBytes = taxFormPdfService.Populate1098Pdf(pdfData, pdfTemplatePath);
-                }
+                
+                var pdfBytes = taxFormPdfService.Populate1098Report(pdfData, pdfTemplatePath);
 
                 // Create and return the HTTP response object
                 var response = new HttpResponseMessage();
@@ -116,6 +105,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 logger.Error(pe, pe.Message);
                 throw CreateHttpResponseException(pe.Message, HttpStatusCode.Forbidden);
             }
+            catch (ApplicationException ae)
+            {
+                logger.Error(ae, ae.Message);
+                throw CreateHttpResponseException("Error retrieving 1098 PDF data.", HttpStatusCode.BadRequest);
+            }
             catch (Exception e)
             {
                 logger.Error(e.Message);
@@ -129,6 +123,9 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             // Determine which PDF template to use.
             switch (pdfData.TaxYear)
             {
+                case "2019":
+                    pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/Student/2019-" + pdfData.TaxFormName + ".rdlc");
+                    break;
                 case "2018":
                     pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/Student/2018-" + pdfData.TaxFormName + ".rdlc");
                     break;
@@ -213,13 +210,17 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 
                 if (Int32.TryParse(pdfData.TaxYear, out taxYear))
                 {
-                    if (taxYear >= 2010 && taxYear <= 2017)
+                    if (taxYear >= 2008 && taxYear <= 2017)
                     {
                         pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/Student/20XX-T2202a.rdlc");
                     }
                     else if (taxYear == 2018)
                     {
                         pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/Student/2018-T2202a.rdlc");
+                    }
+                    else if(taxYear == 2019)
+                    {
+                        pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/Student/2019-T2202.rdlc");
                     }
                 }
                 else
@@ -228,7 +229,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                     logger.Error(message);
                     throw new ApplicationException(message);
                 }
-
+                
                 var pdfBytes = new byte[0];
                 pdfBytes = taxFormPdfService.PopulateT2202aReport(pdfData, pdfTemplatePath);
 
@@ -252,7 +253,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             catch (Exception e)
             {
-                logger.Error(e.Message);
+                logger.Error(e, e.Message);
                 throw CreateHttpResponseException("Error retrieving T2202A PDF data.", HttpStatusCode.BadRequest);
             }
         }

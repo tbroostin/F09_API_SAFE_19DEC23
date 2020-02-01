@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -15,6 +15,8 @@ using Ellucian.Web.Security;
 using slf4net;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Data.ColleagueFinance.Utilities;
+using Ellucian.Colleague.Coordination.ColleagueFinance.Adapters;
+using System.Diagnostics;
 
 namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 {
@@ -100,6 +102,111 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         }
 
         /// <summary>
+        /// Retrieves the list of expense GL account DTOs for which the user has access.
+        /// </summary>
+        /// <param name="glClass">Optional: null for all the user GL accounts, expense for only the expense type GL accounts.</param>
+        /// <returns>A collection of expense GL account DTOs for the user.</returns>
+        public async Task<IEnumerable<Dtos.ColleagueFinance.GlAccount>> GetUserGeneralLedgerAccountsAsync(string glClass)
+        {
+            Stopwatch watch = null;
+
+            // Get the account structure configuration.
+            var glAccountStructure = await generalLedgerConfigurationRepository.GetAccountStructureAsync();
+            if (glAccountStructure == null)
+            {
+                throw new ConfigurationException("Account structure must be defined.");
+            }
+
+            // Get the GL class configuration because it is used by the GL user repository.
+            var glClassConfiguration = await generalLedgerConfigurationRepository.GetClassConfigurationAsync();
+            if (glClassConfiguration == null)
+            {
+                throw new ConfigurationException("GL class configuration must be defined.");
+            }
+
+            var glAccountDtos = new List<GlAccount>();
+
+            if (logger.IsInfoEnabled)
+            {
+                watch = new Stopwatch();
+                watch.Start();
+            }
+
+            // Get the ID for the person who is logged in, and use the ID to get his list of assigned expense GL accounts.
+            var generalLedgerUser = await generalLedgerUserRepository.GetGeneralLedgerUserAsync2(CurrentUser.PersonId, glAccountStructure.FullAccessRole, glClassConfiguration);
+
+            if (logger.IsInfoEnabled)
+            {
+                watch.Stop();
+                logger.Info("GL account LookUp SERVICE timing: GetGeneralLedgerUserAsync2 completed in " + watch.ElapsedMilliseconds.ToString() + " ms");
+            }
+
+            if (generalLedgerUser == null)
+            {
+                throw new ApplicationException("GL user must be defined.");
+            }
+
+            List<string> glAccounts = new List<string>();
+            if (string.IsNullOrWhiteSpace(glClass))
+            {
+                glAccounts = generalLedgerUser.AllAccounts.ToList();
+            }
+            else if (glClass.ToUpperInvariant().Substring(0, 1) == "E")
+            {
+                glAccounts = generalLedgerUser.ExpenseAccounts.ToList();
+            }
+            else
+            {
+                logger.Debug(string.Format("Incorrect gl class"));
+                throw new ArgumentNullException("glClass", "glClass must be null for all types or expense.");
+            }
+
+            if (glAccounts != null && glAccounts.Any())
+            {
+                if (logger.IsInfoEnabled)
+                {
+                    watch.Restart();
+                }
+
+                var glAccountEntities = await generalLedgerAccountRepository.GetUserGeneralLedgerAccountsAsync(glAccounts, glAccountStructure);
+
+                if (logger.IsInfoEnabled)
+                {
+                    watch.Stop();
+                    logger.Info("number of GL accounts " + glAccountEntities.Count());
+                    logger.Info("GL account LookUp SERVICE timing: GetUserGeneralLedgerAccountsAsync completed in " + watch.ElapsedMilliseconds.ToString() + " ms");
+                }
+
+                if (glAccountEntities != null && glAccountEntities.Any())
+                {
+                    var glAccountAdapter = new GlAccountEntityToDtoAdapter2(_adapterRegistry, logger);
+
+                    if (logger.IsInfoEnabled)
+                    {
+                        watch.Restart();
+                    }
+
+                    foreach (var glAccount in glAccountEntities)
+                    {
+                        if (glAccount != null && !string.IsNullOrWhiteSpace(glAccount.GlAccountNumber))
+                        {
+                            var glAccountDto = glAccountAdapter.MapToType(glAccount, glAccountStructure.MajorComponentStartPositions);
+                            glAccountDtos.Add(glAccountDto);
+                        }
+                    }
+
+                    if (logger.IsInfoEnabled)
+                    {
+                        watch.Stop();
+                        logger.Info("GL account LookUp SERVICE timing: converting entities into dtos completed in " + watch.ElapsedMilliseconds.ToString() + " ms");
+                    }
+                }
+            }
+
+            return glAccountDtos;
+        }
+
+        /// <summary>
         /// Validate a GL account. 
         /// If there is a fiscal year, it will also validate it for that year.
         /// </summary>
@@ -113,15 +220,6 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 throw new ArgumentNullException("generalLedgerAccountId", "generalLedgerAccountId is required.");
             }
 
-            if (generalLedgerAccountId.Replace("-", "").Length > 15)
-            {
-                generalLedgerAccountId = generalLedgerAccountId.Replace("-", "_");
-            }
-            else
-            {
-                generalLedgerAccountId = generalLedgerAccountId.Replace("-", "");
-            }
-
             // Get the account structure configuration.
             var glAccountStructure = await generalLedgerConfigurationRepository.GetAccountStructureAsync();
             if (glAccountStructure == null)
@@ -129,13 +227,16 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 throw new ConfigurationException("Account structure must be defined.");
             }
 
+            // Convert the GL account number to internal format. We cannot be sure in which format it comes in.
+            generalLedgerAccountId = GlAccountUtility.ConvertGlAccountToInternalFormat(generalLedgerAccountId, glAccountStructure.MajorComponentStartPositions);
+
             // Get the excluded GL components (from BUWP).
             var budgetAdjustmentAccountExclusions = await generalLedgerConfigurationRepository.GetBudgetAdjustmentAccountExclusionsAsync();
             if (budgetAdjustmentAccountExclusions == null)
             {
                 budgetAdjustmentAccountExclusions = new Domain.ColleagueFinance.Entities.BudgetAdjustmentAccountExclusions();
             }
-            var excludedAccountMessages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(new List<string>() { generalLedgerAccountId }, budgetAdjustmentAccountExclusions);
+            var excludedAccountMessages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(new List<string>() { generalLedgerAccountId }, budgetAdjustmentAccountExclusions, glAccountStructure.MajorComponentStartPositions);
 
             // Get the GL class configuration.
             var glClassConfiguration = await generalLedgerConfigurationRepository.GetClassConfigurationAsync();

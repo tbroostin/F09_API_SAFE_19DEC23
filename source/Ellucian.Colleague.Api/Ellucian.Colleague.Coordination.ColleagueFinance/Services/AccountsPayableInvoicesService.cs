@@ -433,7 +433,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
             catch (KeyNotFoundException ex)
             {
-                throw new KeyNotFoundException("No Accounts Payable Invoices was found for guid " + guid, ex);
+                throw new KeyNotFoundException(ex.Message);
             }
             catch (InvalidOperationException ex)
             {
@@ -474,14 +474,6 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 accountsPayableInvoices.Vendor.ExistingVendor : null;
             var manualVendor = (accountsPayableInvoices.Vendor != null && accountsPayableInvoices.Vendor.ManualVendorDetails != null) ?
                 accountsPayableInvoices.Vendor.ManualVendorDetails : null;
-
-            if (accountsPayableInvoices == null || string.IsNullOrEmpty(accountsPayableInvoices.Id))
-                throw new ArgumentNullException("accountsPayableInvoices", "Must provide guid for accountsPayableInvoices. ");
-
-            if ((existingVendor == null || existingVendor.Vendor == null || string.IsNullOrEmpty(existingVendor.Vendor.Id)) &&
-                (manualVendor == null || string.IsNullOrEmpty(manualVendor.Name)))
-                throw new ArgumentNullException("accountsPayableInvoices", "Must provide either existing vendor or manual vendor details for accountsPayableInvoices. ");
-
             var voucherStatus = VoucherStatus.InProgress;
             if (accountsPayableInvoices.ProcessState != null && accountsPayableInvoices.ProcessState != AccountsPayableInvoicesProcessState.NotSet)
             {
@@ -651,7 +643,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
            if (!string.IsNullOrEmpty(accountsPayableInvoices.InvoiceComment))
                 accountsPayableInvoicesEntity.Comments = accountsPayableInvoices.InvoiceComment;
 
-            if (accountsPayableInvoices.SubmittedBy != null)
+            if (accountsPayableInvoices.SubmittedBy != null && !string.IsNullOrEmpty(accountsPayableInvoices.SubmittedBy.Id))
             {
                 var submittedById = await _personRepository.GetPersonIdFromGuidAsync(accountsPayableInvoices.SubmittedBy.Id);
                 if (string.IsNullOrEmpty(submittedById))
@@ -660,14 +652,6 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 }
                 accountsPayableInvoicesEntity.SubmittedBy = submittedById;
             }
-            else
-            {
-                //send the API user person id in submitted by.
-                accountsPayableInvoicesEntity.SubmittedBy = CurrentUser.PersonId;
-            }
-
-
-
             if (accountsPayableInvoices.InvoiceDiscountAmount != null && accountsPayableInvoices.InvoiceDiscountAmount.Value.HasValue)
             {
                 accountsPayableInvoicesEntity.VoucherDiscAmt = accountsPayableInvoices.InvoiceDiscountAmount.Value;
@@ -833,7 +817,24 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                                 throw new Exception("referenceDocumentLineItemNumber is required if referenceDocument is in the payload.");
                             }
                         }
+                        if (lineItem.ReferenceDocument.BlanketPurchaseOrder != null && (!string.IsNullOrWhiteSpace(lineItem.ReferenceDocument.BlanketPurchaseOrder.Id)))
+                        {
+
+                            var bpoId = await _accountsPayableInvoicesRepository.GetIdFromGuidAsync(lineItem.ReferenceDocument.BlanketPurchaseOrder.Id);
+                            if ((bpoId == null) || (bpoId.Entity != "BPO"))
+                            {
+                                throw new ArgumentNullException("ReferenceDocument.BlanketPurchaseOrder.Id", string.Format("Guid not found for ReferenceDocument.BlanketPurchaseOrder.Id: {0}", lineItem.ReferenceDocument.BlanketPurchaseOrder.Id));
+                            }
+                            apLineItem.BlanketPurchaseOrderId = bpoId.PrimaryKey;
+                            //if there is a BPO, then there cannot be a reference line number
+                            if (!string.IsNullOrEmpty(lineItem.ReferenceDocumentLineItemNumber))
+                            {
+                                throw new Exception("A reference document line item number is not permitted when paying a Blanket Purchase Order");
+                            }
+                        }
                     }
+
+
 
                     //final [ayment is only valid if there is a purchase order
 
@@ -1099,7 +1100,15 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 }
                 accountsPayableInvoices.Vendor.ManualVendorDetails = manualVendorDetails;
             }
-
+            //display submittedBy
+            if (!string.IsNullOrEmpty(source.SubmittedBy))
+            {
+                var personGuid = await _personRepository.GetPersonGuidFromIdAsync(source.SubmittedBy);
+                if (!string.IsNullOrEmpty(personGuid))
+                {
+                    accountsPayableInvoices.SubmittedBy = new GuidObject2(personGuid);
+                }
+            }
             if ((source.VoucherReferenceNo != null) && (source.VoucherReferenceNo.Any()))
                 accountsPayableInvoices.ReferenceNumber = source.VoucherReferenceNo.FirstOrDefault();
 
@@ -1264,7 +1273,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         };
 
                     }
-                    if (accountsPayableInvoicesLineItem.ReferenceDocument != null)
+                    //for BPO, we ae not displaying the referenceDocumentLineItemNumber property
+                    if (accountsPayableInvoicesLineItem.ReferenceDocument != null && accountsPayableInvoicesLineItem.ReferenceDocument.BlanketPurchaseOrder == null)
                         accountsPayableInvoicesLineItem.ReferenceDocumentLineItemNumber = lineItem.Id;
 
                     accountsPayableInvoicesLineItem.LineItemNumber = lineItem.Id;
@@ -1619,7 +1629,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         private void CheckViewApInvoicesPermission()
         {
             var hasPermission = HasPermission(ColleagueFinancePermissionCodes.ViewApInvoices);
-
+            if (!hasPermission)
+            {
+                hasPermission = HasPermission(ColleagueFinancePermissionCodes.UpdateApInvoices);
+            }
             if (!hasPermission)
             {
                 throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view AP.INVOICES.");
@@ -1934,15 +1947,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         {
                             throw new ArgumentNullException("accountsPayableInvoices.LineItems.ReferenceDocument.PurchasingArrangement", "ReferenceDocument.PurchasingArrangement is not supported. ");
                         }
-                        if (lineItem.ReferenceDocument.BlanketPurchaseOrder != null && !string.IsNullOrEmpty(lineItem.ReferenceDocument.BlanketPurchaseOrder.Id))
-                        {
-                            throw new ArgumentNullException("accountsPayableInvoices.LineItems.ReferenceDocument.BlanketPurchaseOrder", "ReferenceDocument.BlanketPurchaseOrder is not supported. ");
-                        }
                         if (!string.IsNullOrEmpty(lineItem.ReferenceDocument.RecurringVoucher))
                         {
                             throw new ArgumentNullException("accountsPayableInvoices.LineItems.ReferenceDocument.RecurringVoucher", "ReferenceDocument.RecurringVoucher is not supported. ");
                         }
+                       
                     }
+                   
                     if (lineItem.UnitPrice != null)
                     {
                         defaultCurrency = checkCurrency(defaultCurrency, lineItem.UnitPrice.Currency);
@@ -2099,6 +2110,15 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     {
                         throw new ArgumentNullException("accountsPayableInvoices.LineItems.Status", "The Status is required when submitting a line item. ");
                     }
+                }
+            }
+            //if one line item has BPO as reference doc then all of them should have it as well
+            var bpoRefDoc = accountsPayableInvoices.LineItems.Where(line => line.ReferenceDocument != null && line.ReferenceDocument.BlanketPurchaseOrder != null && !string.IsNullOrEmpty(line.ReferenceDocument.BlanketPurchaseOrder.Id));
+            if (bpoRefDoc != null && bpoRefDoc.Any())
+            {
+                if (bpoRefDoc.Count() != accountsPayableInvoices.LineItems.Count)
+                {
+                    throw new ArgumentNullException("accountsPayableInvoices.LineItems.ReferenceDocument", "All line items in the voucher need to be related to Blanket Purchase Order when paying a Blanket Purchase Order. ");
                 }
             }
         }

@@ -1,4 +1,5 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Web.Adapters;
@@ -47,6 +48,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 throw new ArgumentNullException("id", "Cannot have a null or empty id");
             }
+
+            CheckViewOrUpdateOrganizationalRelationshipsPermission();
+
             var ids = new List<string> { id };
             var organizationalPositionEntities = await _organizationalPositionRepository.GetOrganizationalPositionsByIdsAsync(ids);
             var entityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.OrganizationalPosition, Dtos.Base.OrganizationalPosition>();
@@ -72,6 +76,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 throw new ArgumentException("You must provide IDs or a search string.", "criteria");
             }
+
+            CheckViewOrUpdateOrganizationalRelationshipsPermission();
+
             var organizationalPositionEntities = await _organizationalPositionRepository.GetOrganizationalPositionsAsync(criteria.SearchString, criteria.Ids);
             var entityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.OrganizationalPosition, Dtos.Base.OrganizationalPosition>();
             var dtoList = new List<Dtos.Base.OrganizationalPosition>();
@@ -80,6 +87,19 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 dtoList.Add(entityToDtoAdapter.MapToType(organizationalPositionEntity));
             }
             return dtoList;
+        }
+
+        /// <summary>
+        /// Throws an exception if the current user does not have the <see cref="BasePermissionCodes.ViewOrganizationalRelationships"/> 
+        /// or <see cref="BasePermissionCodes.UpdateOrganizationalRelationships"/> permission.
+        /// </summary>
+        private void CheckViewOrUpdateOrganizationalRelationshipsPermission()
+        {
+            if (!HasPermission(BasePermissionCodes.ViewOrganizationalRelationships)
+                && !HasPermission(BasePermissionCodes.UpdateOrganizationalRelationships))
+            {
+                throw new PermissionsException("User does not have permission to view organizational relationships.");
+            }
         }
     }
 }

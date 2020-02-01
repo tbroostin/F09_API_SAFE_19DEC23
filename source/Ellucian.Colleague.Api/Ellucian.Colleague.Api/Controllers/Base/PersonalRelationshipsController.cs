@@ -23,6 +23,10 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using System.Net;
 using Ellucian.Colleague.Dtos;
+using Newtonsoft.Json.Linq;
+using System.Web.Http.ModelBinding;
+using Ellucian.Web.Http.ModelBinding;
+using System.Configuration;
 
 namespace Ellucian.Colleague.Api.Controllers.Base
 {
@@ -51,7 +55,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             _logger = logger;
         }
 
-        #region GET Methods
+        #region GET Methods v6
         
         /// <summary>
         /// Retrieves all active personal relationships for relationship id
@@ -82,6 +86,11 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                         new List<string>() { id }));
 
                 return await _personalRelationshipsService.GetPersonalRelationshipByIdAsync(id);
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentNullException e)
             {
@@ -174,7 +183,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -200,7 +209,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
         #endregion
 
-        #region PUT method
+        #region PUT method v6
         /// <summary>
         /// Updates personal relationship
         /// </summary>
@@ -215,7 +224,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         }
         #endregion
 
-        #region POST method
+        #region POST method v6
         /// <summary>
         /// Create new personal relationship
         /// </summary>
@@ -228,19 +237,327 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));        
         }
         #endregion
-        
-        #region DELETE method
+
+        #region Get Methods v16.0.0
+
         /// <summary>
-        /// Delete of personal relationship is not supported
+        /// Return all personalRelationships2
         /// </summary>
-        /// <param name="id">id</param>
-        /// <returns></returns>
-        [HttpDelete]
-        public async Task<HttpResponseMessage> DeletePersonRelationshipAsync(string id)
+        /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>
+        /// <param name="personFilter">person filter criteria</param>
+        /// <param name="person">person filter criteria</param>
+        /// <param name="relationshipType">person filter criteria</param>
+        /// <returns>List of PersonRelationships <see cref="Dtos.PersonalRelationships2"/> objects representing matching personalRelationships2</returns>
+        /// <accessComments>
+        /// Only the current user can get their own person relationships.
+        /// </accessComments>
+        [HttpGet, EedmResponseFilter]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
+        [QueryStringFilterFilter("personFilter", typeof(Dtos.Filters.PersonalRelationships2Filter))]
+        [QueryStringFilterFilter("person", typeof(Dtos.Filters.PersonalRelationships2Filter))]
+        [QueryStringFilterFilter("relationshipType", typeof(Dtos.Filters.PersonalRelationships2Filter))]
+        [PagingFilter(IgnorePaging = true, DefaultLimit = 200)]
+        public async Task<IHttpActionResult> GetPersonalRelationships2Async(Paging page, QueryStringFilter personFilter = null, QueryStringFilter person = null, QueryStringFilter relationshipType = null)
         {
-            //Delete is not supported for Colleague but HeDM requires full crud support.
-            throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
+            var bypassCache = false;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
+            try
+            {
+                if (page == null)
+                {
+                    page = new Paging(200, 0);
+                }
+
+                string personFilterValue = string.Empty;
+                var personFilterObj = GetFilterObject<Dtos.Filters.PersonalRelationships2Filter>(_logger, "personFilter");
+                if ((personFilterObj != null) && (personFilterObj.personFilter != null))
+                {
+                    personFilterValue = personFilterObj.personFilter.Id;
+                }
+
+                string personValue = string.Empty;
+                var personObj = GetFilterObject<Dtos.Filters.PersonalRelationships2Filter>(_logger, "person");
+                if ((personObj != null) && (personObj.person != null))
+                {
+                    personValue = personObj.person.Id;
+                }
+
+                string relationshipTypeValue = string.Empty;
+                var relaObj = GetFilterObject<Dtos.Filters.PersonalRelationships2Filter>(_logger, "relationshipType");
+                if ((relaObj != null) && (relaObj.relationshipType != null))
+                {
+                    relationshipTypeValue = relaObj.relationshipType.Id;
+                }
+
+                if (CheckForEmptyFilterParameters())
+                    return new PagedHttpActionResult<IEnumerable<Dtos.StudentAcademicPrograms4>>(new List<Dtos.StudentAcademicPrograms4>(), page, 0, this.Request);
+
+                var pageOfItems = await _personalRelationshipsService.GetPersonalRelationships2Async(page.Offset, page.Limit, personValue, relationshipTypeValue, personFilterValue, bypassCache);
+
+                AddEthosContextProperties(
+                  await _personalRelationshipsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                  await _personalRelationshipsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                      pageOfItems.Item1.Select(i => i.Id).ToList()));
+
+                return new PagedHttpActionResult<IEnumerable<Dtos.PersonalRelationships2>>(pageOfItems.Item1, page, pageOfItems.Item2, this.Request);
+
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
         }
+
         #endregion
+        /// <summary>
+        /// Read (GET) a personalRelationships2 using a GUID
+        /// </summary>
+        /// <param name="id">GUID to desired personalRelationships2</param>
+        /// <returns>A personalRelationships2 object <see cref="Dtos.PersonalRelationships2"/> in EEDM format</returns>
+        [HttpGet, EedmResponseFilter]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        public async Task<Dtos.PersonalRelationships2> GetPersonalRelationships2ByGuidAsync(string id)
+        {
+            var bypassCache = false;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }            
+            try
+            {
+                AddEthosContextProperties(
+                    await _personalRelationshipsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                    await _personalRelationshipsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                        new List<string>() { id }));
+                return await _personalRelationshipsService.GetPersonalRelationships2ByGuidAsync(id);
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
+
+        /// <summary>
+        /// Update (PUT) an existing PersonRelationships
+        /// </summary>
+        /// <param name="id">GUID of the personalRelationships2 to update</param>
+        /// <param name="personalRelationships2">DTO of the updated personalRelationships2</param>
+        /// <returns>A PersonRelationships object <see cref="Dtos.PersonalRelationships2"/> in EEDM format</returns>
+        [HttpPut, EedmResponseFilter]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        public async Task<Dtos.PersonalRelationships2> PutPersonalRelationships2Async([FromUri] string id, [ModelBinder(typeof(EedmModelBinder))] Dtos.PersonalRelationships2 personalRelationships2)
+        {            
+            try
+            {
+                return await _personalRelationshipsService.UpdatePersonalRelationships2Async(
+                  await PerformPartialPayloadMerge(personalRelationships2, async () => await _personalRelationshipsService.GetPersonalRelationships2ByGuidAsync(id, true),
+                  await _personalRelationshipsService.GetDataPrivacyListByApi(GetRouteResourceName(), true),
+                  _logger));
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (ConfigurationException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
+
+        /// <summary>
+        /// Create (POST) a new personalRelationships2
+        /// </summary>
+        /// <param name="personalRelationships2">DTO of the new personalRelationships2</param>
+        /// <returns>A personalRelationships2 object <see cref="Dtos.PersonalRelationships2"/> in HeDM format</returns>
+        [HttpPost]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        public async Task<Dtos.PersonalRelationships2> PostPersonalRelationships2Async(Dtos.PersonalRelationships2 personalRelationships2)
+        {
+            try
+            {
+                return await _personalRelationshipsService.CreatePersonalRelationships2Async(personalRelationships2);
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (ConfigurationException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
+
+        /// <summary>
+        /// Delete (DELETE) a personalRelationships2
+        /// </summary>
+        /// <param name="id">GUID to desired personalRelationships2</param>
+        /// <returns>HttpResponseMessage</returns>
+        [HttpDelete]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        public async Task DeletePersonalRelationshipsAsync([FromUri] string id)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(id))
+                {
+                    throw new ArgumentNullException("id", "guid is a required for delete");
+                }
+                await _personalRelationshipsService.DeletePersonalRelationshipsAsync(id);
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (InvalidOperationException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
+
     }
+
+    
 }

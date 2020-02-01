@@ -1,5 +1,6 @@
 ﻿// Copyright 2012-2017 Ellucian Company L.P. and its affiliates.
 
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -24,11 +25,25 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// </summary>
         Task<IEnumerable<AcadCredential>> GetAcadCredentialsAsync(bool ignoreCache);
 
+        /// <summary>
+        /// Gets guid for credential.
+        /// </summary>
+        /// <param name="code"></param>
+        /// <returns></returns>
+        Task<string> GetAcadCredentialsGuidAsync(string code);
+
 
         /// <summary>
         /// AcademicDisciplines
         /// </summary>
         Task<IEnumerable<AcademicDiscipline>> GetAcademicDisciplinesAsync(bool ignoreCache);
+
+        /// <summary>
+        /// Gets guid for discipline based on code.
+        /// </summary>
+        /// <param name="code"></param>
+        /// <returns></returns>
+        Task<string> GetAcadDisciplinesGuidAsync(string code);
 
         /// <summary>
         /// AcademicDisciplines OtherMajors
@@ -130,11 +145,32 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         IEnumerable<CitizenType> CitizenTypes { get; }
 
         /// <summary>
+        /// Get a collection of commerce tax code rates
+        /// </summary>
+        /// <param name="ignoreCache">Bypass cache flag</param>
+        /// <returns>Collection of commerce tax code rates</returns>
+        Task<IEnumerable<CommerceTaxCodeRate>> GetCommerceTaxCodeRatesAsync(bool ignoreCache);
+
+        /// <summary>
+        /// Get guid for CommerceTaxCodeRate code
+        /// </summary>
+        /// <param name="code">CommerceTaxCodeRate code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetCommerceTaxCodeRateGuidAsync(string code);
+
+        /// <summary>
         /// Get a collection of commerce tax codes
         /// </summary>
         /// <param name="ignoreCache">Bypass cache flag</param>
         /// <returns>Collection of commerce tax codes</returns>
         Task<IEnumerable<CommerceTaxCode>> GetCommerceTaxCodesAsync(bool ignoreCache);
+
+        /// <summary>
+        /// Get guid for CommerceTaxCode code
+        /// </summary>
+        /// <param name="code">CommerceTaxCode code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetCommerceTaxCodeGuidAsync(string code);
 
         /// <summary>
         /// Communication codes
@@ -316,6 +352,13 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <param name="ignoreCache"></param>
         /// <returns>collection of Instructional Platforms</returns>
         Task<IEnumerable<InstructionalPlatform>> GetInstructionalPlatformsAsync(bool ignoreCache);
+        
+        /// <summary>
+        /// Gets guid for Instructional Platform code.
+        /// </summary>
+        /// <param name="code"></param>
+        /// <returns></returns>
+        Task<string> GetInstructionalPlatformsGuidAsync(string code);
 
         /// <summary>
         /// Interests
@@ -341,6 +384,16 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// Languages
         /// </summary>
         IEnumerable<Language> Languages { get; }
+
+        /// <summary>
+        /// Get a collection of Language ISO Codes
+        /// </summary>
+        Task<IEnumerable<LanguageIsoCodes>> GetLanguageIsoCodesAsync(bool ignoreCache);
+
+        /// <summary>
+        /// Get a Language ISO Code by Guid
+        /// </summary>
+        Task<LanguageIsoCodes> GetLanguageIsoCodeByGuidAsync(string guid);
 
         /// <summary>
         /// Campus locations.
@@ -502,18 +555,54 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         Task<IEnumerable<MilStatuses>> GetMilStatusesAsync(bool ignoreCache);
 
         /// <summary>
-        /// Get a collection of Personal Relationship Status
+        /// Get a collection of IntgPersonEmerPhoneTypes
         /// </summary>
         /// <param name="ignoreCache">Bypass cache flag</param>
-        /// <returns>Collection of Personal Relationship Status</returns>
-        Task<IEnumerable<PersonalRelationshipStatus>> GetPersonalRelationshipStatusesAsync(bool ignoreCache);
+        /// <returns>Collection of IntgPersonEmerPhoneTypes</returns>
+        Task<IEnumerable<IntgPersonEmerPhoneTypes>> GetIntgPersonEmerPhoneTypesAsync(bool ignoreCache);
 
+        /// <summary>
+        /// Get a collection of IntgPersonEmerTypes
+        /// </summary>
+        /// <param name="ignoreCache">Bypass cache flag</param>
+        /// <returns>Collection of IntgPersonEmerTypes</returns>
+        Task<IEnumerable<IntgPersonEmerTypes>> GetIntgPersonEmerTypesAsync(bool ignoreCache);
+
+        
         /// <summary>
         /// Get a collection of Person Filters
         /// </summary>
         /// <param name="ignoreCache">Bypass cache flag</param>
         /// <returns>Collection of Person Filters</returns>
         Task<IEnumerable<PersonFilter>> GetPersonFiltersAsync(bool ignoreCache);
+
+        /// <summary>
+        /// Get a Person Filter by GUID
+        /// </summary>
+        /// <param name="ignoreCache">Bypass cache flag</param>
+        /// <returns>Person Filter</returns>
+        Task<PersonFilter> GetPersonFilterByGuidAsync(string guid);
+
+        /// <summary>
+        /// Get a Person Filter by GUID
+        /// </summary>
+        /// <param name="ignoreCache">Bypass cache flag</param>
+        /// <returns>string list of Colleague person IDs</returns>
+        Task<string[]> GetPersonIdsByPersonFilterGuidAsync(string guid);
+
+        /// <summary>
+        /// Get a collection of PersonOriginCodes
+        /// </summary>
+        /// <param name="ignoreCache">Bypass cache flag</param>
+        /// <returns>Collection of PersonOriginCodes</returns>
+        Task<IEnumerable<PersonOriginCodes>> GetPersonOriginCodesAsync(bool ignoreCache);
+
+        /// <summary>
+        /// Get guid for Person Origin code
+        /// </summary>
+        /// <param name="code">Person Origin code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetPersonOriginCodesGuidAsync(string code);
 
         /// <summary>
         /// Get a collection of personal pronoun types
@@ -612,6 +701,13 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         Task<IEnumerable<RelationshipStatus>> GetRelationshipStatusesAsync(bool ignoreCache);
 
         /// <summary>
+        /// Get guid for GetRelationshipStatuses
+        /// </summary>
+        /// <param name="code">RelationshipStatuses code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetRelationshipStatusesGuidAsync(string code);
+
+        /// <summary>
         /// Get a collection of Relation Types
         /// </summary>
         /// <param name="ignoreCache">Bypass cache flag</param>
@@ -632,6 +728,13 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <param name="ignoreCache">Bypass cache flag</param>
         /// <returns>Collection of Relation Types</returns>
         Task<IEnumerable<RelationType>> GetRelationTypes3Async(bool ignoreCache);
+
+        /// <summary>
+        /// Get guid for RelationTypes3
+        /// </summary>
+        /// <param name="code">RelationTypes3 code</param>
+        /// <returns>Tuple of relationshuip type Guid & reciprocal_type guid</returns>
+        Task<Tuple<string, string>> GetRelationTypes3GuidAsync(string code);
 
         /// <summary>
         /// Get a collection of remark codes
@@ -851,10 +954,18 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         Task<IEnumerable<AcquisitionMethod>> GetAcquisitionMethodsAsync(bool ignoreCache);
 
         /// <summary>
-        /// Get a Place 
+        /// Get a collection of all Place domain entities  
         /// </summary>
-        /// <returns>A collection of Place entities</returns>
+        /// <param name="bypassCache">Bypass cache flag</param>
+        /// <returns>Collection of Place domain entities</returns>
         Task<IEnumerable<Place>> GetPlacesAsync(bool bypassCache);
+
+        /// <summary>
+        ///  Get and return a single place entity by guid without using the cache
+        ///  where the PLACES.COUNTRY ne null but PLACES.REGION and PLACES.SUB.REGION equal null.  
+        /// </summary>
+        /// <returns>Place domain entity</returns>
+        Task<Place> GetPlaceByGuidAsync(string guid);
 
         /// <summary>
         /// Get a collection of AlternativeCredentialTypes.
@@ -862,5 +973,7 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <param name="ignoreCache">Bypass cache flag</param>
         /// <returns>Collection of AltIdTypes</returns>
         Task<IEnumerable<AltIdTypes>> GetAlternateIdTypesAsync(bool ignoreCache);
+
+        Task<IEnumerable<Domain.Base.Entities.BoxCodes>> GetAllBoxCodesAsync();
     }
 }

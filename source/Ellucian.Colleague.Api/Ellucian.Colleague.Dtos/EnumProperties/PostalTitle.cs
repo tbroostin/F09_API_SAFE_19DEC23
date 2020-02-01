@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -23,6 +23,12 @@ namespace Ellucian.Colleague.Dtos.EnumProperties
         /// </summary>
         [EnumMember(Value = "BRAZIL")]
         BRA,
+
+        /// <summary>
+        /// The country code for the CANADA
+        /// </summary>
+        [EnumMember(Value = "CANADA")]
+        CAN,
 
         /// <summary>
         /// The country code for the MEXICO

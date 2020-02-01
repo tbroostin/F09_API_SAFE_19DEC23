@@ -57,7 +57,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         {
             if (string.IsNullOrEmpty(ccm))
             {
-                throw new KeyNotFoundException("Cost Calculation Method was not found.");
+                throw new KeyNotFoundException(string.Format("Cost Calculation Method is missing from the deduction type '{0}'.", string.IsNullOrEmpty(code) ? guid : code));
             }
             this.category = category;
             this.costCalculationMethod = ccm;

@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Tests.UserFactories;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
@@ -9,9 +9,9 @@ using Ellucian.Colleague.Domain.HumanResources.Tests;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
+using Microsoft.Reporting.WebForms;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using PdfSharp.Pdf;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -29,7 +29,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 
         private TestTaxFormPdfDataRepository TestPdfDataRepository;
         private Mock<IHumanResourcesTaxFormPdfDataRepository> mockTaxFormPdfDataRepository;
-        private Mock<IPdfSharpRepository> mockPdfSharpRepository;
         private ICurrentUserFactory currentUserFactory;
 
         private string personId = "000001";
@@ -74,37 +73,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 throw new Exception("An exception occurred.");
             });
 
-            mockPdfSharpRepository = new Mock<IPdfSharpRepository>();
-
-            // Mock for a populated path
-            mockPdfSharpRepository.Setup<PdfDocument>(pdfu => pdfu.OpenDocument(fakeRdlcPath)).Returns(() =>
-            {
-                return new PdfDocument();
-            });
-
-            // Mock for a null path
-            mockPdfSharpRepository.Setup<PdfDocument>(pdfu => pdfu.OpenDocument(null)).Returns(() =>
-            {
-                throw new ApplicationException("Path cannot be null.");
-            });
-
-            // Mock for an empty path
-            mockPdfSharpRepository.Setup<PdfDocument>(pdfu => pdfu.OpenDocument("")).Returns(() =>
-            {
-                throw new ApplicationException("Path cannot be empty.");
-            });
-
-            // Mock for a thrown exception from OpenDocument
-            mockPdfSharpRepository.Setup<PdfDocument>(pdfu => pdfu.OpenDocument(exceptionString)).Returns(() =>
-            {
-                throw new ApplicationException("Path cannot be empty.");
-            });
-
-            mockPdfSharpRepository.Setup<MemoryStream>(pdfu => pdfu.FinalizePdfDocument(It.IsAny<PdfDocument>())).Returns(() =>
-            {
-                return new MemoryStream();
-            });
-
             BuildTaxFormPdfService();
         }
 
@@ -114,7 +82,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             service = null;
             TestPdfDataRepository = null;
             mockTaxFormPdfDataRepository = null;
-            mockPdfSharpRepository = null;
         }
         #endregion
 
@@ -215,50 +182,47 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 
         #region PopulateW2Pdf Tests
         [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
         public void PopulateW2Pdf_Null_PdfData()
         {
-            var pdfBytes = service.PopulateW2Pdf(null, fakeRdlcPath);
+            var pdfBytes = service.PopulateW2PdfReport(null, fakeRdlcPath);
             Assert.IsTrue(pdfBytes is byte[]);
         }
 
         [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
         public void PopulateW2Pdf_Null_Path()
         {
             var pdfData = TestPdfDataRepository.FormW2PdfDataObjects.Where(x => x.TaxYear == "2015").FirstOrDefault();
-            var pdfBytes = service.PopulateW2Pdf(pdfData, null);
+            var pdfBytes = service.PopulateW2PdfReport(pdfData, null);
             Assert.IsTrue(pdfBytes is byte[]);
         }
 
         [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
         public void PopulateW2Pdf_Empty_Path()
         {
             var pdfData = TestPdfDataRepository.FormW2PdfDataObjects.Where(x => x.TaxYear == "2015").FirstOrDefault();
-            var pdfBytes = service.PopulateW2Pdf(pdfData, "");
+            var pdfBytes = service.PopulateW2PdfReport(pdfData, "");
             Assert.IsTrue(pdfBytes is byte[]);
         }
 
         [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
         public void PopulateW2Pdf_Null_PdfData_and_Path()
         {
             var pdfData = TestPdfDataRepository.FormW2PdfDataObjects.Where(x => x.TaxYear == "2015").FirstOrDefault();
-            var pdfBytes = service.PopulateW2Pdf(null, null);
+            var pdfBytes = service.PopulateW2PdfReport(null, null);
             Assert.IsTrue(pdfBytes is byte[]);
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ApplicationException))]
-        public void PopulateW2Pdf_OpenDocumentThrowsApplicationException()
-        {
-            var pdfData = TestPdfDataRepository.FormW2PdfDataObjects.Where(x => x.TaxYear == "2015").FirstOrDefault();
-            var pdfBytes = service.PopulateW2Pdf(pdfData, exceptionString);
-        }
-
-        [TestMethod]
+        [ExpectedException(typeof(LocalProcessingException))]
         public void PopulateW2Pdf_Success()
         {
+            // There is no way to mock the local report used by rdlc. This test is here for reference.
             var pdfData = TestPdfDataRepository.FormW2PdfDataObjects.Where(x => x.TaxYear == "2015").FirstOrDefault();
-            var pdfBytes = service.PopulateW2Pdf(pdfData, fakeRdlcPath);
-            Assert.IsTrue(pdfBytes is byte[]);
+            var pdfBytes = service.PopulateW2PdfReport(pdfData, fakeRdlcPath);
         }
         #endregion
 
@@ -420,7 +384,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 
             // Set up the current user with a subset of tax form statements and set up the service.
             service = new HumanResourcesTaxFormPdfService(this.mockTaxFormPdfDataRepository.Object,
-                this.mockPdfSharpRepository.Object,
                 adapterRegistry.Object,
                 currentUserFactory,
                 roleRepositoryMock.Object,

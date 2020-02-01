@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -49,7 +49,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         private IApiSettingsRepository ApiSettingsRepository;
         private ISettingsRepository XmlSettingsRepository;
         private IResourceRepository ResourceRepository;
-        
+        private IReferenceDataRepository ReferenceDataRepository;
+
         private Domain.Base.Entities.BackupConfiguration FakeBackupConfigurationEntity;
         private Dtos.Base.BackupConfiguration FakeBackupConfigurationDto;
         private ApiSettings FakeApiSettings;
@@ -61,6 +62,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         private Mock<IApiSettingsRepository> ApiSettingsRepositoryMock;
         private Mock<ISettingsRepository> XmlSettingsRepositoryMock;
         private Mock<IResourceRepository> ResourceRepositoryMock;
+        private Mock<IReferenceDataRepository> ReferenceDataRepositoryMock;
 
         private BackupConfigurationQueryCriteria fakeBackupConfigQueryCriteriaWithIds;
         private BackupConfigurationQueryCriteria fakeBackupConfigQueryCriteriaWithNamespace;
@@ -100,10 +102,13 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             ApiSettingsRepositoryMock = new Mock<IApiSettingsRepository>();
             XmlSettingsRepositoryMock = new Mock<ISettingsRepository>();
             ResourceRepositoryMock = new Mock<IResourceRepository>();
-            
+            ReferenceDataRepositoryMock = new Mock<IReferenceDataRepository>();
+
             ApiSettingsRepository = ApiSettingsRepositoryMock.Object;
             XmlSettingsRepository = XmlSettingsRepositoryMock.Object;
             ResourceRepository = ResourceRepositoryMock.Object;
+            ReferenceDataRepository = ReferenceDataRepositoryMock.Object;
+
 
             FakeApiSettings = new ApiSettings(1, "fakeName", 1);
             FakeApiSettings.BulkReadSize = 111;
@@ -166,7 +171,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             // Instantiate the service
             configurationService = new ConfigurationService(configRepoMock.Object, adapterRegistry, currentUserFactoryFake, roleRepo,
-                FakeApiSettings, XmlSettingsRepository, ApiSettingsRepository, ResourceRepository, logger);
+                FakeApiSettings, XmlSettingsRepository, ApiSettingsRepository, ResourceRepository, ReferenceDataRepository, logger);
 
             BuildConfigurationService();
         }
@@ -423,6 +428,16 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             Assert.AreEqual(rdcEntity.TextForBlankDueDate, rdcDto.TextForBlankDueDate);
         }
 
+        [TestMethod]
+        public async Task GetSessionConfigurationAsync_Success()
+        {
+            var sessionConfigurationDto = await this.configurationService.GetSessionConfigurationAsync();
+            var sessionConfigurationEntity = await testConfigurationRepository.GetSessionConfigurationAsync();
+
+            Assert.AreEqual(sessionConfigurationEntity.PasswordResetEnabled, sessionConfigurationDto.PasswordResetEnabled);
+            Assert.AreEqual(sessionConfigurationEntity.UsernameRecoveryEnabled, sessionConfigurationDto.UsernameRecoveryEnabled);
+        }
+
 
         /// <summary>
         /// Fake an ICurrentUserFactory implementation to construct ConfigurationService
@@ -504,14 +519,17 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             var requiredDocumentConfigurationAdapter = new AutoMapperAdapter<Domain.Base.Entities.RequiredDocumentConfiguration, Dtos.Base.RequiredDocumentConfiguration>(adapterRegistry.Object, logger);
             adapterRegistry.Setup(reg => reg.GetAdapter<Domain.Base.Entities.RequiredDocumentConfiguration, Dtos.Base.RequiredDocumentConfiguration>()).Returns(requiredDocumentConfigurationAdapter);
 
+            var sessionConfigurationAdapter = new AutoMapperAdapter<Domain.Base.Entities.SessionConfiguration, Dtos.Base.SessionConfiguration>(adapterRegistry.Object, logger);
+            adapterRegistry.Setup(reg => reg.GetAdapter<Domain.Base.Entities.SessionConfiguration, Dtos.Base.SessionConfiguration>()).Returns(sessionConfigurationAdapter);
+
             configurationService = new ConfigurationService(testConfigurationRepository, adapterRegistry.Object, currentUserFactory, roleRepository,
-                FakeApiSettings, XmlSettingsRepository, ApiSettingsRepository, ResourceRepository, loggerObject);
+                FakeApiSettings, XmlSettingsRepository, ApiSettingsRepository, ResourceRepository, ReferenceDataRepository, loggerObject);
 
             backupConfigurationService = new ConfigurationService(configRepo, adapterRegistry.Object, backupConfigCurrentUserFactory, roleRepo,
-                FakeApiSettings, XmlSettingsRepository, ApiSettingsRepository, ResourceRepository, loggerObject);
+                FakeApiSettings, XmlSettingsRepository, ApiSettingsRepository, ResourceRepository, ReferenceDataRepository, loggerObject);
 
             backupConfigurationServiceNoPermission = new ConfigurationService(configRepo, adapterRegistry.Object, currentUserFactory, roleRepo,
-                FakeApiSettings, XmlSettingsRepository, ApiSettingsRepository, ResourceRepository, loggerObject);
+                FakeApiSettings, XmlSettingsRepository, ApiSettingsRepository, ResourceRepository, ReferenceDataRepository, loggerObject);
 
             // Set up the mock statement to make the configuration repository method return null.
             Mock<IConfigurationRepository> testConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
@@ -527,7 +545,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             configRepoMock.Setup(repo => repo.GetSelfServiceConfigurationAsync()).Returns(testConfigurationRepository.GetSelfServiceConfigurationAsync());
 
             configurationServiceToReturnNull = new ConfigurationService(testConfigurationRepositoryMock.Object, adapterRegistry.Object, currentUserFactory, roleRepository,
-                FakeApiSettings, XmlSettingsRepository, ApiSettingsRepository, ResourceRepository, loggerObject);
+                FakeApiSettings, XmlSettingsRepository, ApiSettingsRepository, ResourceRepository, ReferenceDataRepository, loggerObject);
         }
 
         #region backup configuration

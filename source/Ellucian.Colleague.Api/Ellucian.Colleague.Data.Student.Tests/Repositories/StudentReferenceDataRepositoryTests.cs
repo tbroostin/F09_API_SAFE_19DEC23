@@ -1,10 +1,11 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Repositories;
 using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Domain.Student.Tests;
@@ -397,6 +398,21 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     Assert.AreEqual(allAcademicPrograms.ElementAt(i).StartDate, repoGetAcademicPrograms.ElementAt(i).StartDate);
                 }
             }
+            [TestMethod]
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task StudentReferenceDataRepos_AcademicPrograms_GetAcademicProgramByGuidAsync_WrongGuidType()
+            {
+                GuidLookupResult glr = new GuidLookupResult();
+                var guid = allAcademicPrograms.First().Guid;
+                glr.Entity = "NOT.AN.ACAD.PROGRAM";
+                glr.PrimaryKey = "not important";
+                Dictionary<string, GuidLookupResult> dict = new Dictionary<string, GuidLookupResult>();
+                dict[guid] = glr;
+                dataAccessorMock.Setup(acc => acc.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(dict);
+                var repoGetAcademicProgram = await referenceDataRepo.GetAcademicProgramByGuidAsync(allAcademicPrograms.First().Guid);
+            }
+
+
 
             private StudentReferenceDataRepository BuildValidReferenceDataRepository()
             {
@@ -5000,6 +5016,9 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 // Build Grade Scheme responses used for mocking
                 _allGradeScheme = new TestStudentReferenceDataRepository().GetGradeSchemesAsync().Result;
+                _allGradeScheme.Last().AddGradeCode("A");
+                _allGradeScheme.Last().AddGradeCode("B");
+                _allGradeScheme.Last().AddGradeCode("C");
 
                 // Build Grade Scheme repository
                 _referenceDataRepo = BuildValidReferenceDataRepository();             
@@ -5026,6 +5045,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     Assert.AreEqual(_allGradeScheme.ElementAt(i).Guid, repoGetGradeSchemes.ElementAt(i).Guid);
                     Assert.AreEqual(_allGradeScheme.ElementAt(i).EffectiveStartDate, repoGetGradeSchemes.ElementAt(i).EffectiveStartDate);
                     Assert.AreEqual(_allGradeScheme.ElementAt(i).EffectiveEndDate, repoGetGradeSchemes.ElementAt(i).EffectiveEndDate);
+                    CollectionAssert.AreEqual(_allGradeScheme.ElementAt(i).GradeCodes, repoGetGradeSchemes.ElementAt(i).GradeCodes);
                 }
             }
 
@@ -5040,7 +5060,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     Assert.AreEqual(_allGradeScheme.ElementAt(i).Guid, repoGetGradeSchemes.ElementAt(i).Guid);
                     Assert.AreEqual(_allGradeScheme.ElementAt(i).EffectiveStartDate, repoGetGradeSchemes.ElementAt(i).EffectiveStartDate);
                     Assert.AreEqual(_allGradeScheme.ElementAt(i).EffectiveEndDate, repoGetGradeSchemes.ElementAt(i).EffectiveEndDate);
-               
+                    CollectionAssert.AreEqual(_allGradeScheme.ElementAt(i).GradeCodes, repoGetGradeSchemes.ElementAt(i).GradeCodes);
                 }
             }
 
@@ -5066,27 +5086,28 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                         GrsDesc = item.Description,
                         Recordkey = item.Code,
                         GrsStartDate = item.EffectiveStartDate,
-                        GrsEndDate = item.EffectiveEndDate
+                        GrsEndDate = item.EffectiveEndDate,
+                        GrsGrades =item.GradeCodes.ToList()
                     };
                     records.Add(record);
                 }
-                _dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.GradeSchemes>("GRADE.SCHEMES", "", true)).ReturnsAsync(records);
+                _dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.GradeSchemes>("", It.IsAny<bool>())).ReturnsAsync(records);
 
                 _cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
                  x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
                  .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
 
-                _dataAccessorMock.Setup(acc => acc.SelectAsync(It.IsAny<RecordKeyLookup[]>())).Returns<RecordKeyLookup[]>(recordKeyLookups =>
-                {
-                    var result = new Dictionary<string, RecordKeyLookupResult>();
-                    foreach (var recordKeyLookup in recordKeyLookups)
-                    {
-                        var record = _allGradeScheme.FirstOrDefault(e => e.Code == recordKeyLookup.PrimaryKey);
-                        result.Add(string.Join("+", new string[] { "GRADE.SCHEMES", record.Code }),
-                            new RecordKeyLookupResult() { Guid = record.Guid });
-                    }
-                    return Task.FromResult(result);
-                });
+                //_dataAccessorMock.Setup(acc => acc.SelectAsync(It.IsAny<RecordKeyLookup[]>())).Returns<RecordKeyLookup[]>(recordKeyLookups =>
+                //{
+                //    var result = new Dictionary<string, RecordKeyLookupResult>();
+                //    foreach (var recordKeyLookup in recordKeyLookups)
+                //    {
+                //        var record = _allGradeScheme.FirstOrDefault(e => e.Code == recordKeyLookup.PrimaryKey);
+                //        result.Add(string.Join("+", new string[] { "GRADE.SCHEMES", record.Code }),
+                //            new RecordKeyLookupResult() { Guid = record.Guid });
+                //    }
+                //    return Task.FromResult(result);
+                //});
 
                 // Construct repository
                 _referenceDataRepo = new StudentReferenceDataRepository(_cacheProviderMock.Object, _transFactoryMock.Object, _loggerMock.Object, _apiSettings);
@@ -5094,6 +5115,94 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 return _referenceDataRepo;
             }
         }
+
+        [TestClass]
+        public class GradeSubschemes
+        {
+            Mock<IColleagueTransactionFactory> _transFactoryMock;
+            Mock<ICacheProvider> _cacheProviderMock;
+            Mock<IColleagueDataReader> _dataAccessorMock;
+            Mock<ILogger> _loggerMock;
+            IEnumerable<GradeSubscheme> _allGradeSubscheme;
+
+            ApiSettings _apiSettings;
+            StudentReferenceDataRepository _referenceDataRepo;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = new Mock<ILogger>();
+                _apiSettings = new ApiSettings("TEST");
+
+                // Build Grade Scheme responses used for mocking
+                _allGradeSubscheme = new TestStudentReferenceDataRepository().GetGradeSubschemesAsync().Result;
+                _allGradeSubscheme.Last().AddGradeCode("A");
+                _allGradeSubscheme.Last().AddGradeCode("B");
+                _allGradeSubscheme.Last().AddGradeCode("C");
+
+                // Build Grade Scheme repository
+                _referenceDataRepo = BuildValidReferenceDataRepository();
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                _transFactoryMock = null;
+                _dataAccessorMock = null;
+                _cacheProviderMock = null;
+                _allGradeSubscheme = null;
+                _referenceDataRepo = null;
+            }
+
+            [TestMethod]
+            public async Task StudentReferenceDataRepo_GradeSubschemes_GetGradeSubschemesAsync_Cache()
+            {
+                var repoGetGradeSubschemes = (await _referenceDataRepo.GetGradeSubschemesAsync()).ToList();
+                for (var i = 0; i < _allGradeSubscheme.Count(); i++)
+                {
+                    Assert.AreEqual(_allGradeSubscheme.ElementAt(i).Code, repoGetGradeSubschemes.ElementAt(i).Code);
+                    Assert.AreEqual(_allGradeSubscheme.ElementAt(i).Description, repoGetGradeSubschemes.ElementAt(i).Description);
+                    CollectionAssert.AreEqual(_allGradeSubscheme.ElementAt(i).GradeCodes, repoGetGradeSubschemes.ElementAt(i).GradeCodes);
+                }
+            }
+
+            private StudentReferenceDataRepository BuildValidReferenceDataRepository()
+            {
+                // transaction factory mock
+                _transFactoryMock = new Mock<IColleagueTransactionFactory>();
+                // Cache Provider Mock
+                _cacheProviderMock = new Mock<ICacheProvider>();
+                // Set up data accessor for mocking 
+                _dataAccessorMock = new Mock<IColleagueDataReader>();
+                _apiSettings = new ApiSettings("TEST");
+
+                // Set up dataAccessorMock as the object for the DataAccessor
+                _transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(_dataAccessorMock.Object);
+
+                var records = new Collection<DataContracts.GradeSubschemes>();
+                foreach (var item in _allGradeSubscheme)
+                {
+                    var record = new DataContracts.GradeSubschemes
+                    {
+                        GssDescription = item.Description,
+                        Recordkey = item.Code,
+                        GssGrades = item.GradeCodes.ToList()
+                    };
+                    records.Add(record);
+                }
+                _dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.GradeSubschemes>("", It.IsAny<bool>())).ReturnsAsync(records);
+
+                _cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
+                 x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                 .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+
+                // Construct repository
+                _referenceDataRepo = new StudentReferenceDataRepository(_cacheProviderMock.Object, _transFactoryMock.Object, _loggerMock.Object, _apiSettings);
+
+                return _referenceDataRepo;
+            }
+        }
+
 
         [TestClass]
         public class HousingResidentTypes
@@ -7944,7 +8053,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
             StudentReferenceDataRepository studentSeferenceDataRepo;
             List<StudentCohort> studentCohortEntities;
-            ApplValcodes studentCohortsValcodeResponse;
+            ApplValcodes fedCohortsValcodeResponse;
+            ApplValcodes instCohortsValcodeResponse;
             ApiSettings apiSettings;
 
 
@@ -7955,7 +8065,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 apiSettings = new ApiSettings("TEST");
 
                 BuildData();
-                studentCohortsValcodeResponse = BuildValcodeResponse(studentCohortEntities);
+                fedCohortsValcodeResponse = BuildValcodeResponse(studentCohortEntities.Where(i => i.CohortType.Equals("FED", StringComparison.OrdinalIgnoreCase)));
+                instCohortsValcodeResponse = BuildValcodeResponse(studentCohortEntities.Where(i => i.CohortType.Equals("INSTITUTION", StringComparison.OrdinalIgnoreCase)));
                 studentSeferenceDataRepo = BuildValidReferenceDataRepository();
             }
 
@@ -7963,11 +8074,11 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 studentCohortEntities = new List<StudentCohort>() 
                 {
-                    new StudentCohort("e8dbcea5-ffb8-471e-87b7-ce5d36d5c2e7", "ATHL", "Athletes"),
-                    new StudentCohort("c2f57ee5-1c30-44a5-9d18-311f71f7b722", "FRAT", "Fraternity"),
-                    new StudentCohort("f05a6c0f-3a56-4a87-b931-bc2901da5ef9", "SORO", "Sorority"),
-                    new StudentCohort("05872218-f749-4cdc-b4f0-43200cc21335", "ROTC", "ROTC Participants"),
-                    new StudentCohort("827fffc4-3dd2-4492-8f51-4134597ec4bf", "VETS", "Military Veterans"),
+                    new StudentCohort("e8dbcea5-ffb8-471e-87b7-ce5d36d5c2e7", "ATHL", "Athletes"){ CohortType = "FED" },
+                    new StudentCohort("c2f57ee5-1c30-44a5-9d18-311f71f7b722", "FRAT", "Fraternity"){ CohortType = "FED" },
+                    new StudentCohort("f05a6c0f-3a56-4a87-b931-bc2901da5ef9", "SORO", "Sorority"){ CohortType = "FED" },
+                    new StudentCohort("05872218-f749-4cdc-b4f0-43200cc21335", "ROTC", "ROTC Participants"){ CohortType = "INSTITUTION" },
+                    new StudentCohort("827fffc4-3dd2-4492-8f51-4134597ec4bf", "VETS", "Military Veterans"){ CohortType = "INSTITUTION" },
                 };
             }
 
@@ -7976,14 +8087,15 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 studentSeferenceDataRepo = null;
                 studentCohortEntities = null;
-                studentCohortsValcodeResponse = null;
+                fedCohortsValcodeResponse = null;
+                instCohortsValcodeResponse = null;
                 apiSettings = null;
             }
 
             [TestMethod]
             public async Task StudentCohort_GET_AnyCache()
             {
-                var actuals = await studentSeferenceDataRepo.GetAllStudentCohortAsync(It.IsAny<bool>());
+                var actuals = await studentSeferenceDataRepo.GetAllStudentCohortAsync(true);
                 Assert.IsNotNull(actuals);
 
                 foreach (var actual in actuals)
@@ -7994,6 +8106,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     Assert.AreEqual(expected.Guid, actual.Guid);
                     Assert.AreEqual(expected.Code, actual.Code);
                     Assert.AreEqual(expected.Description, actual.Description);
+                    Assert.AreEqual(expected.CohortType, actual.CohortType);
                 }
             }
 
@@ -8010,7 +8123,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
 
                 // Setup response to courseLevel valcode read
-                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("ST.VALCODES", "INSTITUTION.COHORTS", It.IsAny<bool>())).ReturnsAsync(studentCohortsValcodeResponse);
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("ST.VALCODES", "INSTITUTION.COHORTS", It.IsAny<bool>())).ReturnsAsync(instCohortsValcodeResponse);
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("ST.VALCODES", "FED.COHORTS", It.IsAny<bool>())).ReturnsAsync(fedCohortsValcodeResponse);
                 cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x => x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
                 .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
 
@@ -8020,7 +8134,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     foreach (var recordKeyLookup in recordKeyLookups)
                     {
                         var courseLevel = studentCohortEntities.Where(e => e.Code == recordKeyLookup.SecondaryKey).FirstOrDefault();
-                        result.Add(string.Join("+", new string[] { "ST.VALCODES", "INSTITUTION.COHORTS", courseLevel.Code }),
+                        var cohortType = courseLevel.CohortType.Equals("FED", StringComparison.OrdinalIgnoreCase) ? "FED.COHORTS" : "INSTITUTION.COHORTS";
+                        result.Add(string.Join("+", new string[] { "ST.VALCODES", cohortType, courseLevel.Code }),
                             new RecordKeyLookupResult() { Guid = courseLevel.Guid });
                     }
                     return Task.FromResult(result);
@@ -8038,7 +8153,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 studentCohortResponse.ValsEntityAssociation = new List<ApplValcodesVals>();
                 foreach (var item in studentCohort)
                 {
-                    studentCohortResponse.ValsEntityAssociation.Add(new ApplValcodesVals("", item.Description, "2", item.Code, "3", "", ""));
+                    studentCohortResponse.ValsEntityAssociation.Add(new ApplValcodesVals("", item.Description, "2", item.Code, "3", item.CohortType, ""));
                 }
                 return studentCohortResponse;
             }

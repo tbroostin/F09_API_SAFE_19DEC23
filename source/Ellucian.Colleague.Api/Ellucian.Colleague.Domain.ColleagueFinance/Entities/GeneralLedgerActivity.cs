@@ -50,9 +50,9 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
             {
                 throw new ArgumentNullException(string.Format("Transaction date is required. Guid: {0}", guid));
             }
-            if (debit == 0) debit = null;
-            if (credit == 0) credit = null;
-            if (!debit.HasValue && !credit.HasValue)
+            //if (debit == 0) debit = null;
+            //if (credit == 0) credit = null;
+            if ((!debit.HasValue && !credit.HasValue) || (debit == 0 && credit == 0))
             {
                 throw new ArgumentNullException("Credit/Debit value is required.");
             }

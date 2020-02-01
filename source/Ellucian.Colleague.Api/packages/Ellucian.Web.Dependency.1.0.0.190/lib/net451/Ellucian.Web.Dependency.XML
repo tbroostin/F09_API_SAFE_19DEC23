@@ -1,0 +1,75 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Ellucian.Web.Dependency</name>
+    </assembly>
+    <members>
+        <member name="T:Ellucian.Web.Dependency.DependencyRegistration">
+            <summary>
+            Contains methods for handling dependency registration.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Dependency.DependencyRegistration.RegisterTypes(System.Reflection.Assembly,Microsoft.Practices.Unity.IUnityContainer,System.Type)">
+            <summary>
+            Registers the assembly types.
+            </summary>
+            <param name="assembly">The assembly.</param>
+            <param name="container">The container.</param>
+            <param name="lifetimeManagerType">Type of the lifetime manager (null in this method).</param>
+        </member>
+        <member name="M:Ellucian.Web.Dependency.DependencyRegistration.Register``1(Microsoft.Practices.Unity.IUnityContainer)">
+            <summary>
+            Registers the specified container.
+            </summary>
+            <typeparam name="T">An implementation of IContainerRegistration.</typeparam>
+            <param name="container">The container to register.</param>
+        </member>
+        <member name="T:Ellucian.Web.Dependency.IContainerRegistration">
+            <summary>
+            Basic interface for handling container registration.
+            </summary>
+        </member>
+        <member name="M:Ellucian.Web.Dependency.IContainerRegistration.GetLoadOrder">
+            <summary>
+            Determines the load order of the items registered.
+            </summary>
+            <returns>
+            load order integer
+            </returns>
+        </member>
+        <member name="M:Ellucian.Web.Dependency.IContainerRegistration.Register(Microsoft.Practices.Unity.IUnityContainer)">
+            <summary>
+            Registers items within the unity container.
+            </summary>
+            <param name="container">unity container</param>
+        </member>
+        <member name="T:Ellucian.Web.Dependency.RegisterTypeAttribute">
+            <summary>
+            Class performing attribute registration.
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Dependency.RegisterTypeAttribute.Lifetime">
+            <summary>
+            Gets/sets the lifetime of the registration.
+            </summary>
+            <value>
+            The lifetime value.
+            </value>
+        </member>
+        <member name="T:Ellucian.Web.Dependency.RegistrationLifetime">
+            <summary>
+            Registration property enumeration.
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Dependency.RegistrationLifetime.Singleton">
+            <summary>
+            The singleton
+            </summary>
+        </member>
+        <member name="F:Ellucian.Web.Dependency.RegistrationLifetime.Hierarchy">
+            <summary>
+            The hierarchy
+            </summary>
+        </member>
+    </members>
+</doc>

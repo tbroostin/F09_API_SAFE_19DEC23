@@ -1,4 +1,4 @@
-﻿/*Copyright 2015-2017 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2015-2019 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -78,6 +78,47 @@ namespace Ellucian.Colleague.Api.Controllers.FinancialAid
             }
         }
 
+        /// <summary>
+        /// Get a student's Financial Aid Budget Components for the specified award year
+        /// </summary>
+        /// <accessComments>
+        /// Users may request their own data. Additionally, users who have
+        /// VIEW.FINANCIAL.AID.INFORMATION permission or proxy permissions can request
+        /// other users' data"
+        /// </accessComments>
+        /// <param name="studentId">The Colleague PERSON id of the student for whom to get budget components</param>
+        /// <param name="awardYear">award year to retrieve budget components for</param>
+        /// <returns>A list of StudentBudgetComponent DTOs</returns>
+        [HttpGet]
+        public async Task<IEnumerable<StudentBudgetComponent>> GetStudentFinancialAidBudgetComponentsForYearAsync(string studentId, string awardYear)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw CreateHttpResponseException("studentId argument is required");
+            }
+
+            if (string.IsNullOrEmpty(awardYear))
+            {
+                throw CreateHttpResponseException("awardYear argument is required");
+            }
+
+            try
+            {
+                return await _StudentBudgetComponentService.GetStudentBudgetComponentsForYearAsync(studentId, awardYear);
+            }
+            catch (PermissionsException pex)
+            {
+                var message = string.Format("You do not have permission to get budget component resources for student {0}", studentId);
+                _Logger.Error(pex, message);
+                throw CreateHttpResponseException(message, System.Net.HttpStatusCode.Forbidden);
+            }
+            catch (Exception ex)
+            {
+                var message = "Unknown error occurred getting student budget components";
+                _Logger.Error(ex, message);
+                throw CreateHttpResponseException(message);
+            }
+        }
 
     }
 }

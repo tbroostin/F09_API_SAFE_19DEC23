@@ -21,5 +21,10 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// AP type description
         /// </summary>
         public string Description { get; set; }
+
+        /// <summary>
+        /// AP type source
+        /// </summary>
+        public string Source { get; set; }
     }
 }

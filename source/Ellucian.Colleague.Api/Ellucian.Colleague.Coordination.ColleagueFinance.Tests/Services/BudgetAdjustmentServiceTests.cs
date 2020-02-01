@@ -1,7 +1,8 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Tests.UserFactories;
+using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.ColleagueFinance;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
@@ -41,6 +42,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         private Mock<IBudgetAdjustmentsRepository> repositoryApproveMock;
         private Mock<IBudgetAdjustmentsRepository> repositoryApproveNullDomainMock;
         private Mock<IGeneralLedgerConfigurationRepository> configurationRepositoryMock = new Mock<IGeneralLedgerConfigurationRepository>();
+        private Mock<IGeneralLedgerUserRepository> generalLedgerUserRepositoryMock = new Mock<IGeneralLedgerUserRepository>();
         private Mock<IApproverRepository> approverRepositoryMock = new Mock<IApproverRepository>();
         private Mock<IStaffRepository> staffRepositoryMock = new Mock<IStaffRepository>();
         private Mock<IStaffRepository> approverStaffRepositoryMock = new Mock<IStaffRepository>();
@@ -66,7 +68,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         private CostCenterStructure costCenterStructure = new CostCenterStructure();
         private BudgetAdjustmentAccountExclusions exclusions = new BudgetAdjustmentAccountExclusions();
         private BudgetAdjustmentParameters budgetAdjustmentParameters = new BudgetAdjustmentParameters(false, false, false);
+        private GeneralLedgerAccountStructure glAccountStructure = new GeneralLedgerAccountStructure();
         private GeneralLedgerClassConfiguration glClassConfiguration;
+        private GeneralLedgerUser glUser;
         private TestBudgetAdjustmentRepository testBudgetAdjustmentRepository;
         private string personId = "0000004";
 
@@ -162,9 +166,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             roleRepositoryMock1.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { glUserRoleViewPermissions });
             roleRepository1 = roleRepositoryMock1.Object;
 
-            configurationRepositoryMock.Setup(x => x.GetBudgetAdjustmentParametersAsync()).Returns(() =>
+            generalLedgerUserRepositoryMock.Setup(x => x.GetGeneralLedgerUserAsync2(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<GeneralLedgerClassConfiguration>())).Returns(() =>
             {
-                return Task.FromResult(budgetAdjustmentParameters);
+                return Task.FromResult(glUser);
             });
 
             approverRepositoryMock.Setup(apm => apm.GetApproverNameForIdAsync("XYZ")).Returns(() =>
@@ -177,9 +181,18 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 return Task.FromResult("AJK");
             });
 
-            // Build the service object.
-            service = new BudgetAdjustmentService(repositoryMock.Object, configurationRepositoryMock.Object, approverRepositoryMock.Object,
-                staffRepositoryMock.Object, adapterRegistryObject, userFactory, roleRepository, loggerMock.Object);
+            // Mock the GL account structure.
+            configurationRepositoryMock.Setup(x => x.GetBudgetAdjustmentParametersAsync()).Returns(() =>
+            {
+                return Task.FromResult(budgetAdjustmentParameters);
+            });
+
+            glAccountStructure.FullAccessRole = "FULL_ACCESS";
+            glAccountStructure.SetMajorComponentStartPositions(new List<string>() { "1", "4", "7", "10", "13", "19" });
+            configurationRepositoryMock.Setup(x => x.GetAccountStructureAsync()).Returns(() =>
+            {
+                return Task.FromResult(glAccountStructure);
+            });
 
             // Mock the cost center structure.
             var testGlAccountRepository = new TestGlAccountRepository();
@@ -213,7 +226,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             });
 
             // Mock the return of the adjustment entity.
-            repositoryMock.Setup(x => x.CreateAsync(It.IsAny<Domain.ColleagueFinance.Entities.BudgetAdjustment>())).Returns((Domain.ColleagueFinance.Entities.BudgetAdjustment adjustmentEntity) =>
+            repositoryMock.Setup(x => x.CreateAsync(It.IsAny<Domain.ColleagueFinance.Entities.BudgetAdjustment>(), glAccountStructure.MajorComponentStartPositions))
+                .Returns((Domain.ColleagueFinance.Entities.BudgetAdjustment adjustmentEntity, IEnumerable<string> majorComponentStartPosition) =>
             {
                 if (adjustmentEntity.Initiator == null)
                 {
@@ -259,25 +273,30 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             var summaryToDtoAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.BudgetAdjustmentSummary, Dtos.ColleagueFinance.BudgetAdjustmentSummary>(adapterRegistryObject, loggerObject);
             adapterRegistryMock.Setup(x => x.GetAdapter<Domain.ColleagueFinance.Entities.BudgetAdjustmentSummary, Dtos.ColleagueFinance.BudgetAdjustmentSummary>()).Returns(summaryToDtoAdapter);
 
+            // Build the service object.
+            service = new BudgetAdjustmentService(repositoryMock.Object, configurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object, approverRepositoryMock.Object,
+                staffRepositoryMock.Object, adapterRegistryObject, userFactory, roleRepository, loggerMock.Object);
+
             // Build the service for budget adjustment summary information object.
-            baSummaryService = new BudgetAdjustmentService(testBudgetAdjustmentRepository, configurationRepositoryMock.Object, approverRepositoryMock.Object,
+            baSummaryService = new BudgetAdjustmentService(testBudgetAdjustmentRepository, configurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object, approverRepositoryMock.Object,
                 staffRepositoryMock.Object, adapterRegistryObject, userFactory, roleRepository, loggerObject);
 
             // Build the budgetAdjustmentService object.
-            budgetAdjustmentService = new BudgetAdjustmentService(testBudgetAdjustmentRepository, configurationRepositoryMock.Object, approverRepositoryMock.Object,
+            budgetAdjustmentService = new BudgetAdjustmentService(testBudgetAdjustmentRepository, configurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object, approverRepositoryMock.Object,
                 staffRepositoryMock.Object, adapterRegistryObject, userFactory, roleRepository, loggerObject);
 
             userFactory2 = new GeneralLedgerCurrentUser.UserFactoryAll();
+
             // Setup the service that is going to make currentUser.PersonId different for the security test.
-            baServiceForCurrentUserNotInitiator = new BudgetAdjustmentService(testBudgetAdjustmentRepository, configurationRepositoryMock.Object, approverRepositoryMock.Object,
+            baServiceForCurrentUserNotInitiator = new BudgetAdjustmentService(testBudgetAdjustmentRepository, configurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object, approverRepositoryMock.Object,
                 staffRepositoryMock.Object, adapterRegistryObject, userFactory2, roleRepository, loggerObject);
 
             // Build a service for a user that has the budget adjustor role but only view permissions
-            serviceForViewPermission = new BudgetAdjustmentService(testBudgetAdjustmentRepository, configurationRepositoryMock.Object, approverRepositoryMock.Object,
+            serviceForViewPermission = new BudgetAdjustmentService(testBudgetAdjustmentRepository, configurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object, approverRepositoryMock.Object,
                 staffRepositoryMock.Object, adapterRegistryObject, baViewUserFactory, roleRepository1, loggerObject);
 
             // Build a service for a user that has no permissions.
-            serviceForNoPermission = new BudgetAdjustmentService(testBudgetAdjustmentRepository, configurationRepositoryMock.Object, approverRepositoryMock.Object,
+            serviceForNoPermission = new BudgetAdjustmentService(testBudgetAdjustmentRepository, configurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object, approverRepositoryMock.Object,
                 staffRepositoryMock.Object, adapterRegistryObject, noPermissionsUser, roleRepository1, loggerObject);
 
             #region PostBudgetAdjustmentApprovalAsync
@@ -320,8 +339,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             // Mock the repository to approve a budget adjustment.
             repositoryApproveMock = new Mock<IBudgetAdjustmentsRepository>();
             repositoryApproveMock.Setup(y => y.GetBudgetAdjustmentAsync(It.IsAny<string>())).ReturnsAsync(budgetAdjustmentToApproveEntity);
-            repositoryApproveMock.Setup(x => x.UpdateAsync(It.IsAny<string>(), It.IsAny<Domain.ColleagueFinance.Entities.BudgetAdjustment>())).Returns(Task.FromResult(budgetAdjustmentToApproveEntity));
-            repositoryApproveMock.Setup(x => x.ValidateBudgetAdjustmentAsync(It.IsAny<Domain.ColleagueFinance.Entities.BudgetAdjustment>())).Returns(Task.FromResult(new List<string>()));
+            repositoryApproveMock.Setup(x => x.UpdateAsync(It.IsAny<string>(), It.IsAny<Domain.ColleagueFinance.Entities.BudgetAdjustment>(), glAccountStructure.MajorComponentStartPositions)).Returns(Task.FromResult(budgetAdjustmentToApproveEntity));
+            repositoryApproveMock.Setup(x => x.ValidateBudgetAdjustmentAsync(It.IsAny<Domain.ColleagueFinance.Entities.BudgetAdjustment>(), glAccountStructure.MajorComponentStartPositions)).Returns(Task.FromResult(new List<string>()));
 
             approverStaffRepositoryMock = new Mock<IStaffRepository>();
             approverStaffRepositoryMock.Setup(z => z.GetStaffLoginIdForPersonAsync(It.IsAny<string>())).ReturnsAsync("ABC");
@@ -330,7 +349,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             repositoryApproveNullDomainMock.Setup(y => y.GetBudgetAdjustmentAsync(It.IsAny<string>())).ReturnsAsync(null as BudgetAdjustment);
 
             // Build a service to approve a budget adjustment.
-            approvalBudgetAdjustmentService = new BudgetAdjustmentService(repositoryApproveMock.Object, configurationRepositoryMock.Object, approverRepositoryMock.Object,
+            approvalBudgetAdjustmentService = new BudgetAdjustmentService(repositoryApproveMock.Object, configurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object, approverRepositoryMock.Object,
                 approverStaffRepositoryMock.Object, adapterRegistryObject, userFactory, roleRepository, loggerObject);
 
             ///////////////////////////////////////////////
@@ -353,6 +372,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             approvalBudgetAdjustmentService = null;
             adjustmentSuccessEntity = null;
             adjustmentErrorEntity = null;
+            glAccountStructure = null;
             costCenterStructure = null;
             exclusions = null;
             budgetAdjustmentParameters = null;
@@ -1177,6 +1197,92 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
+        public async Task CreateBudgetAdjustmentAsync_ConfigurationRepositoryReturnsNullGlAccountStructure()
+        {
+            // Initialize the DTO to return.
+            var adjustmentLineDtos = new List<Dtos.ColleagueFinance.AdjustmentLine>();
+            adjustmentLineDtos.Add(new Dtos.ColleagueFinance.AdjustmentLine()
+            {
+                GlNumber = "10_11_12_13_33333_51001",
+                FromAmount = 100m,
+                ToAmount = 0m
+            });
+
+            adjustmentLineDtos.Add(new Dtos.ColleagueFinance.AdjustmentLine()
+            {
+                GlNumber = "10_12_12_13_33333_51001",
+                FromAmount = 0m,
+                ToAmount = 100m
+            });
+
+            var inputDto = new Dtos.ColleagueFinance.BudgetAdjustment()
+            {
+                AdjustmentLines = adjustmentLineDtos,
+                Comments = "additional justificaton",
+                Id = null,
+                Initiator = null,
+                Reason = "need more money",
+                TransactionDate = DateTime.Now
+            };
+
+            glAccountStructure = null;
+            var expectedMessage = "Account structure must be defined.";
+            var actualMessage = "";
+            try
+            {
+                await service.CreateBudgetAdjustmentAsync(inputDto);
+            }
+            catch (ConfigurationException cfex)
+            {
+                actualMessage = cfex.Message;
+            }
+            Assert.AreEqual(expectedMessage, actualMessage);
+        }
+
+        [TestMethod]
+        public async Task CreateBudgetAdjustmentAsync_ConfigurationRepositoryReturnsEmptyGlAccountStructure()
+        {
+            // Initialize the DTO to return.
+            var adjustmentLineDtos = new List<Dtos.ColleagueFinance.AdjustmentLine>();
+            adjustmentLineDtos.Add(new Dtos.ColleagueFinance.AdjustmentLine()
+            {
+                GlNumber = "10_11_12_13_33333_51001",
+                FromAmount = 100m,
+                ToAmount = 0m
+            });
+
+            adjustmentLineDtos.Add(new Dtos.ColleagueFinance.AdjustmentLine()
+            {
+                GlNumber = "10_12_12_13_33333_51001",
+                FromAmount = 0m,
+                ToAmount = 100m
+            });
+
+            var inputDto = new Dtos.ColleagueFinance.BudgetAdjustment()
+            {
+                AdjustmentLines = adjustmentLineDtos,
+                Comments = "additional justificaton",
+                Id = null,
+                Initiator = null,
+                Reason = "need more money",
+                TransactionDate = DateTime.Now
+            };
+
+            glAccountStructure = new GeneralLedgerAccountStructure();
+            var expectedMessage = "Account structure must be defined.";
+            var actualMessage = "";
+            try
+            {
+                await service.CreateBudgetAdjustmentAsync(inputDto);
+            }
+            catch (ConfigurationException cfex)
+            {
+                actualMessage = cfex.Message;
+            }
+            Assert.AreEqual(expectedMessage, actualMessage);
+        }
+
+        [TestMethod]
         public async Task CreateBudgetAdjustmentAsync_ConfigurationRepositoryReturnsNullCostCenterStructure()
         {
             // Initialize the DTO to return.
@@ -1212,9 +1318,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             {
                 await service.CreateBudgetAdjustmentAsync(inputDto);
             }
-            catch (ApplicationException aex)
+            catch (ConfigurationException cfex)
             {
-                actualMessage = aex.Message;
+                actualMessage = cfex.Message;
             }
             Assert.AreEqual(expectedMessage, actualMessage);
         }
@@ -1255,9 +1361,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             {
                 await service.CreateBudgetAdjustmentAsync(inputDto);
             }
-            catch (ApplicationException aex)
+            catch (ConfigurationException cfex)
             {
-                actualMessage = aex.Message;
+                actualMessage = cfex.Message;
             }
             Assert.AreEqual(expectedMessage, actualMessage);
         }
@@ -1548,6 +1654,194 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             var adjustmentDto = await serviceForViewPermission.UpdateBudgetAdjustmentAsync(inputDto.Id, inputDto);
         }
 
+        [TestMethod]
+        public async Task UpdateBudgetAdjustmentAsync_ConfigurationRepositoryReturnsNullGlAccountStructure()
+        {
+            // Initialize the DTO to return.
+            var adjustmentLineDtos = new List<Dtos.ColleagueFinance.AdjustmentLine>();
+            adjustmentLineDtos.Add(new Dtos.ColleagueFinance.AdjustmentLine()
+            {
+                GlNumber = "10_11_12_13_33333_51001",
+                FromAmount = 100m,
+                ToAmount = 0m
+            });
+
+            adjustmentLineDtos.Add(new Dtos.ColleagueFinance.AdjustmentLine()
+            {
+                GlNumber = "10_12_12_13_33333_51001",
+                FromAmount = 0m,
+                ToAmount = 100m
+            });
+
+            var inputDto = new Dtos.ColleagueFinance.BudgetAdjustment()
+            {
+                AdjustmentLines = adjustmentLineDtos,
+                Comments = "additional justificaton",
+                Id = "B000333",
+                Initiator = "Pass",
+                Reason = "need more money",
+                TransactionDate = DateTime.Now,
+                DraftDeletionSuccessfulOrUnnecessary = true,
+                NextApprovers = new List<Dtos.ColleagueFinance.NextApprover>()
+            };
+
+            var initialBudgetAdjustmentDto = await budgetAdjustmentService.GetBudgetAdjustmentAsync(inputDto.Id);
+
+            glAccountStructure = null;
+            var expectedMessage = "Account structure must be defined.";
+            var actualMessage = "";
+            try
+            {
+                await budgetAdjustmentService.UpdateBudgetAdjustmentAsync(inputDto.Id, inputDto);
+            }
+            catch (ConfigurationException cfex)
+            {
+                actualMessage = cfex.Message;
+            }
+            Assert.AreEqual(expectedMessage, actualMessage);
+        }
+
+        [TestMethod]
+        public async Task UpdateBudgetAdjustmentAsync_ConfigurationRepositoryReturnsEmptyGlAccountStructure()
+        {
+            // Initialize the DTO to return.
+            var adjustmentLineDtos = new List<Dtos.ColleagueFinance.AdjustmentLine>();
+            adjustmentLineDtos.Add(new Dtos.ColleagueFinance.AdjustmentLine()
+            {
+                GlNumber = "10_11_12_13_33333_51001",
+                FromAmount = 100m,
+                ToAmount = 0m
+            });
+
+            adjustmentLineDtos.Add(new Dtos.ColleagueFinance.AdjustmentLine()
+            {
+                GlNumber = "10_12_12_13_33333_51001",
+                FromAmount = 0m,
+                ToAmount = 100m
+            });
+
+            var inputDto = new Dtos.ColleagueFinance.BudgetAdjustment()
+            {
+                AdjustmentLines = adjustmentLineDtos,
+                Comments = "additional justificaton",
+                Id = "B000333",
+                Initiator = "Pass",
+                Reason = "need more money",
+                TransactionDate = DateTime.Now,
+                DraftDeletionSuccessfulOrUnnecessary = true,
+                NextApprovers = new List<Dtos.ColleagueFinance.NextApprover>()
+            };
+
+            var initialBudgetAdjustmentDto = await budgetAdjustmentService.GetBudgetAdjustmentAsync(inputDto.Id);
+
+            glAccountStructure = new GeneralLedgerAccountStructure();
+            var expectedMessage = "Account structure must be defined.";
+            var actualMessage = "";
+            try
+            {
+                await budgetAdjustmentService.UpdateBudgetAdjustmentAsync(inputDto.Id, inputDto);
+            }
+            catch (ConfigurationException cfex)
+            {
+                actualMessage = cfex.Message;
+            }
+            Assert.AreEqual(expectedMessage, actualMessage);
+        }
+
+        [TestMethod]
+        public async Task UpdateBudgetAdjustmentAsync_ConfigurationRepositoryReturnsNullCostCenterStructure()
+        {
+            // Initialize the DTO to return.
+            var adjustmentLineDtos = new List<Dtos.ColleagueFinance.AdjustmentLine>();
+            adjustmentLineDtos.Add(new Dtos.ColleagueFinance.AdjustmentLine()
+            {
+                GlNumber = "10_11_12_13_33333_51001",
+                FromAmount = 100m,
+                ToAmount = 0m
+            });
+
+            adjustmentLineDtos.Add(new Dtos.ColleagueFinance.AdjustmentLine()
+            {
+                GlNumber = "10_12_12_13_33333_51001",
+                FromAmount = 0m,
+                ToAmount = 100m
+            });
+
+            var inputDto = new Dtos.ColleagueFinance.BudgetAdjustment()
+            {
+                AdjustmentLines = adjustmentLineDtos,
+                Comments = "additional justificaton",
+                Id = "B000333",
+                Initiator = "Pass",
+                Reason = "need more money",
+                TransactionDate = DateTime.Now,
+                DraftDeletionSuccessfulOrUnnecessary = true,
+                NextApprovers = new List<Dtos.ColleagueFinance.NextApprover>()
+            };
+
+            var initialBudgetAdjustmentDto = await budgetAdjustmentService.GetBudgetAdjustmentAsync(inputDto.Id);
+
+            costCenterStructure = null;
+            var expectedMessage = "Cost center structure not defined.";
+            var actualMessage = "";
+            try
+            {
+                await budgetAdjustmentService.UpdateBudgetAdjustmentAsync(inputDto.Id, inputDto);
+            }
+            catch (ConfigurationException cfex)
+            {
+                actualMessage = cfex.Message;
+            }
+            Assert.AreEqual(expectedMessage, actualMessage);
+        }
+
+        [TestMethod]
+        public async Task UpdateBudgetAdjustmentAsync_ConfigurationRepositoryReturnsEmptyCostCenterStructure()
+        {
+            // Initialize the DTO to return.
+            var adjustmentLineDtos = new List<Dtos.ColleagueFinance.AdjustmentLine>();
+            adjustmentLineDtos.Add(new Dtos.ColleagueFinance.AdjustmentLine()
+            {
+                GlNumber = "10_11_12_13_33333_51001",
+                FromAmount = 100m,
+                ToAmount = 0m
+            });
+
+            adjustmentLineDtos.Add(new Dtos.ColleagueFinance.AdjustmentLine()
+            {
+                GlNumber = "10_12_12_13_33333_51001",
+                FromAmount = 0m,
+                ToAmount = 100m
+            });
+
+            var inputDto = new Dtos.ColleagueFinance.BudgetAdjustment()
+            {
+                AdjustmentLines = adjustmentLineDtos,
+                Comments = "additional justificaton",
+                Id = "B000333",
+                Initiator = "Pass",
+                Reason = "need more money",
+                TransactionDate = DateTime.Now,
+                DraftDeletionSuccessfulOrUnnecessary = true,
+                NextApprovers = new List<Dtos.ColleagueFinance.NextApprover>()
+            };
+
+            var initialBudgetAdjustmentDto = await budgetAdjustmentService.GetBudgetAdjustmentAsync(inputDto.Id);
+
+            costCenterStructure = new CostCenterStructure();
+            var expectedMessage = "Cost center structure not defined.";
+            var actualMessage = "";
+            try
+            {
+                await budgetAdjustmentService.UpdateBudgetAdjustmentAsync(inputDto.Id, inputDto);
+            }
+            catch (ConfigurationException cfex)
+            {
+                actualMessage = cfex.Message;
+            }
+            Assert.AreEqual(expectedMessage, actualMessage);
+        }
+
         #endregion
 
         #region PostBudgetAdjustmentApprovalAsync
@@ -1577,6 +1871,42 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
+        public async Task PostBudgetAdjustmentApprovalAsync_ConfigurationRepositoryReturnsNullGlAccountStructure()
+        {
+
+            glAccountStructure = null;
+            var expectedMessage = "Account structure must be defined.";
+            var actualMessage = "";
+            try
+            {
+                await approvalBudgetAdjustmentService.PostBudgetAdjustmentApprovalAsync("B333333", budgetAdjustmentApprovalDto);
+            }
+            catch (ConfigurationException cfex)
+            {
+                actualMessage = cfex.Message;
+            }
+            Assert.AreEqual(expectedMessage, actualMessage);
+        }
+
+        [TestMethod]
+        public async Task PostBudgetAdjustmentApprovalAsync_ConfigurationRepositoryReturnsEmptyGlAccountStructure()
+        {
+
+            glAccountStructure = new GeneralLedgerAccountStructure();
+            var expectedMessage = "Account structure must be defined.";
+            var actualMessage = "";
+            try
+            {
+                await approvalBudgetAdjustmentService.PostBudgetAdjustmentApprovalAsync("B333333", budgetAdjustmentApprovalDto);
+            }
+            catch (ConfigurationException cfex)
+            {
+                actualMessage = cfex.Message;
+            }
+            Assert.AreEqual(expectedMessage, actualMessage);
+        }
+
+        [TestMethod]
         [ExpectedException(typeof(PermissionsException))]
         public async Task PostBudgetAdjustmentApprovalAsync_DoesNotHavePermission()
         {
@@ -1593,7 +1923,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 repositoryApproveMock = new Mock<IBudgetAdjustmentsRepository>();
                 staffRepositoryMock = new Mock<IStaffRepository>();
                 staffRepositoryMock.Setup(z => z.GetStaffLoginIdForPersonAsync(It.IsAny<string>())).ThrowsAsync(new PermissionsException("Could not find Staff information for the user."));
-                approvalBudgetAdjustmentService = new BudgetAdjustmentService(repositoryApproveMock.Object, configurationRepositoryMock.Object, approverRepositoryMock.Object,
+                approvalBudgetAdjustmentService = new BudgetAdjustmentService(repositoryApproveMock.Object, configurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object, approverRepositoryMock.Object,
                     staffRepositoryMock.Object, adapterRegistryMock.Object, userFactory, roleRepository, loggerMock.Object);
 
                 await approvalBudgetAdjustmentService.PostBudgetAdjustmentApprovalAsync("B333333", budgetAdjustmentApprovalDto);
@@ -1611,7 +1941,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         public async Task PostBudgetAdjustmentApprovalAsync_NullBudgetAdjustmentEntity()
         {
             // Mock the service to a return a null budget adjustment.
-            approvalBudgetAdjustmentService = new BudgetAdjustmentService(repositoryApproveNullDomainMock.Object, configurationRepositoryMock.Object, approverRepositoryMock.Object,
+            approvalBudgetAdjustmentService = new BudgetAdjustmentService(repositoryApproveNullDomainMock.Object, configurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object, approverRepositoryMock.Object,
                 staffRepositoryMock.Object, adapterRegistryMock.Object, userFactory, roleRepository, loggerMock.Object);
 
             var exceptionCaught = false;
@@ -1710,7 +2040,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         public async Task PostBudgetAdjustmentApprovalAsync_ValidationErrors()
         {
             // Mock the service to a return a validation error.
-            repositoryApproveMock.Setup(x => x.ValidateBudgetAdjustmentAsync(It.IsAny<Domain.ColleagueFinance.Entities.BudgetAdjustment>())).Returns(() =>
+            repositoryApproveMock.Setup(x => x.ValidateBudgetAdjustmentAsync(It.IsAny<Domain.ColleagueFinance.Entities.BudgetAdjustment>(), glAccountStructure.MajorComponentStartPositions)).Returns(() =>
            {
                return Task.FromResult(new List<string>() { "Validation error" });
            });
@@ -1732,7 +2062,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         public async Task PostBudgetAdjustmentApprovalAsync_UpdateAsyncReturnsNullEntity()
         {
             // Mock the service to a return a null entity after the update.
-            repositoryApproveMock.Setup(x => x.UpdateAsync(It.IsAny<string>(), It.IsAny<Domain.ColleagueFinance.Entities.BudgetAdjustment>())).ReturnsAsync(null as BudgetAdjustment);
+            repositoryApproveMock.Setup(x => x.UpdateAsync(It.IsAny<string>(), It.IsAny<Domain.ColleagueFinance.Entities.BudgetAdjustment>(), glAccountStructure.MajorComponentStartPositions)).ReturnsAsync(null as BudgetAdjustment);
 
             var exceptionCaught = false;
             try
@@ -1787,8 +2117,6 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             budgetAdjustmentToApproveEntity.Comments = string.Empty;
 
             await approvalBudgetAdjustmentService.PostBudgetAdjustmentApprovalAsync("B333333", budgetAdjustmentApprovalDto);
-
-            //var comments = "AAA" + " " + DateTime.Now.ToString() + Environment.NewLine + budgetAdjustmentApprovalDto.Comments;
         }
 
         #endregion
@@ -1813,7 +2141,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         public async Task GetBudgetAdjustmentAsync_GetAsyncReturnsNullEntity()
         {
             // Mock the service to a return a null budget adjustment.
-            budgetAdjustmentService = new BudgetAdjustmentService(repositoryApproveNullDomainMock.Object, configurationRepositoryMock.Object, approverRepositoryMock.Object,
+            budgetAdjustmentService = new BudgetAdjustmentService(repositoryApproveNullDomainMock.Object, configurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object, approverRepositoryMock.Object,
                 staffRepositoryMock.Object, adapterRegistryMock.Object, userFactory, roleRepository, loggerMock.Object);
 
             var budgetAdjustmentDto = await budgetAdjustmentService.GetBudgetAdjustmentAsync("B000111");
@@ -1851,11 +2179,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         public async Task GetBudgetAdjustmentAsync_ValidationErrors()
         {
             // Mock the service to a return a validation error.
-            repositoryApproveMock.Setup(x => x.ValidateBudgetAdjustmentAsync(It.IsAny<Domain.ColleagueFinance.Entities.BudgetAdjustment>())).Returns(() =>
+            repositoryApproveMock.Setup(x => x.ValidateBudgetAdjustmentAsync(It.IsAny<Domain.ColleagueFinance.Entities.BudgetAdjustment>(), glAccountStructure.MajorComponentStartPositions)).Returns(() =>
             {
                 return Task.FromResult(new List<string>() { "Validation error" });
             });
-            budgetAdjustmentService = new BudgetAdjustmentService(repositoryApproveMock.Object, configurationRepositoryMock.Object, approverRepositoryMock.Object,
+            budgetAdjustmentService = new BudgetAdjustmentService(repositoryApproveMock.Object, configurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object, approverRepositoryMock.Object,
                 staffRepositoryMock.Object, adapterRegistryMock.Object, userFactory, roleRepository, loggerMock.Object);
 
             var budgetAdjustmentDto = await budgetAdjustmentService.GetBudgetAdjustmentAsync("B000111");
@@ -1896,6 +2224,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         [TestMethod]
         public async Task GetBudgetAdjustmentPendingApprovalDetailAsync_Success()
         {
+            glUser = new GeneralLedgerUser("0000001", "Test");
+            glUser.AddExpenseAccounts(new string[] { "11_10_00_01_20601_51000", "11_10_00_01_20601_51001" });
             var budgetAdjustmentDto = await budgetAdjustmentService.GetBudgetAdjustmentPendingApprovalDetailAsync("B000333");
 
             var budgetAdjustmentEntity = await this.testBudgetAdjustmentRepository.GetBudgetAdjustmentAsync("B000333");
@@ -1916,6 +2246,103 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     && x.FromAmount == adjustmentLineDto.FromAmount
                     && x.ToAmount == adjustmentLineDto.ToAmount);
                 Assert.IsNotNull(matchingLine);
+            }
+        }
+
+        [TestMethod]
+        public async Task GetBudgetAdjustmentPendingApprovalDetailAsync_PartialGlAccess()
+        {
+            glUser = new GeneralLedgerUser("0000001", "Test");
+            glUser.AddExpenseAccounts(new string[] { "11_10_00_01_20601_51000" });
+            var budgetAdjustmentDto = await budgetAdjustmentService.GetBudgetAdjustmentPendingApprovalDetailAsync("B000333");
+
+            var budgetAdjustmentEntity = await this.testBudgetAdjustmentRepository.GetBudgetAdjustmentAsync("B000333");
+
+            // Assert each domain entity is represented in a DTO.
+            Assert.AreEqual(budgetAdjustmentEntity.Id, budgetAdjustmentDto.Id);
+            Assert.AreEqual(budgetAdjustmentEntity.TransactionDate, budgetAdjustmentDto.TransactionDate);
+            Assert.AreEqual(budgetAdjustmentDto.Reason, budgetAdjustmentEntity.Reason);
+            Assert.AreEqual(budgetAdjustmentDto.PersonId, budgetAdjustmentEntity.PersonId);
+            Assert.AreEqual(budgetAdjustmentDto.Status.ToString(), budgetAdjustmentEntity.Status.ToString());
+            Assert.AreEqual(budgetAdjustmentDto.Initiator, budgetAdjustmentEntity.Initiator);
+            Assert.AreEqual(budgetAdjustmentDto.DraftBudgetAdjustmentId, budgetAdjustmentEntity.DraftBudgetAdjustmentId);
+            Assert.AreEqual(budgetAdjustmentEntity.Comments, budgetAdjustmentDto.Comments);
+
+            var fromAmount = budgetAdjustmentEntity.AdjustmentLines.FirstOrDefault(x => x.GlNumber == "11_10_00_01_20601_51000").FromAmount;
+            var toAmount = budgetAdjustmentEntity.AdjustmentLines.FirstOrDefault(x => x.GlNumber == "11_10_00_01_20601_51000").ToAmount;
+
+            // Account that is accessible based on GL access will have original values and GL number
+            var matchingLine = budgetAdjustmentDto.AdjustmentLines.FirstOrDefault(x => x.GlNumber == "11_10_00_01_20601_51000"
+                && x.FromAmount == fromAmount
+                && x.ToAmount == toAmount);
+            Assert.IsNotNull(matchingLine);
+
+            fromAmount = budgetAdjustmentEntity.AdjustmentLines.FirstOrDefault(x => x.GlNumber == "11_10_00_01_20601_51001").FromAmount;
+            toAmount = budgetAdjustmentEntity.AdjustmentLines.FirstOrDefault(x => x.GlNumber == "11_10_00_01_20601_51001").ToAmount;
+
+            // Hidden Adjustment Line will have 0 amounts and blank GL number
+            matchingLine = budgetAdjustmentDto.AdjustmentLines.FirstOrDefault(x => x.GlNumber == string.Empty
+                && x.FromAmount == 0m
+                && x.ToAmount == 0m);
+            Assert.IsNotNull(matchingLine);
+
+        }
+
+        [TestMethod]
+        public async Task GetBudgetAdjustmentPendingApprovalDetailAsync_NullGeneralLedgerAccountStructure()
+        {
+            glAccountStructure = null;
+
+            try
+            {
+                var budgetAdjustmentDto = await budgetAdjustmentService.GetBudgetAdjustmentPendingApprovalDetailAsync("B000333");
+            }
+            catch (ConfigurationException e)
+            {
+                Assert.AreEqual("Account structure must be defined.", e.Message);
+            }
+        }
+
+        [TestMethod]
+        public async Task GetBudgetAdjustmentPendingApprovalDetailAsync_NullGeneralLedgerClassConfiguration()
+        {
+            glClassConfiguration = null;
+
+            try
+            {
+                var budgetAdjustmentDto = await budgetAdjustmentService.GetBudgetAdjustmentPendingApprovalDetailAsync("B000333");
+            }
+            catch(ApplicationException e)
+            {
+                Assert.AreEqual("Error retrieving GL class configuration.", e.Message);
+            }
+        }
+
+        [TestMethod]
+        public async Task GetBudgetAdjustmentPendingApprovalDetailAsync_NullGeneralLedgerUser()
+        {
+            glUser = null;
+            try
+            {
+                var budgetAdjustmentDto = await budgetAdjustmentService.GetBudgetAdjustmentPendingApprovalDetailAsync("B000333");
+            }
+            catch (ApplicationException e)
+            {
+                Assert.AreEqual("GL user must be defined.", e.Message);
+            }
+        }
+
+        [TestMethod]
+        public async Task GetBudgetAdjustmentPendingApprovalDetailAsync_GetStaffLoginIdForPersonAsync_Fails()
+        {
+            
+            try
+            {
+                var budgetAdjustmentDto = await budgetAdjustmentService.GetBudgetAdjustmentPendingApprovalDetailAsync("B000333");
+            }
+            catch (ApplicationException e)
+            {
+                Assert.AreEqual("GL user must be defined.", e.Message);
             }
         }
 

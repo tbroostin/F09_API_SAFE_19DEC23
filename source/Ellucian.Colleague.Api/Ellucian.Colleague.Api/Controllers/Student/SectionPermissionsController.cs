@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.using System;
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
@@ -41,7 +41,9 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="sectionId">The section Id to use to retrieve student petitions and faculty consents.</param>
         /// <returns>The <see cref="Dtos.Student.SectionPermission">SectionPermission</see> object</returns>
-        /// <accessComments>Only the faculty of a section can retrieve the permissions for the section.</accessComments>
+        /// <accessComments>
+        /// Only the faculty of a section can retrieve the permissions for the section.
+        /// </accessComments>
         public async Task<SectionPermission> GetSectionPermissionAsync(string sectionId)
          {
              try 

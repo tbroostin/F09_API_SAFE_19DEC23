@@ -150,7 +150,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         {
             var programs = await programRepo.GetAsync();
             Assert.IsTrue(programs.Where(p => p.IsGraduationAllowed).Count() >= 23);
-            Assert.IsTrue(programs.Where(p => !p.IsGraduationAllowed).Count() == 6);
+            Assert.IsTrue(programs.Where(p => !p.IsGraduationAllowed).Count() == 9);
         }
 
         [TestMethod]

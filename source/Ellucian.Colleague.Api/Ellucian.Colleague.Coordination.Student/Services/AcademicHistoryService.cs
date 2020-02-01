@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student;
@@ -1641,6 +1641,99 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             }
             return academicCreditDtos;
+        }
+
+        /// <summary>
+        /// Returns a list of academic credits records for the specified section Ids in the criteria
+        /// Also returns list of invalid academic credits Ids that are missing from STUDENT.ACAD.CRED file.
+        /// </summary>
+        /// <param name="criteria">Criteria that contains a list of sections and some other options</param>
+        /// <returns><see cref="AcademicCreditsWithInvalidKeys">AcademicCreditsWithInvalidKeys</see> Dtos</returns>
+        public async Task<Dtos.Student.AcademicCreditsWithInvalidKeys> QueryAcademicCreditsWithInvalidKeysAsync(Dtos.Student.AcademicCreditQueryCriteria criteria)
+        {
+            if (criteria == null)
+            {
+                throw new ArgumentNullException("criteria", "Must supply a criteria to query academic credits.");
+            }
+            if (criteria.SectionIds == null || !criteria.SectionIds.Any())
+            {
+                throw new ArgumentException("Must supply at least 1 section to query academic credits.");
+            }
+            IEnumerable<string> sectionIds = criteria.SectionIds.Distinct().ToList();
+            List<Dtos.Student.AcademicCredit3> academicCreditDtos = new List<Dtos.Student.AcademicCredit3>();
+            List<string> invalidAcademicCredits = new List<string>();
+            AcademicCreditsWithInvalidKeys academicCreditsWithInvalidKeys = new AcademicCreditsWithInvalidKeys(new List<Domain.Student.Entities.AcademicCredit>(), new List<string>());
+
+            // Only include any sections for which the requestor is an assigned faculty.  There none return none instead of a permission exception.
+            var sections = (await _sectionRepository.GetCachedSectionsAsync(sectionIds, false));
+            if (sections != null && sections.Any())
+            {
+                string requestor = CurrentUser.PersonId;
+                List<string> querySectionIds = new List<string>();
+
+                // Determine the actual list of section Ids that should be used for the query. Make sure the requestor has access to see credits for the sections
+                // AND add in any cross listed sections if requested.
+                foreach (var section in sections)
+                {
+                    // Only assigned faculty of a section can get grade information for a section
+                    if (section.FacultyIds.Contains(requestor))
+                    {
+                        querySectionIds.Add(section.Id);
+                        // Add in any crosslisted section Ids if criteria requests them.
+                        if (criteria.IncludeCrossListedCredits)
+                        {
+                            var crossListedSectionIds = section.CrossListedSections.Select(x => x.Id);
+                            querySectionIds.AddRange(crossListedSectionIds);
+                        }
+                    }
+                }
+                if (querySectionIds.Any())
+                {
+                    try
+                    {
+                        // Get all academic credits for these sections (all statuses). They will be filtered below.
+                         academicCreditsWithInvalidKeys = await _academicCreditRepository.GetAcademicCreditsBySectionIdsWithInvalidKeysAsync(querySectionIds.Distinct().ToList());
+
+
+                        var academicCreditAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.AcademicCredit, Dtos.Student.AcademicCredit3>();
+                        if (academicCreditsWithInvalidKeys != null)
+                        {
+                            if (academicCreditsWithInvalidKeys.AcademicCredits != null)
+                            {
+                                foreach (var credit in academicCreditsWithInvalidKeys.AcademicCredits)
+                                {
+                                    academicCreditDtos.Add(academicCreditAdapter.MapToType(credit));
+                                }
+                                // Now that we have the list of DTOs we can limit the results by te DTO Credit Statuses if applicable
+                                if (criteria.CreditStatuses != null && criteria.CreditStatuses.Any())
+                                {
+                                    // Reduce the results to just those of the proper type
+                                    academicCreditDtos = (from creditStatus in criteria.CreditStatuses
+                                                          join acadCredit in academicCreditDtos
+                                                          on creditStatus.ToString() equals acadCredit.Status into joinCreditAndStatuses
+                                                          from credit in joinCreditAndStatuses
+                                                          select credit).ToList();
+
+                                }
+                            }
+                            if (academicCreditsWithInvalidKeys.InvalidAcademicCreditIds!=null)
+                            {
+                                invalidAcademicCredits = academicCreditsWithInvalidKeys.InvalidAcademicCreditIds.ToList();
+                            }
+                        }
+                        return new Dtos.Student.AcademicCreditsWithInvalidKeys(academicCreditDtos, invalidAcademicCredits);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Couldn't retrieve the desired academic credits or convert them to DTOs.
+                        var errorMessage = "Unable to retrieve academic credits for the requested sections: " + "Exception thrown: " + ex.Message;
+                        logger.Error(errorMessage);
+                        throw;
+                    }
+                }
+
+            }
+            return new Dtos.Student.AcademicCreditsWithInvalidKeys(academicCreditDtos, invalidAcademicCredits);
         }
 
     }

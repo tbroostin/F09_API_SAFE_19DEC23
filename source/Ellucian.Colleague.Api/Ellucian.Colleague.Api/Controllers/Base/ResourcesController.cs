@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -95,14 +95,14 @@ namespace Ellucian.Colleague.Api.Controllers
                         {
                             Controller = x.DeclaringType.Name,
                             Action = x.Name,
-                            DeclaringType = x.DeclaringType,
+                            x.DeclaringType,
                         })
                         .OrderBy(x => x.Controller).ThenBy(x => x.Action).ToList();
 
             
             var deprecatedResources = new DeprecatedResourcesRepository().Get();
 
-            //httpRoutes = httpRoutes.Where(x => x.RouteTemplate.StartsWith("student-transcript-grades")).ToList();
+            //httpRoutes = httpRoutes.Where(x => x.RouteTemplate.StartsWith("personal-relationship-statuses")).ToList();
             foreach (IHttpRoute httpRoute in httpRoutes)
             {
                 try
@@ -140,33 +140,41 @@ namespace Ellucian.Colleague.Api.Controllers
                         continue;
                     }
 
-                    if (allowedMethod.ToLower().Equals("delete"))
+                    //if (allowedMethod.ToLower().Equals("delete"))
+                    //{
+                    //    resourceDto = resourcesList.FirstOrDefault(res => res.Name.Equals(apiName, StringComparison.OrdinalIgnoreCase));
+
+                    //    if (resourceDto != null)
+                    //    {
+                    //        if (resourceDto.Representations == null) resourceDto.Representations = new List<Dtos.Representation>();
+
+                    //        resourceDto.Representations.Add(new Dtos.Representation()
+                    //        {
+                    //            XMediaType = appJsonContentType,
+                    //            Methods = new List<string>()
+                    //            {
+                    //                allowedMethod.ToLower()
+                    //            }
+                    //        });
+                    //        continue;
+                    //    }
+                    //}
+
+                    var headerVersionConstraintConstraintName = ((Web.Http.Routes.HeaderVersionConstraint)constraints[headerVersionConstraintName]);
+
+                    if (headerVersionConstraintConstraintName != null)
                     {
-                        resourceDto = resourcesList.FirstOrDefault(res => res.Name.Equals(apiName, StringComparison.OrdinalIgnoreCase));
+                        var headerVersionConstraint = headerVersionConstraintConstraintName.GetType();
 
-                        if (resourceDto != null)
-                        {
-                            if (resourceDto.Representations == null) resourceDto.Representations = new List<Dtos.Representation>();
+                        var pField = headerVersionConstraint
+                                          .GetField("_customMediaTypes", BindingFlags.NonPublic | BindingFlags.Instance);
+                        headerVersionConstraintValue = (string[])pField.GetValue(((Web.Http.Routes.HeaderVersionConstraint)constraints[headerVersionConstraintName]));
 
-                            resourceDto.Representations.Add(new Dtos.Representation()
-                            {
-                                XMediaType = appJsonContentType,
-                                Methods = new List<string>()
-                                {
-                                    allowedMethod.ToLower()
-                                }
-                            });
-                            continue;
-                        }
+                        var satisfyVersionlessRequest = headerVersionConstraint
+                                      .GetField("_satisfyVersionlessRequest", BindingFlags.NonPublic | BindingFlags.Instance);
+                        versionless = (bool)satisfyVersionlessRequest.GetValue(((Web.Http.Routes.HeaderVersionConstraint)constraints[headerVersionConstraintName]));
+
                     }
-
-                    var headerVersionConstraint = ((Web.Http.Routes.HeaderVersionConstraint)constraints[headerVersionConstraintName])
-                                      .GetType();
-
-                    var pField = headerVersionConstraint
-                                      .GetField("_customMediaTypes", BindingFlags.NonPublic | BindingFlags.Instance);
-                    headerVersionConstraintValue = (string[])pField.GetValue(((Web.Http.Routes.HeaderVersionConstraint)constraints[headerVersionConstraintName]));
-
 
                     if ((allowedMethod.ToLower().Equals("put")) || (allowedMethod.ToLower().Equals("post")))
                     {
@@ -184,10 +192,7 @@ namespace Ellucian.Colleague.Api.Controllers
                         }
                     }
 
-                    var satisfyVersionlessRequest = headerVersionConstraint
-                                      .GetField("_satisfyVersionlessRequest", BindingFlags.NonPublic | BindingFlags.Instance);
-                    versionless = (bool)satisfyVersionlessRequest.GetValue(((Web.Http.Routes.HeaderVersionConstraint)constraints[headerVersionConstraintName]));
-
+                    
                     var eedmResponseFilterAttr = string.Empty;
                     List<string> filters = new List<string>();
                     List<NamedQuery> namedQueries = new List<NamedQuery>();
@@ -201,8 +206,10 @@ namespace Ellucian.Colleague.Api.Controllers
                         {
                             deprecationNotice = new Dtos.DeprecationNotice()
                             {
-                                DeprecatedOn = (DateTime)deprecatedResourceRepresentation.DeprecationNotice.DeprecatedOn,
-                                SunsetOn = (DateTime)deprecatedResourceRepresentation.DeprecationNotice.SunsetOn,
+                                DeprecatedOn = deprecatedResourceRepresentation.DeprecationNotice.DeprecatedOn.HasValue ?
+                                        deprecatedResourceRepresentation.DeprecationNotice.DeprecatedOn : null,
+                                SunsetOn = deprecatedResourceRepresentation.DeprecationNotice.SunsetOn.HasValue ?
+                                        deprecatedResourceRepresentation.DeprecationNotice.SunsetOn : null,
                                 Description = deprecatedResourceRepresentation.DeprecationNotice.Description
                             };
                         }
@@ -256,7 +263,37 @@ namespace Ellucian.Colleague.Api.Controllers
                         resourceDto = resourcesList.FirstOrDefault(res => res.Name.Equals(apiName, StringComparison.OrdinalIgnoreCase));
                     }
 
-                    if (headerVersionConstraintValue != null && headerVersionConstraintValue.Any() && headerVersionConstraintValue[0].Contains(mediaFormat))
+                    //else default route of application/json content type
+                    if ((versionless) || (allowedMethod.ToLower().Equals("delete")) || ((headerVersionConstraintValue != null && headerVersionConstraintValue.Any() && !headerVersionConstraintValue[0].Contains(mediaFormat))))
+                    {
+                        resourceDto = resourcesList.FirstOrDefault(res => res.Name.Equals(apiName, StringComparison.OrdinalIgnoreCase));
+
+                        if (resourceDto != null)
+                        {
+                            if (resourceDto.Representations == null) resourceDto.Representations = new List<Dtos.Representation>();
+
+                            var represDto = resourceDto.Representations.FirstOrDefault(repr => repr.XMediaType.Contains(appJsonContentType));
+                            if (represDto == null)
+                            {
+                                resourceDto.Representations.Add(new Dtos.Representation()
+                                {
+                                    XMediaType = appJsonContentType,
+                                    Methods = new List<string>()
+                                    {
+                                        allowedMethod.ToLower()
+                                    },
+                                    Filters = filters != null && filters.Any() ? filters : null,
+                                    NamedQueries = namedQueries != null && namedQueries.Any() ? namedQueries : null,
+                                    DeprecationNotice = deprecationNotice != null ? deprecationNotice : null
+                                });
+                            }
+                            else if (!represDto.Methods.Contains(allowedMethod.ToLower()))
+                            {
+                                represDto.Methods.Add(allowedMethod.ToLower());
+                            }
+                        }
+                    }
+                    else if (headerVersionConstraintValue != null && headerVersionConstraintValue.Any() && headerVersionConstraintValue[0].Contains(mediaFormat))
                     {
                         var tempXMediaType = headerVersionConstraintValue[0];
 
@@ -294,32 +331,7 @@ namespace Ellucian.Colleague.Api.Controllers
                             representationDto.Filters = filters;
                         }
                     }
-                    //else default route of application/json content type
-                    if ((versionless) || ((headerVersionConstraintValue != null && headerVersionConstraintValue.Any() && !headerVersionConstraintValue[0].Contains(mediaFormat))))
-                    {
-                        resourceDto = resourcesList.FirstOrDefault(res => res.Name.Equals(apiName, StringComparison.OrdinalIgnoreCase));
-
-                        if (resourceDto != null)
-                        {
-                            if (resourceDto.Representations == null) resourceDto.Representations = new List<Dtos.Representation>();
-
-                            var represDto = resourceDto.Representations.FirstOrDefault(repr => repr.XMediaType.Contains(appJsonContentType));
-                            if (represDto == null)
-                            {
-                                resourceDto.Representations.Add(new Dtos.Representation()
-                                {
-                                    XMediaType = appJsonContentType,
-                                    Methods = new List<string>()
-                                    {
-                                        allowedMethod.ToLower()
-                                    },
-                                    Filters = filters.Any() ? filters : null,
-                                    NamedQueries = namedQueries.Any() ? namedQueries : null,
-                                    DeprecationNotice = deprecationNotice != null ? deprecationNotice : null
-                                });
-                            }
-                        }
-                    }
+                   
                 }
                 catch (Exception ex)
                 {

@@ -1,17 +1,13 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
-
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Runtime.Caching;
-using System.Threading;
-using System.Threading.Tasks;
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
+using Ellucian.Colleague.Data.Base.Tests;
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Repositories;
 using Ellucian.Colleague.Data.Student.Transactions;
+using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Colleague.Domain.Base.Tests;
+using Ellucian.Colleague.Domain.Base.Transactions;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
@@ -24,10 +20,14 @@ using Ellucian.Web.Http.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
-using Ellucian.Colleague.Data.Base.Tests;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
 using System.Reflection;
-using Ellucian.Colleague.Domain.Base.Entities;
-using Ellucian.Colleague.Domain.Base.Tests;
+using System.Runtime.Caching;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {
@@ -101,6 +101,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     SecFaculty = new List<string>(),
                     SecFacultyConsentFlag = "Y",
                     SecGradeScheme = "UGR",
+                    SecGradeSubschemesId = "UGS",
                     SecInstrMethods = new List<string>() { "LEC", "LAB" },
                     SecLocation = "MAIN",
                     SecMaxCred = 6m,
@@ -121,6 +122,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     SecXlist = null,
                     SecHideInCatalog = "Y",
                     SecOtherRegBillingRates = new List<string>() { "123", "124" },
+                    SecSynonym = "Synonym",
                     SecAttendTrackingType = "A" // Corresponds to HoursByDateWithoutSectionMeeting in AttendanceTrackingType enum
                 };
                 cs.SecEndDate = cs.SecStartDate.Value.AddDays(69);
@@ -487,6 +489,18 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public void SectionRepository_TestAllFields_GradeSchemeCode()
             {
                 Assert.AreEqual(cs.SecGradeScheme, result.GradeSchemeCode);
+            }
+
+            [TestMethod]
+            public void SectionRepository_TestAllFields_GradeSubschemeCode()
+            {
+                Assert.AreEqual(cs.SecGradeSubschemesId, result.GradeSubschemeCode);
+            }
+
+            [TestMethod]
+            public void SectionRepository_TestAllFields_Synonym()
+            {
+                Assert.AreEqual(cs.SecSynonym, result.Synonym);
             }
 
             [TestMethod]
@@ -6197,15 +6211,10 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         public class SectionRepository_EedmTests : SectionRepositoryTests
         {
             SectionRepository sectionRepo;
-            Mock<IStudentRepositoryHelper> stuRepoHelperMock;
-            IStudentRepositoryHelper stuRepoHelper;
             CourseSections cs;
             Collection<CourseSections> courseSectionCollection = new Collection<CourseSections>();
-            Collection<CourseSecXlists> crosslistResponseData;
-            Section section;
             CourseSecMeeting csm;
             CourseSecFaculty csf;
-            Section result;
             CdDefaults cdDefaults;
             PortalSites ps;
             string csId;
@@ -6214,6 +6223,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public void Initialize()
             {
                 MainInitialize();
+                transManagerMock = new Mock<IColleagueTransactionInvoker>();
                 //stuRepoHelperMock = new Mock<IStudentRepositoryHelper>();
                 //stuRepoHelper = stuRepoHelperMock.Object;
                 csId = "12345";
@@ -6261,7 +6271,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     SecXlist = null,
                     SecFirstMeetingDate = new DateTime(2015, 10, 25),
                     SecLastMeetingDate = new DateTime(2017, 01, 02),
-                    SecLearningProvider = "MOODLE"
+                    SecLearningProvider = "MOODLE",
+                    SecSynonym = "0002334"
                 };
                 cs.SecEndDate = cs.SecStartDate.Value.AddDays(69);
                 cs.SecContactEntityAssociation = new List<CourseSectionsSecContact>();
@@ -6359,6 +6370,37 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     null,
                     new SemaphoreSlim(1, 1)
                     ));
+
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 1,
+                    CacheName = "AllSections:",
+                    Entity = "COURSE.SECTIONS",
+                    Sublist = new List<string>() { "1" },
+                    TotalCount = 1,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                    {
+                        new KeyCacheInfo()
+                        {
+                            KeyCacheMax = 5905,
+                            KeyCacheMin = 1,
+                            KeyCachePart = "000",
+                            KeyCacheSize = 5905
+                        },
+                        new KeyCacheInfo()
+                        {
+                            KeyCacheMax = 7625,
+                            KeyCacheMin = 5906,
+                            KeyCachePart = "001",
+                            KeyCacheSize = 1720
+                        }
+                    }
+                };
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManagerMock.Object);
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
+
                 sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
             }
 
@@ -6366,14 +6408,10 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public void Cleanup()
             {
                 sectionRepo = null;
-                stuRepoHelperMock = null;
-                stuRepoHelper = null;
                 cs = null;
                 courseSectionCollection = null;
-                crosslistResponseData = null;
                 csm = null;
                 csf = null;
-                result = null;
                 cdDefaults = null;
                 ps = null;
                 csId = null;
@@ -6429,7 +6467,37 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [TestMethod]
             public async Task SectionRepository_GetSectionsAsync_LimitingKeysNull()
             {
-                dataReaderMock.Setup(repo => repo.SelectAsync("COURSES", It.IsAny<string[]>(), "SAVING CRS.SECTIONS")).ReturnsAsync(null);
+                dataReaderMock.Setup(repo => repo.SelectAsync("COURSES", It.IsAny<string[]>(), "SAVING CRS.SECTIONS")).ReturnsAsync(new string[] { });
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 1,
+                    CacheName = "AllSections:",
+                    Entity = "COURSE.SECTIONS",
+                    Sublist = new List<string>() { "" },
+                    TotalCount = 0,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                    {
+                        new KeyCacheInfo()
+                        {
+                            KeyCacheMax = 5905,
+                            KeyCacheMin = 1,
+                            KeyCachePart = "000",
+                            KeyCacheSize = 5905
+                        },
+                        new KeyCacheInfo()
+                        {
+                            KeyCacheMax = 7625,
+                            KeyCacheMin = 5906,
+                            KeyCachePart = "001",
+                            KeyCacheSize = 1720
+                        }
+                    }
+                };
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManagerMock.Object);
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
+
                 var results = await sectionRepo.GetSectionsAsync(0, 3, "Title", "2016/01/01", "2016/12/31", "code", "number", "learningProvider", "termId", "academicLevel", "course", "location",
                                                                        "status", "department", "", "");
                 Assert.AreEqual(false, results.Item1.Any());
@@ -6439,8 +6507,22 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [TestMethod]
             public async Task SectionRepository_GetSectionsAsync_TermId()
             {
-                dataReaderMock.Setup(dr => dr.SelectAsync("COURSE.SECTIONS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(null);
-
+                dataReaderMock.Setup(dr => dr.SelectAsync("COURSE.SECTIONS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(new string[] { });
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 1,
+                    CacheName = "AllSections:",
+                    Entity = "COURSE.SECTIONS",
+                    Sublist = new List<string>() { "" },
+                    TotalCount = 0,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                    {
+                    }
+                };
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManagerMock.Object);
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
                 var results = await sectionRepo.GetSectionsAsync(0, 3, "Title", "2016/01/01", "2016/12/31", "code", "number", "learningProvider", "termId", "academicLevel", "", "location",
                                                                        "status", "department", "", "");
                 Assert.AreEqual(false, results.Item1.Any());
@@ -6450,8 +6532,36 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [TestMethod]
             public async Task SectionRepository_GetSectionsAsync_Subject()
             {
-                dataReaderMock.Setup(dr => dr.SelectAsync("COURSE.SECTIONS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(null);
-
+                dataReaderMock.Setup(dr => dr.SelectAsync("COURSE.SECTIONS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(new string[] { });
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 1,
+                    CacheName = "AllSections:",
+                    Entity = "COURSE.SECTIONS",
+                    Sublist = new List<string>() { "" },
+                    TotalCount = 0,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                    {
+                        new KeyCacheInfo()
+                        {
+                            KeyCacheMax = 5905,
+                            KeyCacheMin = 1,
+                            KeyCachePart = "000",
+                            KeyCacheSize = 5905
+                        },
+                        new KeyCacheInfo()
+                        {
+                            KeyCacheMax = 7625,
+                            KeyCacheMin = 5906,
+                            KeyCachePart = "001",
+                            KeyCacheSize = 1720
+                        }
+                    }
+                };
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManagerMock.Object);
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
                 var results = await sectionRepo.GetSectionsAsync(0, 3, "Title", "2016/01/01", "2016/12/31", "code", "number", "learningProvider", "", "academicLevel", "", "location",
                                                                        "status", "department", "subject", "");
                 Assert.AreEqual(false, results.Item1.Any());
@@ -6461,8 +6571,36 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [TestMethod]
             public async Task SectionRepository_GetSectionsAsync_Number()
             {
-                dataReaderMock.Setup(dr => dr.SelectAsync("COURSE.SECTIONS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(null);
-
+                dataReaderMock.Setup(dr => dr.SelectAsync("COURSE.SECTIONS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(new string[] { });
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 1,
+                    CacheName = "AllSections:",
+                    Entity = "COURSE.SECTIONS",
+                    Sublist = new List<string>() { "" },
+                    TotalCount = 0,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                    {
+                        new KeyCacheInfo()
+                        {
+                            KeyCacheMax = 5905,
+                            KeyCacheMin = 1,
+                            KeyCachePart = "000",
+                            KeyCacheSize = 5905
+                        },
+                        new KeyCacheInfo()
+                        {
+                            KeyCacheMax = 7625,
+                            KeyCacheMin = 5906,
+                            KeyCachePart = "001",
+                            KeyCacheSize = 1720
+                        }
+                    }
+                };
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManagerMock.Object);
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
                 var results = await sectionRepo.GetSectionsAsync(0, 3, "Title", "2016/01/01", "2016/12/31", "code", "number", "learningProvider", "", "academicLevel", "", "location",
                                                                        "status", "department", "", "");
                 Assert.AreEqual(false, results.Item1.Any());
@@ -6475,12 +6613,224 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 dataReaderMock.Setup(dr => dr.SelectAsync("COURSE.SECTIONS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(new string[] { "1" });
 
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 1,
+                    CacheName = "AllSections:",
+                    Entity = "COURSE.SECTIONS",
+                    Sublist = new List<string>() { "" },
+                    TotalCount = 0,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                    {
+                        new KeyCacheInfo()
+                        {
+                            KeyCacheMax = 5905,
+                            KeyCacheMin = 1,
+                            KeyCachePart = "000",
+                            KeyCacheSize = 5905
+                        },
+                        new KeyCacheInfo()
+                        {
+                            KeyCacheMax = 7625,
+                            KeyCacheMin = 5906,
+                            KeyCachePart = "001",
+                            KeyCacheSize = 1720
+                        }
+                    }
+                };
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManagerMock.Object);
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
+
                 var results = await sectionRepo.GetSectionsAsync(0, 3, "Title", "2016/01/01", "2016/12/31", "code", "", "learningProvider", "", "academicLevel", "", "location",
                                                                        "status", "department", "", "instructor");
                 Assert.AreEqual(false, results.Item1.Any());
                 Assert.AreEqual(0, results.Item2);
 
             }
+
+            #region For perf test new method
+
+            [TestMethod]
+            public async Task SectionRepository_GetSections2Async()
+            {
+                string[] sublist = new string[] { "1" };
+                courseSectionCollection.Add(cs);
+                dataReaderMock.Setup(dr => dr.SelectAsync("COURSE.SECTIONS", It.IsAny<string>())).ReturnsAsync(sublist);
+                dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<CourseSections>("COURSE.SECTIONS", sublist, It.IsAny<bool>())).ReturnsAsync(courseSectionCollection);
+                dataReaderMock.Setup(dr => dr.SelectAsync("COURSES", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(sublist);
+                dataReaderMock.Setup(dr => dr.SelectAsync("COURSE.SECTIONS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(sublist);
+
+                dataReaderMock.Setup(dr => dr.SelectAsync("COURSE.SEC.FACULTY", It.IsAny<string>())).ReturnsAsync(sublist);
+                var regSections = await new TestSectionRepository().GetRegistrationSectionsAsync(new List<Term>());
+                var sectionFacultyResponseData = BuildSectionFacultyResponse(regSections);
+                dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<CourseSecFaculty>("COURSE.SEC.FACULTY", It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(sectionFacultyResponseData);
+
+
+                var results = await sectionRepo.GetSections2Async(0, 3, "Title", "2016/01/01", "2016/12/31", "code", "number", "learningProvider", "termId", "academicLevel", It.IsAny<List<string>>(), "location",
+                                                                       "status", "department", It.IsAny< List<string>>(), "");
+                Assert.IsNotNull(results);
+                var actuals = results.Item1;
+
+                for (int i = 0; i < actuals.Count(); i++)
+                {
+                    var actual = actuals.ToList()[i];
+                    var expected = courseSectionCollection.ToList()[i];
+                    Assert.IsNotNull(actual);
+
+                    Assert.AreEqual(expected.RecordGuid, actual.Guid);
+                    Assert.AreEqual(expected.Recordkey, actual.Id);
+                    Assert.AreEqual(expected.SecAcadLevel, actual.AcademicLevelCode);
+                    Assert.AreEqual(expected.SecCapacity, actual.Capacity);
+                    Assert.AreEqual(expected.SecCeus, actual.Ceus);
+                    Assert.AreEqual(expected.SecCourse, actual.CourseId);
+                    Assert.AreEqual(expected.SecCredType, actual.CreditTypeCode);
+                    Assert.AreEqual(expected.SecEndDate, actual.EndDate);
+                    Assert.AreEqual(expected.SecFacultyConsentFlag.Equals("Y", StringComparison.OrdinalIgnoreCase) ? true : false, actual.IsInstructorConsentRequired);
+                    Assert.AreEqual(expected.SecFirstMeetingDate, actual.FirstMeetingDate);
+                    Assert.AreEqual(expected.SecLastMeetingDate, actual.LastMeetingDate);
+                    Assert.AreEqual(expected.SecLearningProvider, actual.LearningProvider);
+                    Assert.AreEqual(expected.SecLocation, actual.Location);
+                    Assert.AreEqual(expected.SecMaxCred, actual.MaximumCredits);
+                    Assert.AreEqual(expected.SecMinCred, actual.MinimumCredits);
+                    Assert.AreEqual(expected.SecName, actual.Name);
+                    Assert.AreEqual(expected.SecNo, actual.Number);
+                }
+            }
+
+            [TestMethod]
+            public async Task SectionRepository_GetSections2Async_LimitingKeysNull()
+            {
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 1,
+                    CacheName = "AllSections:",
+                    Entity = "COURSE.SECTIONS",
+                    Sublist = new List<string>(),
+                    TotalCount = 1,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                    {
+                    }
+                };
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManagerMock.Object);
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
+                dataReaderMock.Setup(repo => repo.SelectAsync("COURSES", It.IsAny<string[]>(), "SAVING CRS.SECTIONS")).ReturnsAsync(null);
+                var results = await sectionRepo.GetSections2Async(0, 3, "Title", "2016/01/01", "2016/12/31", "code", "number", "learningProvider", "termId", "academicLevel", new List<string>() { "course" }, "location",
+                                                                       "location", "status", It.IsAny<List<string>>(), "subject", new List<string>(){ "1", "2" }, "");
+                Assert.AreEqual(false, results.Item1.Any());
+                Assert.AreEqual(0, results.Item2);
+            }
+
+            [TestMethod]
+            public async Task SectionRepository_GetSections2Async_TermId()
+            {
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 1,
+                    CacheName = "AllSections:",
+                    Entity = "COURSE.SECTIONS",
+                    Sublist = new List<string>(),
+                    TotalCount = 1,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                    {
+                    }
+                };
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManagerMock.Object);
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
+                dataReaderMock.Setup(dr => dr.SelectAsync("COURSE.SECTIONS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(null);
+
+                var results = await sectionRepo.GetSections2Async(0, 3, "Title", "2016/01/01", "2016/12/31", "code", "number", "learningProvider", "termId", "academicLevel", new List<string>() { "course" }, "location",
+                                                                       "status", "department", It.IsAny<List<string>>(), "");
+                Assert.AreEqual(false, results.Item1.Any());
+                Assert.AreEqual(0, results.Item2);
+            }
+
+            [TestMethod]
+            public async Task SectionRepository_GetSections2Async_Subject()
+            {
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 1,
+                    CacheName = "AllSections:",
+                    Entity = "COURSE.SECTIONS",
+                    Sublist = new List<string>(),
+                    TotalCount = 1,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                    {
+                    }
+                };
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManagerMock.Object);
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
+                dataReaderMock.Setup(dr => dr.SelectAsync("COURSE.SECTIONS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(null);
+
+                var results = await sectionRepo.GetSections2Async(0, 3, "Title", "2016/01/01", "2016/12/31", "code", "number", "learningProvider", "", "academicLevel", It.IsAny<List<string>>(), "location",
+                                                                       "status", "department", new List<string>() { "subject" } );
+                Assert.AreEqual(false, results.Item1.Any());
+                Assert.AreEqual(0, results.Item2);
+            }
+
+            [TestMethod]
+            public async Task SectionRepository_GetSections2Async_Number()
+            {
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 1,
+                    CacheName = "AllSections:",
+                    Entity = "COURSE.SECTIONS",
+                    Sublist = new List<string>(),
+                    TotalCount = 1,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                    {
+                    }
+                };
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManagerMock.Object);
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
+                dataReaderMock.Setup(dr => dr.SelectAsync("COURSE.SECTIONS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(null);
+
+                var results = await sectionRepo.GetSections2Async(0, 3, "Title", "2016/01/01", "2016/12/31", "code", "number", "learningProvider", "", "academicLevel", It.IsAny<List<string>>(), "location",
+                                                                       "status", "department", It.IsAny<List<string>>(), "");
+                Assert.AreEqual(false, results.Item1.Any());
+                Assert.AreEqual(0, results.Item2);
+
+            }
+
+            [TestMethod]
+            public async Task SectionRepository_GetSections2Async_Instructor()
+            {
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 1,
+                    CacheName = "AllSections:",
+                    Entity = "COURSE.SECTIONS",
+                    Sublist = new List<string>(),
+                    TotalCount = 1,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                    {
+                    }
+                };
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManagerMock.Object);
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
+                dataReaderMock.Setup(dr => dr.SelectAsync("COURSE.SECTIONS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(new string[] { "1" });
+
+                var results = await sectionRepo.GetSections2Async(0, 3, "Title", "2016/01/01", "2016/12/31", "code", "", "learningProvider", "", "academicLevel", It.IsAny<List<string>>(), "",
+                                                                       "status", "department", null, "", It.IsAny<List<string>>(), "instructor");
+                Assert.AreEqual(false, results.Item1.Any());
+                Assert.AreEqual(0, results.Item2);
+
+            }
+
+            #endregion
 
             [TestMethod]
             public async Task SectionRepository_GetSectionGuidsCollectionAsync_ZeroResults()
@@ -6717,6 +7067,20 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
+            public async Task SectionRepository_GetSectionByGuid2Async()
+            {
+                string id = "23033dc3-06fc-4111-b910-77050b45cbe1";
+                var guidLookUp = new GuidLookup[] { new GuidLookup(id) };
+                GuidLookupResult guidLookupResult = new GuidLookupResult() { Entity = "COURSE.SECTIONS", PrimaryKey = csId };
+                Dictionary<string, GuidLookupResult> guidLookupDict = new Dictionary<string, GuidLookupResult>();
+                guidLookupDict.Add("COURSE.SECTIONS", guidLookupResult);
+                dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(guidLookupDict);
+
+                var results = await sectionRepo.GetSectionByGuid2Async(id);
+                Assert.IsNotNull(results);
+            }
+
+            [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
             public async Task SectionRepository_GetSectionAsync_ArgumentNullException()
             {
@@ -6783,12 +7147,12 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
 
-            [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task SectionRepository_PostSectionFacultyAsync_NullSection()
-            {
-                var actual = await sectionRepo.PostSectionFacultyAsync(null, "92364642-4CF0-4640-B657-DC76CB7E289B");
-            }
+            //[TestMethod]
+            //[ExpectedException(typeof(ArgumentNullException))]
+            //public async Task SectionRepository_PostSectionFacultyAsync_NullSection()
+            //{
+            //    var actual = await sectionRepo.PostSectionFacultyAsync(null, "92364642-4CF0-4640-B657-DC76CB7E289B");
+            //}
 
 
             [TestMethod]
@@ -6839,15 +7203,15 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 await sectionRepo.DeleteSectionFacultyAsync(sectionFaculty, guid);
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task SectionRepository_PostSectionFacultyAsync_NullGuid()
-            {
-                var guid = "92364642-4CF0-4640-B657-DC76CB7E289B";
-                var sectionFaculty = new SectionFaculty(guid, "1", "12345", "12345", "OLN", new DateTime(2016, 9, 1), new DateTime(2017, 9, 1), 0);
+            //[TestMethod]
+            //[ExpectedException(typeof(ArgumentNullException))]
+            //public async Task SectionRepository_PostSectionFacultyAsync_NullGuid()
+            //{
+            //    var guid = "92364642-4CF0-4640-B657-DC76CB7E289B";
+            //    var sectionFaculty = new SectionFaculty(guid, "1", "12345", "12345", "OLN", new DateTime(2016, 9, 1), new DateTime(2017, 9, 1), 0);
 
-                var actual = await sectionRepo.PostSectionFacultyAsync(sectionFaculty, null);
-            }
+            //    var actual = await sectionRepo.PostSectionFacultyAsync(sectionFaculty, null);
+            //}
 
             [TestMethod]
             [ExpectedException(typeof(RepositoryException))]
@@ -6927,23 +7291,23 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task SectionRepository_PutSectionFacultyAsync_NullSection()
-            {
-                var actual = await sectionRepo.PutSectionFacultyAsync(null, "92364642-4CF0-4640-B657-DC76CB7E289B");
-            }
+            //[TestMethod]
+            //[ExpectedException(typeof(ArgumentNullException))]
+            //public async Task SectionRepository_PutSectionFacultyAsync_NullSection()
+            //{
+            //    var actual = await sectionRepo.PutSectionFacultyAsync(null, "92364642-4CF0-4640-B657-DC76CB7E289B");
+            //}
 
 
-            [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task SectionRepository_PutSectionFacultyAsync_NullGuid()
-            {
-                var guid = "92364642-4CF0-4640-B657-DC76CB7E289B";
-                var sectionFaculty = new SectionFaculty(guid, "1", "12345", "12345", "OLN", new DateTime(2016, 9, 1), new DateTime(2017, 9, 1), 0);
+            //[TestMethod]
+            //[ExpectedException(typeof(ArgumentNullException))]
+            //public async Task SectionRepository_PutSectionFacultyAsync_NullGuid()
+            //{
+            //    var guid = "92364642-4CF0-4640-B657-DC76CB7E289B";
+            //    var sectionFaculty = new SectionFaculty(guid, "1", "12345", "12345", "OLN", new DateTime(2016, 9, 1), new DateTime(2017, 9, 1), 0);
 
-                var actual = await sectionRepo.PutSectionFacultyAsync(sectionFaculty, null);
-            }
+            //    var actual = await sectionRepo.PutSectionFacultyAsync(sectionFaculty, null);
+            //}
 
             [TestMethod]
             [ExpectedException(typeof(RepositoryException))]
@@ -7265,9 +7629,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 });
 
-                //dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<CourseSecFaculty>("COURSE.SEC.FACULTY", It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(sectionFacultyResponseData);
-                dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<CourseSecFaculty>( It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(sectionFacultyResponseData);
-
+                dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<CourseSecFaculty>("COURSE.SEC.FACULTY", It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(sectionFacultyResponseData);
                 var courseSecMeetings = new Collection<CourseSecMeeting>();
                 courseSecMeetings.Add(new CourseSecMeeting() { Recordkey = "1", CsmInstrMethod = "ONL", CsmFriday = "Y", CsmCourseSection = "12345", CsmFrequency = "W", CsmStartDate = new DateTime(2016, 9, 1), CsmEndDate = new DateTime(2017, 12, 12) });
 
@@ -7478,6 +7840,80 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataReaderMock.Setup(cacc => cacc.BulkReadRecordAsync<RegControls>("REG.CONTROLS", "", true)).ReturnsAsync(new Collection<RegControls>() { regCtl } );
 
                 var results = await sectionRepo.GetSectionsSearchableAsync(0, 3, "yes");
+
+                Assert.IsNotNull(results);
+                var actuals = results.Item1;
+
+                for (int i = 0; i < actuals.Count(); i++)
+                {
+                    var actual = actuals.ToList()[i];
+                    var expected = courseSectionCollection.ToList()[i];
+                    Assert.IsNotNull(actual);
+
+                    Assert.AreEqual(expected.RecordGuid, actual.Guid);
+                    Assert.AreEqual(expected.Recordkey, actual.Id);
+                    Assert.AreEqual(expected.SecAcadLevel, actual.AcademicLevelCode);
+                    Assert.AreEqual(expected.SecCapacity, actual.Capacity);
+                    Assert.AreEqual(expected.SecCeus, actual.Ceus);
+                    Assert.AreEqual(expected.SecCourse, actual.CourseId);
+                    Assert.AreEqual(expected.SecCredType, actual.CreditTypeCode);
+                    Assert.AreEqual(expected.SecEndDate, actual.EndDate);
+                    Assert.AreEqual(expected.SecFacultyConsentFlag.Equals("Y", StringComparison.OrdinalIgnoreCase) ? true : false, actual.IsInstructorConsentRequired);
+                    Assert.AreEqual(expected.SecFirstMeetingDate, actual.FirstMeetingDate);
+                    Assert.AreEqual(expected.SecLastMeetingDate, actual.LastMeetingDate);
+                    Assert.AreEqual(expected.SecLearningProvider, actual.LearningProvider);
+                    Assert.AreEqual(expected.SecLocation, actual.Location);
+                    Assert.AreEqual(expected.SecMaxCred, actual.MaximumCredits);
+                    Assert.AreEqual(expected.SecMinCred, actual.MinimumCredits);
+                    Assert.AreEqual(expected.SecName, actual.Name);
+                    Assert.AreEqual(expected.SecNo, actual.Number);
+                }
+            }
+
+            [TestMethod]
+            public async Task SectionRepository_GetSectionsSearchable1Async_Yes()
+            {
+                string[] sublist = new string[] { "1" };
+                courseSectionCollection.Add(cs);
+                dataReaderMock.Setup(dr => dr.SelectAsync("COURSE.SECTIONS", It.IsAny<string>())).ReturnsAsync(sublist);
+                dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<CourseSections>("COURSE.SECTIONS", sublist, It.IsAny<bool>())).ReturnsAsync(courseSectionCollection);
+
+                dataReaderMock.Setup(dr => dr.SelectAsync("COURSE.SEC.FACULTY", It.IsAny<string>())).ReturnsAsync(sublist);
+                var regSections = await new TestSectionRepository().GetRegistrationSectionsAsync(new List<Term>());
+                var sectionFacultyResponseData = BuildSectionFacultyResponse(regSections);
+                dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<CourseSecFaculty>("COURSE.SEC.FACULTY", It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(sectionFacultyResponseData);
+
+                var allCourseTypes = new TestCourseTypeRepository().Get().ToList();
+                var courseTypeValcodeResponse = BuildValcodeResponse(allCourseTypes);
+                dataReaderMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("ST.VALCODES", "COURSE.TYPES", It.IsAny<bool>())).ReturnsAsync(courseTypeValcodeResponse);
+
+                dataReaderMock.Setup(acc => acc.SelectAsync(It.IsAny<RecordKeyLookup[]>())).Returns<RecordKeyLookup[]>(recordKeyLookups =>
+                {
+                    var result = new Dictionary<string, RecordKeyLookupResult>();
+                    foreach (var recordKeyLookup in recordKeyLookups)
+                    {
+                        var contractTypes = allCourseTypes.Where(e => e.Code == recordKeyLookup.SecondaryKey).FirstOrDefault();
+                        result.Add(string.Join("+", new string[] { "ST.VALCODES", "COURSE.TYPES", contractTypes.Code }),
+                            new RecordKeyLookupResult() { Guid = contractTypes.Guid });
+                    }
+                    return Task.FromResult(result);
+                });
+
+                string fileName = "CORE.PARMS";
+                string field = "LDM.DEFAULTS";
+                var ldmDefaults = new LdmDefaults() { LdmdRegUsersId = "1" };
+                dataReaderMock.Setup(i => i.ReadRecordAsync<LdmDefaults>(fileName, field, It.IsAny<bool>())).ReturnsAsync(ldmDefaults);
+
+                var regUser = new RegUsers();
+                regUser.Recordkey = "REGUSERID";
+                regUser.RguRegControls = new List<string>() { "REGCTLID", "OTHER" };
+                dataReaderMock.Setup<Task<RegUsers>>(cacc => cacc.ReadRecordAsync<RegUsers>("REG.USERS", "REGUSERID", false)).ReturnsAsync(regUser);
+                var regCtl = new RegControls();
+                regCtl.Recordkey = "REGCTLID";
+                regCtl.RgcSectionLookupCriteria = new List<string>() { "WITH CRS.EXTERNAL.SOURCE=''", "AND WITH SEC.COURSE.TYPES NE 'PSE'" };
+                dataReaderMock.Setup(cacc => cacc.BulkReadRecordAsync<RegControls>("REG.CONTROLS", "", true)).ReturnsAsync(new Collection<RegControls>() { regCtl });
+
+                var results = await sectionRepo.GetSectionsSearchable1Async(0, 3, "yes");
 
                 Assert.IsNotNull(results);
                 var actuals = results.Item1;
@@ -7750,7 +8186,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     SecWaitlistMax = 10,
                     SecWaitlistRating = "SR",
                     SecXlist = null,
-                    SecHideInCatalog = "Y"
+                    SecHideInCatalog = "Y",
+                    SecSynonym = "992211"
                 };
                 cs.SecEndDate = cs.SecStartDate.Value.AddDays(69);
                 cs.SecContactEntityAssociation = new List<CourseSectionsSecContact>();
@@ -7852,15 +8289,15 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 var result = await sectionRepo.UpdateSectionBookAsync(textbook);
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task SectionRepository_PostSectionFacultyAsync_NullGuid()
-            {
-                var guid = "92364642-4CF0-4640-B657-DC76CB7E289B";
-                var sectionFaculty = new SectionFaculty(guid, "1", "12345", "12345", "OLN", new DateTime(2016, 9, 1), new DateTime(2017, 9, 1), 0);
+            //[TestMethod]
+            //[ExpectedException(typeof(ArgumentNullException))]
+            //public async Task SectionRepository_PostSectionFacultyAsync_NullGuid()
+            //{
+            //    var guid = "92364642-4CF0-4640-B657-DC76CB7E289B";
+            //    var sectionFaculty = new SectionFaculty(guid, "1", "12345", "12345", "OLN", new DateTime(2016, 9, 1), new DateTime(2017, 9, 1), 0);
 
-                var actual = await sectionRepo.PostSectionFacultyAsync(sectionFaculty, null);
-            }
+            //    var actual = await sectionRepo.PostSectionFacultyAsync(sectionFaculty, null);
+            //}
 
             [TestMethod]
             [ExpectedException(typeof(RepositoryException))]
@@ -7886,23 +8323,23 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task SectionRepository_PutSectionFacultyAsync_NullSection()
-            {
-                var actual = await sectionRepo.PutSectionFacultyAsync(null, "92364642-4CF0-4640-B657-DC76CB7E289B");
-            }
+            //[TestMethod]
+            //[ExpectedException(typeof(ArgumentNullException))]
+            //public async Task SectionRepository_PutSectionFacultyAsync_NullSection()
+            //{
+            //    var actual = await sectionRepo.PutSectionFacultyAsync(null, "92364642-4CF0-4640-B657-DC76CB7E289B");
+            //}
 
 
-            [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task SectionRepository_PutSectionFacultyAsync_NullGuid()
-            {
-                var guid = "92364642-4CF0-4640-B657-DC76CB7E289B";
-                var sectionFaculty = new SectionFaculty(guid, "1", "12345", "12345", "OLN", new DateTime(2016, 9, 1), new DateTime(2017, 9, 1), 0);
+            //[TestMethod]
+            //[ExpectedException(typeof(ArgumentNullException))]
+            //public async Task SectionRepository_PutSectionFacultyAsync_NullGuid()
+            //{
+            //    var guid = "92364642-4CF0-4640-B657-DC76CB7E289B";
+            //    var sectionFaculty = new SectionFaculty(guid, "1", "12345", "12345", "OLN", new DateTime(2016, 9, 1), new DateTime(2017, 9, 1), 0);
 
-                var actual = await sectionRepo.PutSectionFacultyAsync(sectionFaculty, null);
-            }
+            //    var actual = await sectionRepo.PutSectionFacultyAsync(sectionFaculty, null);
+            //}
 
             [TestMethod]
             [ExpectedException(typeof(RepositoryException))]
@@ -8084,6 +8521,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
+            [Ignore]
             public async Task GetSectionMeetingInstancesAsync_Returns_SectionMeetingInstance_Objects()
             {
                 var instances = await sectionRepo.GetSectionMeetingInstancesAsync(sectionId);
@@ -8140,6 +8578,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
+            [Ignore]
             public async Task GetSectionMeetingInstancesAsync_Null_SectionMeetingData()
             {
                 dataReaderMock.Setup<Task<Collection<CourseSecMeeting>>>(acc => acc.BulkReadRecordAsync<CourseSecMeeting>("COURSE.SEC.MEETING", It.IsAny<string[]>(), It.IsAny<bool>())).Returns(Task.FromResult<Collection<CourseSecMeeting>>(null));
@@ -8153,6 +8592,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
+            [Ignore]
             public async Task GetSectionMeetingInstancesAsync_Empty_SectionMeetingData()
             {
                 dataReaderMock.Setup<Task<Collection<CourseSecMeeting>>>(acc => acc.BulkReadRecordAsync<CourseSecMeeting>("COURSE.SEC.MEETING", It.IsAny<string[]>(), It.IsAny<bool>())).Returns(Task.FromResult<Collection<CourseSecMeeting>>(new Collection<CourseSecMeeting>()));
@@ -8166,6 +8606,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
+            [Ignore]
             public async Task GetSectionMeetingInstancesAsync_No_Matching_SectionMeetingData()
             {
                 calendarSchedules[1].CalsCourseSecMeeting = "ABCD";
@@ -8529,8 +8970,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task SectionRepository_GetSectionRosterAsync_missing_CourseSecFaculty_record_throws_exception()
+            public async Task SectionRepository_GetSectionRosterAsync_missing_CourseSecFaculty_record_logs_and_continue()
             {
                 // Data setup
                 courseSection = new CourseSections()
@@ -8550,18 +8990,22 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 // Call repository
                 var entity = await sectionRepo.GetSectionRosterAsync(sectionId);
+                Assert.AreEqual(sectionId, entity.SectionId);
+                Assert.AreEqual(1, entity.FacultyIds.Count());
+                Assert.AreEqual(0, entity.StudentIds.Count());
+                Assert.AreEqual("0001239", entity.FacultyIds[0]);
+                loggerMock.Verify(x => x.Error("Unable to retrieve COURSE.SEC.FACULTY data for IDs: 235"));
             }
 
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task SectionRepository_GetSectionRosterAsync_missing_StudentCourseSec_record_throws_exception()
+            public async Task SectionRepository_GetSectionRosterAsync_missing_StudentCourseSec_record_logs_and_continue()
             {
                 // Data setup
                 courseSection = new CourseSections()
                 {
                     Recordkey = sectionId,
-                    SecActiveStudents = new List<string>() { "123", "124", "125", "126", "128" }
+                    SecActiveStudents = new List<string>() { "123", "124", "125", "126", "128", "129" }
                 };
                 studentCourseSecs = new Collection<StudentCourseSec>()
                 {
@@ -8578,11 +9022,18 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 // Call repository
                 var entity = await sectionRepo.GetSectionRosterAsync(sectionId);
+                Assert.AreEqual(4, entity.StudentIds.Count());
+                Assert.AreEqual(sectionId, entity.SectionId);
+                Assert.AreEqual(0, entity.FacultyIds.Count());
+                Assert.AreEqual("0001234", entity.StudentIds[0]);
+                Assert.AreEqual("0001235", entity.StudentIds[1]);
+                Assert.AreEqual("0001236", entity.StudentIds[2]);
+                Assert.AreEqual("0001237", entity.StudentIds[3]);
+                loggerMock.Verify(x => x.Error("Unable to retrieve STUDENT.COURSE.SECTION data for IDs: 128, 129"));
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task SectionRepository_GetSectionRosterAsync_invalid_CourseSecFaculty_record_throws_exception()
+            public async Task SectionRepository_GetSectionRosterAsync_invalid_CourseSecFaculty_record_logs_and_continue()
             {
                 // Data setup
                 courseSection = new CourseSections()
@@ -8603,11 +9054,15 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 // Call repository
                 var entity = await sectionRepo.GetSectionRosterAsync(sectionId);
+                Assert.AreEqual(sectionId, entity.SectionId);
+                Assert.AreEqual(1, entity.FacultyIds.Count());
+                Assert.AreEqual(0, entity.StudentIds.Count());
+                Assert.AreEqual("0001239", entity.FacultyIds[0]);
+                loggerMock.Verify(x => x.Error("Unable to retrieve COURSE.SEC.FACULTY data for IDs: 235"));
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task SectionRepository_GetSectionRosterAsync_invalid_StudentCourseSec_record_throws_exception()
+            public async Task SectionRepository_GetSectionRosterAsync_invalid_StudentCourseSec_record_logs_and_continue()
             {
                 // Data setup
                 courseSection = new CourseSections()
@@ -8631,6 +9086,14 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 // Call repository
                 var entity = await sectionRepo.GetSectionRosterAsync(sectionId);
+                Assert.AreEqual(4, entity.StudentIds.Count());
+                Assert.AreEqual(sectionId, entity.SectionId);
+                Assert.AreEqual(0, entity.FacultyIds.Count());
+                Assert.AreEqual("0001234", entity.StudentIds[0]);
+                Assert.AreEqual("0001235", entity.StudentIds[1]);
+                Assert.AreEqual("0001236", entity.StudentIds[2]);
+                Assert.AreEqual("0001237", entity.StudentIds[3]);
+                loggerMock.Verify(x => x.Error("Unable to retrieve STUDENT.COURSE.SECTION data for IDs: 128"));
             }
         }
 
@@ -9071,6 +9534,440 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
         }
+
+        [TestClass]
+        public class SectionRepository_GetSectionMidtermGradingCompleteAsync : SectionRepositoryTests
+        {
+            SectionRepository sectionRepo;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                MainInitialize();
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task SectionRepository_GetSectionMidtermGradingCompleteAsync_SectionIdIsNull()
+            {
+                var entity = await sectionRepo.GetSectionMidtermGradingCompleteAsync(null);
+            }
+
+            [TestMethod]
+            public async Task SectionRepository_GetSectionMidtermGradingCompleteAsync_NoStatuses()
+            {
+                // Test the logic that still returns an entity when there is no SEC.GRADING.STATUS record in the database.
+                string sectionId = "123";
+                dataReaderMock.Setup(dr => dr.ReadRecordAsync<SecGradingStatus>("SEC.GRADING.STATUS", sectionId, It.IsAny<bool>())).ReturnsAsync(null);
+
+                SectionMidtermGradingComplete entity = await sectionRepo.GetSectionMidtermGradingCompleteAsync(sectionId);
+
+                Assert.AreEqual(entity.SectionId, sectionId);
+                Assert.AreEqual(entity.MidtermGrading1Complete.Count, 0);
+                Assert.AreEqual(entity.MidtermGrading2Complete.Count, 0);
+                Assert.AreEqual(entity.MidtermGrading3Complete.Count, 0);
+                Assert.AreEqual(entity.MidtermGrading4Complete.Count, 0);
+                Assert.AreEqual(entity.MidtermGrading5Complete.Count, 0);
+                Assert.AreEqual(entity.MidtermGrading6Complete.Count, 0);
+            }
+
+            [TestMethod]
+            public async Task SectionRepository_GetSectionMidtermGradingCompleteAsync_FullData()
+            {
+                // Test that all six midterm grade status lists will be populated with multiple values in the database record.
+                string sectionId = "123";
+
+                // Setup a database record
+                SecGradingStatus dbRecord = new SecGradingStatus();
+                dbRecord.Recordkey = sectionId;
+                dbRecord.SgsMidGrade1CmplDates = new List<DateTime?>();
+                dbRecord.SgsMidGrade1CmplOpers = new List<string>();
+                dbRecord.SgsMidGrade1CmplTimes = new List<DateTime?>();
+                dbRecord.SgsMidGrade2CmplDates = new List<DateTime?>();
+                dbRecord.SgsMidGrade2CmplOpers = new List<string>();
+                dbRecord.SgsMidGrade2CmplTimes = new List<DateTime?>();
+                dbRecord.SgsMidGrade3CmplDates = new List<DateTime?>();
+                dbRecord.SgsMidGrade3CmplOpers = new List<string>();
+                dbRecord.SgsMidGrade3CmplTimes = new List<DateTime?>();
+                dbRecord.SgsMidGrade4CmplDates = new List<DateTime?>();
+                dbRecord.SgsMidGrade4CmplOpers = new List<string>();
+                dbRecord.SgsMidGrade4CmplTimes = new List<DateTime?>();
+                dbRecord.SgsMidGrade5CmplDates = new List<DateTime?>();
+                dbRecord.SgsMidGrade5CmplOpers = new List<string>();
+                dbRecord.SgsMidGrade5CmplTimes = new List<DateTime?>();
+                dbRecord.SgsMidGrade6CmplDates = new List<DateTime?>();
+                dbRecord.SgsMidGrade6CmplOpers = new List<string>();
+                dbRecord.SgsMidGrade6CmplTimes = new List<DateTime?>();
+
+                dbRecord.SgsMidGrade1CmplDates.Add(new DateTime(2010, 1, 1));
+                dbRecord.SgsMidGrade1CmplOpers.Add("Oper1");
+                dbRecord.SgsMidGrade1CmplTimes.Add(new DateTime(1,1,1,1,1,1));
+
+                dbRecord.SgsMidGrade1CmplDates.Add(new DateTime(2010, 1, 2));
+                dbRecord.SgsMidGrade1CmplOpers.Add("Oper2");
+                dbRecord.SgsMidGrade1CmplTimes.Add(new DateTime(1, 1, 1, 1, 1, 2));
+
+                dbRecord.SgsMidGrade2CmplDates.Add(new DateTime(2010, 1, 3));
+                dbRecord.SgsMidGrade2CmplOpers.Add("Oper3");
+                dbRecord.SgsMidGrade2CmplTimes.Add(new DateTime(1, 1, 1, 1, 1, 3));
+
+                dbRecord.SgsMidGrade2CmplDates.Add(new DateTime(2010, 1, 4));
+                dbRecord.SgsMidGrade2CmplOpers.Add("Oper4");
+                dbRecord.SgsMidGrade2CmplTimes.Add(new DateTime(1, 1, 1, 1, 1, 4));
+
+                dbRecord.SgsMidGrade3CmplDates.Add(new DateTime(2010, 1, 5));
+                dbRecord.SgsMidGrade3CmplOpers.Add("Oper5");
+                dbRecord.SgsMidGrade3CmplTimes.Add(new DateTime(1, 1, 1, 1, 1, 5));
+
+                dbRecord.SgsMidGrade3CmplDates.Add(new DateTime(2010, 1, 6));
+                dbRecord.SgsMidGrade3CmplOpers.Add("Oper6");
+                dbRecord.SgsMidGrade3CmplTimes.Add(new DateTime(1, 1, 1, 1, 1, 6));
+
+                dbRecord.SgsMidGrade4CmplDates.Add(new DateTime(2010, 1, 7));
+                dbRecord.SgsMidGrade4CmplOpers.Add("Oper7");
+                dbRecord.SgsMidGrade4CmplTimes.Add(new DateTime(1, 1, 1, 1, 1, 7));
+
+                dbRecord.SgsMidGrade4CmplDates.Add(new DateTime(2010, 1, 8));
+                dbRecord.SgsMidGrade4CmplOpers.Add("Oper8");
+                dbRecord.SgsMidGrade4CmplTimes.Add(new DateTime(1, 1, 1, 1, 1, 8));
+
+                dbRecord.SgsMidGrade5CmplDates.Add(new DateTime(2010, 1, 9));
+                dbRecord.SgsMidGrade5CmplOpers.Add("Oper9");
+                dbRecord.SgsMidGrade5CmplTimes.Add(new DateTime(1, 1, 1, 1, 1, 9));
+
+                dbRecord.SgsMidGrade5CmplDates.Add(new DateTime(2010, 1, 10));
+                dbRecord.SgsMidGrade5CmplOpers.Add("Oper10");
+                dbRecord.SgsMidGrade5CmplTimes.Add(new DateTime(1, 1, 1, 1, 1, 10));
+
+                dbRecord.SgsMidGrade6CmplDates.Add(new DateTime(2010, 1, 11));
+                dbRecord.SgsMidGrade6CmplOpers.Add("Oper11");
+                dbRecord.SgsMidGrade6CmplTimes.Add(new DateTime(1, 1, 1, 1, 1, 11));
+
+                dbRecord.SgsMidGrade6CmplDates.Add(new DateTime(2010, 1, 12));
+                dbRecord.SgsMidGrade6CmplOpers.Add("Oper12");
+                dbRecord.SgsMidGrade6CmplTimes.Add(new DateTime(1, 1, 1, 1, 1, 12));
+
+                dbRecord.buildAssociations();
+
+                dataReaderMock.Setup(dr => dr.ReadRecordAsync<SecGradingStatus>("SEC.GRADING.STATUS", sectionId, It.IsAny<bool>())).ReturnsAsync(dbRecord);
+
+                SectionMidtermGradingComplete entity = await sectionRepo.GetSectionMidtermGradingCompleteAsync(sectionId);
+
+                Assert.AreEqual(entity.SectionId, sectionId);
+                Assert.AreEqual(entity.MidtermGrading1Complete.Count, 2);
+                Assert.AreEqual(entity.MidtermGrading2Complete.Count, 2);
+                Assert.AreEqual(entity.MidtermGrading3Complete.Count, 2);
+                Assert.AreEqual(entity.MidtermGrading4Complete.Count, 2);
+                Assert.AreEqual(entity.MidtermGrading5Complete.Count, 2);
+                Assert.AreEqual(entity.MidtermGrading6Complete.Count, 2);
+
+                // Test that each the date and time pairs in the database were converted to universal time
+                DateTime? aDate;
+                DateTime? aTime;
+
+                aDate = new DateTime(2010, 1, 1);
+                aTime = new DateTime(1900, 1, 1, 1, 1, 1);
+                DateTimeOffset? Grade1_1_DateAndTime = aTime.ToPointInTimeDateTimeOffset(aDate, colleagueTimeZone);
+                aDate = new DateTime(2010, 1, 2);
+                aTime = new DateTime(1900, 1, 1, 1, 1, 2);
+                DateTimeOffset? Grade1_2_DateAndTime = aTime.ToPointInTimeDateTimeOffset(aDate, colleagueTimeZone);
+                aDate = new DateTime(2010, 1, 3);
+                aTime = new DateTime(1900, 1, 1, 1, 1, 3);
+                DateTimeOffset? Grade2_1_DateAndTime = aTime.ToPointInTimeDateTimeOffset(aDate, colleagueTimeZone);
+                aDate = new DateTime(2010, 1, 4);
+                aTime = new DateTime(1900, 1, 1, 1, 1, 4);
+                DateTimeOffset? Grade2_2_DateAndTime = aTime.ToPointInTimeDateTimeOffset(aDate, colleagueTimeZone);
+                aDate = new DateTime(2010, 1, 5);
+                aTime = new DateTime(1900, 1, 1, 1, 1, 5);
+                DateTimeOffset? Grade3_1_DateAndTime = aTime.ToPointInTimeDateTimeOffset(aDate, colleagueTimeZone);
+                aDate = new DateTime(2010, 1, 6);
+                aTime = new DateTime(1900, 1, 1, 1, 1, 6);
+                DateTimeOffset? Grade3_2_DateAndTime = aTime.ToPointInTimeDateTimeOffset(aDate, colleagueTimeZone);
+                aDate = new DateTime(2010, 1, 7);
+                aTime = new DateTime(1900, 1, 1, 1, 1, 7);
+                DateTimeOffset? Grade4_1_DateAndTime = aTime.ToPointInTimeDateTimeOffset(aDate, colleagueTimeZone);
+                aDate = new DateTime(2010, 1, 8);
+                aTime = new DateTime(1900, 1, 1, 1, 1, 8);
+                DateTimeOffset? Grade4_2_DateAndTime = aTime.ToPointInTimeDateTimeOffset(aDate, colleagueTimeZone);
+                aDate = new DateTime(2010, 1, 9);
+                aTime = new DateTime(1900, 1, 1, 1, 1, 9);
+                DateTimeOffset? Grade5_1_DateAndTime = aTime.ToPointInTimeDateTimeOffset(aDate, colleagueTimeZone);
+                aDate = new DateTime(2010, 1, 10);
+                aTime = new DateTime(1900, 1, 1, 1, 1, 10);
+                DateTimeOffset? Grade5_2_DateAndTime = aTime.ToPointInTimeDateTimeOffset(aDate, colleagueTimeZone);
+                aDate = new DateTime(2010, 1, 11);
+                aTime = new DateTime(1900, 1, 1, 1, 1, 11);
+                DateTimeOffset? Grade6_1_DateAndTime = aTime.ToPointInTimeDateTimeOffset(aDate, colleagueTimeZone);
+                aDate = new DateTime(2010, 1, 12);
+                aTime = new DateTime(1900, 1, 1, 1, 1, 12);
+                DateTimeOffset? Grade6_2_DateAndTime = aTime.ToPointInTimeDateTimeOffset(aDate, colleagueTimeZone);
+
+                Assert.AreEqual(entity.MidtermGrading1Complete[0].DateAndTime, Grade1_1_DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading1Complete[0].CompleteOperator, "Oper1");
+                Assert.AreEqual(entity.MidtermGrading1Complete[1].DateAndTime, Grade1_2_DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading1Complete[1].CompleteOperator, "Oper2");
+                Assert.AreEqual(entity.MidtermGrading2Complete[0].DateAndTime, Grade2_1_DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading2Complete[0].CompleteOperator, "Oper3");
+                Assert.AreEqual(entity.MidtermGrading2Complete[1].DateAndTime, Grade2_2_DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading2Complete[1].CompleteOperator, "Oper4");
+                Assert.AreEqual(entity.MidtermGrading3Complete[0].DateAndTime, Grade3_1_DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading3Complete[0].CompleteOperator, "Oper5");
+                Assert.AreEqual(entity.MidtermGrading3Complete[1].DateAndTime, Grade3_2_DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading3Complete[1].CompleteOperator, "Oper6");
+                Assert.AreEqual(entity.MidtermGrading4Complete[0].DateAndTime, Grade4_1_DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading4Complete[0].CompleteOperator, "Oper7");
+                Assert.AreEqual(entity.MidtermGrading4Complete[1].DateAndTime, Grade4_2_DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading4Complete[1].CompleteOperator, "Oper8");
+                Assert.AreEqual(entity.MidtermGrading5Complete[0].DateAndTime, Grade5_1_DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading5Complete[0].CompleteOperator, "Oper9");
+                Assert.AreEqual(entity.MidtermGrading5Complete[1].DateAndTime, Grade5_2_DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading5Complete[1].CompleteOperator, "Oper10");
+                Assert.AreEqual(entity.MidtermGrading6Complete[0].DateAndTime, Grade6_1_DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading6Complete[0].CompleteOperator, "Oper11");
+                Assert.AreEqual(entity.MidtermGrading6Complete[1].DateAndTime, Grade6_2_DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading6Complete[1].CompleteOperator, "Oper12");
+            }
+        }
+
+        [TestClass]
+        public class SectionRepository_PostSectionMidtermGradingCompleteAsync : SectionRepositoryTests
+        {
+            SectionRepository sectionRepo;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                MainInitialize();
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task SectionRepository_PostSectionMidtermGradingCompleteAsync_SectionIdIsNull()
+            {
+                var entity = await sectionRepo.PostSectionMidtermGradingCompleteAsync(null, 1, "0012345", DateTimeOffset.Now);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task SectionRepository_PostSectionMidtermGradingCompleteAsync_MidtermGradeNumberIsNull()
+            {
+                var entity = await sectionRepo.PostSectionMidtermGradingCompleteAsync("12345", null, "0012345", DateTimeOffset.Now);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task SectionRepository_PostSectionMidtermGradingCompleteAsync_MidtermGradeNumberTooLow()
+            {
+                var entity = await sectionRepo.PostSectionMidtermGradingCompleteAsync("12345", 0, "0012345", DateTimeOffset.Now);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task SectionRepository_PostSectionMidtermGradingCompleteAsync_MidtermGradeNumberTooHigh()
+            {
+                var entity = await sectionRepo.PostSectionMidtermGradingCompleteAsync("12345", 7, "0012345", DateTimeOffset.Now);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task SectionRepository_PostSectionMidtermGradingCompleteAsync_CompleteOperatorIsNull()
+            {
+                var entity = await sectionRepo.PostSectionMidtermGradingCompleteAsync("12345", 1, null, DateTimeOffset.Now);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task SectionRepository_PostSectionMidtermGradingCompleteAsync_DateAndTimeIsNull()
+            {
+                var entity = await sectionRepo.PostSectionMidtermGradingCompleteAsync("12345", 1, "0012345", null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ApplicationException))]
+            public async Task SectionRepository_PostSectionMidtermGradingCompleteAsync_CTX_Exception()
+            {
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<AddMidtermGradeCompleteRequest, AddMidtermGradeCompleteResponse>(It.IsAny<AddMidtermGradeCompleteRequest>())).ThrowsAsync(new Exception("CTX exception."));
+                var entity = await sectionRepo.PostSectionMidtermGradingCompleteAsync("12345", 1, "0012345", DateTimeOffset.Now);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ApplicationException))]
+            public async Task SectionRepository_PostSectionMidtermGradingCompleteAsync_CTX_Error()
+            {
+                AddMidtermGradeCompleteResponse ctxResponse = new AddMidtermGradeCompleteResponse()
+                {
+                    AErrorMsg = "CTX error"
+                };
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<AddMidtermGradeCompleteRequest, AddMidtermGradeCompleteResponse>(It.IsAny<AddMidtermGradeCompleteRequest>())).ReturnsAsync(ctxResponse);
+                var entity = await sectionRepo.PostSectionMidtermGradingCompleteAsync("12345", 1, "0012345", DateTimeOffset.Now);
+            }
+
+            [TestMethod]
+            public async Task SectionRepository_PostSectionMidtermGradingCompleteAsync_Valid()
+            {
+                // Test that all six midterm grade status lists will be populated with multiple values in the database record.
+                string sectionId = "123";
+
+                // Setup a database record
+                SecGradingStatus dbRecord = new SecGradingStatus();
+                dbRecord.Recordkey = sectionId;
+                dbRecord.SgsMidGrade1CmplDates = new List<DateTime?>();
+                dbRecord.SgsMidGrade1CmplOpers = new List<string>();
+                dbRecord.SgsMidGrade1CmplTimes = new List<DateTime?>();
+                dbRecord.SgsMidGrade2CmplDates = new List<DateTime?>();
+                dbRecord.SgsMidGrade2CmplOpers = new List<string>();
+                dbRecord.SgsMidGrade2CmplTimes = new List<DateTime?>();
+                dbRecord.SgsMidGrade3CmplDates = new List<DateTime?>();
+                dbRecord.SgsMidGrade3CmplOpers = new List<string>();
+                dbRecord.SgsMidGrade3CmplTimes = new List<DateTime?>();
+                dbRecord.SgsMidGrade4CmplDates = new List<DateTime?>();
+                dbRecord.SgsMidGrade4CmplOpers = new List<string>();
+                dbRecord.SgsMidGrade4CmplTimes = new List<DateTime?>();
+                dbRecord.SgsMidGrade5CmplDates = new List<DateTime?>();
+                dbRecord.SgsMidGrade5CmplOpers = new List<string>();
+                dbRecord.SgsMidGrade5CmplTimes = new List<DateTime?>();
+                dbRecord.SgsMidGrade6CmplDates = new List<DateTime?>();
+                dbRecord.SgsMidGrade6CmplOpers = new List<string>();
+                dbRecord.SgsMidGrade6CmplTimes = new List<DateTime?>();
+
+                dbRecord.SgsMidGrade1CmplDates.Add(new DateTime(2010, 1, 1));
+                dbRecord.SgsMidGrade1CmplOpers.Add("Oper1");
+                dbRecord.SgsMidGrade1CmplTimes.Add(new DateTime(1, 1, 1, 1, 1, 1));
+
+                dbRecord.SgsMidGrade1CmplDates.Add(new DateTime(2010, 1, 2));
+                dbRecord.SgsMidGrade1CmplOpers.Add("Oper2");
+                dbRecord.SgsMidGrade1CmplTimes.Add(new DateTime(1, 1, 1, 1, 1, 2));
+
+                dbRecord.SgsMidGrade2CmplDates.Add(new DateTime(2010, 1, 3));
+                dbRecord.SgsMidGrade2CmplOpers.Add("Oper3");
+                dbRecord.SgsMidGrade2CmplTimes.Add(new DateTime(1, 1, 1, 1, 1, 3));
+
+                dbRecord.SgsMidGrade2CmplDates.Add(new DateTime(2010, 1, 4));
+                dbRecord.SgsMidGrade2CmplOpers.Add("Oper4");
+                dbRecord.SgsMidGrade2CmplTimes.Add(new DateTime(1, 1, 1, 1, 1, 4));
+
+                dbRecord.SgsMidGrade3CmplDates.Add(new DateTime(2010, 1, 5));
+                dbRecord.SgsMidGrade3CmplOpers.Add("Oper5");
+                dbRecord.SgsMidGrade3CmplTimes.Add(new DateTime(1, 1, 1, 1, 1, 5));
+
+                dbRecord.SgsMidGrade3CmplDates.Add(new DateTime(2010, 1, 6));
+                dbRecord.SgsMidGrade3CmplOpers.Add("Oper6");
+                dbRecord.SgsMidGrade3CmplTimes.Add(new DateTime(1, 1, 1, 1, 1, 6));
+
+                dbRecord.SgsMidGrade4CmplDates.Add(new DateTime(2010, 1, 7));
+                dbRecord.SgsMidGrade4CmplOpers.Add("Oper7");
+                dbRecord.SgsMidGrade4CmplTimes.Add(new DateTime(1, 1, 1, 1, 1, 7));
+
+                dbRecord.SgsMidGrade4CmplDates.Add(new DateTime(2010, 1, 8));
+                dbRecord.SgsMidGrade4CmplOpers.Add("Oper8");
+                dbRecord.SgsMidGrade4CmplTimes.Add(new DateTime(1, 1, 1, 1, 1, 8));
+
+                dbRecord.SgsMidGrade5CmplDates.Add(new DateTime(2010, 1, 9));
+                dbRecord.SgsMidGrade5CmplOpers.Add("Oper9");
+                dbRecord.SgsMidGrade5CmplTimes.Add(new DateTime(1, 1, 1, 1, 1, 9));
+
+                dbRecord.SgsMidGrade5CmplDates.Add(new DateTime(2010, 1, 10));
+                dbRecord.SgsMidGrade5CmplOpers.Add("Oper10");
+                dbRecord.SgsMidGrade5CmplTimes.Add(new DateTime(1, 1, 1, 1, 1, 10));
+
+                dbRecord.SgsMidGrade6CmplDates.Add(new DateTime(2010, 1, 11));
+                dbRecord.SgsMidGrade6CmplOpers.Add("Oper11");
+                dbRecord.SgsMidGrade6CmplTimes.Add(new DateTime(1, 1, 1, 1, 1, 11));
+
+                dbRecord.SgsMidGrade6CmplDates.Add(new DateTime(2010, 1, 12));
+                dbRecord.SgsMidGrade6CmplOpers.Add("Oper12");
+                dbRecord.SgsMidGrade6CmplTimes.Add(new DateTime(1, 1, 1, 1, 1, 12));
+
+                dbRecord.buildAssociations();
+
+                AddMidtermGradeCompleteResponse ctxResponse = new AddMidtermGradeCompleteResponse()
+                {
+                    AErrorMsg = null
+                };
+
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<AddMidtermGradeCompleteRequest, AddMidtermGradeCompleteResponse>(It.IsAny<AddMidtermGradeCompleteRequest>())).ReturnsAsync(ctxResponse);
+                dataReaderMock.Setup(dr => dr.ReadRecordAsync<SecGradingStatus>("SEC.GRADING.STATUS", sectionId, It.IsAny<bool>())).ReturnsAsync(dbRecord);
+
+                var entity = await sectionRepo.PostSectionMidtermGradingCompleteAsync(sectionId, 1, "0012345", DateTimeOffset.Now);
+
+                Assert.AreEqual(entity.SectionId, sectionId);
+                Assert.AreEqual(entity.MidtermGrading1Complete.Count, 2);
+                Assert.AreEqual(entity.MidtermGrading2Complete.Count, 2);
+                Assert.AreEqual(entity.MidtermGrading3Complete.Count, 2);
+                Assert.AreEqual(entity.MidtermGrading4Complete.Count, 2);
+                Assert.AreEqual(entity.MidtermGrading5Complete.Count, 2);
+                Assert.AreEqual(entity.MidtermGrading6Complete.Count, 2);
+
+                // Test that each the date and time pairs in the database were converted to universal time
+                DateTime? aDate;
+                DateTime? aTime;
+
+                aDate = new DateTime(2010, 1, 1);
+                aTime = new DateTime(1900, 1, 1, 1, 1, 1);
+                DateTimeOffset? Grade1_1_DateAndTime = aTime.ToPointInTimeDateTimeOffset(aDate, colleagueTimeZone);
+                aDate = new DateTime(2010, 1, 2);
+                aTime = new DateTime(1900, 1, 1, 1, 1, 2);
+                DateTimeOffset? Grade1_2_DateAndTime = aTime.ToPointInTimeDateTimeOffset(aDate, colleagueTimeZone);
+                aDate = new DateTime(2010, 1, 3);
+                aTime = new DateTime(1900, 1, 1, 1, 1, 3);
+                DateTimeOffset? Grade2_1_DateAndTime = aTime.ToPointInTimeDateTimeOffset(aDate, colleagueTimeZone);
+                aDate = new DateTime(2010, 1, 4);
+                aTime = new DateTime(1900, 1, 1, 1, 1, 4);
+                DateTimeOffset? Grade2_2_DateAndTime = aTime.ToPointInTimeDateTimeOffset(aDate, colleagueTimeZone);
+                aDate = new DateTime(2010, 1, 5);
+                aTime = new DateTime(1900, 1, 1, 1, 1, 5);
+                DateTimeOffset? Grade3_1_DateAndTime = aTime.ToPointInTimeDateTimeOffset(aDate, colleagueTimeZone);
+                aDate = new DateTime(2010, 1, 6);
+                aTime = new DateTime(1900, 1, 1, 1, 1, 6);
+                DateTimeOffset? Grade3_2_DateAndTime = aTime.ToPointInTimeDateTimeOffset(aDate, colleagueTimeZone);
+                aDate = new DateTime(2010, 1, 7);
+                aTime = new DateTime(1900, 1, 1, 1, 1, 7);
+                DateTimeOffset? Grade4_1_DateAndTime = aTime.ToPointInTimeDateTimeOffset(aDate, colleagueTimeZone);
+                aDate = new DateTime(2010, 1, 8);
+                aTime = new DateTime(1900, 1, 1, 1, 1, 8);
+                DateTimeOffset? Grade4_2_DateAndTime = aTime.ToPointInTimeDateTimeOffset(aDate, colleagueTimeZone);
+                aDate = new DateTime(2010, 1, 9);
+                aTime = new DateTime(1900, 1, 1, 1, 1, 9);
+                DateTimeOffset? Grade5_1_DateAndTime = aTime.ToPointInTimeDateTimeOffset(aDate, colleagueTimeZone);
+                aDate = new DateTime(2010, 1, 10);
+                aTime = new DateTime(1900, 1, 1, 1, 1, 10);
+                DateTimeOffset? Grade5_2_DateAndTime = aTime.ToPointInTimeDateTimeOffset(aDate, colleagueTimeZone);
+                aDate = new DateTime(2010, 1, 11);
+                aTime = new DateTime(1900, 1, 1, 1, 1, 11);
+                DateTimeOffset? Grade6_1_DateAndTime = aTime.ToPointInTimeDateTimeOffset(aDate, colleagueTimeZone);
+                aDate = new DateTime(2010, 1, 12);
+                aTime = new DateTime(1900, 1, 1, 1, 1, 12);
+                DateTimeOffset? Grade6_2_DateAndTime = aTime.ToPointInTimeDateTimeOffset(aDate, colleagueTimeZone);
+
+                Assert.AreEqual(entity.MidtermGrading1Complete[0].DateAndTime, Grade1_1_DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading1Complete[0].CompleteOperator, "Oper1");
+                Assert.AreEqual(entity.MidtermGrading1Complete[1].DateAndTime, Grade1_2_DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading1Complete[1].CompleteOperator, "Oper2");
+                Assert.AreEqual(entity.MidtermGrading2Complete[0].DateAndTime, Grade2_1_DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading2Complete[0].CompleteOperator, "Oper3");
+                Assert.AreEqual(entity.MidtermGrading2Complete[1].DateAndTime, Grade2_2_DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading2Complete[1].CompleteOperator, "Oper4");
+                Assert.AreEqual(entity.MidtermGrading3Complete[0].DateAndTime, Grade3_1_DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading3Complete[0].CompleteOperator, "Oper5");
+                Assert.AreEqual(entity.MidtermGrading3Complete[1].DateAndTime, Grade3_2_DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading3Complete[1].CompleteOperator, "Oper6");
+                Assert.AreEqual(entity.MidtermGrading4Complete[0].DateAndTime, Grade4_1_DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading4Complete[0].CompleteOperator, "Oper7");
+                Assert.AreEqual(entity.MidtermGrading4Complete[1].DateAndTime, Grade4_2_DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading4Complete[1].CompleteOperator, "Oper8");
+                Assert.AreEqual(entity.MidtermGrading5Complete[0].DateAndTime, Grade5_1_DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading5Complete[0].CompleteOperator, "Oper9");
+                Assert.AreEqual(entity.MidtermGrading5Complete[1].DateAndTime, Grade5_2_DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading5Complete[1].CompleteOperator, "Oper10");
+                Assert.AreEqual(entity.MidtermGrading6Complete[0].DateAndTime, Grade6_1_DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading6Complete[0].CompleteOperator, "Oper11");
+                Assert.AreEqual(entity.MidtermGrading6Complete[1].DateAndTime, Grade6_2_DateAndTime);
+                Assert.AreEqual(entity.MidtermGrading6Complete[1].CompleteOperator, "Oper12");
+            }
+        }
+
 
         #region Private helper methods - static so they can be used in any of the above subclasses
 

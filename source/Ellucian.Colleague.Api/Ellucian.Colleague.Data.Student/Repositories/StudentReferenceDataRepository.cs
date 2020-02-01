@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Student.DataContracts;
@@ -226,6 +226,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         public async Task<AcademicProgram> GetAcademicProgramByGuidAsync(string guid)
         {
             GuidLookupResult lookupResult = await GetGuidLookupResultFromGuidAsync(guid);
+
+            if (lookupResult.Entity != "ACAD.PROGRAMS")
+            {
+                var ex = new RepositoryException();
+                var msg = "GUID " + guid + " has different entity, " + lookupResult.Entity + ", than expected, ACAD.PROGRAMS";
+                ex.AddError(new Domain.Entities.RepositoryError("GUID.Wrong.Type", msg));
+                throw ex;
+            }
             AcadPrograms acadProgram = await DataReader.ReadRecordAsync<AcadPrograms>(lookupResult.PrimaryKey, true);
             return BuildAcademicProgram(acadProgram, guid);
         }
@@ -254,7 +262,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 LocalCourseClassifications = ap.AcpgLocalGovtCodes,
                 DeptartmentCodes = ap.AcpgDepts,
                 Location = ap.AcpgLocations,
-                AuthorizingInstitute = ap.AcpgApprovalAgencyIds
+                AuthorizingInstitute = ap.AcpgApprovalAgencyIds,
+                AddnlCcds = ap.AcpgAddnlCcds,
+                AddnlMajors = ap.AcpgAddnlMajors,
+                AddnlMinors = ap.AcpgAddnlMinors,
+                AddnlSpecializations = ap.AcpgAddnlSpecializations
             };
             return prog;
         }
@@ -318,7 +330,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         }
 
         /// <summary>
-        /// Gets AccountingCodes
+        /// Gets DistributionMethod
         /// </summary>
         /// <param name="ignoreCache"></param>
         /// <returns></returns>
@@ -326,6 +338,90 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         {
             return await GetGuidCodeItemAsync<ArCodes, DistributionMethod>("AllDistrMethods", "DISTRIBUTION",
             (ac, g) => new DistributionMethod(g, ac.Recordkey, ac.ArcDesc), bypassCache: ignoreCache);
+        }
+
+        /// <summary>
+        /// Get guid for DistributionMethod code
+        /// </summary>
+        /// <param name="code">Distribution code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetDistrMethodGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetDistrMethodCodesAsync(false);
+            DistributionMethod codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
+
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetDistrMethodCodesAsync(true);
+                if (allCodesCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'DISTRIBUTION', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'DISTRIBUTION', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'DISTRIBUTION', Record ID:'", code, "'"));
+            }
+            return guid;
+        }
+
+        /// <summary>
+        /// Get code for DistributionMethod guid
+        /// </summary>
+        /// <param name="code">DistributionMethod guid</param>
+        /// <returns>code</returns>
+        public async Task<string> GetDistrMethodCodeFromGuidAsync(string guid)
+        {
+            //get all the codes from the cache
+            string code = string.Empty;
+            if (string.IsNullOrEmpty(guid))
+                return code;
+            var allCodesCache = await GetDistrMethodCodesAsync(false);
+            DistributionMethod codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Guid.Equals(guid, StringComparison.OrdinalIgnoreCase));
+            }
+
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetDistrMethodCodesAsync(true);
+                if (allCodesCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No code found, Entity:'DISTRIBUTION', Record ID:'", guid, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Guid.Equals(guid, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    code = codeNoCache.Code;
+                else
+                    throw new RepositoryException(string.Concat("No code found, Entity:'DISTRIBUTION', Record ID:'", guid, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Code))
+                    code = codeCache.Code;
+                else
+                    throw new RepositoryException(string.Concat("No code found, Entity:'DISTRIBUTION', Record ID:'", guid, "'"));
+            }
+            return code;
         }
 
         /// <summary>
@@ -337,6 +433,91 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         {
             return await GetGuidCodeItemAsync<ArTypes, AccountReceivableType>("AllEEDMAccountReceivableTypes", "AR.TYPES",
             (ar, g) => new AccountReceivableType(g, ar.Recordkey, ar.ArtDesc), bypassCache: ignoreCache);
+        }
+
+
+        /// <summary>
+        /// Get guid for AccountReceivableTypes code
+        /// </summary>
+        /// <param name="code">AccountReceivableTypes code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetAccountReceivableTypesGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetAccountReceivableTypesAsync(false);
+            AccountReceivableType codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
+
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetAccountReceivableTypesAsync(true);
+                if (allCodesCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'AR.TYPES', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'AR.TYPES', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'AR.TYPES', Record ID:'", code, "'"));
+            }
+            return guid;
+        }
+
+        /// <summary>
+        /// Get code for AccountReceivableTypes guid
+        /// </summary>
+        /// <param name="code">AccountReceivableTypes guid</param>
+        /// <returns>code</returns>
+        public async Task<string> GetAccountReceivableTypesCodeFromGuidAsync(string guid)
+        {
+            //get all the codes from the cache
+            string code = string.Empty;
+            if (string.IsNullOrEmpty(guid))
+                return code;
+            var allCodesCache = await GetAccountReceivableTypesAsync(false);
+            AccountReceivableType codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Guid.Equals(guid, StringComparison.OrdinalIgnoreCase));
+            }
+
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetAccountReceivableTypesAsync(true);
+                if (allCodesCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No code found, Entity:'AR.TYPES', Record ID:'", guid, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Guid.Equals(guid, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    code = codeNoCache.Code;
+                else
+                    throw new RepositoryException(string.Concat("No code found, Entity:'AR.TYPES', Record ID:'", guid, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Code))
+                    code = codeCache.Code;
+                else
+                    throw new RepositoryException(string.Concat("No code found, Entity:'AR.TYPES', Record ID:'", guid, "'"));
+            }
+            return code;
         }
 
         /// <summary>
@@ -582,9 +763,18 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             var admissionPopulationsRecords = await DataReader.BulkReadRecordAsync<DataContracts.AdmitStatuses>("ADMIT.STATUSES", "");
             foreach (var admissionPopulationsRecord in admissionPopulationsRecords)
             {
-
-                var admissionPopulation = new AdmissionPopulation(admissionPopulationsRecord.RecordGuid, admissionPopulationsRecord.Recordkey, admissionPopulationsRecord.AdmsDesc);
-                admissionPopulationsEntities.Add(admissionPopulation);
+                if ((!string.IsNullOrEmpty(admissionPopulationsRecord.RecordGuid)) && (!string.IsNullOrEmpty(admissionPopulationsRecord.Recordkey)) && (!string.IsNullOrEmpty(admissionPopulationsRecord.AdmsDesc)))
+                {
+                    var admissionPopulation = new AdmissionPopulation(admissionPopulationsRecord.RecordGuid, admissionPopulationsRecord.Recordkey, admissionPopulationsRecord.AdmsDesc);
+                    admissionPopulationsEntities.Add(admissionPopulation);
+                }
+                else
+                {
+                    if ((!string.IsNullOrEmpty(admissionPopulationsRecord.Recordkey)) && (string.IsNullOrEmpty(admissionPopulationsRecord.RecordGuid)))
+                    {
+                        throw new RepositoryException(string.Concat("Missing GUID for ADMIT.STATUSES record ID:'", admissionPopulationsRecord.Recordkey, "'"));
+                    }
+                }
             }
             return admissionPopulationsEntities;
         }
@@ -665,6 +855,47 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return advisorTypes.Where(at => at != null).ToList();
         }
 
+        /// <summary>
+        /// Get guid for AdvisorTypesGuid code
+        /// </summary>
+        /// <param name="code">AdmissionResidencyTypes code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetAdvisorTypeGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetAdvisorTypesAsync(false);
+            AdvisorType codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
+
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetAdvisorTypesAsync(true);
+                if (allCodesCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'ADVISOR.TYPES', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'ADVISOR.TYPES', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'ADVISOR.TYPES', Record ID:'", code, "'"));
+            }
+            return guid;
+        }
 
         public async Task<IEnumerable<AdmittedStatus>> GetAdmittedStatusesAsync()
         {
@@ -888,6 +1119,18 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return admissionDecisionEntities;
         }
 
+        /// <summary>
+        /// Get an admission decision type
+        /// </summary>
+        /// <param name="guid">admission decision type GUID</param>
+        /// <returns>admission decision type</returns>
+        public async Task<AdmissionDecisionType> GetAdmissionDecisionTypeByGuidAsync(string guid)
+        {
+            GuidLookupResult lookupResult = await GetGuidLookupResultFromGuidAsync(guid);
+            ApplicationStatuses applicationStatus = await DataReader.ReadRecordAsync<ApplicationStatuses>(lookupResult.PrimaryKey, true);
+            return new AdmissionDecisionType(guid, applicationStatus.Recordkey, !string.IsNullOrEmpty(applicationStatus.AppsDesc) ? applicationStatus.AppsDesc : applicationStatus.Recordkey)
+            { AdmissionApplicationStatusTypesCategory = GetAdmissionApplicationType2(applicationStatus.AppsSpecialProcessingCode), SpecialProcessingCode = applicationStatus.AppsSpecialProcessingCode };
+        }
 
         ///// <summary>
         ///// Gets & caches application decision types EEDM v11
@@ -1149,20 +1392,20 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 var allCodesNoCache = await GetCourseStatusesAsync(true);
                 if (allCodesCache == null)
                 {
-                    throw new RepositoryException(string.Concat("No Guid found, Entity:'ST.VALOCDES - COURSE.STATUSES ', Record ID:'", code, "'"));
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'ST.VALCODES - COURSE.STATUSES ', Record ID:'", code, "'"));
                 }
                 var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
                 if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
                     guid = codeNoCache.Guid;
                 else
-                    throw new RepositoryException(string.Concat("No Guid found, Entity:'ST.VALOCDES - COURSE.STATUSES', Record ID:'", code, "'"));
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'ST.VALCODES - COURSE.STATUSES', Record ID:'", code, "'"));
             }
             else
             {
                 if (!string.IsNullOrEmpty(codeCache.Guid))
                     guid = codeCache.Guid;
                 else
-                    throw new RepositoryException(string.Concat("No Guid found, Entity:'ST.VALOCDES - COURSE.STATUSES', Record ID:'", code, "'"));
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'ST.VALCODES - COURSE.STATUSES', Record ID:'", code, "'"));
             }
             return guid;
 
@@ -1407,9 +1650,103 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns>Collection of grade schemes</returns>
         public async Task<IEnumerable<GradeScheme>> GetGradeSchemesAsync(bool ignoreCache)
         {
-            return await GetGuidCodeItemAsync<GradeSchemes, GradeScheme>("AllGradeSchemes", "GRADE.SCHEMES",
-                (gs, g) => new GradeScheme(g, gs.Recordkey, gs.GrsDesc) { EffectiveStartDate = gs.GrsStartDate, EffectiveEndDate = gs.GrsEndDate }, bypassCache: ignoreCache);
+            var gradeSchemes = await GetOrAddToCacheAsync<List<GradeScheme>>("AllGradeSchemes",
+                async () =>
+                {
+                    Collection<GradeSchemes> gradeSchemesData = await DataReader.BulkReadRecordAsync<GradeSchemes>("");
+                    var gradeSchemeList = BuildGradeSchemes(gradeSchemesData);
+                    return gradeSchemeList;
+                }
+            );
+            return gradeSchemes;
         }
+
+        /// <summary>
+        /// Convert a list of Grade Schemes data contract objects to a list of <see cref="GradeScheme"/> entity objects
+        /// </summary>
+        /// <param name="gradeSchemeData"> The list of GradeSchemes objects to convert</param>
+        /// <returns></returns>
+
+        private List<GradeScheme> BuildGradeSchemes(Collection<GradeSchemes> gradeSchemeData)
+        {
+            var gradeSchemes = new List<GradeScheme>();
+            // If no data passed in, return a null collection
+            if (gradeSchemeData != null)
+            {
+                foreach (var grdScheme in gradeSchemeData)
+                {
+                    try
+                    {
+                        var gradeScheme = new GradeScheme(grdScheme.Recordkey, grdScheme.GrsDesc);
+                        gradeScheme.Guid = grdScheme.RecordGuid;
+                        gradeScheme.EffectiveStartDate = grdScheme.GrsStartDate;
+                        gradeScheme.EffectiveEndDate = grdScheme.GrsEndDate;
+                        if (grdScheme.GrsGrades != null && grdScheme.GrsGrades.Any())
+                        {
+                            grdScheme.GrsGrades.ForEach(gs => gradeScheme.AddGradeCode(gs));
+                        }
+                        gradeSchemes.Add(gradeScheme);
+                    }
+                    catch (Exception ex)
+                    {
+                        LogDataError("GradeScheme", grdScheme.Recordkey, grdScheme, ex);
+                    }
+
+                }
+            }
+            return gradeSchemes;
+        }
+
+        /// <summary>
+        /// Get a collection of grade subschemes
+        /// </summary>
+        /// <returns>Collection of grade subschemes</returns>
+        public async Task<IEnumerable<GradeSubscheme>> GetGradeSubschemesAsync()
+        {
+            var gradeSubschemes = await GetOrAddToCacheAsync<List<GradeSubscheme>>("AllGradeSubschemes",
+                async () =>
+                {
+                    Collection<GradeSubschemes> gradeSubschemesData = await DataReader.BulkReadRecordAsync<GradeSubschemes>("");
+                    var gradeSubschemeList = BuildGradeSubschemes(gradeSubschemesData);
+                    return gradeSubschemeList;
+                }
+            );
+            return gradeSubschemes;
+        }
+
+        /// <summary>
+        /// Convert a list of Grade Subschemes data contract objects to a list of <see cref="GradeSubscheme"/> entity objects
+        /// </summary>
+        /// <param name="gradeSubschemesData"> The list of GradeSubschemes objects to convert</param>
+        /// <returns></returns>
+
+        private List<GradeSubscheme> BuildGradeSubschemes(Collection<GradeSubschemes> gradeSubschemesData)
+        {
+            var gradeSubschemes = new List<GradeSubscheme>();
+            // If no data passed in, return a null collection
+            if (gradeSubschemesData != null)
+            {
+                foreach (var grdSubscheme in gradeSubschemesData)
+                {
+                    try
+                    {
+                        var gradeSubscheme = new GradeSubscheme(grdSubscheme.Recordkey, grdSubscheme.GssDescription);
+                        if (grdSubscheme.GssGrades != null && grdSubscheme.GssGrades.Any())
+                        {
+                            grdSubscheme.GssGrades.ForEach(gs => gradeSubscheme.AddGradeCode(gs));
+                        }
+                        gradeSubschemes.Add(gradeSubscheme);
+                    }
+                    catch (Exception ex)
+                    {
+                        LogDataError("GradeSubscheme", grdSubscheme.Recordkey, grdSubscheme, ex);
+                    }
+
+                }
+            }
+            return gradeSubschemes;
+        }
+
 
         /// <summary>
         /// Get guid for GradeScheme code
@@ -1529,7 +1866,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 if (string.IsNullOrEmpty(record.RecordGuid))
                 {
-                    throw new ArgumentNullException("RecordGuid", string.Format("The GUID is missing for INSTR.METHODS entity '{0}'.", record.Recordkey));
+                    throw new ArgumentNullException("guid", string.Format("No Guid found, Entity:'INSTR.METHODS', Record ID:'{0}'", record.Recordkey));
                 }
                 instructionalMethodEntities.Add(new InstructionalMethod(record.RecordGuid, record.Recordkey, !string.IsNullOrEmpty(record.InmDesc) ? record.InmDesc : record.Recordkey, record.InmOnline == "Y"));
             }
@@ -1779,7 +2116,48 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
         }
 
-        
+        /// <summary>
+        /// Get guid for MealPlan code
+        /// </summary>
+        /// <param name="code">MealPlan code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetMealPlanGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetMealPlansAsync(false);
+            MealPlan codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
+
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetMealPlansAsync(true);
+                if (allCodesCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'MEAL.PLANS', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'MEAL.PLANS', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'MEAL.PLANS', Record ID:'", code, "'"));
+            }
+            return guid;
+        }
+
         private async Task<IEnumerable<MealPlan>> BuildAllMealPlans()
         {
             var mealPlanEntities = new List<MealPlan>();
@@ -1973,17 +2351,86 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns>Collection of student academic credit statuses</returns>
         public async Task<IEnumerable<SectionRegistrationStatusItem>> GetStudentAcademicCreditStatusesAsync(bool ignoreCache = false)
         {
+            var exception = new RepositoryException();
             var statusItems = new List<SectionRegistrationStatusItem>();
             var statusList = await GetGuidValcodeAsync<SectionRegistrationStatusItem>("ST", "STUDENT.ACAD.CRED.STATUSES",
                 (cs, g) =>
-                    new SectionRegistrationStatusItem(g, cs.ValInternalCodeAssocMember, 
-                    (string.IsNullOrEmpty(cs.ValExternalRepresentationAssocMember) ? cs.ValInternalCodeAssocMember : cs.ValExternalRepresentationAssocMember))
+                    {
+                        SectionRegistrationStatusItem sectionRegistrationStatus = null;
+                        try
                         {
-                        Status = GetSectionRegistrationStatus(cs.ValActionCode1AssocMember),
-                        Category = ConvertTransferStatuses(cs.ValActionCode1AssocMember)
+                            sectionRegistrationStatus = new SectionRegistrationStatusItem(g, cs.ValInternalCodeAssocMember,
+                            (string.IsNullOrEmpty(cs.ValExternalRepresentationAssocMember) ? cs.ValInternalCodeAssocMember : cs.ValExternalRepresentationAssocMember))
+                            {
+                                Status = GetSectionRegistrationStatus(cs.ValActionCode1AssocMember),
+                                Category = ConvertTransferStatuses(cs.ValActionCode1AssocMember)
+                            };
                         }
-                    , bypassCache: ignoreCache);                        
+                        catch (Exception ex)
+                        {
+                            exception.AddError(new Domain.Entities.RepositoryError("Missing.Required.Property", "Invalid STUDENT.ACAD.CRED.STATUSES table entry. " + ex.Message)
+                            {
+                                Id = g,
+                                SourceId = cs.ValInternalCodeAssocMember
+                            });
+                        }
+                        if (exception != null && exception.Errors != null && exception.Errors.Any())
+                        {
+                            return null;
+                        }
+                        return sectionRegistrationStatus;
+                    },
+                bypassCache: ignoreCache);
+
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
+            else
+            {
+                foreach (var status in statusList)
+                {
+                    if (status == null)
+                    {
+                        exception.AddError(new Domain.Entities.RepositoryError("Missing.Required.Property", "Invalid STUDENT.ACAD.CRED.STATUSES table entry. Value cannot be null.  Parameter name: guid"));
+                        throw exception;
+                    }
+                }
+            }
             return statusList;
+        }
+
+        /// <summary>
+        /// Return a list of section-registration-statuses that should be included in the headcount enumeration
+        /// </summary>
+        /// <param name="ignoreCache"></param>
+        /// <returns>List of statuses to be included in headcount enumeration</returns>
+        public async Task<List<string>> GetHeadcountInclusionListAsync(bool ignoreCache = false)
+        {
+            var exception = new RepositoryException();
+            List<string> headCountInclusionList = new List<string>();
+            if (ignoreCache)
+            {
+                ClearCache(new List<string>() { "LdmDefaultsHeadcountInclusion" });
+            }
+            headCountInclusionList = await GetOrAddToCacheAsync<List<string>>("LdmDefaultsHeadcountInclusion",
+                async () =>
+                {
+                    var ldmDefaults = await DataReader.ReadRecordAsync<LdmDefaults>("CORE.PARMS", "LDM.DEFAULTS");
+
+                    if (ldmDefaults == null)
+                    {
+                        exception.AddError(new Domain.Entities.RepositoryError("Missing.Required.Property", "CDM configuration setup not complete")
+                        {
+                            Id = "CORE.PARMS",
+                            SourceId = "LDM.DEFAULTS"
+                        });
+                        throw exception;
+                    }
+                    return ldmDefaults.LdmdIncludeEnrlHeadcounts;
+                });
+
+            return headCountInclusionList;
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
@@ -2111,7 +2558,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     return new SectionRegistrationStatus() { RegistrationStatus = RegistrationStatus.NotRegistered, SectionRegistrationStatusReason = RegistrationStatusReason.Dropped };
                 case "6":
                     return new SectionRegistrationStatus() { RegistrationStatus = RegistrationStatus.NotRegistered, SectionRegistrationStatusReason = RegistrationStatusReason.Canceled };
-                
                 default:
                     return new SectionRegistrationStatus() { RegistrationStatus = RegistrationStatus.NotRegistered, SectionRegistrationStatusReason = RegistrationStatusReason.Transfer };
             }
@@ -2243,7 +2689,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         public async Task<IEnumerable<StudentStatus>> GetStudentStatusesAsync(bool ignoreCache)
         {
             return await GetGuidValcodeAsync<StudentStatus>("ST", "STUDENT.TERM.STATUSES",
-                (ss, g) => new StudentStatus(g, ss.ValInternalCodeAssocMember, ss.ValExternalRepresentationAssocMember), bypassCache: ignoreCache);
+                (ss, g) => new StudentStatus(g, ss.ValInternalCodeAssocMember, 
+                ss.ValExternalRepresentationAssocMember, ss.ValActionCode1AssocMember), bypassCache: ignoreCache);
         }
 
         /// <summary>
@@ -2757,8 +3204,80 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns></returns>
         public async Task<IEnumerable<StudentCohort>> GetAllStudentCohortAsync(bool bypassCache)
         {
+            List<StudentCohort> cohorts = new List<StudentCohort>();
+
+            var instCohorts = await GetAllInstitutionCohortAsync(bypassCache);
+            var fedCohorts = await GetAllFedCohortAsync(bypassCache);
+
+            cohorts.AddRange(instCohorts);
+            cohorts.AddRange(fedCohorts);
+
+            return cohorts;
+        }
+
+        /// <summary>
+        /// Get guid for AcademicLevels code
+        /// </summary>
+        /// <param name="code">AcademicLevels code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetStudentCohortGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetAllStudentCohortAsync(false);
+            StudentCohort codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
+
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetAllStudentCohortAsync(true);
+                if (allCodesCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'ACAD.LEVELS', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'ACAD.LEVELS', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'ACAD.LEVELS', Record ID:'", code, "'"));
+            }
+            return guid;
+
+        }
+
+        /// <summary>
+        /// Returns student cohorts entities
+        /// </summary>
+        /// <param name="bypassCache"></param>
+        /// <returns></returns>
+        private async Task<IEnumerable<StudentCohort>> GetAllInstitutionCohortAsync(bool bypassCache)
+        {
             return await GetGuidValcodeAsync<StudentCohort>("ST", "INSTITUTION.COHORTS",
-                (gcr, g) => new StudentCohort(g, gcr.ValInternalCodeAssocMember, gcr.ValExternalRepresentationAssocMember), bypassCache: bypassCache);
+                (gcr, g) => new StudentCohort(g, gcr.ValInternalCodeAssocMember, gcr.ValExternalRepresentationAssocMember) { CohortType = "INSTITUTION" }, bypassCache: bypassCache);
+        }
+
+        /// <summary>
+        /// Returns student cohorts entities
+        /// </summary>
+        /// <param name="bypassCache"></param>
+        /// <returns></returns>
+        private async Task<IEnumerable<StudentCohort>> GetAllFedCohortAsync(bool bypassCache)
+        {
+            return await GetGuidValcodeAsync<StudentCohort>("ST", "FED.COHORTS",
+                (gcr, g) => new StudentCohort(g, gcr.ValInternalCodeAssocMember, gcr.ValExternalRepresentationAssocMember) { CohortType = "FED" }, bypassCache: bypassCache);
         }
 
         /// <summary>
@@ -3080,6 +3599,48 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         }
 
         /// <summary>
+        /// Get guid for WithdrawReasons code
+        /// </summary>
+        /// <param name="code">WithdrawReasons code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetSectionTitleTypesGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetSectionTitleTypesAsync(false);
+            SectionTitleType codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.ToUpper().Equals(code.ToUpper(), StringComparison.OrdinalIgnoreCase));
+            }
+
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetSectionTitleTypesAsync(true);
+                if (allCodesCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'INTG.SEC.TITLE.TYPES', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.ToUpper().Equals(code.ToUpper(), StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'INTG.SEC.TITLE.TYPES', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'INTG.SEC.TITLE.TYPES', Record ID:'", code, "'"));
+            }
+            return guid;
+        }
+
+        /// <summary>
         /// Get a collection of SectionDescriptionType
         /// </summary>
         /// <param name="ignoreCache">Bypass cache flag</param>
@@ -3089,6 +3650,48 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return await GetGuidValcodeAsync<SectionDescriptionType>("ST", "INTG.SEC.DESC.TYPES",
                 (sdt, g) => new SectionDescriptionType(g, sdt.ValInternalCodeAssocMember, (string.IsNullOrEmpty(sdt.ValExternalRepresentationAssocMember)
                     ? sdt.ValInternalCodeAssocMember : sdt.ValExternalRepresentationAssocMember)), bypassCache: ignoreCache);
+        }
+
+        /// <summary>
+        /// Gets a GUID for SectionDescriptionType.
+        /// </summary>
+        /// <param name="code"></param>
+        /// <returns></returns>
+        public async Task<string> GetSectionDescriptionTypesGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetSectionDescriptionTypesAsync(false);
+            SectionDescriptionType codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.ToUpper().Equals(code.ToUpper(), StringComparison.OrdinalIgnoreCase));
+            }
+
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetSectionDescriptionTypesAsync(true);
+                if (allCodesCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'INTG.SEC.DESC.TYPES', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.ToUpper().Equals(code.ToUpper(), StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'INTG.SEC.DESC.TYPES', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'INTG.SEC.DESC.TYPES', Record ID:'", code, "'"));
+            }
+            return guid;
         }
 
         /// <summary>
@@ -3221,6 +3824,18 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return await GetGuidCodeItemAsync<ReportFundTypes, FinancialAidFundClassification>("AllFinancialAidFundClassifications", "REPORT.FUND.TYPES",
                 (fa, g) => new FinancialAidFundClassification(g, fa.RftFundTypeCode, String.IsNullOrEmpty(fa.RftTitle) ? fa.RftFundTypeCode : fa.RftTitle)
                 { Description2 = fa.RftDesc, FundingTypeCode = fa.Recordkey }, bypassCache: ignoreCache);
+        }
+
+        /// <summary>
+        /// Return a Unidata Formatted Date string from an input argument of string type
+        /// </summary>
+        /// <param name="date">String representing a Date</param>
+        /// <returns>Unidata formatted Date string for use in Colleague Selection.</returns>
+        public async Task<string> GetUnidataFormattedDate(string date)
+        {
+            var internationalParameters = await GetInternationalParametersAsync();
+            var newDate = DateTime.Parse(date).Date;
+            return UniDataFormatter.UnidataFormatDate(newDate, internationalParameters.HostShortDateFormat, internationalParameters.HostDateDelimiter);
         }
 
         /// <summary>

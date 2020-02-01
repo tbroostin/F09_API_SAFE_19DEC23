@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -144,6 +144,9 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// If failure, returns the exception information. If failure due to existing waiver found for the given student and section,
         /// also returns resource locator to use to retrieve the existing item.
         /// </returns>
+        /// <accessComments>
+        /// A user with CREATE.PREREQUISITE.WAIVER permission can create a new Section Requisite Waiver.
+        /// </accessComments>
         public async Task<HttpResponseMessage> PostStudentWaiverAsync([FromBody]Dtos.Student.StudentWaiver waiver)
         {
             try
@@ -176,6 +179,19 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="studentId">The section Id to use to retrieve waivers</param>
         /// <returns>List of <see cref="Dtos.Student.StudentWaiver">Waiver</see> objects</returns>
+        /// <accessComments>
+        /// 1. User must be requesting their own data.
+        /// 2. An Advisor with any of the following codes is accessing the student's data if the student is not assigned advisee.
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// 3. An Advisor with any of the following codes is accessing the student's data if the student is assigned advisee.
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// </accessComments>
         public async Task<IEnumerable<Dtos.Student.StudentWaiver>> GetStudentWaiversAsync(string studentId)
         {
             if (string.IsNullOrEmpty(studentId))

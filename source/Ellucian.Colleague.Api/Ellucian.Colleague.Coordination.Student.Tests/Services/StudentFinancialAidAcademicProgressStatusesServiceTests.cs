@@ -304,9 +304,20 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     await studentFAAcademicProgressStatusesService.GetStudentFinancialAidAcademicProgressStatusesAsync(0, 100, null, false);
                 }
 
+
+                [TestMethod]
+                public async Task StudentFAAPSService_GetStudentFinancialAidAcademicProgressStatusesAsync_Person_BadLookupData_NoException()
+                {
+                    personRepositoryMock.Setup(pr => pr.GetPersonIdFromGuidAsync(It.IsAny<string>())).ThrowsAsync(new KeyNotFoundException());
+                    Dtos.StudentFinancialAidAcademicProgressStatuses criteria = new StudentFinancialAidAcademicProgressStatuses();
+                    criteria.Person = new GuidObject2("12345678");
+                    await studentFAAcademicProgressStatusesService.GetStudentFinancialAidAcademicProgressStatusesAsync(0, 100, criteria, false);
+
+                }
+
                 #endregion
 
-                #region GETBYID
+                    #region GETBYID
                 [TestMethod]
                 [ExpectedException(typeof(PermissionsException))]
                 public async Task StudentFAAPSService_GetStudentFinancialAidAcademicProgressStatusesByGuidAsync_PermissionsException()

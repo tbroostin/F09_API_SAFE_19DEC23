@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -45,11 +45,14 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Get all of a person's correspondence requests.
         /// </summary>
         /// <accessComments>
-        /// Users may request their own data. 
+        /// Users may request their own correspondence requests.
+        /// Proxy users who have been granted General Required Documents (CORD) proxy access permission
+        /// may view the grantor's correspondence requests.
         /// </accessComments>
         /// <param name="personId">The Id of the person for whom to get correspondence requests</param>
         /// <returns>A list of CorrespondenceRequests objects</returns>
-        /// <exception cref="HttpResponseException">Thrown if the personId argument is null, empty or does not match the current user</exception>        
+        /// <exception cref="HttpResponseException">Thrown if the personId argument is null, empty,
+        /// or the user does not have access to the person's correspondence requests</exception>        
         public async Task<IEnumerable<CorrespondenceRequest>> GetCorrespondenceRequestsAsync([FromUri] string personId = "")
         {
             if (string.IsNullOrEmpty(personId))

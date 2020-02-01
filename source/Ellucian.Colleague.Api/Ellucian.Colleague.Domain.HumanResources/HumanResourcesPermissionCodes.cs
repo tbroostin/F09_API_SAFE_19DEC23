@@ -125,5 +125,15 @@ namespace Ellucian.Colleague.Domain.HumanResources
         /// In terms of Human Resources, this permission enables users to view person employment proficiencies data. 
         /// </summary>
         public const string ViewPersonEmpProficiencies = "VIEW.PERSON.EMPL.PROFICIENCIES";
+
+        /// <summary>
+        /// In terms of Human Resources, this permission enables users(admins) to view any employee's paid time card history. 
+        /// </summary>
+        public const string ViewAllTimeHistory = "VIEW.ALL.TIME.HISTORY";
+
+        /// <summary>
+        /// In terms of Human Resources, this permission enables users(admins) to view any employee's total compensation statement. 
+        /// </summary>
+        public const string ViewAllTotalCompensation = "VIEW.ALL.TOTAL.COMPENSATION";
     }
 }

@@ -1,4 +1,5 @@
-﻿using Ellucian.Colleague.Data.Base.Tests.Repositories;
+﻿//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Repositories;
 using Ellucian.Data.Colleague;
@@ -133,11 +134,14 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.RoomAssignment>(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<bool>()))
                               .ReturnsAsync(roomAssignments);
+                var results = new Ellucian.Data.Colleague.BulkReadOutput<DataContracts.RoomAssignment>() { BulkRecordsRead = roomAssignments };
+                dataReaderMock.Setup(d => d.BulkReadRecordWithInvalidKeysAndRecordsAsync<DataContracts.RoomAssignment>(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<bool>()))
+                              .ReturnsAsync(results);
 
                 dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.ArAddnlAmts>(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<bool>()))
                               .ReturnsAsync(additionalAmounts);
 
-                var result = await housingAssignmentRepository.GetHousingAssignmentsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>());
+                var result = await housingAssignmentRepository.GetHousingAssignmentsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
 
                 Assert.AreEqual(roomAssignments.Count, result.Item2);
                 Assert.AreEqual(roomAssignments.FirstOrDefault().RecordGuid, result.Item1.FirstOrDefault().Guid);

@@ -29,5 +29,10 @@ namespace Ellucian.Colleague.Dtos.Student
         /// Indicates whether or not course section fee information should be visible in the course catalog
         /// </summary>
         public bool ShowCourseSectionFeeInformation { get; set; }
+
+        /// <summary>
+        /// Indicates whether or not course section book information should be visible in the course catalog's section detail.
+        /// </summary>
+        public bool ShowCourseSectionBookInformation { get; set; }
     }
 }

@@ -1,7 +1,8 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Transactions;
+using Ellucian.Colleague.Domain.Base.Services;
 using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Student.Entities;
@@ -24,11 +25,15 @@ namespace Ellucian.Colleague.Data.Student.Repositories
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class SectionRegistrationRepository : BaseColleagueRepository, ISectionRegistrationRepository
     {
+        private RepositoryException exception;
+        const string AllSectionRegistrationsCache = "AllSectionRegistrationsKeys";
+        const int AllSectionRegistrationsCacheTimeout = 20;
         public SectionRegistrationRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger)
             : base(cacheProvider, transactionFactory, logger)
         {
             // Using level 1 cache time out value for data that rarely changes.
             CacheTimeout = Level1CacheTimeoutValue;
+            exception = new RepositoryException();
         }
         /// <summary>
         /// Register a student into a section using HeDM
@@ -72,7 +77,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
             }
 
-            return new RegistrationResponse(outputMessages, updateResponse.IpcRegId);
+            return new RegistrationResponse(outputMessages, updateResponse.IpcRegId, null);
         }
         /// <summary>
         /// Register a student into a section using HeDM
@@ -215,7 +220,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 if (limitingKeys == null || !limitingKeys.Any())
                 {
-                    criteria = string.Format("WITH SCS.COURSE.SECTION EQ '{0}' SAVING UNIQUE SCS.STUDENT.ACAD.CRED", 
+                    criteria = string.Format("WITH SCS.COURSE.SECTION EQ '{0}' SAVING UNIQUE SCS.STUDENT.ACAD.CRED",
                         sectReg.SectionId);
                     limitingKeys = await DataReader.SelectAsync("STUDENT.COURSE.SEC", criteria);
                     if (limitingKeys == null || !limitingKeys.Any())
@@ -231,7 +236,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     {
                         return new Tuple<IEnumerable<SectionRegistrationResponse>, int>(new List<SectionRegistrationResponse>(), 0);
                     }
-                }                
+                }
             }
 
             //COURSE.SECTIONS (named query)
@@ -272,8 +277,24 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             //This is for GET ALL
             if (string.IsNullOrEmpty(criteria))
             {
-                //May be here get all the id's from PERSON.ST
-                limitingKeys = await DataReader.SelectAsync("STUDENT.ACAD.CRED", "WITH STC.STUDENT.COURSE.SEC NE ''");
+                var sectionRegistrationsCacheKey = "AllSectionRegistrationsKeys";
+                if (offset == 0 && ContainsKey(BuildFullCacheKey(sectionRegistrationsCacheKey)))
+                {
+                    ClearCache(new List<string> { sectionRegistrationsCacheKey });
+                }
+
+                limitingKeys = await GetOrAddToCacheAsync<string[]>(sectionRegistrationsCacheKey,
+                async () =>
+                {
+                    limitingKeys = await DataReader.SelectAsync("STUDENT.ACAD.CRED", "WITH STC.STUDENT.COURSE.SEC NE ''");
+                    Array.Sort(limitingKeys);
+                    return limitingKeys;
+                }, 20);
+            }
+            else
+            {
+                // Execute sort from limitingKeys built from filtering
+                Array.Sort(limitingKeys);
             }
 
             if (limitingKeys == null || !limitingKeys.Any())
@@ -283,7 +304,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             totalCount = limitingKeys.Count();
 
-            Array.Sort(limitingKeys);
+            //Array.Sort(limitingKeys);
             var sublist = limitingKeys.Skip(offset).Take(limit).ToArray();
 
             var studentAcadCredsPage =
@@ -299,7 +320,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 StringBuilder sb = new StringBuilder();
                 sb.Append("Unable to provide all section registrations.  Entity: 'STUDENT.ACAD.CRED' referencing an invalid STC.STUDENT.COURSE.SEC record");
                 sb.Append(", ");
-                missingIds.ToList().ForEach(id => 
+                missingIds.ToList().ForEach(id =>
                 {
                     var stcRec = studentAcadCredsPage.Where(sc => sc.StcStudentCourseSec == id).FirstOrDefault();
                     sb.Append(string.Format("Entity 'STUDENT.ACAD.CRED', ID: '{0}', Guid '{1}' references invalid data. ", stcRec.Recordkey, stcRec.RecordGuid));
@@ -337,6 +358,207 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             return sectionRegistrations.Any() ? new Tuple<IEnumerable<SectionRegistrationResponse>, int>(sectionRegistrations, totalCount) :
                 new Tuple<IEnumerable<SectionRegistrationResponse>, int>(new List<SectionRegistrationResponse>(), 0);
+        }
+
+        /// <summary>
+        /// Section registration with paging and filters with performance changes.
+        /// </summary>
+        /// <param name="offset"></param>
+        /// <param name="limit"></param>
+        /// <param name="sectionId"></param>
+        /// <param name="personId"></param>
+        /// <param name="acadPeriod"></param>
+        /// <param name="sectionInstructor"></param>
+        /// <returns></returns>
+        public async Task<Tuple<IEnumerable<SectionRegistrationResponse>, int>> GetSectionRegistrations3Async(int offset,
+            int limit, SectionRegistrationResponse sectReg, string acadPeriod, string sectionInstructor)
+        {            
+            var sectionRegistrations = new List<SectionRegistrationResponse>();
+            var totalCount = 0;
+            string[] limitingKeys = null;
+            var criteria = string.Empty;
+
+            try
+            {
+
+                string sectionRegistrationsKeys = CacheSupport.BuildCacheKey(AllSectionRegistrationsCache,
+                    sectReg != null && !string.IsNullOrWhiteSpace(sectReg.StudentId) ? sectReg.StudentId : string.Empty,
+                    !string.IsNullOrWhiteSpace(acadPeriod) ? acadPeriod : string.Empty,
+                    sectReg != null && !string.IsNullOrWhiteSpace(sectReg.SectionId) ? sectReg.SectionId : string.Empty,
+                    !string.IsNullOrWhiteSpace(sectionInstructor) ? sectionInstructor : string.Empty);
+
+                var keyCacheObject = await CacheSupport.GetOrAddKeyCacheToCache(
+                    this,
+                    ContainsKey,
+                    GetOrAddToCacheAsync,
+                    AddOrUpdateCacheAsync,
+                    transactionInvoker,
+                    sectionRegistrationsKeys,
+                    "STUDENT.ACAD.CRED",
+                    offset,
+                    limit,
+                    AllSectionRegistrationsCacheTimeout,
+                    async () => {
+                        //STC.PERSON.ID (criteria)
+                        if (sectReg != null && !string.IsNullOrEmpty(sectReg.StudentId))
+                        {
+                            criteria = "WITH PST.STUDENT.ACAD.CRED BY.EXP PST.STUDENT.ACAD.CRED SAVING PST.STUDENT.ACAD.CRED";
+                            var acadCredIds = await DataReader.SelectAsync("PERSON.ST", new string[] { sectReg.StudentId }, criteria);
+                            limitingKeys = await DataReader.SelectAsync("STUDENT.ACAD.CRED", acadCredIds, "WITH STC.STUDENT.COURSE.SEC NE ''");
+                            if (limitingKeys == null || !limitingKeys.Any())
+                            {
+                                return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                            }
+                        }
+
+                        //STC.TERM (named query)
+                        if (!string.IsNullOrWhiteSpace(acadPeriod))
+                        {
+                            criteria = string.Format("WITH STC.TERM EQ '{0}' AND WITH STC.STUDENT.COURSE.SEC NE ''", acadPeriod);
+                            limitingKeys = await DataReader.SelectAsync("STUDENT.ACAD.CRED", limitingKeys, criteria);
+                            if (limitingKeys == null || !limitingKeys.Any())
+                            {
+                                return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                            }
+                        }
+
+                        //SCS.COURSE.SECTION (criteria)
+                        if (sectReg != null && !string.IsNullOrEmpty(sectReg.SectionId))
+                        {
+                            if (limitingKeys == null || !limitingKeys.Any())
+                            {
+                                criteria = string.Format("WITH SCS.COURSE.SECTION EQ '{0}' SAVING UNIQUE SCS.STUDENT.ACAD.CRED",
+                                    sectReg.SectionId);
+                                limitingKeys = await DataReader.SelectAsync("STUDENT.COURSE.SEC", criteria);
+                                if (limitingKeys == null || !limitingKeys.Any())
+                                {
+                                    return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                }
+                            }
+                            else
+                            {
+                                criteria = string.Format("WITH STC.STUDENT.COURSE.SEC NE '' AND WITH SCS.COURSE.SECTION EQ '{0}'", sectReg.SectionId);
+                                limitingKeys = await DataReader.SelectAsync("STUDENT.ACAD.CRED", limitingKeys, criteria);
+                                if (limitingKeys == null || !limitingKeys.Any())
+                                {
+                                    return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                }
+                            }
+                        }
+
+                        //COURSE.SECTIONS (named query)
+                        if (!string.IsNullOrWhiteSpace(sectionInstructor))
+                        {
+                            //get all the ids COURSE.SEC.FACULTY...
+                            criteria = string.Format("WITH CSF.FACULTY EQ '{0}'", sectionInstructor);
+                            var csfId = await DataReader.SelectAsync("COURSE.SEC.FACULTY", criteria);
+                            if (csfId == null || !csfId.Any())
+                            {
+                                return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                            }
+
+                            var instructorCriteria = "SAVING UNIQUE CSF.COURSE.SECTION";
+                            var courseSecIds = await DataReader.SelectAsync("COURSE.SEC.FACULTY", csfId, instructorCriteria);
+                            if (courseSecIds == null || !courseSecIds.Any())
+                            {
+                                return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                            }
+                            criteria = "WITH SCS.COURSE.SECTION EQ '?'";
+                            var stCourseSecIds = await DataReader.SelectAsync("STUDENT.COURSE.SEC", criteria, courseSecIds.Distinct().ToArray());
+
+                            var stAcadCredLimitingKeys = await DataReader.SelectAsync("STUDENT.COURSE.SEC", stCourseSecIds, "SAVING UNIQUE SCS.STUDENT.ACAD.CRED");
+                            if (stAcadCredLimitingKeys == null || !stAcadCredLimitingKeys.Any())
+                            {
+                                return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                            }
+                            if (limitingKeys == null)
+                            {
+                                limitingKeys = stAcadCredLimitingKeys;
+                            }
+                            else
+                            {
+                                limitingKeys = limitingKeys.Intersect(stAcadCredLimitingKeys).ToArray();
+                            }
+                        }
+
+                        return  new CacheSupport.KeyCacheRequirements()
+                        {
+                            limitingKeys = limitingKeys != null && limitingKeys.Any() ? limitingKeys.Distinct().ToList() : null,
+                            criteria = "WITH STC.STUDENT.COURSE.SEC NE ''",
+                        };
+                    });
+
+                if (keyCacheObject == null || keyCacheObject.Sublist == null || !keyCacheObject.Sublist.Any())
+                {
+                    return new Tuple<IEnumerable<SectionRegistrationResponse>, int>(new List<SectionRegistrationResponse>(), 0);
+                }
+
+                totalCount = keyCacheObject.TotalCount.Value;
+
+                //Array.Sort(limitingKeys);
+                var sublist = keyCacheObject.Sublist.ToArray();
+
+                var studentAcadCredsPage =
+                    await DataReader.BulkReadRecordAsync<StudentAcadCred>("STUDENT.ACAD.CRED", sublist);
+
+                var scsKey = studentAcadCredsPage.Select(s => s.StcStudentCourseSec).Distinct();
+                var studentCourseSecs = await DataReader.BulkReadRecordAsync<StudentCourseSec>(scsKey.ToArray());
+
+                if (studentCourseSecs.Count() != sublist.Count())
+                {
+                    var courseSecIds = studentCourseSecs.Select(scs => scs.Recordkey);
+                    var missingIds = scsKey.Except(courseSecIds);
+                    StringBuilder sb = new StringBuilder();
+                    sb.Append("Unable to provide all section registrations.  Entity: 'STUDENT.ACAD.CRED' referencing an invalid STC.STUDENT.COURSE.SEC record");
+                    sb.Append(", ");
+                    missingIds.ToList().ForEach(id =>
+                    {
+                        var stcRec = studentAcadCredsPage.Where(sc => sc.StcStudentCourseSec == id).FirstOrDefault();
+                        sb.Append(string.Format("Entity 'STUDENT.ACAD.CRED', ID: '{0}', Guid '{1}' references invalid data. ", stcRec.Recordkey, stcRec.RecordGuid));
+                        sb.Append(string.Concat("Record not found, Entity: ‘STUDENT.COURSE.SEC’, ID: '", id, "'"));
+                        sb.Append(" ");
+                    });
+                    var repositoryError = new RepositoryException("Error(s) reading data from STUDENT.ACAD.CRED");
+                    repositoryError.AddError(new RepositoryError("sectionRegistrations.Id", sb.ToString()));
+                    throw repositoryError;
+                }
+
+                var crsSecIds = studentCourseSecs.Select(i => i.ScsCourseSection);
+
+                var courseSections = await DataReader.BulkReadRecordAsync<CourseSections>(crsSecIds.Distinct().ToArray());
+
+                //RepositoryException exception = null;
+                foreach (var studentAcadCred in studentAcadCredsPage)
+                {
+                    try
+                    {
+                        SectionRegistrationResponse sectionRegistrationResponse = BuildSectionRegistrationResponse(studentAcadCred, studentCourseSecs, courseSections);
+                        sectionRegistrations.Add(sectionRegistrationResponse);
+                    }
+                    catch (Exception ex)
+                    {
+                        if (exception == null)
+                            exception = new RepositoryException("Unexpected repository error");
+                        exception.AddError(new RepositoryError("sectionRegistrations.id", string.Format("Error(s) processing STUDENT.ACAD.CRED record '{0}' with guid '{1}'.  Error: {2}", studentAcadCred.Recordkey, studentAcadCred.RecordGuid, ex.Message)));
+                    }
+                }
+                if (exception != null && exception.Errors.Any())
+                {
+                    throw exception;
+                }
+
+                return sectionRegistrations.Any() ? new Tuple<IEnumerable<SectionRegistrationResponse>, int>(sectionRegistrations, totalCount) :
+                    new Tuple<IEnumerable<SectionRegistrationResponse>, int>(new List<SectionRegistrationResponse>(), 0);
+            }
+            catch (RepositoryException ex)
+            {
+                throw ex;
+            }
+            catch (Exception e)
+            {
+                exception.AddError(new RepositoryError("Bad.Data", e.Message));
+                throw exception;
+            }
         }
 
 

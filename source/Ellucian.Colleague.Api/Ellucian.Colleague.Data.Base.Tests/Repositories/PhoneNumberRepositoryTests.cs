@@ -1,18 +1,17 @@
-﻿// Copyright 2012-2013 Ellucian Company L.P. and its affiliates.
-using System.Collections.Generic;
-using System.Linq;
-using Moq;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Ellucian.Data.Colleague;
-using System.Runtime.Caching;
-using System.Collections.ObjectModel;
-using Ellucian.Colleague.Data.Base.Repositories;
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
-using slf4net;
-using Ellucian.Web.Cache;
-using System;
+using Ellucian.Colleague.Data.Base.Repositories;
+using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.DataContracts;
-using System.Threading;
+using Ellucian.Web.Cache;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
+using slf4net;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Runtime.Caching;
 using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.Base.Tests.Repositories
@@ -106,13 +105,13 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         }
 
         [TestMethod]
-        public void MultiPersonPhoneCount_Valid()
+        public async Task MultiPersonPhoneCount_Valid()
         {
             var ids = new List<string>();
             ids.Add(personIds.ElementAt(0));
             ids.Add(personIds.ElementAt(1));
             ids.Add(personIds.ElementAt(2));
-            IEnumerable<Ellucian.Colleague.Domain.Base.Entities.PhoneNumber> phoneNumbers = phoneNumberRepo.GetPersonPhonesByIds(ids);
+            IEnumerable<Ellucian.Colleague.Domain.Base.Entities.PhoneNumber> phoneNumbers = await phoneNumberRepo.GetPersonPhonesByIdsAsync(ids);
             Assert.AreEqual(5, phoneNumbers.Count());
             Assert.AreEqual(3, phoneNumbers.ElementAt(0).PhoneNumbers.Count());
             Assert.AreEqual(3, phoneNumbers.ElementAt(1).PhoneNumbers.Count());
@@ -163,8 +162,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 
             // Mock the call for getting multiple person records
             personResponseData = BuildPersonResponseData(personRecords);
-            dataAccessorMock.Setup<ICollection<Person>>(acc => acc.BulkReadRecord<Person>("PERSON", It.IsAny<string[]>(), true)).Returns(personResponseData);            
-            
+            dataAccessorMock.Setup<ICollection<Person>>(acc => acc.BulkReadRecord<Person>("PERSON", It.IsAny<string[]>(), true)).Returns(personResponseData);
+
             // Mock for async bulk read of Person
             dataAccessorMock.Setup<Task<Collection<DataContracts.Person>>>(
                accessor => accessor.BulkReadRecordAsync<DataContracts.Person>("PERSON", It.IsAny<string[]>(), It.IsAny <bool>()))
@@ -177,6 +176,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             var personId = personIds.ElementAt(0);
             var personResponse = personResponseData.ElementAt(0);
             dataAccessorMock.Setup<Person>(acc => acc.ReadRecord<Person>("PERSON", personId, true)).Returns(personResponse);
+            dataAccessorMock.Setup(acc => acc.ReadRecordAsync<Person>("PERSON", personId, true)).ReturnsAsync(personResponse);
 
             // Set up Address Response
             addressResponseData = BuildAddressResponse(addressRecords);
@@ -213,6 +213,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             // Set up single address response
             var addressId = allPersonAddressIds.ElementAt(0);
             dataAccessorMock.Setup<Address>(acc => acc.ReadRecord<Address>("ADDRESS", addressId, true)).Returns(addressResponse.ElementAt(0));
+            dataAccessorMock.Setup(acc => acc.ReadRecordAsync<Address>("ADDRESS", addressId, true)).ReturnsAsync(addressResponse.ElementAt(0));
 
             // Construct address repository
             phoneNumberRepo = new PhoneNumberRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);

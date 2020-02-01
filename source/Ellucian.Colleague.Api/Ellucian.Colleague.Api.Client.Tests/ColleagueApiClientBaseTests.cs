@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Rest.Client.Exceptions;
 using Ellucian.Web.Http.TestUtil;
@@ -9,9 +9,11 @@ using Newtonsoft.Json;
 using slf4net;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -30,6 +32,7 @@ namespace Ellucian.Colleague.Api.Client.Tests
         private const string _token = "1234567890";
         private const string _courseId = "MATH-100";
         private const string _courseId2 = "ENGL-101";
+        private const string _username = "username";
 
         private List<CorrespondenceRequest> expectedCorrespondenceRequestsResponse = new List<CorrespondenceRequest>()
             {
@@ -51,7 +54,7 @@ namespace Ellucian.Colleague.Api.Client.Tests
             };
 
         #endregion
-        
+
         private ColleagueApiClient client;
         private MockHandler mockHandler;
         private Mock<ILogger> _loggerMock;
@@ -2048,7 +2051,7 @@ namespace Ellucian.Colleague.Api.Client.Tests
         #endregion
 
         #region GetCorrespondenceRequestsAsync
-        
+
         [TestMethod]
         public async Task GetCorrespondenceRequests_ReturnsExpectedResultTest()
         {
@@ -2113,11 +2116,47 @@ namespace Ellucian.Colleague.Api.Client.Tests
 
         #endregion
 
+        #region GetAuthenticationSchemeAsync
+
+        [TestMethod]
+        public async Task GetAuthenticationScheme_ReturnsExpectedResult()
+        {
+            var expectedResult = new AuthenticationScheme()
+            {
+                Code = "COLLEAGUE"
+            };
+            var serializedResponse = JsonConvert.SerializeObject(expectedResult);
+            setResponse(serializedResponse, HttpStatusCode.OK);
+
+            var actualResult = (await client.GetAuthenticationSchemeAsync(_username));
+
+            Assert.AreEqual(expectedResult.Code, actualResult.Code);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetAuthenticationScheme_NullUsername_ThrowsException()
+        {
+            setResponse(string.Empty, HttpStatusCode.OK);
+            await client.GetAuthenticationSchemeAsync(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpRequestFailedException))]
+        public async Task GetAuthenticationScheme_RethrowsBadRequestException()
+        {
+            var serializedResponse = JsonConvert.SerializeObject("");
+            setResponse(serializedResponse, HttpStatusCode.BadRequest);
+            await client.GetAuthenticationSchemeAsync(_username);
+        }
+        #endregion
+
         #region Helpers
 
         private void setResponse(string serializedResponse, HttpStatusCode responseStatusCode)
         {
             var response = new HttpResponseMessage(responseStatusCode);
+            response.RequestMessage = new HttpRequestMessage();
             response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
             mockHandler.Responses.Enqueue(response);
 
@@ -2130,7 +2169,7 @@ namespace Ellucian.Colleague.Api.Client.Tests
 
         #endregion
 
-    #region QueryEmployeeNamesByPostAsync
+        #region QueryEmployeeNamesByPostAsync
 
         [TestClass]
         public class QueryEmployeeNamesByPostAsync
@@ -2241,148 +2280,1037 @@ namespace Ellucian.Colleague.Api.Client.Tests
                 }
             }
         }
-    }
 
-    #endregion
+        #endregion
 
-    #region GetSelfServiceConfigurationAsyncTests
+        #region GetSelfServiceConfigurationAsyncTests
 
-    [TestClass]
-    public class GetSelfServiceConfigurationAsync
-    {
-        private const string _serviceUrl = "http://service.url";
-        private const string _contentType = "application/json";
-        private const string _token = "1234567890";
-
-        private Mock<ILogger> _loggerMock;
-        private ILogger _logger;
-
-        private SelfServiceConfiguration selfServiceConfiguration;
-
-        [TestInitialize]
-        public void Initialize()
+        [TestClass]
+        public class GetSelfServiceConfigurationAsync
         {
-            _loggerMock = MockLogger.Instance;
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+            private const string _token = "1234567890";
 
-            _logger = _loggerMock.Object;
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
 
-            selfServiceConfiguration = new SelfServiceConfiguration() { AlwaysUseClipboardForBulkMailToLinks = true };
+            private SelfServiceConfiguration selfServiceConfiguration;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+
+                _logger = _loggerMock.Object;
+
+                selfServiceConfiguration = new SelfServiceConfiguration() { AlwaysUseClipboardForBulkMailToLinks = true };
+            }
+
+            [TestMethod]
+            public async Task Client_GetSelfServiceConfigurationAsync_Success()
+            {
+                var serializedResponse = JsonConvert.SerializeObject(selfServiceConfiguration);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetSelfServiceConfigurationAsync();
+
+                // Assert that the expected item is found in the response
+                Assert.IsNotNull(selfServiceConfiguration);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpRequestFailedException))]
+            public async Task Client_GetSelfServiceConfigurationAsync_Error()
+            {
+                var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
+                response.Content = new StringContent(string.Empty, Encoding.UTF8, _contentType);
+                response.RequestMessage = new HttpRequestMessage(HttpMethod.Get, "http://test");
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+                var clientResponse = await client.GetSelfServiceConfigurationAsync();
+
+                _loggerMock.Verify(l => l.Error(It.IsAny<Exception>(), "Unable to retrieve Self-Service configuration data."));
+            }
         }
+
+        #endregion
+
+        #region GetRequiredDocumentConfigurationAsyncTests
+
+        [TestClass]
+        public class GetRequiredDocumentConfigurationAsync
+        {
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+            private const string _token = "1234567890";
+
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            private RequiredDocumentConfiguration requiredDocumentConfiguration;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+
+                _logger = _loggerMock.Object;
+
+                requiredDocumentConfiguration = new RequiredDocumentConfiguration()
+                {
+                    SuppressInstance = false,
+                    PrimarySortField = WebSortField.Status,
+                    SecondarySortField = WebSortField.OfficeDescription,
+                    TextForBlankStatus = "",
+                    TextForBlankDueDate = ""
+                };
+            }
+
+            [TestMethod]
+            public async Task Client_GetRequiredDocumentConfigurationAsync_Success()
+            {
+                var serializedResponse = JsonConvert.SerializeObject(requiredDocumentConfiguration);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetRequiredDocumentConfigurationAsync();
+
+                // Assert that the expected item is found in the response
+                Assert.IsNotNull(requiredDocumentConfiguration);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpRequestFailedException))]
+            public async Task Client_GetRequiredDocumentConfigurationAsync_Error()
+            {
+                var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
+                response.Content = new StringContent(string.Empty, Encoding.UTF8, _contentType);
+                response.RequestMessage = new HttpRequestMessage(HttpMethod.Get, "http://test");
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+                var clientResponse = await client.GetRequiredDocumentConfigurationAsync();
+
+                _loggerMock.Verify(l => l.Error(It.IsAny<Exception>(), "Unable to retrieve Required Document configuration data."));
+            }
+        }
+
+        #endregion
+
+        #region AttachmentTests
+
+        [TestClass]
+        public class AttachmentTests
+        {
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            private Attachment GetFakeAttachment1()
+            {
+
+                Attachment fakeAttachment = new Attachment();
+                fakeAttachment.Id = "FakeAttachment1";
+                fakeAttachment.Name = "Fake Attachment 1";
+                fakeAttachment.Owner = "dat";
+                fakeAttachment.Size = 1000000;
+                fakeAttachment.Status = AttachmentStatus.Active;
+                fakeAttachment.ModifiedBy = "dat2";
+                fakeAttachment.ModifiedAt = new DateTimeOffset(new DateTime(2019, 3, 1), new TimeSpan(1, 0, 0));
+                fakeAttachment.ContentType = "text/plain";
+                return fakeAttachment;
+            }
+
+            private Attachment GetFakeAttachment2()
+            {
+
+                Attachment fakeAttachment = new Attachment();
+                fakeAttachment.Id = "FakeAttachment2";
+                fakeAttachment.Name = "Fake Attachment 2";
+                fakeAttachment.Owner = "dat";
+                fakeAttachment.Size = 1000000;
+                fakeAttachment.Status = AttachmentStatus.Active;
+                fakeAttachment.ModifiedBy = "dat2";
+                fakeAttachment.ModifiedAt = new DateTimeOffset(new DateTime(2019, 3, 1), new TimeSpan(1, 0, 0));
+                fakeAttachment.ContentType = "text/plain";
+                return fakeAttachment;
+            }
+
+            private AttachmentCollection GetFakeAttachmentCollection1()
+            {
+
+                AttachmentCollection fakeAttachmentCollection = new AttachmentCollection();
+                fakeAttachmentCollection.Id = "FakeAttachmentCollection1";
+                fakeAttachmentCollection.Name = "Fake Attachment Collection 1";
+                fakeAttachmentCollection.Description = "Fake Attachment Collection 1 Description";
+                fakeAttachmentCollection.Owner = "dat";
+                fakeAttachmentCollection.MaxAttachmentSize = 1000000;
+                fakeAttachmentCollection.Status = AttachmentCollectionStatus.Active;
+                fakeAttachmentCollection.RetentionDuration = "PSY";
+                fakeAttachmentCollection.Users = new List<AttachmentCollectionIdentity>() {
+                        new AttachmentCollectionIdentity() {
+                            Id = "00001234",
+                            Actions = new List<AttachmentAction>() {
+                                AttachmentAction.Create, AttachmentAction.Update, AttachmentAction.View, AttachmentAction.Delete },
+                            Type = AttachmentCollectionIdentityType.User } };
+                fakeAttachmentCollection.Roles = new List<AttachmentCollectionIdentity>() {
+                        new AttachmentCollectionIdentity() {
+                            Id = "1",
+                            Actions = new List<AttachmentAction>() {
+                                AttachmentAction.Create, AttachmentAction.Update, AttachmentAction.View, AttachmentAction.Delete },
+                            Type = AttachmentCollectionIdentityType.Role } };
+                return fakeAttachmentCollection;
+            }
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+                _logger = _loggerMock.Object;
+            }
+
+            [TestMethod]
+            public async Task Client_GetAttachmentsAsync()
+            {
+                // Arrange
+
+                var fakeAttachment = GetFakeAttachment1();
+                var fakeAttachmentCollection = new List<Attachment>() { fakeAttachment };
+                var serializedResponse = JsonConvert.SerializeObject(fakeAttachmentCollection);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetAttachmentsAsync("0001234", "some id", "tag1");
+
+                // Assert that the expected item is found in the response
+                var actualJson = JsonConvert.SerializeObject(clientResponse);
+                var expectedJson = JsonConvert.SerializeObject(fakeAttachmentCollection);
+                Assert.AreEqual(expectedJson, actualJson);
+            }
+
+            [TestMethod]
+            public async Task Client_GetAttachmentContentAsync()
+            {
+                // Arrange
+                string testContent = "some content here";
+                string testFileName = "some file name";
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                var streamContent = new StreamContent(new MemoryStream(Encoding.UTF8.GetBytes(testContent)));
+                streamContent.Headers.ContentDisposition = new ContentDispositionHeaderValue("datafile") { FileName = testFileName };
+                streamContent.Headers.ContentType = new MediaTypeHeaderValue("text/plain");                
+                response.Content = streamContent;
+                // encryption metadata
+                var encrMetadata = new AttachmentEncryption("7c655b4d-c425-4aff-af98-337004ec8cfe", "AES256",
+                    Convert.FromBase64String("zqc0PJyMqfgHS2txd56RDi7dfMoI76elZZyyntMFGs2jcogIVXSU01Y9hc"
+                    + "LezN0KLf8v3crobdiPkHWSCtV+Xl+XM5vhJpfiVVqEdMgG7xXwvdY5rl8gMh298wVSfmCQaFu5z9oMkqn39NJFpr9amf"
+                    + "MOANLrzMUwFdX/jxi2lJJmiirCt/1uNXA6/cQdRfHBtvT0tur+4En5TpSY84DkevOcnDTaKiPa3ZIHM1SZTR9T0mKY59"
+                    + "0Vyo97YJFOuR6W7Q+hVuA62lTqAxUOc19nwKJRCwJ5K6dxtZqaGhbPQu9ubFrvGHPYNrhApjYBlqBdk2yYGKYRy7TIDI"
+                    + "2ZxLIvqA=="), Convert.FromBase64String("d7ztE4TNClbBVp4tbRb94w=="));
+                response.Headers.Add("X-Encr-Content-Key", Convert.ToBase64String(encrMetadata.EncrContentKey));
+                response.Headers.Add("X-Encr-IV", Convert.ToBase64String(encrMetadata.EncrIV));
+                response.Headers.Add("X-Encr-Type", encrMetadata.EncrType);
+                response.Headers.Add("X-Encr-Key-Id", encrMetadata.EncrKeyId);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var resultTuple = await client.GetAttachmentContentAsync("some ID");
+
+                // Assert that the expected items are found in the response
+                Assert.AreEqual(testFileName, resultTuple.Item1);
+                Assert.IsTrue(Encoding.UTF8.GetBytes(testContent).SequenceEqual(resultTuple.Item2));
+                Assert.AreEqual(testFileName, resultTuple.Item1);
+                Assert.AreEqual(Convert.ToBase64String(encrMetadata.EncrContentKey), Convert.ToBase64String(resultTuple.Item3.EncrContentKey));
+                Assert.AreEqual(Convert.ToBase64String(encrMetadata.EncrIV), Convert.ToBase64String(resultTuple.Item3.EncrIV));
+                Assert.AreEqual(encrMetadata.EncrKeyId, resultTuple.Item3.EncrKeyId);
+                Assert.AreEqual(encrMetadata.EncrType, resultTuple.Item3.EncrType);
+            }
+
+            [TestMethod]
+            public async Task Client_PostAttachmentAndContentsAsync()
+            {
+                // Arrange
+                string testContent = "some content here";
+                Stream fakeStreamContent = new MemoryStream(Encoding.UTF8.GetBytes(testContent));
+                var fakeAttachment = GetFakeAttachment1();
+                var serializedResponse = JsonConvert.SerializeObject(fakeAttachment);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var encrMetadata = new AttachmentEncryption("7c655b4d-c425-4aff-af98-337004ec8cfe", "AES256",
+                    Convert.FromBase64String("zqc0PJyMqfgHS2txd56RDi7dfMoI76elZZyyntMFGs2jcogIVXSU01Y9hc"
+                    + "LezN0KLf8v3crobdiPkHWSCtV+Xl+XM5vhJpfiVVqEdMgG7xXwvdY5rl8gMh298wVSfmCQaFu5z9oMkqn39NJFpr9amf"
+                    + "MOANLrzMUwFdX/jxi2lJJmiirCt/1uNXA6/cQdRfHBtvT0tur+4En5TpSY84DkevOcnDTaKiPa3ZIHM1SZTR9T0mKY59"
+                    + "0Vyo97YJFOuR6W7Q+hVuA62lTqAxUOc19nwKJRCwJ5K6dxtZqaGhbPQu9ubFrvGHPYNrhApjYBlqBdk2yYGKYRy7TIDI"
+                    + "2ZxLIvqA=="), Convert.FromBase64String("d7ztE4TNClbBVp4tbRb94w=="));
+                var clientResponse = await client.PostAttachmentAndContentsAsync(fakeAttachment, fakeStreamContent, encrMetadata);
+
+                // Assert that the expected item is found in the response
+                var actualJson = JsonConvert.SerializeObject(clientResponse);
+                var expectedJson = JsonConvert.SerializeObject(fakeAttachment);
+                Assert.AreEqual(expectedJson, actualJson);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task Client_PostAttachmentAndContentsAsync_NullArgs()
+            {
+                var mockHandler = new MockHandler();
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.PostAttachmentAndContentsAsync(null, null, null);
+            }
+
+            [TestMethod]
+            public async Task Client_PostAttachmentAsync()
+            {
+                // Arrange
+                var fakeAttachment = GetFakeAttachment1();
+                var serializedResponse = JsonConvert.SerializeObject(fakeAttachment);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var encrMetadata = new AttachmentEncryption("7c655b4d-c425-4aff-af98-337004ec8cfe", "AES256",
+                    Convert.FromBase64String("zqc0PJyMqfgHS2txd56RDi7dfMoI76elZZyyntMFGs2jcogIVXSU01Y9hc"
+                    + "LezN0KLf8v3crobdiPkHWSCtV+Xl+XM5vhJpfiVVqEdMgG7xXwvdY5rl8gMh298wVSfmCQaFu5z9oMkqn39NJFpr9amf"
+                    + "MOANLrzMUwFdX/jxi2lJJmiirCt/1uNXA6/cQdRfHBtvT0tur+4En5TpSY84DkevOcnDTaKiPa3ZIHM1SZTR9T0mKY59"
+                    + "0Vyo97YJFOuR6W7Q+hVuA62lTqAxUOc19nwKJRCwJ5K6dxtZqaGhbPQu9ubFrvGHPYNrhApjYBlqBdk2yYGKYRy7TIDI"
+                    + "2ZxLIvqA=="), Convert.FromBase64String("d7ztE4TNClbBVp4tbRb94w=="));
+                var clientResponse = await client.PostAttachmentAsync(fakeAttachment, encrMetadata);
+
+                // Assert that the expected item is found in the response
+                var actualJson = JsonConvert.SerializeObject(clientResponse);
+                var expectedJson = JsonConvert.SerializeObject(fakeAttachment);
+                Assert.AreEqual(expectedJson, actualJson);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task Client_PostAttachmentAsync_NullArgs()
+            {
+                var mockHandler = new MockHandler();
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.PostAttachmentAsync(null, null);
+            }
+
+            [TestMethod]
+            public async Task Client_PutAttachmentAsync()
+            {
+                // Arrange
+                var fakeAttachment = GetFakeAttachment1();
+                var serializedResponse = JsonConvert.SerializeObject(fakeAttachment);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.PutAttachmentAsync(fakeAttachment.Id, fakeAttachment);
+
+                // Assert that the expected item is found in the response
+                var actualJson = JsonConvert.SerializeObject(clientResponse);
+                var expectedJson = JsonConvert.SerializeObject(fakeAttachment);
+                Assert.AreEqual(expectedJson, actualJson);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task Client_PutAttachmentAsync_NullArgs()
+            {
+                var mockHandler = new MockHandler();
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.PutAttachmentAsync(null, null);
+            }
+
+            [TestMethod]
+            public async Task Client_GetAttachmentCollectionByIdAsync()
+            {
+                // Arrange            
+                var fakeAttachmentCollection = GetFakeAttachmentCollection1();
+                var serializedResponse = JsonConvert.SerializeObject(fakeAttachmentCollection);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetAttachmentCollectionByIdAsync(fakeAttachmentCollection.Id);
+
+                // Assert that the expected item is found in the response
+                var actualJson = JsonConvert.SerializeObject(clientResponse);
+                var expectedJson = JsonConvert.SerializeObject(fakeAttachmentCollection);
+                Assert.AreEqual(expectedJson, actualJson);
+            }
+
+            [TestMethod]
+            public async Task Client_GetAttachmentCollectionsByUserAsync()
+            {
+                // Arrange            
+                var fakeAttachmentCollectionCollection = new List<AttachmentCollection>() { GetFakeAttachmentCollection1() };
+                var serializedResponse = JsonConvert.SerializeObject(fakeAttachmentCollectionCollection);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetAttachmentCollectionsByUserAsync();
+
+                // Assert that the expected item is found in the response
+                var actualJson = JsonConvert.SerializeObject(clientResponse);
+                var expectedJson = JsonConvert.SerializeObject(fakeAttachmentCollectionCollection);
+                Assert.AreEqual(expectedJson, actualJson);
+            }
+
+            [TestMethod]
+            public async Task Client_PostAttachmentCollectionAsync()
+            {
+                // Arrange            
+                var fakeAttachmentCollection = GetFakeAttachmentCollection1();
+                var serializedResponse = JsonConvert.SerializeObject(fakeAttachmentCollection);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.PostAttachmentCollectionAsync(fakeAttachmentCollection);
+
+                // Assert that the expected item is found in the response
+                var actualJson = JsonConvert.SerializeObject(clientResponse);
+                var expectedJson = JsonConvert.SerializeObject(fakeAttachmentCollection);
+                Assert.AreEqual(expectedJson, actualJson);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task Client_PostAttachmentCollectionAsync_NullArgs()
+            {
+                var mockHandler = new MockHandler();
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.PostAttachmentCollectionAsync(null);
+            }
+
+            [TestMethod]
+            public async Task Client_PutAttachmentCollectionAsync()
+            {
+                // Arrange            
+                var fakeAttachmentCollection = GetFakeAttachmentCollection1();
+                var serializedResponse = JsonConvert.SerializeObject(fakeAttachmentCollection);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.PutAttachmentCollectionAsync(fakeAttachmentCollection.Id, fakeAttachmentCollection);
+
+                // Assert that the expected item is found in the response
+                var actualJson = JsonConvert.SerializeObject(clientResponse);
+                var expectedJson = JsonConvert.SerializeObject(fakeAttachmentCollection);
+                Assert.AreEqual(expectedJson, actualJson);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task Client_PutAttachmentCollectionAsync_NullArgs()
+            {
+                var mockHandler = new MockHandler();
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.PutAttachmentCollectionAsync(null, null);
+            }
+
+            [TestMethod]
+            public async Task Client_GetAttachmentCollectionEffectivePermissionsAsync()
+            {
+                // Arrange            
+                var fakeAttachmentCollection = GetFakeAttachmentCollection1();
+                var fakeAttachmentCollectionEffectivePermissions = new AttachmentCollectionEffectivePermissions()
+                {
+                    CanCreateAttachments = true,
+                    CanDeleteAttachments = false,
+                    CanUpdateAttachments = true,
+                    CanViewAttachments = true
+                };
+                var serializedResponse = JsonConvert.SerializeObject(fakeAttachmentCollectionEffectivePermissions);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetAttachmentCollectionEffectivePermissionsAsync(fakeAttachmentCollection.Id);
+
+                // Assert that the expected item is found in the response
+                var actualJson = JsonConvert.SerializeObject(clientResponse);
+                var expectedJson = JsonConvert.SerializeObject(fakeAttachmentCollectionEffectivePermissions);
+                Assert.AreEqual(expectedJson, actualJson);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task Client_GetAttachmentCollectionEffectivePermissionsNoIdAsync()
+            {
+                var mockHandler = new MockHandler();
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                await client.GetAttachmentCollectionEffectivePermissionsAsync(null);
+            }
+        }
+
+        #endregion
+
+        #region ContentKeyTests
+
+        [TestClass]
+        public class ContentKeyTests
+        {
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            private ContentKey fakeContentKey;
+            private ContentKeyRequest fakeContentKeyRequest;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+                _logger = _loggerMock.Object;
+                fakeContentKey = new ContentKey()
+                {
+                    EncryptionKeyId = "7c655b4d-c425-4aff-af98-337004ec8cfe",
+                    EncryptedKey = Convert.FromBase64String("zqc0PJyMqfgHS2txd56RDi7dfMoI76elZZyyntMFGs2jcogIVXSU01Y9hc"
+                        + "LezN0KLf8v3crobdiPkHWSCtV+Xl+XM5vhJpfiVVqEdMgG7xXwvdY5rl8gMh298wVSfmCQaFu5z9oMkqn39NJFpr9amf"
+                        + "MOANLrzMUwFdX/jxi2lJJmiirCt/1uNXA6/cQdRfHBtvT0tur+4En5TpSY84DkevOcnDTaKiPa3ZIHM1SZTR9T0mKY59"
+                        + "0Vyo97YJFOuR6W7Q+hVuA62lTqAxUOc19nwKJRCwJ5K6dxtZqaGhbPQu9ubFrvGHPYNrhApjYBlqBdk2yYGKYRy7TIDI"
+                        + "2ZxLIvqA=="),
+                    Key = Convert.FromBase64String("KRiO9vG1XXoWgtb9GkTp3McpoRcL8yMcST/TFETXdf4=")
+                };
+                fakeContentKeyRequest = new ContentKeyRequest()
+                {
+                    EncryptionKeyId = "7c655b4d-c425-4aff-af98-337004ec8cfe",
+                    EncryptedKey = Convert.FromBase64String("zqc0PJyMqfgHS2txd56RDi7dfMoI76elZZyyntMFGs2jcogIVXSU01Y9hc"
+                        + "LezN0KLf8v3crobdiPkHWSCtV+Xl+XM5vhJpfiVVqEdMgG7xXwvdY5rl8gMh298wVSfmCQaFu5z9oMkqn39NJFpr9amf"
+                        + "MOANLrzMUwFdX/jxi2lJJmiirCt/1uNXA6/cQdRfHBtvT0tur+4En5TpSY84DkevOcnDTaKiPa3ZIHM1SZTR9T0mKY59"
+                        + "0Vyo97YJFOuR6W7Q+hVuA62lTqAxUOc19nwKJRCwJ5K6dxtZqaGhbPQu9ubFrvGHPYNrhApjYBlqBdk2yYGKYRy7TIDI"
+                        + "2ZxLIvqA==")
+                };
+            }
+
+            [TestMethod]
+            public async Task Client_GetContentKeyAsync_Success()
+            {
+                // Arrange
+                var serializedResponse = JsonConvert.SerializeObject(fakeContentKey);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetContentKeyAsync("7c655b4d-c425-4aff-af98-337004ec8cfe");
+
+                // Assert
+                var actualJson = JsonConvert.SerializeObject(clientResponse);
+                var expectedJson = JsonConvert.SerializeObject(fakeContentKey);
+                Assert.AreEqual(expectedJson, actualJson);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task Client_GetContentKeyAsync_EmptyId()
+            {
+                // Arrange
+                var serializedResponse = JsonConvert.SerializeObject(fakeContentKey);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                await client.GetContentKeyAsync(string.Empty);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task Client_GetContentKeyAsync_NullId()
+            {
+                // Arrange
+                var serializedResponse = JsonConvert.SerializeObject(fakeContentKey);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                await client.GetContentKeyAsync(null);
+            }
+
+            [TestMethod]
+            public async Task Client_PostContentKeyAsync_Success()
+            {
+                // Arrange
+                var serializedResponse = JsonConvert.SerializeObject(fakeContentKey);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.PostContentKeyAsync(fakeContentKeyRequest);
+
+                // Assert
+                var actualJson = JsonConvert.SerializeObject(clientResponse);
+                var expectedJson = JsonConvert.SerializeObject(fakeContentKey);
+                Assert.AreEqual(expectedJson, actualJson);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task Client_PostContentKeyAsync_NullRequest()
+            {
+                // Arrange
+                var serializedResponse = JsonConvert.SerializeObject(fakeContentKey);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                await client.PostContentKeyAsync(null);
+            }
+        }
+
+        #endregion
+
+        #region GetAgreementPeriodsAsyncTests
 
         [TestMethod]
-        public async Task Client_GetSelfServiceConfigurationAsync_Success()
+        public async Task Client_GetAgreementPeriodsAsync_no_parameters_ReturnsExpectedResult()
         {
-            var serializedResponse = JsonConvert.SerializeObject(selfServiceConfiguration);
-
-            var response = new HttpResponseMessage(HttpStatusCode.OK);
-            response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
-            var mockHandler = new MockHandler();
-            mockHandler.Responses.Enqueue(response);
-
-            var testHttpClient = new HttpClient(mockHandler);
-            testHttpClient.BaseAddress = new Uri(_serviceUrl);
-
-            var client = new ColleagueApiClient(testHttpClient, _logger);
-
-            // Act
-            var clientResponse = await client.GetSelfServiceConfigurationAsync();
-
-            // Assert that the expected item is found in the response
-            Assert.IsNotNull(selfServiceConfiguration);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(HttpRequestFailedException))]
-        public async Task Client_GetSelfServiceConfigurationAsync_Error()
-        {
-            var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
-            response.Content = new StringContent(string.Empty, Encoding.UTF8, _contentType);
-            response.RequestMessage = new HttpRequestMessage(HttpMethod.Get, "http://test");
-            var mockHandler = new MockHandler();
-            mockHandler.Responses.Enqueue(response);
-
-            var testHttpClient = new HttpClient(mockHandler);
-            testHttpClient.BaseAddress = new Uri(_serviceUrl);
-
-            var client = new ColleagueApiClient(testHttpClient, _logger);
-            var clientResponse = await client.GetSelfServiceConfigurationAsync();
-
-            _loggerMock.Verify(l => l.Error(It.IsAny<Exception>(), "Unable to retrieve Self-Service configuration data."));
-        }
-    }
-    #endregion
-    #region GetRequiredDocumentConfigurationAsyncTests
-
-    [TestClass]
-    public class GetRequiredDocumentConfigurationAsync
-    {
-        private const string _serviceUrl = "http://service.url";
-        private const string _contentType = "application/json";
-        private const string _token = "1234567890";
-
-        private Mock<ILogger> _loggerMock;
-        private ILogger _logger;
-
-        private RequiredDocumentConfiguration requiredDocumentConfiguration;
-
-        [TestInitialize]
-        public void Initialize()
-        {
-            _loggerMock = MockLogger.Instance;
-
-            _logger = _loggerMock.Object;
-
-            requiredDocumentConfiguration = new RequiredDocumentConfiguration() {
-                SuppressInstance = false,
-                PrimarySortField = WebSortField.Status,
-                SecondarySortField = WebSortField.OfficeDescription,
-                TextForBlankStatus = "",
-                TextForBlankDueDate = ""
+            var expectedResult = new List<AgreementPeriod>()
+            {
+                new AgreementPeriod() { Code = "2019FA", Description = "2019 Fall" },
+                new AgreementPeriod() { Code = "2020FA", Description = "2020 Fall" }
             };
-        }
+            var serializedResponse = JsonConvert.SerializeObject(expectedResult);
+            setResponse(serializedResponse, HttpStatusCode.OK);
 
-        [TestMethod]
-        public async Task Client_GetRequiredDocumentConfigurationAsync_Success()
-        {
-            var serializedResponse = JsonConvert.SerializeObject(requiredDocumentConfiguration);
+            var actualResult = (await client.GetAgreementPeriodsAsync());
 
-            var response = new HttpResponseMessage(HttpStatusCode.OK);
-            response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
-            var mockHandler = new MockHandler();
-            mockHandler.Responses.Enqueue(response);
-
-            var testHttpClient = new HttpClient(mockHandler);
-            testHttpClient.BaseAddress = new Uri(_serviceUrl);
-
-            var client = new ColleagueApiClient(testHttpClient, _logger);
-
-            // Act
-            var clientResponse = await client.GetRequiredDocumentConfigurationAsync();
-
-            // Assert that the expected item is found in the response
-            Assert.IsNotNull(requiredDocumentConfiguration);
+            Assert.AreEqual(expectedResult.Count, actualResult.Count());
+            for(int i = 0; i < expectedResult.Count; i++)
+            {
+                Assert.AreEqual(expectedResult[i].Code, actualResult.ElementAt(i).Code);
+                Assert.AreEqual(expectedResult[i].Description, actualResult.ElementAt(i).Description);
+            }
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpRequestFailedException))]
-        public async Task Client_GetRequiredDocumentConfigurationAsync_Error()
+        public async Task Client_GetAgreementPeriodsAsync_catches_thrown_exception_and_throws_exception()
         {
-            var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
-            response.Content = new StringContent(string.Empty, Encoding.UTF8, _contentType);
-            response.RequestMessage = new HttpRequestMessage(HttpMethod.Get, "http://test");
-            var mockHandler = new MockHandler();
-            mockHandler.Responses.Enqueue(response);
-
-            var testHttpClient = new HttpClient(mockHandler);
-            testHttpClient.BaseAddress = new Uri(_serviceUrl);
-
-            var client = new ColleagueApiClient(testHttpClient, _logger);
-            var clientResponse = await client.GetRequiredDocumentConfigurationAsync();
-
-            _loggerMock.Verify(l => l.Error(It.IsAny<Exception>(), "Unable to retrieve Required Document configuration data."));
+            var serializedResponse = JsonConvert.SerializeObject("");
+            setResponse(serializedResponse, HttpStatusCode.BadRequest);
+            var actualResult = (await client.GetAgreementPeriodsAsync());
         }
+        #endregion
+
+        #region QueryPersonAgreementsByPostAsyncTests
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task Client_QueryPersonAgreementsByPostAsync_null_criteria_throws_ArgumentNullException()
+        {
+            var serializedResponse = JsonConvert.SerializeObject("");
+            setResponse(serializedResponse, HttpStatusCode.OK);
+
+            var actualResult = await client.QueryPersonAgreementsByPostAsync(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task Client_QueryPersonAgreementsByPostAsync_null_criteria_PersonId_throws_ArgumentNullException()
+        {
+            var serializedResponse = JsonConvert.SerializeObject("");
+            setResponse(serializedResponse, HttpStatusCode.OK);
+
+            var actualResult = await client.QueryPersonAgreementsByPostAsync(new PersonAgreementQueryCriteria() { PersonId = null });
+        }
+
+        [TestMethod]
+        public async Task Client_QueryPersonAgreementsByPostAsync_no_parameters_ReturnsExpectedResult()
+        {
+            var criteria = new PersonAgreementQueryCriteria() { PersonId = "0001234" };
+
+            var expectedResult = new List<PersonAgreement>()
+            {
+                new PersonAgreement()
+                {
+                    ActionTimestamp = DateTimeOffset.Now.AddDays(-3),
+                    AgreementCode = "AGR1",
+                    AgreementPeriodCode = "PER1",
+                    Title = "Agreement 1",
+                    DueDate = DateTime.Today.AddDays(5),
+                    Id = "1",
+                    PersonCanDeclineAgreement = true,
+                    PersonId = "0001234",
+                    Status = PersonAgreementStatus.Declined,
+                    Text = new List<string>() {"Agreement 1 Text" }
+                },
+                new PersonAgreement()
+                {
+                    ActionTimestamp = DateTimeOffset.Now.AddDays(-2),
+                    AgreementCode = "AGR2",
+                    AgreementPeriodCode = "PER2",
+                    Title = "Agreement 2",
+                    DueDate = DateTime.Today.AddDays(3),
+                    Id = "2",
+                    PersonCanDeclineAgreement = true,
+                    PersonId = "0002234",
+                    Status = PersonAgreementStatus.Accepted,
+                    Text = new List<string>() {"Agreement 2 Text" }
+                },
+                new PersonAgreement()
+                {
+                    ActionTimestamp = null,
+                    AgreementCode = "AGR3",
+                    AgreementPeriodCode = "PER3",
+                    Title = "Agreement 3",
+                    DueDate = DateTime.Today.AddDays(1),
+                    Id = "3",
+                    PersonCanDeclineAgreement = true,
+                    PersonId = "0003334",
+                    Status = null,
+                    Text = new List<string>() {"Agreement 3 Text" }
+                },
+            };
+            var serializedResponse = JsonConvert.SerializeObject(expectedResult);
+            setResponse(serializedResponse, HttpStatusCode.OK);
+
+            var actualResult = (await client.QueryPersonAgreementsByPostAsync(criteria));
+
+            Assert.AreEqual(expectedResult.Count, actualResult.Count());
+            for (int i = 0; i < expectedResult.Count; i++)
+            {
+                var expected = expectedResult[i];
+                var actual = actualResult.ElementAt(i);
+                Assert.AreEqual(expected.Id, actual.Id, "Id, Index=" + i.ToString());
+                Assert.AreEqual(expected.Title, actual.Title, "Title, Index=" + i.ToString());
+                Assert.AreEqual(expected.ActionTimestamp, actual.ActionTimestamp, "ActionTimestamp, Index=" + i.ToString());
+                Assert.AreEqual(expected.AgreementCode, actual.AgreementCode, "AgreementCode, Index=" + i.ToString());
+                Assert.AreEqual(expected.AgreementPeriodCode, actual.AgreementPeriodCode, "AgreementPeriodCode, Index=" + i.ToString());
+                Assert.AreEqual(expected.DueDate, actual.DueDate, "DueDate, Index=" + i.ToString());
+                Assert.AreEqual(expected.PersonCanDeclineAgreement, actual.PersonCanDeclineAgreement, "PersonCanDeclineAgreement, Index=" + i.ToString());
+                Assert.AreEqual(expected.PersonId, actual.PersonId, "ActionTimestamp, Index=" + i.ToString());
+                Assert.AreEqual(expected.Status, actual.Status, "Status, Index=" + i.ToString());
+                CollectionAssert.AreEqual(expected.Text.ToList(), actual.Text.ToList(), "ActionTimestamp, Index=" + i.ToString());
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpRequestFailedException))]
+        public async Task Client_QueryPersonAgreementsByPostAsync_catches_thrown_exception_and_throws_exception()
+        {
+            var criteria = new PersonAgreementQueryCriteria() { PersonId = "0001234" };
+            var serializedResponse = JsonConvert.SerializeObject("");
+            setResponse(serializedResponse, HttpStatusCode.BadRequest);
+            var actualResult = (await client.QueryPersonAgreementsByPostAsync(criteria));
+        }
+        #endregion
+
+        #region UpdatePersonAgreementAsyncTests
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task Client_UpdatePersonAgreementAsync_null_criteria_throws_ArgumentNullException()
+        {
+            var serializedResponse = JsonConvert.SerializeObject("");
+            setResponse(serializedResponse, HttpStatusCode.OK);
+
+            var actualResult = await client.UpdatePersonAgreementAsync(null);
+        }
+
+        [TestMethod]
+        public async Task Client_UpdatePersonAgreementAsync_ReturnsExpectedResult()
+        {
+            var criteria = new PersonAgreementQueryCriteria() { PersonId = "0001234" };
+
+            var agreement = new PersonAgreement()
+            {
+                ActionTimestamp = DateTimeOffset.Now.AddDays(-3),
+                AgreementCode = "AGR1",
+                AgreementPeriodCode = "PER1",
+                Title = "Agreement 1",
+                DueDate = DateTime.Today.AddDays(5),
+                Id = "1",
+                PersonCanDeclineAgreement = true,
+                PersonId = "0001234",
+                Status = PersonAgreementStatus.Declined,
+                Text = new List<string>() { "Agreement 1 Text" }
+            };
+
+            var serializedResponse = JsonConvert.SerializeObject(agreement);
+            setResponse(serializedResponse, HttpStatusCode.OK);
+
+            var actual = (await client.UpdatePersonAgreementAsync(agreement));
+
+            Assert.IsNotNull(actual);
+            Assert.AreEqual(agreement.Id, actual.Id);
+            Assert.AreEqual(agreement.Title, actual.Title);
+            Assert.AreEqual(agreement.ActionTimestamp, actual.ActionTimestamp);
+            Assert.AreEqual(agreement.AgreementCode, actual.AgreementCode);
+            Assert.AreEqual(agreement.AgreementPeriodCode, actual.AgreementPeriodCode);
+            Assert.AreEqual(agreement.DueDate, actual.DueDate);
+            Assert.AreEqual(agreement.PersonCanDeclineAgreement, actual.PersonCanDeclineAgreement);
+            Assert.AreEqual(agreement.PersonId, actual.PersonId);
+            Assert.AreEqual(agreement.Status.ToString(), actual.Status.ToString());
+            CollectionAssert.AreEqual(agreement.Text.ToList(), actual.Text.ToList());
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpRequestFailedException))]
+        public async Task Client_UpdatePersonAgreementAsync_catches_thrown_exception_and_throws_exception()
+        {
+            var agreement = new PersonAgreement()
+            {
+                ActionTimestamp = DateTimeOffset.Now.AddDays(-3),
+                AgreementCode = "AGR1",
+                AgreementPeriodCode = "PER1",
+                Title = "Agreement 1",
+                DueDate = DateTime.Today.AddDays(5),
+                Id = "1",
+                PersonCanDeclineAgreement = true,
+                PersonId = "0001234",
+                Status = PersonAgreementStatus.Declined,
+                Text = new List<string>() { "Agreement 1 Text" }
+            };
+            var serializedResponse = JsonConvert.SerializeObject("");
+            setResponse(serializedResponse, HttpStatusCode.BadRequest);
+            var actualResult = (await client.UpdatePersonAgreementAsync(agreement));
+        }
+        #endregion
+
+        #region GetSessionConfigurationAsyncTests
+
+        [TestClass]
+        public class GetSessionConfigurationAsync
+        {
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+            private const string _token = "1234567890";
+
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            private SessionConfiguration sessionConfiguration;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+
+                _logger = _loggerMock.Object;
+
+                sessionConfiguration = new SessionConfiguration()
+                {
+                    PasswordResetEnabled = true,
+                    UsernameRecoveryEnabled = true
+                };
+            }
+
+            [TestMethod]
+            public async Task Client_GetSessionConfigurationAsync_Success()
+            {
+                var serializedResponse = JsonConvert.SerializeObject(sessionConfiguration);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetSessionConfigurationAsync();
+
+                // Assert that the expected item is found in the response
+                Assert.IsNotNull(sessionConfiguration);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpRequestFailedException))]
+            public async Task Client_GetSessionConfigurationAsync_Error()
+            {
+                var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
+                response.Content = new StringContent(string.Empty, Encoding.UTF8, _contentType);
+                response.RequestMessage = new HttpRequestMessage(HttpMethod.Get, "http://test");
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+                var clientResponse = await client.GetSessionConfigurationAsync();
+
+                _loggerMock.Verify(l => l.Error(It.IsAny<Exception>(), "Unable to get the Session Configuration."));
+            }
+        }
+
+        #endregion
     }
-    #endregion
-
 }
-

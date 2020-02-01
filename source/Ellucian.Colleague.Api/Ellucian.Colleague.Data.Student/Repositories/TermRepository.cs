@@ -1,4 +1,5 @@
-﻿// Copyright 2012-2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -13,7 +14,6 @@ using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
-using Ellucian.Web.Utility;
 using slf4net;
 using Ellucian.Colleague.Data.Base.DataContracts;
 using System.Threading.Tasks;
@@ -420,6 +420,50 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             return guid;
 
+        }
+
+
+
+        /// <summary>
+        /// Get code for AcademicPeriods guid
+        /// </summary>
+        /// <param name="code">AcademicPeriods guid</param>
+        /// <returns>code</returns>
+        public async Task<string> GetAcademicPeriodsCodeFromGuidAsync(string guid)
+        {
+            //get all the codes from the cache
+             string code = string.Empty;
+            if (string.IsNullOrEmpty(guid))
+                return code;
+            var allCodesCache = await GetAsync(false);
+            Term codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.RecordGuid.Equals(guid, StringComparison.OrdinalIgnoreCase));
+            }
+
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetAsync(true);
+                if (allCodesCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No code found, Entity:'TERMS', Record ID:'", guid, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.RecordGuid.Equals(guid, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.RecordGuid))
+                    code = codeNoCache.Code;
+                else
+                    throw new RepositoryException(string.Concat("No code found, Entity:'TERMS', Record ID:'", guid, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Code))
+                    code = codeCache.Code;
+                else
+                    throw new RepositoryException(string.Concat("No code found, Entity:'TERMS', Record ID:'", guid, "'"));
+            }
+            return code;
         }
 
         /// <summary>

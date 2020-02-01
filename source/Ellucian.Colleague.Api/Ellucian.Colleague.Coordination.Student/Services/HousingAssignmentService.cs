@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -206,15 +206,70 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// Gets all housing-assignments
         /// </summary>
         /// <returns>Collection of HousingAssignments DTO objects</returns>
-        public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.HousingAssignment>, int>> GetHousingAssignmentsAsync(int offset, int limit, bool bypassCache = false)
+        public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.HousingAssignment>, int>> GetHousingAssignmentsAsync(int offset, int limit, Dtos.HousingAssignment criteriaFilter, bool bypassCache = false)
         {
+
+                CheckViewHousingAssignmentPermissions();
+                string person = string.Empty, term = string.Empty, status = string.Empty, startDate = string.Empty, endDate = string.Empty;
+            if (criteriaFilter != null)
+            {
+                //process person guid filter
+                var personGuid = criteriaFilter.Person != null ? criteriaFilter.Person.Id : string.Empty;
+                if (!string.IsNullOrEmpty(personGuid))
+                {
+                    try
+                    {
+                        person = await _personRepository.GetPersonIdFromGuidAsync(personGuid);
+                    }
+                    catch (Exception)
+                    {
+                        return new Tuple<IEnumerable<Dtos.HousingAssignment>, int>(new List<Dtos.HousingAssignment>(), 0);
+                    }
+                }
+
+                //process academicPeriod guid filter
+                var academicPeriodGuid = criteriaFilter.AcademicPeriod != null ? criteriaFilter.AcademicPeriod.Id : string.Empty;
+                if (!string.IsNullOrEmpty(academicPeriodGuid))
+                {
+                    try
+                    {
+                        var academicPeriods = await GetAcademicPeriods();
+                        if (academicPeriods == null)
+                        {
+                            return new Tuple<IEnumerable<Dtos.HousingAssignment>, int>(new List<Dtos.HousingAssignment>(), 0);
+                        }
+                        var academicPeriodEntity = academicPeriods.FirstOrDefault(mp => mp.Guid == academicPeriodGuid);
+                        if (academicPeriodEntity == null)
+                        {
+                            return new Tuple<IEnumerable<Dtos.HousingAssignment>, int>(new List<Dtos.HousingAssignment>(), 0);
+                        }
+                        term = academicPeriodEntity.Code;
+                    }
+                    catch (Exception)
+                    {
+                        return new Tuple<IEnumerable<Dtos.HousingAssignment>, int>(new List<Dtos.HousingAssignment>(), 0);
+                    }
+                }
+                //process status filter
+                if (criteriaFilter.Status != null)
+                    status = ConvertStatusDtoToEntity(criteriaFilter.Status);
+                //process startOn and endOn filter
+                try
+                {
+                    startDate = criteriaFilter.StartOn.HasValue ? await ConvertDateArgument(criteriaFilter.StartOn.ToString()) : string.Empty;
+                    endDate = criteriaFilter.EndOn.HasValue ? await ConvertDateArgument(criteriaFilter.EndOn.ToString()) : string.Empty;
+                }
+                catch (Exception)
+                {
+                    return new Tuple<IEnumerable<Dtos.HousingAssignment>, int>(new List<Dtos.HousingAssignment>(), 0);
+                }
+            }
+
             try
             {
-                CheckViewHousingAssignmentPermissions();
-
                 var housingAssignmentsCollection = new List<Ellucian.Colleague.Dtos.HousingAssignment>();
 
-                var housingAssignmentsEntities = await _housingAssignmentRepository.GetHousingAssignmentsAsync(offset, limit, bypassCache);
+                var housingAssignmentsEntities = await _housingAssignmentRepository.GetHousingAssignmentsAsync(offset, limit, person, term, status, startDate, endDate, bypassCache);
 
                 var totalCount = housingAssignmentsEntities.Item2;
 
@@ -340,7 +395,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             try
             {
-                //person
+                //person is required
+                if (source.Person == null || string.IsNullOrEmpty(source.Person.Id))
+                {
+                    throw new InvalidOperationException("Person is required.");
+                }            
                 var personKey = await _personRepository.GetPersonIdFromGuidAsync(source.Person.Id);
                 if (string.IsNullOrEmpty(personKey))
                 {
@@ -357,7 +416,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 //Create the domain entity
                 Domain.Student.Entities.HousingAssignment destinationEntity = string.IsNullOrEmpty(guid) ?
                     new Domain.Student.Entities.HousingAssignment(source.Id, personKey, roomEntity.Id, source.StartOn.Value, source.EndOn.Value) :
-                    new Domain.Student.Entities.HousingAssignment(source.Id, await GetHousingAssignmentKeyAsync(source), personKey, roomEntity.Id, source.StartOn.Value, source.EndOn.Value);
+                    new Domain.Student.Entities.HousingAssignment(source.Id, await GetHousingAssignmentKeyAsync(source.Id), personKey, roomEntity.Id, source.StartOn.Value,
+                    source.EndOn.Value);
 
                 //academicPeriod
                 if (source.RatePeriod == RatePeriod.Term && string.IsNullOrEmpty(source.AcademicPeriod.Id))
@@ -591,7 +651,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <param name="source"></param>
         /// <returns></returns>
-        private string ConvertStatusDtoToEntity(HousingAssignmentsStatus source)
+        private string ConvertStatusDtoToEntity(HousingAssignmentsStatus? source)
         {
             switch (source)
             {
@@ -606,6 +666,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 case HousingAssignmentsStatus.Prorated:
                     return "L";
                 case HousingAssignmentsStatus.NotSet:
+                    return string.Empty;
                 default:
                     throw new InvalidOperationException("Status is required.");
             }
@@ -616,9 +677,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <param name="housingAssignmentDto"></param>
         /// <returns></returns>
-        private async Task<string> GetHousingAssignmentKeyAsync(Dtos.HousingAssignment housingAssignmentDto)
+        private async Task<string> GetHousingAssignmentKeyAsync(string id)
         {
-            return await _housingAssignmentRepository.GetHousingAssignmentKeyAsync(housingAssignmentDto.Id);
+            return await _housingAssignmentRepository.GetHousingAssignmentKeyAsync(id);
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
@@ -913,7 +974,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         private void CheckViewHousingAssignmentPermissions()
         {
             // access is ok if the current user has the view housing request
-            if (!HasPermission(StudentPermissionCodes.ViewHousingAssignment))
+            if (!HasPermission(StudentPermissionCodes.ViewHousingAssignment) && !HasPermission(StudentPermissionCodes.CreateUpdateHousingAssignment))
             {
                 logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view housing-assignments.");
                 throw new PermissionsException("User is not authorized to view housing-assignments.");
@@ -945,5 +1006,528 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             return _roomrates;
         }
+
+        /// <summary>
+        /// Converts date to unidata Date
+        /// </summary>
+        /// <param name="date">UTC datetime</param>
+        /// <returns>Unidata Date</returns>
+        private async Task<string> ConvertDateArgument(string date)
+        {
+            try
+            {
+                return await _studentReferenceDataRepository.GetUnidataFormattedDate(date);
+            }
+            catch (Exception)
+            {
+                throw new InvalidOperationException("Invalid Date format in arguments");
+            }
+        }
+
+        #region 16.0.0
+
+        /// <summary>
+        /// Get ALL 16.0.0
+        /// </summary>
+        /// <param name="offset"></param>
+        /// <param name="limit"></param>
+        /// <param name="criteriaFilter"></param>
+        /// <param name="bypassCache"></param>
+        /// <returns></returns>
+        public async Task<Tuple<IEnumerable<HousingAssignment2>, int>> GetHousingAssignments2Async(int offset, int limit, HousingAssignment2 criteriaFilter, bool bypassCache = false)
+        {
+            CheckViewHousingAssignmentPermissions();
+            string person = string.Empty, term = string.Empty, status = string.Empty, startDate = string.Empty, endDate = string.Empty;
+            if (criteriaFilter != null)
+            {
+                //process person guid filter
+                var personGuid = criteriaFilter.Person != null ? criteriaFilter.Person.Id : string.Empty;
+                if (!string.IsNullOrEmpty(personGuid))
+                {
+                    try
+                    {
+                        person = await _personRepository.GetPersonIdFromGuidAsync(personGuid);
+                    }
+                    catch (Exception)
+                    {
+                        return new Tuple<IEnumerable<Dtos.HousingAssignment2>, int>(new List<Dtos.HousingAssignment2>(), 0);
+                    }
+                }
+
+                //process academicPeriod guid filter
+                var academicPeriodGuid = criteriaFilter.AcademicPeriod != null ? criteriaFilter.AcademicPeriod.Id : string.Empty;
+                if (!string.IsNullOrEmpty(academicPeriodGuid))
+                {
+                    try
+                    {
+                        var academicPeriods = await GetAcademicPeriods();
+                        if (academicPeriods == null)
+                        {
+                            return new Tuple<IEnumerable<Dtos.HousingAssignment2>, int>(new List<Dtos.HousingAssignment2>(), 0);
+                        }
+                        var academicPeriodEntity = academicPeriods.FirstOrDefault(mp => mp.Guid == academicPeriodGuid);
+                        if (academicPeriodEntity == null)
+                        {
+                            return new Tuple<IEnumerable<Dtos.HousingAssignment2>, int>(new List<Dtos.HousingAssignment2>(), 0);
+                        }
+                        term = academicPeriodEntity.Code;
+                    }
+                    catch (Exception)
+                    {
+                        return new Tuple<IEnumerable<Dtos.HousingAssignment2>, int>(new List<Dtos.HousingAssignment2>(), 0);
+                    }
+                }
+                //process status filter
+                if (criteriaFilter.Status != null)
+                    status = ConvertStatusDtoToEntity(criteriaFilter.Status);
+                //process startOn and endOn filter
+                try
+                {
+                    startDate = criteriaFilter.StartOn.HasValue ? await ConvertDateArgument(criteriaFilter.StartOn.ToString()) : string.Empty;
+                    endDate = criteriaFilter.EndOn.HasValue ? await ConvertDateArgument(criteriaFilter.EndOn.ToString()) : string.Empty;
+                }
+                catch (Exception)
+                {
+                    return new Tuple<IEnumerable<Dtos.HousingAssignment2>, int>(new List<Dtos.HousingAssignment2>(), 0);
+                }
+            }
+
+            try
+            {
+                var housingAssignmentsCollection = new List<Ellucian.Colleague.Dtos.HousingAssignment2>();
+
+                var housingAssignmentsEntities = await _housingAssignmentRepository.GetHousingAssignmentsAsync(offset, limit, person, term, status, startDate, endDate, bypassCache);
+
+                var totalCount = housingAssignmentsEntities.Item2;
+
+                if (housingAssignmentsEntities != null && housingAssignmentsEntities.Item1.Any())
+                {
+                    BuildLocalPersonGuids(housingAssignmentsEntities.Item1);
+
+                    foreach (var housingAssignments in housingAssignmentsEntities.Item1)
+                    {
+                        housingAssignmentsCollection.Add(await ConvertHousingAssignmentsEntityToDto2Async(housingAssignments, bypassCache));
+                    }
+                }
+
+                return new Tuple<IEnumerable<Dtos.HousingAssignment2>, int>(housingAssignmentsCollection, totalCount);
+            }
+            catch (Exception e)
+            {
+                throw e;
+            }
+        }
+
+        /// <summary>
+        /// Gets By Id.
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="bypassCache"></param>
+        /// <returns></returns>
+        public async Task<HousingAssignment2> GetHousingAssignmentByGuid2Async(string id, bool bypassCache = false)
+        {
+            try
+            {
+                CheckViewHousingAssignmentPermissions();
+
+                var housingAssignmentEntity = await _housingAssignmentRepository.GetHousingAssignmentByGuidAsync(id);
+
+                BuildLocalPersonGuids(new List<Ellucian.Colleague.Domain.Student.Entities.HousingAssignment>() { housingAssignmentEntity });
+
+                return await ConvertHousingAssignmentsEntityToDto2Async(housingAssignmentEntity, bypassCache);
+            }
+            catch (Exception e)
+            {
+                throw e;
+            }
+        }
+
+        /// <summary>
+        /// Updates housing assignment.
+        /// </summary>
+        /// <param name="guid"></param>
+        /// <param name="housingAssignmentDto"></param>
+        /// <returns></returns>
+        public async Task<HousingAssignment2> UpdateHousingAssignment2Async(string guid, HousingAssignment2 housingAssignmentDto)
+        {
+            if (housingAssignmentDto == null)
+            {
+                throw new ArgumentNullException("housingAssignmentDto", "Must provide a guid for housing assignment update.");
+            }
+
+            try
+            {
+                // get the ID associated with the incoming guid
+                var housingAssignmentId = await _housingAssignmentRepository.GetHousingAssignmentKeyAsync(housingAssignmentDto.Id);
+                if (!string.IsNullOrEmpty(housingAssignmentId))
+                {
+                    CheckCreateUpdateHousingAssignmentPermissions();
+
+                    _housingAssignmentRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
+
+                    Ellucian.Colleague.Domain.Student.Entities.HousingAssignment housingAssignmentEntity = await ConvertDtoToEntity2Async(guid, housingAssignmentDto);
+
+                    Domain.Student.Entities.HousingAssignment updatedHousingAssignmentEntity = await _housingAssignmentRepository.UpdateHousingAssignmentAsync(housingAssignmentEntity);
+
+                    BuildLocalPersonGuids(new List<Ellucian.Colleague.Domain.Student.Entities.HousingAssignment>() { housingAssignmentEntity });
+
+                    ClearReferenceData();
+
+                    return await this.ConvertHousingAssignmentsEntityToDto2Async(updatedHousingAssignmentEntity, true);
+                }
+            }
+            catch (Exception e)
+            {
+                throw e;
+            }
+            return await CreateHousingAssignment2Async(housingAssignmentDto);
+        }
+
+        /// <summary>
+        /// Creates housing assignment.
+        /// </summary>
+        /// <param name="housingAssignmentDto"></param>
+        /// <returns></returns>
+        public async Task<HousingAssignment2> CreateHousingAssignment2Async(HousingAssignment2 housingAssignmentDto)
+        {
+            if (housingAssignmentDto == null)
+            {
+                throw new ArgumentNullException("housingAssignmentDto", "Must provide a guid for housing assignment create.");
+            }
+
+            try
+            {
+                CheckCreateUpdateHousingAssignmentPermissions();
+
+                _housingAssignmentRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
+
+                var housingAssignmentEntity = await ConvertDtoToEntity2Async(null, housingAssignmentDto);
+                var createdHousingAssignmentEntity = await _housingAssignmentRepository.UpdateHousingAssignmentAsync(housingAssignmentEntity);
+                BuildLocalPersonGuids(new List<Ellucian.Colleague.Domain.Student.Entities.HousingAssignment>() { createdHousingAssignmentEntity });
+
+                return await this.ConvertHousingAssignmentsEntityToDto2Async(createdHousingAssignmentEntity, true);
+            }
+            catch (Exception e)
+            {
+                throw e;
+            }
+        }
+
+
+        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
+        /// <summary>
+        /// Converts a HousingAssignments domain entity to its corresponding HousingAssignments DTO
+        /// </summary>
+        /// <param name="source">HousingAssignments domain entity</param>
+        /// <returns>HousingAssignments DTO</returns>
+        private async Task<Ellucian.Colleague.Dtos.HousingAssignment2> ConvertHousingAssignmentsEntityToDto2Async(Ellucian.Colleague.Domain.Student.Entities.HousingAssignment source, bool bypassCache)
+        {
+            var housingAssignment = new Ellucian.Colleague.Dtos.HousingAssignment2();
+
+            housingAssignment.Id = source.Guid;
+            housingAssignment.HousingRequest = string.IsNullOrEmpty(source.HousingRequest) ? null : new GuidObject2(source.HousingRequest);
+            housingAssignment.Person = await ConvertPersonEntityToDto(source);
+            housingAssignment.Room = await ConvertRoomEntityToDto(string.Concat(source.Building, "*", source.RoomId), bypassCache);
+            housingAssignment.AcademicPeriod = await ConvertTermEntityToDto(source);
+            if (!source.StartOn.HasValue)
+            {
+                throw new InvalidOperationException(string.Format("Start on date is required. Guid: {0}", source.Guid));
+            }
+            housingAssignment.StartOn = source.StartOn.Value;
+            housingAssignment.EndOn = source.EndDate.HasValue ? source.EndDate.Value : default(DateTimeOffset?);
+            var statusStatusDate = ConvertStatusEntityToDto(source);
+
+            housingAssignment.Status = statusStatusDate.Item1;
+            housingAssignment.StatusDate = statusStatusDate.Item2.HasValue ? statusStatusDate.Item2.Value.Date : default(DateTime?);
+            housingAssignment.ContractNumber = string.IsNullOrEmpty(source.ContractNumber) ? null : source.ContractNumber;
+            housingAssignment.Comment = string.IsNullOrEmpty(source.Comments) ? null : source.Comments;
+            housingAssignment.RoomRates = await ConvertRoomRateEntityToDto2(source, bypassCache);
+            housingAssignment.RatePeriod = ConvertEntityRatePeriodToDto(source.RatePeriod);
+            housingAssignment.RateOverride = source.RateOverride.HasValue ? await ConvertOverrideEntityToDto(source.RateOverride, source.RateOverrideReason, bypassCache) : null;
+            housingAssignment.AdditionalCharges = await ConvertAdditionalChargesEntityToDto(source, bypassCache);
+            housingAssignment.ResidentType = await ConvertHousingResTypeEntityToDto(source.ResidentStaffIndicator, bypassCache);
+
+            return housingAssignment;
+        }
+
+        /// <summary>
+        /// Convert housing request dto to entity.
+        /// </summary>
+        /// <param name="guid"></param>
+        /// <param name="source"></param>
+        /// <returns></returns>
+        private async Task<Domain.Student.Entities.HousingAssignment> ConvertDtoToEntity2Async(string guid, Dtos.HousingAssignment2 source)
+        {
+            try
+            {
+                //person is required
+                if (source.Person == null || string.IsNullOrEmpty(source.Person.Id))
+                {
+                    throw new InvalidOperationException("Person is required.");
+                }
+                var personKey = await _personRepository.GetPersonIdFromGuidAsync(source.Person.Id);
+                if (string.IsNullOrEmpty(personKey))
+                {
+                    throw new KeyNotFoundException(string.Format("No person found. guid: {0}", source.Person.Id));
+                }
+
+                //room
+                var roomEntity = (await GetRooms(true)).FirstOrDefault(i => i.Guid.Equals(source.Room.Id, StringComparison.OrdinalIgnoreCase));
+                if (roomEntity == null)
+                {
+                    throw new KeyNotFoundException(string.Format("No room found. guid: {0}", source.Room.Id));
+                }
+
+                //Create the domain entity
+                Domain.Student.Entities.HousingAssignment destinationEntity = string.IsNullOrEmpty(guid) ?
+                    new Domain.Student.Entities.HousingAssignment(source.Id, personKey, roomEntity.Id, source.StartOn.Value, source.EndOn.Value) :
+                    new Domain.Student.Entities.HousingAssignment(source.Id, await GetHousingAssignmentKeyAsync(source.Id), personKey, roomEntity.Id, source.StartOn.Value,
+                    source.EndOn.Value);
+
+                //academicPeriod
+                if (source.RatePeriod == RatePeriod.Term && string.IsNullOrEmpty(source.AcademicPeriod.Id))
+                {
+                    throw new InvalidOperationException("A term must be specified if the rate period is Term .");
+                }
+
+                if (source.AcademicPeriod != null && !string.IsNullOrEmpty(source.AcademicPeriod.Id))
+                {
+                    var acadPeriod = (await GetAcademicPeriods()).FirstOrDefault(i => i.Guid.Equals(source.AcademicPeriod.Id, StringComparison.OrdinalIgnoreCase));
+                    if (acadPeriod == null)
+                    {
+                        throw new KeyNotFoundException(string.Format("No academic period found. guid: {0}", source.AcademicPeriod.Id));
+                    }
+                    destinationEntity.Term = acadPeriod.Code;
+                }
+                //status
+                var status = string.Empty;
+                if (source.Status != HousingAssignmentsStatus.NotSet)
+                {
+                    destinationEntity.Status = ConvertStatusDtoToEntity(source.Status);
+                }
+
+                if (!source.StatusDate.HasValue)
+                {
+                    throw new InvalidOperationException("Status date is required.");
+                }
+                if (source.StatusDate.HasValue)
+                {
+                    destinationEntity.StatusDate = source.StatusDate.Value;
+                }
+
+                //request
+                if (source.HousingRequest != null && !string.IsNullOrEmpty(source.HousingRequest.Id))
+                {
+                    destinationEntity.HousingRequest = source.HousingRequest.Id;
+                }
+
+                //roomRate
+                var roomRates = source.RoomRates ?? null;
+                if (roomRates != null && roomRates.Any() && roomRates.Count() > 1)
+                {
+                    throw new InvalidOperationException("Only a single room rate is permitted.");
+                }
+
+                if (roomRates != null && roomRates.Any())
+                {
+                    var singleRoomRate = roomRates.FirstOrDefault();
+
+                    if (string.IsNullOrEmpty(singleRoomRate.Id))
+                    {
+                        throw new InvalidOperationException("Id is required for the room rate.");
+                    }
+                    if (!string.IsNullOrEmpty(singleRoomRate.Id))
+                    {
+                        var rmRates = await RoomRatesAsync(true);
+                        if (rmRates != null && rmRates.Any())
+                        {
+                            var rmRate = rmRates.FirstOrDefault(i => i.Guid.Equals(singleRoomRate.Id, StringComparison.OrdinalIgnoreCase));
+                            if (rmRate == null)
+                            {
+                                throw new KeyNotFoundException(string.Format("No room rate found for guid: '{0}'", singleRoomRate.Id));
+                            }
+                            if (rmRate.EndDate.HasValue && rmRate.EndDate.Value > source.EndOn.Value)
+                            {
+                                throw new InvalidOperationException("The specified Housing Rate Table is not active on housing assignment start date.");
+                            }
+                            destinationEntity.RoomRateTable = rmRate.Code;
+                        }
+                    }
+
+                    //ratePeriod
+                    if (string.IsNullOrEmpty(singleRoomRate.Id) && source.RatePeriod.HasValue)
+                    {
+                        throw new InvalidOperationException("A valid roomrate id is required when rate period is specified.");
+                    }
+                }
+
+                if (source.RatePeriod.HasValue && source.RatePeriod != Dtos.EnumProperties.RatePeriod.NotSet)
+                {
+                    destinationEntity.RatePeriod = ConvertRatePeriodDtoToEntity(source.RatePeriod);
+                }
+
+                //rateoverride
+                if (source.RateOverride != null)
+                {
+                    //RateOverride
+                    if (source.RateOverride.HousingAssignmentRate != null && source.RateOverride.HousingAssignmentRate.RateValue == null)
+                    {
+                        throw new InvalidOperationException("Rate value is required for the rate override.");
+                    }
+
+                    if (source.RateOverride.HousingAssignmentRate != null && source.RateOverride.HousingAssignmentRate.RateValue != null &&
+                        source.RateOverride.HousingAssignmentRate.RateValue < 0)
+                    {
+                        throw new ArgumentException("The override rate value must be set greater than zero. ");
+                    }
+
+                    //rateOverride.HousingAssignmentRate.RateValue
+                    destinationEntity.RateOverride = source.RateOverride.HousingAssignmentRate.RateValue;
+
+                    if (source.RateOverride.HousingAssignmentRate.RateValue != null && source.RateOverride.HousingAssignmentRate.RateCurrency != Dtos.EnumProperties.CurrencyIsoCode.USD &&
+                        source.RateOverride.HousingAssignmentRate.RateCurrency != Dtos.EnumProperties.CurrencyIsoCode.CAD)
+                    {
+                        throw new ArgumentException("The override rate currency must be set to either 'USD' or 'CAD'. ");
+                    }
+
+                    //RateOverrideReason
+                    if (source.RateOverride.RateOverrideReason != null && string.IsNullOrEmpty(source.RateOverride.RateOverrideReason.Id))
+                    {
+                        throw new InvalidOperationException("An Override Rate Reason must be specified with an Override Rate.");
+                    }
+                    var rateOverrideReason = (await GetBillingOverrideReasons(true)).FirstOrDefault(i => i.Guid.Equals(source.RateOverride.RateOverrideReason.Id, StringComparison.OrdinalIgnoreCase));
+                    if (rateOverrideReason == null)
+                    {
+                        throw new KeyNotFoundException(string.Format("No rate override reason found for guid: {0}", source.RateOverride.RateOverrideReason.Id));
+                    }
+                    destinationEntity.RateOverrideReason = rateOverrideReason.Code;
+                }
+
+                //additionalCharges
+                if (source.AdditionalCharges != null && (source.AdditionalCharges.Any(i => i.AccountingCode == null || (i.AccountingCode != null && string.IsNullOrEmpty(i.AccountingCode.Id)))))
+                {
+                    throw new InvalidOperationException(string.Format("Accounting code is required for additional charges."));
+                }
+
+                if (source.AdditionalCharges != null && (source.AdditionalCharges.Any(i => i.AccountingCode == null || (i.AccountingCode != null && i.HousingAssignmentRate == null))))
+                {
+                    throw new InvalidOperationException(string.Format("Charge is required for additional charges."));
+                }
+
+                if (source.AdditionalCharges != null && (source.AdditionalCharges.Any(i => i.AccountingCode == null ||
+                    (i.AccountingCode != null && i.HousingAssignmentRate != null && i.HousingAssignmentRate.RateCurrency == CurrencyIsoCode.NotSet))))
+                {
+                    throw new InvalidOperationException(string.Format("Currency is required for the additional charges."));
+                }
+
+                if (source.AdditionalCharges != null && (source.AdditionalCharges.Any(i => i.AccountingCode == null ||
+                    (i.AccountingCode != null && i.HousingAssignmentRate != null && (i.HousingAssignmentRate.RateValue == null || !i.HousingAssignmentRate.RateValue.HasValue)))))
+                {
+                    throw new InvalidOperationException("Value is required for the additional charges.");
+                }
+
+                if (source.AdditionalCharges != null && source.AdditionalCharges.Any())
+                {
+                    List<ArAdditionalAmount> arAddlAmountList = new List<ArAdditionalAmount>();
+                    foreach (var additionalCharge in source.AdditionalCharges)
+                    {
+                        var acctCode = (await this.GetAccountingCodes(true)).FirstOrDefault(i => i.Guid.Equals(additionalCharge.AccountingCode.Id));
+                        if (acctCode == null)
+                        {
+                            throw new KeyNotFoundException(string.Format("No accounting code found for guid: {0}", additionalCharge.AccountingCode.Id));
+                        }
+                        ArAdditionalAmount addlAmt = new ArAdditionalAmount()
+                        {
+                            AraaArCode = acctCode.Code
+                        };
+                        if (additionalCharge.HousingAssignmentRate.RateValue.HasValue)
+                        {
+                            if (additionalCharge.HousingAssignmentRate.RateValue.Value > 0)
+                            {
+                                addlAmt.AraaChargeAmt = additionalCharge.HousingAssignmentRate.RateValue.Value;
+                            }
+                            else if (additionalCharge.HousingAssignmentRate.RateValue.Value < 0)
+                            {
+                                addlAmt.AraaCrAmt = additionalCharge.HousingAssignmentRate.RateValue.Value;
+                            }
+                        }
+                        arAddlAmountList.Add(addlAmt);
+                    }
+                    destinationEntity.ArAdditionalAmounts = arAddlAmountList;
+                }
+
+                //residentType
+                if (source.ResidentType != null && string.IsNullOrEmpty(source.ResidentType.Id))
+                {
+                    throw new InvalidOperationException("Id is required for the resident type.");
+                }
+
+                if (source.ResidentType != null)
+                {
+                    var resType = (await GetHousingResidentTypes(true)).FirstOrDefault(i => i.Guid.Equals(source.ResidentType.Id, StringComparison.OrdinalIgnoreCase));
+                    if (resType == null)
+                    {
+                        throw new KeyNotFoundException(string.Format("No resident type found for guid: {0}", source.ResidentType.Id));
+                    }
+                    destinationEntity.ResidentStaffIndicator = resType.Code;
+                }
+
+
+                //contractNumber
+                if (!string.IsNullOrEmpty(source.ContractNumber))
+                {
+                    if (source.ContractNumber.Length > 16)
+                    {
+                        throw new InvalidOperationException("Contract number cannot be more than 16 characters.");
+                    }
+                    destinationEntity.ContractNumber = source.ContractNumber;
+                }
+
+                //comments
+                if (!string.IsNullOrEmpty(source.Comment))
+                {
+                    destinationEntity.Comments = source.Comment;
+                }
+
+                return destinationEntity;
+            }
+            catch (InvalidOperationException e)
+            {
+                throw new Exception(string.Concat(e.Message, " housing assignment guid: ", source.Id));
+            }
+            catch (Exception e)
+            {
+                throw e;
+            }
+        }
+
+        /// <summary>
+        /// Converts room rate entity to dto.
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="bypassCache"></param>
+        /// <returns></returns>
+        private async Task<List<GuidObject2>> ConvertRoomRateEntityToDto2(Domain.Student.Entities.HousingAssignment source, bool bypassCache)
+        {
+            if (string.IsNullOrEmpty(source.RoomRateTable))
+            {
+                return null;
+            }
+            var rmRates = await RoomRatesAsync(bypassCache);
+            if (rmRates != null && rmRates.Any())
+            {
+                var roomRate = rmRates.FirstOrDefault(i => i.Code.Equals(source.RoomRateTable, StringComparison.OrdinalIgnoreCase));
+                if (roomRate == null)
+                {
+                    throw new KeyNotFoundException(string.Format("No room rate for code{0}, guid: {1}", source.RoomRateTable, source.Guid));
+                }
+                return new List<GuidObject2>() { new GuidObject2(roomRate.Guid) };
+            }
+            else
+            {
+                return null;
+            }
+        }
+        #endregion
     }
 }

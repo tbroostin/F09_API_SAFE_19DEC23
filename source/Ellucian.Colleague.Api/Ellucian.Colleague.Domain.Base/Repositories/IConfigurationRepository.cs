@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Base.Entities;
 using System;
@@ -55,8 +55,9 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <summary>
         /// Gets the User profile configuration.
         /// </summary>
+        /// <param name="allAdrelTypes">Address Relation Type codes</param>
         /// <returns><see cref="UserProfileConfiguration2"/>User Profile Configuration</returns>
-        Task<UserProfileConfiguration2> GetUserProfileConfiguration2Async();
+        Task<UserProfileConfiguration2> GetUserProfileConfiguration2Async(List<AddressRelationType> allAdrelTypes);
 
         /// <summary>
         /// Gets the Emergency Information configuration.
@@ -156,5 +157,11 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// </summary>
         /// <returns><see cref="RequiredDocumentConfiguration"/>Required Document Configuration</returns>
         Task<RequiredDocumentConfiguration> GetRequiredDocumentConfigurationAsync();
+
+        /// <summary>
+        /// Gets the Session Configuration.
+        /// </summary>
+        /// <returns>Session Configuration entity</returns>
+        Task<SessionConfiguration> GetSessionConfigurationAsync();
     }
 }

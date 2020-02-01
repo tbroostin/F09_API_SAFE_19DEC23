@@ -90,7 +90,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         {
             var personalRelationStatusCollection = new List<Ellucian.Colleague.Dtos.PersonalRelationshipStatus>();
 
-            var personalRelationStatusEntities = await _referenceDataRepository.GetPersonalRelationshipStatusesAsync(bypassCache);
+            var personalRelationStatusEntities = await _referenceDataRepository.GetRelationshipStatusesAsync(bypassCache);
             if (personalRelationStatusEntities != null && personalRelationStatusEntities.Count() > 0)
             {
                 foreach (var relationStatus in personalRelationStatusEntities)
@@ -110,7 +110,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         {
             try
             {
-                return ConvertPersonalRelationshipStatusEntityToPersonalRelationshipStatusDto((await _referenceDataRepository.GetPersonalRelationshipStatusesAsync(true)).Where(rt => rt.Guid == guid).First());
+                return ConvertPersonalRelationshipStatusEntityToPersonalRelationshipStatusDto((await _referenceDataRepository.GetRelationshipStatusesAsync(true)).Where(rt => rt.Guid == guid).First());
             }
             catch (InvalidOperationException ex)
             {
@@ -179,7 +179,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// </summary>
         /// <param name="source">PersonalRelationshipStatus domain entity</param>
         /// <returns>PersonalRelationshipStatus DTO</returns>
-        private Dtos.PersonalRelationshipStatus ConvertPersonalRelationshipStatusEntityToPersonalRelationshipStatusDto(PersonalRelationshipStatus source)
+        private Dtos.PersonalRelationshipStatus ConvertPersonalRelationshipStatusEntityToPersonalRelationshipStatusDto(RelationshipStatus source)
         {
             var personalRelationshipStatus = new Dtos.PersonalRelationshipStatus();
             personalRelationshipStatus.Id = source.Guid;

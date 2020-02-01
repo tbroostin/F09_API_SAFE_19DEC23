@@ -1,10 +1,8 @@
-﻿// Copyright 2016-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
-using Ellucian.Colleague.Coordination.Base.Services;
-using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.License;
@@ -37,17 +35,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             _logger = logger;
         }
 
-        /// <summary>
-        /// Retrieves information for all grade modes.
-        /// </summary>
-        /// <returns>All <see cref="Dtos.GradeMode">GradeModes</see></returns>
-        public async Task<IEnumerable<Dtos.GradeMode>> GetGradeModesAsync()
-        {
-            //GET is not supported for Colleague but Hedm requires full crud support.
-            throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
-        
-        }
-
+     
         /// <summary>
         /// Retrieves information for all grade modes.
         /// </summary>
@@ -57,19 +45,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             return new List<Dtos.GradeMode>();
         }
 
-        /// <summary>
-        /// Retrieves grade mode by id
-        /// </summary>
-        /// <param name="id">The id of the grade mode</param>
-        /// <returns>The requested <see cref="Dtos.GradeMode">GradeMode</see></returns>
-        public async Task<Dtos.GradeMode> GetGradeModeByIdAsync(string id)
-        {
-            //GET by id is not supported for Colleague but Hedm requires full crud support.
-            throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
-        
-        }
-
-
+     
         /// <summary>
         /// Retrieves grade mode by id
         /// </summary>

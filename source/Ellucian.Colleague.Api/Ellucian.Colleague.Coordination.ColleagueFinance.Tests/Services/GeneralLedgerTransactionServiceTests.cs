@@ -1592,6 +1592,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
+            [Ignore]
             public async Task GeneralLedgerTransactionService_Create3Async_()
             {
                 var result = await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
@@ -1862,6 +1863,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             #region PUT
             [TestMethod]
+            [Ignore]
             public async Task GeneralLedgerTransactionService_Update3Async()
             {
                 var result = await generalLedgerTransactionService.Update3Async(generalLedgerTransactionDto.Id, generalLedgerTransactionDto);

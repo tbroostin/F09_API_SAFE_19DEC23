@@ -9,7 +9,6 @@ using Ellucian.Colleague.Data.Finance.Transactions;
 using Ellucian.Colleague.Domain.Finance.Entities;
 using Ellucian.Colleague.Domain.Finance.Repositories;
 using Ellucian.Data.Colleague;
-using Ellucian.Data.Colleague.DataContracts;
 using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
@@ -195,7 +194,8 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
             bool isId = int.TryParse(criteria, out personId);
             if (isId)
             {
-                string id = criteria.PadLeft(7, '0');
+                //Format the id according to the existing configuration
+                string id = await PadIdPerPid2ParamsAsync(criteria);
                 personIds.Add(id);
             }
             // If search string is alphanumeric, parse names from query and add matching persons to list

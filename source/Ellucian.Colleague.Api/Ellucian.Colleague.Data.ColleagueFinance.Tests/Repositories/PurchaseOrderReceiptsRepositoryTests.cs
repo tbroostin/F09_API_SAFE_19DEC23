@@ -12,7 +12,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
@@ -162,6 +161,19 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 dataReaderMock.Setup(d => d.BulkReadRecordAsync<PoReceiptIntg>("PO.RECEIPT.INTG", It.IsAny<string[]>(), It.IsAny<bool>()))
                      .ReturnsAsync(poReceiptIntgs);
                 dataReaderMock.Setup(d => d.SelectAsync("PO.RECEIPT.INTG", "")).ReturnsAsync(new string[] { "1", "2" });
+
+                // purchaseOrderData = await DataReader.BatchReadRecordColumnsAsync("PURCHASE.ORDERS", purchaseOrderIds.Distinct().ToArray(), new string[] { "PO.NO" });
+
+                Dictionary<string, Dictionary<string, string>> dict = new Dictionary<string, Dictionary<string, string>>();
+                foreach (var poReceiptIntg in poReceiptIntgs)
+                {
+                    var poNoDict = new Dictionary<string, string>
+                    {
+                        { "PO.NO", string.Format("P{0}", poReceiptIntg.PriPoId) }
+                    };
+                    dict.Add(poReceiptIntg.PriPoId, poNoDict);
+                }
+                dataReaderMock.Setup(b => b.BatchReadRecordColumnsAsync("PURCHASE.ORDERS", It.IsAny<string[]>(), It.IsAny<string[]>())).ReturnsAsync(dict);
             }
 
             #endregion
@@ -192,6 +204,36 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 Assert.IsNotNull(result);
                 Assert.AreEqual(result.Item2, 2);
             }
+
+            [TestMethod]
+            public async Task PurchaseOrderReceiptRepository_GetPurchaseOrderReceiptsAsync_PurchaseOrderFilter()
+            {
+                var purchaseOrderID = "1";
+
+                var criteria = string.Format("WITH PRI.PO.ID EQ '{0}'", purchaseOrderID);
+
+                dataReaderMock.Setup(d => d.SelectAsync("PO.RECEIPT.INTG", criteria)).ReturnsAsync(new string[] { "1" });
+
+                var result = await PurchaseOrderReceiptRepository.GetPurchaseOrderReceiptsAsync(0, 2, purchaseOrderID);
+              
+                Assert.IsNotNull(result);
+                Assert.AreEqual(result.Item2, 1);
+            }
+
+            [TestMethod]
+            public async Task PurchaseOrderReceiptRepository_GetPurchaseOrderReceiptsAsync_EmptyPurchaseOrderFilter()
+            {
+                var purchaseOrderID = "1";
+
+                var criteria = string.Format("WITH PRI.PO.ID EQ '{0}'", purchaseOrderID);
+                dataReaderMock.Setup(d => d.SelectAsync("PO.RECEIPT.INTG", criteria)).ReturnsAsync(new string[] { });
+
+                var result = await PurchaseOrderReceiptRepository.GetPurchaseOrderReceiptsAsync(0, 2, purchaseOrderID);
+
+                Assert.IsNotNull(result);
+                Assert.AreEqual(result.Item2, 0);
+            }
+
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
@@ -232,11 +274,14 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             [TestMethod]
             public async Task PurchaseOrderReceiptRepository_GetPurchaseOrderReceiptByGuidAsync()
             {
+                var poRectIntg = poReceiptIntgs.FirstOrDefault(x => x.RecordGuid == guid);
 
                 var result = await PurchaseOrderReceiptRepository.GetPurchaseOrderReceiptByGuidAsync(guid);
 
                 Assert.IsNotNull(result);
                 Assert.AreEqual(result.Guid, guid);
+                Assert.AreEqual(result.PoNo, string.Format("P{0}", poRectIntg.PriPoId));
+
             }
 
             [TestMethod]
@@ -248,10 +293,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 dataReaderMock.Setup(d => d.ReadRecordAsync<PoReceiptIntg>(It.IsAny<string>(), It.IsAny<bool>()))
                    .ReturnsAsync(poReceiptIntg);
 
-                var result = await PurchaseOrderReceiptRepository.GetPurchaseOrderReceiptByGuidAsync(guid);
+                await PurchaseOrderReceiptRepository.GetPurchaseOrderReceiptByGuidAsync(guid);
 
-                Assert.IsNotNull(result);
-                Assert.AreEqual(result.Guid, guid);
             }
 
             [TestMethod]
@@ -281,8 +324,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 };
                 transManagerMock.Setup(repo => repo.ExecuteAsync<CreateProcurementReceiptRequest, CreateProcurementReceiptResponse>(It.IsAny<CreateProcurementReceiptRequest>()))
                     .ReturnsAsync(response);
-                var actual = await PurchaseOrderReceiptRepository.CreatePurchaseOrderReceiptAsync(purchaseOrderReceipt);
-                Assert.IsNotNull(actual);
+                 await PurchaseOrderReceiptRepository.CreatePurchaseOrderReceiptAsync(purchaseOrderReceipt);
+                
             }
 
             [TestMethod]
@@ -315,8 +358,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 };
                 transManagerMock.Setup(repo => repo.ExecuteAsync<CreateProcurementReceiptRequest, CreateProcurementReceiptResponse>(It.IsAny<CreateProcurementReceiptRequest>()))
                     .ReturnsAsync(response);
-                var actual = await PurchaseOrderReceiptRepository.CreatePurchaseOrderReceiptAsync(purchaseOrderReceipt);
-                Assert.IsNotNull(actual);
+                await PurchaseOrderReceiptRepository.CreatePurchaseOrderReceiptAsync(purchaseOrderReceipt);
+
             }
         }
     }

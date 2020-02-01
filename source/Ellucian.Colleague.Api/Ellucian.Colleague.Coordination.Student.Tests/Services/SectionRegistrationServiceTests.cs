@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Data.Student.Transactions;
@@ -1001,7 +1001,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 viewRegistrationRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.SectionPermissionCodes.ViewRegistrations));
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewRegistrationRole });
 
-                sectionRegistrationRepositoryMock.Setup(repo => repo.GetSectionRegistrations2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<SectionRegistrationResponse>(),
+                sectionRegistrationRepositoryMock.Setup(repo => repo.GetSectionRegistrations3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<SectionRegistrationResponse>(),
                     It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(tuple);
 
                 ////Act
@@ -1747,7 +1747,6 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
 
-
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
             public async Task CheckForRequiredFields_SectionGradeType_Null_ArgumentNullException()
@@ -1762,6 +1761,54 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 {
                     new SectionRegistrationGrade()
                     { SectionGrade = new GuidObject2(){ Id = "7373"}, SectionGradeType = null,
+                        Submission =  new Submission(){ SubmissionMethod= SubmissionMethodType.Auto, SubmissionReason = new GuidObject2(){ Id = "1235"},
+                            SubmittedBy = new GuidObject2(){Id = "7979"}, SubmittedOn= DateTimeOffset.Now}
+                    }
+
+                };
+                //Act
+                sectionRegistrationRepositoryMock
+                    .Setup(a => a.UpdateAsync(It.IsAny<SectionRegistrationRequest>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                    .ThrowsAsync(new ArgumentNullException());
+                var result = await sectionRegistrationService.UpdateSectionRegistrationAsync(guid, registrationDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(InvalidOperationException))]
+            public async Task CheckForRequiredFields_SectionGradeType_Duplicate_InvalidOperationException()
+            {
+                //Arrange
+                viewRegistrationRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.SectionPermissionCodes.ViewRegistrations));
+                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewRegistrationRole });
+
+                var gradeSchemes = new List<Domain.Student.Entities.GradeScheme>()
+                {
+                    new Domain.Student.Entities.GradeScheme("bb66b971-3ee0-4477-9bb7-539721f93434" ,"CE", "Continuing Education")
+                    { EffectiveStartDate = DateTime.Today.AddDays(-30), EffectiveEndDate = DateTime.Today.AddDays(30) },
+                    new Domain.Student.Entities.GradeScheme("5aeebc5c-c973-4f83-be4b-f64c95002124", "GR", "Graduate")
+                    { EffectiveStartDate = DateTime.Today.AddDays(-30) },
+                    new Domain.Student.Entities.GradeScheme("9a1914f6-ee9c-449c-92bc-8928267dfe4d", "UG", "Undergraduate")
+                    { EffectiveStartDate = DateTime.Today }
+                };
+                studentReferenceDataRepositoryMock.Setup(gsch => gsch.GetGradeSchemesAsync(It.IsAny<bool>())).ReturnsAsync(gradeSchemes);
+
+
+                var sections = new TestSectionRepository().GetAsync().Result.ToList();
+                sectionRepositoryMock.Setup(s => s.GetSectionByGuidAsync(It.IsAny<string>())).ReturnsAsync(sections.First());
+
+                var guid = Guid.NewGuid().ToString();
+
+                registrationDto = JsonConvert.DeserializeObject<SectionRegistration2>(json);
+              
+                registrationDto.SectionRegistrationGrades = new List<SectionRegistrationGrade>()
+                {
+                    new SectionRegistrationGrade()
+                    { SectionGrade = new GuidObject2(){ Id = "123"}, SectionGradeType = new GuidObject2(){ Id = guid},
+                        Submission =  new Submission(){ SubmissionMethod= SubmissionMethodType.Auto, SubmissionReason = new GuidObject2(){ Id = "1235"},
+                            SubmittedBy = new GuidObject2(){Id = "7979"}, SubmittedOn= DateTimeOffset.Now}
+                    },
+                    new SectionRegistrationGrade()
+                    { SectionGrade = new GuidObject2(){ Id = "456"}, SectionGradeType = new GuidObject2(){ Id = guid},
                         Submission =  new Submission(){ SubmissionMethod= SubmissionMethodType.Auto, SubmissionReason = new GuidObject2(){ Id = "1235"},
                             SubmittedBy = new GuidObject2(){Id = "7979"}, SubmittedOn= DateTimeOffset.Now}
                     }

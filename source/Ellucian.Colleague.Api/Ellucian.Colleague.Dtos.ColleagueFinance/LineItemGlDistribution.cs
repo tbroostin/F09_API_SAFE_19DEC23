@@ -41,5 +41,15 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// This is the GL amount for the line item GL distribution.
         /// </summary>
         public decimal Amount { get; set; }
+
+        /// <summary>
+        /// Will this GL number be visible to the client?
+        /// </summary>
+        public bool IsMasked { get; set; }
+
+        /// <summary>
+        /// Description for the GL account.
+        /// </summary>
+        public string GlAccountDescription { get; set; }
     }
 }

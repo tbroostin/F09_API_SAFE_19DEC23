@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Repositories;
 using Ellucian.Data.Colleague;
@@ -101,7 +101,17 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.AreEqual(stwebDefaults.StwebGradCommencementUrl, graduationConfiguration.CommencementInformationLink);
                 Assert.AreEqual(stwebDefaults.StwebGradPhoneticUrl, graduationConfiguration.PhoneticSpellingLink);
                 Assert.AreEqual(stwebDefaults.StwebGradDiffProgramUrl, graduationConfiguration.ApplyForDifferentProgramLink);
-                Assert.AreEqual(stwebDefaults.StwebGradMaxGuests, graduationConfiguration.MaximumCommencementGuests);                
+                Assert.AreEqual(stwebDefaults.StwebGradMaxGuests, graduationConfiguration.MaximumCommencementGuests);     
+                
+            }
+
+            [TestMethod]
+            public async Task ReturnsExpectedPreventGraduationApplicationEdits()
+            {
+                dataAccessorMock.Setup<Task<Data.Student.DataContracts.DaDefaults>>(acc => acc.ReadRecordAsync<DaDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(daDefaults));
+                var graduationConfiguration = await studentConfigurationRepository.GetGraduationConfigurationAsync();
+                var allowGraduationApplicationEdits = !string.IsNullOrEmpty(stwebDefaults.StwebAllowGradAppEdits) && stwebDefaults.StwebAllowGradAppEdits.ToUpper() == "N";
+                Assert.AreEqual(allowGraduationApplicationEdits, graduationConfiguration.PreventGraduationApplicationEdits);
             }
 
             [TestMethod]
@@ -356,6 +366,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 defaults.StwebGradTerms = new List<string>() { "term1", "term2", "term3" };
                 defaults.StwebGradOvrCmcmtCapgown = "Y";
                 defaults.StwebGradNotifyPara = "GNOTIFY";
+                defaults.StwebAllowGradAppEdits = "Y";
                 return defaults;
             }
 
@@ -671,6 +682,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.AreEqual(2, courseCatalogConfiguration.CatalogFilterOptions.Where(c => c.IsHidden == true).Count());
                 Assert.AreEqual(Ellucian.Colleague.Domain.Student.Entities.CatalogFilterType.CourseTypes, courseCatalogConfiguration.CatalogFilterOptions[1].Type);
                 Assert.IsFalse(courseCatalogConfiguration.ShowCourseSectionFeeInformation);
+                Assert.IsFalse(courseCatalogConfiguration.ShowCourseSectionBookInformation);
             }
 
             [TestMethod]
@@ -745,6 +757,46 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.IsTrue(courseCatalogConfiguration.ShowCourseSectionFeeInformation);
             }
 
+
+            [TestMethod]
+            public async Task GetCourseCatalogConfigurationAsync_showCatSecBookInformation_N()
+            {
+                // Arrange: Set up repo response for null stwebDefaults data contract and null Defaults data contract.
+                StwebDefaults response = new StwebDefaults()
+                {
+                    StwebRegStartDate = DateTime.Today.AddDays(-30),
+                    StwebRegEndDate = DateTime.Today.AddDays(30),
+                    StwebShowBookInformation = "N"
+                };
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response));
+                // Act
+                var courseCatalogConfiguration = await studentConfigurationRepository.GetCourseCatalogConfigurationAsync();
+                // Assert
+                Assert.AreEqual(response.StwebRegStartDate, courseCatalogConfiguration.EarliestSearchDate);
+                Assert.AreEqual(response.StwebRegEndDate, courseCatalogConfiguration.LatestSearchDate);
+                Assert.AreEqual(3, courseCatalogConfiguration.CatalogFilterOptions.Count());
+                Assert.IsFalse(courseCatalogConfiguration.ShowCourseSectionBookInformation);
+            }
+
+            [TestMethod]
+            public async Task GetCourseCatalogConfigurationAsync_showCatSecBookInformation_Null()
+            {
+                // Arrange: Set up repo response for null stwebDefaults data contract and null Defaults data contract.
+                StwebDefaults response = new StwebDefaults()
+                {
+                    StwebRegStartDate = DateTime.Today.AddDays(-30),
+                    StwebRegEndDate = DateTime.Today.AddDays(30),
+                };
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response));
+                // Act
+                var courseCatalogConfiguration = await studentConfigurationRepository.GetCourseCatalogConfigurationAsync();
+                // Assert
+                Assert.AreEqual(response.StwebRegStartDate, courseCatalogConfiguration.EarliestSearchDate);
+                Assert.AreEqual(response.StwebRegEndDate, courseCatalogConfiguration.LatestSearchDate);
+                Assert.AreEqual(3, courseCatalogConfiguration.CatalogFilterOptions.Count());
+                Assert.IsFalse(courseCatalogConfiguration.ShowCourseSectionBookInformation);
+            }
+
             private StwebDefaults BuildStwebDefaultsResponse()
             {
                 var defaults = new StwebDefaults();
@@ -759,6 +811,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 var defaults = new CatalogSearchDefaults();
                 defaults.ClsdSearchElementsEntityAssociation = new List<CatalogSearchDefaultsClsdSearchElements>();
                 defaults.ClsdSearchElementsEntityAssociation.Add(new CatalogSearchDefaultsClsdSearchElements() { ClsdSearchElementAssocMember = "AVAILABILITY", ClsdHideAssocMember = "Y" });
+                defaults.ClsdSearchElementsEntityAssociation.Add(new CatalogSearchDefaultsClsdSearchElements() { ClsdSearchElementAssocMember = "SYNONYMS", ClsdHideAssocMember = "N" });
                 defaults.ClsdSearchElementsEntityAssociation.Add(new CatalogSearchDefaultsClsdSearchElements() { ClsdSearchElementAssocMember = "COURSE_TYPES", ClsdHideAssocMember = "" });
                 defaults.ClsdSearchElementsEntityAssociation.Add(new CatalogSearchDefaultsClsdSearchElements() { ClsdSearchElementAssocMember = "LOCATIONS", ClsdHideAssocMember = "y" });
                 // And one invalid one that will not be converted:
@@ -791,6 +844,211 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         }
 
         [TestClass]
+        public class CourseCatalogConfiguration2AsyncTests
+        {
+            Mock<IColleagueTransactionFactory> transFactoryMock;
+            Mock<IColleagueDataReader> dataAccessorMock;
+            Mock<ICacheProvider> cacheProviderMock;
+            Mock<ILogger> loggerMock;
+            CatalogSearchDefaults catalogSearchDefaults;
+            StwebDefaults stwebDefaults;
+            StudentConfigurationRepository studentConfigurationRepository;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                loggerMock = new Mock<ILogger>();
+                // Collection of data accessor responses
+                stwebDefaults = BuildStwebDefaultsResponse();
+                catalogSearchDefaults = BuildCatalogSearchDefaultsResponse();
+                studentConfigurationRepository = BuildValidStudentConfigurationRepository();
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                transFactoryMock = null;
+                dataAccessorMock = null;
+                cacheProviderMock = null;
+                stwebDefaults = null;
+                catalogSearchDefaults = null;
+                studentConfigurationRepository = null;
+            }
+
+            [TestMethod]
+            public async Task GetCourseCatalogConfiguration2Async_ReturnsValidProperties()
+            {
+                var courseCatalogConfiguration = await studentConfigurationRepository.GetCourseCatalogConfiguration2Async();
+                Assert.IsTrue(courseCatalogConfiguration is Ellucian.Colleague.Domain.Student.Entities.CourseCatalogConfiguration);
+                Assert.AreEqual(stwebDefaults.StwebRegStartDate, courseCatalogConfiguration.EarliestSearchDate);
+                Assert.AreEqual(stwebDefaults.StwebRegEndDate, courseCatalogConfiguration.LatestSearchDate);
+                Assert.AreEqual(4, courseCatalogConfiguration.CatalogFilterOptions.Count());
+                Assert.AreEqual(2, courseCatalogConfiguration.CatalogFilterOptions.Where(c => c.IsHidden == true).Count());
+                Assert.AreEqual(Ellucian.Colleague.Domain.Student.Entities.CatalogFilterType.Synonyms, courseCatalogConfiguration.CatalogFilterOptions[1].Type);
+                Assert.IsFalse(courseCatalogConfiguration.ShowCourseSectionFeeInformation);
+                Assert.IsFalse(courseCatalogConfiguration.ShowCourseSectionBookInformation);
+            }
+
+            [TestMethod]
+            public async Task GetCourseCatalogConfiguration2Async_StwebDefaultsReturnsNull()
+            {
+                // Arrange: Set up repo response for null stwebDefaults data contract and null Defaults data contract.
+                StwebDefaults nullResponse = null;
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(nullResponse));
+                dataAccessorMock.Setup<Task<CatalogSearchDefaults>>(acc => acc.ReadRecordAsync<CatalogSearchDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(catalogSearchDefaults));
+
+                // Act
+                var courseCatalogConfiguration = await studentConfigurationRepository.GetCourseCatalogConfiguration2Async();
+                // Assert
+                Assert.IsNull(courseCatalogConfiguration.EarliestSearchDate);
+                Assert.IsNull(courseCatalogConfiguration.LatestSearchDate);
+                Assert.AreEqual(4, courseCatalogConfiguration.CatalogFilterOptions.Count());
+            }
+
+            [TestMethod]
+            public async Task GetCourseCatalogConfiguration2Async_CatalogSearchDefaultsReturnsNull()
+            {
+                // Arrange: Set up repo response for null stwebDefaults data contract and null Defaults data contract.
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(stwebDefaults));
+
+                CatalogSearchDefaults nullCatalogSearchDefaultsResponse = null;
+                dataAccessorMock.Setup<Task<CatalogSearchDefaults>>(acc => acc.ReadRecordAsync<CatalogSearchDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(nullCatalogSearchDefaultsResponse));
+                // Act
+                var courseCatalogConfiguration = await studentConfigurationRepository.GetCourseCatalogConfiguration2Async();
+                // Assert
+                Assert.AreEqual(stwebDefaults.StwebRegStartDate, courseCatalogConfiguration.EarliestSearchDate);
+                Assert.AreEqual(stwebDefaults.StwebRegEndDate, courseCatalogConfiguration.LatestSearchDate);
+                Assert.AreEqual(0, courseCatalogConfiguration.CatalogFilterOptions.Count());
+
+            }
+
+            [TestMethod]
+            public async Task GetCourseCatalogConfiguration2Async_StwebShowCatSecOtherFee_Y()
+            {
+                // Arrange: Set up repo response for null stwebDefaults data contract and null Defaults data contract.
+                StwebDefaults response = new StwebDefaults()
+                {
+                    StwebRegStartDate = DateTime.Today.AddDays(-30),
+                    StwebRegEndDate = DateTime.Today.AddDays(30),
+                    StwebShowCatSecOtherFee = "Y"
+                };
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response));
+                // Act
+                var courseCatalogConfiguration = await studentConfigurationRepository.GetCourseCatalogConfiguration2Async();
+                // Assert
+                Assert.AreEqual(response.StwebRegStartDate, courseCatalogConfiguration.EarliestSearchDate);
+                Assert.AreEqual(response.StwebRegEndDate, courseCatalogConfiguration.LatestSearchDate);
+                Assert.AreEqual(4, courseCatalogConfiguration.CatalogFilterOptions.Count());
+                Assert.IsTrue(courseCatalogConfiguration.ShowCourseSectionFeeInformation);
+            }
+
+            [TestMethod]
+            public async Task GetCourseCatalogConfiguration2Async_StwebShowCatSecOtherFee_Null()
+            {
+                // Arrange: Set up repo response for null stwebDefaults data contract and null Defaults data contract.
+                StwebDefaults response = new StwebDefaults()
+                {
+                    StwebRegStartDate = DateTime.Today.AddDays(-30),
+                    StwebRegEndDate = DateTime.Today.AddDays(30),
+                };
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response));
+                // Act
+                var courseCatalogConfiguration = await studentConfigurationRepository.GetCourseCatalogConfiguration2Async();
+                // Assert
+                Assert.AreEqual(response.StwebRegStartDate, courseCatalogConfiguration.EarliestSearchDate);
+                Assert.AreEqual(response.StwebRegEndDate, courseCatalogConfiguration.LatestSearchDate);
+                Assert.AreEqual(4, courseCatalogConfiguration.CatalogFilterOptions.Count());
+                Assert.IsTrue(courseCatalogConfiguration.ShowCourseSectionFeeInformation);
+            }
+
+
+            [TestMethod]
+            public async Task GetCourseCatalogConfiguration2Async_showCatSecBookInformation_N()
+            {
+                // Arrange: Set up repo response for null stwebDefaults data contract and null Defaults data contract.
+                StwebDefaults response = new StwebDefaults()
+                {
+                    StwebRegStartDate = DateTime.Today.AddDays(-30),
+                    StwebRegEndDate = DateTime.Today.AddDays(30),
+                    StwebShowBookInformation = "N"
+                };
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response));
+                // Act
+                var courseCatalogConfiguration = await studentConfigurationRepository.GetCourseCatalogConfiguration2Async();
+                // Assert
+                Assert.AreEqual(response.StwebRegStartDate, courseCatalogConfiguration.EarliestSearchDate);
+                Assert.AreEqual(response.StwebRegEndDate, courseCatalogConfiguration.LatestSearchDate);
+                Assert.AreEqual(4, courseCatalogConfiguration.CatalogFilterOptions.Count());
+                Assert.IsFalse(courseCatalogConfiguration.ShowCourseSectionBookInformation);
+            }
+
+            [TestMethod]
+            public async Task GetCourseCatalogConfiguration2Async_showCatSecBookInformation_Null()
+            {
+                // Arrange: Set up repo response for null stwebDefaults data contract and null Defaults data contract.
+                StwebDefaults response = new StwebDefaults()
+                {
+                    StwebRegStartDate = DateTime.Today.AddDays(-30),
+                    StwebRegEndDate = DateTime.Today.AddDays(30),
+                };
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(response));
+                // Act
+                var courseCatalogConfiguration = await studentConfigurationRepository.GetCourseCatalogConfiguration2Async();
+                // Assert
+                Assert.AreEqual(response.StwebRegStartDate, courseCatalogConfiguration.EarliestSearchDate);
+                Assert.AreEqual(response.StwebRegEndDate, courseCatalogConfiguration.LatestSearchDate);
+                Assert.AreEqual(4, courseCatalogConfiguration.CatalogFilterOptions.Count());
+                Assert.IsFalse(courseCatalogConfiguration.ShowCourseSectionBookInformation);
+            }
+
+            private StwebDefaults BuildStwebDefaultsResponse()
+            {
+                var defaults = new StwebDefaults();
+                defaults.StwebRegStartDate = DateTime.Now.AddDays(-30);
+                defaults.StwebRegEndDate = DateTime.Now;
+                defaults.StwebShowCatSecOtherFee = "N";
+                return defaults;
+            }
+
+            private CatalogSearchDefaults BuildCatalogSearchDefaultsResponse()
+            {
+                var defaults = new CatalogSearchDefaults();
+                defaults.ClsdSearchElementsEntityAssociation = new List<CatalogSearchDefaultsClsdSearchElements>();
+                defaults.ClsdSearchElementsEntityAssociation.Add(new CatalogSearchDefaultsClsdSearchElements() { ClsdSearchElementAssocMember = "AVAILABILITY", ClsdHideAssocMember = "Y" });
+                defaults.ClsdSearchElementsEntityAssociation.Add(new CatalogSearchDefaultsClsdSearchElements() { ClsdSearchElementAssocMember = "SYNONYMS", ClsdHideAssocMember = "N" });
+                defaults.ClsdSearchElementsEntityAssociation.Add(new CatalogSearchDefaultsClsdSearchElements() { ClsdSearchElementAssocMember = "COURSE_TYPES", ClsdHideAssocMember = "" });
+                defaults.ClsdSearchElementsEntityAssociation.Add(new CatalogSearchDefaultsClsdSearchElements() { ClsdSearchElementAssocMember = "LOCATIONS", ClsdHideAssocMember = "y" });
+                // And one invalid one that will not be converted:
+                defaults.ClsdSearchElementsEntityAssociation.Add(new CatalogSearchDefaultsClsdSearchElements() { ClsdSearchElementAssocMember = "JUNK", ClsdHideAssocMember = "Y" });
+                return defaults;
+            }
+
+            private StudentConfigurationRepository BuildValidStudentConfigurationRepository()
+            {
+                transFactoryMock = new Mock<IColleagueTransactionFactory>();
+                dataAccessorMock = new Mock<IColleagueDataReader>();
+                cacheProviderMock = new Mock<ICacheProvider>();
+                // Needed to for GetOrAddToCacheAsync 
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
+                    x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                    .Returns(Task.FromResult(new Tuple<object, SemaphoreSlim>(
+                    null,
+                    new SemaphoreSlim(1, 1)
+                )));
+
+                // Set up data accessor for the transaction factory 
+                transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
+
+                // Set up repo response for stwebDefault
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(stwebDefaults));
+                dataAccessorMock.Setup<Task<CatalogSearchDefaults>>(acc => acc.ReadRecordAsync<CatalogSearchDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(catalogSearchDefaults));
+                StudentConfigurationRepository repository = new StudentConfigurationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+                return repository;
+            }
+        }
+
+
+        [TestClass]
         public class RegistrationConfigurationAsyncTests
         {
             Mock<IColleagueTransactionFactory> transFactoryMock;
@@ -798,13 +1056,14 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             Mock<ICacheProvider> cacheProviderMock;
             Mock<ILogger> loggerMock;
             RegDefaults regDefaults;
-            StwebDefaults StwebDefaults;
+            StwebDefaults stwebDefaults;
             StudentConfigurationRepository studentConfigurationRepository;
 
             [TestInitialize]
             public void Initialize()
             {
                 loggerMock = new Mock<ILogger>();
+                stwebDefaults = BuildStwebDefaultsResponse();
                 // Collection of data accessor responses
                 studentConfigurationRepository = BuildValidStudentConfigurationRepository();
             }
@@ -844,7 +1103,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.IsTrue(regConfiguration is Ellucian.Colleague.Domain.Student.Entities.RegistrationConfiguration);
                 Assert.IsTrue(regConfiguration.RequireFacultyAddAuthorization);
                 Assert.AreEqual(0, regConfiguration.AddAuthorizationStartOffsetDays);
-
+                Assert.IsTrue(regConfiguration.QuickRegistrationIsEnabled);
+                Assert.AreEqual(2, regConfiguration.QuickRegistrationTermCodes.Count);
             }
 
             [TestMethod]
@@ -863,7 +1123,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.IsTrue(regConfiguration is Ellucian.Colleague.Domain.Student.Entities.RegistrationConfiguration);
                 Assert.IsFalse(regConfiguration.RequireFacultyAddAuthorization);
                 Assert.AreEqual(0, regConfiguration.AddAuthorizationStartOffsetDays);
-
+                Assert.IsFalse(regConfiguration.QuickRegistrationIsEnabled);
+                Assert.AreEqual(0, regConfiguration.QuickRegistrationTermCodes.Count);
             }
 
             [TestMethod]
@@ -877,7 +1138,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.IsTrue(regConfiguration is Ellucian.Colleague.Domain.Student.Entities.RegistrationConfiguration);
                 Assert.IsFalse(regConfiguration.RequireFacultyAddAuthorization);
                 Assert.AreEqual(0, regConfiguration.AddAuthorizationStartOffsetDays);
-
+                Assert.IsTrue(regConfiguration.QuickRegistrationIsEnabled);
+                Assert.AreEqual(2, regConfiguration.QuickRegistrationTermCodes.Count);
             }
 
             [TestMethod]
@@ -891,7 +1153,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.IsTrue(regConfiguration is Ellucian.Colleague.Domain.Student.Entities.RegistrationConfiguration);
                 Assert.IsFalse(regConfiguration.RequireFacultyAddAuthorization);
                 Assert.AreEqual(0, regConfiguration.AddAuthorizationStartOffsetDays);
-
+                Assert.IsTrue(regConfiguration.QuickRegistrationIsEnabled);
+                Assert.AreEqual(2, regConfiguration.QuickRegistrationTermCodes.Count);
             }
             [TestMethod]
             public async Task GetRegistrationConfigurationAsync_RequireAuthorizationNo()
@@ -904,17 +1167,18 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.IsTrue(regConfiguration is Ellucian.Colleague.Domain.Student.Entities.RegistrationConfiguration);
                 Assert.IsFalse(regConfiguration.RequireFacultyAddAuthorization);
                 Assert.AreEqual(0, regConfiguration.AddAuthorizationStartOffsetDays);
-
+                Assert.IsTrue(regConfiguration.QuickRegistrationIsEnabled);
+                Assert.AreEqual(2, regConfiguration.QuickRegistrationTermCodes.Count);
             }
             //stwebdefaults for drop reasons retreival
             [TestMethod]
             public async Task GetRegistrationConfigurationAsync_ReturnsValidPropertiesForDropReasons()
             {
                 regDefaults = new RegDefaults() { Recordkey = "REG.DEFAULTS", RgdRequireAddAuthFlag = "y", RgdAddAuthStartOffset = 3 };
-                StwebDefaults = new StwebDefaults() { Recordkey = "STWEB.DEFAULTS", StwebDropRsnPromptFlag = "Y", StwebDropRsnRequiredFlag = "Y" };
+                stwebDefaults = new StwebDefaults() { Recordkey = "STWEB.DEFAULTS", StwebDropRsnPromptFlag = "Y", StwebDropRsnRequiredFlag = "Y", StwebShowBksOnSchedPrt = "Y", StwebShowCmntOnSchedPrt = "Y", StwebAddDfltTermsToDp = "Y", StwebEnableQuickReg = "N", StwebQuickRegTerms = null };
                 // Set up repo response for StwebDefaults
                 dataAccessorMock.Setup<Task<RegDefaults>>(acc => acc.ReadRecordAsync<RegDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(regDefaults));
-                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(),true)).Returns(Task.FromResult(StwebDefaults));
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(),true)).Returns(Task.FromResult(stwebDefaults));
 
                 var regConfiguration = await studentConfigurationRepository.GetRegistrationConfigurationAsync();
                 Assert.IsTrue(regConfiguration is Ellucian.Colleague.Domain.Student.Entities.RegistrationConfiguration);
@@ -922,17 +1186,21 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.AreEqual(3, regConfiguration.AddAuthorizationStartOffsetDays);
                 Assert.IsTrue(regConfiguration.PromptForDropReason);
                 Assert.IsTrue(regConfiguration.RequireDropReason);
-
+                Assert.IsTrue(regConfiguration.ShowBooksOnPrintedSchedules);
+                Assert.IsTrue(regConfiguration.ShowCommentsOnPrintedSchedules);
+                Assert.IsTrue(regConfiguration.AddDefaultTermsToDegreePlan);
+                Assert.IsFalse(regConfiguration.QuickRegistrationIsEnabled);
+                Assert.AreEqual(0, regConfiguration.QuickRegistrationTermCodes.Count);
             }
 
             [TestMethod]
             public async Task GetRegistrationConfigurationAsync_StwebDfltsIsNull()
             {
                 regDefaults = new RegDefaults() { Recordkey = "REG.DEFAULTS", RgdRequireAddAuthFlag = "y", RgdAddAuthStartOffset = 3 };
-                StwebDefaults = null;
+                stwebDefaults = null;
                 // Set up repo response for StwebDefaults
                 dataAccessorMock.Setup<Task<RegDefaults>>(acc => acc.ReadRecordAsync<RegDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(regDefaults));
-                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(StwebDefaults));
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(stwebDefaults));
 
                 var regConfiguration = await studentConfigurationRepository.GetRegistrationConfigurationAsync();
                 Assert.IsTrue(regConfiguration is Ellucian.Colleague.Domain.Student.Entities.RegistrationConfiguration);
@@ -940,18 +1208,22 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.AreEqual(3, regConfiguration.AddAuthorizationStartOffsetDays);
                 Assert.IsFalse(regConfiguration.PromptForDropReason);
                 Assert.IsFalse(regConfiguration.RequireDropReason);
+                Assert.IsFalse(regConfiguration.ShowBooksOnPrintedSchedules);
+                Assert.IsFalse(regConfiguration.ShowCommentsOnPrintedSchedules);
+                Assert.IsFalse(regConfiguration.QuickRegistrationIsEnabled);
+                Assert.AreEqual(0, regConfiguration.QuickRegistrationTermCodes.Count);
                 loggerMock.Verify(l => l.Info("Unable to access registration defaults from ST.PARMS. STWEB.DEFAULTS."));
             }
 
             [TestMethod]
-            public async Task GetRegistrationConfigurationAsync_PromptandrequiredForReasonIsEmpty()
+            public async Task GetRegistrationConfigurationAsync_PromptandrequiredForReason_and_ShowBooks_and_AddDfltTermsToDp_IsEmpty()
             {
                 regDefaults = new RegDefaults() { Recordkey = "REG.DEFAULTS", RgdRequireAddAuthFlag = "y", RgdAddAuthStartOffset = 3 };
-                StwebDefaults = new StwebDefaults() { Recordkey = "STWEB.DEFAULTS", StwebDropRsnPromptFlag = null, StwebDropRsnRequiredFlag = string.Empty };
+                stwebDefaults = new StwebDefaults() { Recordkey = "STWEB.DEFAULTS", StwebDropRsnPromptFlag = null, StwebDropRsnRequiredFlag = string.Empty, StwebShowBksOnSchedPrt = null, StwebShowCmntOnSchedPrt = string.Empty, StwebAddDfltTermsToDp = string.Empty };
 
                 // Set up repo response for StwebDefaults
                 dataAccessorMock.Setup<Task<RegDefaults>>(acc => acc.ReadRecordAsync<RegDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(regDefaults));
-                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(StwebDefaults));
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(stwebDefaults));
 
                 var regConfiguration = await studentConfigurationRepository.GetRegistrationConfigurationAsync();
                 Assert.IsTrue(regConfiguration is Ellucian.Colleague.Domain.Student.Entities.RegistrationConfiguration);
@@ -959,17 +1231,22 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.AreEqual(3, regConfiguration.AddAuthorizationStartOffsetDays);
                 Assert.IsFalse(regConfiguration.PromptForDropReason);
                 Assert.IsFalse(regConfiguration.RequireDropReason);
+                Assert.IsFalse(regConfiguration.ShowBooksOnPrintedSchedules);
+                Assert.IsFalse(regConfiguration.ShowCommentsOnPrintedSchedules);
+                Assert.IsTrue(regConfiguration.AddDefaultTermsToDegreePlan);
+                Assert.IsFalse(regConfiguration.QuickRegistrationIsEnabled);
+                Assert.AreEqual(0, regConfiguration.QuickRegistrationTermCodes.Count);
             }
 
             [TestMethod]
-            public async Task GetRegistrationConfigurationAsync_PromptForReasonIsN()
+            public async Task GetRegistrationConfigurationAsync_PromptForReason_and_ShowBooks_and_AddDfltTermsToDp_IsN()
             {
                 regDefaults = new RegDefaults() { Recordkey = "REG.DEFAULTS", RgdRequireAddAuthFlag = "y", RgdAddAuthStartOffset = 3 };
-                StwebDefaults = new StwebDefaults() { Recordkey = "STWEB.DEFAULTS", StwebDropRsnPromptFlag = "y", StwebDropRsnRequiredFlag ="n" };
+                stwebDefaults = new StwebDefaults() { Recordkey = "STWEB.DEFAULTS", StwebDropRsnPromptFlag = "y", StwebDropRsnRequiredFlag ="n", StwebShowBksOnSchedPrt = "N", StwebShowCmntOnSchedPrt = "N", StwebAddDfltTermsToDp = "N" };
 
                 // Set up repo response for StwebDefaults
                 dataAccessorMock.Setup<Task<RegDefaults>>(acc => acc.ReadRecordAsync<RegDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(regDefaults));
-                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(StwebDefaults));
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(stwebDefaults));
 
                 var regConfiguration = await studentConfigurationRepository.GetRegistrationConfigurationAsync();
                 Assert.IsTrue(regConfiguration is Ellucian.Colleague.Domain.Student.Entities.RegistrationConfiguration);
@@ -977,6 +1254,11 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.AreEqual(3, regConfiguration.AddAuthorizationStartOffsetDays);
                 Assert.IsTrue(regConfiguration.PromptForDropReason);
                 Assert.IsFalse(regConfiguration.RequireDropReason);
+                Assert.IsFalse(regConfiguration.ShowBooksOnPrintedSchedules);
+                Assert.IsFalse(regConfiguration.ShowCommentsOnPrintedSchedules);
+                Assert.IsFalse(regConfiguration.AddDefaultTermsToDegreePlan);
+                Assert.IsFalse(regConfiguration.QuickRegistrationIsEnabled);
+                Assert.AreEqual(0, regConfiguration.QuickRegistrationTermCodes.Count);
             }
 
             private StudentConfigurationRepository BuildValidStudentConfigurationRepository()
@@ -994,11 +1276,23 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 // Set up data accessor for the transaction factory 
                 transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
-
+                dataAccessorMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(Task.FromResult(stwebDefaults));
 
                 StudentConfigurationRepository repository = new StudentConfigurationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
                 return repository;
             }
+
+            private StwebDefaults BuildStwebDefaultsResponse()
+            {
+                var defaults = new StwebDefaults();
+                defaults.StwebRegStartDate = DateTime.Now.AddDays(-30);
+                defaults.StwebRegEndDate = DateTime.Now;
+                defaults.StwebShowCatSecOtherFee = "N";
+                defaults.StwebEnableQuickReg = "Y";
+                defaults.StwebQuickRegTerms = new List<string>() { null, string.Empty, "2019/FA", "2020/SP" };
+                return defaults;
+            }
+
         }
     }
 }

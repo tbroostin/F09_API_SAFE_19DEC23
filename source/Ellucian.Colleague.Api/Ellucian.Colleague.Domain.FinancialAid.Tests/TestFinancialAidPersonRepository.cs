@@ -42,6 +42,38 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
             },
             new PersonRecord()
             {
+                id = "123456789",
+                preferredName = "Grace Huntington",
+                lastName = "Huntington",
+                firstName = "Grace",
+                privacyCode = "bar"
+            },
+            new PersonRecord()
+            {
+                id = "AB12345",
+                preferredName = "Grace Abbington",
+                lastName = "Abbington",
+                firstName = "Grace",
+                privacyCode = "bar"
+            },
+            new PersonRecord()
+            {
+                id = "00_12345",
+                preferredName = "Sasha Morales",
+                lastName = "Morales",
+                firstName = "Sasha",
+                privacyCode = "bar"
+            },
+            new PersonRecord()
+            {
+                id = "0002345",
+                preferredName = "Nydia O'Hruska",
+                lastName = "O'Hruska",
+                firstName = "Nydia",
+                privacyCode = "bar"
+            },
+            new PersonRecord()
+            {
                 id = "9876543",
                 preferredName = "Grace Huntington",
                 lastName = "Huntington",
@@ -66,6 +98,18 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
             new Applicant()
             {
                 id = "0000000"
+            },
+            new Applicant()
+            {
+                id = "123456789"
+            },
+            new Applicant()
+            {
+                id = "00_12345"
+            },
+            new Applicant()
+            {
+                id = "0002345"
             }
         };
 
@@ -86,6 +130,14 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
             new Student()
             {
                 id = "6574839"
+            },
+            new Student()
+            {
+                id = "9876543"
+            },
+            new Student()
+            {
+                id = "AB12345"
             }
         };
         #endregion

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -6,6 +6,7 @@ using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.DataContracts;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
@@ -21,10 +22,9 @@ using System.Threading.Tasks;
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
-    public class StudentConfigurationRepository : BaseColleagueRepository, IStudentConfigurationRepository
+    public class StudentConfigurationRepository : BaseStudentRepository, IStudentConfigurationRepository
     {
-        IEnumerable<GradingTerm> _allowedGradingTerms = null;
-
+        private const string _preferredHierarchyCode = "PREFERRED";
         public StudentConfigurationRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger)
             : base(cacheProvider, transactionFactory, logger)
         {
@@ -77,12 +77,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                    var graduationQuestionsTask = DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.GraduationQuestions>("GRADUATION.QUESTIONS", "");
                    var defaultsTask = DataReader.ReadRecordAsync<Data.Base.DataContracts.Defaults>("CORE.PARMS", "DEFAULTS");
                    var daDefaultsTask = DataReader.ReadRecordAsync<Data.Student.DataContracts.DaDefaults>("ST.PARMS", "DA.DEFAULTS");
+                   var valCodesTask = DataReader.ReadRecordAsync<ApplValcodes>("ST.VALCODES", "STUDENT.PROGRAM.STATUSES");
 
-                   await Task.WhenAll(stwebDefaultsTask, graduationQuestionsTask, defaultsTask, daDefaultsTask);
+                   await Task.WhenAll(stwebDefaultsTask, graduationQuestionsTask, defaultsTask, daDefaultsTask, valCodesTask);
                    Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults stwebDefaults = stwebDefaultsTask.Result;
                    Collection<Ellucian.Colleague.Data.Student.DataContracts.GraduationQuestions> graduationQuestions = graduationQuestionsTask.Result;
                    Ellucian.Colleague.Data.Base.DataContracts.Defaults defaultData = defaultsTask.Result;
                    Data.Student.DataContracts.DaDefaults daDefaults = daDefaultsTask.Result;
+                   ApplValcodes valCodes = valCodesTask.Result;
 
                    if (stwebDefaults == null)
                    {
@@ -102,14 +104,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                        logger.Info(errorMessage);
                        throw new Exception(errorMessage);
                    }
-                   return BuildGraduationConfiguration(stwebDefaults, graduationQuestions, defaultData.DefaultWebEmailType, daDefaults);
+                   return BuildGraduationConfiguration(stwebDefaults, graduationQuestions, defaultData.DefaultWebEmailType, daDefaults, valCodes);
                });
 
             return studentConfiguration;
         }
 
         /// <summary>
-        /// Get the student request configuration information needed for a new transcript request or enrollment request  
+        /// Get the student request configuration information needed for a new transcript request or enrollment request
         /// </summary>
         /// <returns>The StudentRequestConfiguration entity</returns>
         public async Task<StudentRequestConfiguration> GetStudentRequestConfigurationAsync()
@@ -139,7 +141,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         }
 
         /// <summary>
-        /// Get the faculty grading configuration information 
+        /// Get the faculty grading configuration information
         /// </summary>
         /// <returns>The FacultyGradingConfiguration entity</returns>
         public async Task<FacultyGradingConfiguration> GetFacultyGradingConfigurationAsync()
@@ -163,9 +165,72 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         }
 
         /// <summary>
-        /// Get the course catalog configuration information needed for course catalog searches 
+        /// Get the student profile configurations
+        /// </summary>
+        /// <returns>The StudentProfileConfiguration entity</returns>
+        public async Task<StudentProfileConfiguration> GetStudentProfileConfigurationAsync()
+        {
+            StudentProfileConfiguration result = new StudentProfileConfiguration();
+            StudentProfileConfiguration configuration = await GetOrAddToCacheAsync<StudentProfileConfiguration>("StudentProfileConfiguration",
+           async () =>
+           {
+               StwebDefaults stwebDefaults = await DataReader.ReadRecordAsync<StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS");
+
+               if (stwebDefaults == null)
+               {
+                   var errorMessage = "Unable to access student web defaults from ST.PARMS. STWEB.DEFAULTS.";
+                   logger.Info(errorMessage);
+                   stwebDefaults = new StwebDefaults();
+               }
+               else
+               {
+                   result.FacultyPersonConfiguration = new StudentProfilePersonConfiguration()
+                   {
+                       ShowAcadamicPrograms = (!string.IsNullOrEmpty(stwebDefaults.StwebStShowAcadProgFac) && stwebDefaults.StwebStShowAcadProgFac.ToUpper() == "Y"),
+                       ShowPhone = (!string.IsNullOrEmpty(stwebDefaults.StwebStShowPhoneFac) && stwebDefaults.StwebStShowPhoneFac.ToUpper() == "Y"),
+                       ShowAcadLevelStanding = (!string.IsNullOrEmpty(stwebDefaults.StwebStShowAcadStndFac) && stwebDefaults.StwebStShowAcadStndFac.ToUpper() == "Y"),
+                       ShowAddress = (!string.IsNullOrEmpty(stwebDefaults.StwebStShowAddressFac) && stwebDefaults.StwebStShowAddressFac.ToUpper() == "Y"),
+                       ShowAdvisorDetails = (!string.IsNullOrEmpty(stwebDefaults.StwebStShowAdvsorDtlFac) && stwebDefaults.StwebStShowAdvsorDtlFac.ToUpper() == "Y"),
+                       ShowAdvisorOfficeHours = (!string.IsNullOrEmpty(stwebDefaults.StwebStShowAdvOfcHrFac) && stwebDefaults.StwebStShowAdvOfcHrFac.ToUpper() == "Y"),
+                       ShowAnticipatedCompletionDate = (!string.IsNullOrEmpty(stwebDefaults.StwebStShowAncptDateFac) && stwebDefaults.StwebStShowAncptDateFac.ToUpper() == "Y")
+                   };
+
+                   result.AdvisorPersonConfiguration = new StudentProfilePersonConfiguration()
+                   {
+                       ShowAcadamicPrograms = (!string.IsNullOrEmpty(stwebDefaults.StwebStShowAcadProgAdv) && stwebDefaults.StwebStShowAcadProgAdv.ToUpper() == "Y"),
+                       ShowPhone = (!string.IsNullOrEmpty(stwebDefaults.StwebStShowPhoneAdv) && stwebDefaults.StwebStShowPhoneAdv.ToUpper() == "Y"),
+                       ShowAcadLevelStanding = (!string.IsNullOrEmpty(stwebDefaults.StwebStShowAcadStndAdv) && stwebDefaults.StwebStShowAcadStndAdv.ToUpper() == "Y"),
+                       ShowAddress = (!string.IsNullOrEmpty(stwebDefaults.StwebStShowAddressAdv) && stwebDefaults.StwebStShowAddressAdv.ToUpper() == "Y"),
+                       ShowAdvisorDetails = (!string.IsNullOrEmpty(stwebDefaults.StwebStShowAdvsorDtlAdv) && stwebDefaults.StwebStShowAdvsorDtlAdv.ToUpper() == "Y"),
+                       ShowAdvisorOfficeHours = (!string.IsNullOrEmpty(stwebDefaults.StwebStShowAdvOfcHrAdv) && stwebDefaults.StwebStShowAdvOfcHrAdv.ToUpper() == "Y"),
+                       ShowAnticipatedCompletionDate = (!string.IsNullOrEmpty(stwebDefaults.StwebStShowAncptDateAdv) && stwebDefaults.StwebStShowAncptDateAdv.ToUpper() == "Y")
+                   };
+
+                   result.PhoneTypesHierarchy = stwebDefaults.StwebProfilePhoneType;
+                   result.EmailTypesHierarchy = stwebDefaults.StwebProfileEmailType;
+                   result.ProfileFacultyEmailType = stwebDefaults.StwebProfileFacEmailType;
+                   result.ProfileFacultyPhoneType = stwebDefaults.StwebProfileFacPhoneType;
+                   result.ProfileAdvsiorType = stwebDefaults.StwebProfileAdvType;
+                   NameAddressHierarchy addresshierarchy = await GetAddressHierarchyAsync(stwebDefaults.StwebProfileStuAddrHier);
+                   result.AddressTypesHierarchy = new List<string>();
+                   if (addresshierarchy != null && addresshierarchy.AddressTypeHierarchy != null && addresshierarchy.AddressTypeHierarchy.Any())
+                   {
+                       foreach (var addressType in addresshierarchy.AddressTypeHierarchy)
+                       {
+                           result.AddressTypesHierarchy.Add(addressType);
+                       }
+                   }
+               }
+               return result;
+           });
+            return configuration;
+        }
+
+        /// <summary>
+        /// Get the course catalog configuration information needed for course catalog searches
         /// </summary>
         /// <returns>The CourseCatalogConfiguration entity</returns>
+        [Obsolete("Obsolete as of API version 1.26. Use GetCourseCatalogConfiguration2Async.")]
         public async Task<CourseCatalogConfiguration> GetCourseCatalogConfigurationAsync()
         {
             CourseCatalogConfiguration configuration = await GetOrAddToCacheAsync<CourseCatalogConfiguration>("CourseCatalogConfiguration",
@@ -184,9 +249,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                    {
                        // Only hide course section fee information if flag is set to No
                        bool showCatSecOtherFees = string.IsNullOrEmpty(stwebDefaults.StwebShowCatSecOtherFee) || stwebDefaults.StwebShowCatSecOtherFee.ToUpper() != "N";
+                       bool showCatSecBookInformation = !string.IsNullOrEmpty(stwebDefaults.StwebShowBookInformation) && stwebDefaults.StwebShowBookInformation.ToUpper() == "Y" ? true : false;
                        result = new CourseCatalogConfiguration(stwebDefaults.StwebRegStartDate, stwebDefaults.StwebRegEndDate)
                        {
-                           ShowCourseSectionFeeInformation = showCatSecOtherFees
+                           ShowCourseSectionFeeInformation = showCatSecOtherFees,
+                           ShowCourseSectionBookInformation = showCatSecBookInformation
                        };
                    }
 
@@ -257,6 +324,106 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         }
 
         /// <summary>
+        /// Get the course catalog configuration information needed for course catalog searches
+        /// </summary>
+        /// <returns>The CourseCatalogConfiguration2 entity</returns>
+        public async Task<CourseCatalogConfiguration> GetCourseCatalogConfiguration2Async()
+        {
+            CourseCatalogConfiguration configuration = await GetOrAddToCacheAsync<CourseCatalogConfiguration>("CourseCatalogConfiguration2",
+               async () =>
+               {
+                   Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults stwebDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS");
+                   Ellucian.Colleague.Data.Student.DataContracts.CatalogSearchDefaults catalogSearchDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.CatalogSearchDefaults>("CORE.PARMS", "CATALOG.SEARCH.DEFAULTS");
+                   CourseCatalogConfiguration result;
+                   if (stwebDefaults == null)
+                   {
+                       var errorMessage = "Unable to access student web defaults from ST.PARMS. STWEB.DEFAULTS.";
+                       logger.Info(errorMessage);
+                       result = new CourseCatalogConfiguration(null, null);
+                   }
+                   else
+                   {
+                       // Only hide course section fee information if flag is set to No
+                       bool showCatSecOtherFees = string.IsNullOrEmpty(stwebDefaults.StwebShowCatSecOtherFee) || stwebDefaults.StwebShowCatSecOtherFee.ToUpper() != "N";
+                       bool showCatSecBookInformation = !string.IsNullOrEmpty(stwebDefaults.StwebShowBookInformation) && stwebDefaults.StwebShowBookInformation.ToUpper() == "Y" ? true : false;
+                       result = new CourseCatalogConfiguration(stwebDefaults.StwebRegStartDate, stwebDefaults.StwebRegEndDate)
+                       {
+                           ShowCourseSectionFeeInformation = showCatSecOtherFees,
+                           ShowCourseSectionBookInformation = showCatSecBookInformation
+                       };
+                   }
+
+                   if (catalogSearchDefaults == null)
+                   {
+                       var errorMessage = "Unable to access catalog search defaults from CORE.PARMS: CATALOG.SEARCH.DEFAULTS.";
+                       logger.Info(errorMessage);
+                   }
+                   else
+                   {
+                       if (catalogSearchDefaults.ClsdSearchElementsEntityAssociation != null && catalogSearchDefaults.ClsdSearchElementsEntityAssociation.Any())
+                       {
+                           foreach (var filterOption in catalogSearchDefaults.ClsdSearchElementsEntityAssociation)
+                           {
+                               if (filterOption.ClsdSearchElementAssocMember != null)
+                               {
+                                   switch (filterOption.ClsdSearchElementAssocMember.ToUpper())
+                                   {
+                                       case "AVAILABILITY":
+                                           result.AddCatalogFilterOption(CatalogFilterType.Availability, filterOption.ClsdHideAssocMember.ToUpper() == "Y");
+                                           break;
+                                       case "LOCATIONS":
+                                           result.AddCatalogFilterOption(CatalogFilterType.Locations, filterOption.ClsdHideAssocMember.ToUpper() == "Y");
+                                           break;
+                                       case "TERMS":
+                                           result.AddCatalogFilterOption(CatalogFilterType.Terms, filterOption.ClsdHideAssocMember.ToUpper() == "Y");
+                                           break;
+                                       case "DAYS_OF_WEEK":
+                                           result.AddCatalogFilterOption(CatalogFilterType.DaysOfWeek, filterOption.ClsdHideAssocMember.ToUpper() == "Y");
+                                           break;
+                                       case "TIMES_OF_DAY":
+                                           result.AddCatalogFilterOption(CatalogFilterType.TimesOfDay, filterOption.ClsdHideAssocMember.ToUpper() == "Y");
+                                           break;
+                                       case "INSTRUCTORS":
+                                           result.AddCatalogFilterOption(CatalogFilterType.Instructors, filterOption.ClsdHideAssocMember.ToUpper() == "Y");
+                                           break;
+                                       case "ACADEMIC_LEVELS":
+                                           result.AddCatalogFilterOption(CatalogFilterType.AcademicLevels, filterOption.ClsdHideAssocMember.ToUpper() == "Y");
+                                           break;
+                                       case "COURSE_LEVELS":
+                                           result.AddCatalogFilterOption(CatalogFilterType.CourseLevels, filterOption.ClsdHideAssocMember.ToUpper() == "Y");
+                                           break;
+                                       case "COURSE_TYPES":
+                                           result.AddCatalogFilterOption(CatalogFilterType.CourseTypes, filterOption.ClsdHideAssocMember.ToUpper() == "Y");
+                                           break;
+                                       case "TOPICS":
+                                           result.AddCatalogFilterOption(CatalogFilterType.TopicCodes, filterOption.ClsdHideAssocMember.ToUpper() == "Y");
+                                           break;
+                                       case "INSTRUCTION_TYPES":
+                                           result.AddCatalogFilterOption(CatalogFilterType.InstructionTypes, filterOption.ClsdHideAssocMember.ToUpper() == "Y");
+                                           break;
+                                       case "SYNONYMS":
+                                           result.AddCatalogFilterOption(CatalogFilterType.Synonyms, filterOption.ClsdHideAssocMember.ToUpper() == "Y");
+                                           break;
+                                       default:
+                                           if (logger.IsInfoEnabled)
+                                           {
+                                               logger.Info("Invalid entry in CATALOG.SEARCH.DEFAULTS " + filterOption.ClsdSearchElementAssocMember);
+                                           }
+                                           break;
+                                   }
+                               }
+                           }
+                       }
+                   }
+                   return result;
+
+               });
+
+            return configuration;
+        }
+
+
+        /// <summary>
         /// Retrieves the configuration information needed for registration processing asynchronously.
         /// </summary>
         public async Task<RegistrationConfiguration> GetRegistrationConfigurationAsync()
@@ -284,25 +451,90 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                       {
                           offsetDays = regDefaults.RgdAddAuthStartOffset.HasValue ? regDefaults.RgdAddAuthStartOffset.Value : 0;
                       }
+                      if (stwebDefaults == null)
+                      {
+                          var errorMessage = "Unable to access registration defaults from ST.PARMS. STWEB.DEFAULTS.";
+                          logger.Info(errorMessage);
+                          result = new RegistrationConfiguration(requireAddAuthorization, offsetDays);
+                      }
+                      else
+                      {
+                          var quickRegistrationIsEnabled = !string.IsNullOrEmpty(stwebDefaults.StwebEnableQuickReg) && stwebDefaults.StwebEnableQuickReg.ToUpper() == "Y" ? true : false;
+                          result = new RegistrationConfiguration(requireAddAuthorization, offsetDays, quickRegistrationIsEnabled);
+                          result.PromptForDropReason = !string.IsNullOrEmpty(stwebDefaults.StwebDropRsnPromptFlag) && stwebDefaults.StwebDropRsnPromptFlag.ToUpper() == "Y" ? true : false;
+                          result.RequireDropReason = !string.IsNullOrEmpty(stwebDefaults.StwebDropRsnRequiredFlag) && stwebDefaults.StwebDropRsnRequiredFlag.ToUpper() == "Y" ? true : false;
+                          result.ShowBooksOnPrintedSchedules = !string.IsNullOrEmpty(stwebDefaults.StwebShowBksOnSchedPrt) && stwebDefaults.StwebShowBksOnSchedPrt.ToUpper() == "Y" ? true : false;
+                          result.ShowCommentsOnPrintedSchedules = !string.IsNullOrEmpty(stwebDefaults.StwebShowCmntOnSchedPrt) && stwebDefaults.StwebShowCmntOnSchedPrt.ToUpper() == "Y" ? true : false;
+                          result.AddDefaultTermsToDegreePlan = !string.IsNullOrEmpty(stwebDefaults.StwebAddDfltTermsToDp) && stwebDefaults.StwebAddDfltTermsToDp.ToUpper() == "N" ? false : true;
+                          if (stwebDefaults.StwebQuickRegTerms != null)
+                          {
+                              foreach (var termCode in stwebDefaults.StwebQuickRegTerms)
+                              {
+                                  try
+                                  {
+                                      result.AddQuickRegistrationTerm(termCode);
+                                  }
+                                  catch (Exception ex)
+                                  {
+                                      logger.Info(ex, string.Format("Unable to add termCode '{0}' to list of quick registration terms.", termCode));
+                                  }
+                              }
+                          }
+                      }
 
-                       result = new RegistrationConfiguration(requireAddAuthorization, offsetDays);
-                      
-                     
+
+
                   }
-                  if(stwebDefaults==null)
-                  {
-                      var errorMessage = "Unable to access registration defaults from ST.PARMS. STWEB.DEFAULTS.";
-                      logger.Info(errorMessage);
-                  }
-                  else
-                  {
-                      result.PromptForDropReason = !string.IsNullOrEmpty(stwebDefaults.StwebDropRsnPromptFlag) && stwebDefaults.StwebDropRsnPromptFlag.ToUpper() == "Y" ? true : false;
-                      result.RequireDropReason = !string.IsNullOrEmpty(stwebDefaults.StwebDropRsnRequiredFlag) && stwebDefaults.StwebDropRsnRequiredFlag.ToUpper() == "Y" ? true : false;
-                  }
-                   return result;
+                  return result;
 
               });
             return configuration;
+        }
+
+        /// <summary>
+        /// Returns the Address Hierarchy record for the specified hierarchy code
+        /// </summary>
+        /// <returns>NameAddressHierarchy</returns>
+        private async Task<NameAddressHierarchy> GetAddressHierarchyAsync(string nameAddressHierarchyCode = _preferredHierarchyCode)
+        {
+            if(string.IsNullOrEmpty(nameAddressHierarchyCode))
+            {
+                nameAddressHierarchyCode = _preferredHierarchyCode;
+            }
+            NameAddressHierarchy requestedNameAddressHierarchy = new NameAddressHierarchy(nameAddressHierarchyCode);
+            NameAddrHierarchy nameAddrHierarchy = await DataReader.ReadRecordAsync<NameAddrHierarchy>("NAME.ADDR.HIERARCHY", nameAddressHierarchyCode);
+            if (nameAddrHierarchy == null)
+            {
+                if (nameAddressHierarchyCode != _preferredHierarchyCode)
+                {
+                    // for all hierarchies except PREFERRED throw an error - this means nothing will be cached 
+                    var errorMessage = "Unable to find NAME.ADDR.HIERARCHY record with Id " + nameAddressHierarchyCode + ". Cache not built.";
+                    logger.Info(errorMessage);
+                    throw new KeyNotFoundException(errorMessage);
+                }
+                else
+                {
+                    // All clients are expected to have a PREFERRED name address hierarchy. If they don't, report it but also default one so that it is cached.
+                    var errorMessage = "Unable to find NAME.ADDR.HIERARCHY record with Id " + nameAddressHierarchyCode + ". Creating a basic preferred hierarchy with PF name type.";
+                    logger.Info(errorMessage);
+                    // Construct a default one with the desired name type values.
+                    nameAddrHierarchy = new NameAddrHierarchy();
+                    nameAddrHierarchy.Recordkey = _preferredHierarchyCode;
+                    nameAddrHierarchy.NahNameHierarchy = new List<string>() { "PF" };
+                }
+
+            }
+            // Build the NameAddressHierarchy Entity and cache that.
+            requestedNameAddressHierarchy = new NameAddressHierarchy(nameAddrHierarchy.Recordkey);
+            if (nameAddrHierarchy.NahAddressHierarchy != null && nameAddrHierarchy.NahAddressHierarchy.Any())
+            {
+                foreach (var addressType in nameAddrHierarchy.NahAddressHierarchy)
+                {
+                    requestedNameAddressHierarchy.AddAddressTypeHierarchy(addressType);
+                }
+            }
+
+            return requestedNameAddressHierarchy;
         }
 
 
@@ -480,7 +712,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return cdDefaults;
         }
 
-        private GraduationConfiguration BuildGraduationConfiguration(StwebDefaults webDefaults, Collection<Ellucian.Colleague.Data.Student.DataContracts.GraduationQuestions> graduationQuestions, string defaultEmailType, Data.Student.DataContracts.DaDefaults daDefaults)
+        private GraduationConfiguration BuildGraduationConfiguration(StwebDefaults webDefaults, Collection<Ellucian.Colleague.Data.Student.DataContracts.GraduationQuestions> graduationQuestions, string defaultEmailType, Data.Student.DataContracts.DaDefaults daDefaults, ApplValcodes valCodes)
         {
             GraduationConfiguration configuration = new GraduationConfiguration();
             if (webDefaults != null)
@@ -523,7 +755,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
                 configuration.OverrideCapAndGownDisplay = !string.IsNullOrEmpty(webDefaults.StwebGradOvrCmcmtCapgown) && (webDefaults.StwebGradOvrCmcmtCapgown.ToUpper() == "Y");
                 configuration.MaximumCommencementGuests = (webDefaults.StwebGradMaxGuests == null) ? 100 : webDefaults.StwebGradMaxGuests;
-
+                configuration.PreventGraduationApplicationEdits = webDefaults.StwebAllowGradAppEdits != null && webDefaults.StwebAllowGradAppEdits.ToUpper() == "N";
                 configuration.RequireImmediatePayment = webDefaults.StwebGradRequirePayment != null && webDefaults.StwebGradRequirePayment.ToUpper() == "Y";
             }
 
@@ -587,8 +819,18 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             configuration.DefaultWebEmailType = defaultEmailType;
             configuration.EmailGradNotifyPara = webDefaults.StwebGradNotifyPara;
 
+            //check for NP CP values
+            if (valCodes == null){
+                configuration.IsNPCPValuesSetForPrograms = false;
+            }
+            else{
+                if (valCodes.ValActionCode2.Count(x => x.ToUpper() == "NP") == 1 && valCodes.ValActionCode2.Count(x => x.ToUpper() == "CP") == 1){
+                    configuration.IsNPCPValuesSetForPrograms = true;
+                }
+            }
+
             // Anticipated date global settings
-            configuration.HideAnticipatedCompletionDate = 
+            configuration.HideAnticipatedCompletionDate =
                     (string.IsNullOrEmpty(daDefaults.DaHideAntCmplDtInSsMp) || daDefaults.DaHideAntCmplDtInSsMp.ToUpper() == "Y") ? false : true;
 
             return configuration;
@@ -626,6 +868,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 configuration.IncludeCrosslistedStudents = !string.IsNullOrEmpty(webDefaults.StwebGradeInclXlist) && (webDefaults.StwebGradeInclXlist.ToUpper() == "Y");
                 configuration.IncludeDroppedWithdrawnStudents = !string.IsNullOrEmpty(webDefaults.StwebGradeDropsFlag) && (webDefaults.StwebGradeDropsFlag.ToUpper() == "Y");
+                configuration.LimitMidtermGradingToAllowedTerms = !string.IsNullOrEmpty(webDefaults.StwebMidGradeTermsFlag) && (webDefaults.StwebMidGradeTermsFlag.ToUpper() == "Y");
+                configuration.ProvideMidtermGradingCompleteFeature = !string.IsNullOrEmpty(webDefaults.StwebMidGradeCmplFlag) && (webDefaults.StwebMidGradeCmplFlag.ToUpper() == "Y");
+                configuration.LockMidtermGradingWhenComplete = !string.IsNullOrEmpty(webDefaults.StwebMidGradeLockFlag) && (webDefaults.StwebMidGradeLockFlag.ToUpper() == "Y");
             }
             var allowedGradingTerms = await GetAllowedGradingTermsAsync();
             if (allowedGradingTerms != null && allowedGradingTerms.Any())
@@ -644,7 +889,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
             }
             configuration.VerifyGrades = !string.IsNullOrEmpty(webDefaults.StwebVerifyGrades) ? webDefaults.StwebVerifyGrades.Equals("Y", StringComparison.OrdinalIgnoreCase) ? true : false : default(bool?);
-            // Catch and log exception if the either the STWEB.MIDTERM.GRADE.COUNT is not a number or if it isn't between 0 - 6. But continue either way and let it default to zero. 
+            // Catch and log exception if the either the STWEB.MIDTERM.GRADE.COUNT is not a number or if it isn't between 0 - 6. But continue either way and let it default to zero.
             if (!string.IsNullOrEmpty(webDefaults.StwebMidtermGradeCount))
             {
                 try

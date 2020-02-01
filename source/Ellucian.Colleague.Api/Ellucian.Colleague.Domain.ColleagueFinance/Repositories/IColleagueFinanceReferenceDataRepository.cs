@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -29,10 +29,12 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
         /// <summary>
         /// Get a collectoin of accounting string component values
         /// </summary>
-        Task<Tuple<IEnumerable<AccountingStringComponentValues>,int>> GetAccountingStringComponentValuesAsync(int Offset, int Limit, string component, string transactionStatus, string typeAccount, string typeFund, bool bypassCache);
-        Task<Tuple<IEnumerable<AccountingStringComponentValues>, int>> GetAccountingStringComponentValues2Async(int Offset, int Limit, string component, string transactionStatus, string typeAccount, string typeFund, bool ignoreCache);
+        Task<Tuple<IEnumerable<AccountingStringComponentValues>,int>> GetAccountingStringComponentValuesAsync(int Offset, int Limit, string component, 
+            string transactionStatus, string typeAccount, string typeFund, bool bypassCache);
+        Task<Tuple<IEnumerable<AccountingStringComponentValues>, int>> GetAccountingStringComponentValues2Async(int Offset, int Limit, string component, 
+            string transactionStatus, string typeAccount);
         Task<Tuple<IEnumerable<AccountingStringComponentValues>, int>> GetAccountingStringComponentValues3Async(int Offset, int Limit, string component,
-           string typeAccount, string status, IEnumerable<string> grants, DateTime? effectiveOn, bool ignoreCache);
+           string typeAccount, string status, IEnumerable<string> grants, DateTime? effectiveOn);
 
         /// <summary>
         /// Get a accounting string component value from a Guid
@@ -72,6 +74,13 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
         Task<IEnumerable<AccountsPayableSources>> GetAccountsPayableSourcesAsync(bool ignoreCache);
 
         /// <summary>
+        /// Get guid for AccountsPayableSource code
+        /// </summary>
+        /// <param name="code">AccountsPayableSource code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetAccountsPayableSourceGuidAsync(string code);
+
+        /// <summary>
         /// Returns domain entities for Accounts Payable Tax codes.
         /// </summary>
         Task<IEnumerable<AccountsPayableTax>> GetAccountsPayableTaxCodesAsync();
@@ -87,9 +96,30 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
         Task<IEnumerable<CommodityCode>> GetCommodityCodesAsync(bool ignoreCache);
 
         /// <summary>
+        /// Returns domain entities for commodity codes.
+        /// </summary>
+        Task<IEnumerable<ProcurementCommodityCode>> GetAllCommodityCodesAsync();
+
+        /// <summary>
+        /// Get guid for CommodityCode code
+        /// </summary>
+        /// <param name="code">CommodityCode code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetCommodityCodeGuidAsync(string code);
+
+        /// <summary>
         /// Returns domain entities for commodity unit types.
         /// </summary>
         Task<IEnumerable<CommodityUnitType>> GetCommodityUnitTypesAsync(bool ignoreCache);
+
+        Task<IEnumerable<CommodityUnitType>> GetAllCommodityUnitTypesAsync();
+
+        /// <summary>
+        /// Get guid for CommodityUnitType code
+        /// </summary>
+        /// <param name="code">FreeOnBoardType code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetCommodityUnitTypeGuidAsync(string code);
 
         /// <summary>
         /// Return the name (CORP.NAME) of the Host Organization ID on PID2 (DEFAULTS.HOST.CORP.ID).
@@ -123,6 +153,13 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
         Task<IEnumerable<FreeOnBoardType>> GetFreeOnBoardTypesAsync(bool ignoreCache);
 
         /// <summary>
+        /// Get guid for FreeOnBoardType code
+        /// </summary>
+        /// <param name="code">FreeOnBoardType code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetFreeOnBoardTypeGuidAsync(string code);
+
+        /// <summary>
         /// Returns domain entities for shipping methods.
         /// </summary>
         Task<IEnumerable<ShippingMethod>> GetShippingMethodsAsync(bool ignoreCache);
@@ -135,9 +172,23 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
         Task<IEnumerable<ShipToDestination>> GetShipToDestinationsAsync(bool ignoreCache);
 
         /// <summary>
+        /// Get guid for ShipToDestination code
+        /// </summary>
+        /// <param name="code">ShipToDestination code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetShipToDestinationGuidAsync(string code);
+
+        /// <summary>
         /// Returns domain entities for VendorTerms.
         /// </summary>
         Task<IEnumerable<VendorTerm>> GetVendorTermsAsync(bool ignoreCache);
+
+        /// <summary>
+        /// Get guid for VendorTerm code
+        /// </summary>
+        /// <param name="code">VendorTerm code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetVendorTermGuidAsync(string code);
 
         /// <summary>
         /// Returns domain entities for commodity unit types.
@@ -249,6 +300,32 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
         ///// <param name="Key"></param>
         ///// <returns></returns>
         //Task<Ellucian.Colleague.Domain.ColleagueFinance.Entities.AccountingStringSubcomponentValues> GetAccountingStringSubcomponentValuesByEntityKey(string entity, string key);
+
+        /// <summary>
+        /// Get a collection of ShipToCodes
+        /// </summary>
+        /// <returns>Collection of ShipToCodes</returns>
+        Task<IEnumerable<ShipToCode>> GetShipToCodesAsync();
+
+        /// <summary>
+        /// Get fixed asset transfer flags
+        /// </summary>
+        /// <returns></returns>
+        Task<IEnumerable<FixedAssetsFlag>> GetFixedAssetTransferFlagsAsync();
+
+        /// <summary>
+        /// Get a commodity code
+        /// </summary>
+        /// <param name="recordKey">commodity code key</param>
+        /// <returns>ProcurementCommodityCode</returns>
+        Task<Domain.ColleagueFinance.Entities.ProcurementCommodityCode> GetCommodityCodeByCodeAsync(string recordKey);
+
+        /// <summary>
+        /// Get tax forms
+        /// </summary>
+        /// <returns></returns>
+        Task<IEnumerable<TaxForm>> GetTaxFormsAsync();
+
 
     }
 }

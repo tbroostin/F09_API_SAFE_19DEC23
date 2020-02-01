@@ -546,6 +546,9 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             {
                 Domain.Base.Entities.PersonFilter thisPersonFilter = allPersonFilters.Where(m => m.Guid == demographicGuid).FirstOrDefault();
                 refRepoMock.Setup(repo => repo.GetPersonFiltersAsync(true)).ReturnsAsync(allPersonFilters.Where(m => m.Guid == demographicGuid));
+                refRepoMock.Setup(repo => repo.GetPersonFilterByGuidAsync(It.IsAny<string>()))
+                    .ReturnsAsync(allPersonFilters.FirstOrDefault(m => m.Guid == demographicGuid));
+
                 Dtos.PersonFilter personFilter = await demographicService.GetPersonFilterByGuidAsync(demographicGuid);
                 Assert.AreEqual(thisPersonFilter.Guid, personFilter.Id);
                 Assert.AreEqual(thisPersonFilter.Code, personFilter.Code);
@@ -575,10 +578,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(InvalidOperationException))]
+            [ExpectedException(typeof(KeyNotFoundException))]
             public async Task DemographicService_GetPersonFilterByGuid_HEDM_ThrowsInvOpExc()
             {
                 refRepoMock.Setup(repo => repo.GetPersonFiltersAsync(It.IsAny<bool>())).Throws<InvalidOperationException>();
+                refRepoMock.Setup(repo => repo.GetPersonFilterByGuidAsync(It.IsAny<string>()))
+                    .Throws<InvalidOperationException>();
                 await demographicService.GetPersonFilterByGuidAsync("dshjfkj");
             }
         }

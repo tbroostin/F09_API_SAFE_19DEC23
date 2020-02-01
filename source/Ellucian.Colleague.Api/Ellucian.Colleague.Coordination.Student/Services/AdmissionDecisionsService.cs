@@ -1,9 +1,11 @@
-//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student;
+using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Web.Adapters;
@@ -14,7 +16,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Ellucian.Colleague.Domain.Student.Entities;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
@@ -23,13 +24,15 @@ namespace Ellucian.Colleague.Coordination.Student.Services
     {
         private readonly IApplicationStatusRepository _applicationStatusRepository;
         private readonly IAdmissionApplicationsRepository _admissionApplicationsRepository;
-        private readonly IStudentReferenceDataRepository _referenceDataRepository;
+        private readonly IStudentReferenceDataRepository _studentReferenceDataRepository;
+        private readonly IReferenceDataRepository _referenceDataRepository;
         private Dictionary<string, string> _admissionApplicationDict = new Dictionary<string, string>();
 
         public AdmissionDecisionsService(
             IApplicationStatusRepository applicationStatusRepository,
             IAdmissionApplicationsRepository admissionApplicationsRepository,
-            IStudentReferenceDataRepository referenceDataRepository,
+            IStudentReferenceDataRepository studentReferenceDataRepository,
+            IReferenceDataRepository referenceDataRepository,
             IAdapterRegistry adapterRegistry,
             ICurrentUserFactory currentUserFactory,
             IRoleRepository roleRepository,
@@ -39,28 +42,62 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             _applicationStatusRepository = applicationStatusRepository;
             _admissionApplicationsRepository = admissionApplicationsRepository;
+            _studentReferenceDataRepository = studentReferenceDataRepository;
             _referenceDataRepository = referenceDataRepository;
         }
 
         #region GET
-        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
         /// Gets all admission-decisions
         /// </summary>
-        /// <returns>Collection of AdmissionDecisions DTO objects</returns>
-        public async Task<Tuple<IEnumerable<Dtos.AdmissionDecisions>, int>> GetAdmissionDecisionsAsync(int offset, int limit, string applicationId, bool bypassCache)
+        /// <param name="offset">Offset for paging results</param>
+        /// <param name="limit">Limit for paging results</param>
+        /// <param name="applicationId">The admission application, on which this decision was made.</param>
+        /// <param name="decidedOn">The date of the decision on the admission application.</param>
+        /// <param name="filterQualifiers">KeyValuePair of advanced filter criteria.</param>
+        /// <param name="personFilterValue">Person filter criteria.</param>
+        /// <param name="bypassCache">Flag to bypass cache</param>
+        /// <returns>Collection of <see cref="AdmissionDecisions">admissionDecisions</see> objects</returns>          
+        public async Task<Tuple<IEnumerable<Dtos.AdmissionDecisions>, int>> GetAdmissionDecisionsAsync(int offset, int limit,
+            string applicationId, DateTimeOffset? decidedOn, Dictionary<string, string> filterQualifiers, string personFilterValue, bool bypassCache)
         {
             try
             {
-                if (!await CheckViewAdmissionDecisionsPermissionAsync())
+                // access is ok if the current user has the view, or create, permission
+                if ((!await CheckViewAdmissionDecisionsPermissionAsync()) && (!await CheckCreateAdmissionDecisionPermissionAsync()))
                 {
                     logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view admission-decisions.");
-                    throw new PermissionsException("User is not authorized to view admission-decisions.");
+                    throw new PermissionsException("User '" + CurrentUser.UserId + "' does not have permission to view admission-decisions");
                 }
 
                 var admissionDecisionsCollection = new List<Dtos.AdmissionDecisions>();
+                var newPersonFilter = string.Empty;
+                Tuple<IEnumerable<ApplicationStatus2>, int> admissionDecisionsEntities = null;
 
-                Tuple<IEnumerable<Domain.Student.Entities.ApplicationStatus2>, int> admissionDecisionsEntities = await _applicationStatusRepository.GetApplicationStatusesAsync(offset, limit, applicationId, bypassCache);
+                string[] filterPersonIds = new List<string>().ToArray();
+
+                if (!string.IsNullOrEmpty(personFilterValue))
+                {
+                    var personFilterKeys = (await _referenceDataRepository.GetPersonIdsByPersonFilterGuidAsync(personFilterValue));
+                    if (personFilterKeys != null)
+                    {
+                        filterPersonIds = personFilterKeys;
+                    }
+                    else
+                    {
+                        return new Tuple<IEnumerable<Dtos.AdmissionDecisions>, int>(new List<Dtos.AdmissionDecisions>(), 0);
+                    }
+                }
+
+                try
+                {
+                    admissionDecisionsEntities = await _applicationStatusRepository.GetApplicationStatusesAsync(offset, limit, applicationId, filterPersonIds, decidedOn, filterQualifiers, bypassCache);
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex);
+                    throw IntegrationApiException;
+                }
                 if (admissionDecisionsEntities != null && admissionDecisionsEntities.Item1.Any())
                 {
                     _admissionApplicationDict = await _admissionApplicationsRepository.GetAdmissionApplicationGuidDictionary(admissionDecisionsEntities.Item1.Select(i => i.ApplicantRecordKey).Distinct());
@@ -69,6 +106,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         admissionDecisionsCollection.Add(await ConvertEntityToDtoAsync(admissionDecisions, _admissionApplicationDict, bypassCache));
                     }
                 }
+                if (IntegrationApiException != null)
+                    throw IntegrationApiException;
+
                 return admissionDecisionsCollection.Any() ? new Tuple<IEnumerable<Dtos.AdmissionDecisions>, int>(admissionDecisionsCollection, admissionDecisionsEntities.Item2) :
                     new Tuple<IEnumerable<Dtos.AdmissionDecisions>, int>(new List<Dtos.AdmissionDecisions>(), 0);
             }
@@ -84,30 +124,54 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
-        /// Get a AdmissionDecisions from its GUID
+        /// Get a admissionDecisions by guid.
         /// </summary>
-        /// <returns>AdmissionDecisions DTO object</returns>
+        /// <param name="guid">Guid of the admissionDecisions in Colleague.</param>
+        /// <param name="bypassCache">Flag to bypass cache</param>
+        /// <returns>The <see cref="AdmissionDecisions">admissionDecisions</see></returns>
         public async Task<Ellucian.Colleague.Dtos.AdmissionDecisions> GetAdmissionDecisionsByGuidAsync(string guid, bool bypassCache = true)
         {
             try
             {
-                if (!await CheckViewAdmissionDecisionsPermissionAsync())
+                // access is ok if the current user has the view, or create, permission
+                if ((!await CheckViewAdmissionDecisionsPermissionAsync()) && (!await CheckCreateAdmissionDecisionPermissionAsync()))
                 {
                     logger.Error("User " + CurrentUser.UserId + " does not have permission to view admission decisions.");
-                    throw new PermissionsException("User is not authorized to view admission-decisions.");
+                    throw new PermissionsException("User '" + CurrentUser.UserId + "' does not have permission to view admission-decisions");
+
                 }
-                var entity = await _applicationStatusRepository.GetApplicationStatusByGuidAsync(guid, bypassCache);
+                ApplicationStatus2 entity = null;
+                try
+                {
+                    entity = await _applicationStatusRepository.GetApplicationStatusByGuidAsync(guid, bypassCache);
+
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex);
+                    throw IntegrationApiException;
+                }
+
                 if (entity == null)
                 {
-                    throw new KeyNotFoundException(string.Format("No admission decision was found for guid {0}.", guid));
+                    throw new KeyNotFoundException(string.Format("No admission-decisions was found for guid '{0}'.", guid));
                 }
-                _admissionApplicationDict = await _admissionApplicationsRepository.GetAdmissionApplicationGuidDictionary(new List<string>() { entity.ApplicantRecordKey });                
+                _admissionApplicationDict = await _admissionApplicationsRepository.GetAdmissionApplicationGuidDictionary(new List<string>() { entity.ApplicantRecordKey });
 
-                return await ConvertEntityToDtoAsync(entity, _admissionApplicationDict, bypassCache);
-            }
+                var retval = await ConvertEntityToDtoAsync(entity, _admissionApplicationDict, bypassCache);
+
+                if (IntegrationApiException != null)
+                    throw IntegrationApiException;
+
+                return retval;
+            }          
             catch (KeyNotFoundException ex)
             {
-                throw ex;
+                throw new KeyNotFoundException(string.Format("No admission-decisions was found for guid '{0}'", guid), ex);
+            }
+            catch (InvalidOperationException ex)
+            {
+                throw new KeyNotFoundException(string.Format("No admission-decisions was found for guid '{0}'", guid), ex);
             }
             catch (PermissionsException ex)
             {
@@ -115,6 +179,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
         }
 
+      
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
         /// Converts a ApplStatuses domain entity to its corresponding AdmissionDecisions DTO
@@ -152,12 +217,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns></returns>
         private async Task<GuidObject2> ConvertEntityToDecisionTypeGuidObjectAsync(string source, bool bypassCache)
         {
-            var decisionType = (await AdmissionDecisionTypesAsync(bypassCache)).FirstOrDefault(dt => dt.Code.Equals(source, StringComparison.OrdinalIgnoreCase));
-            if (decisionType == null)
+            var decisionTypeGuid = await _studentReferenceDataRepository.GetAdmissionDecisionTypesGuidAsync(source);
+            if (decisionTypeGuid == null)
             {
-                throw new KeyNotFoundException(string.Format("Admission decision type not found for code {0}.", source));
+                IntegrationApiExceptionAddError(string.Format("Admission decision type not found for code {0}.", source));
+                return null;
             }
-            return new GuidObject2(decisionType.Guid);
+            return new GuidObject2(decisionTypeGuid);
         }
 
         /// <summary>
@@ -171,7 +237,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var applicationGuid = source.FirstOrDefault(i => i.Key.Equals(applicationId, StringComparison.OrdinalIgnoreCase));
             if (string.IsNullOrEmpty(applicationGuid.Value))
             {
-                throw new KeyNotFoundException(string.Format("No application guid found for id: {0}", applicationId));
+                IntegrationApiExceptionAddError(string.Format("No application guid found for id: {0}", applicationId));
+                return null;
             }
             return new GuidObject2(applicationGuid.Value);
         }
@@ -190,17 +257,32 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (!await CheckCreateAdmissionDecisionPermissionAsync())
             {
                 logger.Error(string.Format("User '{0}' is not authorized to create admission-decisions.", CurrentUser.UserId));
-                throw new PermissionsException("User is not authorized to create admission-decisions.");
+                throw new PermissionsException("User '" + CurrentUser.UserId + "' does not have permission to create admission-decisions");
+
             }
 
             _applicationStatusRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
-            Domain.Student.Entities.ApplicationStatus2 appStatusEntity = await ConvertDtoToAppStatusEntityAsync(admissionDecisions);
-            Domain.Student.Entities.ApplicationStatus2 entity = await _applicationStatusRepository.UpdateAdmissionDecisionAsync(appStatusEntity);
+           ApplicationStatus2 appStatusEntity = await ConvertDtoToAppStatusEntityAsync(admissionDecisions);
+            if (IntegrationApiException != null)
+                throw IntegrationApiException;
+            ApplicationStatus2 entity = null;
+            try
+            {
+                entity = await _applicationStatusRepository.UpdateAdmissionDecisionAsync(appStatusEntity);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }
 
             _admissionApplicationDict = await _admissionApplicationsRepository.GetAdmissionApplicationGuidDictionary(new List<string>() { entity.ApplicantRecordKey });
 
-            return await ConvertEntityToDtoAsync(entity, _admissionApplicationDict, true);
+            var retval = await ConvertEntityToDtoAsync(entity, _admissionApplicationDict, true);
+            if (IntegrationApiException != null)
+                throw IntegrationApiException;
+            return retval;
         }
 
         /// <summary>
@@ -210,55 +292,76 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns></returns>
         private async Task<Domain.Student.Entities.ApplicationStatus2> ConvertDtoToAppStatusEntityAsync(Dtos.AdmissionDecisions source)
         {
-            if(!source.Id.Equals(Guid.Empty.ToString()))
+            ApplicationStatus2 retval = null;
+
+            if (source == null)
+            {
+                IntegrationApiExceptionAddError("Source is a required object.");
+                return retval;
+            }
+
+            if (!source.Id.Equals(Guid.Empty.ToString()))
             {
                 var recordTuple = await _applicationStatusRepository.GetApplicationStatusKey(source.Id);
-                if(recordTuple != null)
+                if (recordTuple != null)
                 {
-                    throw new ArgumentException("Changing the admission decision type is not permitted.", "id");
+                    IntegrationApiExceptionAddError("Changing the admission decision type is not permitted.", "id");
                 }
             }
 
             var applicationTuple = await _applicationStatusRepository.GetApplicationStatusKey(source.Application.Id);
-            if (applicationTuple == null || !applicationTuple.Item1.Equals("APPLICATIONS", StringComparison.OrdinalIgnoreCase))
+            if (applicationTuple == null || !applicationTuple.Item1.Equals("APPLICATIONS", StringComparison.OrdinalIgnoreCase) || !string.IsNullOrEmpty(applicationTuple.Item3))
             {
-                throw new KeyNotFoundException(string.Format("Application not found for guid '{0}'.", source.Application.Id));
-            }
-
-            if (applicationTuple == null || !string.IsNullOrEmpty(applicationTuple.Item3))
-            {
-                throw new KeyNotFoundException(string.Format("Application not found for guid {0}.", source.Application.Id));
+                IntegrationApiExceptionAddError(string.Format("Application not found for guid '{0}'.", source.Application.Id));
             }
 
             var decisionType = (await AdmissionDecisionTypesAsync(true)).FirstOrDefault(i => i.Guid.Equals(source.DecisionType.Id, StringComparison.OrdinalIgnoreCase));
+            string decisionTypeCode = string.Empty;
             if (decisionType == null)
             {
-                throw new KeyNotFoundException(string.Format("Decision type not found for guid {0}.", source.DecisionType.Id));
+                IntegrationApiExceptionAddError(string.Format("Decision type not found for guid {0}.", source.DecisionType.Id));
             }
-
-            if(decisionType.SpecialProcessingCode != null && decisionType.SpecialProcessingCode.Equals("MS", StringComparison.OrdinalIgnoreCase))
+            else
             {
-                throw new InvalidOperationException("Admission decision type associated with 'move to students' is not permitted.");
-            }
+                if (decisionType.SpecialProcessingCode != null && decisionType.SpecialProcessingCode.Equals("MS", StringComparison.OrdinalIgnoreCase))
+                {
+                    IntegrationApiExceptionAddError("Admission decision type associated with 'move to students' is not permitted.");
+                }
 
-            if(string.IsNullOrEmpty(decisionType.SpecialProcessingCode))
+                if (string.IsNullOrEmpty(decisionType.SpecialProcessingCode))
+                {
+                    IntegrationApiExceptionAddError("Admission decision type is not valid for a submitted application. This admission decision type is associated with a prospect status.");
+                }
+
+                decisionTypeCode = decisionType.Code;
+            }
+           
+            try
             {
-                throw new InvalidOperationException("Admission decision type is not valid for a submitted application. This admission decision type is associated with a prospect status.");
+
+                var decidedOnDate = new DateTime(source.DecidedOn.Year, source.DecidedOn.Month, source.DecidedOn.Day);
+                var decidedOnTime = new DateTime(1900, 1, 1, source.DecidedOn.Hour, source.DecidedOn.Minute, source.DecidedOn.Second);
+
+                if (applicationTuple != null)
+                {
+                    retval = new ApplicationStatus2(source.Id, applicationTuple.Item2, decisionTypeCode, decidedOnDate, decidedOnTime)
+                    {
+                        DecidedOn = source.DecidedOn
+                    };
+                }
             }
-
-            var decisionTypeCode = decisionType.Code;
-
-            var decidedOnDate = new DateTime(source.DecidedOn.Year, source.DecidedOn.Month, source.DecidedOn.Day);
-            var decidedOnTime = new DateTime(1900, 1, 1, source.DecidedOn.Hour, source.DecidedOn.Minute, source.DecidedOn.Second);
-
-            return new Domain.Student.Entities.ApplicationStatus2(source.Id, applicationTuple.Item2, decisionTypeCode, source.DecidedOn, decidedOnTime);
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(ex.Message);
+            }
+            return retval;
         }
 
         #endregion
 
         #region Helper Methods
         /// <summary>
-        /// Helper method to determine if the user has permission to delete Student Aptitude Assessments.
+        /// Permissions code that allows an external system to view admission applications
         /// </summary>
         /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
         private async Task<bool> CheckViewAdmissionDecisionsPermissionAsync()
@@ -293,7 +396,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             if (_decisionTypes == null)
             {
-                _decisionTypes = (await _referenceDataRepository.GetAdmissionDecisionTypesAsync(bypassCache)).ToList();
+                _decisionTypes = (await _studentReferenceDataRepository.GetAdmissionDecisionTypesAsync(bypassCache)).ToList();
             }
             return _decisionTypes;
         }

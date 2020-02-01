@@ -249,5 +249,10 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         {
             throw new NotImplementedException();
         }
+
+        public Task<Tuple<IEnumerable<SectionRegistrationResponse>, int>> GetSectionRegistrations3Async(int offset, int limit, SectionRegistrationResponse sectReg, string acadPeriod, string sectionInstructor)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

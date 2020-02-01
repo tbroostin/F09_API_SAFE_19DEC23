@@ -1,4 +1,5 @@
-﻿using System;
+﻿//Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -23,6 +24,7 @@ using slf4net;
 using GlAccts = Ellucian.Colleague.Data.ColleagueFinance.DataContracts.GlAccts;
 using Projects = Ellucian.Colleague.Data.ColleagueFinance.DataContracts.Projects;
 using Ellucian.Colleague.Domain.Base.Exceptions;
+using Ellucian.Colleague.Domain.Exceptions;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 {
@@ -713,8 +715,13 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 _referenceDataRepoMock = new Mock<ColleagueFinanceReferenceDataRepository>();
                 BuildData();
 
-                dataReaderMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.GlAccts>("GL.ACCTS", "", It.IsAny<bool>()))
+                var glIds = _glAcctsDataContract.Select(i => i.Recordkey).ToArray();
+                var prIds = _projectsDataContract.Select(i => i.Recordkey).ToArray();
+
+                dataReaderMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.GlAccts>("GL.ACCTS", It.IsAny<string[]>(), It.IsAny<bool>()))
                     .ReturnsAsync(_glAcctsDataContract);
+                dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", string.Empty)).ReturnsAsync(glIds);
+
                 dataReaderMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.GlAccts>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
                     .ReturnsAsync(_glAcctsDataContract);
 
@@ -728,8 +735,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                     .ReturnsAsync(_fiscalYrDataContract);
 
 
-                dataReaderMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.Projects>("PROJECTS", "", It.IsAny<bool>()))
+                dataReaderMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.Projects>("PROJECTS", It.IsAny<string[]>(), It.IsAny<bool>()))
                     .ReturnsAsync(_projectsDataContract);
+                dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", string.Empty)).ReturnsAsync(prIds);
 
 
                 cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
@@ -825,9 +833,38 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             }
 
             [TestMethod]
+            public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValueByGuid_AccountFundsController()
+            {
+                var record = _glAcctsDataContract.FirstOrDefault(p => p.Recordkey == "11_00_01_00_20603_52010");
+                record.MemosEntityAssociation = new List<GlAcctsMemos>() { new GlAcctsMemos()};
+                dataReaderMock.Setup(acc => acc.ReadRecordAsync<DataContracts.GlAccts>(It.IsAny<string>(), It.IsAny<bool>()))
+                   .ReturnsAsync(_glAcctsDataContract.FirstOrDefault(p => p.Recordkey == "11_00_01_00_20603_52010"));
+                dataReaderMock.Setup(acc => acc.SelectAsync(It.IsAny<GuidLookup[]>())).Returns<GuidLookup[]>(gla =>
+                {
+                    var result = new Dictionary<string, GuidLookupResult>();
+                    foreach (var gl in gla)
+                    {
+                        result.Add(gl.Guid, new GuidLookupResult() { Entity = "GL.ACCTS", PrimaryKey = "1" });
+                    }
+                    return Task.FromResult(result);
+                });
+                try
+                {
+                    await _referenceDataRepo.GetAccountingStringComponentValueByGuid(record.RecordGuid);
+                }
+                catch (RepositoryException e)
+                {
+                    Assert.AreEqual(1, e.Errors.Count());
+                    Assert.AreEqual("The record associated to the accounting string component value contains an invalid element. guid: '4f937f08-f6a0-4a1c-8d55-9f2a6dd6be46'",
+                        e.Errors[0].Message);
+                }
+
+            }
+
+            [TestMethod]
             public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues_Component_All_NonCache()
             {
-                var actuals = await _referenceDataRepo.GetAccountingStringComponentValuesAsync(offset, limit, "", "", "", "", true);
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "", "", "");
                 Assert.IsNotNull(actuals);
                 var actual = actuals.Item1.FirstOrDefault(a => a.Guid == guid);
                 var expected = _glAcctsDataContract.FirstOrDefault(glAcct => glAcct.RecordGuid == guid);
@@ -838,7 +875,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 Assert.AreEqual(guid, actual.Guid);
                 Assert.AreEqual(expectedCc.GlccAcctDesc, actual.Description);
                 Assert.AreEqual("available", actual.Status);
-                Assert.AreEqual("liability", actual.Type);
+                Assert.AreEqual("expense", actual.Type);
                 Assert.AreEqual("GL", actual.AccountDef);
                 Assert.AreEqual(expected.Recordkey, actual.AccountNumber);
             }
@@ -846,7 +883,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             [TestMethod]
             public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues_Component_GlAcct_NonCache()
             {
-                var actuals = await _referenceDataRepo.GetAccountingStringComponentValuesAsync(offset, limit, "GL.ACCT", "", "", "", true);
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "GL.ACCT", "", "");
                 Assert.IsNotNull(actuals);
                 var actual = actuals.Item1.FirstOrDefault(a => a.Guid == guid);
                 var expected = _glAcctsDataContract.FirstOrDefault(glAcct => glAcct.RecordGuid == guid);
@@ -857,7 +894,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 Assert.AreEqual(guid, actual.Guid);
                 Assert.AreEqual(expectedCc.GlccAcctDesc, actual.Description);
                 Assert.AreEqual("available", actual.Status);
-                Assert.AreEqual("liability", actual.Type);
+                Assert.AreEqual("expense", actual.Type);
                 Assert.AreEqual("GL", actual.AccountDef);
                 Assert.AreEqual(expected.Recordkey, actual.AccountNumber);
             }
@@ -865,14 +902,134 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             [TestMethod]
             public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues_Component_Project_NonCache()
             {
-                var actuals = await _referenceDataRepo.GetAccountingStringComponentValuesAsync(offset, limit, "PROJECT", "", "", "", true);
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "PROJECT", "", "");
                 Assert.IsNotNull(actuals);
-                    }
+            }
+
+            [TestMethod]
+            public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues_Component_NullProjectIds()
+            {
+                dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", string.Empty)).ReturnsAsync(null);
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "PROJECT", "", "");
+                Assert.IsNotNull(actuals);
+                Assert.AreEqual(0, actuals.Item2);
+            }
+
+            [TestMethod]
+            public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues_Component_NullGLAcctsIds()
+            {
+                dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", string.Empty)).ReturnsAsync(null);
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "GL.ACCT", "", "");
+                Assert.IsNotNull(actuals);
+                Assert.AreEqual(0, actuals.Item2);
+            }
+
+            [TestMethod]
+            public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues_Component_NullGLAcctsPrjIds()
+            {
+                dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", string.Empty)).ReturnsAsync(null);
+                dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", string.Empty)).ReturnsAsync(null);
+
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "", "", "");
+                Assert.IsNotNull(actuals);
+                Assert.AreEqual(0, actuals.Item2);
+            }
+
+            [TestMethod]
+            public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues_Component_WithTransactionStatus()
+            {
+                var glIds = _glAcctsDataContract.Select(i => i.Recordkey).ToArray();
+                var prIds = _projectsDataContract.Select(i => i.Recordkey).ToArray();
+                dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", string.Empty)).ReturnsAsync(glIds);
+                dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", string.Empty)).ReturnsAsync(prIds);
+
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "", "available", "");
+                Assert.IsNotNull(actuals);
+                Assert.AreEqual(0, actuals.Item2);
+            }
+
+            [TestMethod]
+            public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues_Component_AssetTypeAccount()
+            {
+                var glIds = _glAcctsDataContract.Select(i => i.Recordkey).ToArray();
+                var prIds = _projectsDataContract.Select(i => i.Recordkey).ToArray();
+                dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", string.Empty)).ReturnsAsync(glIds);
+                dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", string.Empty)).ReturnsAsync(prIds);
+
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "", "", "asset");
+                Assert.IsNotNull(actuals);
+                Assert.AreEqual(1, actuals.Item2);
+            }
+
+            [TestMethod]
+            public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues_Component_LiabilityTypeAccount()
+            {
+                var glIds = _glAcctsDataContract.Select(i => i.Recordkey).ToArray();
+                var prIds = _projectsDataContract.Select(i => i.Recordkey).ToArray();
+                dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", string.Empty)).ReturnsAsync(glIds);
+                dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", string.Empty)).ReturnsAsync(prIds);
+
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "", "", "liability");
+                Assert.IsNotNull(actuals);
+                Assert.AreEqual(0, actuals.Item2);
+            }
+
+            [TestMethod]
+            public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues_Component_revenueTypeAccount()
+            {
+                var glIds = _glAcctsDataContract.Select(i => i.Recordkey).ToArray();
+                var prIds = _projectsDataContract.Select(i => i.Recordkey).ToArray();
+                dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", string.Empty)).ReturnsAsync(glIds);
+                dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", string.Empty)).ReturnsAsync(prIds);
+
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "", "", "revenue");
+                Assert.IsNotNull(actuals);
+                Assert.AreEqual(0, actuals.Item2);
+            }
+
+            [TestMethod]
+            public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues_Component_FundBalanceTypeAccount()
+            {
+                var glIds = _glAcctsDataContract.Select(i => i.Recordkey).ToArray();
+                var prIds = _projectsDataContract.Select(i => i.Recordkey).ToArray();
+                dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", string.Empty)).ReturnsAsync(glIds);
+                dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", string.Empty)).ReturnsAsync(prIds);
+
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "", "", "fundBalance");
+                Assert.IsNotNull(actuals);
+                Assert.AreEqual(0, actuals.Item2);
+            }
+
+            [TestMethod]
+            public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues_Component_ExpenseTypeAccount()
+            {
+                var glIds = _glAcctsDataContract.Select(i => i.Recordkey).ToArray();
+                var prIds = _projectsDataContract.Select(i => i.Recordkey).ToArray();
+                dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", string.Empty)).ReturnsAsync(glIds);
+                dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", string.Empty)).ReturnsAsync(prIds);
+
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "", "", "expense");
+                Assert.IsNotNull(actuals);
+                Assert.AreEqual(4, actuals.Item2);
+            }
+
+            [TestMethod]
+            public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues_Component_NonPersonalExpenseTypeAccount()
+            {
+                var glIds = _glAcctsDataContract.Select(i => i.Recordkey).ToArray();
+                var prIds = _projectsDataContract.Select(i => i.Recordkey).ToArray();
+                dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", string.Empty)).ReturnsAsync(glIds);
+                dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", string.Empty)).ReturnsAsync(prIds);
+
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "", "", "nonPersonalExpense");
+                Assert.IsNotNull(actuals);
+                Assert.AreEqual(0, actuals.Item2);
+            }
 
             [TestMethod]
             public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues_Component_All_Cache()
             {
-                var actuals = await _referenceDataRepo.GetAccountingStringComponentValuesAsync(offset, limit, "", "", "", "", false);
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "", "", "");
                 Assert.IsNotNull(actuals);
                 var actual = actuals.Item1.FirstOrDefault(a => a.Guid == guid);
                 var expected = _glAcctsDataContract.FirstOrDefault(glAcct => glAcct.RecordGuid == guid);
@@ -883,7 +1040,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 Assert.AreEqual(guid, actual.Guid);
                 Assert.AreEqual(expectedCc.GlccAcctDesc, actual.Description);
                 Assert.AreEqual("available", actual.Status);
-                Assert.AreEqual("liability", actual.Type);
+                Assert.AreEqual("expense", actual.Type);
                 Assert.AreEqual("GL", actual.AccountDef);
                 Assert.AreEqual(expected.Recordkey, actual.AccountNumber);
             }
@@ -891,7 +1048,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             [TestMethod]
             public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues_Component_GlAcct_Cache()
             {
-                var actuals = await _referenceDataRepo.GetAccountingStringComponentValuesAsync(offset, limit, "GL.ACCT", "", "", "", false);
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "GL.ACCT", "", "");
                 Assert.IsNotNull(actuals);
                 var actual = actuals.Item1.FirstOrDefault(a => a.Guid == guid);
                 var expected = _glAcctsDataContract.FirstOrDefault(glAcct => glAcct.RecordGuid == guid);
@@ -902,7 +1059,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 Assert.AreEqual(guid, actual.Guid);
                 Assert.AreEqual(expectedCc.GlccAcctDesc, actual.Description);
                 Assert.AreEqual("available", actual.Status);
-                Assert.AreEqual("liability", actual.Type);
+                Assert.AreEqual("expense", actual.Type);
                 Assert.AreEqual("GL", actual.AccountDef);
                 Assert.AreEqual(expected.Recordkey, actual.AccountNumber);
             }
@@ -910,7 +1067,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             [TestMethod]
             public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues_Component_Project_Cache()
             {
-                var actuals = await _referenceDataRepo.GetAccountingStringComponentValuesAsync(offset, limit, "PROJECT", "", "", "", false);
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "PROJECT", "", "");
                 Assert.IsNotNull(actuals);
                      }
 
@@ -918,7 +1075,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues_FiscalYear_Null()
             {
                 _fiscalYrDataContract = null;
-                var actuals = await _referenceDataRepo.GetAccountingStringComponentValuesAsync(offset, limit, "PROJECT", "", "", "", false);
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "PROJECT", "", "");
                 Assert.IsNotNull(actuals);
                }
 
@@ -931,7 +1088,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                     CfCurrentFiscalYear = "1999",
                     FiscalStartMonth = 1
                 };
-                var actuals = await _referenceDataRepo.GetAccountingStringComponentValuesAsync(offset, limit, "PROJECT", "", "", "", false);
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "PROJECT", "", "");
                 Assert.IsNotNull(actuals);
             }
 
@@ -944,7 +1101,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                     GlClassLocation = null
                 };
 
-                var actuals = await _referenceDataRepo.GetAccountingStringComponentValuesAsync(offset, limit, "PROJECT", "", "", "", false);
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "PROJECT", "", "");
                 Assert.IsNotNull(actuals);
                 foreach (var actual in actuals.Item1)
                 {
@@ -1021,7 +1178,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 {
                     GlClassLocation = new List<int?>() {19, 1},
                     GlClassAssetValues = new List<string>() {"1"},
-                    GlClassLiabilityValues = new List<string>() {"5"}
+                    GlClassLiabilityValues = new List<string>() {"2"},
+                    GlClassFundBalValues = new List<string>() { "3" },
+                    GlClassRevenueValues = new List<string>() { "4" },
+                    GlClassExpenseValues = new List<string>() { "5" }
                 };
 
                 _glAcctsCcDataContract = new Collection<GlAcctsCc>()
@@ -1078,8 +1238,12 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 _referenceDataRepoMock = new Mock<ColleagueFinanceReferenceDataRepository>();
                 BuildData();
 
-                dataReaderMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.GlAccts>("GL.ACCTS", "", It.IsAny<bool>()))
+                var glIds = _glAcctsDataContract.Select(i => i.Recordkey).ToArray();
+                var prIds = _projectsDataContract.Select(i => i.Recordkey).ToArray();
+
+                dataReaderMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.GlAccts>("GL.ACCTS", It.IsAny<string[]>(), It.IsAny<bool>()))
                     .ReturnsAsync(_glAcctsDataContract);
+                dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", string.Empty)).ReturnsAsync(glIds);
                 dataReaderMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.GlAccts>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
                     .ReturnsAsync(_glAcctsDataContract);
 
@@ -1092,9 +1256,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 dataReaderMock.Setup(acc => acc.ReadRecordAsync<DataContracts.Fiscalyr>("ACCOUNT.PARAMETERS", "FISCAL.YEAR", It.IsAny<bool>()))
                     .ReturnsAsync(_fiscalYrDataContract);
 
-
-                dataReaderMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.Projects>("PROJECTS", "", It.IsAny<bool>()))
+                dataReaderMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.Projects>("PROJECTS", It.IsAny<string[]>(), It.IsAny<bool>()))
                     .ReturnsAsync(_projectsDataContract);
+                dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", string.Empty)).ReturnsAsync(prIds);
 
 
                 cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
@@ -1156,6 +1320,62 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             }
 
             [TestMethod]
+            public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValueByGuid2_AccountingComponent()
+            {
+                var record = _glAcctsDataContract.FirstOrDefault(p => p.Recordkey == "11_00_01_00_20603_52010");
+                record.MemosEntityAssociation = new List<GlAcctsMemos>() { new GlAcctsMemos()};
+                dataReaderMock.Setup(acc => acc.ReadRecordAsync<DataContracts.GlAccts>(It.IsAny<string>(), It.IsAny<bool>()))
+                   .ReturnsAsync(_glAcctsDataContract.FirstOrDefault(p => p.Recordkey == "11_00_01_00_20603_52010"));
+                dataReaderMock.Setup(acc => acc.SelectAsync(It.IsAny<GuidLookup[]>())).Returns<GuidLookup[]>(gla =>
+                {
+                    var result = new Dictionary<string, GuidLookupResult>();
+                    foreach (var gl in gla)
+                    {
+                        result.Add(gl.Guid, new GuidLookupResult() { Entity = "GL.ACCTS", PrimaryKey = "1" });
+                    }
+                    return Task.FromResult(result);
+                });
+                try
+                {
+                    await _referenceDataRepo.GetAccountingStringComponentValue2ByGuid(record.RecordGuid);
+                }
+                catch (RepositoryException e)
+                {
+                    Assert.AreEqual(1, e.Errors.Count());
+                    Assert.AreEqual("The record associated to the accounting string component value contains an invalid element. guid: '4f937f08-f6a0-4a1c-8d55-9f2a6dd6be46'",
+                        e.Errors[0].Message);
+                }
+            }
+
+            [TestMethod]
+            public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValueByGuid2_AvailFundsController()
+            {
+                var record = _glAcctsDataContract.FirstOrDefault(p => p.Recordkey == "11_00_01_00_20603_52010");
+                record.MemosEntityAssociation = new List<GlAcctsMemos>() { new GlAcctsMemos() { AvailFundsControllerAssocMember = "2000" } };
+                dataReaderMock.Setup(acc => acc.ReadRecordAsync<DataContracts.GlAccts>(It.IsAny<string>(), It.IsAny<bool>()))
+                   .ReturnsAsync(_glAcctsDataContract.FirstOrDefault(p => p.Recordkey == "11_00_01_00_20603_52010"));
+                dataReaderMock.Setup(acc => acc.SelectAsync(It.IsAny<GuidLookup[]>())).Returns<GuidLookup[]>(gla =>
+                {
+                    var result = new Dictionary<string, GuidLookupResult>();
+                    foreach (var gl in gla)
+                    {
+                        result.Add(gl.Guid, new GuidLookupResult() { Entity = "GL.ACCTS", PrimaryKey = "1" });
+                    }
+                    return Task.FromResult(result);
+                });
+                try
+                {
+                    await _referenceDataRepo.GetAccountingStringComponentValue2ByGuid(record.RecordGuid);
+                }
+                catch (RepositoryException e)
+                {
+                    Assert.AreEqual(1, e.Errors.Count());
+                    Assert.AreEqual("The record associated to the accounting string component value contains an invalid element. guid: '4f937f08-f6a0-4a1c-8d55-9f2a6dd6be46'",
+                        e.Errors[0].Message);
+                }
+            }
+
+            [TestMethod]
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValue2ByGuid_KeyNotFound()
             {
@@ -1191,7 +1411,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             [TestMethod]
             public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues2_Component_All_NonCache()
             {
-                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "", "", "", "", true);
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "", "", "");
                 Assert.IsNotNull(actuals);
                 var actual = actuals.Item1.FirstOrDefault(a => a.Guid == guid);
                 var expected = _glAcctsDataContract.FirstOrDefault(glAcct => glAcct.RecordGuid == guid);
@@ -1205,12 +1425,12 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 Assert.AreEqual("liability", actual.Type);
                 Assert.AreEqual("GL", actual.AccountDef);
                 Assert.AreEqual(expected.Recordkey, actual.AccountNumber);
-            }            
+            }
 
             [TestMethod]
             public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues2_Component_GlAcct_NonCache()
             {
-                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "GL.ACCT", "", "", "", true);
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "GL.ACCT", "", "");
                 Assert.IsNotNull(actuals);
                 var actual = actuals.Item1.FirstOrDefault(a => a.Guid == guid);
                 var expected = _glAcctsDataContract.FirstOrDefault(glAcct => glAcct.RecordGuid == guid);
@@ -1229,14 +1449,14 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             [TestMethod]
             public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues2_Component_Project_NonCache()
             {
-                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "PROJECT", "", "", "", true);
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "PROJECT", "", "");
                 Assert.IsNotNull(actuals);
             }
 
             [TestMethod]
             public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues2_Component_All_Cache()
             {
-                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "", "", "", "", false);
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "", "", "");
                 Assert.IsNotNull(actuals);
                 var actual = actuals.Item1.FirstOrDefault(a => a.Guid == guid);
                 var expected = _glAcctsDataContract.FirstOrDefault(glAcct => glAcct.RecordGuid == guid);
@@ -1255,7 +1475,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             [TestMethod]
             public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues2_Component_GlAcct_Cache()
             {
-                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "GL.ACCT", "", "", "", false);
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "GL.ACCT", "", "");
                 Assert.IsNotNull(actuals);
                 var actual = actuals.Item1.FirstOrDefault(a => a.Guid == guid);
                 var expected = _glAcctsDataContract.FirstOrDefault(glAcct => glAcct.RecordGuid == guid);
@@ -1274,7 +1494,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             [TestMethod]
             public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues2_Component_Project_Cache()
             {
-                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "PROJECT", "", "", "", false);
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "PROJECT", "", "");
                 Assert.IsNotNull(actuals);
             }
 
@@ -1282,7 +1502,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues2_FiscalYear_Null()
             {
                 _fiscalYrDataContract = null;
-                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "PROJECT", "", "", "", false);
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "PROJECT", "", "");
                 Assert.IsNotNull(actuals);
             }
 
@@ -1295,7 +1515,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                     CfCurrentFiscalYear = "1999",
                     FiscalStartMonth = 1
                 };
-                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "PROJECT", "", "", "", false);
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "PROJECT", "", "");
                 Assert.IsNotNull(actuals);
             }
 
@@ -1307,7 +1527,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                     GlClassLocation = null
                 };
 
-                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "PROJECT", "", "", "", false);
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "PROJECT", "", "");
                 Assert.IsNotNull(actuals);
                 foreach (var actual in actuals.Item1)
                 {
@@ -1454,7 +1674,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 _referenceDataRepoMock = new Mock<ColleagueFinanceReferenceDataRepository>();
                 BuildData();
 
-                dataReaderMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.GlAccts>("GL.ACCTS", "", It.IsAny<bool>()))
+                var glIds = _glAcctsDataContract.Select(i => i.Recordkey).ToArray();
+                var prIds = _projectsDataContract.Select(i => i.Recordkey).ToArray();
+
+                dataReaderMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.GlAccts>("GL.ACCTS", It.IsAny<string[]>(), It.IsAny<bool>()))
                     .ReturnsAsync(_glAcctsDataContract);
                 dataReaderMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.GlAccts>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
                     .ReturnsAsync(_glAcctsDataContract);
@@ -1468,10 +1691,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 dataReaderMock.Setup(acc => acc.ReadRecordAsync<DataContracts.Fiscalyr>("ACCOUNT.PARAMETERS", "FISCAL.YEAR", It.IsAny<bool>()))
                     .ReturnsAsync(_fiscalYrDataContract);
 
-
-                dataReaderMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.Projects>("PROJECTS", "", It.IsAny<bool>()))
+                dataReaderMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.Projects>("PROJECTS", It.IsAny<string[]>(), It.IsAny<bool>()))
                     .ReturnsAsync(_projectsDataContract);
-
+                dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", string.Empty)).ReturnsAsync(prIds);
 
                 cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
                     x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
@@ -1534,56 +1756,56 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             [TestMethod]
             public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues3_Component_Project_Cache()
             {
-                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "PROJECT", "", "", new List<string>(), null, true);
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "PROJECT", "", "", new List<string>(), null);
                 Assert.IsNotNull(actuals);
             }
 
             [TestMethod]
             public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues3_Component_Project_NonCache()
             {
-                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "PROJECT", "", "", new List<string>(), null, false);
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "PROJECT", "", "", new List<string>(), null);
                 Assert.IsNotNull(actuals);
             }
 
             [TestMethod]
             public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues3_Component_GlAcct_NonCache()
             {
-                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "GL.ACCT", "", "", new List<string>(), null, false);
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "GL.ACCT", "", "", new List<string>(), null);
                 Assert.IsNotNull(actuals);
             }
 
             [TestMethod]
             public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues3_Component_GlAcct_Cache()
             {
-                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "GL.ACCT", "", "", new List<string>(), null, true);
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "GL.ACCT", "", "", new List<string>(), null);
                 Assert.IsNotNull(actuals);
             }
 
             [TestMethod]
             public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues3_Component_Default_Cache()
             {
-                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "", "", "", new List<string>(), null, true);
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "", "", "", new List<string>(), null);
                 Assert.IsNotNull(actuals);
             }
 
             [TestMethod]
             public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues3_Component_Default_NonCache()
             {
-                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "", "", "", new List<string>(), null, false);
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "", "", "", new List<string>(), null);
                 Assert.IsNotNull(actuals);
             }
 
             [TestMethod]
             public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues3_Component_Status_Available()
             {
-                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "", "", "available", new List<string>(), null, false);
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "", "", "available", new List<string>(), null);
                 Assert.IsNotNull(actuals);
             }
 
             [TestMethod]
             public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues3_Component_Grants()
             {
-                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "", "", "available", new List<string>() { "1" }, null, false);
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "", "", "available", new List<string>() { "1" }, null);
                 Assert.IsNotNull(actuals);
             }
 
@@ -1591,7 +1813,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues3_Component_EffectiveOn()
             {
                 DateTime? date = new DateTime(2017, 5, 1);
-                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "", "", "available", new List<string>() { "1" }, date, false);
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "", "", "available", new List<string>() { "1" }, date);
                 Assert.IsNotNull(actuals);
             }
 
@@ -1599,8 +1821,226 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues3_Component_WithTyeAccount()
             {
                 DateTime? date = new DateTime(2017, 5, 1);
-                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "", "asset", "available", new List<string>() { "1" }, date, false);
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "", "asset", "available", new List<string>() { "1" }, date);
                 Assert.IsNotNull(actuals);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValueByGuid3_AccountingComponent()
+            {
+                var record = _glAcctsDataContract.FirstOrDefault(p => p.Recordkey == "11_00_01_00_20603_52010");
+                record.MemosEntityAssociation = new List<GlAcctsMemos>() { new GlAcctsMemos()};
+                dataReaderMock.Setup(acc => acc.ReadRecordAsync<DataContracts.GlAccts>(It.IsAny<string>(), It.IsAny<bool>()))
+                   .ReturnsAsync(_glAcctsDataContract.FirstOrDefault(p => p.Recordkey == "11_00_01_00_20603_52010"));
+                dataReaderMock.Setup(acc => acc.SelectAsync(It.IsAny<GuidLookup[]>())).Returns<GuidLookup[]>(gla =>
+                {
+                    var result = new Dictionary<string, GuidLookupResult>();
+                    foreach (var gl in gla)
+                    {
+                        result.Add(gl.Guid, new GuidLookupResult() { Entity = "GL.ACCTS", PrimaryKey = "1" });
+                    }
+                    return Task.FromResult(result);
+                });
+                try
+                {
+                    await _referenceDataRepo.GetAccountingStringComponentValue3ByGuid(record.RecordGuid);
+                }
+                catch (RepositoryException e)
+                {
+                    Assert.AreEqual(1, e.Errors.Count());
+                    Assert.AreEqual("The record associated to the accounting string component value contains an invalid element. guid: '4f937f08-f6a0-4a1c-8d55-9f2a6dd6be46'",
+                        e.Errors[0].Message);
+                    throw e;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValueByGuid3_AvailFundsController()
+            {
+                var record = _glAcctsDataContract.FirstOrDefault(p => p.Recordkey == "11_00_01_00_20603_52010");
+                record.MemosEntityAssociation = new List<GlAcctsMemos>() { new GlAcctsMemos() { AvailFundsControllerAssocMember = "2000" } };
+                dataReaderMock.Setup(acc => acc.ReadRecordAsync<DataContracts.GlAccts>(It.IsAny<string>(), It.IsAny<bool>()))
+                   .ReturnsAsync(_glAcctsDataContract.FirstOrDefault(p => p.Recordkey == "11_00_01_00_20603_52010"));
+                dataReaderMock.Setup(acc => acc.SelectAsync(It.IsAny<GuidLookup[]>())).Returns<GuidLookup[]>(gla =>
+                {
+                    var result = new Dictionary<string, GuidLookupResult>();
+                    foreach (var gl in gla)
+                    {
+                        result.Add(gl.Guid, new GuidLookupResult() { Entity = "GL.ACCTS", PrimaryKey = "1" });
+                    }
+                    return Task.FromResult(result);
+                });
+                try
+                {
+                    await _referenceDataRepo.GetAccountingStringComponentValue3ByGuid(record.RecordGuid);
+                }
+                catch (RepositoryException e)
+                {
+                    Assert.AreEqual(1, e.Errors.Count());
+                    Assert.AreEqual("The record associated to the accounting string component value contains an invalid element. guid: '4f937f08-f6a0-4a1c-8d55-9f2a6dd6be46'",
+                        e.Errors[0].Message);
+                    throw e;
+                }
+            }
+
+            [TestMethod]
+            public async Task GetAccountingStringComponentValues3_WithTransactionStatus_EffectiveOn()
+            {
+                DateTime? date = new DateTime(2017, 5, 1);
+
+                var glIds = _glAcctsDataContract.Select(i => i.Recordkey).ToArray();
+                var prIds = _projectsDataContract.Select(i => i.Recordkey).ToArray();
+
+                dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", It.IsAny<string>())).ReturnsAsync(glIds);
+                dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", glIds, It.IsAny<string>())).ReturnsAsync(glIds);
+                //dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", glIds, It.IsAny<string>())).ReturnsAsync(glIds);
+                dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", It.IsAny<string>())).ReturnsAsync(prIds);
+                dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", prIds, It.IsAny<string>())).ReturnsAsync(prIds);
+
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "", "", "available", null, date);
+                Assert.IsNotNull(actuals);
+                Assert.AreEqual(5, actuals.Item2);
+            }
+
+            [TestMethod]
+            public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues3_Component_AssetTypeAccount()
+            {
+                var glIds = _glAcctsDataContract.Select(i => i.Recordkey).ToArray();
+                var prIds = _projectsDataContract.Select(i => i.Recordkey).ToArray();
+                dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", string.Empty)).ReturnsAsync(glIds);
+                dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", string.Empty)).ReturnsAsync(prIds);
+
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "", "asset", "", null, null);
+                Assert.IsNotNull(actuals);
+                Assert.AreEqual(1, actuals.Item2);
+            }
+
+            [TestMethod]
+            public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues3_Component_LiabilityTypeAccount()
+            {
+                var glIds = _glAcctsDataContract.Select(i => i.Recordkey).ToArray();
+                var prIds = _projectsDataContract.Select(i => i.Recordkey).ToArray();
+                dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", string.Empty)).ReturnsAsync(glIds);
+                dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", string.Empty)).ReturnsAsync(prIds);
+
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "", "liability", "", null, null);
+
+                Assert.IsNotNull(actuals);
+                Assert.AreEqual(0, actuals.Item2);
+            }
+
+            [TestMethod]
+            public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues3_Component_revenueTypeAccount()
+            {
+                var glIds = _glAcctsDataContract.Select(i => i.Recordkey).ToArray();
+                var prIds = _projectsDataContract.Select(i => i.Recordkey).ToArray();
+                dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", string.Empty)).ReturnsAsync(glIds);
+                dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", string.Empty)).ReturnsAsync(prIds);
+
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "", "revenue", "", null, null);
+
+                Assert.IsNotNull(actuals);
+                Assert.AreEqual(0, actuals.Item2);
+            }
+
+            [TestMethod]
+            public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues3_Component_FundBalanceTypeAccount()
+            {
+                var glIds = _glAcctsDataContract.Select(i => i.Recordkey).ToArray();
+                var prIds = _projectsDataContract.Select(i => i.Recordkey).ToArray();
+                dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", string.Empty)).ReturnsAsync(glIds);
+                dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", string.Empty)).ReturnsAsync(prIds);
+
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "", "fundBalance", "", null, null);
+
+                Assert.IsNotNull(actuals);
+                Assert.AreEqual(0, actuals.Item2);
+            }
+
+            [TestMethod]
+            public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues3_Component_ExpenseTypeAccount()
+            {
+                var glIds = _glAcctsDataContract.Select(i => i.Recordkey).ToArray();
+                var prIds = _projectsDataContract.Select(i => i.Recordkey).ToArray();
+                dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", string.Empty)).ReturnsAsync(glIds);
+                dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", string.Empty)).ReturnsAsync(prIds);
+
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "", "expense", "", null, null);
+
+                Assert.IsNotNull(actuals);
+                Assert.AreEqual(4, actuals.Item2);
+            }
+
+            [TestMethod]
+            public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues3_Component_NonPersonalExpenseTypeAccount()
+            {
+                var glIds = _glAcctsDataContract.Select(i => i.Recordkey).ToArray();
+                var prIds = _projectsDataContract.Select(i => i.Recordkey).ToArray();
+                dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", string.Empty)).ReturnsAsync(glIds);
+                dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", string.Empty)).ReturnsAsync(prIds);
+
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "", "nonPersonalExpense", "", null, null);
+
+                Assert.IsNotNull(actuals);
+                Assert.AreEqual(0, actuals.Item2);
+            }
+
+            [TestMethod]
+            public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues3_Grants_NoRecords()
+            {
+                var glIds = _glAcctsDataContract.Select(i => i.Recordkey).ToArray();
+                var prIds = _projectsDataContract.Select(i => i.Recordkey).ToArray();
+                dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", string.Empty)).ReturnsAsync(glIds);
+                dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", string.Empty)).ReturnsAsync(prIds);
+
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "", "", "", new List<string>() { "1" }, null);
+
+                Assert.IsNotNull(actuals);
+                Assert.AreEqual(0, actuals.Item2);
+            }
+
+            [TestMethod]
+            public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues3_Grants()
+            {
+                var glIds = _glAcctsDataContract.Select(i => i.Recordkey).ToArray();
+                var prIds = _projectsDataContract.Select(i => i.Recordkey).ToArray();
+                dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", string.Empty)).ReturnsAsync(glIds);
+                dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>())).ReturnsAsync(glIds);
+                dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", string.Empty)).ReturnsAsync(prIds);
+                dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>())).ReturnsAsync(prIds);
+
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "", "", "", new List<string>() { "1" }, null);
+
+                Assert.IsNotNull(actuals);
+                Assert.AreEqual(5, actuals.Item2);
+            }
+
+            [TestMethod]
+            public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues3_GL_ACCT()
+            {
+                var glIds = _glAcctsDataContract.Select(i => i.Recordkey).ToArray();
+                dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", string.Empty)).ReturnsAsync(glIds);
+                dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", string.Empty)).ReturnsAsync(null);
+
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "GL.ACCT", "", "", null, null);
+
+                Assert.IsNotNull(actuals);
+                Assert.AreEqual(2, actuals.Item2);
+            }
+
+            [TestMethod]
+            public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues3_PROJECT()
+            {
+                var prIds = _projectsDataContract.Select(i => i.Recordkey).ToArray();
+                dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", string.Empty)).ReturnsAsync(null);
+                dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", string.Empty)).ReturnsAsync(prIds);
+
+                var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "PROJECT", "", "", null, null);
+
+                Assert.IsNotNull(actuals);
+                Assert.AreEqual(3, actuals.Item2);
             }
 
             private void BuildData()
@@ -1673,7 +2113,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 {
                     GlClassLocation = new List<int?>() { 19, 1 },
                     GlClassAssetValues = new List<string>() { "1" },
-                    GlClassLiabilityValues = new List<string>() { "5" }
+                    GlClassLiabilityValues = new List<string>() { "2" },
+                    GlClassFundBalValues = new List<string>() { "3" },
+                    GlClassRevenueValues = new List<string>() { "4" },
+                    GlClassExpenseValues = new List<string>() { "5" }
                 };
 
                 _glAcctsCcDataContract = new Collection<GlAcctsCc>()
@@ -2172,6 +2615,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             Mock<IColleagueDataReader> dataAccessorMock;
             Mock<ILogger> loggerMock;
             IEnumerable<ShipToDestination> _shipToDestinationsCollection;
+            IEnumerable<ShipToCode> _shipToCodesCollection;
             string codeItemName;
 
             ColleagueFinanceReferenceDataRepository referenceDataRepo;
@@ -2188,7 +2632,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                     new ShipToDestination("849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "AC", "Academic"),
                     new ShipToDestination("d2253ac7-9931-4560-b42f-1fccd43c952e", "CU", "Cultural")
                 };
-
                 // Build repository
                 referenceDataRepo = BuildValidReferenceDataRepository();
                 codeItemName = referenceDataRepo.BuildFullCacheKey("AllShipToDestinations");

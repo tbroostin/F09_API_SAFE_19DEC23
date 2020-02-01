@@ -33,8 +33,6 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             CampusOrganizationRepository campusOrganizationRepository;
             List<CampusOrgMembers> CampusOrgMembers;
 
-
-
             [TestInitialize]
             public void Initialize()
             {
@@ -438,6 +436,158 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 return campusOrganizationRepository;
             }
-        }    
+        }
+
+        [TestClass]
+        public class CampusOrganization2_GET
+        {
+            Mock<IColleagueTransactionFactory> transFactoryMock;
+            Mock<ICacheProvider> cacheProviderMock;
+            Mock<IColleagueDataReader> dataAccessorMock;
+            Mock<ILogger> loggerMock;
+
+            CampusOrganizationRepository campusOrganizationRepository;
+            List<CampusOrganization2> CampusOrganization2Records;
+            ApiSettings apiSettings;
+
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                loggerMock = new Mock<ILogger>();
+                CampusOrganization2Records = BuildCampusOrganization2Records();
+                campusOrganizationRepository = BuildCampusOrganizationRepository();
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                campusOrganizationRepository = null;
+                CampusOrganization2Records = null;
+                apiSettings = null;
+                transFactoryMock = null;
+                cacheProviderMock = null;
+                dataAccessorMock = null;
+                loggerMock = null;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task CampusOrganizationRepository_GetCampusOrganizations2AsyncNullInputTest()
+            {
+                List<string> campusOrgIds = null;
+                var results = await campusOrganizationRepository.GetCampusOrganizations2Async(campusOrgIds);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task CampusOrganizationRepository_GetCampusOrganizations2AsyncNoCampusOrgIdInputTest()
+            {
+                List<string> campusOrgIds = new List<string>();
+                var results = await campusOrganizationRepository.GetCampusOrganizations2Async(campusOrgIds);
+            }
+
+            [TestMethod]
+            public async Task CampusOrganizationRepository_GetCampusOrganizations2AsyncTest()
+            {             
+                List<string> campusOrgIds = new List<string>() { "CYC", "BIOS" };
+                var results = await campusOrganizationRepository.GetCampusOrganizations2Async(campusOrgIds);
+                Assert.AreEqual(CampusOrganization2Records.First().CampusOrganizationId, results.First().CampusOrganizationId);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(KeyNotFoundException))]
+            public async Task CampusOrganizationRepository_GetCampusOrganizations2AsyncWithWrongIdTest()
+            {
+                List<string> campusOrgIds = new List<string>() { "WRONG"};               
+                var results = await campusOrganizationRepository.GetCampusOrganizations2Async(campusOrgIds);                         
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ApplicationException))]
+            public async Task CampusOrganizationRepository_GetCampusOrganizations2AsyncReturnsNullTest()
+            {
+                List<string> campusOrgIds = new List<string>() { "WRONG" };
+
+                CampusOrganization2Records = null;
+
+                dataAccessorMock.Setup(d => d.SelectAsync("CAMPUS.ORGS", "WITH CAMPUS.ORGS.ID EQ ?", It.IsAny<string[]>(), "?", true, 425))
+                .Returns<string, string, string[], string, bool, int>((f, c, cmp, p, b, s) =>
+                Task.FromResult(CampusOrganization2Records == null ? null :
+                   CampusOrganization2Records
+                       .Where(r => cmp.Select(v => v.Replace("\"", "").Replace("\\", "")).Contains(r.CampusOrganizationId))
+                       .Select(r => r.CampusOrganizationId)
+                       .ToArray()));
+                
+                var results = await campusOrganizationRepository.GetCampusOrganizations2Async(campusOrgIds);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ApplicationException))]
+            public async Task CampusOrganizationRepository_GetCampusOrganizations2AsyncBulkReaderReturnsNoRecordsTest()
+            {
+                List<string> campusOrgIds = new List<string>() { "CYC", "BIOS" };
+                var records = new List<CampusOrganization2>();
+                dataAccessorMock.Setup(d => d.BulkReadRecordAsync<CampusOrgs>(It.IsAny<string[]>(), true))
+                .Returns<string[], bool>((ids, b) =>
+                    Task.FromResult(records == null ? null :
+                        new Collection<CampusOrgs>(
+                            records
+                            .Where(r => ids.Contains(r.CampusOrganizationId))
+                            .Select(r => new CampusOrgs()
+                            {
+                                Recordkey = r.CampusOrganizationId,
+                                CmpDesc = r.CampusOrganizationDescription
+                            }).ToList())));
+                var results = await campusOrganizationRepository.GetCampusOrganizations2Async(campusOrgIds);
+            }
+
+            private List<CampusOrganization2> BuildCampusOrganization2Records()
+            {
+                List<CampusOrganization2> campusOrganization2Records = new List<CampusOrganization2>()
+                {
+                    new CampusOrganization2("CYC", "Cycling Club"),
+                    new CampusOrganization2("BIOS", "Amateur Bioinformatics Group")
+                };
+
+                return campusOrganization2Records;
+            }
+
+            private CampusOrganizationRepository BuildCampusOrganizationRepository()
+            {                
+                transFactoryMock = new Mock<IColleagueTransactionFactory>();                
+                cacheProviderMock = new Mock<ICacheProvider>();             
+                dataAccessorMock = new Mock<IColleagueDataReader>();
+                apiSettings = new ApiSettings("TEST");
+
+                // Set up dataAccessorMock as the object for the DataAccessor
+                transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
+
+                var records = new Collection<DataContracts.CampusOrgs>();
+                foreach (var item in CampusOrganization2Records)
+                {
+                    DataContracts.CampusOrgs record = new DataContracts.CampusOrgs();
+                    record.Recordkey = item.CampusOrganizationId;
+                    record.CmpDesc = item.CampusOrganizationDescription;
+                    records.Add(record);
+                }
+
+                dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.CampusOrgs>(It.IsAny<string[]>(), true)).ReturnsAsync(records);
+
+                dataAccessorMock.Setup(d => d.SelectAsync("CAMPUS.ORGS", "WITH CAMPUS.ORGS.ID EQ ?", It.IsAny<string[]>(), "?", true, 425))
+                .Returns<string, string, string[], string, bool, int>((f, c, campusOrgIds, p, b, s) =>
+                Task.FromResult(CampusOrganization2Records == null ? null :
+                   CampusOrganization2Records
+                       .Where(r => campusOrgIds.Select(v => v.Replace("\"", "").Replace("\\", "")).Contains(r.CampusOrganizationId))
+                       .Select(r => r.CampusOrganizationId)
+                       .ToArray()));
+                                
+                // Construct repository
+                campusOrganizationRepository = new CampusOrganizationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+
+                return campusOrganizationRepository;
+            }
+        }
+
     }
 }

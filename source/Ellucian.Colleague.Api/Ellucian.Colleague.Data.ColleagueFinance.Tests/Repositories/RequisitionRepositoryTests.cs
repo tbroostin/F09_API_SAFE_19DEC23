@@ -48,7 +48,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
         [TestInitialize]
         public void Initialize()
-        {
+        {            
             // Set up a mock data reader
             dataReader = new Mock<IColleagueDataReader>();
 
@@ -836,7 +836,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             InitializeMockMethods();
             var requisition = await requisitionRepository.GetRequisitionAsync(requisitionId, personId, GlAccessLevel.Full_Access, expenseAccounts);
             Assert.AreEqual(RequisitionStatus.PoCreated, requisition.Status);
-        }
+        }        
         #endregion
 
         #region Vendor tests
@@ -1318,6 +1318,423 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             Assert.AreEqual(0, requisition.LineItems.Count());
             Assert.AreEqual(0, requisition.LineItems.SelectMany(x => x.GlDistributions).Count());
         }
+
+        [TestMethod]
+        public async Task GetRequisitionAsync_UStatus_PersonIdIsRequestor_AllLineItemsAvailable()
+        {
+            //this.requisitionDataContract.ReqDefaultInitiator = "0001687";
+            //this.requisitionDataContract.ReqRequestor = "0004437";
+            personId = "0004437";
+            string requisitionId = "4";
+            this.requisitionDomainEntity = await testRequisitionRepository.GetRequisitionAsync(requisitionId, personId, GlAccessLevel.Possible_Access, null);            
+            var expenseAccounts = CalculateExpenseAccountsForUser(requisitionId);
+            ConvertDomainEntitiesIntoDataContracts();
+            InitializeMockMethods();
+            Assert.AreEqual(this.requisitionDataContract.ReqRequestor, personId);
+            var requisition = await requisitionRepository.GetRequisitionAsync(requisitionId, personId, GlAccessLevel.Possible_Access, expenseAccounts);
+            Assert.AreEqual(RequisitionStatus.InProgress, requisition.Status);
+            Assert.AreEqual(this.requisitionDomainEntity.Amount, requisition.Amount, "The requisition amounts should be the same.");
+            Assert.AreEqual(this.requisitionDomainEntity.LineItems.Count(), requisition.LineItems.Count(), "We should be able to see all of the requisition line items.");
+            foreach (var lineItem in this.requisitionDomainEntity.LineItems)
+            {
+                Assert.IsTrue(requisition.LineItems.Any(x =>
+                    x.Comments == lineItem.Comments
+                    && x.Description == lineItem.Description
+                    && x.ExtendedPrice == lineItem.ExtendedPrice
+                    && x.Id == lineItem.Id
+                    && x.DesiredDate == lineItem.DesiredDate
+                    && x.Price == lineItem.Price
+                    && x.Quantity == lineItem.Quantity
+                    && x.TaxForm == lineItem.TaxForm
+                    && x.TaxFormCode == lineItem.TaxFormCode
+                    && x.TaxFormLocation == lineItem.TaxFormLocation
+                    && x.UnitOfIssue == lineItem.UnitOfIssue
+                    && x.VendorPart == lineItem.VendorPart));
+            }
+        }
+
+        [TestMethod]
+        public async Task GetRequisitionAsync_UStatus_PersonIdIsInitiator_AllLineItemsAvailable()
+        {
+            //this.requisitionDataContract.ReqDefaultInitiator = "0001687";
+            //this.requisitionDataContract.ReqRequestor = "0004437";
+            personId = "0001687";
+            string requisitionId = "4";
+            this.requisitionDomainEntity = await testRequisitionRepository.GetRequisitionAsync(requisitionId, personId, GlAccessLevel.Possible_Access, null);            
+            var expenseAccounts = CalculateExpenseAccountsForUser(requisitionId);
+            ConvertDomainEntitiesIntoDataContracts();
+            InitializeMockMethods();
+            Assert.AreEqual(this.requisitionDataContract.ReqDefaultInitiator, personId);
+            var requisition = await requisitionRepository.GetRequisitionAsync(requisitionId, personId, GlAccessLevel.Possible_Access, expenseAccounts);
+            Assert.AreEqual(RequisitionStatus.InProgress, requisition.Status);
+            Assert.AreEqual(this.requisitionDomainEntity.Amount, requisition.Amount, "The requisition amounts should be the same.");
+            Assert.AreEqual(this.requisitionDomainEntity.LineItems.Count(), requisition.LineItems.Count(), "We should be able to see all of the requisition line items.");
+            foreach (var lineItem in this.requisitionDomainEntity.LineItems)
+            {
+                Assert.IsTrue(requisition.LineItems.Any(x =>
+                    x.Comments == lineItem.Comments
+                    && x.Description == lineItem.Description
+                    && x.ExtendedPrice == lineItem.ExtendedPrice
+                    && x.Id == lineItem.Id
+                    && x.DesiredDate == lineItem.DesiredDate
+                    && x.Price == lineItem.Price
+                    && x.Quantity == lineItem.Quantity
+                    && x.TaxForm == lineItem.TaxForm
+                    && x.TaxFormCode == lineItem.TaxFormCode
+                    && x.TaxFormLocation == lineItem.TaxFormLocation
+                    && x.UnitOfIssue == lineItem.UnitOfIssue
+                    && x.VendorPart == lineItem.VendorPart));
+            }
+        }
+
+        [TestMethod]
+        public async Task GetRequisitionAsync_UStatus__LineItemWithOnlyDescQty_PersonIdIsRequestor_AllLineItemsAvailable()
+        {
+            //this.requisitionDataContract.ReqDefaultInitiator = "0001687";
+            //this.requisitionDataContract.ReqRequestor = "0004437";
+            personId = "0004437";
+            string requisitionId = "34";
+            this.requisitionDomainEntity = await testRequisitionRepository.GetRequisitionAsync(requisitionId, personId, GlAccessLevel.Possible_Access, null);
+            var expenseAccounts = CalculateExpenseAccountsForUser(requisitionId);
+            ConvertDomainEntitiesIntoDataContracts();
+            InitializeMockMethods();
+            var requisition = await requisitionRepository.GetRequisitionAsync(requisitionId, personId, GlAccessLevel.Possible_Access, expenseAccounts);
+            Assert.AreEqual(RequisitionStatus.InProgress, requisition.Status);
+            Assert.AreEqual(this.requisitionDomainEntity.LineItems.Count(), requisition.LineItems.Count(), "We should be able to see all of the requisition line items.");
+            foreach (var lineItem in this.requisitionDomainEntity.LineItems)
+            {
+                Assert.IsTrue(requisition.LineItems.Any(x =>
+                    x.Comments == lineItem.Comments
+                    && x.Description == lineItem.Description
+                    && x.ExtendedPrice == lineItem.ExtendedPrice
+                    && x.Id == lineItem.Id
+                    && x.DesiredDate == lineItem.DesiredDate
+                    && x.Price == lineItem.Price
+                    && x.Quantity == lineItem.Quantity
+                    && x.TaxForm == lineItem.TaxForm
+                    && x.TaxFormCode == lineItem.TaxFormCode
+                    && x.TaxFormLocation == lineItem.TaxFormLocation
+                    && x.UnitOfIssue == lineItem.UnitOfIssue
+                    && x.VendorPart == lineItem.VendorPart));
+            }
+        }
+
+        [TestMethod]
+        public async Task GetRequisitionAsync_UStatus_LineItemWithOnlyDescQty_PersonIdIdIsNeitherRequestorNorInitiator()
+        {
+            //this.requisitionDataContract.ReqDefaultInitiator = "0001687";
+            //this.requisitionDataContract.ReqRequestor = "0004437";            
+            string requisitionId = "34";
+            this.requisitionDomainEntity = await testRequisitionRepository.GetRequisitionAsync(requisitionId, personId, GlAccessLevel.Possible_Access, null);
+            var expenseAccounts = CalculateExpenseAccountsForUser(requisitionId);
+            ConvertDomainEntitiesIntoDataContracts();
+            InitializeMockMethods();
+            var requisition = await requisitionRepository.GetRequisitionAsync(requisitionId, personId, GlAccessLevel.Possible_Access, expenseAccounts);
+            Assert.AreEqual(RequisitionStatus.InProgress, requisition.Status);
+            Assert.AreEqual(0, requisition.LineItems.Count(), "We should not be able to see the requisition line items.");            
+        }        
+
+        [TestMethod]
+        public async Task GetRequisitionAsync_UStatus_PersonIdIdIsNeitherRequestorNorInitiator_AllLineItemsAvailable()
+        {
+            //this.requisitionDataContract.ReqDefaultInitiator = "0001687";
+            //this.requisitionDataContract.ReqRequestor = "0004437";            
+            string requisitionId = "4";
+            this.requisitionDomainEntity = await testRequisitionRepository.GetRequisitionAsync(requisitionId, personId, GlAccessLevel.Possible_Access, null);
+            var expenseAccounts = CalculateExpenseAccountsForUser(requisitionId);
+            ConvertDomainEntitiesIntoDataContracts();
+            InitializeMockMethods();
+            var requisition = await requisitionRepository.GetRequisitionAsync(requisitionId, personId, GlAccessLevel.Possible_Access, expenseAccounts);
+            Assert.AreEqual(RequisitionStatus.InProgress, requisition.Status);
+            Assert.AreEqual(this.requisitionDomainEntity.Amount, requisition.Amount, "The requisition amounts should be the same.");
+            Assert.AreEqual(this.requisitionDomainEntity.LineItems.Count(), requisition.LineItems.Count(), "We should be able to see all of the requisition line items.");
+            foreach (var lineItem in this.requisitionDomainEntity.LineItems)
+            {
+                Assert.IsTrue(requisition.LineItems.Any(x =>
+                    x.Comments == lineItem.Comments
+                    && x.Description == lineItem.Description
+                    && x.ExtendedPrice == lineItem.ExtendedPrice
+                    && x.Id == lineItem.Id
+                    && x.DesiredDate == lineItem.DesiredDate
+                    && x.Price == lineItem.Price
+                    && x.Quantity == lineItem.Quantity
+                    && x.TaxForm == lineItem.TaxForm
+                    && x.TaxFormCode == lineItem.TaxFormCode
+                    && x.TaxFormLocation == lineItem.TaxFormLocation
+                    && x.UnitOfIssue == lineItem.UnitOfIssue
+                    && x.VendorPart == lineItem.VendorPart));
+            }
+        }
+        
+        [TestMethod]
+        public async Task GetRequisition_UStatus_PersonIdIdIsNeitherRequestorNorInitiator_UserHasNoAccess()
+        {
+            string requisitionId = "4";
+            this.requisitionDomainEntity = await testRequisitionRepository.GetRequisitionAsync(requisitionId, personId, GlAccessLevel.Possible_Access, null);
+            var expenseAccounts = new List<string>();
+            ConvertDomainEntitiesIntoDataContracts();
+            InitializeMockMethods();
+            var requisition = await requisitionRepository.GetRequisitionAsync(requisitionId, personId, GlAccessLevel.Possible_Access, expenseAccounts);
+            Assert.AreEqual(RequisitionStatus.InProgress, requisition.Status);
+            Assert.AreEqual(this.requisitionDomainEntity.Amount, requisition.Amount, "The requisition amount should show as if we have full access.");
+            Assert.IsTrue(requisition.LineItems.Count() == 0, "The requisition should have no line items.");
+
+        }
+        #endregion
+
+        #region Requisitions Summary Test
+        [TestMethod]
+        public async Task GetRequisitionsSummaryByPersonIdAsync_Base()
+        {
+            string requisitionId = "1";
+            InitDataForRequisitionSummary();
+            this.requisitionDomainEntity = await testRequisitionRepository.GetRequisitionAsync(requisitionId, personId, GlAccessLevel.Full_Access, null);
+            ConvertDomainEntitiesIntoDataContracts();
+            InitializeMockMethods();
+
+            Collection<DataContracts.Requisitions> requisitionDataContractList = new Collection<DataContracts.Requisitions>();
+            requisitionDataContractList.Add(this.requisitionDataContract);
+            dataReader.Setup(d => d.BulkReadRecordAsync<DataContracts.Requisitions>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(requisitionDataContractList);
+            var requisitionSummaryList = await testRequisitionRepository.GetRequisitionsSummaryByPersonIdAsync(personId);
+            var actual = await requisitionRepository.GetRequisitionsSummaryByPersonIdAsync(personId);
+            Assert.IsNotNull(actual);
+            Assert.IsTrue(actual.ToList().Count == 1);
+
+            var actualRequisitionSummary = requisitionSummaryList.Where(x => x.Id == requisitionId).FirstOrDefault();
+            var requisitionSummary = actual.FirstOrDefault();
+
+            //assert on entity properties
+            Assert.AreEqual(actualRequisitionSummary.Id, requisitionSummary.Id);
+            Assert.AreEqual(actualRequisitionSummary.Number, requisitionSummary.Number);
+            Assert.AreEqual(actualRequisitionSummary.Date, requisitionSummary.Date);
+            Assert.AreEqual(actualRequisitionSummary.Status, requisitionSummary.Status);
+            Assert.AreEqual(actualRequisitionSummary.StatusDate, requisitionSummary.StatusDate);
+            Assert.AreEqual(actualRequisitionSummary.InitiatorName, requisitionSummary.InitiatorName);
+            Assert.AreEqual(actualRequisitionSummary.RequestorName, requisitionSummary.RequestorName);
+            Assert.AreEqual(actualRequisitionSummary.VendorId, requisitionSummary.VendorId);
+            Assert.AreEqual(actualRequisitionSummary.VendorName, requisitionSummary.VendorName);
+            Assert.AreEqual(actualRequisitionSummary.Amount, requisitionSummary.Amount);
+        }
+
+        [TestMethod]
+        public async Task GetRequisitionsSummaryByPersonIdAsync_With_CfwebDefaults()
+        {
+            string requisitionId = "1";
+
+            InitDataForRequisitionSummary();
+            this.requisitionDomainEntity = await testRequisitionRepository.GetRequisitionAsync(requisitionId, personId, GlAccessLevel.Full_Access, null);
+            ConvertDomainEntitiesIntoDataContracts();
+            InitializeMockMethods();
+
+            dataReader.Setup<Task<CfwebDefaults>>(d => d.ReadRecordAsync<CfwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(() =>
+            {
+                return Task.FromResult(new CfwebDefaults() { CfwebReqStatuses = new List<string> { "0" } });
+            });
+            
+            Collection<DataContracts.Requisitions> requisitionDataContractList = new Collection<DataContracts.Requisitions>();
+            requisitionDataContractList.Add(this.requisitionDataContract);
+            dataReader.Setup(d => d.BulkReadRecordAsync<DataContracts.Requisitions>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(requisitionDataContractList);
+
+            var requisitionSummaryList = await testRequisitionRepository.GetRequisitionsSummaryByPersonIdAsync(personId);
+            var actual = await requisitionRepository.GetRequisitionsSummaryByPersonIdAsync(personId);
+            Assert.IsNotNull(actual);
+            Assert.IsTrue(actual.ToList().Count == 1);
+            dataReader.Verify(x => x.SelectAsync("REQUISITIONS", It.IsAny<string[]>(), It.IsAny<string>()), Times.Once);
+            dataReader.Verify(x => x.SelectAsync("REQUISITIONS", It.IsAny<string>()), Times.Once);
+
+            var actualRequisitionSummary = requisitionSummaryList.Where(x => x.Id == requisitionId).FirstOrDefault();
+            var requisitionSummary = actual.FirstOrDefault();
+
+            //assert on entity properties
+            Assert.AreEqual(actualRequisitionSummary.Id, requisitionSummary.Id);
+            Assert.AreEqual(actualRequisitionSummary.Number, requisitionSummary.Number);
+            Assert.AreEqual(actualRequisitionSummary.Date, requisitionSummary.Date);
+            Assert.AreEqual(actualRequisitionSummary.Status, requisitionSummary.Status);
+            Assert.AreEqual(actualRequisitionSummary.StatusDate, requisitionSummary.StatusDate);
+            Assert.AreEqual(actualRequisitionSummary.InitiatorName, requisitionSummary.InitiatorName);
+            Assert.AreEqual(actualRequisitionSummary.RequestorName, requisitionSummary.RequestorName);
+            Assert.AreEqual(actualRequisitionSummary.VendorId, requisitionSummary.VendorId);
+            Assert.AreEqual(actualRequisitionSummary.VendorName, requisitionSummary.VendorName);
+            Assert.AreEqual(actualRequisitionSummary.Amount, requisitionSummary.Amount);
+        }
+
+        [TestMethod]
+        public async Task GetRequisitionsSummaryByPersonIdAsync_EmptyList()
+        {
+            var requisitionSummaryList = await this.requisitionRepository.GetRequisitionsSummaryByPersonIdAsync(personId);
+            Assert.IsNull(requisitionSummaryList);
+        }
+
+        [TestMethod]
+        public async Task GetRequisitionsSummaryByPersonIdAsync_CfwebDefaults_EmptyList()
+        {
+            string[] emptyArray = new string[0];
+            //mock SelectAsync to return empty array of string
+            dataReader.Setup(dr => dr.SelectAsync("REQUISITIONS", It.IsAny<string>())).Returns(() =>
+            {
+                return Task.FromResult(emptyArray);
+            });
+            //mock SelectAsync to return empty array of string
+            dataReader.Setup(dr => dr.SelectAsync("REQUISITIONS", It.IsAny<string[]>(), It.IsAny<string>())).Returns(() =>
+            {
+                return Task.FromResult(emptyArray);
+            });
+            dataReader.Setup<Task<CfwebDefaults>>(d => d.ReadRecordAsync<CfwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(() =>
+            {
+                return Task.FromResult(new CfwebDefaults() { CfwebReqStatuses = new List<string> { "0" } });
+            });
+            var requisitionSummaryList = await this.requisitionRepository.GetRequisitionsSummaryByPersonIdAsync(personId);
+            Assert.IsNull(requisitionSummaryList);            
+            dataReader.Verify(x => x.SelectAsync("REQUISITIONS", It.IsAny<string>()), Times.Exactly(2));
+        }
+        
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetRequisitionsSummaryByPersonIdAsync_NullPersonId()
+        {
+            var requisitionSummaryList = await this.requisitionRepository.GetRequisitionsSummaryByPersonIdAsync(null);
+        }
+        
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task GetRequisitionsSummaryByPersonIdAsync_NullStatus()
+        {
+            InitDataForRequisitionSummary();
+            Collection<DataContracts.Requisitions> requisitionDataContractList = new Collection<DataContracts.Requisitions>();
+            
+            var requisitionDataContract = new Requisitions()
+            {
+                Recordkey = "10",
+                ReqStatus = null
+            };
+            
+            requisitionDataContractList.Add(requisitionDataContract);
+            dataReader.Setup(d => d.BulkReadRecordAsync<DataContracts.Requisitions>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(requisitionDataContractList);            
+            var requisition = await requisitionRepository.GetRequisitionsSummaryByPersonIdAsync(personId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task GetRequisitionsSummaryByPersonIdAsync_StatusListHasBlankValue()
+        {
+            InitDataForRequisitionSummary();
+            Collection<DataContracts.Requisitions> requisitionDataContractList = new Collection<DataContracts.Requisitions>();
+
+            var requisitionDataContract = new Requisitions()
+            {
+                Recordkey = "10",
+                ReqStatus = new List<string>() { "" }
+            };
+
+            requisitionDataContractList.Add(requisitionDataContract);
+            dataReader.Setup(d => d.BulkReadRecordAsync<DataContracts.Requisitions>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(requisitionDataContractList);
+            var requisition = await requisitionRepository.GetRequisitionsSummaryByPersonIdAsync(personId);
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task GetRequisitionsSummaryByPersonIdAsync_StatusDateHasNullValue()
+        {
+            InitDataForRequisitionSummary();
+            Collection<DataContracts.Requisitions> requisitionDataContractList = new Collection<DataContracts.Requisitions>();
+
+            var requisitionDataContract = new Requisitions()
+            {
+                Recordkey = "10",
+                ReqStatus = new List<string>() { "P" },
+                ReqStatusDate = new List<DateTime?>() { null }
+            };
+
+            requisitionDataContractList.Add(requisitionDataContract);
+            dataReader.Setup(d => d.BulkReadRecordAsync<DataContracts.Requisitions>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(requisitionDataContractList);
+            var requisition = await requisitionRepository.GetRequisitionsSummaryByPersonIdAsync(personId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task GetRequisitionsSummaryByPersonIdAsync_InvalidRequisitionStatus()
+        {
+            string requisitionId = "1";
+
+            InitDataForRequisitionSummary();
+            this.requisitionDomainEntity = await testRequisitionRepository.GetRequisitionAsync(requisitionId, personId, GlAccessLevel.Full_Access, null);
+            ConvertDomainEntitiesIntoDataContracts();
+            InitializeMockMethods();
+
+            Collection<DataContracts.Requisitions> requisitionDataContractList = new Collection<DataContracts.Requisitions>();
+
+            // Mock ReadRecord to return a pre-defined, null requisition data contract
+            var requisitionDataContract = new Requisitions()
+            {
+                Recordkey = "1",
+                ReqStatus = new List<string>() { "Z" }
+            };
+            requisitionDataContractList.Add(requisitionDataContract);
+            dataReader.Setup(d => d.BulkReadRecordAsync<DataContracts.Requisitions>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(requisitionDataContractList);
+            var requisition = await requisitionRepository.GetRequisitionsSummaryByPersonIdAsync(personId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task GetRequisitionsSummaryByPersonIdAsync_NullStatusDate()
+        {
+            InitDataForRequisitionSummary();
+            Collection<DataContracts.Requisitions> requisitionDataContractList = new Collection<DataContracts.Requisitions>();
+
+            var requisitionDataContract = new Requisitions()
+            {
+                Recordkey = "10",
+                ReqStatus = new List<string>() { "P" },
+                ReqStatusDate = null
+            };
+
+            requisitionDataContractList.Add(requisitionDataContract);
+            dataReader.Setup(d => d.BulkReadRecordAsync<DataContracts.Requisitions>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(requisitionDataContractList);
+            var requisition = await requisitionRepository.GetRequisitionsSummaryByPersonIdAsync(personId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task GetRequisitionsSummaryByPersonIdAsync_StatusDateListHasNullValue()
+        {
+            InitDataForRequisitionSummary();
+            Collection<DataContracts.Requisitions> requisitionDataContractList = new Collection<DataContracts.Requisitions>();
+
+            var requisitionDataContract = new Requisitions()
+            {
+                Recordkey = "10",
+                ReqStatus = new List<string>() { "P" },
+                ReqStatusDate = new List<DateTime?>() { null }
+            };
+
+
+            requisitionDataContractList.Add(requisitionDataContract);
+            dataReader.Setup(d => d.BulkReadRecordAsync<DataContracts.Requisitions>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(requisitionDataContractList);
+            var requisition = await requisitionRepository.GetRequisitionsSummaryByPersonIdAsync(personId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task GetRequisitionsSummaryByPersonIdAsync_NullReqDate()
+        {
+            InitDataForRequisitionSummary();
+            Collection<DataContracts.Requisitions> requisitionDataContractList = new Collection<DataContracts.Requisitions>();
+
+            var requisitionDataContract = new Requisitions()
+            {
+                Recordkey = "10",
+                ReqStatus = new List<string>() { "P" },
+                ReqStatusDate = new List<DateTime?>() { new DateTime(2015, 1, 1) },
+                ReqDate = null
+            };
+
+
+            requisitionDataContractList.Add(requisitionDataContract);
+            dataReader.Setup(d => d.BulkReadRecordAsync<DataContracts.Requisitions>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(requisitionDataContractList);
+            var requisition = await requisitionRepository.GetRequisitionsSummaryByPersonIdAsync(personId);
+        }
         #endregion
 
         #region Private methods
@@ -1400,6 +1817,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 {
                     return this.hierarchyNamesForIdsResponse;
                 });
+
+            // Mock Execute within the transaction invoker to return a GetHierarchyNamesForIdsResponse object
+            transactionInvoker.Setup(tio => tio.ExecuteAsync<GetHierarchyNamesForIdsRequest, GetHierarchyNamesForIdsResponse>(It.IsAny<GetHierarchyNamesForIdsRequest>())).Returns(Task.FromResult(this.hierarchyNamesForIdsResponse));
         }
 
         private List<string> CalculateExpenseAccountsForUser(string requisitionId)
@@ -1721,6 +2141,29 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 this.itemsDataContracts.Add(itemsDataContract);
             }
         }
+
+        private async void InitDataForRequisitionSummary()
+        {
+            string requisitionId = "1";
+            var requisitionsFilename = "REQUISITIONS";
+            var requisitionIds = new List<string>()
+            {
+                requisitionId
+            };
+            dataReader.Setup(dr => dr.SelectAsync(requisitionsFilename, It.IsAny<string[]>(), It.IsAny<string>())).Returns(() =>
+            {
+                return Task.FromResult(requisitionIds.ToArray());
+            });
+            dataReader.Setup(dr => dr.SelectAsync(requisitionsFilename, It.IsAny<string>())).Returns(() =>
+            {
+                return Task.FromResult(requisitionIds.ToArray());
+            });
+
+            dataReader.Setup<Task<CfwebDefaults>>(d => d.ReadRecordAsync<CfwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(() =>
+            {
+                return Task.FromResult(new CfwebDefaults());
+            });
+        }
         #endregion
 
         #region Delete Test
@@ -1963,7 +2406,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 {
                     RecordGuid = guid,
                     Recordkey = "1",
-                    ReqStatus = new List<string>() { "U" },
+                    ReqStatus = new List<string>() { "O" },
                     ReqStatusDate = new List<DateTime?>() { DateTime.Now },
                     ReqDate = DateTime.Now,
                     ReqNo = "1",
@@ -2063,6 +2506,14 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             }
 
             [TestMethod]
+            [ExpectedException(typeof(KeyNotFoundException))]
+            public async Task GetRequisitionsByGuidAsync_ApplicationException_When_Requistion_Status_Inprogress()
+            {
+                requisition.ReqStatus = new List<string> {"U" };
+                await requisitionRepository.GetRequisitionsByGuidAsync(guid);
+            }
+
+            [TestMethod]
             [ExpectedException(typeof(ApplicationException))]
             public async Task GetRequisitionsByGuidAsync_ApplicationException_When_Requistion_Status_Is_Invalid()
             {
@@ -2109,11 +2560,13 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             #region GETALL
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
             public async Task GetRequisitionsAsync_KeyNotFoundException_When_Requisitions_NotFound_For_Given_Ids()
             {
+                dataReaderMock.Setup(r => r.SelectAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(new string[] {});
                 dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.Requisitions>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(null);
-                await requisitionRepository.GetRequisitionsAsync(0, 2);
+                var result = await requisitionRepository.GetRequisitionsAsync(0, 2);
+                Assert.IsNotNull(result);
+                Assert.IsTrue(result.Item2 == 0);
             }
 
             [TestMethod]
@@ -2237,7 +2690,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 {
                     RecordGuid = guid,
                     Recordkey = "1",
-                    ReqStatus = new List<string>() { "U" },
+                    ReqStatus = new List<string>() { "O" },
                     ReqStatusDate = new List<DateTime?>() { DateTime.Now },
                     ReqDate = DateTime.Now,
                     ReqNo = "1",
@@ -2302,7 +2755,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                     ApType = guid,
                     InternalComments = "comments",
                     Comments = "comments"
-                    
+
                 };
 
                 LineItem lineItem = new LineItem("1", "desc", 10, 1000, 100)
@@ -2341,7 +2794,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             [ExpectedException(typeof(ArgumentNullException))]
             public async Task CreateRequisitionAsync_ArgumentNullException_When_Entity_Null()
             {
-                await requisitionRepository.CreateRequisitionAsync(null);
+                await requisitionRepository.CreateRequisitionAsync((Requisition)null);
             }
 
             [TestMethod]

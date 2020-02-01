@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -27,7 +27,8 @@ namespace Ellucian.Colleague.Coordination.Base.Adapters
             }
 
             Dtos.Base.Staff staffDto = new Dtos.Base.Staff(source.Id, source.LastName);
-            staffDto.PrivacyCodes = source.PrivacyCodes;            
+            staffDto.PrivacyCodes = source.PrivacyCodes;
+            staffDto.StaffInitials = source.StaffInitials;
 
             return staffDto;
         }

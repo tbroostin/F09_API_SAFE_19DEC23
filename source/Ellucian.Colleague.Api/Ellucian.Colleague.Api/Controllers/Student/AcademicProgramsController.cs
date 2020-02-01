@@ -97,6 +97,11 @@ namespace Ellucian.Colleague.Api.Controllers
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
             }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
@@ -180,6 +185,11 @@ namespace Ellucian.Colleague.Api.Controllers
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
             }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
             catch (Exception ex)
             {
                 _logger.Error(ex.ToString());
@@ -258,6 +268,7 @@ namespace Ellucian.Colleague.Api.Controllers
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
             }
+           
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
@@ -292,9 +303,13 @@ namespace Ellucian.Colleague.Api.Controllers
         [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("academicCatalog", typeof(Dtos.Filters.AcademicCatalogFilter))]
-        public async Task<IEnumerable<Dtos.AcademicProgram4>> GetAcademicPrograms4Async(QueryStringFilter academicCatalog)
+        [QueryStringFilterFilter("recruitmentProgram", typeof(Dtos.Filters.RecruitmentProgramFilter))]
+        [QueryStringFilterFilter("criteria", typeof(Dtos.AcademicProgram4))]
+        public async Task<IEnumerable<Dtos.AcademicProgram4>> GetAcademicPrograms4Async(QueryStringFilter academicCatalog, QueryStringFilter recruitmentProgram, 
+            QueryStringFilter criteria)
         {
             var academicCatalogId = string.Empty;
+            var recruitmentProgActive = string.Empty;
             bool bypassCache = false;
 
             try
@@ -309,6 +324,10 @@ namespace Ellucian.Colleague.Api.Controllers
 
                 var academicCatalogFilter = GetFilterObject<Dtos.Filters.AcademicCatalogFilter>(_logger, "academicCatalog");
 
+                var recruitmentProgramFilter = GetFilterObject<Dtos.Filters.RecruitmentProgramFilter>(_logger, "recruitmentProgram");
+
+                var criteriaObj = GetFilterObject<Dtos.AcademicProgram4>(_logger, "criteria");
+
                 if (CheckForEmptyFilterParameters())
                     return new List<Dtos.AcademicProgram4>(new List<Dtos.AcademicProgram4>());
 
@@ -317,7 +336,13 @@ namespace Ellucian.Colleague.Api.Controllers
                 {
                     academicCatalogId = academicCatalogFilter.AcademicCatalog.Id;
                 }
-                var items = await _academicProgramService.GetAcademicPrograms4Async( academicCatalogId, bypassCache);
+
+                if (recruitmentProgramFilter.RecruitmentProgram.HasValue)
+                {
+                    recruitmentProgActive = "active";
+                }
+
+                var items = await _academicProgramService.GetAcademicPrograms4Async(academicCatalogId, recruitmentProgActive, criteriaObj, bypassCache);
 
                 AddEthosContextProperties(
                   await _academicProgramService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
@@ -357,7 +382,7 @@ namespace Ellucian.Colleague.Api.Controllers
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
         }
-
+        
         #region PUT/POST
         /// <remarks>FOR USE WITH ELLUCIAN HeDM</remarks>
         /// <summary>

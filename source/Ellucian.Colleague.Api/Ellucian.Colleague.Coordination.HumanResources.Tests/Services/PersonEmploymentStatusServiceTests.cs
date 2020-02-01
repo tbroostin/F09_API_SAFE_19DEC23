@@ -41,6 +41,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         protected Domain.Entities.Role proxyTimeApprovalRole;
         private Domain.Entities.Permission proxyTimeEntryApprovalPermission;
 
+
         public ICurrentUserFactory employeeProxyCurrentUserFactory;
 
         public class EmployeeProxyUserFactory : ICurrentUserFactory
@@ -140,6 +141,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             proxyTimeApprovalRole.AddPermission(proxyTimeEntryApprovalPermission);
             proxyRoleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { proxyTimeApprovalRole });
 
+
             personEmploymentStatusDtoComparer = new FunctionEqualityComparer<PersonEmploymentStatus>(
                 (p1, p2) =>
                     p1.Id == p2.Id &&
@@ -155,6 +157,13 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         [TestClass]
         public class GetPersonEmploymentStatussTests : PersonEmploymentStatusServiceTests
         {
+            public string UserForAdminPermissionCheck
+            {
+                get
+                {
+                    return "0003916";
+                }
+            }
             [TestInitialize]
             public void Initialize()
             {
@@ -213,6 +222,33 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 var actual = await actualService.GetPersonEmploymentStatusesAsync();
 
                 CollectionAssert.AreEqual(expected.ToArray(), actual.ToArray(), personEmploymentStatusDtoComparer);
+            }
+
+            [TestMethod]
+            public async Task PersonEmploymentStatus_RepositoryCurrentUserIdWithAdminPermissionTest()
+            {
+                roleRepositoryMock.Setup(r => r.Roles)
+               .Returns(() => (employeeCurrentUserFactory.CurrentUser.Roles).Select(roleTitle =>
+               {
+                   var role = new Domain.Entities.Role(roleTitle.GetHashCode(), roleTitle);
+
+                   role.AddPermission(new Domain.Entities.Permission("VIEW.ALL.TIME.HISTORY"));
+
+                   return role;
+               }));
+
+                await actualService.GetPersonEmploymentStatusesAsync(UserForAdminPermissionCheck);
+                personEmploymentStatusRepositoryMock.Verify(r =>
+                    r.GetPersonEmploymentStatusesAsync(It.Is<IEnumerable<string>>(list =>
+                        list.Count() == 1 && list.ElementAt(0) == UserForAdminPermissionCheck)));
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task PersonEmploymentStatus_RepositoryCurrentUserIdWithoutAdminPermissionTest()
+            {
+                await actualService.GetPersonEmploymentStatusesAsync(UserForAdminPermissionCheck);
+
             }
         }
     }

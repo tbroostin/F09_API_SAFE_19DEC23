@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -220,6 +220,13 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     },
                 };
 
+                Dictionary<string, string> studentGuidDict = new Dictionary<string, string>();
+                studentGuidDict.Add("CODE1", "d190d4b5-03b5-41aa-99b8-b8286717c956");
+                studentGuidDict.Add("CODE2", "d190d4b5-03b5-41aa-99b8-b8286717c956");
+                studentGuidDict.Add("CODE3", "cecdce5a-54a7-45fb-a975-5392a579e5bf");
+                studentGuidDict.Add("CODE4", "cecdce5a-54a7-45fb-a975-5392a579e5bf");
+                personRepositoryMock.Setup(repo => repo.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(studentGuidDict);
+
                 //Entities
                 aidAwardEntities = new List<StudentFinancialAidAward>() 
                 {
@@ -232,7 +239,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                                 AwardPeriod = "CODE1",
                                 Status = "A",
                                 StatusDate = new DateTime(2016, 02, 01),
-                                Amount = (decimal) 100000000
+                                Amount = (decimal) 100000000                             
                             },
                             new StudentAwardHistoryByPeriod() 
                             {
@@ -359,7 +366,12 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 referenceRepositoryMock.Setup(i => i.GetFinancialAidFundCategoriesAsync(It.IsAny<bool>())).ReturnsAsync(financialCategoryEntities);
                 fundRepositoryMock.Setup(i => i.GetFinancialAidFundsAsync(It.IsAny<bool>())).ReturnsAsync(aidFundEntities);
                 referenceRepositoryMock.Setup(i => i.GetFinancialAidYearsAsync(It.IsAny<bool>())).ReturnsAsync(aidYearEntities);
-                awardRepositoryMock.Setup(i => i.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<string>>())).ReturnsAsync(aidAwardEntitiesTuple);
+                awardRepositoryMock.Setup(i => i.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<string>>(), 
+                    It.IsAny<Domain.Student.Entities.StudentFinancialAidAward>())).ReturnsAsync(aidAwardEntitiesTuple);
+
+                awardRepositoryMock.Setup(i => i.Get2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<string>>(),
+                    It.IsAny<Domain.Student.Entities.StudentFinancialAidAward>())).ReturnsAsync(aidAwardEntitiesTuple);
+
                 personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync("CODE1")).ReturnsAsync("d190d4b5-03b5-41aa-99b8-b8286717c956");
                 personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync("CODE2")).ReturnsAsync("d190d4b5-03b5-41aa-99b8-b8286717c956");
                 personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync("CODE3")).ReturnsAsync("cecdce5a-54a7-45fb-a975-5392a579e5bf");
@@ -413,7 +425,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task StudentFinancialAidAwardService__GetStudentFinancialAidAwards2Async()
             {
-                var studentFinancialAidAwards = await studentFinancialAidAwardService.Get2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<bool>());
+                var studentFinancialAidAwards = await studentFinancialAidAwardService.Get2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.StudentFinancialAidAward2>(), It.IsAny<bool>(), It.IsAny<bool>());
 
                 Assert.IsNotNull(studentFinancialAidAwards);
 
@@ -427,6 +439,74 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     Assert.AreEqual(expected.Student.Id, actual.Student.Id);
                     Assert.AreEqual(expected.AwardFund.Id, actual.AwardFund.Id);
                 }
+            }
+
+            [TestMethod]
+            public async Task StudentFinancialAidAwardService__GetStudentFinancialAidAwards2Async_NullStudent()
+            {
+                Dtos.StudentFinancialAidAward2 sfa = new Dtos.StudentFinancialAidAward2();
+                sfa.Student = new Dtos.GuidObject2("someguid");
+                var studentFinancialAidAwards = await studentFinancialAidAwardService.Get2Async(It.IsAny<int>(), It.IsAny<int>(), sfa, It.IsAny<bool>(), It.IsAny<bool>());
+
+                Assert.IsNotNull(studentFinancialAidAwards);
+                Assert.IsNotNull(studentFinancialAidAwards.Item1);
+                Assert.AreEqual(0, studentFinancialAidAwards.Item2);                
+            }
+
+            [TestMethod]
+            public async Task StudentFinancialAidAwardService__GetStudentFinancialAidAwards2Async_NullAidYear()
+            {
+                Dtos.StudentFinancialAidAward2 sfa = new Dtos.StudentFinancialAidAward2();
+                sfa.AidYear = new Dtos.GuidObject2("someguid");
+                var studentFinancialAidAwards = await studentFinancialAidAwardService.Get2Async(It.IsAny<int>(), It.IsAny<int>(), sfa, It.IsAny<bool>(), It.IsAny<bool>());
+
+                Assert.IsNotNull(studentFinancialAidAwards);
+                Assert.IsNotNull(studentFinancialAidAwards.Item1);
+                Assert.AreEqual(0, studentFinancialAidAwards.Item2);
+            }
+            
+            [TestMethod]
+            public async Task StudentFinancialAidAwardService__GetStudentFinancialAidAwards2Async_WithAidYear()
+            {
+                Dtos.StudentFinancialAidAward2 sfa = new Dtos.StudentFinancialAidAward2();
+                sfa.AidYear = new Dtos.GuidObject2("e0c0c94c-53a7-46b7-96c4-76b12512c323");
+                sfa.AwardFund = new Dtos.GuidObject2("someguid");
+
+                var studentFinancialAidAwards = await studentFinancialAidAwardService.Get2Async(It.IsAny<int>(), It.IsAny<int>(), sfa, It.IsAny<bool>(), It.IsAny<bool>());
+
+                Assert.IsNotNull(studentFinancialAidAwards);
+                Assert.IsNotNull(studentFinancialAidAwards.Item1);
+                Assert.AreEqual(0, studentFinancialAidAwards.Item2);
+            }
+
+            [TestMethod]
+            public async Task StudentFinancialAidAwardService__GetStudentFinancialAidAwards2Async_NullAwardFund()
+            {
+                Dtos.StudentFinancialAidAward2 sfa = new Dtos.StudentFinancialAidAward2();
+                sfa.AwardFund = new Dtos.GuidObject2("someguid");
+                var studentFinancialAidAwards = await studentFinancialAidAwardService.Get2Async(It.IsAny<int>(), It.IsAny<int>(), sfa, It.IsAny<bool>(), It.IsAny<bool>());
+
+                Assert.IsNotNull(studentFinancialAidAwards);
+                Assert.IsNotNull(studentFinancialAidAwards.Item1);
+                Assert.AreEqual(0, studentFinancialAidAwards.Item2);
+            }
+
+            [TestMethod]
+            public async Task StudentFinancialAidAwardService__GetStudentFinancialAidAwards2Async_WithAwardFund()
+            {
+                awardRepositoryMock.Setup(i => i.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<bool>(), 
+                    It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<string>>(), It.IsAny<Domain.Student.Entities.StudentFinancialAidAward>()))
+                    .ReturnsAsync(new Tuple<IEnumerable<StudentFinancialAidAward>, int>(new List<StudentFinancialAidAward>(), 0));
+                awardRepositoryMock.Setup(i => i.Get2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<bool>(),
+                    It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<string>>(), It.IsAny<Domain.Student.Entities.StudentFinancialAidAward>()))
+                    .ReturnsAsync(new Tuple<IEnumerable<StudentFinancialAidAward>, int>(new List<StudentFinancialAidAward>(), 0));
+                Dtos.StudentFinancialAidAward2 sfa = new Dtos.StudentFinancialAidAward2();
+                sfa.AwardFund = new Dtos.GuidObject2("b90812ee-b573-4acb-88b0-6999a050be4f");
+                var studentFinancialAidAwards = await studentFinancialAidAwardService.Get2Async(It.IsAny<int>(), It.IsAny<int>(), sfa, It.IsAny<bool>(), It.IsAny<bool>());
+
+                Assert.IsNotNull(studentFinancialAidAwards);
+                Assert.IsNotNull(studentFinancialAidAwards.Item1);
+                Assert.AreEqual(0, studentFinancialAidAwards.Item2);
             }
         }
     }

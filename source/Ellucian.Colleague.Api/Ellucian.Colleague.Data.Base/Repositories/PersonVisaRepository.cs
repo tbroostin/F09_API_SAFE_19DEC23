@@ -288,7 +288,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             if (response.DeleteVisaErrors.Any())
             {
                 var exception = new RepositoryException("Errors encountered while deleting person visa: " + id);
-                response.DeleteVisaErrors.ForEach(e => exception.AddError(new RepositoryError(e.ErrorCode, e.ErrorMsg)));
+                response.DeleteVisaErrors.ForEach(e => exception.AddError(new RepositoryError(string.IsNullOrEmpty(e.ErrorCode) ? "" : e.ErrorCode, e.ErrorMsg)));
                 throw exception;
             }
         }

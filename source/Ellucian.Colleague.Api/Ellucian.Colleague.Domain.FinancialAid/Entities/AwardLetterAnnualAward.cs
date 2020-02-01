@@ -41,6 +41,16 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
         public List<AwardLetterAwardPeriod> AwardLetterAwardPeriods { get; set; }
 
         /// <summary>
+        /// Flag that determines if the award is renewable
+        /// </summary>
+        public string AwRenewableFlag { get; set; }
+
+        /// <summary>
+        /// Renewable text for the selected award
+        /// </summary>
+        public string AwRenewableText { get; set; }
+
+        /// <summary>
         /// Constructor for Annual Award information group
         /// </summary>
         public AwardLetterAnnualAward()

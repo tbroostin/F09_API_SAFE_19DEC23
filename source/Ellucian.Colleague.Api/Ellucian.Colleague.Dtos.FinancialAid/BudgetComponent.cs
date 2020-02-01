@@ -1,8 +1,4 @@
-﻿/*Copyright 2014-2015 Ellucian Company L.P. and its affiliates.*/
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿/*Copyright 2014-2019 Ellucian Company L.P. and its affiliates.*/
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
@@ -27,6 +23,11 @@ namespace Ellucian.Colleague.Dtos.FinancialAid
         /// A short description of what this BudgetComponent defines
         /// </summary>
         public string Description { get; set; }
+
+        /// <summary>
+        /// Budget component cost type
+        /// </summary>
+        public BudgetComponentCostType? CostType { get; set; }
 
         /// <summary>
         /// The group assigned to this BudgetComponent to categorize students' costs on the Financial Aid shopping sheet

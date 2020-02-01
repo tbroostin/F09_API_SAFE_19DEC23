@@ -1,7 +1,8 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Data.ColleagueFinance.Utilities;
+using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.ColleagueFinance;
 using Ellucian.Colleague.Domain.ColleagueFinance.Exceptions;
@@ -30,6 +31,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         private readonly IGeneralLedgerConfigurationRepository configurationRepository;
         private readonly IApproverRepository approverRepository;
         private readonly IStaffRepository staffRepository;
+        private readonly IGeneralLedgerUserRepository generalLedgerUserRepository;
 
         /// <summary>
         /// Initialize the service.
@@ -41,7 +43,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <param name="currentUserFactory">User factory</param>
         /// <param name="roleRepository">Role repository</param>
         /// <param name="logger">Logger object</param>
-        public BudgetAdjustmentService(IBudgetAdjustmentsRepository budgetAdjustmentRepository, IGeneralLedgerConfigurationRepository configurationRepository,
+        public BudgetAdjustmentService(IBudgetAdjustmentsRepository budgetAdjustmentRepository, IGeneralLedgerConfigurationRepository configurationRepository, IGeneralLedgerUserRepository generalLedgerUserRepository,
             IApproverRepository approverRepository, IStaffRepository staffRepository, IAdapterRegistry adapterRegistry, ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, ILogger logger)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger)
         {
@@ -49,6 +51,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             this.configurationRepository = configurationRepository;
             this.approverRepository = approverRepository;
             this.staffRepository = staffRepository;
+            this.generalLedgerUserRepository = generalLedgerUserRepository;
         }
 
         /// <summary>
@@ -67,6 +70,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             CheckCreateUpdateBudgetAdjustmentPermission();
 
             #region Get configuration data
+
             var exclusions = await configurationRepository.GetBudgetAdjustmentAccountExclusionsAsync();
             if (exclusions == null)
             {
@@ -82,8 +86,16 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             var costCenterStructure = await this.configurationRepository.GetCostCenterStructureAsync();
             if (costCenterStructure == null || !costCenterStructure.CostCenterComponents.Any())
             {
-                throw new ApplicationException("Cost center structure not defined.");
+                throw new ConfigurationException("Cost center structure not defined.");
             }
+
+            // Get the account structure configuration.
+            var glAccountStructure = await configurationRepository.GetAccountStructureAsync();
+            if (glAccountStructure == null || !glAccountStructure.MajorComponentStartPositions.Any())
+            {
+                throw new ConfigurationException("Account structure must be defined.");
+            }
+
             #endregion
 
             // Initialize the adjustment line entities.
@@ -124,7 +136,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
 
             // See if any of the GL accounts in the adjustment are not allowed.
-            var restrictionMessages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(adjustmentInputEntity.AdjustmentLines.Select(x => x.GlNumber).ToList(), exclusions);
+            var restrictionMessages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(adjustmentInputEntity.AdjustmentLines.Select(x => x.GlNumber).ToList(), exclusions, glAccountStructure.MajorComponentStartPositions);
             if (restrictionMessages != null && restrictionMessages.Any())
             {
                 throw new ApplicationException(String.Join("<>", restrictionMessages));
@@ -135,7 +147,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             {
                 if (adjustmentLine != null)
                 {
-                    var glClass = GlAccountUtility.GetGlAccountGlClass(adjustmentLine.GlNumber, glClassConfiguration);
+                    var glClass = GlAccountUtility.GetGlAccountGlClass(adjustmentLine.GlNumber, glClassConfiguration, glAccountStructure.MajorComponentStartPositions);
                     if (glClass != Domain.ColleagueFinance.Entities.GlClass.Expense)
                     {
                         throw new ApplicationException("Only expense type GL accounts are allowed in a Budget Adjustment.");
@@ -150,14 +162,14 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             if (budgetAdjustmentParameters.SameCostCenterRequired)
             {
                 // Make sure we're dealing with only a single cost center.
-                var costCenterIds = adjustmentInputEntity.AdjustmentLines.Select(x => GlAccountUtility.GetCostCenterId(x.GlNumber, costCenterStructure)).Distinct().ToList();
+                var costCenterIds = adjustmentInputEntity.AdjustmentLines.Select(x => GlAccountUtility.GetCostCenterId(x.GlNumber, costCenterStructure, glAccountStructure.MajorComponentStartPositions)).Distinct().ToList();
                 if (costCenterIds.Count() > 1)
                 {
                     throw new ApplicationException("GL accounts must be from the same cost center.");
                 }
             }
 
-            var adjustmentOutputEntity = await budgetAdjustmentRepository.CreateAsync(adjustmentInputEntity);
+            var adjustmentOutputEntity = await budgetAdjustmentRepository.CreateAsync(adjustmentInputEntity, glAccountStructure.MajorComponentStartPositions);
 
             if (adjustmentOutputEntity == null)
             {
@@ -246,10 +258,17 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 throw new ApplicationException("Error retrieving GL class configuration.");
             }
 
+            // Get the account structure configuration.
+            var glAccountStructure = await configurationRepository.GetAccountStructureAsync();
+            if (glAccountStructure == null || !glAccountStructure.MajorComponentStartPositions.Any())
+            {
+                throw new ConfigurationException("Account structure must be defined.");
+            }
+
             var costCenterStructure = await this.configurationRepository.GetCostCenterStructureAsync();
             if (costCenterStructure == null || !costCenterStructure.CostCenterComponents.Any())
             {
-                throw new ApplicationException("Cost center structure not defined.");
+                throw new ConfigurationException("Cost center structure not defined.");
             }
             #endregion
 
@@ -272,7 +291,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     }
                 }
 
-                var adjustmentOutputEntity = await budgetAdjustmentRepository.UpdateAsync(id, budgetAdjustmentEntityToUpdate);
+                var adjustmentOutputEntity = await budgetAdjustmentRepository.UpdateAsync(id, budgetAdjustmentEntityToUpdate, glAccountStructure.MajorComponentStartPositions);
 
                 if (adjustmentOutputEntity == null)
                 {
@@ -452,6 +471,60 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
                 // Run validation (which will also update the Validation Results property of the DTO).
                 await ValidateBudgetAdjustmentAsync(budgetAdjustment, budgetAdjustmentDto);
+
+                // Get the account structure configuration.
+                var glAccountStructure = await configurationRepository.GetAccountStructureAsync();
+                if (glAccountStructure == null)
+                {
+                    throw new ConfigurationException("Account structure must be defined.");
+                }
+
+                var glClassConfiguration = await configurationRepository.GetClassConfigurationAsync();
+                if (glClassConfiguration == null)
+                {
+                    throw new ApplicationException("Error retrieving GL class configuration.");
+                }
+
+                // Get the ID for the person who is logged in, and use the ID to get his list of assigned expense and revenue GL accounts.
+                var generalLedgerUser = await generalLedgerUserRepository.GetGeneralLedgerUserAsync2(CurrentUser.PersonId, glAccountStructure.FullAccessRole, glClassConfiguration);
+                if (generalLedgerUser == null)
+                {
+                    throw new ApplicationException("GL user must be defined.");
+                }
+
+                if (budgetAdjustmentDto != null)
+                {
+
+                    var costCenterStructure = await configurationRepository.GetCostCenterStructureAsync();
+                    if (costCenterStructure == null)
+                    {
+                        throw new ConfigurationException("costCenterStructure can not be null.");
+                    }
+
+                    List<string> costCenterIds = new List<string>();
+
+                    // Strip out GL accounts that the approver does not have access to based on their GL User access.
+                    var expenseAndRevenueAccounts = generalLedgerUser.RevenueAccounts.Union(generalLedgerUser.ExpenseAccounts);
+
+                    foreach (var adjustmentLine in budgetAdjustmentDto.AdjustmentLines)
+                    {
+                        costCenterIds.Add(GlAccountUtility.GetCostCenterId(adjustmentLine.GlNumber, costCenterStructure, glAccountStructure.MajorComponentStartPositions));
+
+                        if (!expenseAndRevenueAccounts.Contains(adjustmentLine.GlNumber))
+                        {
+                            adjustmentLine.Hidden = true;
+                            adjustmentLine.FromAmount = 0m;
+                            adjustmentLine.ToAmount = 0m;
+                            adjustmentLine.GlNumber = string.Empty;
+                        }
+                        else
+                        {
+                            adjustmentLine.Hidden = false;
+                        }
+                    }
+                    budgetAdjustmentDto.CostCenterCount = costCenterIds.Distinct().Count();
+                }
+
             }
 
             return budgetAdjustmentDto;
@@ -473,6 +546,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             if (budgetAdjustmentApprovalDto == null)
             {
                 throw new ArgumentNullException("budgetAdjustmentApprovalDto", "Budget adjustment approval is required.");
+            }
+
+            // Get the account structure configuration.
+            var glAccountStructure = await configurationRepository.GetAccountStructureAsync();
+            if (glAccountStructure == null || !glAccountStructure.MajorComponentStartPositions.Any())
+            {
+                throw new ConfigurationException("Account structure must be defined.");
             }
 
             // Check the permission code to view pending approval budget adjustments.
@@ -543,7 +623,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             // Validate the budget adjustment before posting it.
             // If there are any validation errors, throw an exception.
-            var validationMessages = await budgetAdjustmentRepository.ValidateBudgetAdjustmentAsync(budgetAdjustmentEntity);
+            var validationMessages = await budgetAdjustmentRepository.ValidateBudgetAdjustmentAsync(budgetAdjustmentEntity, glAccountStructure.MajorComponentStartPositions);
             if (validationMessages != null && validationMessages.Any())
             {
                 var message = "The budget adjustment fails validation before posting.";
@@ -629,7 +709,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             // Approve the budget adjustment. The current user approval may not be enough to approve 
             // this budget adjustment, so it may not go to a complete status.
-            var budgetAdjustmentOutputEntity = await budgetAdjustmentRepository.UpdateAsync(id, budgetAdjustmentEntity);
+            var budgetAdjustmentOutputEntity = await budgetAdjustmentRepository.UpdateAsync(id, budgetAdjustmentEntity, glAccountStructure.MajorComponentStartPositions);
 
             if (budgetAdjustmentOutputEntity == null)
             {
@@ -781,9 +861,16 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         {
             if (budgetAdjustmentDto != null)
             {
+                // Get the account structure configuration.
+                var glAccountStructure = await configurationRepository.GetAccountStructureAsync();
+                if (glAccountStructure == null)
+                {
+                    throw new ConfigurationException("Account structure must be defined.");
+                }
+
                 budgetAdjustmentDto.ValidationResults = new List<string>();
 
-                var validationMessages = await budgetAdjustmentRepository.ValidateBudgetAdjustmentAsync(budgetAdjustmentEntity);
+                var validationMessages = await budgetAdjustmentRepository.ValidateBudgetAdjustmentAsync(budgetAdjustmentEntity, glAccountStructure.MajorComponentStartPositions);
                 if (validationMessages != null && validationMessages.Any())
                 {
                     budgetAdjustmentDto.ValidationResults.AddRange(validationMessages);

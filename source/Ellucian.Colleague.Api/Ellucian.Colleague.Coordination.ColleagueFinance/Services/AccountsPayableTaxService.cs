@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -9,6 +9,7 @@ using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
 using slf4net;
+using System.Linq;
 
 namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 {
@@ -39,13 +40,16 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             // Create the adapter to convert AccountsPayable tax domain entities to DTOs.
             var accountsPayableTaxDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.ColleagueFinance.Entities.AccountsPayableTax, Ellucian.Colleague.Dtos.ColleagueFinance.AccountsPayableTax>();
             var accountsPayableTaxDtos = new List<Ellucian.Colleague.Dtos.ColleagueFinance.AccountsPayableTax>();
-
-            foreach (var tax in accountsPayableTaxDomainEntities)
+            if (accountsPayableTaxDomainEntities != null && accountsPayableTaxDomainEntities.Any())
             {
-                accountsPayableTaxDtos.Add(accountsPayableTaxDtoAdapter.MapToType(tax));
+                //sort the entities on code, then by description
+                accountsPayableTaxDomainEntities = accountsPayableTaxDomainEntities.OrderBy(x => x.Code).ToList();
+                foreach (var tax in accountsPayableTaxDomainEntities)
+                {
+                    accountsPayableTaxDtos.Add(accountsPayableTaxDtoAdapter.MapToType(tax));
+                }
             }
-
             return accountsPayableTaxDtos;
         }
     }
-}
+};

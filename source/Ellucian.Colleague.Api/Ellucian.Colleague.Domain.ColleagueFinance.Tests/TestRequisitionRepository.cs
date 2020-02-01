@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -15,6 +15,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
     public class TestRequisitionRepository : IRequisitionRepository
     {
         private List<Requisition> requisitions = new List<Requisition>();
+        private List<RequisitionSummary> requisitionsSummaryList = new List<RequisitionSummary>();
 
         #region Define all data for a requisition
 
@@ -24,7 +25,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             {  "1",   "0009876",  "Ellucian Consulting, Inc.",         "O",    "AP",    "2,330.00",   "05/11/2015",  "05/30/2015",    "05/21/2015",       "0001111",      "05/21/2015",    "One Initiator",      "Mary Requestor1",    "Just comments 1",    "MC",       "Internal Comments 1",   "",               ""      },      
             {  "2",   "0009876",  "Ellucian Consulting, Inc.",         "N",    "AP",      "222.22",   "2/3/2015",    "2/23/2015",     "2/13/2015",        "0002222",      "2/13/2015",     "Two Initiator",      "null",               "Just comments 2",    "null",     "Internal Comments 2",   "CAN",            ""      }, 
             {  "3",   "0009876",  "Ellucian Consulting, Inc.",         "O",    "AP",      "333.33",   "2/4/2015",    "2/24/2015",     "2/14/2015",        "0003333",      "2/14/2015",     "Three Initiator",    "Mary Requestor",     "Just comments 3",    "null",     "Internal Comments 3",   "",               ""      }, 
-            {  "4",   "0009876",  "Ellucian Consulting, Inc.",         "U",    "AP",      "444.44",   "2/5/2015",    "2/25/2015",     "2/15/2015",        "0004444",      "2/25/2015",     "Four Initiator",     "null",               "Just comments 4",    "null",     "Internal Comments 4",   "",               "41"    },
+            {  "4",   "0009876",  "Ellucian Consulting, Inc.",         "U",    "AP",      "222.22",   "2/5/2015",    "2/25/2015",     "2/15/2015",        "0004444",      "2/25/2015",     "Four Initiator",     "null",               "Just comments 4",    "null",     "Internal Comments 4",   "",               "41"    },
             {  "5",   "",         "Ellucian Consulting",               "U",    "AP",      "555.55",   "2/6/2015",    "2/26/2015",     "2/16/2015",        "null",         "2/26/2015",     "",                   "",                   "Just comments 5",    "MC",       "Internal Comments 5",   "",               ""      }, 
             {  "6",   "",         "Ellucian's Consulting Associates",  "P",    "AP",      "666.66",   "2/7/2015",    "2/27/2015",     "3/17/2015",        "0006666",      "2/27/2015",     "",                   "",                   "Just comments 6",    "null",     "Internal Comments 6",   "",               ""      }, 
             {  "7",   "0001111",  "null",                              "P",    "AP",    "7,777.77",   "3/1/2015",    "3/31/2015",     "3/11/2015",        "0007777",      "3/31/2015",     "Seven Initiator",    "Mary Requestor",     "Just comments 7",    "null",     "Internal Comments 7",   "",               ""      }, 
@@ -34,7 +35,8 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             { "11",   "0005432",  "Offices Supplies Unlimited",        "P",    "AP",      "876.54",   "3/5/2015",    "3/25/2015",     "3/15/2015",        "0010101",      "3/25/2015",     "Eleven Initiator",   "null",               "Just comments 11",   "null",     "Internal Comments 11",  "",               ""      },  
             { "31",   "0009876",  "Office Supplies",                   "O",    "AP",      "800.00",   "3/31/2015",   "4/15/2015",     "3/31/2015",        "0003131",      "3/31/2015",     "",                   "",                   "Just Comments 31",   "null",     "Internal Comments 31",  "",               ""      }, 
             { "32",   "0009876",  "Office Supplies",                   "O",    "AP",      "800.00",   "3/31/2015",   "4/15/2015",     "3/31/2015",        "0003132",      "3/31/2015",     "",                   "",                   "Just Comments 32",   "null",     "Internal Comments 32",  "",               ""      },  
-            { "33",   "0009876",  "Office Supplies",                   "O",    "AP",      "800.00",   "3/31/2015",   "4/15/2015",     "3/31/2015",        "0003133",      "3/31/2015",     "",                   "",                   "Just Comments 33",   "null",     "Internal Comments 33",  "",               ""      }                     
+            { "33",   "0009876",  "Office Supplies",                   "O",    "AP",      "800.00",   "3/31/2015",   "4/15/2015",     "3/31/2015",        "0003133",      "3/31/2015",     "",                   "",                   "Just Comments 33",   "null",     "Internal Comments 33",  "",               ""      },
+            { "34",   "",         "",                                  "U",      "",            "",   "3/31/2015",            "",     "3/31/2015",        "0003134",      "3/31/2015",     "",                   "",                                   "",   "MC",                           "",  "",               ""      }
                                               };
 
         private string[,] approversArray = {
@@ -78,6 +80,8 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
 
             { "3331",  "33",     "First line 33",  "14",   "101.55",   "box",          "VP",           "543.21",       "1/3/2015",       "1099-MISC",   "NEC",     "VA",     "Comments line item 3331"},
             { "3332",  "33",     "Second line 33", "14",   "208.09",   "box",          "VP",           "543.21",       "1/3/2015",       "1099-MISC",   "NEC",     "VA",     "Comments line item 3332"},
+
+            { "3341",  "34",     "Firt line 34",    "2",         "",      "",            "",                 "",           "null",                "",      "",       "",     ""},
         };
 
         private string[,] glDistributionArray = {
@@ -151,6 +155,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
         public TestRequisitionRepository()
         {
             Populate();
+            PopulateRequisitionsSummary();
 
             // Add a domain entity to the requisitions list that has one GL account masked.
             var requisition = new Requisition("999", "000999", "Susty Corporation", RequisitionStatus.InProgress, DateTime.Now, DateTime.Now);
@@ -224,9 +229,9 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
                 }
 
                 apType = requisitionsArray[i, 4];
-                requisitionAmount = Convert.ToDecimal(requisitionsArray[i, 5]);
+                requisitionAmount = !string.IsNullOrEmpty(requisitionsArray[i, 5]) ? Convert.ToDecimal(requisitionsArray[i, 5]) : 0;
                 date = Convert.ToDateTime(requisitionsArray[i, 6]);
-                desiredDate = Convert.ToDateTime(requisitionsArray[i, 7]);
+                desiredDate = !string.IsNullOrEmpty(requisitionsArray[i, 7]) ? Convert.ToDateTime(requisitionsArray[i, 7]): (DateTime?)null;
                 maintenanceDate = Convert.ToDateTime(requisitionsArray[i, 8]);
                 number = requisitionsArray[i, 9];
                 statusDate = Convert.ToDateTime(requisitionsArray[i, 10]);
@@ -337,11 +342,11 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
                 lineItemRequisitionId = lineItemsArray[i, 1];
                 description = lineItemsArray[i, 2];
                 quantity = Convert.ToDecimal(lineItemsArray[i, 3]);
-                price = Convert.ToDecimal(lineItemsArray[i, 4]);
+                price = !string.IsNullOrEmpty(lineItemsArray[i, 4]) ? Convert.ToDecimal(lineItemsArray[i, 4]):0;
 
                 unitOfIssue = lineItemsArray[i, 5];
                 vendorPart = lineItemsArray[i, 6];
-                extendedPrice = Convert.ToDecimal(lineItemsArray[i, 7]);
+                extendedPrice = !string.IsNullOrEmpty(lineItemsArray[i, 7]) ? Convert.ToDecimal(lineItemsArray[i, 7]) : 0;
 
                 if (lineItemsArray[i, 8] == "null")
                 {
@@ -447,6 +452,96 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             #endregion
         }
 
+        private void PopulateRequisitionsSummary()
+        {
+            # region Populate RequisitionsSummary
+
+            // Loop through the requisition array and create requisition domain entities
+            string requisitionId,
+                    vendorId,
+                    vendorName,
+                    number,
+                    initiatorName,
+                    requestorName;
+
+            RequisitionStatus status;
+
+            decimal requisitionAmount;
+
+            DateTime date,
+                     statusDate,
+                     maintenanceDate;
+
+
+            for (var i = 0; i < requisitionsArray.GetLength(0); i++)
+            {
+                requisitionId = requisitionsArray[i, 0];
+                vendorId = requisitionsArray[i, 1];
+                vendorName = requisitionsArray[i, 2];
+
+                switch (requisitionsArray[i, 3])
+                {
+                    case "U":
+                        status = RequisitionStatus.InProgress;
+                        break;
+                    case "N":
+                        status = RequisitionStatus.NotApproved;
+                        break;
+                    case "O":
+                        status = RequisitionStatus.Outstanding;
+                        break;
+                    case "P":
+                        status = RequisitionStatus.PoCreated;
+                        break;
+                    default:
+                        throw new Exception("Invalid status specified in TestRequisitionRepository.");
+                }
+
+                requisitionAmount = !string.IsNullOrEmpty(requisitionsArray[i, 5]) ? Convert.ToDecimal(Convert.ToDecimal(requisitionsArray[i, 5])) : 0;
+                date = Convert.ToDateTime(requisitionsArray[i, 6]);
+                maintenanceDate = Convert.ToDateTime(requisitionsArray[i, 8]);
+                number = requisitionsArray[i, 9];                
+                initiatorName = requisitionsArray[i, 11];
+                requestorName = requisitionsArray[i, 12];
+
+                var requisitionSummary = new RequisitionSummary(requisitionId, number, vendorName, date);
+
+                requisitionSummary.Status = status;
+                requisitionSummary.VendorId = vendorId;
+                requisitionSummary.Amount = requisitionAmount;
+                requisitionSummary.MaintenanceDate = maintenanceDate;
+                requisitionSummary.InitiatorName = initiatorName;
+                requisitionSummary.RequestorName = requestorName;
+
+                requisitionsSummaryList.Add(requisitionSummary);
+            }
+            #endregion
+            
+            #region Populate Purchase Orders
+
+            string purchaseOrderId,
+                purchaseOrderNumber,
+                purchaseOrderRequisitionId;
+
+            for (var i = 0; i < purchaseOrdersArray.GetLength(0); i++)
+            {
+                purchaseOrderId = purchaseOrdersArray[i, 0];
+                purchaseOrderNumber = purchaseOrdersArray[i, 1];
+                purchaseOrderRequisitionId = purchaseOrdersArray[i, 2];
+
+                foreach (var requisitionSummary in requisitionsSummaryList)
+                {
+                    if (requisitionSummary.Id == purchaseOrderRequisitionId)
+                    {
+                        var po = new PurchaseOrderSummary(purchaseOrderId, purchaseOrderNumber, requisitionSummary.VendorName, requisitionSummary.Date);
+                        requisitionSummary.AddPurchaseOrder(po);
+                    }
+                }
+            }
+            #endregion
+
+        }
+
         public Task<Tuple<IEnumerable<Requisition>, int>> GetRequisitionsAsync(int offset, int limit)
         {
             throw new NotImplementedException();
@@ -490,6 +585,22 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
         public Dictionary<string, string> EthosExtendedDataDictionary { get; set; }
 
         public Tuple<List<string>, List<string>> GetEthosExtendedDataLists()
+        {
+            throw new NotImplementedException();
+        }
+
+        public async Task<IEnumerable<RequisitionSummary>> GetRequisitionsSummaryByPersonIdAsync(string personId)
+        {
+            return await Task.Run(() => requisitionsSummaryList);
+        }
+        
+
+        public Task<RequisitionCreateUpdateResponse> CreateRequisitionsAsync(RequisitionCreateUpdateRequest createUpdateRequest)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<RequisitionCreateUpdateResponse> UpdateRequisitionsAsync(RequisitionCreateUpdateRequest createUpdateRequest, Requisition originalRequisition)
         {
             throw new NotImplementedException();
         }

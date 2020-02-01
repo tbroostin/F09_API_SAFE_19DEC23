@@ -24,6 +24,16 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
         private readonly AwardCategory awardCategory;
 
         /// <summary>
+        /// Flag that determines if the award is renewable
+        /// </summary>
+        public string AwRenewableFlag { get; set; }
+
+        /// <summary>
+        /// Renewable text for the selected award
+        /// </summary>
+        public string AwRenewableText { get; set; }
+
+        /// <summary>
         /// The LoanType of this award. An award will have a loan type if its a loan.
         /// Otherwise, this attribute will be null.
         /// </summary>

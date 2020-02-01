@@ -1,4 +1,4 @@
-//Copyright 2018 Ellucian Company L.P. and its affiliates
+//Copyright 2018-2019 Ellucian Company L.P. and its affiliates
 
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -109,6 +109,14 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             _studentReferenceRepositoryMock.Setup(repo => repo.GetGradeSchemesAsync(It.IsAny<bool>())).ReturnsAsync(_gradeSchemeCollection);
 
             _studentReferenceRepositoryMock.Setup(repo => repo.GetCreditCategoriesAsync(It.IsAny<bool>())).ReturnsAsync(_creditCategoriesCollection);
+
+            _gradeRepositoryMock.Setup(repo => repo.GetGradesGuidAsync("1")).ReturnsAsync("b9459074-5de3-460b-a7e7-fafbda932cef");
+            _gradeRepositoryMock.Setup(repo => repo.GetGradesGuidAsync("2")).ReturnsAsync("dc333822-757c-43d2-8408-37e237ac57d8");
+
+            _studentReferenceRepositoryMock.Setup(repo => repo.GetGradeSchemeGuidAsync("UG")).ReturnsAsync("27178aab-a6e8-4d1e-ae27-eca1f7b33363");
+            _studentReferenceRepositoryMock.Setup(repo => repo.GetGradeSchemeGuidAsync("TR")).ReturnsAsync("37178aab-a6e8-4d1e-ae27-eca1f7b33363");
+
+            _studentReferenceRepositoryMock.Setup(repo => repo.GetCreditCategoriesGuidAsync("TR")).ReturnsAsync("b5cc288b-8692-474e-91be-bdc55778e2f5");
 
             _referenceRepositoryMock.Setup(repo => repo.GetGradeChangeReasonAsync(It.IsAny<bool>())).ReturnsAsync(_gradeChangeReasonsCollection);
 
@@ -247,6 +255,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         [TestMethod]
         public async Task StudentTranscriptGradesService_GetStudentTranscriptGradesAsync()
         {
+
+
             var results = await _studentTranscriptGradesService.GetStudentTranscriptGradesAsync(It.IsAny<int>(), It.IsAny<int>(), new Dtos.StudentTranscriptGrades(), It.IsAny<bool>());
             Assert.IsNotNull(results);
             var actuals = results.Item1.ToList();
@@ -276,30 +286,17 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(IntegrationApiException))]
-        public async Task StudentTranscriptGradesService_GetStudentTranscriptGrades_CreditCategories_Null()
-        {
-            _studentReferenceRepositoryMock.Setup(repo => repo.GetCreditCategoriesAsync(It.IsAny<bool>())).ReturnsAsync(null);
-
-            await _studentTranscriptGradesService.GetStudentTranscriptGradesAsync(It.IsAny<int>(), It.IsAny<int>(), new Dtos.StudentTranscriptGrades(), It.IsAny<bool>());
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(IntegrationApiException))]
         public async Task StudentTranscriptGradesService_GetStudentTranscriptGrades_CreditCategories_NotFound()
         {
-            _creditCategoriesCollection = new List<CreditCategory>() { new CreditCategory("invalid", "x", "x", CreditType.None) };
-            _studentReferenceRepositoryMock.Setup(repo => repo.GetCreditCategoriesAsync(It.IsAny<bool>())).ReturnsAsync(_creditCategoriesCollection);
-
-            try
+            _studentReferenceRepositoryMock.Setup(repo => repo.GetCreditCategoriesGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+            var results = await _studentTranscriptGradesService.GetStudentTranscriptGradesAsync(It.IsAny<int>(), It.IsAny<int>(), new Dtos.StudentTranscriptGrades(), It.IsAny<bool>());
+            Assert.IsNotNull(results);
+            var actuals = results.Item1.ToList();
+            for (int i = 0; i < results.Item1.Count(); i++)
             {
-                await _studentTranscriptGradesService.GetStudentTranscriptGradesAsync(It.IsAny<int>(), It.IsAny<int>(), new Dtos.StudentTranscriptGrades(), It.IsAny<bool>());
-            }
-            catch (IntegrationApiException ex)
-            {
-                Assert.IsNotNull(ex.Errors);
-                Assert.AreEqual("Credit Categories not found for key: 'TR'.", ex.Errors[0].Message);
-                throw;
+                var expected = _studentTranscriptGradesCollection[i];
+                var actual = actuals[i];
+                Assert.AreEqual(null, actual.CreditCategory);                
             }
         }
 
@@ -442,6 +439,15 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             _studentTranscriptGradesRepositoryMock.Setup(repo => repo.GetStudentTranscriptGradesByGuidAsync(It.IsAny<string>()))
                 .ThrowsAsync(new InvalidOperationException());
             var actual = await _studentTranscriptGradesService.GetStudentTranscriptGradesByGuidAsync(studentTranscriptGradesGuid);
+        }
+
+        [TestMethod]
+        public async Task StudentTranscriptGradesService_GetStudentTranscriptGradesByGuidAsync_BadHistoricalGrade_NoThrow()
+        {
+            _studentTranscriptGradesCollection.First().StudentTranscriptGradesHistory.First().PreviousVerifiedGradeValue = "invalidgrade";
+            var actual = await _studentTranscriptGradesService.GetStudentTranscriptGradesByGuidAsync(studentTranscriptGradesGuid);
+            Assert.IsNotNull(actual);
+            Assert.IsNull(actual.ChangeDetails);
         }
 
         #endregion

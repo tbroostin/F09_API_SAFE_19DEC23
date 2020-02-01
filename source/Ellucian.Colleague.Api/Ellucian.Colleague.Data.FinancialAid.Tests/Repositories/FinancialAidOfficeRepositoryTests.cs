@@ -1,4 +1,4 @@
-﻿/*Copyright 2014-2018 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2014-2019 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -11,11 +11,6 @@ using Ellucian.Colleague.Domain.FinancialAid.Tests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using System.Threading.Tasks;
-using Ellucian.Data.Colleague;
-using Ellucian.Web.Cache;
-using slf4net;
-using Ellucian.Web.Http.Configuration;
-using System.Threading;
 
 namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
 {
@@ -2319,6 +2314,69 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                 CollectionAssert.AreEqual(officeParametersRecord.IgnoreAwardCategoriesOnChecklist, actualConfiguration.IgnoreAwardCategoriesOnChecklist);
             }
 
+            [TestMethod]
+            public async Task ShowBudgetDetailsOnAwardLetter_ReturnsFalseTest()
+            {
+                actualOffices = (await actualRepository.GetFinancialAidOfficesAsync()).ToList();
+                var actualConfiguration = actualOffices.First().Configurations.First();
+                Assert.IsFalse(actualConfiguration.ShowBudgetDetailsOnAwardLetter);
+            }
+
+            [TestMethod]
+            public async Task EmptyContractValue_ShowBudgetDetailsOnAwardLetter_ReturnsFalseTest()
+            {
+                var officeParametersRecord = expectedRepository.officeParameterRecordData.First();
+                officeParametersRecord.ShowBudgetDetailsOnAwardLetter = "";
+                BuildRepositoryAsync();
+                actualOffices = (await actualRepository.GetFinancialAidOfficesAsync()).ToList();
+                var actualConfiguration = actualOffices.First(o => o.Id == officeParametersRecord.OfficeCode).Configurations.First(c => c.AwardYear == officeParametersRecord.AwardYear);
+                Assert.IsFalse(actualConfiguration.ShowBudgetDetailsOnAwardLetter);
+            }
+
+            [TestMethod]
+            public async Task ShowBudgetDetailsOnAwardLetter_ReturnsTrueTest()
+            {
+                var officeParametersRecord = expectedRepository.officeParameterRecordData.First();
+                officeParametersRecord.ShowBudgetDetailsOnAwardLetter = "Y";
+                BuildRepositoryAsync();
+                actualOffices = (await actualRepository.GetFinancialAidOfficesAsync()).ToList();
+                var actualConfiguration = actualOffices.First(o => o.Id == officeParametersRecord.OfficeCode).Configurations.First(c => c.AwardYear == officeParametersRecord.AwardYear);
+                Assert.IsTrue(actualConfiguration.ShowBudgetDetailsOnAwardLetter);
+            }
+
+            [TestMethod]
+            public async Task StudentAwardLetterBudgetDetailsDescription_ReturnsExpectedValueTest()
+            {
+                actualOffices = (await actualRepository.GetFinancialAidOfficesAsync()).ToList();
+                foreach(var record in expectedRepository.officeParameterRecordData)
+                {
+                    var actualConfiguration = actualOffices.First(o => o.Id == record.OfficeCode).Configurations.First(c => c.AwardYear == record.AwardYear);
+                    Assert.AreEqual(record.StudentAwardLetterBudgetDetailsDescription, actualConfiguration.StudentAwardLetterBudgetDetailsDescription);
+                }
+                
+            }
+
+            [TestMethod]
+            public async Task NullStudentAwardLetterBudgetDetailsDescription_ReturnsExpectedValueTest()
+            {
+                var officeParametersRecord = expectedRepository.officeParameterRecordData.First();
+                officeParametersRecord.StudentAwardLetterBudgetDetailsDescription = null;
+                BuildRepositoryAsync();
+                actualOffices = (await actualRepository.GetFinancialAidOfficesAsync()).ToList();
+                var actualConfiguration = actualOffices.First(o => o.Id == officeParametersRecord.OfficeCode).Configurations.First(c => c.AwardYear == officeParametersRecord.AwardYear);
+                Assert.IsNull(actualConfiguration.StudentAwardLetterBudgetDetailsDescription);
+            }
+
+            [TestMethod]
+            public async Task EmptyStudentAwardLetterBudgetDetailsDescription_ReturnsExpectedValueTest()
+            {
+                var officeParametersRecord = expectedRepository.officeParameterRecordData.First();
+                officeParametersRecord.StudentAwardLetterBudgetDetailsDescription = string.Empty;
+                BuildRepositoryAsync();
+                actualOffices = (await actualRepository.GetFinancialAidOfficesAsync()).ToList();
+                var actualConfiguration = actualOffices.First(o => o.Id == officeParametersRecord.OfficeCode).Configurations.First(c => c.AwardYear == officeParametersRecord.AwardYear);
+                Assert.AreEqual(string.Empty, actualConfiguration.StudentAwardLetterBudgetDetailsDescription);
+            }
 
             private FinancialAidOfficeRepository BuildRepositoryAsync()
             {
@@ -2440,7 +2498,9 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                                 FopSuppressDisbInfoDispl = officeParameter.SuppressDisbursementInfoDisplay,
                                 FopIgnoreActStOnChklst = officeParameter.IgnoreActionStatusesOnChecklist,
                                 FopIgnoreAwardsOnChklst = officeParameter.IgnoreAwardsOnChecklist,
-                                FopIgnoreAwdCatOnChklst = officeParameter.IgnoreAwardCategoriesOnChecklist
+                                FopIgnoreAwdCatOnChklst = officeParameter.IgnoreAwardCategoriesOnChecklist,
+                                FopShowBudgetDetails = officeParameter.ShowBudgetDetailsOnAwardLetter,
+                                FopBudgetDtlDesc = officeParameter.StudentAwardLetterBudgetDetailsDescription
                             }).ToList()));
                     });
 

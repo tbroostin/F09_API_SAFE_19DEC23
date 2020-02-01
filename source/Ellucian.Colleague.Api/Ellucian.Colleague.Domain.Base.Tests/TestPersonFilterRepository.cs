@@ -12,10 +12,10 @@ namespace Ellucian.Colleague.Domain.Base.Tests
     {
         private string[,] personFilters = {
                                             //GUID   CODE   DESCRIPTION
-                                            {"625c69ff-280b-4ed3-9474-662a43616a8a", "BFEDLIST", "Description"}, 
-                                            {"bfea651b-8e27-4fcd-abe3-04573443c04c", "CHC", "Description"},
-                                            {"9ae3a175-1dfd-4937-b97b-3c9ad596e023", "SES23", "Description"},
-                                            {"e9e6837f-2c51-431b-9069-4ac4c0da3041", "ADVISEEASSIGN", "Description"}
+                                            {"625c69ff-280b-4ed3-9474-662a43616a8a", "BFEDLIST", "Description1"}, 
+                                            {"bfea651b-8e27-4fcd-abe3-04573443c04c", "CHC", "Description2"},
+                                            {"9ae3a175-1dfd-4937-b97b-3c9ad596e023", "SES23", "Description3"},
+                                            {"e9e6837f-2c51-431b-9069-4ac4c0da3041", "ADVISEEASSIGN", "Description4"}
                                       };
 
         public IEnumerable<PersonFilter> GetPersonFilters()

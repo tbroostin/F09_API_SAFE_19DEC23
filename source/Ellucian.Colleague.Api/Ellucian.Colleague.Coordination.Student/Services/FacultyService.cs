@@ -1,6 +1,7 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base;
 using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Colleague.Data.Student.Repositories;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
@@ -371,6 +372,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns></returns>
         public async Task<IEnumerable<string>> SearchFacultyIdsAsync(bool facultyOnlyFlag, bool advisorOnlyFlag)
         {
+            if (!HasPermission(PlanningPermissionCodes.ViewAnyAdvisee))
+            {
+                throw new PermissionsException("User does not have permissions to access to this function");
+            }
             return await _facultyRepository.SearchFacultyIdsAsync(facultyOnlyFlag, advisorOnlyFlag);
         }
 
@@ -497,6 +502,37 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 throw new ApplicationException("An error occurred while retrieving faculty permissions.");
             }
+        }
+
+        /// <summary>
+        /// Returns the faculty office hours for the faculty ids
+        /// </summary>
+        /// <returns>A list of faculty office hours for the faculty ids</returns>
+        public async Task<IEnumerable<Dtos.Student.FacultyOfficeHours>> GetFacultyOfficeHoursAsync(IEnumerable<string> facultyIds)
+        {
+            try
+            {
+                IEnumerable<Domain.Student.Entities.FacultyOfficeHours> facultyOfficeHours = await GetFacultyOfficeHourAsync(facultyIds);
+                List<Dtos.Student.FacultyOfficeHours> facultyOfficeHoursDTOList = new List<Dtos.Student.FacultyOfficeHours>();
+                foreach (Domain.Student.Entities.FacultyOfficeHours domainFacultyOfficeHours in facultyOfficeHours )
+                {                    
+                    ITypeAdapter<Domain.Student.Entities.FacultyOfficeHours, Dtos.Student.FacultyOfficeHours> entityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.FacultyOfficeHours, Dtos.Student.FacultyOfficeHours>();
+                    Dtos.Student.FacultyOfficeHours dtoFacultyOfficeHours = entityToDtoAdapter.MapToType(domainFacultyOfficeHours);                
+                    facultyOfficeHoursDTOList.Add(dtoFacultyOfficeHours);
+                }
+                return facultyOfficeHoursDTOList;
+            }
+            catch (Exception ex)
+            {                
+                logger.Error(ex, "An error occurred while retrieving faculty office hours.");                
+                throw new ApplicationException("An error occurred while retrieving faculty office hours.");
+            }
+        }
+
+        protected async Task<IEnumerable<Domain.Student.Entities.FacultyOfficeHours>> GetFacultyOfficeHourAsync(IEnumerable<string> facultyIds)
+        {
+            IEnumerable<Domain.Student.Entities.FacultyOfficeHours> officehours = await _facultyRepository.GetFacultyOfficeHoursByIdsAsync(facultyIds);
+            return officehours;
         }
 
         /// <summary>

@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -31,6 +31,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         private readonly IConfigurationRepository _configurationRepository;
         private readonly IStudentReferenceDataRepository _studentReferenceDataRepository;
         private readonly IStudentFinancialAidOfficeRepository _studentFinancialAidOfficeRepository;
+        private Dictionary<string, string> studentIdDict = null;
 
 
         /// <summary>
@@ -83,41 +84,41 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         }
 
         private IEnumerable<Domain.Student.Entities.FinancialAidAwardPeriod> _financialAidAwardPeriods = null;
-        private async Task<IEnumerable<Domain.Student.Entities.FinancialAidAwardPeriod>> GetFinancialAidAwardPeriodsAsync()
+        private async Task<IEnumerable<Domain.Student.Entities.FinancialAidAwardPeriod>> GetFinancialAidAwardPeriodsAsync(bool bypassCache = false)
         {
             if (_financialAidAwardPeriods == null)
             {
-                _financialAidAwardPeriods = await _studentReferenceDataRepository.GetFinancialAidAwardPeriodsAsync(false);
+                _financialAidAwardPeriods = await _studentReferenceDataRepository.GetFinancialAidAwardPeriodsAsync(bypassCache);
             }
             return _financialAidAwardPeriods;
         }
 
         private IEnumerable<Domain.Student.Entities.FinancialAidFund> _financialAidFunds = null;
-        private async Task<IEnumerable<Domain.Student.Entities.FinancialAidFund>> GetFinancialAidFundsAsync()
+        private async Task<IEnumerable<Domain.Student.Entities.FinancialAidFund>> GetFinancialAidFundsAsync(bool bypassCache = false)
         {
             if (_financialAidFunds == null)
             {
-                _financialAidFunds = await _financialAidFundRepository.GetFinancialAidFundsAsync(false);
+                _financialAidFunds = await _financialAidFundRepository.GetFinancialAidFundsAsync(bypassCache);
             }
             return _financialAidFunds;
         }
 
         private IEnumerable<Domain.Student.Entities.FinancialAidYear> _financialAidYears = null;
-        private async Task<IEnumerable<Domain.Student.Entities.FinancialAidYear>> GetFinancialAidYearsAsync()
+        private async Task<IEnumerable<Domain.Student.Entities.FinancialAidYear>> GetFinancialAidYearsAsync(bool bypassCache = false)
         {
             if (_financialAidYears == null)
             {
-                _financialAidYears = await _studentReferenceDataRepository.GetFinancialAidYearsAsync(false);
+                _financialAidYears = await _studentReferenceDataRepository.GetFinancialAidYearsAsync(bypassCache);
             }
             return _financialAidYears;
         }
 
         private IEnumerable<Domain.Student.Entities.FinancialAidFundCategory> _financialAidFundCategories = null;
-        private async Task<IEnumerable<Domain.Student.Entities.FinancialAidFundCategory>> GetFinancialAidFundCategoriesAsync()
+        private async Task<IEnumerable<Domain.Student.Entities.FinancialAidFundCategory>> GetFinancialAidFundCategoriesAsync(bool bypassCache = false)
         {
             if (_financialAidFundCategories == null)
             {
-                _financialAidFundCategories = await _studentReferenceDataRepository.GetFinancialAidFundCategoriesAsync(false);
+                _financialAidFundCategories = await _studentReferenceDataRepository.GetFinancialAidFundCategoriesAsync(bypassCache);
             }
             return _financialAidFundCategories;
         }
@@ -166,7 +167,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             if (restricted == true)
             {
-                // Running for retricted only so error if its unrestricted.
+                // Running for restricted only so error if its unrestricted.
                 if (unrestrictedFunds.Contains(studentFinancialAidAwardDomainEntity.AwardFundId))
                 {
                     throw new PermissionsException(string.Format("Unrestricted FA award is not permitted for guid {0}", id));
@@ -216,7 +217,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             if (restricted == true)
             {
-                // Running for retricted only so error if its unrestricted.
+                // Running for restricted only so error if its unrestricted.
                 if (unrestrictedFunds.Contains(studentFinancialAidAwardDomainEntity.AwardFundId))
                 {
                     throw new PermissionsException(string.Format("Unrestricted FA award is not permitted for guid {0}", id));
@@ -230,6 +231,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     throw new PermissionsException(string.Format("Restricted FA award is not permitted for guid {0}", id));
                 }
             }
+
+            //Collect Student Ids
+            var studentId = studentFinancialAidAwardDomainEntity.StudentId;
+            studentIdDict = await _personRepository.GetPersonGuidsCollectionAsync(new List<string>() { studentId });
 
             // Convert the student financial aid award object into DTO.
             return await BuildStudentFinancialAidAward2DtoAsync(studentFinancialAidAwardDomainEntity);
@@ -249,13 +254,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             CheckViewStudentFinancialAidAwardsPermission();
 
             var studentFinancialAidAwardDtos = new List<Dtos.StudentFinancialAidAward>();
-            var aidYearsEntities = await GetFinancialAidYearsAsync();
+            var aidYearsEntities = await GetFinancialAidYearsAsync(bypassCache);
             var aidYears = aidYearsEntities.Where(ay => ay.status != "D").Select(ay => ay.Code).Distinct().ToList();
             List<string> unrestrictedFunds = new List<string>();
 
             // Find a list of all non-securred financial aid funds
-            var unrestrictedFundCategories = (await GetFinancialAidFundCategoriesAsync()).Where(fc => fc.restrictedFlag == false).Select(fc => fc.Code).ToList();
-            unrestrictedFunds = (await GetFinancialAidFundsAsync()).Where(fa => (unrestrictedFundCategories.Contains(fa.CategoryCode)) || (fa.CategoryCode == string.Empty) || (fa.CategoryCode == null)).Select(fa => fa.Code).ToList();
+            var unrestrictedFundCategories = (await GetFinancialAidFundCategoriesAsync(bypassCache)).Where(fc => fc.restrictedFlag == false).Select(fc => fc.Code).ToList();
+            unrestrictedFunds = (await GetFinancialAidFundsAsync(bypassCache)).Where(fa => (unrestrictedFundCategories.Contains(fa.CategoryCode)) || (fa.CategoryCode == string.Empty) || (fa.CategoryCode == null)).Select(fa => fa.Code).ToList();
 
             // Get the student financial aid awards domain entity from the repository
             var studentFinancialAidAwardDomainTuple = await _studentFinancialAidAwardRepository.GetAsync(offset, limit, bypassCache, restricted, unrestrictedFunds, aidYears);
@@ -287,7 +292,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="bypassCache">Flag to read from disk instead of cache</param>
         /// <param name="restricted">True if you are allowed to see restricted awards</param>
         /// <returns>Collection of StudentFinancialAidAwards</returns>
-        public async Task<Tuple<IEnumerable<Dtos.StudentFinancialAidAward2>, int>> Get2Async(int offset, int limit, bool bypassCache, bool restricted)
+        public async Task<Tuple<IEnumerable<Dtos.StudentFinancialAidAward2>, int>> Get2Async(int offset, int limit, Dtos.StudentFinancialAidAward2 criteria, bool bypassCache, 
+            bool restricted)
         {
             if (restricted == false)
             {
@@ -298,24 +304,81 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 CheckViewRestrictedStudentFinancialAidAwardsPermission();
             }
 
+            Domain.Student.Entities.StudentFinancialAidAward criteriaEntity = null;
+            var aidYearsEntities = await GetFinancialAidYearsAsync(bypassCache);
+            List<string> aidYears = null;
+            aidYears = aidYearsEntities.Where(ay => ay.status != "D").Select(ay => ay.Code).Distinct().ToList();
+            var finAidFunds = await GetFinancialAidFundsAsync(bypassCache);
+
+            if (criteria != null)
+            {
+                string studentId = string.Empty;
+                string awardFundId = string.Empty;
+                string aidYearId = string.Empty;
+
+                //student
+                if (criteria.Student != null && !string.IsNullOrEmpty(criteria.Student.Id))
+                {
+                    try
+                    {
+                        studentId = await _personRepository.GetPersonIdFromGuidAsync(criteria.Student.Id);
+                        if (string.IsNullOrEmpty(studentId))
+                        {
+                            return new Tuple<IEnumerable<Dtos.StudentFinancialAidAward2>, int>(new List<Dtos.StudentFinancialAidAward2>(), 0);
+                        }
+                    }
+                    catch
+                    {
+                        return new Tuple<IEnumerable<Dtos.StudentFinancialAidAward2>, int>(new List<Dtos.StudentFinancialAidAward2>(), 0);
+                    }
+                }
+                //aidYear
+                if (criteria.AidYear != null && ! string.IsNullOrEmpty(criteria.AidYear.Id))
+                {
+                    var aidYear = (aidYearsEntities == null || !aidYearsEntities.Any())? null : aidYearsEntities.FirstOrDefault(y => y.Guid.Equals(criteria.AidYear.Id, StringComparison.OrdinalIgnoreCase));
+                    if(aidYear == null)
+                    {
+                        return new Tuple<IEnumerable<Dtos.StudentFinancialAidAward2>, int>(new List<Dtos.StudentFinancialAidAward2>(), 0);
+                    }
+                    aidYearId = aidYear.Code;                    
+                }
+                //awardFund
+                if(criteria.AwardFund != null && ! string.IsNullOrEmpty(criteria.AwardFund.Id))
+                {
+                    var awardFund = (finAidFunds == null || !finAidFunds.Any()) ? null : finAidFunds.FirstOrDefault(f => f.Guid.Equals(criteria.AwardFund.Id, StringComparison.OrdinalIgnoreCase));
+                    if(awardFund == null)
+                    {
+                        return new Tuple<IEnumerable<Dtos.StudentFinancialAidAward2>, int>(new List<Dtos.StudentFinancialAidAward2>(), 0);
+                    }
+                    awardFundId = awardFund.Code;
+                }
+                var ids = string.Concat(studentId, aidYearId, awardFundId);
+                if(!string.IsNullOrEmpty(ids))
+                {
+                    criteriaEntity = new Domain.Student.Entities.StudentFinancialAidAward(studentId, awardFundId, aidYearId);
+                }
+            }
+
             var studentFinancialAidAwardDtos = new List<Dtos.StudentFinancialAidAward2>();
-            var aidYearsEntities = await GetFinancialAidYearsAsync();
-            var aidYears = aidYearsEntities.Where(ay => ay.status != "D").Select(ay => ay.Code).Distinct().ToList();
             List<string> unrestrictedFunds = new List<string>();
 
             // Find a list of all non-securred financial aid funds
-            var unrestrictedFundCategories = (await GetFinancialAidFundCategoriesAsync()).Where(fc => fc.restrictedFlag == false).Select(fc => fc.Code).ToList();
-            unrestrictedFunds = (await GetFinancialAidFundsAsync()).Where(fa => (unrestrictedFundCategories.Contains(fa.CategoryCode)) || (fa.CategoryCode == string.Empty) || (fa.CategoryCode == null)).Select(fa => fa.Code).ToList();
+            var unrestrictedFundCategories = (await GetFinancialAidFundCategoriesAsync(bypassCache)).Where(fc => fc.restrictedFlag == false).Select(fc => fc.Code).ToList();
+            unrestrictedFunds = finAidFunds.Where(fa => (unrestrictedFundCategories.Contains(fa.CategoryCode)) || (fa.CategoryCode == string.Empty) || (fa.CategoryCode == null)).Select(fa => fa.Code).ToList();
 
             // Get the student financial aid awards domain entity from the repository
-            var studentFinancialAidAwardDomainTuple = await _studentFinancialAidAwardRepository.GetAsync(offset, limit, bypassCache, restricted, unrestrictedFunds, aidYears);
+            var studentFinancialAidAwardDomainTuple = await _studentFinancialAidAwardRepository.Get2Async(offset, limit, bypassCache, restricted, unrestrictedFunds, aidYears, criteriaEntity);
             var studentFinancialAidAwardDomainEntities = studentFinancialAidAwardDomainTuple.Item1;
             var totalRecords = studentFinancialAidAwardDomainTuple.Item2;
 
-            if (studentFinancialAidAwardDomainEntities == null)
+            if (studentFinancialAidAwardDomainEntities == null || !studentFinancialAidAwardDomainEntities.Any())
             {
-                throw new ArgumentNullException("StudentFinancialAidAwardDomainEntity", "StudentFinancialAidAwardDomainEntity cannot be null. ");
+                return new Tuple<IEnumerable<Dtos.StudentFinancialAidAward2>, int>(new List<Dtos.StudentFinancialAidAward2>(), 0);
             }
+
+            //Collect Student Ids
+            var studentIds = studentFinancialAidAwardDomainEntities.Where(st => !string.IsNullOrEmpty(st.StudentId)).Select(id => id.StudentId).Distinct();
+            studentIdDict = await _personRepository.GetPersonGuidsCollectionAsync(studentIds);
 
             // Convert the student financial aid awards and all its child objects into DTOs.
             foreach (var entity in studentFinancialAidAwardDomainEntities)
@@ -340,7 +403,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             if (!string.IsNullOrEmpty(studentFinancialAidAwardEntity.AwardFundId))
             {
-                var awardFundEntity = (await GetFinancialAidFundsAsync()).FirstOrDefault(t => t.Code == studentFinancialAidAwardEntity.AwardFundId);
+                var awardFundEntity = (await GetFinancialAidFundsAsync(bypassCache)).FirstOrDefault(t => t.Code == studentFinancialAidAwardEntity.AwardFundId);
                 if (awardFundEntity != null && !string.IsNullOrEmpty(awardFundEntity.Guid))
                 {
                     studentFinancialAidAwardDto.AwardFund = new GuidObject2(awardFundEntity.Guid);
@@ -349,7 +412,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             if (!string.IsNullOrEmpty(studentFinancialAidAwardEntity.AidYearId))
             {
-                var aidYearEntity = (await GetFinancialAidYearsAsync()).FirstOrDefault(t => t.Code == studentFinancialAidAwardEntity.AidYearId);
+                var aidYearEntity = (await GetFinancialAidYearsAsync(bypassCache)).FirstOrDefault(t => t.Code == studentFinancialAidAwardEntity.AidYearId);
                 if (aidYearEntity != null && !string.IsNullOrEmpty(aidYearEntity.Guid))
                 {
                     studentFinancialAidAwardDto.AidYear = new GuidObject2(aidYearEntity.Guid);
@@ -366,7 +429,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var awardsByPeriod = new List<Dtos.DtoProperties.StudentAwardsByPeriodDtoProperty>();
                 foreach (var awardHistoryEntity in studentFinancialAidAwardEntity.AwardHistory)
                 {
-                    var awardPeriodEntity = (await GetFinancialAidAwardPeriodsAsync()).FirstOrDefault(t => t.Code == awardHistoryEntity.AwardPeriod);
+                    var awardPeriodEntity = (await GetFinancialAidAwardPeriodsAsync(bypassCache)).FirstOrDefault(t => t.Code == awardHistoryEntity.AwardPeriod);
                     if (awardPeriodEntity != null && !string.IsNullOrEmpty(awardPeriodEntity.Guid))
                     {
                         var studentAwardsByPeriod = new Dtos.DtoProperties.StudentAwardsByPeriodDtoProperty()
@@ -411,14 +474,17 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             var studentFinancialAidAwardDto = new Dtos.StudentFinancialAidAward2();
 
-            studentFinancialAidAwardDto.Student = new GuidObject2((!string.IsNullOrEmpty(studentFinancialAidAwardEntity.StudentId)) ?
-                await _personRepository.GetPersonGuidFromIdAsync(studentFinancialAidAwardEntity.StudentId) :
-                string.Empty);
             studentFinancialAidAwardDto.Id = studentFinancialAidAwardEntity.Guid;
+
+            var studentGuid = string.Empty;
+            if(studentIdDict != null && studentIdDict.TryGetValue(studentFinancialAidAwardEntity.StudentId, out studentGuid))
+            {
+                studentFinancialAidAwardDto.Student = new GuidObject2(studentGuid);
+            }
 
             if (!string.IsNullOrEmpty(studentFinancialAidAwardEntity.AwardFundId))
             {
-                var awardFundEntity = (await GetFinancialAidFundsAsync()).FirstOrDefault(t => t.Code == studentFinancialAidAwardEntity.AwardFundId);
+                var awardFundEntity = (await GetFinancialAidFundsAsync(bypassCache)).FirstOrDefault(t => t.Code == studentFinancialAidAwardEntity.AwardFundId);
                 if (awardFundEntity != null && !string.IsNullOrEmpty(awardFundEntity.Guid))
                 {
                     studentFinancialAidAwardDto.AwardFund = new GuidObject2(awardFundEntity.Guid);
@@ -427,7 +493,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             if (!string.IsNullOrEmpty(studentFinancialAidAwardEntity.AidYearId))
             {
-                var aidYearEntity = (await GetFinancialAidYearsAsync()).FirstOrDefault(t => t.Code == studentFinancialAidAwardEntity.AidYearId);
+                var aidYearEntity = (await GetFinancialAidYearsAsync(bypassCache)).FirstOrDefault(t => t.Code == studentFinancialAidAwardEntity.AidYearId);
                 if (aidYearEntity != null && !string.IsNullOrEmpty(aidYearEntity.Guid))
                 {
                     studentFinancialAidAwardDto.AidYear = new GuidObject2(aidYearEntity.Guid);
@@ -444,7 +510,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var awardsByPeriod = new List<Dtos.DtoProperties.StudentAwardsByPeriod2DtoProperty>();
                 foreach (var awardHistoryEntity in studentFinancialAidAwardEntity.AwardHistory)
                 {
-                    var awardPeriodEntity = (await GetFinancialAidAwardPeriodsAsync()).FirstOrDefault(t => t.Code == awardHistoryEntity.AwardPeriod);
+                    var awardPeriodEntity = (await GetFinancialAidAwardPeriodsAsync(bypassCache)).FirstOrDefault(t => t.Code == awardHistoryEntity.AwardPeriod);
                     if (awardPeriodEntity != null && !string.IsNullOrEmpty(awardPeriodEntity.Guid))
                     {
                         var studentAwardsByPeriod = new Dtos.DtoProperties.StudentAwardsByPeriod2DtoProperty()

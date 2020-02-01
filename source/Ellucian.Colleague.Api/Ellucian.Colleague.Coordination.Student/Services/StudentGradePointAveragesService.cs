@@ -61,7 +61,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             //Check if user has view permissions.
             if (!await HasStudentGradePointAveragesPermissionsAsync())
             {
-                // throw new PermissionsException(string.Format("User {0} does not have permission to view grade point averages.", CurrentUser.UserId));
                 IntegrationApiExceptionAddError(string.Format("User '{0}' is not authorized to view grade point averages.", CurrentUser.UserId), "Authentication.Required", httpStatusCode: System.Net.HttpStatusCode.Forbidden);
                 throw IntegrationApiException;
             }
@@ -72,12 +71,19 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             StudentAcademicCredit sGpa = null;
             if (criteriaObj != null && criteriaObj.Student != null && !string.IsNullOrEmpty(criteriaObj.Student.Id))
             {
-                var studentId = await _personRepository.GetPersonIdFromGuidAsync(criteriaObj.Student.Id);
-                if (string.IsNullOrEmpty(studentId))
+                try
+                {
+                    var studentId = await _personRepository.GetPersonIdFromGuidAsync(criteriaObj.Student.Id);
+                    if (string.IsNullOrEmpty(studentId))
+                    {
+                        return new Tuple<IEnumerable<StudentGradePointAverages>, int>(new List<StudentGradePointAverages>(), 0);
+                    }
+                    sGpa = new StudentAcademicCredit(studentId);
+                }
+                catch
                 {
                     return new Tuple<IEnumerable<StudentGradePointAverages>, int>(new List<StudentGradePointAverages>(), 0);
                 }
-                sGpa = new StudentAcademicCredit(studentId);
             }
 
             if (criteriaObj != null && criteriaObj.PeriodBased != null && criteriaObj.PeriodBased.Any())
@@ -109,7 +115,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             catch (RepositoryException ex)
             {
-                throw ex;
+                throw;
             }
             
             //total count
@@ -135,8 +141,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                                                                                 .Select(t => t.StcReportingTerm)).Distinct().ToList();
                 termIdList.AddRange(termIds.Union(reportingTermIds).Distinct());
 
-                var acadPeriods = (await AcademicPeriodsAsync(bypassCache)).Where(rec => termIdList.Contains(rec.Code));
-
                 //Get all student acad programs info based marked cred ids
                 var markCredIds = gpaEntities.Item1.Where(i => i.StudentGPAInfoList != null && i.StudentGPAInfoList.Any())
                                                    .SelectMany(cr => cr.StudentGPAInfoList)
@@ -148,11 +152,19 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
 
                 //Get the altcum flag
-                bool useAltCumFlag = await _studentGradePointAveragesRepository.UseAlternativeCumulativeValuesAsync();
+                bool useAltCumFlag = false;
+                try
+                {
+                    useAltCumFlag = await _studentGradePointAveragesRepository.UseAlternativeCumulativeValuesAsync();
+                }
+                catch (Exception ex)
+                {
+                    throw;
+                }
 
                 foreach (var gpaEntity in gpaEntities.Item1)
                 {
-                    var dto = await ConvertStudentGradePointAveragesEntityToDtoAsync(gpaEntity, personIdDict, acadPeriods, studCredPrgInfo, useAltCumFlag, bypassCache);
+                    var dto = await ConvertStudentGradePointAveragesEntityToDtoAsync(gpaEntity, personIdDict, studCredPrgInfo, useAltCumFlag, bypassCache);
                     if (IntegrationApiException == null)
                         gpas.Add(dto);
                 }
@@ -230,8 +242,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             termIdList.AddRange(termIds.Union(reportingTermIds).Distinct());
 
-            var acadPeriods = (await AcademicPeriodsAsync(bypassCache)).Where(rec => termIdList.Contains(rec.Code)).ToList();
-
             //Get all student acad programs info based marked cred ids
             var markCredIds = entity.StudentGPAInfoList != null && entity.StudentGPAInfoList.Any() ? 
                               entity.StudentGPAInfoList.SelectMany(i => i.MarkAcadCredentials).Distinct() : 
@@ -245,7 +255,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             //Get the altcum flag
             bool useAltCumFlag = await _studentGradePointAveragesRepository.UseAlternativeCumulativeValuesAsync();
 
-            var dto = await ConvertStudentGradePointAveragesEntityToDtoAsync(entity, personIdDict, acadPeriods, studCredPrgInfo, useAltCumFlag, bypassCache);
+            var dto = await ConvertStudentGradePointAveragesEntityToDtoAsync(entity, personIdDict, studCredPrgInfo, useAltCumFlag, bypassCache);
             
             if (IntegrationApiException != null)
             {
@@ -267,7 +277,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="bypassCache"></param>
         /// <returns></returns>
         private async Task<StudentGradePointAverages> ConvertStudentGradePointAveragesEntityToDtoAsync(StudentAcademicCredit source, Dictionary<string, string> personIdDict, 
-            IEnumerable<AcademicPeriod> acadPeriods, IEnumerable<StudentAcademicCredentialProgramInfo> studCredPrgInfo, bool useAltCumFlag, bool bypassCache = false)
+            IEnumerable<StudentAcademicCredentialProgramInfo> studCredPrgInfo, bool useAltCumFlag, bool bypassCache = false)
         {
             StudentGradePointAverages dto = new StudentGradePointAverages();
             decimal? instAttemptedCredits, instEarnedCredits, instQualityPoints, allAttemptedCredits, allEarnedCredits, allQualityPoints = 0.00m;
@@ -276,8 +286,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             string personId = string.Empty;
             if (!personIdDict.TryGetValue(source.StudentId, out personId))
             {
-                //throw new ArgumentNullException("student.id", "Student id is required.");
-                IntegrationApiExceptionAddError(string.Format("Unable to locate guid for student ID '{0}'", source.StudentId), "student.id", source.PersonSTGuid, source.StudentId);
+                IntegrationApiExceptionAddError(string.Format("Unable to locate guid for student id '{0}'", source.StudentId), "student.id", source.PersonSTGuid, source.StudentId);
                 return dto;
             }
             dto.Student = new GuidObject2(personId);
@@ -322,14 +331,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     if (instQualityPoints.HasValue && instEarnedCredits.HasValue && institutionAcadCred != null && institutionAcadCred.Any())
                     {
                         if (dto.PeriodBased == null) dto.PeriodBased = new List<StudentGradePointAveragesPeriodBasedDtoProperty>();
-                        periodBasedList.Add(await ConvertEntityToPeriodBasedDtoAsync(acadPeriods, instAttemptedCredits, instEarnedCredits, instQualityPoints, 
+                        periodBasedList.Add(await ConvertEntityToPeriodBasedDtoAsync(instAttemptedCredits, instEarnedCredits, instQualityPoints, 
                             "institution", periodBasedCred, institutionAcadCred, source.PersonSTGuid, source.StudentId, bypassCache));
                     }
 
                     if (allQualityPoints.HasValue && allEarnedCredits.HasValue && allAcadCred != null && allAcadCred.Any())
                     {
                         if (dto.PeriodBased == null) dto.PeriodBased = new List<StudentGradePointAveragesPeriodBasedDtoProperty>();
-                        periodBasedList.Add(await ConvertEntityToPeriodBasedDtoAsync(acadPeriods, allAttemptedCredits, allEarnedCredits, allQualityPoints, 
+                        periodBasedList.Add(await ConvertEntityToPeriodBasedDtoAsync(allAttemptedCredits, allEarnedCredits, allQualityPoints, 
                             "all", periodBasedCred, allAcadCred, source.PersonSTGuid, source.StudentId, bypassCache));
                     }
                 }
@@ -341,7 +350,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 List<StudentGradePointAveragesCumulativeDtoProperty> cumulativeList = new List<StudentGradePointAveragesCumulativeDtoProperty>();
                 foreach (var cumulativeCred in cumulativeCreds)
                 {
-                    var institutionAcadCred = cumulativeCred.Where(inst => instCreditTypes.Contains(inst.CreditType) && inst.StcAttCredit.HasValue && !string.IsNullOrEmpty(inst.StcStudentCourseSec));
+                    var institutionAcadCred = cumulativeCred.Where(inst => instCreditTypes.Contains(inst.CreditType) && inst.StcAttCredit.HasValue);
                     var allAcadCred = cumulativeCred.Where(all => all.StcAttCredit.HasValue);
 
                     ConvertEntityToGpaValues(useAltCumFlag, out instAttemptedCredits, out instEarnedCredits, out instQualityPoints, out allAttemptedCredits, out allEarnedCredits,
@@ -350,12 +359,15 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     if (instQualityPoints.HasValue && instEarnedCredits.HasValue)
                     {
                         if (dto.Cumulative == null) dto.Cumulative = new List<StudentGradePointAveragesCumulativeDtoProperty>();
-                        cumulativeList.Add(await ConvertEntityToCumulativeDtoAsync(acadPeriods, instAttemptedCredits, instEarnedCredits, instQualityPoints, "institution", institutionAcadCred, source.PersonSTGuid, source.StudentId, bypassCache));
+                        if (institutionAcadCred != null && institutionAcadCred.Any())
+                        {
+                            cumulativeList.Add(await ConvertEntityToCumulativeDtoAsync(instAttemptedCredits, instEarnedCredits, instQualityPoints, "institution", institutionAcadCred, source.PersonSTGuid, source.StudentId, bypassCache));
+                        }
                     }
                     if (allQualityPoints.HasValue && allEarnedCredits.HasValue)
                     {
                         if (dto.Cumulative == null) dto.Cumulative = new List<StudentGradePointAveragesCumulativeDtoProperty>();
-                        cumulativeList.Add(await ConvertEntityToCumulativeDtoAsync(acadPeriods, allAttemptedCredits, allEarnedCredits, allQualityPoints, "all", allAcadCred, source.PersonSTGuid, source.StudentId, bypassCache));
+                        cumulativeList.Add(await ConvertEntityToCumulativeDtoAsync(allAttemptedCredits, allEarnedCredits, allQualityPoints, "all", allAcadCred, source.PersonSTGuid, source.StudentId, bypassCache));
                     }
                 }
                 dto.Cumulative = cumulativeList;
@@ -372,13 +384,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     if (dto.EarnedDegrees == null) dto.EarnedDegrees = new List<StudentGradePointAveragesEarnedDegreesDtoProperty>();
 
-                    earnedDegreeList.Add(ConvertEntityToEarnedDtoAsync(acadPeriods, instAttemptedCredits, instEarnedCredits, instQualityPoints, "institution", earnedDegreeCreds, studCredPrgInfo, source.PersonSTGuid, source.StudentId, bypassCache));
+                    earnedDegreeList.Add(ConvertEntityToEarnedDtoAsync(instAttemptedCredits, instEarnedCredits, instQualityPoints, "institution", earnedDegreeCreds, studCredPrgInfo, source.PersonSTGuid, source.StudentId, bypassCache));
                 }
                 if (allQualityPoints.HasValue && allEarnedCredits.HasValue)
                 {
                     if (dto.EarnedDegrees == null) dto.EarnedDegrees = new List<StudentGradePointAveragesEarnedDegreesDtoProperty>();
 
-                    earnedDegreeList.Add(ConvertEntityToEarnedDtoAsync(acadPeriods, allAttemptedCredits, allEarnedCredits, allQualityPoints, "all", earnedDegreeCreds, studCredPrgInfo, source.PersonSTGuid, source.StudentId, bypassCache));
+                    earnedDegreeList.Add(ConvertEntityToEarnedDtoAsync(allAttemptedCredits, allEarnedCredits, allQualityPoints, "all", earnedDegreeCreds, studCredPrgInfo, source.PersonSTGuid, source.StudentId, bypassCache));
                 }
                 dto.EarnedDegrees = earnedDegreeList;
             }           
@@ -439,7 +451,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="institutionAcadCred"></param>
         /// <param name="bypassCache"></param>
         /// <returns></returns>
-        private async Task<StudentGradePointAveragesPeriodBasedDtoProperty> ConvertEntityToPeriodBasedDtoAsync(IEnumerable<AcademicPeriod> acadPeriods, decimal? attemptedCredits, decimal? earnedCredits, 
+        private async Task<StudentGradePointAveragesPeriodBasedDtoProperty> ConvertEntityToPeriodBasedDtoAsync(decimal? attemptedCredits, decimal? earnedCredits, 
             decimal? qualityPoints, string academicSource, IGrouping<string, StudentGPAInfo> periodBasedCred, IEnumerable<StudentGPAInfo> institutionAcadCred,
             string personSTGuid, string studentId, bool bypassCache)
         {
@@ -450,36 +462,39 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             instPeriodDto.QualityPoints = qualityPoints.Value;
             instPeriodDto.Value = earnedCredits.Value == 0m? 0.000m : decimal.Round(decimal.Divide(qualityPoints.Value, earnedCredits.Value), 3, MidpointRounding.AwayFromZero);
 
-            //Acad Level
-            var acadLevels = await AcademicLevelsAsync(bypassCache);
-            if (acadLevels != null && acadLevels.Any())
+            //Checking if there are missing acad level data
+            var noAcadLevels = institutionAcadCred.Where(i => string.IsNullOrWhiteSpace(i.AcademicLevel)).ToList();
+            if (noAcadLevels != null && noAcadLevels.Any())
             {
-                var templvl = institutionAcadCred.FirstOrDefault(i => !string.IsNullOrEmpty(i.AcademicLevel));
-                if (templvl != null && !string.IsNullOrEmpty(templvl.AcademicLevel))
+                noAcadLevels.ForEach(i => 
                 {
-                    var acadLevel = acadLevels.FirstOrDefault(lvl => lvl.Code.Equals(templvl.AcademicLevel, StringComparison.OrdinalIgnoreCase));
-                    if (acadLevel == null || string.IsNullOrEmpty(acadLevel.Guid))
-                    {
-                        IntegrationApiExceptionAddError(string.Format("Academic level not found for level '{0}'.", templvl.AcademicLevel), "academic.level.invalid", personSTGuid, studentId);
-                    }
-                    else
-                    {
-                        instPeriodDto.AcademicLevel = new GuidObject2(acadLevel.Guid);
-                    }
-                }
+                    IntegrationApiExceptionAddError(string.Format("Academic level is required. ID: {0}.", i.SourceKey), "cumulative.academicLevel.id", personSTGuid, studentId);
+                });
             }
-            //Terms
-            if (acadPeriods != null && acadPeriods.Any())
+            //Acad Level
+            var templvl = institutionAcadCred.FirstOrDefault(i => !string.IsNullOrEmpty(i.AcademicLevel));
+            if (templvl != null && !string.IsNullOrEmpty(templvl.AcademicLevel))
             {
-                var tempTerm = acadPeriods.FirstOrDefault(t => t.Code.Equals(periodBasedCred.Key, StringComparison.OrdinalIgnoreCase));
-                if (tempTerm == null || string.IsNullOrEmpty(tempTerm.Guid))
+                var acadLevelGuid = await _referenceDataRepository.GetAcademicLevelsGuidAsync(templvl.AcademicLevel);                
+                if (acadLevelGuid == null || string.IsNullOrEmpty(acadLevelGuid))
                 {
-                    IntegrationApiExceptionAddError(string.Format("Term not found for '{0}'.", periodBasedCred.Key), "academic.periods.invalid", personSTGuid, studentId);
+                    IntegrationApiExceptionAddError(string.Format("Academic level not found for level '{0}'.", templvl.AcademicLevel), "periodBased.academicLevel.id", personSTGuid, studentId);
                 }
                 else
                 {
-                    instPeriodDto.AcademicPeriod = new GuidObject2(tempTerm.Guid);
+                    instPeriodDto.AcademicLevel = new GuidObject2(acadLevelGuid);
                 }
+            }
+
+            //Terms
+            var tempTerm = await _termRepository.GetAcademicPeriodsGuidAsync(periodBasedCred.Key);
+            if (string.IsNullOrEmpty(tempTerm))
+            {
+                IntegrationApiExceptionAddError(string.Format("Term not found for '{0}'.", periodBasedCred.Key), "academic.periods.invalid", personSTGuid, studentId);
+            }
+            else
+            {
+                instPeriodDto.AcademicPeriod = new GuidObject2(tempTerm);
             }
             return instPeriodDto;
         }
@@ -487,7 +502,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <summary>
         /// Converts entity to Cumulative dto.
         /// </summary>
-        /// <param name="acadPeriods"></param>
         /// <param name="attemptedCredits"></param>
         /// <param name="earnedCredits"></param>
         /// <param name="qualityPoints"></param>
@@ -495,7 +509,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="institutionAcadCred"></param>
         /// <param name="bypassCache"></param>
         /// <returns></returns>
-        private async Task<StudentGradePointAveragesCumulativeDtoProperty> ConvertEntityToCumulativeDtoAsync(IEnumerable<AcademicPeriod> acadPeriods, decimal? attemptedCredits, decimal? earnedCredits,
+        private async Task<StudentGradePointAveragesCumulativeDtoProperty> ConvertEntityToCumulativeDtoAsync(decimal? attemptedCredits, decimal? earnedCredits,
             decimal? qualityPoints, string academicSource, IEnumerable<StudentGPAInfo> institutionAcadCred,
             string personSTGuid, string studentId, bool bypassCache)
         {
@@ -506,22 +520,27 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             cumulativeDto.QualityPoints = qualityPoints.Value;
             cumulativeDto.Value = earnedCredits.Value == 0m? 0.000m : decimal.Round(decimal.Divide(qualityPoints.Value, earnedCredits.Value), 3, MidpointRounding.AwayFromZero);
 
-            //Acad Level
-            var acadLevels = await AcademicLevelsAsync(bypassCache);
-            if (acadLevels != null && acadLevels.Any())
+            //Checking if there are missing acad level data
+            var noAcadLevels = institutionAcadCred.Where(i => string.IsNullOrWhiteSpace(i.AcademicLevel)).ToList();
+            if(noAcadLevels != null && noAcadLevels.Any())
             {
-                var templvl = institutionAcadCred.FirstOrDefault(i => !string.IsNullOrEmpty(i.AcademicLevel));
-                if (templvl != null && !string.IsNullOrEmpty(templvl.AcademicLevel))
+                noAcadLevels.ForEach(i =>
                 {
-                    var acadLevel = acadLevels.FirstOrDefault(lvl => lvl.Code.Equals(templvl.AcademicLevel, StringComparison.OrdinalIgnoreCase));
-                    if (acadLevel == null || string.IsNullOrEmpty(acadLevel.Guid))
-                    {
-                        IntegrationApiExceptionAddError(string.Format("Academic level not found for level '{0}'.", templvl.AcademicLevel), "academic.level.invalid", personSTGuid, studentId);
-                    }
-                    else
-                    {
-                        cumulativeDto.AcademicLevel = new GuidObject2(acadLevel.Guid);
-                    }
+                    IntegrationApiExceptionAddError(string.Format("Academic level is required. ID: {0}.", i.SourceKey), "cumulative.academicLevel.id", personSTGuid, studentId);
+                });
+            }
+            //Acad Level
+            var templvl = institutionAcadCred.FirstOrDefault(i => !string.IsNullOrEmpty(i.AcademicLevel));
+            if (templvl != null && !string.IsNullOrEmpty(templvl.AcademicLevel))
+            {                
+                var acadLevelGuid = await _referenceDataRepository.GetAcademicLevelsGuidAsync(templvl.AcademicLevel);
+                if (acadLevelGuid == null || string.IsNullOrEmpty(acadLevelGuid))
+                {
+                    IntegrationApiExceptionAddError(string.Format("Academic level not found for level '{0}'.", templvl.AcademicLevel), "cumulative.academicLevel.id", personSTGuid, studentId);
+                }
+                else
+                {
+                    cumulativeDto.AcademicLevel = new GuidObject2(acadLevelGuid);
                 }
             }
             return cumulativeDto;
@@ -530,7 +549,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <summary>
         /// Converts entity to earned degrees dto.
         /// </summary>
-        /// <param name="acadPeriods"></param>
         /// <param name="attemptedCredits"></param>
         /// <param name="earnedCredits"></param>
         /// <param name="qualityPoints"></param>
@@ -539,7 +557,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="studCredPrgInfo"></param>
         /// <param name="bypassCache"></param>
         /// <returns></returns>
-        private StudentGradePointAveragesEarnedDegreesDtoProperty ConvertEntityToEarnedDtoAsync(IEnumerable<AcademicPeriod> acadPeriods, decimal? attemptedCredits, decimal? earnedCredits,
+        private StudentGradePointAveragesEarnedDegreesDtoProperty ConvertEntityToEarnedDtoAsync(decimal? attemptedCredits, decimal? earnedCredits,
             decimal? qualityPoints, string academicSource, IEnumerable<StudentGPAInfo> institutionAcadCred, IEnumerable<StudentAcademicCredentialProgramInfo> studCredPrgInfo,
             string personSTGuid, string StudentId, bool bypassCache)
         {
@@ -618,22 +636,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             if (_academicPeriods == null)
             {
-                _academicPeriods =  _termRepository.GetAcademicPeriods(await TermsAsync(bypassCache));
+                _academicPeriods = _termRepository.GetAcademicPeriods(await TermsAsync(bypassCache));
             }
             return _academicPeriods;
-        }
-
-        /// <summary>
-        /// Get all academic periods
-        /// </summary>
-        private IEnumerable<AcademicLevel> _academicLevels = null;
-        private async Task<IEnumerable<AcademicLevel>> AcademicLevelsAsync(bool bypassCache = false)
-        {
-            if (_academicLevels == null)
-            {
-                _academicLevels = await _referenceDataRepository.GetAcademicLevelsAsync(bypassCache);
-            }
-            return _academicLevels;
         }
 
         /// <summary>

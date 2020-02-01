@@ -116,6 +116,14 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         [TestClass]
         public class GetPersonPositionWagesTests : PersonPositionWageServiceTests
         {
+            public string UserForAdminPermissionCheck
+            {
+                get
+                {
+                    return "0003916";
+                }
+            }
+
             [TestInitialize]
             public void Initialize()
             {
@@ -174,6 +182,33 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             public async Task NoAccessWithRandomIdViaProxyService()
             {
                 await proxyActualService.GetPersonPositionWagesAsync("0000003");
+
+            }
+
+            [TestMethod]
+            public async Task PersonPositionWages_RepositoryCurrentUserIdWithAdminPermissionTest()
+            {
+                roleRepositoryMock.Setup(r => r.Roles)
+               .Returns(() => (employeeCurrentUserFactory.CurrentUser.Roles).Select(roleTitle =>
+               {
+                   var role = new Domain.Entities.Role(roleTitle.GetHashCode(), roleTitle);
+
+                   role.AddPermission(new Domain.Entities.Permission("VIEW.ALL.TIME.HISTORY"));
+
+                   return role;
+               }));
+
+                var res=await actualService.GetPersonPositionWagesAsync(UserForAdminPermissionCheck);
+                personPositionWageRepositoryMock.Verify(r =>
+                    r.GetPersonPositionWagesAsync(It.Is<IEnumerable<string>>(list =>
+                        list.Count() == 1 && list.ElementAt(0) == UserForAdminPermissionCheck)));
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task PersonPositionWages_RepositoryCurrentUserIdWithoutAdminPermissionTest()
+            {
+                await actualService.GetPersonPositionWagesAsync(UserForAdminPermissionCheck);
 
             }
         }

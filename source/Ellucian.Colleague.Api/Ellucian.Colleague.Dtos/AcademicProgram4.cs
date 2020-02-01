@@ -1,10 +1,11 @@
-﻿//Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
 
+using Ellucian.Colleague.Dtos.Attributes;
+using Ellucian.Colleague.Dtos.Converters;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
-using Ellucian.Colleague.Dtos.Converters;
-using Newtonsoft.Json;
 
 namespace Ellucian.Colleague.Dtos
 {
@@ -30,6 +31,7 @@ namespace Ellucian.Colleague.Dtos
         /// The level of academic progress that is associated with an academic program.
         /// </summary>
         [JsonProperty("academicLevel", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        [FilterProperty("criteria")]
         public GuidObject2 AcademicLevel { get; set; }
 
         /// <summary>
@@ -48,7 +50,7 @@ namespace Ellucian.Colleague.Dtos
         /// The academic disciplines offered as part of an academic program.
         /// </summary>
         [JsonProperty("disciplines", DefaultValueHandling = DefaultValueHandling.Ignore)]
-        public List<AcademicProgramDisciplines> Disciplines { get; set; }
+        public List<Dtos.AcademicProgramDiscipline2> Disciplines { get; set; }
 
         /// <summary>
         /// The status of an academic program.
@@ -82,18 +84,5 @@ namespace Ellucian.Colleague.Dtos
         [JsonConverter(typeof(DateOnlyConverter))]
         [JsonProperty("endOn", DefaultValueHandling = DefaultValueHandling.Ignore)]
         public DateTime? EndDate { get; set; }
-
-        /// <summary>
-        /// An offering by an institution that represents a combination of courses and requirements leading to a degree,
-        /// diploma, or certificate for a defined set of majors, minors, or concentrations.
-        /// </summary>
-        public AcademicProgram4()
-        {
-            Sites = new List<GuidObject2>();
-            AcademicLevel = new GuidObject2();
-            Credentials = new List<GuidObject2>();
-            Disciplines = new List<AcademicProgramDisciplines>();
-            ProgramOwners = new List<GuidObject2>();
-        }
     }
 }

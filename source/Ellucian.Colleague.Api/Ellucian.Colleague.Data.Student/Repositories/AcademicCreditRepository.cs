@@ -1,6 +1,9 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Transactions;
+using Ellucian.Colleague.Domain.Entities;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Data.Colleague;
@@ -78,6 +81,38 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 academicCredits = await GetAsync(consolidatedAcademicCreditIds.Distinct().ToList(), false, false);
             }
             return academicCredits;
+        }
+
+        /// <summary>
+        /// Retrieves all academic credits for specific section Ids. This will return all academic credits regardless of status.
+        /// This also returns collection of invalid academic credit Ids, Ids that are missing from STUDENT.ACAD.CRED file.
+        /// </summary>
+        /// <param name="sectionId">Section Id</param>
+        /// <returns>Tuple that contains List of AcademicCredit entities specific to the given sections and List of invalid academic credit Ids.</returns>
+        public async Task<AcademicCreditsWithInvalidKeys> GetAcademicCreditsBySectionIdsWithInvalidKeysAsync(IEnumerable<string> sectionIds)
+        {
+            if (sectionIds == null || !sectionIds.Any())
+            {
+                throw new ArgumentNullException("sectionIds", "At least 1 Section Id is required to retrieve a section academic credits.");
+            }
+            AcademicCreditsWithInvalidKeys academicCreditsWithInvalidKeys = new AcademicCreditsWithInvalidKeys(new List<AcademicCredit>(), new List<string>());
+            //remove duplicates, null, blanks from the list
+            IEnumerable<string> cleanedSectionIds = sectionIds.Where(s => !string.IsNullOrEmpty(s)).Distinct();
+            // Section Id is not a property of the STUDENT.ACAD.CRED. Select STUDENT.COURSE.SEC records and retrieve the appropriate academic credit Ids from those.
+            List<string> consolidatedAcademicCreditIds = new List<string>();
+            for (int i = 0; i < cleanedSectionIds.Count(); i += readSize)
+            {
+                var subList = cleanedSectionIds.Skip(i).Take(readSize).ToArray();
+                string[] academicCreditIds = await DataReader.SelectAsync("STUDENT.COURSE.SEC", "WITH SCS.COURSE.SECTION = '?' SAVING SCS.STUDENT.ACAD.CRED", subList);
+                consolidatedAcademicCreditIds.AddRange(academicCreditIds);
+            }
+
+            if (consolidatedAcademicCreditIds != null && consolidatedAcademicCreditIds.Any())
+            {
+                // ask for all academic credit, unfiltered and without best fit. Called processes can filter as they need.
+                academicCreditsWithInvalidKeys = await GetWithInvalidKeysAsync(consolidatedAcademicCreditIds.Distinct().ToList(), false, false);
+            }
+            return academicCreditsWithInvalidKeys;
         }
 
         /// <summary>
@@ -211,6 +246,67 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
         }
 
+        /// <summary>
+        /// Get a set of valid academic credits by ID as well as list of invalid academic credit Ids that are missing from STUDENT.ACAD.CRED file.
+        /// </summary>
+        /// <param name="academicCreditIds"></param>
+        /// <param name="bestFit">Set to true if non-term credits should be given the term that most closely matches the credits date range </param>
+        /// <param name="term">Term for filtering academic credit</param>
+        /// <param name="filter">Flag indicating whether or not to filter credits based on status</param>
+        /// <param name="includeDrops">Flag indicating whether or not to include dropped academic credits; can only be used when 'filter' is true</param>
+        /// <returns>A Tuple that contains set of academic credits and list of invalid academic credit Ids</returns>
+        public async Task<AcademicCreditsWithInvalidKeys> GetWithInvalidKeysAsync(ICollection<string> academicCreditIds, bool bestFit = false, bool filter = true, bool includeDrops = false)
+        {
+            var creditList = new List<AcademicCredit>();
+            List<string> missingIds = new List<string>();
+
+            if (academicCreditIds != null && academicCreditIds.Count() > 0)
+            {
+                List<string> distinctAcademicCreditIds = academicCreditIds.Distinct().ToList();
+                // Not caching this information at this time. If we do decide to cash this info, we should cache all
+                // the student information together (including grade viewing Restrictions).
+                var academicCredits = await DataReader.BulkReadRecordAsync<StudentAcadCred>("STUDENT.ACAD.CRED", distinctAcademicCreditIds.ToArray());
+                if (academicCredits == null || distinctAcademicCreditIds.Count != academicCredits.Count)
+                {
+                    logger.Error("AcademicCreditRepository: ERROR: Failed to retrieve all credits from the database.  Id count " + distinctAcademicCreditIds.Count + " Credits count " + academicCredits.Count);
+                    missingIds = distinctAcademicCreditIds.Except(academicCredits.Select(c => c.Recordkey)).Distinct().ToList();
+                    logger.Error("   Missing Ids :" + string.Join(",", missingIds));
+                }
+                var academicCreditsCc = await DataReader.BulkReadRecordAsync<StudentAcadCredCc>("STUDENT.ACAD.CRED.CC", distinctAcademicCreditIds.ToArray());
+                var studentCourseSecIds = academicCredits.Select(sas => sas.StcStudentCourseSec).Distinct();
+                var studentCourseSections = await DataReader.BulkReadRecordAsync<StudentCourseSec>("STUDENT.COURSE.SEC", studentCourseSecIds.ToArray());
+                var studentCourseSectionCc = await DataReader.BulkReadRecordAsync<StudentCourseSecCc>("STUDENT.COURSE.SEC.CC", studentCourseSecIds.ToArray());
+
+                // Bulk read StudentEquivEvals, which is used to determine if credit was granted based on a non-course equivalency
+                var studentEquivEvalIds = academicCredits.Select(sas => sas.StcStudentEquivEval).Distinct();
+                var studentEquivEvals = await DataReader.BulkReadRecordAsync<StudentEquivEvals>("STUDENT.EQUIV.EVALS", studentEquivEvalIds.ToArray());
+
+                creditList = (await BuildCreditsAsync(academicCredits, academicCreditsCc, studentCourseSections, studentCourseSectionCc, studentEquivEvals, bestFit)).ToList();
+            }
+            if (filter)
+            {
+                List<CreditStatus> filteredStatuses = new List<CreditStatus>()
+                {
+                    CreditStatus.Add,
+                    CreditStatus.New,
+                    CreditStatus.Preliminary,
+                    CreditStatus.Withdrawn,
+                    CreditStatus.TransferOrNonCourse
+                };
+                if (includeDrops)
+                {
+                    filteredStatuses.Add(CreditStatus.Dropped);
+                }
+                return new AcademicCreditsWithInvalidKeys(creditList.Where(ac => filteredStatuses.Contains(ac.Status)), missingIds);
+            }
+            else
+            {
+                return new AcademicCreditsWithInvalidKeys(creditList, missingIds);
+            }
+        }
+
+
+
         public async Task<IEnumerable<AcademicCreditMinimum>> GetAcademicCreditMinimumAsync(ICollection<string> academicCreditIds, bool filter = true, bool includeDrops = false)
         {
             var creditList = new List<AcademicCreditMinimum>();
@@ -308,18 +404,17 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             }
                             catch (Exception e)
                             {
-                                LogDataError("Student Academic Credit", cred.Recordkey, ss, e);
+                                logger.Error(e, string.Format("An error occurred adding academic credit status for academic credit {0}", cred.Recordkey));
                             }
                         }
-                    }            
+                    }
 
                     credits.Add(ac);
                 }
                 catch (Exception aex)
                 {
                     // If any of the student's academic credits cannot be built throw an error and stop processing  
-                    logger.Error(aex, "Unable to create all academic credits");
-                    LogDataError("Student Academic Credit", cred.Recordkey, cred, aex, "AcademicCreditRepository: FATAL ERROR: Unable to create academic credit " + cred.Recordkey);
+                    logger.Error(aex, string.Format("Unable to create all academic credits; error occurred building academic credit information for credit {0}", cred.Recordkey));
                     throw;
                 }
             }
@@ -340,46 +435,87 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             int totalCount = 0;
             string[] subList = null;
-            string[] studentEquivEvalIds = null;
-            var criteria = "WITH STE.COURSE.ACAD.CRED NE '' WITH STE.INSTITUTION NE ''";
-            studentEquivEvalIds = await DataReader.SelectAsync("STUDENT.EQUIV.EVALS", criteria);
+            string[] acadCredIds = null;
+            var criteria = "WITH STE.COURSE.ACAD.CRED NE '' AND WITH STE.INSTITUTION NE '' BY.EXP STE.COURSE.ACAD.CRED SAVING STE.COURSE.ACAD.CRED";
+            acadCredIds = await DataReader.SelectAsync("STUDENT.EQUIV.EVALS", criteria);
+            acadCredIds = acadCredIds.Distinct().ToArray();
 
-            totalCount = studentEquivEvalIds.Count();
-            Array.Sort(studentEquivEvalIds);
-            subList = studentEquivEvalIds.Skip(offset).Take(limit).ToArray();
-            
-            // Bulk read StudentEquivEvals, which is used to determine if credit was granted based on a non-course equivalency
-            var equivRecords = await DataReader.BulkReadRecordAsync<StudentEquivEvals>("STUDENT.EQUIV.EVALS", subList);
+            totalCount = acadCredIds.Count();
+            Array.Sort(acadCredIds);
+            subList = acadCredIds.Skip(offset).Take(limit).ToArray();
 
             // Bulk read StudentAcadCreds
-            string[] acadCredIds = equivRecords.SelectMany(ste => ste.SteCourseAcadCred).Distinct().ToArray();
-            var acadCredRecords = await DataReader.BulkReadRecordAsync<StudentAcadCred>("STUDENT.ACAD.CRED", acadCredIds);
+            //var acadCredRecords = await DataReader.BulkReadRecordAsync<StudentAcadCred>("STUDENT.ACAD.CRED", subList);
+            var acadCredRecords = await DataReader.BulkReadRecordWithInvalidKeysAndRecordsAsync<StudentAcadCred>("STUDENT.ACAD.CRED", subList);
 
-            // Combine each distinct acad cred/equiv eval combination to make a StudentCourseTransfer domain object
-            // (acad cred/equiv evals have a possible many-to-many relationship)
-
-            foreach (var equivEval in equivRecords)
+            if((acadCredRecords.InvalidKeys != null && acadCredRecords.InvalidKeys.Any()) ||
+                acadCredRecords.InvalidRecords != null && acadCredRecords.InvalidRecords.Any())
             {
-                foreach (var acadCredId in equivEval.SteCourseAcadCred)
+                var repositoryException = new RepositoryException();
+
+                if (acadCredRecords.InvalidKeys.Any())
                 {
-
-                    StudentAcadCred acadCred;
-
-                    try
-                    {
-                        acadCred = acadCredRecords.First(ac => ac.Recordkey == acadCredId);
-                    }
-                    catch (Exception e)
-                    {
-                        var msg = string.Format("Unable to locate academic credit record with id of {0} that should exists for student equiv eval" +
-                                                                                    "record with id of {1}: " + e.Message
-                                                                                        , acadCredId, equivEval.Recordkey);
-                        logger.Error(msg);
-                        throw new KeyNotFoundException(msg);
-                    }
-
-                    studentCourseTransfers.Add(await BuildStudentCourseTransfer(equivEval, acadCred));
+                    repositoryException.AddErrors(acadCredRecords.InvalidKeys
+                        .Select(key => new RepositoryError("invalid.key",
+                        string.Format("Unable to locate the following key '{0}'.", key.ToString()))));
                 }
+                if (acadCredRecords.InvalidRecords.Any())
+                {
+                    repositoryException.AddErrors(acadCredRecords.InvalidRecords
+                       .Select(r => new RepositoryError("invalid.record",
+                       string.Format("Error: '{0}' ", r.Value))
+                       { SourceId = r.Key }));
+                }
+                throw repositoryException;
+            }
+
+            // Bulk read StudentEquivEvals, which is used to determine if credit was granted based on a non-course equivalency
+            string[] equivEvalIds = acadCredRecords.BulkRecordsRead.Select(stc => stc.StcStudentEquivEval).Distinct().ToArray();
+
+            var equivRecords = await DataReader.BulkReadRecordWithInvalidKeysAndRecordsAsync<StudentEquivEvals>("STUDENT.EQUIV.EVALS", equivEvalIds);
+
+            if ((equivRecords.InvalidKeys != null && equivRecords.InvalidKeys.Any()) ||
+                equivRecords.InvalidRecords != null && equivRecords.InvalidRecords.Any())
+            {
+                var repositoryException = new RepositoryException();
+
+                if (equivRecords.InvalidKeys.Any())
+                {
+                    repositoryException.AddErrors(equivRecords.InvalidKeys
+                        .Select(key => new RepositoryError("invalid.key",
+                        string.Format("Unable to locate the following key '{0}'.", key.ToString()))));
+                }
+                if (equivRecords.InvalidRecords.Any())
+                {
+                    repositoryException.AddErrors(equivRecords.InvalidRecords
+                       .Select(r => new RepositoryError("invalid.record",
+                       string.Format("Error: '{0}' ", r.Value))
+                       { SourceId = r.Key }));
+                }
+                throw repositoryException;
+            }
+            // Combine each distinct acad cred/equiv eval combination to make a StudentCourseTransfer domain object
+            // (acad cred/equiv evals have a possible many-to-one relationship)
+
+            foreach (var acadCred in acadCredRecords.BulkRecordsRead)
+            {
+
+                StudentEquivEvals equivEval;
+
+                try
+                {
+                    equivEval = equivRecords.BulkRecordsRead.First(ae => ae.Recordkey == acadCred.StcStudentEquivEval);
+                }
+                catch (Exception e)
+                {
+                    var msg = string.Format("Unable to locate student equiv eval record with id of {0} that should exists for student academic credit" +
+                                                                                "record with id of {1}: " + e.Message
+                                                                                    , acadCred.StcStudentEquivEval, acadCred.Recordkey);
+                    logger.Error(msg);
+                    throw new KeyNotFoundException(msg);
+                }
+
+                studentCourseTransfers.Add(await BuildStudentCourseTransfer(equivEval, acadCred));
             }
 
             return studentCourseTransfers.Any() ?
@@ -412,20 +548,36 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             try
             {
                 steRecord = await DataReader.ReadRecordAsync<StudentEquivEvals>(steKey);
+                if(steRecord == null)
+                {
+                    throw new KeyNotFoundException(string.Format("Unable to locate student equiv eval record with id of '{0}'.", steKey));
+                }
+            }
+            catch(KeyNotFoundException)
+            {
+                throw;
             }
             catch (Exception e)
             {
-                var msg = string.Format("Unable to locate student equiv eval record with id of {1}: " + e.Message, steKey);
+                var msg = string.Format("Unable to locate student equiv eval record with id of {0}: " + e.Message, steKey);
                 logger.Error(msg);
                 throw new KeyNotFoundException(msg);
             }
-            
+
 
             try
             {
                 stcRecord = await DataReader.ReadRecordAsync<StudentAcadCred>(stcKey);
+                if(stcRecord == null)
+                {
+                    throw new KeyNotFoundException(string.Format("Unable to locate academic credit record with id of '{0}' that should exists for student equiv eval record with id of '{1}'.", stcKey, steKey));
+                }
             }
-            catch(Exception e)
+            catch (KeyNotFoundException)
+            {
+                throw;
+            }
+            catch (Exception e)
             {
                 var msg = string.Format("Unable to locate academic credit record with id of {0} that should exists for student equiv eval" +
                                                                                     "record with id of {1}: " + e.Message
@@ -450,27 +602,27 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             // Acad level guid
             sct.AcademicLevel = acadCred.StcAcadLevel;
-            
+
             // Institution guid
             sct.TransferredFromInstitution = equivEval.SteInstitution;
-            
+
             // Person guid
             sct.Student = acadCred.StcPersonId;
-            
+
             // Course guid
-            sct.Course = acadCred.StcCourse;            
+            sct.Course = acadCred.StcCourse;
 
             // Academic program guids
             sct.AcademicPrograms = equivEval.SteAcadPrograms;
-            
+
             // Term
             sct.AcademicPeriod = acadCred.StcTerm;
-            
+
             // grade scheme
-            sct.GradeScheme = acadCred.StcGradeScheme;           
+            sct.GradeScheme = acadCred.StcGradeScheme;
 
             // grade
-            sct.Grade = acadCred.StcVerifiedGrade;           
+            sct.Grade = acadCred.StcVerifiedGrade;
 
             // quality points
             if (acadCred.StcGradePts != null)
@@ -493,7 +645,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
 
             // status
-            if (acadCred.StcStatus.Any())
+            if (acadCred.StcStatus != null && acadCred.StcStatus.Any())
             {
                 sct.Status = acadCred.StcStatus.FirstOrDefault();
             }
@@ -932,20 +1084,20 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             else
                             {
                                 var errorMessage = "Unable to access STUDENT.COURSE.SEC with ID " + cred.StcStudentCourseSec + " referenced by STUDENT.ACAD.CRED " + cred.Recordkey + " for student ID " + cred.StcPersonId;
-                                logger.Info(errorMessage);
+                                logger.Error(errorMessage);
                             }
                         }
                         Course c = null;
                         // Get the course record out of the dictionary
                         if (coursesDictionary.TryGetValue(cred.StcCourse, out c))
                         {
-                            ac = new AcademicCredit(cred.Recordkey, c, sectionId) {  StudentCourseSectionId = studentCourseSectionId };
+                            ac = new AcademicCredit(cred.Recordkey, c, sectionId) { StudentCourseSectionId = studentCourseSectionId };
                         }
                         else
                         {
                             // Academic credit had a link to a course that is not good.  Build the credit anyway.
                             var errorMessage = "Unable to access COURSES record for " + cred.StcCourse;
-                            logger.Info(errorMessage);
+                            logger.Error(errorMessage);
                             ac = new AcademicCredit(cred.Recordkey) { StudentCourseSectionId = studentCourseSectionId };
                         }
 
@@ -967,7 +1119,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     ac.AdjustedCredit = cred.StcAltcumContribCmplCred;
                     ac.AdjustedGpaCredit = cred.StcAltcumContribGpaCred ?? 0;
                     ac.AdjustedGradePoints = cred.StcAltcumContribGradePts ?? 0;
-                    ac.CompletedCredit = cred.StcCmplCred ;
+                    ac.CompletedCredit = cred.StcCmplCred;
                     ac.AttemptedCredit = cred.StcAttCred ?? 0;
                     ac.CanBeReplaced = cred.StcAllowReplFlag == "Y" ? true : false;
                     ac.ContinuingEducationUnits = cred.StcCeus ?? 0;
@@ -976,7 +1128,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     ac.Credit = cred.StcCred ?? 0;
                     ac.EndDate = cred.StcEndDate;
                     ac.StartDate = cred.StcStartDate;
-                    ac.GpaCredit = cred.StcGpaCred ;
+                    ac.GpaCredit = cred.StcGpaCred;
                     ac.GradePoints = cred.StcGradePts ?? 0;
                     ac.GradeSchemeCode = cred.StcGradeScheme;
                     ac.CourseLevelCode = cred.StcCourseLevel;
@@ -1060,7 +1212,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             }
                             catch (Exception e)
                             {
-                                LogDataError("Student Academic Credit", cred.Recordkey, ss, e);
+                                logger.Error(e, string.Format("An error occurred adding academic credit status for academic credit {0}", cred.Recordkey));
                             }
                         }
                     }
@@ -1137,7 +1289,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                     }
                                 }
                                 ac.VerifiedGradeTimestamp = GetCompositeDateTime(cred.StcVerifiedGradeDate, timePart);
-                                
+
                             }
                         }
                         catch (Exception ex)
@@ -1161,8 +1313,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 catch (Exception aex)
                 {
                     // If any of the student's academic credits cannot be built throw an error and stop processing  
-                    logger.Error(aex, "Unable to create all academic credits");
-                    LogDataError("Student Academic Credit", cred.Recordkey, cred, aex, "AcademicCreditRepository: FATAL ERROR: Unable to create academic credit " + cred.Recordkey);
+                    logger.Error(aex, string.Format("Unable to create all academic credits; error occurred building academic credit information for credit {0}", cred.Recordkey));
                     throw;
                 }
             }
@@ -1564,6 +1715,50 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 return CreditStatus.Unknown;
             }
         }
+        /// <summary>
+        /// Filters and return academic credits based upon the criteria passed.
+        /// Criteria is passed as unidata_uniquery syntax.
+        /// Criteria will only be applied to STUDENT.ACAD.CRED records
+        /// Criteria syntax is like "WITH <STUDENT.ACAD.CRED><FIELD NAME>"
+        /// </summary>
+        /// <param name="academicCredits">List of academic credits</param>
+        /// <param name="criteria">criteria as per unidata_uniquery syntax</param>
+        /// <returns>Filtered Academic credits as per criteria
+        /// If no criteria is passed, returns all the academic credits
+        /// </returns>
+        public async Task<IEnumerable<AcademicCredit>> FilterAcademicCreditsAsync(IEnumerable<AcademicCredit> academicCredits, string criteria)
+        {
+            if (academicCredits == null)
+            {
+                throw new ArgumentNullException("acadCredits", "academic credits cannot be null");
+            }
+            if (string.IsNullOrEmpty(criteria))
+            {
+                return academicCredits;
+            }
+            string[] fiteredAcadCredIds = null;
+            IEnumerable<AcademicCredit> filteredAcadCredits = new List<AcademicCredit>();
+            string[] academicCreditsIds = academicCredits.Select(a => a.Id).ToArray<string>();
+            if (academicCreditsIds != null && academicCreditsIds.Length>0)
+            {
+                try
+                {
+                    fiteredAcadCredIds = await DataReader.SelectAsync("STUDENT.ACAD.CRED", academicCreditsIds, criteria);
+
+                }
+                catch (Exception ex)
+                {
+                    logger.Error(ex, "Exception occured while filtering academic credits, criteria passed is :"+ criteria);
+                    return academicCredits;
+                }
+                if (fiteredAcadCredIds != null && fiteredAcadCredIds.Any())
+                {
+                    filteredAcadCredits = academicCredits.Where(a => fiteredAcadCredIds.Contains(a.Id));
+                }
+
+            }
+            return filteredAcadCredits;
+        }
 
         /// <summary>
         /// GetCreditStatuses gets the STUDENT.ACAD.CRED.STATUSES valcode table 
@@ -1616,6 +1811,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 UseCensusDate = pilotDefaults.PilCensusFteFlag.ToUpper() == "Y";
             }
             return UseCensusDate;
-        }        
+        }
+
+
     }
 }

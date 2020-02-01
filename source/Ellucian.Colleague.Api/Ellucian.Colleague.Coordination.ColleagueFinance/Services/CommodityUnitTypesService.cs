@@ -54,7 +54,28 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 }
             }
             return commodityUnitTypeCollection;
-        }      
+        }
+
+        /// <summary>
+        /// Returns all commodity unit types
+        /// </summary>
+        /// <returns>List of unity type objects.</returns>
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.CommodityUnitType>> GetAllCommodityUnitTypesAsync()
+        {
+            var commodityUnitTypeCollection = new List<Ellucian.Colleague.Dtos.CommodityUnitType>();
+
+            var commodityUnitTypes = await _cfReferenceDataRepository.GetAllCommodityUnitTypesAsync();
+            if (commodityUnitTypes != null && commodityUnitTypes.Any())
+            {
+                //sort the entities on code, then by description
+                commodityUnitTypes = commodityUnitTypes.OrderBy(x => x.Code);
+                foreach (var commodityUnitType in commodityUnitTypes)
+                {
+                    commodityUnitTypeCollection.Add(ConvertCommodityUnitTypeEntityToDto(commodityUnitType));
+                }
+            }
+            return commodityUnitTypeCollection;
+        }
 
         /// <summary>
         /// Returns an commodity unit type

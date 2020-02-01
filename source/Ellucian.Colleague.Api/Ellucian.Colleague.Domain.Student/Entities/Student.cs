@@ -111,6 +111,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// The Residency status code
         /// </summary>
         public string ResidencyStatus { get; set; }
+
         /// <summary>
         /// List of student residencies and dates
         /// </summary>
@@ -135,6 +136,10 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// Class Level Codes for each academic level
         /// </summary>
         public List<string> ClassLevelCodes { get; set; }
+        /// <summary>
+        /// Phonetypes hierarchy for student profile
+        /// </summary>
+        public List<string> PhoneTypesHierarchy { get; set; }
         /// <summary>
         /// Flag to indicate if the student record is confidential
         /// </summary>

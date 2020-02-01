@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -24,5 +24,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <param name="fiscalYear">Optional; General Ledger fiscal year.</param>
         /// <returns>GL account validation response DTO.</returns>
         Task<Dtos.ColleagueFinance.GlAccountValidationResponse> ValidateGlAccountAsync(string generalLedgerAccountId, string fiscalYear);
+
+        /// <summary>
+        /// Retrieves the list of expense GL account DTOs that the user has access to.
+        /// </summary>
+        /// <param name="glClass">Optional: null for all the user GL accounts, expense for only the expense type GL accounts.</param>
+        /// <returns>A collection of expense GL account DTOs for the user.</returns>
+        Task<IEnumerable<Dtos.ColleagueFinance.GlAccount>> GetUserGeneralLedgerAccountsAsync(string glClass);
+
     }
 }

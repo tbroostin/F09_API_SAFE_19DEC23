@@ -1,4 +1,5 @@
-﻿//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+
 using System;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -18,6 +19,9 @@ using Ellucian.Web.Http.Exceptions;
 using System.IO;
 using System.Net.Http.Headers;
 using Ellucian.Web.Http.Models;
+using System.Reflection;
+using Ellucian.Colleague.Dtos.Attributes;
+using Newtonsoft.Json;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 {
@@ -36,9 +40,10 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         private string expectedGuid = "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc";
         List<Dtos.AdmissionDecisions> admissionDecisionsDtos;
         Dtos.AdmissionDecisions admissionDecisionDTO;
-        int offset = 0;
-        int limit = 100;
+        readonly int offset = 0;
+        readonly int limit = 100;
         private Ellucian.Web.Http.Models.QueryStringFilter criteriaFilter = new Web.Http.Models.QueryStringFilter("criteria", "");
+        private Ellucian.Web.Http.Models.QueryStringFilter personFilter = new Web.Http.Models.QueryStringFilter("personFilter", "");
 
         [TestInitialize]
         public void Initialize()
@@ -55,7 +60,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             admissionDecisionsController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
             admissionDecisionsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
         }
-
         private void BuildData()
         {
             admissionDecisionsDtos = new List<Dtos.AdmissionDecisions>()
@@ -64,28 +68,28 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     {
                         Id = "bbd216fb-0fc5-4f44-ae45-42d3cdd1e89a",
                         Application = new Dtos.GuidObject2("b2ee3ff9-8613-40ff-9c32-4aa7bedc607d"),
-                        DecidedOn = new DateTime(2017,10,11),
+                        DecidedOn = new DateTimeOffset(2017,10,11, 00, 00, 00, new TimeSpan(-4, 0, 0)),
                         DecisionType = new Dtos.GuidObject2("3d737f01-9624-4306-9200-04153bebab4d"),
                     },
                     new Dtos.AdmissionDecisions()
                     {
                         Id = "3f67b180-ce1d-4552-8d81-feb96b9fea5b",
                        Application = new Dtos.GuidObject2("b2ee3ff9-8613-40ff-9c32-4aa7bedc607d"),
-                        DecidedOn = new DateTime(2017,9,13),
+                        DecidedOn = new DateTimeOffset(2017,9,13, 00, 00, 00, new TimeSpan(-4, 0, 0)),
                         DecisionType = new Dtos.GuidObject2("67534c13-5d55-4d9d-a03f-1acf23598158"),
                     },
                     new Dtos.AdmissionDecisions()
                     {
                         Id = "bf67e156-8f5d-402b-8101-81b0a2796873",
                         Application = new Dtos.GuidObject2("8559e317-dc8e-4635-8ca7-6dd5c0924647"),
-                        DecidedOn = new DateTime(2017,1,1),
+                        DecidedOn = new DateTimeOffset(2017,1,1, 00, 00, 00, new TimeSpan(-4, 0, 0)),
                         DecisionType = new Dtos.GuidObject2("3d737f01-9624-4306-9200-04153bebab4d"),
                     },
                     new Dtos.AdmissionDecisions()
                     {
                         Id = "0111d6ef-5a86-465f-ac58-4265a997c136",
                         Application = new Dtos.GuidObject2("8559e317-dc8e-4635-8ca7-6dd5c0924647"),
-                        DecidedOn = new DateTime(2017,10,1),
+                        DecidedOn = new DateTimeOffset(2017,10,1, 00, 00, 00, new TimeSpan(-4, 0, 0)),
                         DecisionType = new Dtos.GuidObject2("3d737f01-9624-4306-9200-04153bebab4d"),
                     },
                 };
@@ -93,7 +97,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             {
                 Id = Guid.Empty.ToString(),
                 Application = new Dtos.GuidObject2("b2ee3ff9-8613-40ff-9c32-4aa7bedc607d"),
-                DecidedOn = new DateTime(2017, 10, 11),
+                DecidedOn = new DateTimeOffset(2017, 10, 11, 00, 00, 00, new TimeSpan(-4, 0, 0)),
                 DecisionType = new Dtos.GuidObject2("3d737f01-9624-4306-9200-04153bebab4d")
             };
         }
@@ -108,6 +112,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             admissionDecisionsServiceMock = null;
         }
 
+      
         [TestMethod]
         public async Task AdmissionDecisionsController_GetAll_NoCache_True()
         {
@@ -117,9 +122,10 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 Public = true
             };
             var tuple = new Tuple<IEnumerable<Dtos.AdmissionDecisions>, int>(admissionDecisionsDtos, 4);
-            //admissionDecisionsServiceMock.Setup(ci => ci.GetAdmissionDecisionsAsync(offset, limit, "", true)).ReturnsAsync(tuple);
-            admissionDecisionsServiceMock.Setup(ci => ci.GetAdmissionDecisionsAsync(offset, limit,  It.IsAny<string>() , It.IsAny<bool>())).ReturnsAsync(tuple);
-            var admissionDecisions = await admissionDecisionsController.GetAdmissionDecisionsAsync(new Paging(limit, offset), criteriaFilter);
+           
+            admissionDecisionsServiceMock.Setup(ci => ci.GetAdmissionDecisionsAsync(offset, limit,  It.IsAny<string>(), It.IsAny<DateTimeOffset?>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>(),
+                It.IsAny<bool>())).ReturnsAsync(tuple);
+            var admissionDecisions = await admissionDecisionsController.GetAdmissionDecisionsAsync(new Paging(limit, offset), criteriaFilter, personFilter);
 
             var cancelToken = new System.Threading.CancellationToken(false);
 
@@ -151,8 +157,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 Public = true
             };
             var tuple = new Tuple<IEnumerable<Dtos.AdmissionDecisions>, int>(admissionDecisionsDtos, 4);
-            admissionDecisionsServiceMock.Setup(ci => ci.GetAdmissionDecisionsAsync(offset, limit, "",false)).ReturnsAsync(tuple);
-            var admissionDecisions = await admissionDecisionsController.GetAdmissionDecisionsAsync(new Paging(limit, offset), criteriaFilter);
+            admissionDecisionsServiceMock.Setup(ci => ci.GetAdmissionDecisionsAsync(offset, limit, "", It.IsAny<DateTimeOffset?>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>(), false)).ReturnsAsync(tuple);
+            var admissionDecisions = await admissionDecisionsController.GetAdmissionDecisionsAsync(new Paging(limit, offset), criteriaFilter, personFilter);
 
             var cancelToken = new System.Threading.CancellationToken(false);
 
@@ -187,8 +193,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             string criteria = @"{'application':{'id':'70479f3b-bb79-4c0b-a0db-c240cd51e300'}}";
 
-            admissionDecisionsServiceMock.Setup(ci => ci.GetAdmissionDecisionsAsync(offset, limit, It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(tuple);
-            var admissionDecisions = await admissionDecisionsController.GetAdmissionDecisionsAsync(new Paging(limit, offset), criteriaFilter);
+            admissionDecisionsServiceMock.Setup(ci => ci.GetAdmissionDecisionsAsync(offset, limit, It.IsAny<string>(), It.IsAny<DateTimeOffset?>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+            var admissionDecisions = await admissionDecisionsController.GetAdmissionDecisionsAsync(new Paging(limit, offset), criteriaFilter, personFilter);
 
             var cancelToken = new System.Threading.CancellationToken(false);
 
@@ -223,8 +229,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             string criteria = @"{'invalid':{'id':'70479f3b-bb79-4c0b-a0db-c240cd51e300'}}";
 
-            admissionDecisionsServiceMock.Setup(ci => ci.GetAdmissionDecisionsAsync(offset, limit, It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(tuple);
-            var admissionDecisions = await admissionDecisionsController.GetAdmissionDecisionsAsync(new Paging(limit, offset), criteriaFilter);
+            admissionDecisionsServiceMock.Setup(ci => ci.GetAdmissionDecisionsAsync(offset, limit, It.IsAny<string>(), It.IsAny<DateTimeOffset?>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+            var admissionDecisions = await admissionDecisionsController.GetAdmissionDecisionsAsync(new Paging(limit, offset), criteriaFilter, personFilter);
 
             var cancelToken = new System.Threading.CancellationToken(false);
 
@@ -256,8 +262,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 Public = true
             };
             var tuple = new Tuple<IEnumerable<Dtos.AdmissionDecisions>, int>(admissionDecisionsDtos, 4);
-            admissionDecisionsServiceMock.Setup(ci => ci.GetAdmissionDecisionsAsync(offset, limit, "", false)).ReturnsAsync(tuple);
-            var admissionDecisions = await admissionDecisionsController.GetAdmissionDecisionsAsync(null, criteriaFilter);
+            admissionDecisionsServiceMock.Setup(ci => ci.GetAdmissionDecisionsAsync(offset, limit, "", It.IsAny<DateTimeOffset?>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>(), false)).ReturnsAsync(tuple);
+            var admissionDecisions = await admissionDecisionsController.GetAdmissionDecisionsAsync(null, criteriaFilter, personFilter);
 
 
             var cancelToken = new System.Threading.CancellationToken(false);
@@ -282,6 +288,53 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             }
         }
 
+
+        [TestMethod]
+        public void AdmissionDecisionsController_DecidedOn_SupportedFilterOperators()
+        {
+
+            var modelType = typeof(Dtos.AdmissionDecisions);
+            var key = new List<string>() { "criteria" };
+            var memberName = "decidedOn";
+
+            var filterAttributes = new List<string>();
+            var supportedFilterDict = new Dictionary<List<string>, List<string>>();
+
+            var properties = modelType.GetProperties();
+
+            PropertyInfo matchingProperty = properties
+               .FirstOrDefault(p => Attribute.IsDefined(p, typeof(JsonPropertyAttribute))
+               && (((JsonPropertyAttribute)Attribute.GetCustomAttribute(
+                                p, typeof(JsonPropertyAttribute))).PropertyName != null)
+               && (((JsonPropertyAttribute)Attribute.GetCustomAttribute(
+                                p, typeof(JsonPropertyAttribute))).PropertyName.ToLower() == memberName.ToLower()
+                                ));
+
+            var matchingFilterAttributes = matchingProperty.GetCustomAttributes(typeof(FilterPropertyAttribute), false);
+
+            foreach (FilterPropertyAttribute matchingFilterAttribute in matchingFilterAttributes)
+            {
+
+                filterAttributes = (matchingFilterAttribute.Name).ToList();
+
+                if (matchingFilterAttribute.Name[0] == key[0] && (matchingFilterAttribute.SupportedOperators != null))
+                {
+                    supportedFilterDict.Add((matchingFilterAttribute.Name).ToList(), (matchingFilterAttribute.SupportedOperators).ToList());
+                    break;
+                }
+            }
+
+            var expected = supportedFilterDict.FirstOrDefault(x => x.Key[0] == key[0]);
+
+            Assert.IsNotNull(expected, "expected");
+            Assert.IsTrue(expected.Value.Contains("$eq"), "Contains $eq");
+            Assert.IsTrue(expected.Value.Contains("$gte"), "Contains $gte");
+            Assert.IsTrue(expected.Value.Contains("$lte"), "Contains $lte");
+            Assert.IsFalse(expected.Value.Contains("$ne"), "Contains $ne");
+
+        }
+
+        
         [TestMethod]
         public async Task AdmissionDecisionsController_GetById()
         {
@@ -330,8 +383,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 Public = true
             };
             var tuple = new Tuple<IEnumerable<Dtos.AdmissionDecisions>, int>(admissionDecisionsDtos, 4);
-            admissionDecisionsServiceMock.Setup(ci => ci.GetAdmissionDecisionsAsync(offset, limit, string.Empty, false)).ThrowsAsync(new Exception());
-            var admissionDecisions = await admissionDecisionsController.GetAdmissionDecisionsAsync(new Paging(limit, offset), criteriaFilter);
+            admissionDecisionsServiceMock.Setup(ci => ci.GetAdmissionDecisionsAsync(offset, limit, string.Empty, It.IsAny<DateTimeOffset?>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>(), false)).ThrowsAsync(new Exception());
+            var admissionDecisions = await admissionDecisionsController.GetAdmissionDecisionsAsync(new Paging(limit, offset), criteriaFilter, personFilter);
         }
 
         [TestMethod]
@@ -357,40 +410,40 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         [ExpectedException(typeof(HttpResponseException))]
         public async Task AdmissionDecisionsController_GetAdmissionDecisions_KeyNotFoundException()
         {
-            admissionDecisionsServiceMock.Setup(x => x.GetAdmissionDecisionsAsync(offset, limit, It.IsAny<string>(), It.IsAny<bool>())).Throws<KeyNotFoundException>();
-            await admissionDecisionsController.GetAdmissionDecisionsAsync(new Paging(limit, offset), criteriaFilter);
+            admissionDecisionsServiceMock.Setup(x => x.GetAdmissionDecisionsAsync(offset, limit, It.IsAny<string>(), It.IsAny<DateTimeOffset?>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<KeyNotFoundException>();
+            await admissionDecisionsController.GetAdmissionDecisionsAsync(new Paging(limit, offset), criteriaFilter, personFilter);
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task AdmissionDecisionsController_GetAdmissionDecisions_PermissionsException()
         {
-            admissionDecisionsServiceMock.Setup(x => x.GetAdmissionDecisionsAsync(offset, limit, It.IsAny<string>(), It.IsAny<bool>())).Throws<PermissionsException>();
-            await admissionDecisionsController.GetAdmissionDecisionsAsync(new Paging(limit, offset), criteriaFilter);
+            admissionDecisionsServiceMock.Setup(x => x.GetAdmissionDecisionsAsync(offset, limit, It.IsAny<string>(), It.IsAny<DateTimeOffset?>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<PermissionsException>();
+            await admissionDecisionsController.GetAdmissionDecisionsAsync(new Paging(limit, offset), criteriaFilter, personFilter);
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task AdmissionDecisionsController_GetAdmissionDecisions_ArgumentNullException()
         {
-            admissionDecisionsServiceMock.Setup(x => x.GetAdmissionDecisionsAsync(offset, limit, It.IsAny<string>(), It.IsAny<bool>())).Throws<ArgumentNullException>();
-            await admissionDecisionsController.GetAdmissionDecisionsAsync(new Paging(limit, offset), criteriaFilter);
+            admissionDecisionsServiceMock.Setup(x => x.GetAdmissionDecisionsAsync(offset, limit, It.IsAny<string>(), It.IsAny<DateTimeOffset?>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<ArgumentNullException>();
+            await admissionDecisionsController.GetAdmissionDecisionsAsync(new Paging(limit, offset), criteriaFilter, personFilter);
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task AdmissionDecisionsController_GetAdmissionDecisions_RepositoryException()
         {
-            admissionDecisionsServiceMock.Setup(x => x.GetAdmissionDecisionsAsync(offset, limit, It.IsAny<string>(), It.IsAny<bool>())).Throws<RepositoryException>();
-            await admissionDecisionsController.GetAdmissionDecisionsAsync(new Paging(limit, offset), criteriaFilter);
+            admissionDecisionsServiceMock.Setup(x => x.GetAdmissionDecisionsAsync(offset, limit, It.IsAny<string>(), It.IsAny<DateTimeOffset?>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<RepositoryException>();
+            await admissionDecisionsController.GetAdmissionDecisionsAsync(new Paging(limit, offset), criteriaFilter, personFilter);
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task AdmissionDecisionsController_GetAdmissionDecisions_IntegrationApiException()
         {
-            admissionDecisionsServiceMock.Setup(x => x.GetAdmissionDecisionsAsync(offset, limit, It.IsAny<string>(), It.IsAny<bool>())).Throws<IntegrationApiException>();
-            await admissionDecisionsController.GetAdmissionDecisionsAsync(new Paging(limit, offset), criteriaFilter);
+            admissionDecisionsServiceMock.Setup(x => x.GetAdmissionDecisionsAsync(offset, limit, It.IsAny<string>(), It.IsAny<DateTimeOffset?>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<IntegrationApiException>();
+            await admissionDecisionsController.GetAdmissionDecisionsAsync(new Paging(limit, offset), criteriaFilter, personFilter);
         } 
 
         [TestMethod]
@@ -547,7 +600,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 Id = "00000000-0000-0000-0000-000000000000",
                 Application = new Dtos.GuidObject2("1234"),
                 DecisionType = new Dtos.GuidObject2("1234"),
-                DecidedOn = default(DateTime)
+                DecidedOn = default(DateTimeOffset)
             });
         }
 

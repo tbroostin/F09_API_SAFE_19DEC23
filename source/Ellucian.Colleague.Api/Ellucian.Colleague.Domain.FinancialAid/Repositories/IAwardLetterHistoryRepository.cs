@@ -1,4 +1,4 @@
-﻿/*Copyright 2015-2018 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2015-2019 Ellucian Company L.P. and its affiliates.*/
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.FinancialAid.Entities;
@@ -34,13 +34,13 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Repositories
         /// <summary>
         /// Gets award letter history record by award letter record id
         /// </summary>
-        /// <param name="studentId">student id</param>
         /// <param name="recordId">award letter history record id</param>
-        /// <param name="studentAwardYears">list of student award years</param>        
-        /// <param name="allAwards">reference award data</param>
+        /// <param name="studentAwardYears">list of student award years</param>
+        /// <param name="allAwards">reference award data</param>        
+        /// 
         /// <returns>AwardLetter2 entity</returns>
         [Obsolete("Obsolete as of Api version 1.22, use GetAwardLetterById2Async instead")]
-        Task<AwardLetter2> GetAwardLetterByIdAsync(string studentId, string recordId, IEnumerable<StudentAwardYear> studentAwardYears, IEnumerable<Award> allAwards);
+        Task<AwardLetter2> GetAwardLetterByIdAsync(string recordId, IEnumerable<StudentAwardYear> studentAwardYears, IEnumerable<Award> allAwards);
 
         /// <summary>
         /// Updates the Date Accepted for a single award letter
@@ -78,12 +78,12 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Repositories
         /// <summary>
         /// Gets award letter history record by award letter record id
         /// </summary>
-        /// <param name="studentId">student id</param>
         /// <param name="recordId">award letter history record id</param>
-        /// <param name="studentAwardYears">list of student award years</param>        
-        /// <param name="allAwards">reference award data</param>
+        /// <param name="studentAwardYears">list of student award years</param>
+        /// <param name="allAwards">reference award data</param>        
+        /// 
         /// <returns>AwardLetter3 entity</returns>
-        Task<AwardLetter3> GetAwardLetterById2Async(string studentId, string recordId, IEnumerable<StudentAwardYear> studentAwardYears, IEnumerable<Award> allAwards);
+        Task<AwardLetter3> GetAwardLetterById2Async(string recordId, IEnumerable<StudentAwardYear> studentAwardYears, IEnumerable<Award> allAwards);
 
         /// <summary>
         /// Updates the Date Accepted for a single award letter

@@ -34,6 +34,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
 
         Task<IDictionary<string, string>> GetProjectReferenceIds(string[] projectIds);
         Task<IDictionary<string, string>> GetProjectIdsFromReferenceNo(string[] projectRefNo);
+        Task<IEnumerable<PurchaseOrderSummary>> GetPurchaseOrderSummaryByPersonIdAsync(string personId);
 
 
     }

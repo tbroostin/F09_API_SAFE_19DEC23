@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Finance.Entities;
 using Ellucian.Colleague.Domain.Finance.Entities.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -252,6 +252,15 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Entities
             string expected = "www.google.com";
             config.EcommerceProviderLink = expected;
             Assert.AreEqual(expected, config.EcommerceProviderLink);
+        }
+
+        /// <summary>
+        /// Validate DisplayPotentialD7Amounts is initialized to false
+        /// </summary>
+        [TestMethod]
+        public void FinanceConfiguration_DisplayPotentialD7Amounts_IsFalseOnInitializationTest()
+        {
+            Assert.IsFalse(config.DisplayPotentialD7Amounts);
         }
     }
 }

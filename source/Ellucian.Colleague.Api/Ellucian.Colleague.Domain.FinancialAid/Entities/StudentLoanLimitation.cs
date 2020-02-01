@@ -1,4 +1,4 @@
-﻿//Copyright 2014 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
 using System;
 
 namespace Ellucian.Colleague.Domain.FinancialAid.Entities
@@ -43,13 +43,19 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
         public int GradPlusMaximumAmount { get; set; }
 
         /// <summary>
+        /// Flag indicating whether max loan amounts should be suppressed or not
+        /// </summary>
+        public bool SuppressStudentMaximumAmounts { get; private set; }
+
+        /// <summary>
         /// Constructor for StudentLoanLimitations requires the award year and student id.
         /// The limits are initialized to $0.
         /// </summary>
         /// <param name="awardYear">The year these limits apply to</param>
         /// <param name="studentId">The student these limits apply to</param>
+        /// <param name="suppressStudentMaximumAmounts">flag indicating whether loan max amounts should be suppressed</param>
         /// <exception cref="ArgumentNullException">Thrown when the awardYear or studentId arguments are null or empty</exception>
-        public StudentLoanLimitation(string awardYear, string studentId)
+        public StudentLoanLimitation(string awardYear, string studentId, bool suppressStudentMaximumAmounts)
         {
             if (string.IsNullOrEmpty(awardYear))
             {
@@ -65,7 +71,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
 
             SubsidizedMaximumAmount = 0;
             UnsubsidizedMaximumAmount = 0;
-
+            SuppressStudentMaximumAmounts = suppressStudentMaximumAmounts;
         }
     }
 }

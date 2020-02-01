@@ -62,6 +62,48 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.Requirements
                 CollectionAssert.AreEqual(new List<string>(), entity.ForceAppliedAcademicCreditIds);
                 CollectionAssert.AreEqual(new List<string>(), entity.ForceDeniedAcademicCreditIds);
                 Assert.AreEqual(entity.MinGroupStatus, GroupResultMinGroupStatus.None);
+                Assert.IsFalse(entity.ShowRelatedCourses);
+            }
+        }
+
+        [TestClass]
+        public class GroupResult_Parameter_Constructor_Tests : GroupResultTests
+        {
+            [TestInitialize]
+            public void GroupResult_Constructor_Initialize()
+            {
+                base.Initialize();
+                
+
+            }
+
+            [TestMethod]
+            public void GroupResult_Constructor_showRelatedCurses_true()
+            {
+                entity = new GroupResult(groupEntity, true);
+                Assert.AreEqual(groupEntity, entity.Group);
+                CollectionAssert.AreEqual(new List<AcadResult>(), entity.Results);
+                Assert.AreEqual(typeof(HashSet<GroupExplanation>), entity.Explanations.GetType());
+                Assert.AreEqual(0, entity.Explanations.Count);
+                CollectionAssert.AreEqual(new List<string>(), entity.EvalDebug);
+                CollectionAssert.AreEqual(new List<string>(), entity.ForceAppliedAcademicCreditIds);
+                CollectionAssert.AreEqual(new List<string>(), entity.ForceDeniedAcademicCreditIds);
+                Assert.AreEqual(entity.MinGroupStatus, GroupResultMinGroupStatus.None);
+                Assert.IsTrue(entity.ShowRelatedCourses);
+            }
+            [TestMethod]
+            public void GroupResult_Constructor_showRelatedCurses_false()
+            {
+                entity = new GroupResult(groupEntity, false);
+                Assert.AreEqual(groupEntity, entity.Group);
+                CollectionAssert.AreEqual(new List<AcadResult>(), entity.Results);
+                Assert.AreEqual(typeof(HashSet<GroupExplanation>), entity.Explanations.GetType());
+                Assert.AreEqual(0, entity.Explanations.Count);
+                CollectionAssert.AreEqual(new List<string>(), entity.EvalDebug);
+                CollectionAssert.AreEqual(new List<string>(), entity.ForceAppliedAcademicCreditIds);
+                CollectionAssert.AreEqual(new List<string>(), entity.ForceDeniedAcademicCreditIds);
+                Assert.AreEqual(entity.MinGroupStatus, GroupResultMinGroupStatus.None);
+                Assert.IsFalse(entity.ShowRelatedCourses);
             }
         }
 
@@ -858,6 +900,111 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.Requirements
         }
 
         [TestClass]
+        public class GroupResult_GetRelatedCredits_Tests : GroupResultTests
+        {
+            [TestInitialize]
+            public void GroupResult_GetRelatedCredits_Initialize()
+            {
+                base.Initialize();
+                entity = new GroupResult(groupEntity, true);
+
+            }
+
+            [TestMethod]
+            public void GroupResult_GetRelatedCredits_Default()
+            {
+                entity = new GroupResult(groupEntity);
+                Assert.IsNotNull(entity);
+                Assert.IsNull(entity.GetRelated());
+            }
+            [TestMethod]
+            public void GroupResult_GetRelatedCredits_ShowRelatedCourses_False()
+            {
+                entity = new GroupResult(groupEntity, false);
+                Assert.IsNotNull(entity);
+                Assert.IsNull(entity.GetRelated());
+            }
+            [TestMethod]
+            public void GroupResult_GetRelatedCredits_Results_Null()
+            {
+                entity.Results = null;
+                var related=entity.GetRelated();
+                Assert.IsNotNull(entity);
+                Assert.IsNotNull(related);
+                Assert.AreEqual(0, related.Count());
+            }
+            [TestMethod]
+            public void GroupResult_GetRelatedCredits_Results_Empty()
+            {
+                entity.Results = new List<AcadResult>();
+                var related = entity.GetRelated();
+                Assert.IsNotNull(entity);
+                Assert.IsNotNull(related);
+                Assert.AreEqual(0, related.Count());
+            }
+
+            [TestMethod]
+            public void GroupResult_GetRelatedCredits_differentTypes_Result()
+            {
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.InCoursesListButAlreadyApplied });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.Replaced });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.ReplaceInProgress });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.Related });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.ExcludedByOverride });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.MaxDepartments });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.MaxCourses });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.MaxSubjects });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.MaxCoursesPerSubject });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.MaxCoursesPerDepartment });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.MaxCoursesAtLevel });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.MaxCoursesPerRule });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.MaxCredits });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.MaxCreditsPerCourse });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.MaxCreditsPerSubject });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.MaxCreditsAtLevel });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.MaxCreditsPerRule });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.MinCreditsPerCourse });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.MinGrade });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.MinGPA });
+                //duplicate statuses
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.ExcludedByOverride });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.MaxDepartments });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.MaxCourses });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.MaxSubjects });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.MaxCoursesPerSubject });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.MaxCoursesPerDepartment });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.MaxCoursesAtLevel });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.MaxCoursesPerRule });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.MaxCredits });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.MaxCreditsPerCourse });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.MaxCreditsPerSubject });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.MaxCreditsAtLevel });
+                //statuses should not be counted as related
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.Applied });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.FromWrongDepartment });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.CourseExcluded });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.DepartmentExcluded });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.FromWrongLevel });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.FromWrongSubject });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.LevelExcluded });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.NotInFromCoursesList });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.PlannedApplied });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.ReplacedWithGPAValues });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.SubjectExcluded });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.Untested });
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.RuleFailed });
+                //empty credits in the list
+                entity.Results.Add(null);
+                entity.Results.Add(new CreditResult(acadCredit));//this will have Untested result
+
+                var related = entity.GetRelated();
+                Assert.IsNotNull(entity);
+                Assert.IsNotNull(related);
+                Assert.AreEqual(32, related.Count());
+            }
+        }
+
+        [TestClass]
         public class GroupResult_ToString_Tests : GroupResultTests
         {
             [TestInitialize]
@@ -872,6 +1019,204 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.Requirements
             {
                 var expected = "GroupResult: " + entity.Group.ToString();
                 Assert.AreEqual(expected, entity.ToString());
+            }
+        }
+
+        [TestClass]
+        public class GroupResult_GetNonOverrideApplied_Tests : GroupResultTests
+        {
+            [TestInitialize]
+            public void GroupResult_GetNonOverrideApplied_Initialize()
+            {
+                base.Initialize();
+                entity = new GroupResult(groupEntity);
+            }
+            [TestMethod]
+            public void GroupResult_GetNonOverrideApplied_No_Override_And_Applied_Courses_Results()
+            {
+                Assert.AreEqual(0, entity.GetNonOverrideApplied().Count());
+            }
+
+            [TestMethod]
+            public void GroupResult_GetNonOverrideApplied_No_Override_Courses_Results()
+            {
+                entity.Results.Add(new CreditResult(acadCredit) { GroupId= "123", Result = Result.Applied, Explanation = AcadResultExplanation.Extra });
+                Assert.AreEqual(1, entity.GetNonOverrideApplied().Count());
+                Assert.AreEqual(AcadResultExplanation.Extra, entity.GetNonOverrideApplied().ToList()[0].Explanation);
+                Assert.AreEqual("123", entity.GetNonOverrideApplied().ToList()[0].GroupId);
+            }
+
+            [TestMethod]
+            public void GroupResult_GetNonOverrideApplied_ForcedCourses_Null_Results()
+            {
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.Applied, Explanation = AcadResultExplanation.Extra });
+                entity.ForceAppliedAcademicCreditIds = null;
+                Assert.AreEqual(1, entity.GetNonOverrideApplied().Count());
+                Assert.AreEqual(AcadResultExplanation.Extra, entity.GetNonOverrideApplied().ToList()[0].Explanation);
+                Assert.AreEqual("3", entity.GetNonOverrideApplied().ToList()[0].GetAcadCredId());
+
+            }
+
+            [TestMethod]
+            public void GroupResult_GetNonOverrideApplied_ForcedCourses_Empty_Results()
+            {
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.Applied, Explanation = AcadResultExplanation.Extra });
+                entity.ForceAppliedAcademicCreditIds = new List<string>();
+                Assert.AreEqual(1, entity.GetNonOverrideApplied().Count());
+                Assert.AreEqual(AcadResultExplanation.Extra, entity.GetNonOverrideApplied().ToList()[0].Explanation);
+                Assert.AreEqual("3", entity.GetNonOverrideApplied().ToList()[0].GetAcadCredId());
+
+            }
+
+            [TestMethod]
+            public void GroupResult_GetNonOverrideApplied_ForcedApplied_Results()
+            {
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.PlannedApplied, Explanation = AcadResultExplanation.None });
+                Assert.AreEqual(0m, entity.GetNonExtraAppliedCredits());
+            }
+
+            [TestMethod]
+            public void GroupResult_GetNonOverrideApplied_NonExtra_Applied_Results()
+            {
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.Applied, Explanation = AcadResultExplanation.None });
+                var expected = entity.Results.Sum(res => res.GetAdjustedCredits());
+                Assert.AreEqual(expected, entity.GetNonExtraAppliedCredits());
+            }
+            //when overridden applied course is in course list
+            //make multiples overridden applied courses
+            [TestMethod]
+            public void GroupResult_GetNonOverrideApplied_InCourses_Once()
+            {
+
+                //     public Course Biol100 { get { return GetAsync("110").Result; } }
+                //public Course Biol200 { get { return GetAsync("21").Result; } }
+                //public Course Math100 { get { return GetAsync("143").Result; } }
+                //public Course Hist400 { get { return GetAsync("87").Result; } }
+                //public Course Hist100 { get { return GetAsync("139").Result; } }
+                //TAKE "MATH-100", "BIOL-100", "HIST-400"
+                entity.Group.Courses = new List<string>() {"143", "110", "87" };
+                //BIOL-100 is applied
+                var course = new TestCourseRepository().Biol100;
+                var acadCredit = new AcademicCredit("3", course, "123");
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.Applied, Explanation = AcadResultExplanation.None });
+                //MATH-100 is taken twice
+                var course1 = new TestCourseRepository().Math100;
+                var acadCredit1 = new AcademicCredit("4", course1, "111");
+                entity.Results.Add(new CreditResult(acadCredit1) { Result = Result.Applied, Explanation = AcadResultExplanation.None });
+                var acadCredit2 = new AcademicCredit("5", course1, "112");
+                entity.Results.Add(new CreditResult(acadCredit2) { Result = Result.Applied, Explanation = AcadResultExplanation.None });
+                //HIST-400 is applied
+                var course2 = new TestCourseRepository().Hist400;
+                var acadCredit3 = new AcademicCredit("6", course2, "122");
+                entity.Results.Add(new CreditResult(acadCredit3) { Result = Result.Applied, Explanation = AcadResultExplanation.None });
+                //hist-100 is not applied to group
+                var course3 = new TestCourseRepository().Hist100;
+                var acadCredit4 = new AcademicCredit("7", course3, "333");
+                entity.Results.Add(new CreditResult(acadCredit4) { Result = Result.NotInCoursesList, Explanation = AcadResultExplanation.None });
+                //biol-100 and MTAH-100 is forced applied and are in COURSES list
+                //hist-100 IS FORCED APPLIED BUT Not in courses list
+                entity.ForceAppliedAcademicCreditIds = new List<string>() {"3","4","7" };
+                List<AcadResult> nonOverrideAppliedCourses= entity.GetNonOverrideApplied().ToList();
+                //should consider MATH-100 and BIOL-100 as part on non override courses even though they are forced applied because such courses are in COURSES LIST
+                //hist-100 will be considered as non override course because it is forcibly applied.
+                Assert.AreEqual(4, nonOverrideAppliedCourses.Count());
+                //MATH-100
+                Assert.AreEqual("5", nonOverrideAppliedCourses[0].GetAcadCredId());
+                //hist-400
+                Assert.AreEqual("6", nonOverrideAppliedCourses[1].GetAcadCredId());
+                //BIOL-100
+                Assert.AreEqual("3", nonOverrideAppliedCourses[2].GetAcadCredId());
+                //MATH-100
+                Assert.AreEqual("4", nonOverrideAppliedCourses[3].GetAcadCredId());
+            }
+
+            //when overridden applied course is not in course list
+            [TestMethod]
+            public void GroupResult_GetNonOverrideApplied_forcedcourses_notInCourseList()
+            {
+
+                //TAKE "MATH-100(143)", "BIOL-100(110)", "HIST-400(87)"
+                entity.Group.Courses = new List<string>() { "143", "110", "87" };
+                //BIOL-100 is applied
+                var course = new TestCourseRepository().Biol100;
+                var acadCredit = new AcademicCredit("3", course, "123");
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.Applied, Explanation = AcadResultExplanation.None });
+                //MATH-100 is applied
+                var course1 = new TestCourseRepository().Math100;
+                var acadCredit1 = new AcademicCredit("4", course1, "111");
+                entity.Results.Add(new CreditResult(acadCredit1) { Result = Result.Applied, Explanation = AcadResultExplanation.None });
+                //hist-100 is not applied to group
+                var course3 = new TestCourseRepository().Hist100;
+                var acadCredit4 = new AcademicCredit("7", course3, "333");
+                entity.Results.Add(new CreditResult(acadCredit4) { Result = Result.NotInCoursesList, Explanation = AcadResultExplanation.None });
+                entity.ForceAppliedAcademicCreditIds = new List<string>() { "7" };
+                List<AcadResult> nonOverrideAppliedCourses = entity.GetNonOverrideApplied().ToList();
+                Assert.AreEqual(2, nonOverrideAppliedCourses.Count());
+                Assert.AreEqual("3", nonOverrideAppliedCourses[0].GetAcadCredId());
+                Assert.AreEqual("4", nonOverrideAppliedCourses[1].GetAcadCredId());
+            }
+
+            //when overridden applied course is forcibly applied multiple times but courses list have only once
+            [TestMethod]
+            public void GroupResult_GetNonOverrideApplied_ForcedCourse_MultipleTimes()
+            {
+                //TAKE "MATH-100(143)", "BIOL-100(110)", "HIST-400(87)"
+                entity.Group.Courses = new List<string>() { "143", "110", "87" };
+                //BIOL-100 is applied
+                var course = new TestCourseRepository().Biol100;
+                var acadCredit = new AcademicCredit("3", course, "123");
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.Applied, Explanation = AcadResultExplanation.None });
+                //MATH-100 is taken twice
+                var course1 = new TestCourseRepository().Math100;
+                var acadCredit1 = new AcademicCredit("4", course1, "111");
+                entity.Results.Add(new CreditResult(acadCredit1) { Result = Result.Applied, Explanation = AcadResultExplanation.None });
+                var acadCredit2 = new AcademicCredit("5", course1, "112");
+                entity.Results.Add(new CreditResult(acadCredit2) { Result = Result.Replaced, Explanation = AcadResultExplanation.None });
+                //HIST-400 is applied
+                var course2 = new TestCourseRepository().Hist400;
+                var acadCredit3 = new AcademicCredit("6", course2, "122");
+                entity.Results.Add(new CreditResult(acadCredit3) { Result = Result.Applied, Explanation = AcadResultExplanation.None });
+                //hist-100 is not applied to group
+                var course3 = new TestCourseRepository().Hist100;
+                var acadCredit4 = new AcademicCredit("7", course3, "333");
+                entity.Results.Add(new CreditResult(acadCredit4) { Result = Result.NotInCoursesList, Explanation = AcadResultExplanation.None });
+                entity.ForceAppliedAcademicCreditIds = new List<string>() { "3", "4","5", "7" };
+                List<AcadResult> nonOverrideAppliedCourses = entity.GetNonOverrideApplied().ToList();
+                Assert.AreEqual(3, nonOverrideAppliedCourses.Count());
+                Assert.AreEqual("6", nonOverrideAppliedCourses[0].GetAcadCredId());
+                Assert.AreEqual("3", nonOverrideAppliedCourses[1].GetAcadCredId());
+                Assert.AreEqual("4", nonOverrideAppliedCourses[2].GetAcadCredId());
+
+            }
+
+            //when courses list have repeated same course but overridden only once
+            [TestMethod]
+            public void GroupResult_GetNonOverrideApplied_Courses_MultipleTimes()
+            {
+                //TAKE "MATH-100(143)", "BIOL-100(110)", "HIST-400(87)"
+                entity.Group.Courses = new List<string>() { "143", "110", "87","110" };
+                //BIOL-100 is applied
+                var course = new TestCourseRepository().Biol100;
+                var acadCredit = new AcademicCredit("3", course, "123");
+                entity.Results.Add(new CreditResult(acadCredit) { Result = Result.Applied, Explanation = AcadResultExplanation.None });
+                //MATH-100 is taken twice
+                var course1 = new TestCourseRepository().Math100;
+                var acadCredit1 = new AcademicCredit("4", course1, "111");
+                entity.Results.Add(new CreditResult(acadCredit1) { Result = Result.Applied, Explanation = AcadResultExplanation.None });
+                //HIST-400 is applied
+                var course2 = new TestCourseRepository().Hist400;
+                var acadCredit3 = new AcademicCredit("6", course2, "122");
+                entity.Results.Add(new CreditResult(acadCredit3) { Result = Result.Applied, Explanation = AcadResultExplanation.None });
+                //hist-100 is not applied to group
+                var course3 = new TestCourseRepository().Hist100;
+                var acadCredit4 = new AcademicCredit("7", course3, "333");
+                entity.Results.Add(new CreditResult(acadCredit4) { Result = Result.NotInCoursesList, Explanation = AcadResultExplanation.None });
+                entity.ForceAppliedAcademicCreditIds = new List<string>() { "3", "4", "7" };
+                List<AcadResult> nonOverrideAppliedCourses = entity.GetNonOverrideApplied().ToList();
+                Assert.AreEqual(3, nonOverrideAppliedCourses.Count());
+                Assert.AreEqual("6", nonOverrideAppliedCourses[0].GetAcadCredId());
+                Assert.AreEqual("3", nonOverrideAppliedCourses[1].GetAcadCredId());
+                Assert.AreEqual("4", nonOverrideAppliedCourses[2].GetAcadCredId());
             }
         }
 

@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using Ellucian.Web.Http.Tests.Utilities.TestData;
@@ -69,5 +69,39 @@ namespace Ellucian.Web.Http.Tests.Utilities
 
             Assert.IsNull(returnedJson);
         }
+
+        [TestMethod]
+        public void TestStudentGradePointAvgsNoPeriodBased()
+        {
+            var testCompare = TestData.GetStudentGradePointAvgsNoPeriodBasedJContainer();
+
+            var returnedJson = DataPrivacy.ApplyDataPrivacy(TestData.StudentGradePointAvgsJContainer,
+                TestData.GetPeriodBasedSettings(), LoggerMock.Object);
+
+            Assert.IsTrue(JToken.DeepEquals(testCompare, returnedJson));
+        }
+
+        [TestMethod]
+        public void TestStudentGradePointAvgsNoPeriodBasedAcadSourceArray()
+        {
+            var testCompare = TestData.GetStudentGradePointAvgsNoPeriodBasedAcadSourceJContainer();
+
+            var returnedJson = DataPrivacy.ApplyDataPrivacy(TestData.StudentGradePointAvgsJContainer,
+                TestData.GetPeriodBasedAcadSourceSettings(), LoggerMock.Object);
+
+            Assert.IsTrue(JToken.DeepEquals(testCompare, returnedJson));
+        }
+
+        [TestMethod]
+        public void TestStudentGradePointAvgsNoCumulativeAcadSourceArray()
+        {
+            var testCompare = TestData.GetStudentGradePointAvgsNoCumulativeAcadSourceJContainer();
+
+            var returnedJson = DataPrivacy.ApplyDataPrivacy(TestData.StudentGradePointAvgsJContainer,
+                TestData.GetCumulativeAcadSourceSettings(), LoggerMock.Object);
+
+            Assert.IsTrue(JToken.DeepEquals(testCompare, returnedJson));
+        }
+
     }
 }

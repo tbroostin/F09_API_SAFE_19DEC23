@@ -57,9 +57,24 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AgreementPeriod.cs" />
+    <Compile Include="Attachment.cs" />
+    <Compile Include="AttachmentCollectionEffectivePermissions.cs" />
+    <Compile Include="AttachmentEncryption.cs" />
+    <Compile Include="AttachmentOwnerAction.cs" />
+    <Compile Include="AttachmentCollection.cs" />
+    <Compile Include="AttachmentAction.cs" />
+    <Compile Include="AttachmentCollectionStatus.cs" />
+    <Compile Include="AttachmentCollectionIdentityType.cs" />
+    <Compile Include="AttachmentStatus.cs" />
+    <Compile Include="AuthenticationScheme.cs" />
     <Compile Include="BackupConfigurationQueryCriteria.cs" />
     <Compile Include="BackupConfiguration.cs" />
+    <Compile Include="TaxFormBoxCodes.cs" />
     <Compile Include="CampusCalendar.cs" />
+    <Compile Include="AttachmentCollectionIdentity.cs" />
+    <Compile Include="ContentKeyRequest.cs" />
+    <Compile Include="ContentKey.cs" />
     <Compile Include="CorrespondenceRequest.cs" />
     <Compile Include="CorrespondenceRequestStatus.cs" />
     <Compile Include="EmployeeNameQueryCriteria.cs" />
@@ -109,6 +124,9 @@
     <Compile Include="OrganizationalRelationshipConfiguration.cs" />
     <Compile Include="OrganizationalRelationshipType.cs" />
     <Compile Include="PayrollDepositDirective.cs" />
+    <Compile Include="PersonAgreement.cs" />
+    <Compile Include="PersonAgreementQueryCriteria.cs" />
+    <Compile Include="PersonAgreementStatus.cs" />
     <Compile Include="PersonalPronounType.cs" />
     <Compile Include="PersonHierarchyName.cs" />
     <Compile Include="PayableDepositDirective.cs" />
@@ -190,6 +208,8 @@
     <Compile Include="Relationship.cs" />
     <Compile Include="RelationshipType.cs" />
     <Compile Include="RequiredDocumentConfiguration.cs" />
+    <Compile Include="PasswordResetTokenRequest.cs" />
+    <Compile Include="ResetPassword.cs" />
     <Compile Include="ResourceBusinessEventMapping.cs" />
     <Compile Include="RestrictionConfiguration.cs" />
     <Compile Include="Role.cs" />
@@ -197,6 +217,7 @@
     <Compile Include="School.cs" />
     <Compile Include="SelfServiceConfiguration.cs" />
     <Compile Include="SelfservicePreference.cs" />
+    <Compile Include="SessionConfiguration.cs" />
     <Compile Include="SeverityStyleMapping.cs" />
     <Compile Include="SpecialDay.cs" />
     <Compile Include="SpecialNeed.cs" />
@@ -214,6 +235,7 @@
     <Compile Include="UrlFilter.cs" />
     <Compile Include="User.cs" />
     <Compile Include="Profile.cs" />
+    <Compile Include="UserIdRecoveryRequest.cs" />
     <Compile Include="UserProfileConfiguration.cs" />
     <Compile Include="GraduateMilitaryStatus.cs" />
     <Compile Include="UserProfileConfiguration2.cs" />

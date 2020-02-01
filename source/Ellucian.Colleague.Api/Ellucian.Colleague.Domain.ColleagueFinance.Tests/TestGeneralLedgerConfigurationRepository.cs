@@ -100,6 +100,23 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             accountStructure.AddMajorComponent(testGlAccountRepository.GlComponents.FirstOrDefault(x => x.ComponentName == TestGlAccountRepository.LOCATION_CODE));
             accountStructure.AddMajorComponent(testGlAccountRepository.GlComponents.FirstOrDefault(x => x.ComponentName == TestGlAccountRepository.UNIT_CODE));
             accountStructure.AddMajorComponent(testGlAccountRepository.GlComponents.FirstOrDefault(x => x.ComponentName == TestGlAccountRepository.OBJECT_CODE));
+            accountStructure.AddMajorComponent(testGlAccountRepository.GlComponents.FirstOrDefault(x => x.ComponentName == TestGlAccountRepository.SOURCE_CODE));
+            accountStructure.AddMajorComponent(testGlAccountRepository.GlComponents.FirstOrDefault(x => x.ComponentName == TestGlAccountRepository.FUNCTION_CODE));
+
+            accountStructure.AddSubcomponent(testGlAccountRepository.GlComponents.FirstOrDefault(x => x.ComponentName == TestGlAccountRepository.FUND_CODE));
+            accountStructure.AddSubcomponent(testGlAccountRepository.GlComponents.FirstOrDefault(x => x.ComponentName == TestGlAccountRepository.SOURCE_CODE));
+            accountStructure.AddSubcomponent(testGlAccountRepository.GlComponents.FirstOrDefault(x => x.ComponentName == TestGlAccountRepository.FUNCTION_CODE));
+            accountStructure.AddSubcomponent(testGlAccountRepository.GlComponents.FirstOrDefault(x => x.ComponentName == TestGlAccountRepository.LOCATION_CODE));
+            accountStructure.AddSubcomponent(testGlAccountRepository.GlComponents.FirstOrDefault(x => x.ComponentName == TestGlAccountRepository.UNIT_CODE));
+            accountStructure.AddSubcomponent(testGlAccountRepository.GlComponents.FirstOrDefault(x => x.ComponentName == TestGlAccountRepository.OBJECT_CODE));
+            accountStructure.AddSubcomponent(testGlAccountRepository.GlComponents.FirstOrDefault(x => x.ComponentName == TestGlAccountRepository.SOURCE_CODE));
+            accountStructure.AddSubcomponent(testGlAccountRepository.GlComponents.FirstOrDefault(x => x.ComponentName == TestGlAccountRepository.FUNCTION_CODE));
+
+            accountStructure.AddSubcomponent(testGlAccountRepository.GlComponents.FirstOrDefault(x => x.ComponentName == TestGlAccountRepository.FUND_GROUP));
+            accountStructure.AddSubcomponent(testGlAccountRepository.GlComponents.FirstOrDefault(x => x.ComponentName == TestGlAccountRepository.LOCATION_SUBCLASS_CODE));
+            accountStructure.AddSubcomponent(testGlAccountRepository.GlComponents.FirstOrDefault(x => x.ComponentName == TestGlAccountRepository.UNIT_SUBCLASS_CODE));
+            accountStructure.AddSubcomponent(testGlAccountRepository.GlComponents.FirstOrDefault(x => x.ComponentName == TestGlAccountRepository.GL_SUBSCLASS_CODE));
+
             accountStructure.FullAccessRole = "ALLACCESS";
             accountStructure.glDelimiter = "-";
 
@@ -214,7 +231,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
 
         public Glstruct GlStructDataContract = new Glstruct()
         {
-            AcctSize = new List<string>() { "18", "6"},
+            AcctSize = new List<string>() { "18", "6" },
             AcctNames = new List<string>() { "FUND", "PROGRAM", "LOCATION", "ACTIVITY", "DEPARTMENT", "OBJECT" },
             AcctStart = new List<string>() { "1", "4", "7", "10", "13", "19" },
             AcctLength = new List<int?>() { 2, 2, 2, 2, 5, 5 },
@@ -321,10 +338,13 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
 
         public async Task<GeneralLedgerClassConfiguration> GetClassConfigurationAsync()
         {
-            return await Task.Run(() =>
-                new GeneralLedgerClassConfiguration(GlClassDefDataContract.GlClassDict, GlClassDefDataContract.GlClassExpenseValues,
-                    GlClassDefDataContract.GlClassRevenueValues, GlClassDefDataContract.GlClassAssetValues, GlClassDefDataContract.GlClassLiabilityValues,
-                    GlClassDefDataContract.GlClassFundBalValues));
+            var classConfiguration = await Task.Run(() =>
+                                  new GeneralLedgerClassConfiguration(GlClassDefDataContract.GlClassDict, GlClassDefDataContract.GlClassExpenseValues,
+                                  GlClassDefDataContract.GlClassRevenueValues, GlClassDefDataContract.GlClassAssetValues, GlClassDefDataContract.GlClassLiabilityValues,
+                                  GlClassDefDataContract.GlClassFundBalValues));
+            classConfiguration.GlClassLength = 1;
+            classConfiguration.GlClassStartPosition = 18;
+            return classConfiguration;
         }
         #endregion
 

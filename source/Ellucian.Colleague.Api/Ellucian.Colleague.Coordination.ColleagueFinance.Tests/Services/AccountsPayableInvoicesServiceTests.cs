@@ -21,6 +21,7 @@ using Ellucian.Colleague.Dtos.EnumProperties;
 using System.Collections.ObjectModel;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Data.Colleague;
+using Ellucian.Colleague.Dtos.DtoProperties;
 
 namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 {
@@ -163,6 +164,141 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 if (dtoLi.ReferenceDocument != null)
                 {
                     Assert.AreEqual("POGuid", dtoLi.ReferenceDocument.PurchaseOrder.Id);
+                }
+
+                Assert.AreEqual(entityLi.Description, dtoLi.Description);
+                Assert.AreEqual("CommodityGuid321", dtoLi.CommodityCode.Id);
+                Assert.AreEqual(entityLi.Quantity, dtoLi.Quantity);
+                Assert.AreEqual(null, dtoLi.VendorBilledQuantity);
+                if (entityLi.UnitOfIssue == "rocks")
+                {
+                    Assert.AreEqual("unitGuid321", dtoLi.Description);
+                }
+                else
+                {
+                    Assert.AreEqual("unitGuid123", dtoLi.Description);
+                }
+                Assert.AreEqual(entityLi.Price, dtoLi.UnitPrice.Value);
+                Assert.AreEqual(Dtos.EnumProperties.CurrencyIsoCode.USD, dtoLi.UnitPrice.Currency);
+                Assert.AreEqual(null, dtoLi.VendorBilledUnitPrice.Value);
+                Assert.AreEqual(null, dtoLi.VendorBilledUnitPrice.Currency);
+                Assert.AreEqual(null, dtoLi.AdditionalAmount.Value);
+                Assert.AreEqual(null, dtoLi.AdditionalAmount.Currency);
+                Assert.AreEqual(entityLi.LineItemTaxes.Count(), dtoLi.Taxes.Count());
+                for (int i = 0; i < dtoLi.Taxes.Count(); i++)
+                {
+                    Assert.AreEqual(entityLi.LineItemTaxes[i].TaxCode, dtoLi.Taxes[i].TaxCode);
+                    Assert.AreEqual(entityLi.LineItemTaxes[i].TaxAmount, dtoLi.Taxes[i].VendorAmount.Value);
+                    Assert.AreEqual(Dtos.EnumProperties.CurrencyIsoCode.USD, dtoLi.Taxes[i].VendorAmount.Currency);
+                }
+
+                Assert.AreEqual(entityLi.CashDiscountAmount, dtoLi.Discount.Amount.Value);
+                Assert.AreEqual(Dtos.EnumProperties.CurrencyIsoCode.USD, dtoLi.Discount.Amount.Currency);
+                Assert.AreEqual(entityLi.TradeDiscountPercent, dtoLi.Discount.Percent);
+                Assert.AreEqual(Dtos.EnumProperties.AccountsPayableInvoicesPaymentStatus.Nohold, dtoLi.PaymentStatus);
+                Assert.AreEqual(entityLi.Comments, dtoLi.Comment);
+
+                if (AccountsPayableInvoicesEntity.Status == VoucherStatus.InProgress
+                    || AccountsPayableInvoicesEntity.Status == VoucherStatus.NotApproved
+                    || AccountsPayableInvoicesEntity.Status == VoucherStatus.Outstanding)
+                {
+                    Assert.AreEqual(AccountsPayableInvoicesStatus.Open, dtoLi.Status);
+                }
+                else
+                {
+                    Assert.AreEqual(AccountsPayableInvoicesStatus.Closed, dtoLi.Status);
+                }
+                Assert.AreEqual(entityLi.GlDistributions.Count(), dtoLi.AccountDetails.Count());
+                for (int j = 0; j < entityLi.GlDistributions.Count(); j++)
+                {
+                    Assert.AreEqual(j, dtoLi.AccountDetails[j].SequenceNumber);
+                    Assert.AreEqual(entityLi.GlDistributions[j].GlAccountNumber, dtoLi.AccountDetails[j].AccountingString);
+                    Assert.AreEqual(entityLi.GlDistributions[j].Amount, dtoLi.AccountDetails[j].Allocation.Allocated.Amount.Value);
+                    Assert.AreEqual(Dtos.EnumProperties.CurrencyIsoCode.USD, dtoLi.AccountDetails[j].Allocation.Allocated.Amount.Currency);
+                    Assert.AreEqual(entityLi.GlDistributions[j].Quantity, dtoLi.AccountDetails[j].Allocation.Allocated.Quantity);
+                    Assert.AreEqual(entityLi.GlDistributions[j].Percent, dtoLi.AccountDetails[j].Allocation.Allocated.Percentage);
+                    Assert.AreEqual(null, dtoLi.AccountDetails[j].Allocation.AdditionalAmount.Value);
+                    Assert.AreEqual(null, dtoLi.AccountDetails[j].Allocation.AdditionalAmount.Currency);
+                    Assert.AreEqual(null, dtoLi.AccountDetails[j].Allocation.DiscountAmount.Value);
+                    Assert.AreEqual(null, dtoLi.AccountDetails[j].Allocation.DiscountAmount.Currency);
+                    Assert.AreEqual("apTypeGuid321", dtoLi.AccountDetails[j].Source.Id);
+                }
+            }
+        }
+        [TestMethod]
+        public async Task AccountsPayableInvoicesServiceTests_GetAccountsPayableInvoices2ByGuidAsync_BPO()
+        {
+            string voucherId = "1";
+            var voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(voucherId, "00000001", GlAccessLevel.Full_Access, null, versionNumber);
+
+            Collection<Ellucian.Colleague.Domain.Base.Entities.CommerceTaxCode> TaxCodInfo = new Collection<Ellucian.Colleague.Domain.Base.Entities.CommerceTaxCode>() { new Ellucian.Colleague.Domain.Base.Entities.CommerceTaxCode("TaxGuid", "ST", "TestGUIDdesc") };
+            mockreferenceDataRepository.Setup(repo => repo.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(TaxCodInfo);
+
+            Collection<Ellucian.Colleague.Domain.ColleagueFinance.Entities.CommodityCode> commodityCodes = new Collection<Ellucian.Colleague.Domain.ColleagueFinance.Entities.CommodityCode>() { new Ellucian.Colleague.Domain.ColleagueFinance.Entities.CommodityCode("CommodityGuid321", "00402", "Test Commodity") };
+            mockcolleagueFinanceReferenceDataRepository.Setup(repo => repo.GetCommodityCodesAsync(It.IsAny<bool>())).ReturnsAsync(commodityCodes);
+
+            Collection<Ellucian.Colleague.Domain.ColleagueFinance.Entities.AccountsPayableSources> apTypes = new Collection<Ellucian.Colleague.Domain.ColleagueFinance.Entities.AccountsPayableSources>() { new Ellucian.Colleague.Domain.ColleagueFinance.Entities.AccountsPayableSources("apTypeGuid321", "AP", "Account Payable") };
+            mockcolleagueFinanceReferenceDataRepository.Setup(repo => repo.GetAccountsPayableSourcesAsync(It.IsAny<bool>())).ReturnsAsync(apTypes);
+
+            Collection<VendorTerm> Terms = new Collection<VendorTerm>() { new VendorTerm("TermsGuid321", "02", "02-15 days") };
+            mockcolleagueFinanceReferenceDataRepository.Setup(repo => repo.GetVendorTermsAsync(It.IsAny<bool>())).ReturnsAsync(Terms);
+
+            Collection<Ellucian.Colleague.Domain.ColleagueFinance.Entities.CommodityUnitType> UnitTypes = new Collection<Ellucian.Colleague.Domain.ColleagueFinance.Entities.CommodityUnitType>() {
+                new Ellucian.Colleague.Domain.ColleagueFinance.Entities.CommodityUnitType("unitGuid321", "rock", "Rocks"),
+                new Ellucian.Colleague.Domain.ColleagueFinance.Entities.CommodityUnitType("unitGuid123", "thing", "Things") };
+            mockcolleagueFinanceReferenceDataRepository.Setup(repo => repo.GetCommodityUnitTypesAsync(It.IsAny<bool>())).ReturnsAsync(UnitTypes);
+
+            AccountsPayableInvoicesEntity = ConvertVoucherEntityToAPI(voucherDomainEntity);
+            AccountsPayableInvoicesEntity.BlanketPurchaseOrderId = "BPO01";
+            mockAccountsPayableInvoices.Setup(repo => repo.GetAccountsPayableInvoicesByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(AccountsPayableInvoicesEntity);
+            mockvendorsRepository.Setup(repo => repo.GetVendorGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("VendorIDGuid");
+            mockaddressRepository.Setup(repo => repo.GetAddressGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("AddressGuid");
+            mockAccountsPayableInvoices.Setup(rep => rep.GetGuidFromID(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync("POGuid");
+
+
+            var actual = await AccountsPayableInvoicesService.GetAccountsPayableInvoices2ByGuidAsync(guid);
+            Assert.IsNotNull(actual);
+            Assert.AreEqual(guid, actual.Id);
+            Assert.AreEqual(AccountsPayableInvoicesEntity.Comments, actual.InvoiceComment);
+            Assert.AreEqual(AccountsPayableInvoicesEntity.VoucherDiscAmt, actual.InvoiceDiscountAmount.Value);
+            Assert.AreEqual(AccountsPayableInvoicesInvoiceType.Invoice, actual.InvoiceType);
+            Assert.AreEqual(AccountsPayableInvoicesProcessState.Inprogress, actual.ProcessState);
+            if (actual.ProcessState != AccountsPayableInvoicesProcessState.NotSet)
+            {
+                if (AccountsPayableInvoicesEntity.VoucherPayFlag == "Y")
+                {
+                    Assert.AreEqual(AccountsPayableInvoicesPaymentStatus.Nohold, actual.PaymentStatus);
+                }
+                else
+                {
+                    Assert.AreEqual(AccountsPayableInvoicesPaymentStatus.Hold, actual.PaymentStatus);
+                }
+            }
+            Assert.AreEqual("RefNo1111", actual.ReferenceNumber);
+            Assert.AreEqual("taxguid", actual.Taxes[0].TaxCode.Id);
+            Assert.AreEqual(AccountsPayableInvoicesEntity.VoucherTaxes[0].TaxAmount, actual.Taxes[0].VendorAmount.Value);
+            Assert.AreEqual(Dtos.EnumProperties.CurrencyIsoCode.USD, actual.Taxes[0].VendorAmount.Currency);
+
+            Assert.AreEqual("VendorIDGuid", actual.Vendor.ExistingVendor.Vendor.Id);
+            Assert.AreEqual("AddressGuid", actual.Vendor.ExistingVendor.AlternativeVendorAddress.Id);
+            Assert.AreEqual(AccountsPayableInvoicesEntity.VoucherInvoiceAmt, actual.VendorBilledAmount.Value);
+            Assert.AreEqual(Dtos.EnumProperties.CurrencyIsoCode.USD, actual.VendorBilledAmount.Currency);
+            Assert.AreEqual(AccountsPayableInvoicesEntity.InvoiceDate, actual.VendorInvoiceDate);
+            Assert.AreEqual(AccountsPayableInvoicesEntity.InvoiceNumber, actual.VendorInvoiceNumber);
+            Assert.AreEqual(AccountsPayableInvoicesEntity.VoucherVoidGlTranDate, actual.VoidDate);
+            Assert.AreEqual("aptypeguid321", actual.Payment.Source.Id);
+            Assert.AreEqual(AccountsPayableInvoicesEntity.DueDate, actual.Payment.PaymentDueOn);
+            Assert.AreEqual("termsguid321", actual.Payment.PaymentTerms.Id);
+
+            Assert.AreEqual(AccountsPayableInvoicesEntity.LineItems.Count(), actual.LineItems.Count());
+            for (int x = 0; x > actual.LineItems.Count(); x++)
+            {
+                var dtoLi = actual.LineItems[x];
+                var entityLi = AccountsPayableInvoicesEntity.LineItems[x];
+
+                if (dtoLi.ReferenceDocument != null)
+                {
+                    Assert.AreEqual("BPOGuid", dtoLi.ReferenceDocument.BlanketPurchaseOrder.Id);
                 }
 
                 Assert.AreEqual(entityLi.Description, dtoLi.Description);
@@ -605,7 +741,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             //    It.IsAny<DateTime>(), It.IsAny<string>())).ReturnsAsync(checkFund);
 
             mockAccountFundsAvailable.Setup(x => x.CheckAvailableFundsAsync(It.IsAny<List<Domain.ColleagueFinance.Entities.FundsAvailable>>(),
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(null);
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(null);
 
             mockPersonRepository.Setup(repo => repo.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("ebf585ad-cc1f-478f-a7a3-aefae87f873a");
 
@@ -1184,7 +1320,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             updateAccountsPayableInvoicesRole.AddPermission(new Domain.Entities.Permission(Domain.ColleagueFinance.ColleagueFinancePermissionCodes.UpdateApInvoices));
             roleRepositoryMock.Setup(r => r.Roles).Returns(new List<Domain.Entities.Role>() { updateAccountsPayableInvoicesRole });
 
-            accountFundsAvailableMock.Setup(p => p.CheckAvailableFundsAsync(It.IsAny<List<Domain.ColleagueFinance.Entities.FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(fundsAvailable);
+            accountFundsAvailableMock.Setup(p => p.CheckAvailableFundsAsync(It.IsAny<List<Domain.ColleagueFinance.Entities.FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(fundsAvailable);
             personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
             personRepositoryMock.Setup(p => p.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(guid);
             vendorsRepositoryMock.Setup(p => p.GetVendorIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
@@ -2346,6 +2482,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 CurrencyCode = "USD",
                 HostCountry = "CAN",
                 VendorId = "1",
+                SubmittedBy = "1",
                 VoucherAddressId = "1",
                 VoucherUseAltAddress = true,
                 VoucherMiscName = new List<string>() { "name" },
@@ -2419,7 +2556,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             updateAccountsPayableInvoicesRole.AddPermission(new Domain.Entities.Permission(Domain.ColleagueFinance.ColleagueFinancePermissionCodes.UpdateApInvoices));
             roleRepositoryMock.Setup(r => r.Roles).Returns(new List<Domain.Entities.Role>() { updateAccountsPayableInvoicesRole });
 
-            accountFundsAvailableMock.Setup(p => p.CheckAvailableFundsAsync(It.IsAny<List<Domain.ColleagueFinance.Entities.FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(fundsAvailable);
+            accountFundsAvailableMock.Setup(p => p.CheckAvailableFundsAsync(It.IsAny<List<Domain.ColleagueFinance.Entities.FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(fundsAvailable);
             personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
             personRepositoryMock.Setup(p => p.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(guid);
             vendorsRepositoryMock.Setup(p => p.GetVendorIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
@@ -2465,6 +2602,15 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         {
             accountsPayableInvoice.Vendor = null;
 
+            await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task ActPayInvService_PUT_When_Dto_Manual_ExistingVendorId_Is_Null()
+        {
+            accountsPayableInvoice.Vendor.ExistingVendor = null;
+            accountsPayableInvoice.Vendor.ManualVendorDetails = null;
             await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
         }
 
@@ -3125,6 +3271,53 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
         }
 
+        [TestMethod]
+        [ExpectedException(typeof(Exception))]
+        //  //if there is a BPO, then there cannot be a reference line number
+        public async Task ActPayInvService_PUT_DtoToEntity_LineItem_BPO_ReferenceDocumentLineItemNumber()
+        {
+            accountsPayableInvoice.LineItems.FirstOrDefault().ReferenceDocument.PurchaseOrder = null;
+            accountsPayableInvoice.LineItems.FirstOrDefault().ReferenceDocument.BlanketPurchaseOrder = new GuidObject2(guid);
+            accountsPayableInvoicesMock.Setup(p => p.GetIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(new GuidLookupResult() { Entity = "BPO", PrimaryKey = "1" });
+            await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        ////if one line item has BPO as reference doc then all of them should have it as well
+        public async Task ActPayInvService_PUT_DtoToEntity_LineItem_BPO_NotFound()
+        {
+
+            accountsPayableInvoice.LineItems.FirstOrDefault().ReferenceDocument.PurchaseOrder = null;
+            accountsPayableInvoice.LineItems.FirstOrDefault().ReferenceDocument.BlanketPurchaseOrder = new GuidObject2(guid);
+            accountsPayableInvoice.LineItems.FirstOrDefault().ReferenceDocumentLineItemNumber = null;
+            accountsPayableInvoicesMock.Setup(p => p.GetIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(new GuidLookupResult() { Entity = "BPO", PrimaryKey = "1" });
+            var newitem = new Dtos.DtoProperties.AccountsPayableInvoicesLineItemDtoProperty2()
+            {
+                LineItemNumber = "1",
+                CommodityCode = new GuidObject2(guid),
+                UnitofMeasure = new GuidObject2(guid),
+                UnitPrice = new Dtos.DtoProperties.Amount2DtoProperty() { Value = 100, Currency = CurrencyIsoCode.USD },
+                VendorBilledUnitPrice = new Dtos.DtoProperties.Amount2DtoProperty() { Value = 105, Currency = CurrencyIsoCode.USD },
+                AdditionalAmount = new Dtos.DtoProperties.Amount2DtoProperty() { Value = 110, Currency = CurrencyIsoCode.USD },
+                Taxes = taxes,
+                AccountDetails = accountDetails,
+                Description = "description",
+                Quantity = 2,
+                PaymentStatus = AccountsPayableInvoicesPaymentStatus.Nohold,
+                Status = AccountsPayableInvoicesStatus.Open,
+                Discount = new Dtos.DtoProperties.AccountsPayableInvoicesDiscountDtoProperty()
+                {
+                    Amount = new Dtos.DtoProperties.Amount2DtoProperty() { Value = 120, Currency = CurrencyIsoCode.USD },
+
+                },
+
+            };
+            accountsPayableInvoice.LineItems.Add(newitem);
+
+            await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
+        }
+
         //73
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
@@ -3193,6 +3386,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             var testGlAccountStructure = await new TestGeneralLedgerConfigurationRepository().GetAccountStructureAsync();
             generalLedgerConfigurationRepositoryMock.Setup(repo => repo.GetAccountStructureAsync()).ReturnsAsync(testGlAccountStructure);
 
+            accountsPayableInvoiceEntity.SubmittedBy = string.Empty;
             accountsPayableInvoiceEntity.CurrencyCode = "A12";
             accountsPayableInvoiceEntity.HostCountry = "USA";
             accountsPayableInvoiceEntity.VoucherMiscCountry = String.Empty;
@@ -3258,6 +3452,28 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             Assert.AreEqual(guid, result.Id);
         }
 
+        [TestMethod]
+        public async Task ActPayInvService_PUT_valid_BPO()
+        {
+            var testGlAccountStructure = await new TestGeneralLedgerConfigurationRepository().GetAccountStructureAsync();
+            generalLedgerConfigurationRepositoryMock.Setup(repo => repo.GetAccountStructureAsync()).ReturnsAsync(testGlAccountStructure);
+            accountsPayableInvoice.LineItems[0].ReferenceDocument.BlanketPurchaseOrder = new GuidObject2(guid);
+            accountsPayableInvoice.LineItems[0].ReferenceDocument.PurchaseOrder = null;
+            accountsPayableInvoice.LineItems[0].ReferenceDocumentLineItemNumber = null;
+            accountsPayableInvoicesMock.Setup(p => p.GetIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(new GuidLookupResult() { Entity = "BPO", PrimaryKey = "1" });
+            accountsPayableInvoiceEntity.PurchaseOrderId = string.Empty;
+            accountsPayableInvoiceEntity.BlanketPurchaseOrderId = "1";
+
+            manualVendorDetails.Place.Country.Code = IsoCode.CAN;
+
+            accountsPayableInvoice.Vendor.ManualVendorDetails = manualVendorDetails;
+            accountsPayableInvoice.InvoiceNumber = "1";
+            accountsPayableInvoice.LineItems.FirstOrDefault().AccountDetails.FirstOrDefault().BudgetCheck = AccountsPayableInvoicesAccountBudgetCheck.Override;
+            var result = await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
+
+            Assert.IsNotNull(result);
+            Assert.AreEqual(guid, result.Id);
+        }
         [TestMethod]
         public async Task ActPayInvService_PUT_Create_NewRecord()
         {

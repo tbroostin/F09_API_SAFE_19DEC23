@@ -22,6 +22,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
             public string id;
             public string checkNumber;
             public string adviceNumber;
+            public string isUsingNewW4Flag;
             public List<PayToDateEarningsRecord> earnings;
             public List<PayToDateTaxRecord> taxes;
             public List<PayToDateExpandedTaxRecord> expandedTaxes;
@@ -120,6 +121,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                     id = string.Format("12345*{0}*{1}*1", payCycleId, employeeId),
                     adviceNumber = "333",
                     checkNumber = "111",
+                    isUsingNewW4Flag = "n",
                     earnings = new List<PayToDateEarningsRecord>()
                     {
                         new PayToDateEarningsRecord()
@@ -262,6 +264,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                     id = string.Format("12345*{0}*{1}*1", payCycleId, employeeId),
                     adviceNumber = "334",
                     checkNumber = "111",
+                    isUsingNewW4Flag = "n",
                     earnings = new List<PayToDateEarningsRecord>()
                     {
                         new PayToDateEarningsRecord()
@@ -404,6 +407,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                     id = string.Format("12345*{0}*{1}*1", payCycleId, employeeId),
                     adviceNumber = "335",
                     checkNumber = "111",
+                    isUsingNewW4Flag = "",
                     earnings = new List<PayToDateEarningsRecord>()
                     {
                         new PayToDateEarningsRecord()
@@ -534,6 +538,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                     id = string.Format("12345*{0}*{1}*1", payCycleId, employeeId),
                     adviceNumber = "336",
                     checkNumber = "111",
+                    isUsingNewW4Flag = "",
                     earnings = new List<PayToDateEarningsRecord>()
                     {
                         new PayToDateEarningsRecord()
@@ -664,6 +669,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                     id = string.Format("12345*{0}*{1}*1", payCycleId, employeeId),
                     adviceNumber = "444",
                     checkNumber = "111",
+                    isUsingNewW4Flag = "",
                     earnings = new List<PayToDateEarningsRecord>()
                     {
                         new PayToDateEarningsRecord()
@@ -830,7 +836,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                         var keyParts = ptd.id.Split('*');
 
                         var payControl = payControlRecords.FirstOrDefault(pc => pc.id == string.Format("{0}*{1}", keyParts[0], keyParts[1]));
-                        var entry = new PayrollRegisterEntry(ptd.id, employeeId, payControl.periodStartDate.Value, DmiString.PickDateToDateTime(int.Parse(keyParts[0])), keyParts[1], int.Parse(keyParts[3]), ptd.checkNumber, ptd.adviceNumber);
+                        var entry = new PayrollRegisterEntry(ptd.id, employeeId, payControl.periodStartDate.Value, DmiString.PickDateToDateTime(int.Parse(keyParts[0])), keyParts[1], int.Parse(keyParts[3]), ptd.checkNumber, ptd.adviceNumber, true);
 
                         foreach (var earn in ptd.earnings)
                         {
@@ -854,13 +860,13 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                             }
                             else
                             {
-                                var stipendEntry = new PayrollRegisterEarningsEntry(earn.earningsCode, 
-                                    earn.stipendId, 
-                                    earn.totalAmount.Value, 
+                                var stipendEntry = new PayrollRegisterEarningsEntry(earn.earningsCode,
+                                    earn.stipendId,
+                                    earn.totalAmount.Value,
                                     earn.baseAmount ?? 0,
                                     earn.earningsFactorAmount ?? 0,
-                                    earn.hours, 
-                                    earn.rate.Value, 
+                                    earn.hours,
+                                    earn.rate.Value,
                                     hsIndicator);
                             }
                         }

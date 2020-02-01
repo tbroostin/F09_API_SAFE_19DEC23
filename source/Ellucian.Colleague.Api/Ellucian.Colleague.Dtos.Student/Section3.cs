@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -142,6 +142,16 @@ namespace Ellucian.Colleague.Dtos.Student
         public int Waitlisted { get; set; }
 
         /// <summary>
+        /// Maximum number of students allowed to be waitlisted for this section.
+        /// </summary>
+        public int WaitlistMaximum { get; set; }
+
+        /// <summary>
+        /// Check if waitlist is allowed for a particular section
+        /// </summary>
+        public bool AllowWaitlist { get; set; }
+
+        /// <summary>
         /// If True, the course requisites are not relevant to this section.
         /// </summary>
         public bool OverridesCourseRequisites { get; set; }
@@ -187,6 +197,11 @@ namespace Ellucian.Colleague.Dtos.Student
         public string GradeSchemeCode { get; set; }
 
         /// <summary>
+        /// Grade subscheme
+        /// </summary>
+        public string GradeSubschemeCode { get; set; }
+
+        /// <summary>
         /// Miscellaneous (non-registration) financial charges
         /// </summary>
         public IEnumerable<SectionCharge> SectionCharges { get; set; }
@@ -201,5 +216,9 @@ namespace Ellucian.Colleague.Dtos.Student
         /// </summary>
         public AttendanceTrackingType AttendanceTrackingType { get; set; }
 
+        /// <summary>
+        /// Synonym
+        /// </summary>
+        public string Synonym { get; set; }
     }
 }

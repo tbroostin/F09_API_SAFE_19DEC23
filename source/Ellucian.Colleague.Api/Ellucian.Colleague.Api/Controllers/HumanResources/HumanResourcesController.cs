@@ -50,9 +50,15 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <returns></returns>
         ///<accessComments>
         /// 1. Any user can get a human-resources resource that represents their self.
-        /// 2. Users who have the permission - ACCEPT.REJECT.TIME.ENTRY - are considered supervisors and can get resources owned by their
-        /// supervisees. If a supervisor user attempts to get a resource owned by a non-supervisee, this endpoint will throw a 403.
-        /// 3. Users who are proxying for a supervisor (a user with the aforementioned permission) have the same authorization as the
+        /// 2. Any non-supervisor user can access HumanResourceDemographics data of all their supervisors along with that of their own.
+        /// 3. Any user with ViewAllEarningsStatements permission can acces HumanResourceDemographics data of all the employees along with that of their own.
+        /// 4. Users who have the permission - ACCEPT.REJECT.TIME.ENTRY - are considered supervisors and can access the HumanResourceDemographics data
+        /// of the following:
+        ///     a. Self
+        ///     b. All their supervisors
+        ///     c. All their subordinates
+        ///     d. All the supervisors of their subordinates
+        /// 5. Users who are proxying for a supervisor (a user with the aforementioned permission) have the same authorization as the
         /// supervisor. When this is the case, set the effectivePersonId argument in the route url to the id of the supervisor.
         /// </accessComments>         
         [HttpGet]
@@ -85,8 +91,9 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// 1. Any user can get a human-resources resource that represents their self.
         /// 2. Users who have the permission - ACCEPT.REJECT.TIME.ENTRY - are considered supervisors and can get resources owned by their
         /// supervisees. If a supervisor user attempts to get a resource owned by a non-supervisee, this endpoint will throw a 403.
-        /// 3. Users who are proxying for a supervisor (a user with the aforementioned permission) have the same authorization as the
+        /// 3. Users who are proxying for a supervisor (a user with the afore mentioned permission) have the same authorization as the
         /// supervisor. When this is the case, set the effectivePersonId argument in the route url to the id of the supervisor.
+        /// 4. Admin can access human-resources resource of anyone. 
         /// </accessComments>         
         [HttpGet]
         public async Task<IEnumerable<HumanResourceDemographics>> GetHumanResourceDemographics2Async(string effectivePersonId = null)

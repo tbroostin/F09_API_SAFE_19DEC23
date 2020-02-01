@@ -122,30 +122,30 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 _studentAdvisorRelationshipsCollection = new List<StudentAdvisorRelationship>()
                 {
                     new StudentAdvisorRelationship() {
-                        id = "1",
-                        guid = "3632ece0-8b9e-495f-a697-b5c9e053aad5",
-                        advisor = "ad1",
-                        advisorType = "Type1",
-                        startOn = new DateTime(2001, 10,15),
-                         program = "ProgCode1",
-                          student = "stu1"
+                        Id = "1",
+                        Guid = "3632ece0-8b9e-495f-a697-b5c9e053aad5",
+                        Advisor = "ad1",
+                        AdvisorType = "Type1",
+                        StartOn = new DateTime(2001, 10,15),
+                         Program = "ProgCode1",
+                          Student = "stu1"
                     },
                     new StudentAdvisorRelationship() {
-                        id = "2",
-                        guid = "176d35fb-5f7a-4c06-b3ae-65a7662c8b43",
-                        advisor = "ad2",
-                        startOn = new DateTime(2001, 09,01),
-                        endOn = new DateTime(2004, 05,15),
-                          student = "stu2"
+                        Id = "2",
+                        Guid = "176d35fb-5f7a-4c06-b3ae-65a7662c8b43",
+                        Advisor = "ad2",
+                        StartOn = new DateTime(2001, 09,01),
+                        EndOn = new DateTime(2004, 05,15),
+                          Student = "stu2"
                     },
                     new StudentAdvisorRelationship() {
-                        id = "3",
-                        guid = "635a3ad5-59ab-47ca-af87-8538c2ad727f",
-                        advisor = "ad3",
-                        advisorType = "Type1",
-                        startOn = new DateTime(2009, 07,17),
-                         program = "ProgCode1",
-                          student = "stu3"
+                        Id = "3",
+                        Guid = "635a3ad5-59ab-47ca-af87-8538c2ad727f",
+                        Advisor = "ad3",
+                        AdvisorType = "Type1",
+                        StartOn = new DateTime(2009, 07,17),
+                         Program = "ProgCode1",
+                          Student = "stu3"
                     },
                 };
 
@@ -180,12 +180,12 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
             };
 
-                prgList = new List<Domain.Student.Entities.AcademicProgram>()
+            prgList = new List<Domain.Student.Entities.AcademicProgram>()
             {
                 new Domain.Student.Entities.AcademicProgram("progguid1", "ProgCode1", "Prog description")
             };
 
-                advisorTypeList = new List<AdvisorType>()
+            advisorTypeList = new List<AdvisorType>()
             {
                 new AdvisorType("typeguid1", "Type1","Ad type Descpt","1")
             };
@@ -195,10 +195,21 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     _personRepositoryMock.Object, _adapterRegistryMock.Object, _advisorTypesServiceMock.Object, curntUserFactory,
                     _roleRepositoryMock.Object, _loggerMock.Object, _studentRepoMock.Object, baseConfigurationRepository);
 
-                _referenceRepositoryMock.Setup(x => x.GetAcademicProgramsAsync(It.IsAny<bool>())).ReturnsAsync(prgList);
+                _referenceRepositoryMock.Setup(x => x.GetAcademicProgramsGuidAsync(It.IsAny<string>())).ReturnsAsync("progguid1");
+                //_referenceRepositoryMock.Setup(x => x.GetAcademicProgramsAsync(It.IsAny<bool>())).ReturnsAsync(prgList);
 
-                _referenceRepositoryMock.Setup(x => x.GetAdvisorTypesAsync(It.IsAny<bool>())).ReturnsAsync(advisorTypeList);
+                _referenceRepositoryMock.Setup(x => x.GetAdvisorTypeGuidAsync(It.IsAny<string>())).ReturnsAsync("typeguid1");
+                //_referenceRepositoryMock.Setup(x => x.GetAdvisorTypesAsync(It.IsAny<bool>())).ReturnsAsync(advisorTypeList);
 
+                Dictionary<string, string> ids = new Dictionary<string, string>();
+                ids.Add("ad1", "adGuid1");
+                ids.Add("ad2", "adGuid2");
+                ids.Add("ad3", "adGuid3");
+                ids.Add("stu1", "stuGuid1");
+                ids.Add("stu2", "stuGuid2");
+                ids.Add("stu3", "stuGuid3");
+
+                _personRepositoryMock.Setup(x => x.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(ids);
                 _personRepositoryMock.Setup(x => x.GetPersonGuidFromIdAsync("ad1")).ReturnsAsync("adGuid1");
                 _personRepositoryMock.Setup(x => x.GetPersonGuidFromIdAsync("ad2")).ReturnsAsync("adGuid2");
                 _personRepositoryMock.Setup(x => x.GetPersonGuidFromIdAsync("ad3")).ReturnsAsync("adGuid3");
@@ -256,12 +267,15 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task StudentAdvisorRelationshipsService_GetStudentAdvisorRelationshipsAsync_filters()
             {
                 Tuple<IEnumerable<StudentAdvisorRelationship>, int> tupleResult = new Tuple<IEnumerable<StudentAdvisorRelationship>, int>(_studentAdvisorRelationshipsCollection, 3);
-
-                _personRepositoryMock.Setup(x => x.GetPersonIdFromGuidAsync("adGuid1")).ReturnsAsync("ad1");
-                _personRepositoryMock.Setup(x => x.GetPersonIdFromGuidAsync("stuGuid1")).ReturnsAsync("stu1");
+                advisorTypeList = new List<AdvisorType>()
+                {
+                    new AdvisorType("typeguid1", "Type1","Ad type Descpt","1")
+                };
+                _personRepositoryMock.SetupSequence(x => x.GetPersonIdFromGuidAsync(It.IsAny<string>())).Returns(Task.FromResult("ad1")).Returns(Task.FromResult("stu1"));
+                _referenceRepositoryMock.Setup(x => x.GetAdvisorTypesAsync(It.IsAny<bool>())).ReturnsAsync(advisorTypeList);
 
                 _studentAdvisorRelationshipsRepositoryMock.Setup(x => x.GetStudentAdvisorRelationshipsAsync(It.IsAny<int>(), It.IsAny<int>(),
-                    It.IsAny<bool>(), "stu1", "ad1", "Type1")).ReturnsAsync(tupleResult);
+                    It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(tupleResult);
 
                 var results = await _studentAdvisorRelationshipsService.GetStudentAdvisorRelationshipsAsync(0, 100,
                     false, "stuGuid1", "adGuid1", "typeguid1");
@@ -275,11 +289,11 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task StudentAdvisorRelationshipsService_GetStudentAdvisorRelationshipsByGuidAsync()
             {
                 StudentAdvisorRelationship entity = _studentAdvisorRelationshipsCollection.First();
-                var expected = _dtoStudentAdvisorRelList.FirstOrDefault(x => x.Id == entity.guid);
+                var expected = _dtoStudentAdvisorRelList.FirstOrDefault(x => x.Id == entity.Guid);
 
                 _studentAdvisorRelationshipsRepositoryMock.Setup(x => x.GetStudentAdvisorRelationshipsByGuidAsync(It.IsAny<string>())).ReturnsAsync(entity);
 
-                var actual = await _studentAdvisorRelationshipsService.GetStudentAdvisorRelationshipsByGuidAsync(entity.guid);
+                var actual = await _studentAdvisorRelationshipsService.GetStudentAdvisorRelationshipsByGuidAsync(entity.Guid);
 
                 Assert.IsNotNull(actual);
 
@@ -395,9 +409,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task StudentAdvisorRelationshipsService_GetStudentAdvisorRelationshipsByGuidAsync_SourceInvalidGuidException()
             {
                 StudentAdvisorRelationship entity = _studentAdvisorRelationshipsCollection.First();
-                var expected = _dtoStudentAdvisorRelList.FirstOrDefault(x => x.Id == entity.guid);
+                var expected = _dtoStudentAdvisorRelList.FirstOrDefault(x => x.Id == entity.Guid);
 
-                entity.guid = null;
+                entity.Guid = null;
 
                 _studentAdvisorRelationshipsRepositoryMock.Setup(x => x.GetStudentAdvisorRelationshipsByGuidAsync(It.IsAny<string>())).ReturnsAsync(entity);
 
@@ -409,9 +423,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task StudentAdvisorRelationshipsService_GetStudentAdvisorRelationshipsByGuidAsync_SourceInvalidAdvisorException()
             {
                 StudentAdvisorRelationship entity = _studentAdvisorRelationshipsCollection.First();
-                var expected = _dtoStudentAdvisorRelList.FirstOrDefault(x => x.Id == entity.guid);
+                var expected = _dtoStudentAdvisorRelList.FirstOrDefault(x => x.Id == entity.Guid);
 
-                entity.advisor = null;
+                entity.Advisor = null;
 
                 _studentAdvisorRelationshipsRepositoryMock.Setup(x => x.GetStudentAdvisorRelationshipsByGuidAsync(It.IsAny<string>())).ReturnsAsync(entity);
 
@@ -423,9 +437,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task StudentAdvisorRelationshipsService_GetStudentAdvisorRelationshipsByGuidAsync_SourceInvalidStudentException()
             {
                 StudentAdvisorRelationship entity = _studentAdvisorRelationshipsCollection.First();
-                var expected = _dtoStudentAdvisorRelList.FirstOrDefault(x => x.Id == entity.guid);
+                var expected = _dtoStudentAdvisorRelList.FirstOrDefault(x => x.Id == entity.Guid);
 
-                entity.student = null;
+                entity.Student = null;
 
                 _studentAdvisorRelationshipsRepositoryMock.Setup(x => x.GetStudentAdvisorRelationshipsByGuidAsync(It.IsAny<string>())).ReturnsAsync(entity);
 
@@ -437,9 +451,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task StudentAdvisorRelationshipsService_GetStudentAdvisorRelationshipsByGuidAsync_SourceInvalidStartOnException()
             {
                 StudentAdvisorRelationship entity = _studentAdvisorRelationshipsCollection.First();
-                var expected = _dtoStudentAdvisorRelList.FirstOrDefault(x => x.Id == entity.guid);
+                var expected = _dtoStudentAdvisorRelList.FirstOrDefault(x => x.Id == entity.Guid);
 
-                entity.startOn = null;
+                entity.StartOn = null;
 
                 _studentAdvisorRelationshipsRepositoryMock.Setup(x => x.GetStudentAdvisorRelationshipsByGuidAsync(It.IsAny<string>())).ReturnsAsync(entity);
 
@@ -451,9 +465,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task StudentAdvisorRelationshipsService_GetStudentAdvisorRelationshipsByGuidAsync_NoAdvisorGuidFound()
             {
                 StudentAdvisorRelationship entity = _studentAdvisorRelationshipsCollection.First();
-                var expected = _dtoStudentAdvisorRelList.FirstOrDefault(x => x.Id == entity.guid);
+                var expected = _dtoStudentAdvisorRelList.FirstOrDefault(x => x.Id == entity.Guid);
 
-                entity.advisor = "notFoundID";
+                entity.Advisor = "notFoundID";
 
                 _studentAdvisorRelationshipsRepositoryMock.Setup(x => x.GetStudentAdvisorRelationshipsByGuidAsync(It.IsAny<string>())).ReturnsAsync(entity);
 
@@ -465,9 +479,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task StudentAdvisorRelationshipsService_GetStudentAdvisorRelationshipsByGuidAsync_NoStudentGuidFound()
             {
                 StudentAdvisorRelationship entity = _studentAdvisorRelationshipsCollection.First();
-                var expected = _dtoStudentAdvisorRelList.FirstOrDefault(x => x.Id == entity.guid);
+                var expected = _dtoStudentAdvisorRelList.FirstOrDefault(x => x.Id == entity.Guid);
 
-                entity.student = "notFoundID";
+                entity.Student = "notFoundID";
 
                 _studentAdvisorRelationshipsRepositoryMock.Setup(x => x.GetStudentAdvisorRelationshipsByGuidAsync(It.IsAny<string>())).ReturnsAsync(entity);
 
@@ -479,10 +493,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task StudentAdvisorRelationshipsService_GetStudentAdvisorRelationshipsByGuidAsync_NoAdvsiorTypeGuidFound()
             {
                 StudentAdvisorRelationship entity = _studentAdvisorRelationshipsCollection.First();
-                var expected = _dtoStudentAdvisorRelList.FirstOrDefault(x => x.Id == entity.guid);
+                var expected = _dtoStudentAdvisorRelList.FirstOrDefault(x => x.Id == entity.Guid);
 
-                entity.advisorType = "notFoundID";
-
+                entity.AdvisorType = "notFoundID";
+                _referenceRepositoryMock.Setup(x => x.GetAdvisorTypeGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
                 _studentAdvisorRelationshipsRepositoryMock.Setup(x => x.GetStudentAdvisorRelationshipsByGuidAsync(It.IsAny<string>())).ReturnsAsync(entity);
 
                 await _studentAdvisorRelationshipsService.GetStudentAdvisorRelationshipsByGuidAsync("99");
@@ -493,10 +507,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task StudentAdvisorRelationshipsService_GetStudentAdvisorRelationshipsByGuidAsync_NoProgramGuidFound()
             {
                 StudentAdvisorRelationship entity = _studentAdvisorRelationshipsCollection.First();
-                var expected = _dtoStudentAdvisorRelList.FirstOrDefault(x => x.Id == entity.guid);
+                var expected = _dtoStudentAdvisorRelList.FirstOrDefault(x => x.Id == entity.Guid);
 
-                entity.program = "notFoundID";
-
+                entity.Program = "notFoundID";
+                _referenceRepositoryMock.Setup(x => x.GetAcademicProgramsGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
                 _studentAdvisorRelationshipsRepositoryMock.Setup(x => x.GetStudentAdvisorRelationshipsByGuidAsync(It.IsAny<string>())).ReturnsAsync(entity);
 
                 await _studentAdvisorRelationshipsService.GetStudentAdvisorRelationshipsByGuidAsync("99");
@@ -512,9 +526,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     _roleRepositoryMock.Object, _loggerMock.Object, _studentRepoMock.Object, baseConfigurationRepository);
 
                 StudentAdvisorRelationship entity = _studentAdvisorRelationshipsCollection.First();
-                var expected = _dtoStudentAdvisorRelList.FirstOrDefault(x => x.Id == entity.guid);
+                var expected = _dtoStudentAdvisorRelList.FirstOrDefault(x => x.Id == entity.Guid);
 
-                entity.program = "notFoundID";
+                entity.Program = "notFoundID";
 
                 _studentAdvisorRelationshipsRepositoryMock.Setup(x => x.GetStudentAdvisorRelationshipsByGuidAsync(It.IsAny<string>())).ReturnsAsync(entity);
 

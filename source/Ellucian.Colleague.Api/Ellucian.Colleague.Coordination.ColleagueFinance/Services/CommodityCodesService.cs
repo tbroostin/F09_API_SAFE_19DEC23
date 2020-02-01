@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -72,9 +72,72 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             var commodityCode = ConvertCommodityCodeEntityToDto(commodityCodeEntity);
             return commodityCode;
         }
+
+        /// <summary>
+        /// Gets all Commodity Codes with descriptions
+        /// </summary>
+        /// <returns>Collection of Commodity Code</returns>
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.ColleagueFinance.ProcurementCommodityCode>> GetAllCommodityCodesAsync()
+        {
+            var commodityCodeCollection = new List<Ellucian.Colleague.Dtos.ColleagueFinance.ProcurementCommodityCode>();
+
+            var commodityCodesEntities = await _cfReferenceDataRepository.GetAllCommodityCodesAsync();
+            if (commodityCodesEntities != null && commodityCodesEntities.Any())
+            {
+                foreach (var commodityCodeEntity in commodityCodesEntities)
+                {
+                    //convert Commodity Code entity to dto
+                    commodityCodeCollection.Add(ConvertCommodityCodesEntityToDto(commodityCodeEntity));
+                }
+            }
+            return commodityCodeCollection;
+        }
+
+        /// <summary>
+        /// Returns a commodity code
+        /// </summary>
+        /// <param name="code">commoditycode</param>
+        /// <returns>Procurement commodity code</returns>
+        public async Task<Ellucian.Colleague.Dtos.ColleagueFinance.ProcurementCommodityCode> GetCommodityCodeByCodeAsync(string code)
+        {
+            Ellucian.Colleague.Dtos.ColleagueFinance.ProcurementCommodityCode commodityCodeDto = new Dtos.ColleagueFinance.ProcurementCommodityCode();
+            if (string.IsNullOrEmpty(code))
+                throw new ArgumentNullException("code", "code must be specified to get commodity code");
+
+            var commodityCodeEntity = (await _cfReferenceDataRepository.GetCommodityCodeByCodeAsync(code));
+            if (commodityCodeEntity == null)
+            {
+                throw new KeyNotFoundException("Commodity Code is not found.");
+            }
+
+            var adapter = _adapterRegistry.GetAdapter<Domain.ColleagueFinance.Entities.ProcurementCommodityCode, Dtos.ColleagueFinance.ProcurementCommodityCode>();
+
+            if (commodityCodeEntity != null)
+            {
+                commodityCodeDto = adapter.MapToType(commodityCodeEntity);
+            }            
+            return commodityCodeDto;
+        }
         #endregion
 
         #region Convert method(s)
+
+        /// <summary>
+        /// Converts a Commodity Codes domain entity to its corresponding ShipToCodes DTO
+        /// </summary>
+        /// <param name="source">Commodity Codes domain entity</param>
+        /// <returns>Commodity Codes DTO</returns>
+        private  Ellucian.Colleague.Dtos.ColleagueFinance.ProcurementCommodityCode ConvertCommodityCodesEntityToDto(Ellucian.Colleague.Domain.ColleagueFinance.Entities.ProcurementCommodityCode source)
+        {
+            var commodityCode = new Ellucian.Colleague.Dtos.ColleagueFinance.ProcurementCommodityCode();
+            if(source != null)
+            {
+                commodityCode.Code = source.Code;
+                commodityCode.Description = source.Description;                
+            }
+            
+            return commodityCode;
+        }
 
         /// <summary>
         /// Converts from CommodityCode entity to CommodityCode dto

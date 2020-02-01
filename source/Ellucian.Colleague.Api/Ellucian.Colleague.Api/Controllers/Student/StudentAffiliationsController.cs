@@ -1,4 +1,4 @@
-﻿// Copyright 2014 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -52,6 +52,9 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="criteria">DTO Object containing List of Student Keys, Affiliation and Term.</param>
         /// <returns>List of StudentAffiliation Objects <see cref="Ellucian.Colleague.Dtos.Student.StudentTerm">StudentAffiliation</see></returns>
+        /// <accessComments>
+        /// API endpoint is secured with the VIEW.STUDENT.INFORMATION permission code
+        /// </accessComments>
         [HttpPost]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.Student.StudentAffiliation>> QueryStudentAffiliationsAsync([FromBody] StudentAffiliationQueryCriteria criteria)
         {

@@ -73,6 +73,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Return all personalPronouns
         /// </summary>
         /// <returns>List of PersonalPronouns <see cref="Dtos.PersonalPronouns"/> objects representing matching personalPronouns</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.PersonalPronouns>> GetPersonalPronounsAsync()
@@ -134,6 +135,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// </summary>
         /// <param name="guid">GUID to desired personalPronouns</param>
         /// <returns>A personalPronouns object <see cref="Dtos.PersonalPronouns"/> in EEDM format</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpGet, EedmResponseFilter]
         public async Task<Dtos.PersonalPronouns> GetPersonalPronounsByGuidAsync(string guid)
         {

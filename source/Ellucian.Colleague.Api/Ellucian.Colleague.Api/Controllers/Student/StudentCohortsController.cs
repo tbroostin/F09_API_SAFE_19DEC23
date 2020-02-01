@@ -15,6 +15,7 @@ using slf4net;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using System.Web.Http;
@@ -51,6 +52,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <returns></returns>
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
+        [EedmResponseFilter]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.StudentCohort>> GetStudentCohortsAsync()
         {
             bool bypassCache = false;
@@ -63,7 +65,14 @@ namespace Ellucian.Colleague.Api.Controllers
             }
             try
             {
-                return await _studentService.GetAllStudentCohortsAsync(bypassCache);
+                var items = await _studentService.GetAllStudentCohortsAsync(bypassCache);
+
+                AddEthosContextProperties(
+                    await _studentService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                    await _studentService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                        items.Select(i => i.Id).ToList()));
+
+                return items;
             }
             catch  (KeyNotFoundException e)
             {
@@ -102,11 +111,26 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="id">Guid of students cohort to retrieve</param>
         /// <returns>A <see cref="Ellucian.Colleague.Dtos.StudentCohort">student cohort.</see></returns>
+        [EedmResponseFilter]
         public async Task<Ellucian.Colleague.Dtos.StudentCohort> GetStudentCohortByIdAsync(string id)
         {
+            bool bypassCache = false;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
+
             try
             {
-                return await _studentService.GetStudentCohortByGuidAsync(id);
+                AddEthosContextProperties(
+                    await _studentService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                    await _studentService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                        new List<string>() { id }));
+
+                return await _studentService.GetStudentCohortByGuidAsync(id, bypassCache);
             }
             catch (KeyNotFoundException e)
             {

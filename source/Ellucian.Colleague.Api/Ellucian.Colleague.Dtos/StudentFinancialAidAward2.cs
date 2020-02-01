@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Runtime.Serialization;
 using Newtonsoft.Json;
 using Ellucian.Colleague.Dtos.Converters;
+using Ellucian.Colleague.Dtos.Attributes;
 
 namespace Ellucian.Colleague.Dtos
 {
@@ -18,18 +19,21 @@ namespace Ellucian.Colleague.Dtos
         /// Student who will be receiving the financial aid award.
         /// </summary>
         [JsonProperty("student")]
+        [FilterProperty("criteria")]
         public GuidObject2 Student { get; set; }
 
         /// <summary>
         /// The fund that is awarded to the student. 
         /// </summary>
         [JsonProperty("awardFund", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        [FilterProperty("criteria")]
         public GuidObject2 AwardFund { get; set; }
 
         /// <summary>
         /// The year that the award is assigned.
         /// </summary>
         [JsonProperty("aidYear", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        [FilterProperty("criteria")]
         public GuidObject2 AidYear { get; set; }
         
         /// <summary>

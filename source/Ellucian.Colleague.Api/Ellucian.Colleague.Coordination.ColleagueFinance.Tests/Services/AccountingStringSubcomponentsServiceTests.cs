@@ -1,21 +1,19 @@
 ﻿//Copyright 2018 Ellucian Company L.P. and its affiliates.
 
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
+using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
+using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos;
+using Ellucian.Web.Adapters;
+using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
-using Ellucian.Colleague.Domain.Base.Repositories;
-using Ellucian.Web.Adapters;
-using Ellucian.Web.Security;
-using Ellucian.Colleague.Domain.Repositories;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 {
@@ -89,8 +87,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     new Domain.ColleagueFinance.Entities.AcctStructureIntg("849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "GL.CLASS", "GL Class")
                     {Type = "FC" },
                     new Domain.ColleagueFinance.Entities.AcctStructureIntg("d2253ac7-9931-4560-b42f-1fccd43c952e", "PROGRAM", "Program")
-                    {Type = "OB" }
-
+                    {Type = "OB" },
+                    new Domain.ColleagueFinance.Entities.AcctStructureIntg("d2253ac7-9931-4560-b42f-1fccd43c952e", "PROGRAM", "Program")
+                    {Type = "UN" },
+                    new Domain.ColleagueFinance.Entities.AcctStructureIntg("d2253ac7-9931-4560-b42f-1fccd43c952e", "PROGRAM", "Program")
+                    {Type = "SO" },
+                    new Domain.ColleagueFinance.Entities.AcctStructureIntg("d2253ac7-9931-4560-b42f-1fccd43c952e", "PROGRAM", "Program")
+                    {Type = "LO" }
                 };
 
                 // Set up current user
@@ -133,7 +136,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             public async Task AccountingStringSubcomponentsService_GetAccountingStringSubcomponentsAsync_Count()
             {
                 var results = await _accountingStringSubcomponentsService.GetAccountingStringSubcomponentsAsync(true);
-                Assert.AreEqual(3, results.Count());
+                Assert.AreEqual(6, results.Count());
             }
 
             [TestMethod]

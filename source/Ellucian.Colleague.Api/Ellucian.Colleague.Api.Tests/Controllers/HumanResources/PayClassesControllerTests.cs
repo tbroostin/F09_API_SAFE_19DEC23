@@ -34,6 +34,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
         private IEnumerable<Domain.HumanResources.Entities.PayClass> allPayclass;
         private List<Dtos.PayClasses> payClassesCollection;
         private string expectedGuid = "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc";
+   
 
         [TestInitialize]
         public void Initialize() 
@@ -121,7 +122,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             }
         }
 
-         [TestMethod]
+        [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task PayClassesController_GetPayClasses_KeyNotFoundException()
         {
@@ -292,6 +293,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
         private IEnumerable<Domain.HumanResources.Entities.PayClass> allPayclass;
         private List<Dtos.PayClasses2> payClassesCollection;
         private string expectedGuid = "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc";
+        private Ellucian.Web.Http.Models.QueryStringFilter criteriaFilter = new Web.Http.Models.QueryStringFilter("criteria", "");
 
         [TestInitialize]
         public void Initialize()
@@ -347,7 +349,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 
             payClassesServiceMock.Setup(x => x.GetPayClasses2Async(false)).ReturnsAsync(payClassesCollection);
 
-            var sourceContexts = (await payClassesController.GetPayClasses2Async()).ToList();
+            var sourceContexts = (await payClassesController.GetPayClasses2Async(criteriaFilter)).ToList();
             Assert.AreEqual(payClassesCollection.Count, sourceContexts.Count);
             for (var i = 0; i < sourceContexts.Count; i++)
             {
@@ -367,7 +369,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 
             payClassesServiceMock.Setup(x => x.GetPayClasses2Async(true)).ReturnsAsync(payClassesCollection);
 
-            var sourceContexts = (await payClassesController.GetPayClasses2Async()).ToList();
+            var sourceContexts = (await payClassesController.GetPayClasses2Async(criteriaFilter)).ToList();
             Assert.AreEqual(payClassesCollection.Count, sourceContexts.Count);
             for (var i = 0; i < sourceContexts.Count; i++)
             {
@@ -380,13 +382,33 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
         }
 
         [TestMethod]
+        public async Task PayClassesController_GetPayClasses_Code_Filter()
+        {
+            payClassesController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+
+            payClassesServiceMock.Setup(x => x.GetPayClasses2Async(true)).ReturnsAsync(payClassesCollection);
+
+            var filterGroupName = "criteria";
+            var filterRecord = payClassesCollection.FirstOrDefault(i => i.Code.Equals("AT"));
+            payClassesController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName), filterRecord);
+            var sourceContexts = (await payClassesController.GetPayClasses2Async(criteriaFilter)).ToList();
+            Assert.AreEqual(sourceContexts.Count, 1);
+            var expected = filterRecord;
+            var actual = sourceContexts[0];
+            Assert.AreEqual(expected.Id, actual.Id);
+            Assert.AreEqual(expected.Title, actual.Title);
+            Assert.AreEqual(expected.Code, actual.Code);
+        }
+
+        [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task PayClassesController_GetPayClasses_KeyNotFoundException()
         {
             //
             payClassesServiceMock.Setup(x => x.GetPayClasses2Async(false))
                 .Throws<KeyNotFoundException>();
-            await payClassesController.GetPayClasses2Async();
+            await payClassesController.GetPayClasses2Async(criteriaFilter);
         }
 
         [TestMethod]
@@ -396,7 +418,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 
             payClassesServiceMock.Setup(x => x.GetPayClasses2Async(false))
                 .Throws<PermissionsException>();
-            await payClassesController.GetPayClasses2Async();
+            await payClassesController.GetPayClasses2Async(criteriaFilter);
         }
 
         [TestMethod]
@@ -406,7 +428,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 
             payClassesServiceMock.Setup(x => x.GetPayClasses2Async(false))
                 .Throws<ArgumentException>();
-            await payClassesController.GetPayClasses2Async();
+            await payClassesController.GetPayClasses2Async(criteriaFilter);
         }
 
         [TestMethod]
@@ -416,7 +438,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 
             payClassesServiceMock.Setup(x => x.GetPayClasses2Async(false))
                 .Throws<RepositoryException>();
-            await payClassesController.GetPayClasses2Async();
+            await payClassesController.GetPayClasses2Async(criteriaFilter);
         }
 
         [TestMethod]
@@ -426,7 +448,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 
             payClassesServiceMock.Setup(x => x.GetPayClasses2Async(false))
                 .Throws<IntegrationApiException>();
-            await payClassesController.GetPayClasses2Async();
+            await payClassesController.GetPayClasses2Async(criteriaFilter);
         }
 
         [TestMethod]
@@ -447,7 +469,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
         public async Task PayClassesController_GetPayClasses_Exception()
         {
             payClassesServiceMock.Setup(x => x.GetPayClasses2Async(false)).Throws<Exception>();
-            await payClassesController.GetPayClasses2Async();
+            await payClassesController.GetPayClasses2Async(criteriaFilter);
         }
 
         [TestMethod]

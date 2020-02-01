@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Data.Base.Transactions;
@@ -1237,10 +1237,11 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 dataReaderMock.Setup(r => r.ReadRecordAsync<CorewebDefaults>("CORE.PARMS", "COREWEB.DEFAULTS", true))
                        .ReturnsAsync(corewebDefaults);
 
-                var configuration = await ConfigRepository.GetUserProfileConfiguration2Async();
+                var configuration = await ConfigRepository.GetUserProfileConfiguration2Async(null);
                 Assert.AreEqual(0, configuration.ViewableAddressTypes.Count());
                 Assert.AreEqual(0, configuration.ViewablePhoneTypes.Count());
                 Assert.AreEqual(0, configuration.ViewableEmailTypes.Count());
+                Assert.AreEqual(0, configuration.ChangeRequestAddressTypes.Count());
                 Assert.IsTrue(configuration.AllAddressTypesAreViewable);
                 Assert.IsTrue(configuration.AllEmailTypesAreViewable);
                 Assert.IsTrue(configuration.AllPhoneTypesAreViewable);
@@ -1638,7 +1639,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x => x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
                 .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
             // Construct referenceData repository
-            ConfigRepository = new ConfigurationRepository(cacheProvider, transFactoryMock.Object, FakeApiSettingsWithGmtColleagueTimeZone, logger);
+            ConfigRepository = new ConfigurationRepository(cacheProvider, transFactoryMock.Object, FakeApiSettingsWithGmtColleagueTimeZone, logger, colleagueSettings);
 
             return ConfigRepository;
         }
@@ -1667,7 +1668,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 (It.IsAny<ReadBackupConfigDataRequest>())).ReturnsAsync(FakeBackupConfigReadResponse);
 
             ConfigRepository = new ConfigurationRepository(
-                cacheProvider, transFactory, FakeApiSettingsWithGmtColleagueTimeZone, logger);
+                cacheProvider, transFactory, FakeApiSettingsWithGmtColleagueTimeZone, logger, colleagueSettings);
 
             // Act
             var actual = await ConfigRepository.AddBackupConfigurationAsync(FakeBackupConfigurationData);
@@ -1698,7 +1699,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 (It.IsAny<WriteBackupConfigDataRequest>())).ReturnsAsync(fakeWriteResponse);
 
             ConfigRepository = new ConfigurationRepository(
-                cacheProvider, transFactory, FakeApiSettingsWithGmtColleagueTimeZone, logger);
+                cacheProvider, transFactory, FakeApiSettingsWithGmtColleagueTimeZone, logger, colleagueSettings);
 
             // Act
             var actual = await ConfigRepository.AddBackupConfigurationAsync(FakeBackupConfigurationData);
@@ -1710,7 +1711,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         public async Task ConfigurationRepository_AddBackupConfigurationAsync_Nullarg()
         {
             ConfigRepository = new ConfigurationRepository(
-                cacheProvider, transFactory, FakeApiSettingsWithGmtColleagueTimeZone, logger);
+                cacheProvider, transFactory, FakeApiSettingsWithGmtColleagueTimeZone, logger, colleagueSettings);
             // Act
             var actual = await ConfigRepository.AddBackupConfigurationAsync(null);
         }
@@ -1727,7 +1728,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 (It.IsAny<ReadBackupConfigDataRequest>())).ReturnsAsync(FakeBackupConfigReadResponse);
 
             ConfigRepository = new ConfigurationRepository(
-                cacheProvider, transFactory, FakeApiSettingsWithGmtColleagueTimeZone, logger);
+                cacheProvider, transFactory, FakeApiSettingsWithGmtColleagueTimeZone, logger, colleagueSettings);
 
             // Act
             var actualSet = await ConfigRepository.GetBackupConfigurationByIdsAsync(new List<string>() { "56c1fb34-9e3e-49a0-b2b0-60751a877855" });
@@ -1757,7 +1758,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 (It.IsAny<ReadBackupConfigDataRequest>())).ReturnsAsync(fakeReadResponse);
 
             ConfigRepository = new ConfigurationRepository(
-                cacheProvider, transFactory, FakeApiSettingsWithGmtColleagueTimeZone, logger);
+                cacheProvider, transFactory, FakeApiSettingsWithGmtColleagueTimeZone, logger, colleagueSettings);
 
             // Act
             var actual = await ConfigRepository.GetBackupConfigurationByIdsAsync(new List<string>() { "56c1fb34-9e3e-49a0-b2b0-60751a877855" });
@@ -1768,7 +1769,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         public async Task ConfigurationRepository_GetBackupConfigurationAsync_NullIds()
         {
             ConfigRepository = new ConfigurationRepository(
-                cacheProvider, transFactory, FakeApiSettingsWithGmtColleagueTimeZone, logger);
+                cacheProvider, transFactory, FakeApiSettingsWithGmtColleagueTimeZone, logger, colleagueSettings);
             // Act
             var actual = await ConfigRepository.GetBackupConfigurationByIdsAsync(null);
         }
@@ -1778,7 +1779,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         public async Task ConfigurationRepository_GetBackupConfigurationAsync_NullNamespace()
         {
             ConfigRepository = new ConfigurationRepository(
-                cacheProvider, transFactory, FakeApiSettingsWithGmtColleagueTimeZone, logger);
+                cacheProvider, transFactory, FakeApiSettingsWithGmtColleagueTimeZone, logger, colleagueSettings);
             // Act
             var actual = await ConfigRepository.GetBackupConfigurationByNamespaceAsync(null);
         }
@@ -1897,6 +1898,88 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 Assert.AreEqual(WebSortField.Description, configuration.SecondarySortField);
                 Assert.AreEqual("Asap", configuration.TextForBlankStatus);
                 Assert.AreEqual("Due", configuration.TextForBlankDueDate);
+            }
+
+            #endregion
+        }
+
+        #region Configuration for SessionConfiguration
+        [TestClass]
+        public class ConfigurationRepository_GetSessionConfigurationAsync : ConfigurationRepositoryTests
+        {
+            [TestMethod]
+            public async Task GetSessionConfiguration_AllSettingsBlank_BecomeFalse()
+            {
+                var response = new GetSessionConfigurationResponse()
+                {
+                    PasswordResetEnabled = "",
+                    UsernameRecoveryEnabled = "",
+                    ErrorOccurred = "0",
+                    ErrorMessage = ""
+                };
+
+                transManagerMock.Setup(e => e.ExecuteAnonymousAsync<GetSessionConfigurationRequest, GetSessionConfigurationResponse>(It.IsAny<GetSessionConfigurationRequest>()))
+                    .ReturnsAsync(response);
+
+                var sessionConfiguration = await ConfigRepository.GetSessionConfigurationAsync();
+                Assert.IsFalse(sessionConfiguration.PasswordResetEnabled);
+                Assert.IsFalse(sessionConfiguration.UsernameRecoveryEnabled);
+            }
+
+            [TestMethod]
+            public async Task GetSessionConfiguration_AllSettingsN_BecomeFalse()
+            {
+                var response = new GetSessionConfigurationResponse()
+                {
+                    PasswordResetEnabled = "N",
+                    UsernameRecoveryEnabled = "N",
+                    ErrorOccurred = "0",
+                    ErrorMessage = ""
+                };
+
+                transManagerMock.Setup(e => e.ExecuteAnonymousAsync<GetSessionConfigurationRequest, GetSessionConfigurationResponse>(It.IsAny<GetSessionConfigurationRequest>()))
+                    .ReturnsAsync(response);
+
+                var sessionConfiguration = await ConfigRepository.GetSessionConfigurationAsync();
+                Assert.IsFalse(sessionConfiguration.PasswordResetEnabled);
+                Assert.IsFalse(sessionConfiguration.UsernameRecoveryEnabled);
+            }
+
+            [TestMethod]
+            public async Task GetSessionConfiguration_AllSettingsY_BecomeTrue()
+            {
+                var response = new GetSessionConfigurationResponse()
+                {
+                    PasswordResetEnabled = "Y",
+                    UsernameRecoveryEnabled = "Y",
+                    ErrorOccurred = "0",
+                    ErrorMessage = ""
+                };
+
+                transManagerMock.Setup(e => e.ExecuteAnonymousAsync<GetSessionConfigurationRequest, GetSessionConfigurationResponse>(It.IsAny<GetSessionConfigurationRequest>()))
+                    .ReturnsAsync(response);
+
+                var sessionConfiguration = await ConfigRepository.GetSessionConfigurationAsync();
+                Assert.IsTrue(sessionConfiguration.PasswordResetEnabled);
+                Assert.IsTrue(sessionConfiguration.UsernameRecoveryEnabled);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ApplicationException))]
+            public async Task GetSessionConfiguration_ErrorOccurred_ThrowsException()
+            {
+                var response = new GetSessionConfigurationResponse()
+                {
+                    PasswordResetEnabled = "",
+                    UsernameRecoveryEnabled = "",
+                    ErrorOccurred = "1",
+                    ErrorMessage = "Error message from transaction"
+                };
+
+                transManagerMock.Setup(e => e.ExecuteAnonymousAsync<GetSessionConfigurationRequest, GetSessionConfigurationResponse>(It.IsAny<GetSessionConfigurationRequest>()))
+                    .ReturnsAsync(response);
+
+                var sessionConfiguration = await ConfigRepository.GetSessionConfigurationAsync();
             }
 
             #endregion

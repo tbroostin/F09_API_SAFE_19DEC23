@@ -20,6 +20,7 @@ using System.Threading.Tasks;
 using Ellucian.Colleague.HumanResources.Base.Tests;
 using Ellucian.Web.Http.Configuration;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
+using Ellucian.Colleague.Domain.Exceptions;
 
 namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 {
@@ -983,20 +984,25 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 recordLookupResult = new RecordKeyLookupResult() { Guid = guid };
                 recordLookupDict = new Dictionary<string, RecordKeyLookupResult>();
 
-                dataReaderMock.SetupSequence(acc => acc.SelectAsync(It.IsAny<GuidLookup[]>()))
-                    .Returns(Task.FromResult(new Dictionary<string, GuidLookupResult>() { { guid, new GuidLookupResult() { Entity = "DEPTS", PrimaryKey = id, SecondaryKey = sid } } }))
-                    .Returns(Task.FromResult(new Dictionary<string, GuidLookupResult>() { { guid2, new GuidLookupResult() { Entity = "DEPTS", PrimaryKey = id2, SecondaryKey = sid2 } } }))
-                    .Returns(Task.FromResult(new Dictionary<string, GuidLookupResult>() { { guid3, new GuidLookupResult() { Entity = "DEPTS", PrimaryKey = id3, SecondaryKey = sid3 } } }));
-                dataReaderMock.SetupSequence(ep => ep.SelectAsync(It.IsAny<RecordKeyLookup[]>()))
-                    .Returns(Task.FromResult(new Dictionary<string, RecordKeyLookupResult>() { { "DEPTS+" + id + "+" + sid, new RecordKeyLookupResult() { Guid = guid } } }))
-                    .Returns(Task.FromResult(new Dictionary<string, RecordKeyLookupResult>() { { "DEPTS+" + id2 + "+" + sid, new RecordKeyLookupResult() { Guid = guid2 } } }))
-                    .Returns(Task.FromResult(new Dictionary<string, RecordKeyLookupResult>() { { "DEPTS+" + id3 + "+" + sid, new RecordKeyLookupResult() { Guid = guid3 } } }));
-                
-                dataReaderMock.Setup(d => d.SelectAsync("DEPTS", "WITH DEPTS.TYPE NE 'A'"))
+                var bulkRecordKeyLookupResults = new Dictionary<string, RecordKeyLookupResult> {
+                    { "DEPTS+" + id, new RecordKeyLookupResult() {Guid = guid } },
+                    { "DEPTS+" + id2, new RecordKeyLookupResult() {Guid = guid2 } },
+                    { "DEPTS+" + id3, new RecordKeyLookupResult() {Guid = guid3 } }
+                };
+                dataReaderMock.Setup(acc => acc.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(bulkRecordKeyLookupResults);
+
+                var bulkResult = new Dictionary<string, GuidLookupResult>();
+                bulkResult[guid] = new GuidLookupResult() { Entity = "DEPTS", PrimaryKey = id, SecondaryKey = sid };
+                bulkResult[guid2] = new GuidLookupResult() { Entity = "DEPTS", PrimaryKey = id2, SecondaryKey = sid2 };
+                bulkResult[guid3] = new GuidLookupResult() { Entity = "DEPTS", PrimaryKey = id3, SecondaryKey = sid3 };
+
+                dataReaderMock.Setup(acc => acc.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(bulkResult);
+
+                dataReaderMock.Setup(d => d.SelectAsync("DEPTS", ""))
                     .Returns<string, string>((f, c) => Task.FromResult(testDataRepository.GetEmploymentDepartments() == null ? null :
                         testDataRepository.GetEmploymentDepartments().Select(dtype => dtype.Guid).ToArray()));
 
-                dataReaderMock.Setup(d => d.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Depts>(It.IsAny<string[]>(), It.IsAny<bool>()))
+                dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.Depts>(It.IsAny<string[]>(), It.IsAny<bool>()))
                     .Returns<string[], bool>((ids, b) =>
                         Task.FromResult(testDataRepository.GetEmploymentDepartments() == null ? null :
                             new Collection<Ellucian.Colleague.Data.Base.DataContracts.Depts>(testDataRepository.GetEmploymentDepartments()
@@ -1876,6 +1882,23 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     Assert.AreEqual(allEmploymentStatusEndingReason.ElementAt(i).Description, EmploymentStatusEndingReasons.ElementAt(i).Description);
                 }
             }
+
+            [TestMethod]
+            public async Task GetsEmploymentStatusEndingReasonsGuidAsync()
+            {
+                var employmentStatusEndingReasonsGuid = await referenceDataRepo.GetEmploymentStatusEndingReasonsGuidAsync(allEmploymentStatusEndingReason.ElementAt(0).Code);
+
+                Assert.IsNotNull(employmentStatusEndingReasonsGuid);
+                Assert.AreEqual(allEmploymentStatusEndingReason.ElementAt(0).Guid, employmentStatusEndingReasonsGuid);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task GetsEmploymentStatusEndingReasonsGuidAsync_Invalid()
+            {
+               await referenceDataRepo.GetEmploymentStatusEndingReasonsGuidAsync("invalid");
+            }
+
 
             [TestMethod]
             public async Task GetsEmploymentStatusEndingReasonsNonCacheAsync()

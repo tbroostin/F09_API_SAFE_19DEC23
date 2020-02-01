@@ -609,6 +609,13 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
             }
 
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task StudentFinancialAidApplicationRepository_GetAsync_FfaSuiteYearsNull()
+            {
+                var tuple = await actualRepository.GetAsync(0, 1, false, It.IsAny<string>(), It.IsAny<string>(), null);
+            }
+
             private StudentFinancialAidApplicationRepository BuildRepository()
             {
                 

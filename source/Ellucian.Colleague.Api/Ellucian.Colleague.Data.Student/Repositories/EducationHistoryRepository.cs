@@ -319,7 +319,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         }
                         catch (Exception ex)
                         {
-                            LogDataError("InstitutionsAttend or AcadCredenials", institutionsAttend.Recordkey, institutionsAttend, ex);
+                            logger.Error(ex, string.Format("An error occurred building education history from institutions attended record {0}", institutionsAttend.Recordkey));
                             return null;
                         }
                     }

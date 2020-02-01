@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -63,6 +63,11 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// The requisition ship to code
         /// </summary>
         public string ShipToCode { get; set; }
+
+        /// <summary>
+        /// Requisition commodity code
+        /// </summary>
+        public string CommodityCode { get; set; }
 
         /// <summary>
         /// The blanket purchase order associated with the requisition
@@ -199,6 +204,16 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// Integration Submitted By operator for funds availability checking.
         /// </summary>
         public string IntgSubmittedBy { get; set; }
+
+        /// <summary>
+        /// flag to bypass tax forms.
+        /// </summary>
+        public bool bypassTaxForms { get; set; }
+
+        /// <summary>
+        /// flag to bypass approvals
+        /// </summary>
+        public bool bypassApprovals { get; set; }
 
         /// <summary>
         /// Vendor PreferredAddressId

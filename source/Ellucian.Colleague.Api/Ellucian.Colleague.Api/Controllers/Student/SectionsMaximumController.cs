@@ -107,9 +107,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                     page = new Paging(100, 0);
                 }
 
-                AddDataPrivacyContextProperty((await _sectionCoordinationService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
+                //AddDataPrivacyContextProperty((await _sectionCoordinationService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
                 var pageOfItems = await _sectionCoordinationService.GetSectionsMaximum2Async(page.Offset, page.Limit, title, startOn, endOn, code, number, instructionalPlatform, academicPeriod, academicLevels, course, site, status, owningInstitutionUnits);
-
+                AddEthosContextProperties(
+                    await _sectionCoordinationService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                    await _sectionCoordinationService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                pageOfItems.Item1.Select(i => i.Id).ToList()));
                 return new PagedHttpActionResult<IEnumerable<Dtos.SectionMaximum2>>(pageOfItems.Item1, page, pageOfItems.Item2, this.Request);
             }
             catch (PermissionsException e)
@@ -225,12 +228,14 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
                 if (CheckForEmptyFilterParameters())
                     return new PagedHttpActionResult<IEnumerable<Dtos.SectionMaximum3>>(new List<Dtos.SectionMaximum3>(), page, 0, this.Request);
-
-                AddDataPrivacyContextProperty((await _sectionCoordinationService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
+                                
                 var pageOfItems = await _sectionCoordinationService.GetSectionsMaximum3Async(page.Offset, page.Limit, title, startOn, endOn, code, 
                     number, instructionalPlatform, 
                     academicPeriod, academicLevels, course, site, status, owningOrganizations);
-
+                AddEthosContextProperties(
+                    await _sectionCoordinationService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                    await _sectionCoordinationService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                    pageOfItems.Item1.Select(i => i.Id).ToList()));
                 return new PagedHttpActionResult<IEnumerable<Dtos.SectionMaximum3>>(pageOfItems.Item1, page, pageOfItems.Item2, this.Request);
             }
             catch (PermissionsException e)
@@ -348,8 +353,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 if (CheckForEmptyFilterParameters())
                     return new PagedHttpActionResult<IEnumerable<Dtos.SectionMaximum4>>(new List<Dtos.SectionMaximum4>(), page, 0, this.Request);
 
-                AddDataPrivacyContextProperty((await _sectionCoordinationService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
                 var pageOfItems = await _sectionCoordinationService.GetSectionsMaximum4Async(page.Offset, page.Limit, title, startOn, endOn, code, number, instructionalPlatform, academicPeriod, academicLevels, course, site, status, owningOrganizations);
+                AddEthosContextProperties(
+                    await _sectionCoordinationService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                    await _sectionCoordinationService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                pageOfItems.Item1.Select(i => i.Id).ToList()));
 
                 return new PagedHttpActionResult<IEnumerable<Dtos.SectionMaximum4>>(pageOfItems.Item1, page, pageOfItems.Item2, this.Request);
             }
@@ -487,8 +495,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 if (CheckForEmptyFilterParameters())
                     return new PagedHttpActionResult<IEnumerable<Dtos.SectionMaximum5>>(new List<Dtos.SectionMaximum5>(), page, 0, this.Request);
 
-                AddDataPrivacyContextProperty((await _sectionCoordinationService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
+                
                 var pageOfItems = await _sectionCoordinationService.GetSectionsMaximum5Async(page.Offset, page.Limit, title, startOn, endOn, code, number, instructionalPlatform, academicPeriod, reportingAcademicPeriod, academicLevels, course, site, status, owningOrganizations, instructors, scheduleAcademicPeriod, bypassCache);
+                AddEthosContextProperties(
+                    await _sectionCoordinationService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                    await _sectionCoordinationService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                pageOfItems.Item1.Select(i => i.Id).ToList()));
 
                 return new PagedHttpActionResult<IEnumerable<Dtos.SectionMaximum5>>(pageOfItems.Item1, page, pageOfItems.Item2, this.Request);
             }
@@ -544,6 +556,10 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             try
             {
                 AddDataPrivacyContextProperty((await _sectionCoordinationService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
+                AddEthosContextProperties(
+                    await _sectionCoordinationService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                    await _sectionCoordinationService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                new List<string>() { id }));
                 return await _sectionCoordinationService.GetSectionMaximumByGuid2Async(id);
             }
             catch (KeyNotFoundException e)
@@ -603,6 +619,10 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             try
             {
                 AddDataPrivacyContextProperty((await _sectionCoordinationService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
+                AddEthosContextProperties(
+                    await _sectionCoordinationService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                    await _sectionCoordinationService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                new List<string>() { id }));
                 return await _sectionCoordinationService.GetSectionMaximumByGuid3Async(id);
             }
             catch (KeyNotFoundException e)
@@ -661,7 +681,10 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
-                AddDataPrivacyContextProperty((await _sectionCoordinationService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
+                AddEthosContextProperties(
+                    await _sectionCoordinationService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                    await _sectionCoordinationService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                new List<string>() { id }));
                 return await _sectionCoordinationService.GetSectionMaximumByGuid4Async(id);
             }
             catch (KeyNotFoundException e)
@@ -721,6 +744,10 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             try
             {
                 AddDataPrivacyContextProperty((await _sectionCoordinationService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
+                AddEthosContextProperties(
+                    await _sectionCoordinationService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                    await _sectionCoordinationService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                new List<string>() { id }));
                 return await _sectionCoordinationService.GetSectionMaximumByGuid5Async(id, bypassCache);
             }
             catch (KeyNotFoundException e)

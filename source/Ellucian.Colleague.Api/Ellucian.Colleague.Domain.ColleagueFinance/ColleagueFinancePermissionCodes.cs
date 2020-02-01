@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Base;
 using System;
@@ -31,6 +31,12 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance
 
         // View any PurchaseOrder
         public const string ViewPurchaseOrders = "VIEW.PURCHASE.ORDERS";
+
+        // View any BlanketPurchaseOrder
+        public const string ViewBlanketPurchaseOrders = "VIEW.BLANKET.PURCHASE.ORDERS";
+
+        // Update any BlanketPurchaseOrder
+        public const string UpdateBlanketPurchaseOrders = "UPDATE.BLANKET.PURCHASE.ORDERS";
 
         // View any Requisitions
         public const string ViewRequisitions = "VIEW.REQUISITIONS";
@@ -89,6 +95,12 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance
         //Allows this partner system to create purchase orders directly in an "outstanding" status even if Colleague approvals are turned on.
         public const string ByPassPurchaseOrderApproval = "BYPASS.COLL.PO.APPROVALS";
 
+        //Allows this partner system to create purchase orders directly in an "outstanding" status even if Colleague approvals are turned on.
+        public const string ByPassRequisitionApproval = "BYPASS.COLL.REQ.APPROVALS";
+
+        //Allows this partner system to create blanket purchase orders directly in an "outstanding" status even if Colleague approvals are turned on.
+        public const string ByPassBlanketPurchaseOrderApproval = "BYPASS.COLL.BPO.APPROVALS";
+
 
         // The following section contains permissions created by the Colleague Financials
         // team, which are kept separated from the permissions created by the Ethos team.
@@ -128,11 +140,20 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance
         // View any requisition
         public const string ViewRequisition = "VIEW.REQUISITION";
 
+        // Create or Update any requisition
+        public const string CreateUpdateRequisition = "CREATE.UPDATE.REQUISITION";
+
+        // Create or Update any purchase order
+        public const string CreateUpdatePurchaseOrder = "CREATE.UPDATE.PURCHASE.ORDER";
+
         // View any voucher
         public const string ViewVoucher = "VIEW.VOUCHER";
 
         // Enable user to view their own 1099MI information
         public const string View1099MISC = BasePermissionCodes.View1099MISC;
+
+        // View any vendor information/s
+        public const string ViewVendor = "VIEW.VENDOR";
 
         #endregion
     }

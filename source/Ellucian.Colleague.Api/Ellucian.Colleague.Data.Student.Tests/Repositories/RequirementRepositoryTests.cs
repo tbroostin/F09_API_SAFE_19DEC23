@@ -604,6 +604,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
              Assert.IsTrue(daParams.UseLowGrade);
              Assert.IsFalse(daParams.ModifiedDefaultSort);
              Assert.AreEqual(ExtraCourses.Apply, daParams.ExtraCourseHandling);
+            Assert.IsFalse(daParams.ShowRelatedCourses);
          }
 
          [TestMethod]
@@ -618,6 +619,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
              Assert.IsTrue(daParams.UseLowGrade);
              Assert.IsFalse(daParams.ModifiedDefaultSort);
              Assert.AreEqual(ExtraCourses.Apply, daParams.ExtraCourseHandling);
+            Assert.IsFalse(daParams.ShowRelatedCourses);
          }
 
          [TestMethod]
@@ -632,13 +634,14 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
              Assert.IsTrue(daParams.UseLowGrade);
              Assert.IsFalse(daParams.ModifiedDefaultSort);
              Assert.AreEqual(ExtraCourses.Apply, daParams.ExtraCourseHandling);
+            Assert.IsFalse(daParams.ShowRelatedCourses);
          } 
 
          [TestMethod]
          public async Task ValidateDegreeAuditParameters_LowerCaseTrues()
          {
              // Override Mock DADefaults response to return object with all null properties
-             DaDefaults daDefaults = new DaDefaults() { DaIncludeFailures = "y", DaDefaultSortOverride = "y", DaExtraCode = "s" };
+             DaDefaults daDefaults = new DaDefaults() { DaIncludeFailures = "y", DaDefaultSortOverride = "y", DaExtraCode = "s", DaRelatedCoursesFlag="y" };
              dataAccessorMock.Setup<Task<DaDefaults>>(acc => acc.ReadRecordAsync<DaDefaults>("ST.PARMS", "DA.DEFAULTS", true)).Returns(Task.FromResult(daDefaults));
 
              var daParams = await requirementRepo.GetDegreeAuditParametersAsync();
@@ -646,13 +649,14 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
              Assert.IsTrue(daParams.UseLowGrade);
              Assert.IsTrue(daParams.ModifiedDefaultSort);
              Assert.AreEqual(ExtraCourses.SemiApply, daParams.ExtraCourseHandling);
-         }
+            Assert.IsTrue(daParams.ShowRelatedCourses);
+        }
 
          [TestMethod]
          public async Task ValidateDegreeAuditParameters_LowerCaseFalses()
          {
              // Override Mock DADefaults response to return object with all null properties
-             DaDefaults daDefaults = new DaDefaults() { DaIncludeFailures = "n", DaDefaultSortOverride = "n", DaExtraCode = "d" };
+             DaDefaults daDefaults = new DaDefaults() { DaIncludeFailures = "n", DaDefaultSortOverride = "n", DaExtraCode = "d" , DaRelatedCoursesFlag="n"};
              dataAccessorMock.Setup<Task<DaDefaults>>(acc => acc.ReadRecordAsync<DaDefaults>("ST.PARMS", "DA.DEFAULTS", true)).Returns(Task.FromResult(daDefaults));
 
              var daParams = await requirementRepo.GetDegreeAuditParametersAsync();
@@ -660,13 +664,14 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
              Assert.IsFalse(daParams.UseLowGrade);
              Assert.IsFalse(daParams.ModifiedDefaultSort);
              Assert.AreEqual(ExtraCourses.Display, daParams.ExtraCourseHandling);
+            Assert.IsFalse(daParams.ShowRelatedCourses);
          }
 
          [TestMethod]
          public async Task ValidateDegreeAuditParameters_UpperCaseTrues()
          {
              // Override Mock DADefaults response to return object with all null properties
-             DaDefaults daDefaults = new DaDefaults() { DaIncludeFailures = "Y", DaDefaultSortOverride = "Y", DaExtraCode = "I" };
+             DaDefaults daDefaults = new DaDefaults() { DaIncludeFailures = "Y", DaDefaultSortOverride = "Y", DaExtraCode = "I" , DaRelatedCoursesFlag="Y"};
              dataAccessorMock.Setup<Task<DaDefaults>>(acc => acc.ReadRecordAsync<DaDefaults>("ST.PARMS", "DA.DEFAULTS", true)).Returns(Task.FromResult(daDefaults));
 
              var daParams = await requirementRepo.GetDegreeAuditParametersAsync();
@@ -674,12 +679,13 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
              Assert.IsTrue(daParams.UseLowGrade);
              Assert.IsTrue(daParams.ModifiedDefaultSort);
              Assert.AreEqual(ExtraCourses.Ignore, daParams.ExtraCourseHandling);
+            Assert.IsTrue(daParams.ShowRelatedCourses);
          }
          [TestMethod]
          public async Task ValidateDegreeAuditParameters_UpperCaseFalses()
          {
              // Override Mock DADefaults response to return object with all null properties
-             DaDefaults daDefaults = new DaDefaults() { DaIncludeFailures = "N", DaDefaultSortOverride = "N", DaExtraCode = "A" };
+             DaDefaults daDefaults = new DaDefaults() { DaIncludeFailures = "N", DaDefaultSortOverride = "N", DaExtraCode = "A", DaRelatedCoursesFlag="N" };
              dataAccessorMock.Setup<Task<DaDefaults>>(acc => acc.ReadRecordAsync<DaDefaults>("ST.PARMS", "DA.DEFAULTS", true)).Returns(Task.FromResult(daDefaults));
 
              var daParams = await requirementRepo.GetDegreeAuditParametersAsync();
@@ -687,13 +693,14 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
              Assert.IsFalse(daParams.UseLowGrade);
              Assert.IsFalse(daParams.ModifiedDefaultSort);
              Assert.AreEqual(ExtraCourses.Apply, daParams.ExtraCourseHandling);
+            Assert.IsFalse(daParams.ShowRelatedCourses);
          }
 
          [TestMethod]
          public async Task ValidateDegreeAuditParameters_BadValuesInProperties()
          {
              // Override Mock DADefaults response to return object with all null properties
-             DaDefaults daDefaults = new DaDefaults() { DaIncludeFailures = "x", DaDefaultSortOverride = "x", DaExtraCode = "x" };
+             DaDefaults daDefaults = new DaDefaults() { DaIncludeFailures = "x", DaDefaultSortOverride = "x", DaExtraCode = "x", DaRelatedCoursesFlag="x" };
              dataAccessorMock.Setup<Task<DaDefaults>>(acc => acc.ReadRecordAsync<DaDefaults>("ST.PARMS", "DA.DEFAULTS", true)).Returns(Task.FromResult(daDefaults));
 
              var daParams = await requirementRepo.GetDegreeAuditParametersAsync();
@@ -701,6 +708,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
              Assert.IsTrue(daParams.UseLowGrade);
              Assert.IsFalse(daParams.ModifiedDefaultSort);
              Assert.AreEqual(ExtraCourses.Apply, daParams.ExtraCourseHandling);
+             Assert.IsFalse(daParams.ShowRelatedCourses);
          }
 
         private async Task<RequirementRepository> BuildValidRequirementRepository(ProgramRequirements pr)

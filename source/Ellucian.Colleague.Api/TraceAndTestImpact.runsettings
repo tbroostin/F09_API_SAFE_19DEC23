@@ -123,7 +123,7 @@ Included items must then not match any entries in the exclude list to remain inc
   </DataCollectionRunSettings>
   <!-- MSTest adapter -->
   <MSTest>
-    <MapInconclusiveToFailed>True</MapInconclusiveToFailed>
+    <MapInconclusiveToFailed>False</MapInconclusiveToFailed>
     <CaptureTraceOutput>false</CaptureTraceOutput>
     <DeleteDeploymentDirectoryAfterTestRunIsComplete>False</DeleteDeploymentDirectoryAfterTestRunIsComplete>
     <DeploymentEnabled>true</DeploymentEnabled>

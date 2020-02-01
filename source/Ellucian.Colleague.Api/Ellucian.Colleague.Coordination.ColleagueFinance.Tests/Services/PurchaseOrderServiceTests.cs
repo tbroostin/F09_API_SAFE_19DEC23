@@ -45,6 +45,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         private Mock<IGeneralLedgerConfigurationRepository> mockGlConfigurationRepository;
         private Mock<IGeneralLedgerUserRepository> mockGeneralLedgerUserRepository;
 
+        private Mock<IStaffRepository> staffRepositoryMock;
+        private IStaffRepository staffRepository;
+
         private Mock<IPersonRepository> mockPersonRepository;
         private Mock<IAccountFundsAvailableRepository> mockAccountFundAvailableRepo;
         private IConfigurationRepository baseConfigurationRepository;
@@ -69,11 +72,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             mockPurchaseOrderRepository = new Mock<IPurchaseOrderRepository>();
             mockGlConfigurationRepository = new Mock<IGeneralLedgerConfigurationRepository>();
             mockGeneralLedgerUserRepository = new Mock<IGeneralLedgerUserRepository>();
+            staffRepositoryMock = new Mock<IStaffRepository>();
 
             // Create permission domain entities for viewing the purchase order.
             permissionViewPurchaseOrder = new Domain.Entities.Permission(ColleagueFinancePermissionCodes.ViewPurchaseOrder);
             // Assign view permission to the role that has view permissions.
             glUserRoleViewPermissions.AddPermission(permissionViewPurchaseOrder);
+            staffRepositoryMock.Setup(repo => repo.GetAsync(It.IsAny<string>())).Returns(Task.FromResult(new Domain.Base.Entities.Staff("1", "Test LastName")));
             // build all service objects to use in testing
             BuildValidPurchaseOrderService();
         }
@@ -514,13 +519,45 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             // Set up the services
             service = new PurchaseOrderService(testPurchaseOrderRepository, testGeneralLedgerConfigurationRepository, testGeneralLedgerUserRepository,
-                colleagueFinanceReferenceDataRepository, referenceDataRepo.Object, buyersDataRepo.Object, vendorsDataRepo.Object, baseConfigurationRepository, adapterRegistry.Object, currentUserFactory, mockAccountFundAvailableRepo.Object, mockPersonRepository.Object, roleRepository, loggerObject);
+                colleagueFinanceReferenceDataRepository, referenceDataRepo.Object, buyersDataRepo.Object, vendorsDataRepo.Object, baseConfigurationRepository, adapterRegistry.Object, currentUserFactory, mockAccountFundAvailableRepo.Object, mockPersonRepository.Object, roleRepository, staffRepositoryMock.Object, loggerObject);
             service2 = new PurchaseOrderService(mockPurchaseOrderRepository.Object, mockGlConfigurationRepository.Object, mockGeneralLedgerUserRepository.Object,
-                colleagueFinanceReferenceDataRepository, referenceDataRepo.Object, buyersDataRepo.Object, vendorsDataRepo.Object, baseConfigurationRepository, adapterRegistry.Object, currentUserFactory, mockAccountFundAvailableRepo.Object, mockPersonRepository.Object, roleRepository, loggerObject);
+                colleagueFinanceReferenceDataRepository, referenceDataRepo.Object, buyersDataRepo.Object, vendorsDataRepo.Object, baseConfigurationRepository, adapterRegistry.Object, currentUserFactory, mockAccountFundAvailableRepo.Object, mockPersonRepository.Object, roleRepository, staffRepositoryMock.Object, loggerObject);
             // Build a service for a user that has no permissions.
             serviceForNoPermission = new PurchaseOrderService(testPurchaseOrderRepository, testGeneralLedgerConfigurationRepository, testGeneralLedgerUserRepository,
-                colleagueFinanceReferenceDataRepository, referenceDataRepo.Object, buyersDataRepo.Object, vendorsDataRepo.Object, baseConfigurationRepository, adapterRegistry.Object, noPermissionUser, mockAccountFundAvailableRepo.Object, mockPersonRepository.Object, roleRepository, loggerObject);
+                colleagueFinanceReferenceDataRepository, referenceDataRepo.Object, buyersDataRepo.Object, vendorsDataRepo.Object, baseConfigurationRepository, adapterRegistry.Object, noPermissionUser, mockAccountFundAvailableRepo.Object, mockPersonRepository.Object, roleRepository, staffRepositoryMock.Object, loggerObject);
         }
+        #endregion
+
+        #region Tests for GetPurchaseOrderSummaryByPersonIdAsync
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetPurchaseOrderSummaryByPersonIdAsync_EmptyPersonId_ArgumentNullException()
+        {
+            await service2.GetPurchaseOrderSummaryByPersonIdAsync("");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task GetPurchaseOrderSummaryByPersonIdAsync_CurrentUserDifferentFromRequest()
+        {
+            await service2.GetPurchaseOrderSummaryByPersonIdAsync("0016357");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task GetPurchaseOrderSummaryByPersonIdAsync_MissingPermissionException()
+        {
+            await serviceForNoPermission.GetPurchaseOrderSummaryByPersonIdAsync(currentUserFactory.CurrentUser.PersonId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task GetPurchaseOrderSummaryByPersonIdAsync_StaffRecordMissingException()
+        {
+            Domain.Base.Entities.Staff nullStaff = null;
+            staffRepositoryMock.Setup(repo => repo.GetAsync(It.IsAny<string>())).Returns(Task.FromResult(nullStaff));
+            await service2.GetPurchaseOrderSummaryByPersonIdAsync(currentUserFactory.CurrentUser.PersonId);
+        }      
         #endregion
     }
 
@@ -549,6 +586,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         private IConfigurationRepository baseConfigurationRepository;
         private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
         private Mock<IGeneralLedgerConfigurationRepository> generalLedgerConfigurationRepositoryMock;
+        private Mock<IStaffRepository> staffRepositoryMock;
 
         protected Domain.Entities.Role viewPurchaseOrderRole = new Domain.Entities.Role(1, "VIEW.PURCHASE.ORDERS");
         protected Domain.Entities.Role updatePurchaseOrderRole = new Domain.Entities.Role(2, "UPDATE.PURCHASE.ORDERS");
@@ -567,6 +605,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             this.mockPurchaseOrderRepository = new Mock<IPurchaseOrderRepository>();
 
             // build all service objects to use in testing
+            staffRepositoryMock = new Mock<IStaffRepository>();
             BuildValidPurchaseOrderService();
         }
 
@@ -1151,7 +1190,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             // Set up the service
             service = new PurchaseOrderService(mockPurchaseOrderRepository.Object, testGeneralLedgerConfigurationRepository, testGeneralLedgerUserRepository,
                 colleagueFinanceReferenceDataRepository.Object, referenceDataRepo.Object, buyersDataRepo.Object, vendorsDataRepo.Object, baseConfigurationRepository, adapterRegistry.Object,
-                currentUserFactory, mockAccountFundAvailableRepo.Object, mockPersonRepository.Object, roleRepository.Object, loggerObject);
+                currentUserFactory, mockAccountFundAvailableRepo.Object, mockPersonRepository.Object, roleRepository.Object, staffRepositoryMock.Object, loggerObject);
 
         }
         #endregion
@@ -1179,6 +1218,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             private Mock<IRoleRepository> roleRepositoryMock;
             private Mock<ILogger> loggerMock;
             private Mock<IAdapterRegistry> adapterRegistryMock;
+            private Mock<IStaffRepository> staffRepositoryMock;
             private Mock<IConfigurationRepository> configurationRepositoryMock;
             private PurchaseOrderUser currentUserFactory;
             private PurchaseOrderService purchaseOrderService;
@@ -1232,11 +1272,12 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 currentUserFactory = new GeneralLedgerCurrentUser.PurchaseOrderUser();
                 generalLedgerConfigurationRepositoryMock = new Mock<IGeneralLedgerConfigurationRepository>();
                 testGeneralLedgerConfigurationRepository = new TestGeneralLedgerConfigurationRepository();
-             
+                staffRepositoryMock = new Mock<IStaffRepository>();
+
                 purchaseOrderService = new PurchaseOrderService(purchaseOrderRepositoryMock.Object, generalLedgerConfigurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object,
                     colleagueFinanceReferenceDataRepositoryMock.Object, referenceDataRepositoryMock.Object, buyerRepositoryMock.Object,
                     vendorsRepositoryMock.Object, configurationRepositoryMock.Object, adapterRegistryMock.Object, currentUserFactory, mockAccountFundAvailableRepo.Object,
-                    personRepositoryMock.Object, roleRepositoryMock.Object, loggerMock.Object);
+                    personRepositoryMock.Object, roleRepositoryMock.Object, staffRepositoryMock.Object, loggerMock.Object);
 
                 InitializeTestData();
 
@@ -1478,7 +1519,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             private void InitializeMock()
             {
-                mockAccountFundAvailableRepo.Setup(a => a.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                mockAccountFundAvailableRepo.Setup(a => a.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
                                                .ReturnsAsync(accountFundsAvailable);
 
                 purchaseOrderRepositoryMock.Setup(r => r.GetPurchaseOrdersIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
@@ -1746,7 +1787,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
                 createPurchaseOrder.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(ColleagueFinancePermissionCodes.UpdatePurchaseOrders));
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPurchaseOrder });
-                mockAccountFundAvailableRepo.Setup(a => a.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                mockAccountFundAvailableRepo.Setup(a => a.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
                                                .ReturnsAsync(accountFundsAvailable);
 
                 purchaseOrderRepositoryMock.Setup(r => r.GetPurchaseOrdersIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
@@ -2272,6 +2313,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             private IEnumerable<Country> countries;
             private IEnumerable<State> states;
             private TestGeneralLedgerConfigurationRepository testGeneralLedgerConfigurationRepository;
+            private Mock<IStaffRepository> staffRepositoryMock;
 
 
             private string guid = "1a59eed8-5fe7-4120-b1cf-f23266b9e874";
@@ -2298,11 +2340,12 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 configurationRepositoryMock = new Mock<IConfigurationRepository>();
                 currentUserFactory = new GeneralLedgerCurrentUser.PurchaseOrderUser();
                 testGeneralLedgerConfigurationRepository = new TestGeneralLedgerConfigurationRepository();
+                staffRepositoryMock = new Mock<IStaffRepository>();
 
                 purchaseOrderService = new PurchaseOrderService(purchaseOrderRepositoryMock.Object, generalLedgerConfigurationRepositoryMock.Object, generalLedgerUserRepositoryMock.Object,
                     colleagueFinanceReferenceDataRepositoryMock.Object, referenceDataRepositoryMock.Object, buyerRepositoryMock.Object,
                     vendorsRepositoryMock.Object, configurationRepositoryMock.Object, adapterRegistryMock.Object, currentUserFactory, accountFundAvailableRepoMock.Object,
-                    personRepositoryMock.Object, roleRepositoryMock.Object, loggerMock.Object);
+                    personRepositoryMock.Object, roleRepositoryMock.Object, staffRepositoryMock.Object, loggerMock.Object);
 
                 InitializeTestData();
 
@@ -2538,7 +2581,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             {
                 purchaseOrderRepositoryMock.Setup(r => r.GetPurchaseOrdersIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
 
-                accountFundAvailableRepoMock.Setup(a => a.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                accountFundAvailableRepoMock.Setup(a => a.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
                                                .ReturnsAsync(accountFundsAvailable);
 
                 buyerRepositoryMock.Setup(p => p.GetBuyerIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
@@ -3354,6 +3397,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
                 Assert.IsNotNull(result);
             }
+
+         
         }
     }
 

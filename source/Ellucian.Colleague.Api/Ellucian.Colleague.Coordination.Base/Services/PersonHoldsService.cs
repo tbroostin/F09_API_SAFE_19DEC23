@@ -239,7 +239,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         private void CheckUserPersonHoldsViewPermissions()
         {
             // access is ok if the current user has the view person-holds permission
-            if (!HasPermission(PersonHoldsPermissionCodes.ViewPersonHold))
+            if ((!HasPermission(PersonHoldsPermissionCodes.ViewPersonHold)) && (!HasPermission(PersonHoldsPermissionCodes.CreateUpdatePersonHold)))
             {
                 logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view person-holds.");
                 throw new PermissionsException("User is not authorized to view person-holds.");
@@ -397,7 +397,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         {
             Dtos.PersonHold dtoPersonHolds = new Dtos.PersonHold();
             dtoPersonHolds.Id = personHoldId;
-            dtoPersonHolds.Comment = personHoldEntity.Comment;
+            if (!String.IsNullOrEmpty(personHoldEntity.Comment))
+            {
+                dtoPersonHolds.Comment = personHoldEntity.Comment;
+            }
             dtoPersonHolds.EndOn = personHoldEntity.EndDate;
             dtoPersonHolds.Person = new Dtos.GuidObject2(personId);
             dtoPersonHolds.PersonHoldTypeType = ConvertCategoryToPersonHoldTypeType(personHoldType, personHoldTypes);

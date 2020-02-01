@@ -26,7 +26,8 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// <param name="applicationId"></param>
         /// <param name="bypassCache"></param>
         /// <returns></returns>
-        Task<Tuple<IEnumerable<ApplicationStatus2>, int>> GetApplicationStatusesAsync(int offset, int limit, string applicationId, bool bypassCache = false);
+        Task<Tuple<IEnumerable<ApplicationStatus2>, int>> GetApplicationStatusesAsync(int offset, int limit, string applicationId,
+            string[] filterPersonIds = null, DateTimeOffset? convertedDecidedOn = null, Dictionary<string, string> filterQualifiers = null, bool bypassCache = false);
 
         /// <summary>
         /// Gets Entity, PrimaryKey & Secondarykey.

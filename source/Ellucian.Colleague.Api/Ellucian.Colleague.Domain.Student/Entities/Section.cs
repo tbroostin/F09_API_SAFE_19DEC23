@@ -1,5 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
-
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -310,6 +309,12 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// Grade scheme
         /// </summary>
         public string GradeSchemeCode { get; set; }
+
+        /// <summary>
+        /// Grade subscheme
+        /// </summary>
+        public string GradeSubschemeCode { get; set; }
+
 
         ///<summary>
         /// Course categories
@@ -728,6 +733,11 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// Attendance tracking type for the course section
         /// </summary>
         public AttendanceTrackingType AttendanceTrackingType { get; set; }
+
+        /// <summary>
+        /// Synonym for the section
+        /// </summary>
+        public string Synonym { get; set; }
         #endregion
 
         #region Calculated properties

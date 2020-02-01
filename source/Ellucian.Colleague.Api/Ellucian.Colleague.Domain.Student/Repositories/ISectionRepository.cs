@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -45,6 +45,33 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
             string code = "", string number = "", string learningProvider = "", string termId = "",
             string academicLevel = "", string course = "", string location = "", string status = "", string department = "",
             string subject = "", string instructor = "");
+
+        /// <summary>
+        /// Get section using filters for performance.
+        /// </summary>
+        /// <param name="offset"></param>
+        /// <param name="limit"></param>
+        /// <param name="title"></param>
+        /// <param name="startDate"></param>
+        /// <param name="endDate"></param>
+        /// <param name="code"></param>
+        /// <param name="number"></param>
+        /// <param name="learningProvider"></param>
+        /// <param name="termId"></param>
+        /// <param name="reportingTermId"></param>
+        /// <param name="academicLevels"></param>
+        /// <param name="course"></param>
+        /// <param name="location"></param>
+        /// <param name="status"></param>
+        /// <param name="departments"></param>
+        /// <param name="subject"></param>
+        /// <param name="instructors"></param>
+        /// <param name="scheduleTermId"></param>
+        /// <returns></returns>
+        Task<Tuple<IEnumerable<Section>, int>> GetSections2Async(int offset, int limit, string title = "", string startDate = "", string endDate = "",
+            string code = "", string number = "", string learningProvider = "", string termId = "", string reportingTermId = "",
+            List<string> academicLevels = null, string course = "", string location = "", string status = "", List<string> departments = null,
+            string subject = "", List<string> instructors = null, string scheduleTermId = "", bool addToErrorCollection = false);
 
         /// <summary>
         /// Get section using filters
@@ -107,6 +134,14 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// <returns>IEnumerable Sections domain entity</returns>   
         Task<Tuple<IEnumerable<Section>, int>> GetSectionsSearchableAsync(int offset, int limit, string searchable = "");
 
+        /// <summary>        
+        /// Get an IEnumerable Sections domain entity using keyword search criteria
+        /// </summary>
+        /// <param name="offset">The position to start the paged return at</param>
+        /// <param name="limit">the number of items to return for this page of results</param>
+        /// <param name="searchable">Check if a section is searchable or hidden.  Required.</param>
+        /// <returns>IEnumerable Sections domain entity</returns>   
+        Task<Tuple<IEnumerable<Section>, int>> GetSectionsSearchable1Async(int offset, int limit, string searchable = "", bool addToCollection = false);
 
         /// <summary>        
         /// Get an IEnumerable Sections domain entity using keyword search criteria
@@ -117,10 +152,22 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// <param name="bypassCache">use cache</param>
         /// <param name="caseSensitive">case sensative search</param>
         /// <returns>IEnumerable Sections domain entity</returns>
-    
+
         Task<Tuple<IEnumerable<Section>, int>> GetSectionsKeywordAsync(int offset, int limit, string keyword = "", 
             bool bypassCache = false, bool caseSensitive = false);
 
+        /// <summary>
+        /// Get an IEnumerable Sections domain entity using keyword search criteria
+        /// </summary>
+        /// <param name="offset"></param>
+        /// <param name="limit"></param>
+        /// <param name="keyword"></param>
+        /// <param name="bypassCache"></param>
+        /// <param name="caseSensitive"></param>
+        /// <param name="addToCollection"></param>
+        /// <returns></returns>
+        Task<Tuple<IEnumerable<Section>, int>> GetSectionsKeyword1Async(int offset, int limit, string keyword, bool bypassCache = false, bool caseSensitive = false,
+            bool addToCollection = false);
         /// <summary>
         /// Return a Section Status code from a string of either
         /// "Cancelled", "Open", "Closed" or "Pending"
@@ -230,6 +277,14 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         Task<Section> GetSectionByGuidAsync(string guid);
 
         /// <summary>
+        /// Get a section using its GUID V16
+        /// </summary>
+        /// <param name="guid"></param>
+        /// <param name="addToErrorCollection"></param>
+        /// <returns></returns>
+        Task<Section> GetSectionByGuid2Async(string guid, bool addToErrorCollection = false);
+
+        /// <summary>
         /// Get the section ID for a GUID
         /// </summary>
         /// <param name="guid">The GUID</param>
@@ -296,6 +351,24 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// <param name="instructor">Instructor Person Id</param>
         /// <returns>Section meeting</returns>
         Task<Tuple<IEnumerable<SectionMeeting>, int>> GetSectionMeetingAsync(int offset, int limit, string section, string startDate, string endDate, string startTime, string endTime, List<string> buildings, List<string> rooms, List<string> instructors, string term);
+
+
+        /// <summary>
+        /// Get a section meeting using filters
+        /// </summary>
+        /// <param name="offset"></param>
+        /// <param name="limit"></param>
+        /// <param name="section">Section Colleague Id</param>
+        /// <param name="startDate">Meeting Start Date</param>
+        /// <param name="startTime">Meeting Start Time</param>
+        /// <param name="endDate">Meeting End Date</param>
+        /// <param name="endTime">Meeting End Time</param>
+        /// <param name="building">Meeting Building Code</param>
+        /// <param name="room">Meeting Room Code</param>
+        /// <param name="instructor">Instructor Person Id</param>
+        /// <returns>Section meeting</returns>
+        Task<Tuple<IEnumerable<SectionMeeting>, int>> GetSectionMeeting2Async(int offset, int limit, string section, string startDate, string endDate, string startTime, string endTime, List<string> buildings, List<string> rooms, List<string> instructors, string term);
+
 
         /// <summary>
         /// Get a section facult using filters
@@ -436,6 +509,43 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// <returns>A <see cref="SectionRoster"/></returns>
         Task<SectionRoster> GetSectionRosterAsync(string sectionId);
 
+        /// <summary>
+        /// Get a <see cref="SectionWaitlist"/> for a given course section ID
+        /// </summary>
+        /// <param name="sectionId">Course section ID</param>
+        /// <returns>A <see cref="SectionWaitlist"/></returns>
+        Task<SectionWaitlist> GetSectionWaitlistAsync(string sectionId);
+
+
+        /// <summary>
+        /// Get a <see cref="SectionWaitlistConfig"/> for a given course section ID
+        /// </summary>
+        /// <param name="sectionId">Course section ID</param>
+        /// <returns>A <see cref="SectionWaitlistConfig"/></returns>
+        Task<SectionWaitlistConfig> GetSectionWaitlistConfigAsync(string sectionId);
+
+        /// <summary>
+        /// Get a list of<see cref="SectionWaitlist2"/> for a given course section ID
+        /// </summary>
+        /// <param name="sectionId">Course section ID</param>
+        /// <returns>A list of<see cref="SectionWaitlist2"/></returns>
+        Task<IEnumerable<SectionWaitlistStudent>> GetSectionWaitlist2Async(string sectionId);
+
+        /// <summary>
+        /// Get the list of student waitlist statuses
+        /// </summary>
+        /// <returns>A list of StudentWaitlistStatus</returns>
+        Task<IEnumerable<StudentWaitlistStatus>> GetStudentWaitlistStatusesAsync();
+
+        /// <summary>
+        /// To get the waitlist details based on the section and student id
+        /// Sends back the details on rank and rating of the waitlisted student for the section along with the config details of show rank and show rating
+        /// </summary>
+        /// <param name="sectionId"></param>
+        /// <param name="studentId"></param>
+        /// <returns> StudentSectionWaitlistInfo </returns>
+        Task<StudentSectionWaitlistInfo> GetStudentSectionWaitlistsByStudentAndSectionIdAsync(string sectionId, string studentId);
+        
         /// Using a collection of section ids, get a dictionary collection of associated guids
         /// </summary>
         /// <param name="sectionIds">collection of person ids</param>
@@ -457,6 +567,9 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// </exception>
         /// <exception cref="System.ArgumentException">At least one Calendar Schedule Pointer to an Associated Record is required</exception>
         Task<IEnumerable<Event>> GetSectionEventsICalAsync(string calendarScheduleType, IEnumerable<string> calendarSchedulePointers, DateTime? startDate, DateTime? endDate);
+
+        Task<SectionMidtermGradingComplete> GetSectionMidtermGradingCompleteAsync(string sectionId);
+        Task<SectionMidtermGradingComplete> PostSectionMidtermGradingCompleteAsync(string sectionId, int? midtermGradeNumber, string completeOperator, DateTimeOffset? dateAndTime);
 
     }
 }

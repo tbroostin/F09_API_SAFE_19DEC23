@@ -115,6 +115,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
         private async Task<List<Program>> BuildProgramsAsync(Collection<AcadPrograms> programData, IEnumerable<TranscriptGroupings> transGroupData, IEnumerable<CredTypes> credTypeData)
         {
+
             char _VM = Convert.ToChar(DynamicArray.VM);
             var programs = new List<Program>();
             // If no data passed in, return a null collection
@@ -240,6 +241,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             // Credit filter IncludeNeverGradedCredits defaults to true because the Colleague transcript grouping form
                             // defaults Incl No Grade to Yes.  If the transcript grouping has TrgpInclNoGradesFlag not Y then set it to false.
                             if (trgrp.TrgpInclNoGradesFlag != "Y") { creditFilter.IncludeNeverGradedCredits = false; }
+
+                            //add additional selection criteria from transcript grouping to credit filter
+                            creditFilter.AdditionalSelectCriteria = trgrp.TrgpAddnlSelectCriteria;
                         }
                         else
                         {
@@ -256,6 +260,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         program.TranscriptGrouping = prog.AcpgTranscriptGrouping;
                         program.UnofficialTranscriptGrouping = prog.AcpgUnoffTransGrouping;
                         program.OfficialTranscriptGrouping = prog.AcpgOfficialTransGrouping;
+                        program.ProgramStartDate = prog.AcpgStartDate;
+                        program.ProgramEndDate = prog.AcpgEndDate;                       
+
                         if (!string.IsNullOrEmpty(prog.AcpgDegree))
                         {
                             var deg =(await studentReferenceRepo.GetDegreesAsync()).FirstOrDefault(dg => dg.Code == prog.AcpgDegree);

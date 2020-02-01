@@ -44,6 +44,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary> 
         /// <accessComments>
         /// This endpoint returns objects based on the current user's permissions.
+        /// Example: If the current user is an admin, this endpoint returns the PersonPositionWages for the effectivePersonId
         /// Example: If the current user/user who has proxy is an employee, this endpoint returns that employee's/proxy user's PersonPositionWages
         /// Example: If the current user/user who has proxy is a supervisor with the permission ACCEPT.REJECT.TIME.ENTRY, 
         /// this endpoint the manager's PersonPositionWages and all the PersonPositionWages of the employees reporting to the manager

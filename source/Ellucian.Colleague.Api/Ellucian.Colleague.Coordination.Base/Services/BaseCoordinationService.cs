@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
@@ -9,10 +9,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using AutoMapper;
 using Microsoft.Practices.EnterpriseLibrary.Common.Utility;
 using Ellucian.Web.Http.EthosExtend;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Colleague.Domain.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Base.Services
 {
@@ -117,18 +117,40 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         {
             if (IntegrationApiException == null)
                 IntegrationApiException = new IntegrationApiException();
+       
+            IntegrationApiException.AddError(ConvertToIntegrationApiError(message, code, guid, id, httpStatusCode));
+        }
 
-            if (string.IsNullOrEmpty(code))
-                code = "Global.Internal.Error";
+        /// <summary>
+        /// Populate IntegrationApiException object for error collection. Extracts all errors
+        /// from a Repository Exception
+        /// </summary>
+        /// <param name="ex">The RepositoryException.</param>
+        /// <param name="code">The error message code used to describe the error details</param>
+        /// <param name="guid">The global identifier of the resource in error.</param>
+        /// <param name="id">The source applications data reference identifier for the primary data entity used to create the resource.</param>
+        /// <param name="httpStatusCode">HTTP Status Code.  Default 400 Bad Request</param>
+        protected void IntegrationApiExceptionAddError(RepositoryException ex, string code = null, string guid = null,
+            string id = null, System.Net.HttpStatusCode httpStatusCode = System.Net.HttpStatusCode.BadRequest)
+        {
+            if (ex == null)
+                return;
 
-            IntegrationApiException.AddError(new Ellucian.Web.Http.Exceptions.IntegrationApiError()
+            if (IntegrationApiException == null)
+                IntegrationApiException = new IntegrationApiException();
+
+            IntegrationApiException.AddErrors(ex.Errors.ToList().ConvertAll(
+                x => ConvertToIntegrationApiError(x.Message, x.Code, 
+                !string.IsNullOrEmpty(x.Id) || !string.IsNullOrEmpty(x.SourceId) ? x.Id : guid,
+                !string.IsNullOrEmpty(x.Id) || !string.IsNullOrEmpty(x.SourceId) ? x.SourceId : id,
+                httpStatusCode)));
+
+            if ((!string.IsNullOrEmpty(ex.Message)) 
+                && (!IntegrationApiException.Errors.Any(e => !string.IsNullOrEmpty(e.Message)
+                    && e.Message.Equals(ex.Message, StringComparison.OrdinalIgnoreCase))))
             {
-                Code = code,
-                Message = message,
-                Guid = guid,
-                Id = id,
-                StatusCode = httpStatusCode
-            });
+                IntegrationApiException.AddError(ConvertToIntegrationApiError(ex.Message, "Data.Access", guid, id, httpStatusCode));
+            }           
         }
 
         /// <summary>
@@ -640,5 +662,25 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             return platformExtensibleDatas;
         }
 
+        /// <summary>
+        /// Static helper method to convert a repository error into an integration API error
+        /// </summary>
+        /// <param name="error">A repository error</param>
+        /// <returns>An integration API error</returns>
+        public static IntegrationApiError ConvertToIntegrationApiError(string message, string code = null, string guid = null,
+            string id = null, System.Net.HttpStatusCode httpStatusCode = System.Net.HttpStatusCode.BadRequest)
+        {
+            if (string.IsNullOrEmpty(code))
+                code = "Global.Internal.Error";
+
+            return new IntegrationApiError()
+            {
+                Code = code,
+                Message = message,
+                Guid = !string.IsNullOrEmpty(guid) ? guid : null,
+                Id = !string.IsNullOrEmpty(id) ? id : null,
+                StatusCode = httpStatusCode
+            };
+        }
     }
 }

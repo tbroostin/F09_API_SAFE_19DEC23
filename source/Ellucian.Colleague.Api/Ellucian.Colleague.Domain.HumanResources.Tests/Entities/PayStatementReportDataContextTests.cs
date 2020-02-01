@@ -16,18 +16,18 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
         {
             get
             {
-                return new PayStatementSourceData("12345", 
-                    "0003914", 
-                    "Matt DeDiana", 
-                    "555-55-5555", 
-                    new PayStatementAddress[2] { new PayStatementAddress("5 5th Ave"), new PayStatementAddress("Essex Junction, VT 05402") }, 
-                    "1111", 
-                    "2222", 
-                    periodEndDate.AddDays(1), 
-                    periodEndDate, 
-                    555, 
-                    500, 
-                    5555, 
+                return new PayStatementSourceData("12345",
+                    "0003914",
+                    "Matt DeDiana",
+                    "555-55-5555",
+                    new PayStatementAddress[2] { new PayStatementAddress("5 5th Ave"), new PayStatementAddress("Essex Junction, VT 05402") },
+                    "1111",
+                    "2222",
+                    periodEndDate.AddDays(1),
+                    periodEndDate,
+                    555,
+                    500,
+                    5555,
                     5000,
                     "stuff and things");
             }
@@ -36,7 +36,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
         {
             get
             {
-                return new PayrollRegisterEntry("54321", "0003914", periodEndDate.AddMonths(-1).AddDays(1), periodEndDate, "BW", 1, "1111", "2222");
+                return new PayrollRegisterEntry("54321", "0003914", periodEndDate.AddMonths(-1).AddDays(1), periodEndDate, "BW", 1, "1111", "2222", true);
             }
         }
 
@@ -85,7 +85,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
         [ExpectedException(typeof(ArgumentException))]
         public void PayStatementAndPayrollRegisterMustShareReferenceKeyTest()
         {
-            var invalidRegister = new PayrollRegisterEntry("54321", "0003914", periodEndDate, periodEndDate, "BW", 1, "foo", "bar");
+            var invalidRegister = new PayrollRegisterEntry("54321", "0003914", periodEndDate, periodEndDate, "BW", 1, "foo", "bar", false);
             new PayStatementReportDataContext(payStatementSource, invalidRegister, personBenefitDeductions, personEmploymentStatuses);
         }
 

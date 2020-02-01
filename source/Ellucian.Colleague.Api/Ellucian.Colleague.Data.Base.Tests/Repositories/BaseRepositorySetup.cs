@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2014 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -11,6 +11,7 @@ using Moq;
 using slf4net;
 using System.Threading.Tasks;
 using System.Threading;
+using Ellucian.Colleague.Configuration;
 
 namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 {
@@ -29,6 +30,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         protected Mock<IColleagueTransactionInvoker> transManagerMock;
         protected IColleagueTransactionInvoker transManager;
         protected ApiSettings apiSettings;
+        protected ColleagueSettings colleagueSettings;
         protected string colleagueTimeZone;
 
         protected void MockInitialize()
@@ -54,6 +56,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             // Set up API settings object
             apiSettings = new ApiSettings("TEST");
             colleagueTimeZone = apiSettings.ColleagueTimeZone;
+            colleagueSettings = new ColleagueSettings();
 
             cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
                     x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
@@ -104,14 +107,20 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Read record using any input string
                 dataReaderMock.Setup(r => r.ReadRecord<T>(It.IsAny<string>(), It.IsAny<bool>())).Returns<T>(null);
                 dataReaderMock.Setup(r => r.ReadRecord<T>(fileName, It.IsAny<string>(), It.IsAny<bool>())).Returns<T>(null);
+                dataReaderMock.Setup(r => r.ReadRecordAsync<T>(It.IsAny<string>(), It.IsAny<bool>())).Returns<T>(null);
+                dataReaderMock.Setup(r => r.ReadRecordAsync<T>(fileName, It.IsAny<string>(), It.IsAny<bool>())).Returns<T>(null);
 
                 // Bulk read using list of record IDs
                 dataReaderMock.Setup(r => r.BulkReadRecord<T>(It.IsAny<string[]>(), It.IsAny<bool>())).Returns(new Collection<T>());
                 dataReaderMock.Setup(r => r.BulkReadRecord<T>(fileName, It.IsAny<string[]>(), It.IsAny<bool>())).Returns(new Collection<T>());
+                dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(new Collection<T>());
+                dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(fileName, It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(new Collection<T>());
 
                 // Bulk read using any criteria
                 dataReaderMock.Setup(r => r.BulkReadRecord<T>(It.IsAny<string>(), It.IsAny<bool>())).Returns(new Collection<T>());
                 dataReaderMock.Setup(r => r.BulkReadRecord<T>(fileName, It.IsAny<string>(), It.IsAny<bool>())).Returns(new Collection<T>());
+                dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(new Collection<T>());
+                dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(fileName, It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(new Collection<T>());
 
                 return;
             }
@@ -123,32 +132,46 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Read record using any input string
                 dataReaderMock.Setup(r => r.ReadRecord<T>(It.IsAny<string>(), It.IsAny<bool>())).Returns(record);
                 dataReaderMock.Setup(r => r.ReadRecord<T>(fileName, It.IsAny<string>(), It.IsAny<bool>())).Returns(record);
+                dataReaderMock.Setup(r => r.ReadRecordAsync<T>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(record);
+                dataReaderMock.Setup(r => r.ReadRecordAsync<T>(fileName, It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(record);
 
                 // Bulk read using list of record IDs
                 dataReaderMock.Setup(r => r.BulkReadRecord<T>(It.IsAny<string[]>(), It.IsAny<bool>())).Returns(new Collection<T> { record });
                 dataReaderMock.Setup(r => r.BulkReadRecord<T>(fileName, It.IsAny<string[]>(), It.IsAny<bool>())).Returns(new Collection<T> { record });
+                dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(new Collection<T> { record });
+                dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(fileName, It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(new Collection<T> { record });
 
                 // Bulk read using any criteria
                 dataReaderMock.Setup(r => r.BulkReadRecord<T>(It.IsAny<string>(), It.IsAny<bool>())).Returns(new Collection<T> { record });
                 dataReaderMock.Setup(r => r.BulkReadRecord<T>(fileName, It.IsAny<string>(), It.IsAny<bool>())).Returns(new Collection<T> { record });
+                dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(new Collection<T> { record });
+                dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(fileName, It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(new Collection<T> { record });
             }
             else
             {
                 // Read record using record ID
                 dataReaderMock.Setup(r => r.ReadRecord<T>(record.Recordkey, It.IsAny<bool>())).Returns(record);
                 dataReaderMock.Setup(r => r.ReadRecord<T>(fileName, record.Recordkey, It.IsAny<bool>())).Returns(record);
+                dataReaderMock.Setup(r => r.ReadRecordAsync<T>(record.Recordkey, It.IsAny<bool>())).ReturnsAsync(record);
+                dataReaderMock.Setup(r => r.ReadRecordAsync<T>(fileName, record.Recordkey, It.IsAny<bool>())).ReturnsAsync(record);
 
                 // Select using criteria or record IDs and criteria
                 dataReaderMock.Setup(r => r.Select(fileName, It.IsAny<string>())).Returns(new [] { record.Recordkey });
                 dataReaderMock.Setup(r => r.Select(fileName, It.IsAny<string[]>(), It.IsAny<string>())).Returns(new [] { record.Recordkey });
+                dataReaderMock.Setup(r => r.SelectAsync(fileName, It.IsAny<string>())).ReturnsAsync(new[] { record.Recordkey });
+                dataReaderMock.Setup(r => r.SelectAsync(fileName, It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(new[] { record.Recordkey });
 
                 // Bulk read using individual record ID
                 dataReaderMock.Setup(r => r.BulkReadRecord<T>(new string[] { record.Recordkey }, It.IsAny<bool>())).Returns(new Collection<T> { record });
                 dataReaderMock.Setup(r => r.BulkReadRecord<T>(fileName, new string[] { record.Recordkey }, It.IsAny<bool>())).Returns(new Collection<T> { record });
+                dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(new string[] { record.Recordkey }, It.IsAny<bool>())).ReturnsAsync(new Collection<T> { record });
+                dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(fileName, new string[] { record.Recordkey }, It.IsAny<bool>())).ReturnsAsync(new Collection<T> { record });
 
                 // Bulk read with criteria
                 dataReaderMock.Setup(r => r.BulkReadRecord<T>(It.IsAny<string>(), It.IsAny<bool>())).Returns(new Collection<T> { record });
                 dataReaderMock.Setup(r => r.BulkReadRecord<T>(fileName, It.IsAny<string>(), It.IsAny<bool>())).Returns(new Collection<T> { record });
+                dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(new Collection<T> { record });
+                dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(fileName, It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(new Collection<T> { record });
             }
 
             if (!string.IsNullOrEmpty(guid) || typeof(T).GetInterfaces().Contains(typeof(IColleagueGuidEntity)))
@@ -165,10 +188,14 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Read record using GUID
                 dataReaderMock.Setup(r => r.ReadRecord<T>(guidLookup, It.IsAny<bool>())).Returns(record);
                 dataReaderMock.Setup(r => r.ReadRecord<T>(fileName, guidLookup, It.IsAny<bool>())).Returns(record);
+                dataReaderMock.Setup(r => r.ReadRecordAsync<T>(guidLookup, It.IsAny<bool>())).ReturnsAsync(record);
+                dataReaderMock.Setup(r => r.ReadRecordAsync<T>(fileName, guidLookup, It.IsAny<bool>())).ReturnsAsync(record);
 
                 // Bulk read record using GUID
                 dataReaderMock.Setup(r => r.BulkReadRecord<T>(new[] { guidLookup }, It.IsAny<bool>())).Returns(new Collection<T> { record });
                 dataReaderMock.Setup(r => r.BulkReadRecord<T>(fileName, new[] { guidLookup }, It.IsAny<bool>())).Returns(new Collection<T> { record });
+                dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(new[] { guidLookup }, It.IsAny<bool>())).ReturnsAsync(new Collection<T> { record });
+                dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(fileName, new[] { guidLookup }, It.IsAny<bool>())).ReturnsAsync(new Collection<T> { record });
 
                 if (!string.IsNullOrEmpty(record.Recordkey))
                 {
@@ -177,12 +204,14 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     var guidSelectResult = new Dictionary<string, GuidLookupResult>();
                     guidSelectResult.Add(guid, guidLookupResult);
                     dataReaderMock.Setup(r => r.Select(new [] { guidLookup })).Returns(guidSelectResult);
+                    dataReaderMock.Setup(r => r.SelectAsync(new[] { guidLookup })).ReturnsAsync(guidSelectResult);
 
                     // Select using filename/record ID to get GUID via RecordKeyLookupResult
                     var recLookup = new RecordKeyLookup(fileName, record.Recordkey, false);
                     var recordKeySelectResult = new Dictionary<string, RecordKeyLookupResult>();
                     recordKeySelectResult.Add(recLookup.ResultKey, lookupResult);
                     dataReaderMock.Setup(r => r.Select(new [] { recLookup })).Returns(recordKeySelectResult);
+                    dataReaderMock.Setup(r => r.SelectAsync(new[] { recLookup })).ReturnsAsync(recordKeySelectResult);
                 }
             }
         }
@@ -211,27 +240,40 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             if (keys.Length == 0)
             {
                 dataReaderMock.Setup(r => r.ReadRecord<T>(It.IsAny<string>(), It.IsAny<bool>())).Returns<T>(null);
+                dataReaderMock.Setup(r => r.ReadRecordAsync<T>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
                 dataReaderMock.Setup(r => r.ReadRecord<T>(fileName, It.IsAny<string>(), It.IsAny<bool>())).Returns<T>(null);
+                dataReaderMock.Setup(r => r.ReadRecordAsync<T>(fileName, It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
 
                 // Read or select records using any input criteria
                 dataReaderMock.Setup(r => r.Select(fileName, It.IsAny<string>())).Returns<string[]>(null);
+                dataReaderMock.Setup(r => r.SelectAsync(fileName, It.IsAny<string>())).Returns<string[]>(null);
                 dataReaderMock.Setup(r => r.BulkReadRecord<T>(It.IsAny<string>(), It.IsAny<bool>())).Returns(new Collection<T>());
+                dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(new Collection<T>());
                 dataReaderMock.Setup(r => r.BulkReadRecord<T>(fileName, It.IsAny<string>(), It.IsAny<bool>())).Returns(new Collection<T>());
+                dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(fileName, It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(new Collection<T>());
 
                 // Read or select records using key values - only return the corresponding records
                 dataReaderMock.Setup(r => r.Select(fileName, It.IsAny<string[]>(), It.IsAny<string>())).Returns<string[]>(null);
+                dataReaderMock.Setup(r => r.SelectAsync(fileName, It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(null);
                 dataReaderMock.Setup(r => r.BulkReadRecord<T>(It.IsAny<string[]>(), It.IsAny<bool>())).Returns(new Collection<T>());
                 dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(It.IsAny<string[]>(), It.IsAny<bool>())).Returns(Task.FromResult(new Collection<T>()));
                 dataReaderMock.Setup(r => r.BulkReadRecord<T>(fileName, It.IsAny<string[]>(), It.IsAny<bool>())).Returns(new Collection<T>());
+                dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(fileName, It.IsAny<string[]>(), It.IsAny<bool>())).Returns(Task.FromResult(new Collection<T>()));
+
 
                 // If this entity has a GUID, include mocking for the GUID lookups
                 if (typeof(T).GetInterfaces().Contains(typeof(IColleagueGuidEntity)))
                 {
                     dataReaderMock.Setup(r => r.BulkReadRecord<T>(It.IsAny<GuidLookup[]>(), It.IsAny<bool>())).Returns(new Collection<T>());
                     dataReaderMock.Setup(r => r.BulkReadRecord<T>(fileName, It.IsAny<GuidLookup[]>(), It.IsAny<bool>())).Returns(new Collection<T>());
+                    dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(It.IsAny<GuidLookup[]>(), It.IsAny<bool>())).ReturnsAsync(new Collection<T>());
+                    dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(fileName, It.IsAny<GuidLookup[]>(), It.IsAny<bool>())).ReturnsAsync(new Collection<T>());
 
                     dataReaderMock.Setup(r => r.Select(It.IsAny<RecordKeyLookup[]>())).Returns(new Dictionary<string, RecordKeyLookupResult>());
                     dataReaderMock.Setup(r => r.Select(It.IsAny<GuidLookup[]>())).Returns(new Dictionary<string, GuidLookupResult>());
+                    dataReaderMock.Setup(r => r.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(new Dictionary<string, RecordKeyLookupResult>());
+                    dataReaderMock.Setup(r => r.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(new Dictionary<string, GuidLookupResult>());
+
                 }
 
                 return;
@@ -244,6 +286,11 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     recordList.FirstOrDefault(r => r.Recordkey == key));
                 dataReaderMock.Setup(r => r.ReadRecord<T>(fileName, It.IsAny<string>(), It.IsAny<bool>())).Returns<string, string, bool>((file, key, flag) =>
                     recordList.FirstOrDefault(r => r.Recordkey == key));
+                dataReaderMock.Setup(r => r.ReadRecordAsync<T>(It.IsAny<string>(), It.IsAny<bool>())).Returns<string, bool>((key, flag) =>
+                    Task.FromResult(recordList.FirstOrDefault(r => r.Recordkey == key)));
+                dataReaderMock.Setup(r => r.ReadRecordAsync<T>(fileName, It.IsAny<string>(), It.IsAny<bool>())).Returns<string, string, bool>((file, key, flag) =>
+                    Task.FromResult(recordList.FirstOrDefault(r => r.Recordkey == key)));
+
 
                 // Read or select records using any input criteria
                 dataReaderMock.Setup(r => r.Select(fileName, It.IsAny<string>())).Returns(keys);
@@ -251,15 +298,24 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     new Collection<T>(keys.Select(id => recordList.FirstOrDefault(r => r.Recordkey == id)).Where(r => r != null).ToList()));
                 dataReaderMock.Setup(r => r.BulkReadRecord<T>(fileName, It.IsAny<string>(), It.IsAny<bool>())).Returns<string, string, bool>((file, criteria, flag) =>
                     new Collection<T>(keys.Select(id => recordList.FirstOrDefault(r => r.Recordkey == id)).Where(r => r != null).ToList()));
+                dataReaderMock.Setup(r => r.SelectAsync(fileName, It.IsAny<string>())).ReturnsAsync(keys);
+                dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(It.IsAny<string>(), It.IsAny<bool>())).Returns<string, bool>((criteria, flag) =>
+                    Task.FromResult(new Collection<T>(keys.Select(id => recordList.FirstOrDefault(r => r.Recordkey == id)).Where(r => r != null).ToList())));
+                dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(fileName, It.IsAny<string>(), It.IsAny<bool>())).Returns<string, string, bool>((file, criteria, flag) =>
+                    Task.FromResult(new Collection<T>(keys.Select(id => recordList.FirstOrDefault(r => r.Recordkey == id)).Where(r => r != null).ToList())));
+
 
                 // Read or select records using key values - only return the corresponding records
                 dataReaderMock.Setup(r => r.Select(fileName, It.IsAny<string[]>(), It.IsAny<string>())).Returns<string, string[], string>((file, ids, criteria) => ids);
+                dataReaderMock.Setup(r => r.SelectAsync(fileName, It.IsAny<string[]>(), It.IsAny<string>())).Returns<string, string[], string>((file, ids, criteria) => Task.FromResult(ids));
                 dataReaderMock.Setup(r => r.BulkReadRecord<T>(It.IsAny<string[]>(), It.IsAny<bool>())).Returns<string[], bool>((ids, flag) =>
                     new Collection<T>(ids.Select(id => recordList.FirstOrDefault(r => r.Recordkey == id)).Where(r => r != null).ToList()));
                 dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(It.IsAny<string[]>(), It.IsAny<bool>())).Returns<string[], bool>((ids, flag) =>
                     Task.FromResult(new Collection<T>(ids.Select(id => recordList.FirstOrDefault(r => r.Recordkey == id)).Where(r => r != null).ToList())));
                 dataReaderMock.Setup(r => r.BulkReadRecord<T>(fileName, It.IsAny<string[]>(), It.IsAny<bool>())).Returns<string, string[], bool>((file, ids, flag) =>
                     new Collection<T>(ids.Select(id => recordList.FirstOrDefault(r => r.Recordkey == id)).Where(r => r != null).ToList()));
+                dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(fileName, It.IsAny<string[]>(), It.IsAny<bool>())).Returns<string, string[], bool>((file, ids, flag) =>
+                    Task.FromResult(new Collection<T>(ids.Select(id => recordList.FirstOrDefault(r => r.Recordkey == id)).Where(r => r != null).ToList())));
 
                 // If this entity has a GUID, include mocking for the GUID lookups
                 if (typeof(T).GetInterfaces().Contains(typeof(IColleagueGuidEntity)))
@@ -268,11 +324,19 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                         new Collection<T>(guidLookups.Select(g => recordList.FirstOrDefault(r => (r as IColleagueGuidEntity).RecordGuid == g.Guid)).ToList()));
                     dataReaderMock.Setup(r => r.BulkReadRecord<T>(fileName, It.IsAny<GuidLookup[]>(), It.IsAny<bool>())).Returns<string, GuidLookup[], bool>((file, guidLookups, flag) =>
                         new Collection<T>(guidLookups.Select(g => recordList.FirstOrDefault(r => (r as IColleagueGuidEntity).RecordGuid == g.Guid)).ToList()));
+                    dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(It.IsAny<GuidLookup[]>(), It.IsAny<bool>())).Returns<GuidLookup[], bool>((guidLookups, flag) =>
+                        Task.FromResult(new Collection<T>(guidLookups.Select(g => recordList.FirstOrDefault(r => (r as IColleagueGuidEntity).RecordGuid == g.Guid)).ToList())));
+                    dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(fileName, It.IsAny<GuidLookup[]>(), It.IsAny<bool>())).Returns<string, GuidLookup[], bool>((file, guidLookups, flag) =>
+                        Task.FromResult(new Collection<T>(guidLookups.Select(g => recordList.FirstOrDefault(r => (r as IColleagueGuidEntity).RecordGuid == g.Guid)).ToList())));
 
                     dataReaderMock.Setup(r => r.Select(recordList.Select(rl => new RecordKeyLookup(fileName, rl.Recordkey, string.Empty, string.Empty, false)).ToArray()))
                         .Returns(recordList.ToDictionary(r => fileName + "+" + r.Recordkey, r => new RecordKeyLookupResult { Guid = (r as IColleagueGuidEntity).RecordGuid }));
                     dataReaderMock.Setup(r => r.Select(recordList.Select(rl => new GuidLookup((rl as IColleagueGuidEntity).RecordGuid)).ToArray()))
                         .Returns(recordList.ToDictionary(r => (r as IColleagueGuidEntity).RecordGuid, r => new GuidLookupResult() { Entity = fileName, PrimaryKey = r.Recordkey }));
+                    dataReaderMock.Setup(r => r.SelectAsync(recordList.Select(rl => new RecordKeyLookup(fileName, rl.Recordkey, string.Empty, string.Empty, false)).ToArray()))
+                        .ReturnsAsync(recordList.ToDictionary(r => fileName + "+" + r.Recordkey, r => new RecordKeyLookupResult { Guid = (r as IColleagueGuidEntity).RecordGuid }));
+                    dataReaderMock.Setup(r => r.SelectAsync(recordList.Select(rl => new GuidLookup((rl as IColleagueGuidEntity).RecordGuid)).ToArray()))
+                        .ReturnsAsync(recordList.ToDictionary(r => (r as IColleagueGuidEntity).RecordGuid, r => new GuidLookupResult() { Entity = fileName, PrimaryKey = r.Recordkey }));
                 }
                 return;
             }
@@ -281,6 +345,11 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 outputMethod.Invoke(criteria, recordList).FirstOrDefault());
             dataReaderMock.Setup(r => r.ReadRecord<T>(fileName, It.IsAny<string>(), It.IsAny<bool>())).Returns<string, string, bool>((file, criteria, flag) =>
                 outputMethod.Invoke(criteria, recordList).FirstOrDefault());
+            dataReaderMock.Setup(r => r.ReadRecordAsync<T>(It.IsAny<string>(), It.IsAny<bool>())).Returns<string, bool>((criteria, flag) =>
+                Task.FromResult(outputMethod.Invoke(criteria, recordList).FirstOrDefault()));
+            dataReaderMock.Setup(r => r.ReadRecordAsync<T>(fileName, It.IsAny<string>(), It.IsAny<bool>())).Returns<string, string, bool>((file, criteria, flag) =>
+                Task.FromResult(outputMethod.Invoke(criteria, recordList).FirstOrDefault()));
+
 
             // Read or select records using any input criteria
             dataReaderMock.Setup(r => r.Select(fileName, It.IsAny<string>())).Returns<string, string>((file, criteria) =>
@@ -289,6 +358,13 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 new Collection<T>(outputMethod.Invoke(criteria, recordList)));
             dataReaderMock.Setup(r => r.BulkReadRecord<T>(fileName, It.IsAny<string>(), It.IsAny<bool>())).Returns<string, string, bool>((file, criteria, flag) =>
                 new Collection<T>(outputMethod.Invoke(criteria, recordList)));
+            dataReaderMock.Setup(r => r.SelectAsync(fileName, It.IsAny<string>())).Returns<string, string>((file, criteria) =>
+                Task.FromResult(outputMethod.Invoke(criteria, recordList).Select(r => r.Recordkey).ToArray()));
+            dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(It.IsAny<string>(), It.IsAny<bool>())).Returns<string, bool>((criteria, flag) =>
+                Task.FromResult(new Collection<T>(outputMethod.Invoke(criteria, recordList))));
+            dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(fileName, It.IsAny<string>(), It.IsAny<bool>())).Returns<string, string, bool>((file, criteria, flag) =>
+                Task.FromResult(new Collection<T>(outputMethod.Invoke(criteria, recordList))));
+
 
             // Read or select records using key values - only return the corresponding records
             dataReaderMock.Setup(r => r.Select(fileName, It.IsAny<string[]>(), It.IsAny<string>())).Returns<string, string[], string>((file, ids, criteria) => 
@@ -297,6 +373,13 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 new Collection<T>(ids.Select(id => recordList.FirstOrDefault(r => r.Recordkey == id)).Where(r => r != null).ToList()));
             dataReaderMock.Setup(r => r.BulkReadRecord<T>(fileName, It.IsAny<string[]>(), It.IsAny<bool>())).Returns<string, string[], bool>((file, ids, flag) =>
                 new Collection<T>(ids.Select(id => recordList.FirstOrDefault(r => r.Recordkey == id)).Where(r => r != null).ToList()));
+            dataReaderMock.Setup(r => r.SelectAsync(fileName, It.IsAny<string[]>(), It.IsAny<string>())).Returns<string, string[], string>((file, ids, criteria) =>
+                Task.FromResult(ids.Select(id => recordList.FirstOrDefault(r => r.Recordkey == id)).Where(r => r != null).Select(x => x.Recordkey).ToArray()));
+            dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(It.IsAny<string[]>(), It.IsAny<bool>())).Returns<string[], bool>((ids, flag) =>
+                Task.FromResult(new Collection<T>(ids.Select(id => recordList.FirstOrDefault(r => r.Recordkey == id)).Where(r => r != null).ToList())));
+            dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(fileName, It.IsAny<string[]>(), It.IsAny<bool>())).Returns<string, string[], bool>((file, ids, flag) =>
+                Task.FromResult(new Collection<T>(ids.Select(id => recordList.FirstOrDefault(r => r.Recordkey == id)).Where(r => r != null).ToList())));
+
 
             if (typeof(T).GetInterfaces().Contains(typeof(IColleagueGuidEntity)))
             {
@@ -304,6 +387,10 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                         new Collection<T>(guidLookups.Select(g => recordList.FirstOrDefault(r => (r as IColleagueGuidEntity).RecordGuid == g.Guid)).ToList()));
                 dataReaderMock.Setup(r => r.BulkReadRecord<T>(fileName, It.IsAny<GuidLookup[]>(), It.IsAny<bool>())).Returns<string, GuidLookup[], bool>((file, guidLookups, flag) =>
                         new Collection<T>(guidLookups.Select(g => recordList.FirstOrDefault(r => (r as IColleagueGuidEntity).RecordGuid == g.Guid)).ToList()));
+                dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(It.IsAny<GuidLookup[]>(), It.IsAny<bool>())).Returns<GuidLookup[], bool>((guidLookups, flag) =>
+                        Task.FromResult(new Collection<T>(guidLookups.Select(g => recordList.FirstOrDefault(r => (r as IColleagueGuidEntity).RecordGuid == g.Guid)).ToList())));
+                dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(fileName, It.IsAny<GuidLookup[]>(), It.IsAny<bool>())).Returns<string, GuidLookup[], bool>((file, guidLookups, flag) =>
+                        Task.FromResult(new Collection<T>(guidLookups.Select(g => recordList.FirstOrDefault(r => (r as IColleagueGuidEntity).RecordGuid == g.Guid)).ToList())));
 
                 dataReaderMock.Setup(r => r.Select(recordList.Select(rl => new RecordKeyLookup(fileName, rl.Recordkey, string.Empty, string.Empty, false)).ToArray()))
                     .Returns<string>(criteria => outputMethod.Invoke(criteria, recordList).Where(r => r != null)
@@ -311,6 +398,13 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 dataReaderMock.Setup(r => r.Select(recordList.Select(rl => new GuidLookup((rl as IColleagueGuidEntity).RecordGuid)).ToArray()))
                     .Returns<string>(criteria => outputMethod.Invoke(criteria, recordList).Where(r => r != null)
                         .ToDictionary(r => (r as IColleagueGuidEntity).RecordGuid, r => new GuidLookupResult() { Entity = fileName, PrimaryKey = r.Recordkey }));
+                dataReaderMock.Setup(r => r.SelectAsync(recordList.Select(rl => new RecordKeyLookup(fileName, rl.Recordkey, string.Empty, string.Empty, false)).ToArray()))
+                    .Returns<string>(criteria => Task.FromResult(outputMethod.Invoke(criteria, recordList).Where(r => r != null)
+                        .ToDictionary(r => fileName + "+" + r.Recordkey, r => new RecordKeyLookupResult { Guid = (r as IColleagueGuidEntity).RecordGuid })));
+                dataReaderMock.Setup(r => r.SelectAsync(recordList.Select(rl => new GuidLookup((rl as IColleagueGuidEntity).RecordGuid)).ToArray()))
+                    .Returns<string>(criteria => Task.FromResult(outputMethod.Invoke(criteria, recordList).Where(r => r != null)
+                        .ToDictionary(r => (r as IColleagueGuidEntity).RecordGuid, r => new GuidLookupResult() { Entity = fileName, PrimaryKey = r.Recordkey })));
+
             }
         }
 
@@ -338,16 +432,28 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 { T record = null; keyedRecords.TryGetValue(id, out record); return record; });
             dataReaderMock.Setup(r => r.ReadRecord<T>(fileName, It.IsAny<string>(), true)).Returns<string, bool>((id, flag) =>
                 { T record = null; keyedRecords.TryGetValue(id, out record); return record; });
+            dataReaderMock.Setup(r => r.ReadRecordAsync<T>(It.IsAny<string>(), true)).Returns<string, bool>((id, flag) =>
+                { T record = null; keyedRecords.TryGetValue(id, out record); return Task.FromResult(record); });
+            dataReaderMock.Setup(r => r.ReadRecordAsync<T>(fileName, It.IsAny<string>(), true)).Returns<string, bool>((id, flag) =>
+                { T record = null; keyedRecords.TryGetValue(id, out record); return Task.FromResult(record); });
 
             if (outputMethod == null)
             {
                 // Select and bulk read with no output function to process
                 dataReaderMock.Setup(r => r.Select(fileName, It.IsAny<string>())).Returns<string>(criteria => keys.ToArray());
                 dataReaderMock.Setup(r => r.Select(fileName, It.IsAny<string[]>(), It.IsAny<string>())).Returns<string[], string>((ids, criteria) => ids.ToArray());
+                dataReaderMock.Setup(r => r.SelectAsync(fileName, It.IsAny<string>())).Returns<string>(criteria => Task.FromResult(keys.ToArray()));
+                dataReaderMock.Setup(r => r.SelectAsync(fileName, It.IsAny<string[]>(), It.IsAny<string>())).Returns<string[], string>((ids, criteria) => Task.FromResult(ids.ToArray()));
+
                 dataReaderMock.Setup(r => r.BulkReadRecord<T>(It.IsAny<string[]>(), true)).Returns<string[], bool>((ids, flag) => 
                     new Collection<T>(keyedRecords.Where(x => ids.Contains(x.Key)).Select(x => x.Value).ToList()));
                 dataReaderMock.Setup(r => r.BulkReadRecord<T>(fileName, keys, true)).Returns<string[], bool>((ids, flag) =>
                     new Collection<T>(keyedRecords.Where(x => ids.Contains(x.Key)).Select(x => x.Value).ToList()));
+                dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(It.IsAny<string[]>(), true)).Returns<string[], bool>((ids, flag) =>
+                    Task.FromResult(new Collection<T>(keyedRecords.Where(x => ids.Contains(x.Key)).Select(x => x.Value).ToList())));
+                dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(fileName, keys, true)).Returns<string[], bool>((ids, flag) =>
+                    Task.FromResult(new Collection<T>(keyedRecords.Where(x => ids.Contains(x.Key)).Select(x => x.Value).ToList())));
+
             }
             else
             {
@@ -356,10 +462,19 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     outputMethod.Invoke(keyedRecords, keys, criteria).Select(r => r.Recordkey).ToArray());
                 dataReaderMock.Setup(r => r.Select(fileName, It.IsAny<string[]>(), It.IsAny<string>())).Returns<string[], string>((ids, criteria) =>
                     outputMethod.Invoke(keyedRecords, ids, criteria).Select(r => r.Recordkey).ToArray());
+                dataReaderMock.Setup(r => r.SelectAsync(fileName, It.IsAny<string>())).Returns<string>(criteria =>
+                    Task.FromResult(outputMethod.Invoke(keyedRecords, keys, criteria).Select(r => r.Recordkey).ToArray()));
+                dataReaderMock.Setup(r => r.SelectAsync(fileName, It.IsAny<string[]>(), It.IsAny<string>())).Returns<string[], string>((ids, criteria) =>
+                    Task.FromResult(outputMethod.Invoke(keyedRecords, ids, criteria).Select(r => r.Recordkey).ToArray()));
+
                 dataReaderMock.Setup(r => r.BulkReadRecord<T>(It.IsAny<string[]>(), true)).Returns<string[], bool>((ids, flag) => 
                     new Collection<T>(outputMethod.Invoke(keyedRecords, ids, null)));
                 dataReaderMock.Setup(r => r.BulkReadRecord<T>(fileName, keys, true)).Returns<string[], bool>((ids, flag) => 
                     new Collection<T>(outputMethod.Invoke(keyedRecords, ids, null)));
+                dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(It.IsAny<string[]>(), true)).Returns<string[], bool>((ids, flag) =>
+                    Task.FromResult(new Collection<T>(outputMethod.Invoke(keyedRecords, ids, null))));
+                dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(fileName, keys, true)).Returns<string[], bool>((ids, flag) =>
+                    Task.FromResult(new Collection<T>(outputMethod.Invoke(keyedRecords, ids, null))));
             }
 
             if (typeof(T).GetInterfaces().Contains(typeof(IColleagueGuidEntity)))
@@ -371,6 +486,10 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                         new Collection<T>(guidLookups.Select(x => recordList.FirstOrDefault(r => (r as IColleagueGuidEntity).RecordGuid == x.Guid)).Where(x => x != null).ToList()));
                     dataReaderMock.Setup(r => r.BulkReadRecord<T>(fileName, It.IsAny<GuidLookup[]>(), true)).Returns<GuidLookup[], bool>((guidLookups, flag) =>
                         new Collection<T>(guidLookups.Select(x => recordList.FirstOrDefault(r => (r as IColleagueGuidEntity).RecordGuid == x.Guid)).Where(x => x != null).ToList()));
+                    dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(It.IsAny<GuidLookup[]>(), true)).Returns<GuidLookup[], bool>((guidLookups, flag) =>
+                        Task.FromResult(new Collection<T>(guidLookups.Select(x => recordList.FirstOrDefault(r => (r as IColleagueGuidEntity).RecordGuid == x.Guid)).Where(x => x != null).ToList())));
+                    dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(fileName, It.IsAny<GuidLookup[]>(), true)).Returns<GuidLookup[], bool>((guidLookups, flag) =>
+                        Task.FromResult(new Collection<T>(guidLookups.Select(x => recordList.FirstOrDefault(r => (r as IColleagueGuidEntity).RecordGuid == x.Guid)).Where(x => x != null).ToList())));
                 }
                 else
                 {
@@ -385,6 +504,17 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                             guidLookups.Select(x => recordList.FirstOrDefault(r => (r as IColleagueGuidEntity).RecordGuid == x.Guid)).Where(x => x != null).ToDictionary(k => k.Recordkey, v => v),
                             guidLookups.Select(x => recordList.FirstOrDefault(r => (r as IColleagueGuidEntity).RecordGuid == x.Guid)).Where(x => x != null).Select(x => x.Recordkey).ToArray(),
                             null)));
+                    dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(It.IsAny<GuidLookup[]>(), true)).Returns<GuidLookup[], bool>((guidLookups, flag) =>
+                        Task.FromResult(new Collection<T>(outputMethod.Invoke(
+                            guidLookups.Select(x => recordList.FirstOrDefault(r => (r as IColleagueGuidEntity).RecordGuid == x.Guid)).Where(x => x != null).ToDictionary(k => k.Recordkey, v => v),
+                            guidLookups.Select(x => recordList.FirstOrDefault(r => (r as IColleagueGuidEntity).RecordGuid == x.Guid)).Where(x => x != null).Select(x => x.Recordkey).ToArray(),
+                            null))));
+                    dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(fileName, It.IsAny<GuidLookup[]>(), true)).Returns<GuidLookup[], bool>((guidLookups, flag) =>
+                        Task.FromResult(new Collection<T>(outputMethod.Invoke(
+                            guidLookups.Select(x => recordList.FirstOrDefault(r => (r as IColleagueGuidEntity).RecordGuid == x.Guid)).Where(x => x != null).ToDictionary(k => k.Recordkey, v => v),
+                            guidLookups.Select(x => recordList.FirstOrDefault(r => (r as IColleagueGuidEntity).RecordGuid == x.Guid)).Where(x => x != null).Select(x => x.Recordkey).ToArray(),
+                            null))));
+
                 }
 
                 var recordLookups = recordList.Select(r => new RecordKeyLookup(fileName, r.Recordkey, string.Empty, string.Empty, false)).ToArray();
@@ -392,12 +522,16 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     (r => fileName + "+" + r.Recordkey, r => new RecordKeyLookupResult() { Guid = (r as IColleagueGuidEntity).RecordGuid });
                 dataReaderMock.Setup(r => r.Select(It.IsAny<RecordKeyLookup[]>())).Returns<RecordKeyLookup[]>(rkls =>
                     rkls.Select(x => lookupResults.FirstOrDefault(y => y.Key == x.ResultKey)).ToDictionary(k => k.Key, v => v.Value));
+                dataReaderMock.Setup(r => r.SelectAsync(It.IsAny<RecordKeyLookup[]>())).Returns<RecordKeyLookup[]>(rkls =>
+                    Task.FromResult(rkls.Select(x => lookupResults.FirstOrDefault(y => y.Key == x.ResultKey)).ToDictionary(k => k.Key, v => v.Value)));
 
                 var guidLookup = recordList.Select(r => new GuidLookup((r as IColleagueGuidEntity).RecordGuid)).ToArray();
                 var guidLookupResult = recordList.ToDictionary(r => (r as IColleagueGuidEntity).RecordGuid,
                     r => new GuidLookupResult() { Entity = fileName, PrimaryKey = r.Recordkey });
                 dataReaderMock.Setup(r => r.Select(It.IsAny<GuidLookup[]>())).Returns <GuidLookup[]>(glus =>
                     glus.Select(glu => guidLookupResult.FirstOrDefault(glr => glr.Key == glu.Guid)).ToDictionary(k => k.Key, v => v.Value));
+                dataReaderMock.Setup(r => r.SelectAsync(It.IsAny<GuidLookup[]>())).Returns<GuidLookup[]>(glus =>
+                   Task.FromResult(glus.Select(glu => guidLookupResult.FirstOrDefault(glr => glr.Key == glu.Guid)).ToDictionary(k => k.Key, v => v.Value)));
             }
         }
 
@@ -430,67 +564,27 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 keyedRecords.Add(keys[i], recordList[i]);
             }
 
-            // Read individual records
-            //dataReaderMock.Setup(r => r.ReadRecord<T>(It.IsAny<string>(), true)).Returns<string, bool>((id, flag) =>
-            //    {
-            //        int pos = keyList.FindIndex(x => x == id);
-            //        if (pos >= 0)
-            //        {
-            //            return recordList[pos];
-            //        }
-            //        return null;
-            //    });
-            //dataReaderMock.Setup(r => r.ReadRecord<T>(fileName, It.IsAny<string>(), true)).Returns<string, bool>((id, flag) =>
-            //{
-            //    int pos = keyList.FindIndex(x => x == id);
-            //    if (pos >= 0)
-            //    {
-            //        return recordList[pos];
-            //    }
-            //    return null;
-            //});
-
             if (outputMethod == null)
             {
                 MockRecords(fileName, keyedRecords, null);
                 return;
             }
 
-            //if (outputMethod == null)
-            //{ 
-            //    dataReaderMock.Setup(r => r.Select(fileName, keys, It.IsAny<string>())).Returns(recordList.Select(r => r.Recordkey).ToArray());
-            //    dataReaderMock.Setup(r => r.BulkReadRecord<T>(keys, true)).Returns(new Collection<T>(recordList));
-            //    dataReaderMock.Setup(r => r.BulkReadRecord<T>(fileName, keys, true)).Returns(new Collection<T>(recordList));
-            //}
-            //else
-            //{
-                dataReaderMock.Setup(r => r.Select(fileName, keys, It.IsAny<string>())).Returns(outputMethod.Invoke(keys, true).Select(r => r.Recordkey).ToArray());
-                dataReaderMock.Setup(r => r.BulkReadRecord<T>(keys, true)).Returns(outputMethod.Invoke(keys, true));
-                dataReaderMock.Setup(r => r.BulkReadRecord<T>(fileName, keys, true)).Returns(new Collection<T>(outputMethod.Invoke(keys, true)));
-            //}
+            dataReaderMock.Setup(r => r.Select(fileName, keys, It.IsAny<string>())).Returns(outputMethod.Invoke(keys, true).Select(r => r.Recordkey).ToArray());
+            dataReaderMock.Setup(r => r.BulkReadRecord<T>(keys, true)).Returns(outputMethod.Invoke(keys, true));
+            dataReaderMock.Setup(r => r.BulkReadRecord<T>(fileName, keys, true)).Returns(new Collection<T>(outputMethod.Invoke(keys, true)));
+            dataReaderMock.Setup(r => r.SelectAsync(fileName, keys, It.IsAny<string>())).ReturnsAsync(outputMethod.Invoke(keys, true).Select(r => r.Recordkey).ToArray());
+            dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(keys, true)).ReturnsAsync(outputMethod.Invoke(keys, true));
+            dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(fileName, keys, true)).ReturnsAsync(new Collection<T>(outputMethod.Invoke(keys, true)));
+
 
             if (typeof(T).GetInterfaces().Contains(typeof(IColleagueGuidEntity)))
             {
-                //if (outputMethod == null)
-                //{
-                //    dataReaderMock.Setup(r => r.BulkReadRecord<T>(It.IsAny<GuidLookup[]>(), true)).Returns(new Collection<T>(recordList));
-                //    dataReaderMock.Setup(r => r.BulkReadRecord<T>(fileName, It.IsAny<GuidLookup[]>(), true)).Returns(new Collection<T>(recordList));
-                //}
-                //else
-                //{
-                    dataReaderMock.Setup(r => r.BulkReadRecord<T>(It.IsAny<GuidLookup[]>(), true)).Returns(new Collection<T>(outputMethod.Invoke(keys, true)));
-                    dataReaderMock.Setup(r => r.BulkReadRecord<T>(fileName, It.IsAny<GuidLookup[]>(), true)).Returns(new Collection<T>(outputMethod.Invoke(keys, true)));
-                //}
+                dataReaderMock.Setup(r => r.BulkReadRecord<T>(It.IsAny<GuidLookup[]>(), true)).Returns(new Collection<T>(outputMethod.Invoke(keys, true)));
+                dataReaderMock.Setup(r => r.BulkReadRecord<T>(fileName, It.IsAny<GuidLookup[]>(), true)).Returns(new Collection<T>(outputMethod.Invoke(keys, true)));
+                dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(It.IsAny<GuidLookup[]>(), true)).ReturnsAsync(new Collection<T>(outputMethod.Invoke(keys, true)));
+                dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(fileName, It.IsAny<GuidLookup[]>(), true)).ReturnsAsync(new Collection<T>(outputMethod.Invoke(keys, true)));
 
-                //var recordLookup = recordList.Select(r => new RecordKeyLookup(fileName, r.Recordkey, string.Empty, string.Empty, false)).ToArray();
-                //var lookupResult = recordList.ToDictionary
-                //    (r => fileName + "+" + r.Recordkey, r => new RecordKeyLookupResult() { Guid = (r as IColleagueGuidEntity).RecordGuid });
-                //dataReaderMock.Setup(reader => reader.Select(recordLookup)).Returns(lookupResult);
-
-                //var guidLookup = recordList.Select(r => new GuidLookup((r as IColleagueGuidEntity).RecordGuid)).ToArray();
-                //var guidLookupResult = recordList.ToDictionary(r => (r as IColleagueGuidEntity).RecordGuid,
-                //    r => new GuidLookupResult() { Entity = fileName, PrimaryKey = r.Recordkey });
-                //dataReaderMock.Setup(r => r.Select(guidLookup)).Returns(guidLookupResult);
             }
         }
 
@@ -596,6 +690,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Bulk read using list of record IDs
                 dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(It.IsAny<string[]>(), It.IsAny<bool>())).Returns<Task<T>>(null);
                 dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(fileName, It.IsAny<string[]>(), It.IsAny<bool>())).Returns<Task<T>>(null);
+                dataReaderMock.Setup(r => r.BulkReadRecordWithInvalidKeysAndRecordsAsync<T>(It.IsAny<string[]>(), It.IsAny<bool>())).Returns<Task<T>>(null);
+                dataReaderMock.Setup(r => r.BulkReadRecordWithInvalidKeysAndRecordsAsync<T>(fileName, It.IsAny<string[]>(), It.IsAny<bool>())).Returns<Task<T>>(null);
 
                 // Bulk read using any criteria
                 dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(It.IsAny<string>(), It.IsAny<bool>())).Returns<Task<T>>(null);
@@ -613,6 +709,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Bulk read using list of record IDs
                 dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(It.IsAny<string[]>(), It.IsAny<bool>())).Returns(Task.FromResult(new Collection<T> { record }));
                 dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(fileName, It.IsAny<string[]>(), It.IsAny<bool>())).Returns(Task.FromResult(new Collection<T> { record }));
+                dataReaderMock.Setup(r => r.BulkReadRecordWithInvalidKeysAndRecordsAsync<T>(It.IsAny<string[]>(), It.IsAny<bool>())).Returns(Task.FromResult(new BulkReadOutput<T>() { BulkRecordsRead = new Collection<T> { record } }));
+                dataReaderMock.Setup(r => r.BulkReadRecordWithInvalidKeysAndRecordsAsync<T>(fileName, It.IsAny<string[]>(), It.IsAny<bool>())).Returns(Task.FromResult(new BulkReadOutput<T>() { BulkRecordsRead = new Collection<T> { record } }));
 
                 // Bulk read using any criteria
                 dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(It.IsAny<string>(), It.IsAny<bool>())).Returns(Task.FromResult(new Collection<T> { record }));
@@ -631,6 +729,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Bulk read using individual record ID
                 dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(new string[] { record.Recordkey }, It.IsAny<bool>())).Returns(Task.FromResult(new Collection<T> { record }));
                 dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(fileName, new string[] { record.Recordkey }, It.IsAny<bool>())).Returns(Task.FromResult(new Collection<T> { record }));
+                dataReaderMock.Setup(r => r.BulkReadRecordWithInvalidKeysAndRecordsAsync<T>(new string[] { record.Recordkey }, It.IsAny<bool>())).Returns(Task.FromResult(new BulkReadOutput<T>() { BulkRecordsRead = new Collection<T> { record } }));
+                dataReaderMock.Setup(r => r.BulkReadRecordWithInvalidKeysAndRecordsAsync<T>(fileName, new string[] { record.Recordkey }, It.IsAny<bool>())).Returns(Task.FromResult(new BulkReadOutput<T>() { BulkRecordsRead = new Collection<T> { record } }));
 
                 // Bulk read with criteria
                 dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(It.IsAny<string>(), It.IsAny<bool>())).Returns(Task.FromResult(new Collection<T> { record }));
@@ -655,6 +755,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Bulk read record using GUID
                 dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(new[] { guidLookup }, It.IsAny<bool>())).Returns(Task.FromResult(new Collection<T> { record }));
                 dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(fileName, new[] { guidLookup }, It.IsAny<bool>())).Returns(Task.FromResult(new Collection<T> { record }));
+                dataReaderMock.Setup(r => r.BulkReadRecordWithInvalidKeysAndRecordsAsync<T>(fileName, new[] { guidLookup }, It.IsAny<bool>())).Returns(Task.FromResult(new BulkReadOutput<T>() { BulkRecordsRead = new Collection<T> { record } }));
 
                 if (!string.IsNullOrEmpty(record.Recordkey))
                 {
@@ -715,6 +816,11 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                         .ReturnsAsync(null);
                     dataReaderMock.Setup<Task<Collection<T>>>(r => r.BulkReadRecordAsync<T>(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<bool>()))
                         .ReturnsAsync(null);
+                    dataReaderMock.Setup<Task<BulkReadOutput<T>>>(r => r.BulkReadRecordWithInvalidKeysAndRecordsAsync<T>(It.IsAny<string[]>(), It.IsAny<bool>()))
+                        .ReturnsAsync(new BulkReadOutput<T>() { BulkRecordsRead = null, InvalidKeys = null, InvalidRecords = null });
+                    dataReaderMock.Setup<Task<BulkReadOutput<T>>>(r => r.BulkReadRecordWithInvalidKeysAndRecordsAsync<T>(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<bool>()))
+                        .ReturnsAsync(new BulkReadOutput<T>() { BulkRecordsRead = null, InvalidKeys = null, InvalidRecords = null });
+
 
                     // If this entity has a GUID, include mocking for the GUID lookups
                     if (typeof(T).GetInterfaces().Contains(typeof(IColleagueGuidEntity)))
@@ -723,7 +829,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                             .ReturnsAsync(null);
                         dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(It.IsAny<string>(), It.IsAny<GuidLookup[]>(), It.IsAny<bool>()))
                             .ReturnsAsync(null);
-
+                        dataReaderMock.Setup<Task<BulkReadOutput<T>>>(r => r.BulkReadRecordWithInvalidKeysAndRecordsAsync<T>(It.IsAny<string>(), It.IsAny<GuidLookup[]>(), It.IsAny<bool>()))
+                            .ReturnsAsync(new BulkReadOutput<T>() { BulkRecordsRead = null, InvalidKeys = null, InvalidRecords = null });
                         dataReaderMock.Setup(r => r.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(null);
                         dataReaderMock.Setup(r => r.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(null);
                     }
@@ -732,7 +839,6 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 }
 
                 // Set up the mocks for a non-empty list of records
-
                 dataReaderMock.Setup(r => r.ReadRecordAsync<T>(It.IsAny<string>(), It.IsAny<bool>())).Returns<string, bool>((key, flag) =>
                     Task.FromResult( recordList.FirstOrDefault(r => r.Recordkey == key)));
                 dataReaderMock.Setup(r => r.ReadRecordAsync<T>(fileName, It.IsAny<string>(), It.IsAny<bool>())).Returns<string, string, bool>((file, key, flag) =>
@@ -753,6 +859,10 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     Task.FromResult( new Collection<T>(ids.Select(id => recordList.FirstOrDefault(r => r.Recordkey == id)).Where(r => r != null).ToList())));
                 dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(fileName, It.IsAny<string[]>(), It.IsAny<bool>())).Returns<string, string[], bool>((file, ids, flag) =>
                     Task.FromResult( new Collection<T>(ids.Select(id => recordList.FirstOrDefault(r => r.Recordkey == id)).Where(r => r != null).ToList())));
+                dataReaderMock.Setup(r => r.BulkReadRecordWithInvalidKeysAndRecordsAsync<T>(It.IsAny<string[]>(), It.IsAny<bool>())).Returns<string[], bool>((ids, flag) =>
+                    Task.FromResult(new BulkReadOutput<T>() { BulkRecordsRead = new Collection<T>(ids.Select(id => recordList.FirstOrDefault(r => r.Recordkey == id)).Where(r => r != null).ToList()) }));
+                dataReaderMock.Setup(r => r.BulkReadRecordWithInvalidKeysAndRecordsAsync<T>(fileName, It.IsAny<string[]>(), It.IsAny<bool>())).Returns<string, string[], bool>((file, ids, flag) =>
+                    Task.FromResult(new BulkReadOutput<T>() { BulkRecordsRead = new Collection<T>(ids.Select(id => recordList.FirstOrDefault(r => r.Recordkey == id)).Where(r => r != null).ToList()) }));
 
                 // If this entity has a GUID, include mocking for the GUID lookups
                 if (typeof(T).GetInterfaces().Contains(typeof(IColleagueGuidEntity)))
@@ -761,6 +871,9 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                         Task.FromResult(new Collection<T>(guidLookups.Select(g => recordList.FirstOrDefault(r => (r as IColleagueGuidEntity).RecordGuid == g.Guid)).ToList())));
                     dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(fileName, It.IsAny<GuidLookup[]>(), It.IsAny<bool>())).Returns<string, GuidLookup[], bool>((file, guidLookups, flag) =>
                         Task.FromResult( new Collection<T>(guidLookups.Select(g => recordList.FirstOrDefault(r => (r as IColleagueGuidEntity).RecordGuid == g.Guid)).ToList())));
+
+                    dataReaderMock.Setup(r => r.BulkReadRecordWithInvalidKeysAndRecordsAsync<T>(fileName, It.IsAny<GuidLookup[]>(), It.IsAny<bool>())).Returns<string, GuidLookup[], bool>((file, guidLookups, flag) =>
+                        Task.FromResult(new BulkReadOutput<T>() { BulkRecordsRead = new Collection<T>(guidLookups.Select(g => recordList.FirstOrDefault(r => (r as IColleagueGuidEntity).RecordGuid == g.Guid)).ToList()) }));
 
                     dataReaderMock.Setup(r => r.SelectAsync(recordList.Select(rl => new RecordKeyLookup(fileName, rl.Recordkey, string.Empty, string.Empty, false)).ToArray()))
                         .Returns(Task.FromResult(recordList.ToDictionary(r => fileName + "+" + r.Recordkey, r => new RecordKeyLookupResult { Guid = (r as IColleagueGuidEntity).RecordGuid })));
@@ -790,6 +903,10 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 Task.FromResult(new Collection<T>(ids.Select(id => recordList.FirstOrDefault(r => r.Recordkey == id)).Where(r => r != null).ToList())));
             dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(fileName, It.IsAny<string[]>(), It.IsAny<bool>())).Returns<string, string[], bool>((file, ids, flag) =>
                 Task.FromResult(new Collection<T>(ids.Select(id => recordList.FirstOrDefault(r => r.Recordkey == id)).Where(r => r != null).ToList())));
+            dataReaderMock.Setup(r => r.BulkReadRecordWithInvalidKeysAndRecordsAsync<T>(It.IsAny<string[]>(), It.IsAny<bool>())).Returns<string[], bool>((ids, flag) =>
+                Task.FromResult(new BulkReadOutput<T>() { BulkRecordsRead = new Collection<T>(ids.Select(id => recordList.FirstOrDefault(r => r.Recordkey == id)).Where(r => r != null).ToList()) }));
+            dataReaderMock.Setup(r => r.BulkReadRecordWithInvalidKeysAndRecordsAsync<T>(fileName, It.IsAny<string[]>(), It.IsAny<bool>())).Returns<string, string[], bool>((file, ids, flag) =>
+                Task.FromResult(new BulkReadOutput<T>() { BulkRecordsRead = new Collection<T>(ids.Select(id => recordList.FirstOrDefault(r => r.Recordkey == id)).Where(r => r != null).ToList()) }));
 
             if (typeof(T).GetInterfaces().Contains(typeof(IColleagueGuidEntity)))
             {
@@ -797,6 +914,9 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                        Task.FromResult( new Collection<T>(guidLookups.Select(g => recordList.FirstOrDefault(r => (r as IColleagueGuidEntity).RecordGuid == g.Guid)).ToList())));
                 dataReaderMock.Setup(r => r.BulkReadRecordAsync<T>(fileName, It.IsAny<GuidLookup[]>(), It.IsAny<bool>())).Returns<string, GuidLookup[], bool>((file, guidLookups, flag) =>
                        Task.FromResult(  new Collection<T>(guidLookups.Select(g => recordList.FirstOrDefault(r => (r as IColleagueGuidEntity).RecordGuid == g.Guid)).ToList())));
+
+                dataReaderMock.Setup(r => r.BulkReadRecordWithInvalidKeysAndRecordsAsync<T>(fileName, It.IsAny<GuidLookup[]>(), It.IsAny<bool>())).Returns<string, GuidLookup[], bool>((file, guidLookups, flag) =>
+                    Task.FromResult(new BulkReadOutput<T>() { BulkRecordsRead = new Collection<T>(guidLookups.Select(g => recordList.FirstOrDefault(r => (r as IColleagueGuidEntity).RecordGuid == g.Guid)).ToList()) }));
 
                 dataReaderMock.Setup(r => r.SelectAsync(recordList.Select(rl => new RecordKeyLookup(fileName, rl.Recordkey, string.Empty, string.Empty, false)).ToArray()))
                     .Returns<string>(criteria => Task.FromResult(outputMethod.Invoke(criteria, recordList).Where(r => r != null)

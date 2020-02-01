@@ -1,11 +1,9 @@
 ﻿// Copyright 2016 Ellucian Company L.P. and its affiliates
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Transactions;
+using Ellucian.Colleague.Domain.Entities;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Data.Colleague;
@@ -13,9 +11,11 @@ using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using slf4net;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
-using Ellucian.Colleague.Domain.Exceptions;
-using Ellucian.Colleague.Domain.Entities;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -77,7 +77,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns>A list of StudentCharge domain entities</returns>
         /// <exception cref="ArgumentNullException">Thrown if the id argument is null or empty</exception>
         /// <exception cref="KeyNotFoundException">Thrown if no database records exist for the given id argument</exception>
-        public async Task<Tuple<IEnumerable<StudentCharge>,int>> GetAsync(int offset, int limit, bool bypassCache, string personId = "", string term = "", string arCode = "", string arType = "", string chargeType = "")
+        public async Task<Tuple<IEnumerable<StudentCharge>, int>> GetAsync(int offset, int limit, bool bypassCache, string personId = "", string term = "", string arCode = "", string arType = "", string chargeType = "", string usage = "")
         {
             var intgStudentChargesEntities = new List<StudentCharge>();
             var criteria = new StringBuilder();
@@ -118,6 +118,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
                 criteria.AppendFormat("WITH INVI.INTG.CHARGE.TYPE = '{0}'", chargeType.ToLowerInvariant());
             }
+            if (!string.IsNullOrEmpty(usage))
+            {
+                if (criteria.Length > 0)
+                {
+                    criteria.Append(" AND ");
+                }
+                criteria.AppendFormat("WITH INVI.INTG.USAGE = '{0}'", usage);
+            }
             string select = criteria.ToString();
             string[] intgStudentChargeIds = await DataReader.SelectAsync("AR.INV.ITEMS.INTG", select);
             var totalCount = intgStudentChargeIds.Count();
@@ -138,7 +146,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 intgStudentChargesEntities.Add(BuildStudentCharge(intgStudentChargesEntity));
             }
-            return new Tuple<IEnumerable<StudentCharge>,int>(intgStudentChargesEntities, totalCount);
+            return new Tuple<IEnumerable<StudentCharge>, int>(intgStudentChargesEntities, totalCount);
         }
 
         /// <summary>
@@ -152,7 +160,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             if (string.IsNullOrEmpty(id))
             {
                 throw new ArgumentNullException("id");
-            }  
+            }
             ////Guid reqdness HEDM-2628, 00000000-0000-0000-0000-000000000000 should not be validated
             if (!studentCharge.Guid.Equals(Guid.Empty.ToString(), StringComparison.OrdinalIgnoreCase))
             {
@@ -211,8 +219,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             ////if there are any errors throw
             if (response.DeleteIntgGlPostingErrors.Any())
             {
-                var exception = new RepositoryException("Errors encountered while deleting general-ledger-transactions: " + id);
-                response.DeleteIntgGlPostingErrors.ForEach(e => exception.AddError(new RepositoryError(e.ErrorCode, e.ErrorMsg)));
+                var exception = new RepositoryException("Errors encountered while deleting student-charges: " + id);
+                response.DeleteIntgGlPostingErrors.ForEach(e => exception.AddError(new RepositoryError(string.IsNullOrEmpty(e.ErrorCode) ? "" : e.ErrorCode, e.ErrorMsg)));
                 throw exception;
             }
             return null;
@@ -220,24 +228,27 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
         private StudentCharge BuildStudentCharge(ArInvItemsIntg integStudentCharge)
         {
-            var studentCharge = new StudentCharge(integStudentCharge.InviIntgPersonId,
-                integStudentCharge.InviIntgChargeType, integStudentCharge.InviIntgDueDate)
-                {
-                     AccountsReceivableCode = integStudentCharge.InviIntgArCode,
-                     AccountsReceivableTypeCode = integStudentCharge.InviIntgArType,
-                     ChargeAmount = integStudentCharge.InviIntgAmt,
-                     ChargeCurrency = integStudentCharge.InviIntgAmtCurrency,
-                     Comments = !string.IsNullOrEmpty(integStudentCharge.InviIntgComments) ? new List<string> { integStudentCharge.InviIntgComments } : null,
-                     Guid = integStudentCharge.RecordGuid,
-                     InvoiceItemID = integStudentCharge.InviIntgArInvItem,
-                     Term = integStudentCharge.InviIntgTerm,
-                     UnitCost = integStudentCharge.InviIntgUnitCost,
-                     UnitCurrency = integStudentCharge.InviIntgUnitCurrency,
-                     UnitQuantity = integStudentCharge.InviIntgUnitQty
-                };
+            var studentCharge = new StudentCharge(integStudentCharge.InviIntgPersonId, integStudentCharge.InviIntgDueDate)
+            {
+                ChargeType = integStudentCharge.InviIntgChargeType,
+                AccountsReceivableCode = integStudentCharge.InviIntgArCode,
+                AccountsReceivableTypeCode = integStudentCharge.InviIntgArType,
+                ChargeAmount = integStudentCharge.InviIntgAmt,
+                ChargeCurrency = integStudentCharge.InviIntgAmtCurrency,
+                Comments = !string.IsNullOrEmpty(integStudentCharge.InviIntgComments) ? new List<string> { integStudentCharge.InviIntgComments } : null,
+                Guid = integStudentCharge.RecordGuid,
+                InvoiceItemID = integStudentCharge.InviIntgArInvItem,
+                Term = integStudentCharge.InviIntgTerm,
+                UnitCost = integStudentCharge.InviIntgUnitCost,
+                UnitCurrency = integStudentCharge.InviIntgUnitCurrency,
+                UnitQuantity = integStudentCharge.InviIntgUnitQty,
+                Usage = integStudentCharge.InviIntgUsage,
+                OriginatedOn = integStudentCharge.InviIntgOriginatedOn,
+                OverrideDescription = integStudentCharge.InviIntgOverrideDesc
+            };
             return studentCharge;
         }
- 
+
         private async Task<StudentCharge> CreateStudentCharges(StudentCharge studentCharge)
         {
             var comments = new StringBuilder();
@@ -253,23 +264,26 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
             }
             var request = new PostStudentChargesRequest()
-                {
-                    InviIntgAmt = studentCharge.ChargeAmount,
-                    InviIntgAmtCurrency = studentCharge.ChargeCurrency,
-                    InviIntgArCode = studentCharge.AccountsReceivableCode,
-                    InviIntgArInvItem = studentCharge.InvoiceItemID,
-                    InviIntgArType = studentCharge.AccountsReceivableTypeCode,
-                    InviIntgChargeType = studentCharge.ChargeType,
-                    InviIntgComments = comments.ToString(),
-                    InviIntgDueDate = studentCharge.ChargeDate,
-                    InviIntgGuid = studentCharge.Guid,
-                    InviIntgPersonId = studentCharge.PersonId,
-                    InviIntgTerm = studentCharge.Term,
-                    InviIntgUnitCost = studentCharge.UnitCost,
-                    InviIntgUnitCurrency = studentCharge.UnitCurrency,
-                    InviIntgUnitQty = studentCharge.UnitQuantity,
-                    ElevateFlag = studentCharge.ChargeFromElevate
-                };
+            {
+                InviIntgAmt = studentCharge.ChargeAmount,
+                InviIntgAmtCurrency = studentCharge.ChargeCurrency,
+                InviIntgArCode = studentCharge.AccountsReceivableCode,
+                InviIntgArInvItem = studentCharge.InvoiceItemID,
+                InviIntgArType = studentCharge.AccountsReceivableTypeCode,
+                InviIntgChargeType = studentCharge.ChargeType,
+                InviIntgComments = comments.ToString(),
+                InviIntgDueDate = studentCharge.ChargeDate,
+                InviIntgGuid = studentCharge.Guid,
+                InviIntgPersonId = studentCharge.PersonId,
+                InviIntgTerm = studentCharge.Term,
+                InviIntgUnitCost = studentCharge.UnitCost,
+                InviIntgUnitCurrency = studentCharge.UnitCurrency,
+                InviIntgUnitQty = studentCharge.UnitQuantity,
+                ElevateFlag = studentCharge.ChargeFromElevate,
+                InviIntgUsage = studentCharge.Usage,
+                InviIntgOriginatedOn = studentCharge.OriginatedOn,
+                InviIntgOverrideDesc = studentCharge.OverrideDescription
+            };
 
             ////Guid reqdness HEDM-2628, since transaction doesn't support 00000000-0000-0000-0000-000000000000, we have to assign empty string
             if (request.InviIntgGuid.Equals(Guid.Empty.ToString(), StringComparison.OrdinalIgnoreCase))
@@ -293,7 +307,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 var exception = new RepositoryException(errorMessage);
                 foreach (var errMsg in updateResponse.StudentChargeErrors)
                 {
-                    exception.AddError(new RepositoryError(errMsg.ErrorCodes, errMsg.ErrorMessages));
+                    exception.AddError(new RepositoryError("Create.Update.Exception", string.Concat(errMsg.ErrorCodes, ": ", errMsg.ErrorMessages)));
                     errorMessage += string.Join(Environment.NewLine, errMsg.ErrorMessages);
                 }
                 logger.Error(errorMessage.ToString());

@@ -12,7 +12,7 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         /// </summary>
         public string PersonGuid { get; set; }
         /// <summary>
-        /// Language code defining the person's language
+        /// Language ISO code defining the person's language
         /// </summary>
         public string Code { get; private set; }
         /// <summary>

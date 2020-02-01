@@ -460,12 +460,12 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         private LedgerActivityAmount ConvertEntityToAmountDto(decimal? credit, decimal? debit, string hostCountry)
         {
             LedgerActivityAmount laa = null;
-            if (credit.HasValue && credit != 0)
+            if (credit.HasValue)
             {
                 laa = new LedgerActivityAmount() { Value = credit, Currency = ConvertEntityToHostCountryEnum(hostCountry) };
             }
 
-            if(debit.HasValue && debit != 0)
+            if(debit.HasValue)
             {
                 laa = new LedgerActivityAmount() { Value = debit, Currency = ConvertEntityToHostCountryEnum(hostCountry) };
             }

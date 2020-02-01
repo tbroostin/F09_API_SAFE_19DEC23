@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -33,11 +33,16 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         private ApplValcodes MaritalStatuses;
         private ApplValcodes PersonRaces;
         private ApplValcodes PersonalStatuses;
+        private ApplValcodes Languages;
         protected string Quote = '"'.ToString();
         protected const int PersonCacheTimeout = 120;
         protected const int AddressCacheTimeout = 120;
+        protected const int AllFilteredPersonsCacheTimeout = 20; 
         protected const string PersonContractCachePrefix = "PersonContract";
         protected const string AddressContractCachePrefix = "AddressContract";
+        protected const string AllFilteredPersonsCache = "AllFilteredPersons";
+        protected const int AllOrganizationsCacheTimeout = 20; 
+        protected const string AllOrganizationsCache = "AllOrganizations";
         private readonly string colleagueTimeZone;
         public static char _SM = Convert.ToChar(DynamicArray.SM);
         private int bulkReadSize;
@@ -118,6 +123,28 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     return racesTable;
                 }, Level1CacheTimeoutValue);
             return PersonRaces;
+        }
+
+        public async Task<ApplValcodes> GetLanguagesAsync()
+        {
+            if (Languages != null)
+            {
+                return Languages;
+            }
+
+            Languages = await GetOrAddToCacheAsync<ApplValcodes>("PersonLanguages",
+                async () =>
+                {
+                    ApplValcodes languagesTable = await DataReader.ReadRecordAsync<ApplValcodes>("CORE.VALCODES", "LANGUAGES");
+                    if (languagesTable == null)
+                    {
+                        var errorMessage = "Unable to access LANGUAGES valcode table.";
+                        logger.Info(errorMessage);
+                        throw new Exception(errorMessage);
+                    }
+                    return languagesTable;
+                }, Level1CacheTimeoutValue);
+            return Languages;
         }
 
         private async Task<ApplValcodes> GetPersonalStatusesAsync()
@@ -230,9 +257,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         }
                         catch (ArgumentNullException ane)
                         {
-                            var message = string.Format("Last name for record {0} may not be null", p.Recordkey);
-                            logger.Info(message);
-                            LogDataError("PERSON", p.Recordkey, p.LastName, ane);
+                            var message = string.Format("Last name for Person record {0} is null or empty.", p.Recordkey);
+                            logger.Error(ane, message);
                             if (!hasLastName)
                             {
                                 throw new ApplicationException(message, ane);
@@ -432,7 +458,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 // log any ids that were not found.
                 var errorMessage = "The following person Ids were requested but not found: " + string.Join(",", personIdsNotFound.ToArray());
-                logger.Info(errorMessage);
+                logger.Debug(errorMessage);
             }
             return personResults;
         }
@@ -495,7 +521,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         }
                         catch (Exception)
                         {
-                            logger.Info("Unable to add formatted name to person " + record.Recordkey + " with type " + pFormat.PersonFormattedNameTypesAssocMember + " and name " + pFormat.PersonFormattedNamesAssocMember);
+                            logger.Info("Unable to add formatted name to person " + record.Recordkey + " with type " + pFormat.PersonFormattedNameTypesAssocMember);
                         }
                     }
                 }
@@ -529,7 +555,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     foreach (var raceCode in record.PerRaces)
                     {
                         var ethnicOrigin = EthnicOrigin.Unknown;
-                        var codeAssoc = (await GetRacesAsync()).ValsEntityAssociation.Where(v => v.ValInternalCodeAssocMember == raceCode).FirstOrDefault();
+                        var codeAssoc = (await GetRacesAsync()).ValsEntityAssociation.Where(v => v != null && v.ValInternalCodeAssocMember == raceCode).FirstOrDefault();
                         if (codeAssoc != null)
                         {
                             switch (codeAssoc.ValActionCode1AssocMember)
@@ -587,8 +613,14 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         }
                         catch (Exception ex)
                         {
-                            // Log the original exception and a serialized version of the email
-                            LogDataError("Person email address", personId, emailData, ex);
+                            if (emailData != null && string.IsNullOrEmpty(emailData.PersonEmailTypesAssocMember))
+                            {
+                                logger.Error(ex, "Person {0} has email with no type code that could not be added", record.Recordkey);
+                            }
+                            else
+                            {
+                                logger.Error(ex, "Person {0} has email with type {1} that could not be added", record.Recordkey, emailData.PersonEmailTypesAssocMember);
+                            }
                         }
                     }
                 }
@@ -605,12 +637,44 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         }
                         catch (Exception ex)
                         {
-                            // Log the original exception and a serialized version of the person alt Id
-                            LogDataError("Person alternate ID", personId, personAltData, ex);
+                            if (personAltData != null && string.IsNullOrEmpty(personAltData.PersonAltIdTypesAssocMember))
+                            {
+                                logger.Error(ex, "Person {0} has alternate ID with no type", record.Recordkey);
+                            }
+                            else
+                            {
+                                logger.Error(ex, "Person {0} has alternate ID of type {1} that could not be added", record.Recordkey, personAltData.PersonAltIdTypesAssocMember);
+                            }
                         }
                     }
                 }
 
+                // person languages
+                if (record.PersonPrimaryLanguage != null)
+                {
+                    var codeAssoc = (await GetLanguagesAsync()).ValsEntityAssociation.Where(v => v != null && v.ValInternalCodeAssocMember == record.PersonPrimaryLanguage).FirstOrDefault();
+                    if (codeAssoc != null)
+                    {
+                        personBasedObject.PrimaryLanguage = codeAssoc.ValInternalCodeAssocMember;                        
+                    }
+                }
+                
+                if (record.PersonSecondaryLanguage != null && record.PersonSecondaryLanguage.Count > 0)
+                {
+                    var secondaryLanguages = new List<string>();
+                    foreach (var secondaryLanguage in record.PersonSecondaryLanguage)
+                    {
+                        var codeAssoc = (await GetLanguagesAsync()).ValsEntityAssociation.Where(v => v != null && v.ValInternalCodeAssocMember == secondaryLanguage).FirstOrDefault();
+                        if (codeAssoc != null)
+                        {
+                            secondaryLanguages.Add(codeAssoc.ValInternalCodeAssocMember);
+                        }
+                    }
+                    if (secondaryLanguages.Any())
+                    {
+                        personBasedObject.SecondaryLanguages = secondaryLanguages;
+                    }
+                }
             }
             return personBasedObject;
         }
@@ -632,9 +696,9 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             if (record != null && personBasedObject != null)
             {
                 // Populate additional Person fields
-                personBasedObject.Guid = record.RecordGuid;               
+                personBasedObject.Guid = record.RecordGuid;
                 personBasedObject.GovernmentId = record.Ssn;
-                
+
                 // person alternate Ids
                 if (record.PersonAltEntityAssociation != null && record.PersonAltEntityAssociation.Count > 0)
                 {
@@ -647,8 +711,14 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         }
                         catch (Exception ex)
                         {
-                            // Log the original exception and a serialized version of the person alt Id
-                            LogDataError("Person alternate ID", personId, personAltData, ex);
+                            if (personAltData != null && string.IsNullOrEmpty(personAltData.PersonAltIdTypesAssocMember))
+                            {
+                                logger.Error(ex, "Person {0} has alternate ID with no type", record.Recordkey);
+                            }
+                            else
+                            {
+                                logger.Error(ex, "Person {0} has alternate ID of type {1} that could not be added", record.Recordkey, personAltData.PersonAltIdTypesAssocMember);
+                            }
                         }
                     }
                 }
@@ -818,7 +888,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 var tempStaffIds = staffRecords.Where(rec => !string.IsNullOrWhiteSpace(rec.Recordkey)).Select(i => i.Recordkey).ToList();
                 var personIds = sysPersonIds.Union(tempStaffIds).Distinct();
 
-                if(personIds == null || !personIds.Any())
+                if (personIds == null || !personIds.Any())
                 {
                     return null;
                 }
@@ -1005,14 +1075,15 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 return new Dictionary<string, string>();
             }
             var personGuidCollection = new Dictionary<string, string>();
-            try
+
+            var personGuidLookup = personIds
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Distinct().ToList()
+                .ConvertAll(p => new RecordKeyLookup("PERSON", p, false)).ToArray();
+            var recordKeyLookupResults = await DataReader.SelectAsync(personGuidLookup);
+            foreach (var recordKeyLookupResult in recordKeyLookupResults)
             {
-                var personGuidLookup = personIds
-                    .Where(s => !string.IsNullOrWhiteSpace(s))
-                    .Distinct().ToList()
-                    .ConvertAll(p => new RecordKeyLookup("PERSON", p, false)).ToArray();
-                var recordKeyLookupResults = await DataReader.SelectAsync(personGuidLookup);
-                foreach (var recordKeyLookupResult in recordKeyLookupResults)
+                try
                 {
                     var splitKeys = recordKeyLookupResult.Key.Split(new[] { "+" }, StringSplitOptions.RemoveEmptyEntries);
                     if (!personGuidCollection.ContainsKey(splitKeys[1]))
@@ -1020,10 +1091,9 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         personGuidCollection.Add(splitKeys[1], recordKeyLookupResult.Value.Guid);
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                throw new Exception("Error occured while getting person guids.", ex); ;
+                catch (Exception) // Do not throw error.
+                {
+                }
             }
 
             return personGuidCollection;
@@ -1387,7 +1457,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                 }
 
                                 //apply the check for alternate Id type of Elevate here
-                                
+
                                 if (elevatePersonIds == null || !elevatePersonIds.Any())
                                 {
                                     return new Tuple<IEnumerable<string>, int>(new List<string>(), 0);
@@ -2076,6 +2146,944 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         }
 
         /// <summary>
+        /// Get a list of guids associated with faculty
+        /// </summary>
+        /// <param name="Offset">Paging offset</param>
+        /// <param name="Limit">Paging limit</param>
+        /// <param name="bypassCache">Flag to bypass cache</param>
+        /// <param name="title">Specific title</param>
+        /// <param name="firstName">Specific first name</param>
+        /// <param name="middleName">Specific middle name</param>
+        /// <param name="lastNamePrefix">Last name beings with</param>
+        /// <param name="lastName">Specific last name</param>
+        /// <param name="pedigree">Specific suffix</param>
+        /// <param name="preferredName">Specific preferred name</param>
+        /// <param name="role">Specific role of a person</param>
+        /// <param name="credentialType">Credential type of either colleagueId or ssn</param>
+        /// <param name="credentialValue">Specific value of the credential to be evaluated</param>
+        /// <param name="personFilter">Person Saved List selection or list name from person-filters</param>
+        /// <returns>List of person guids </returns>
+        public async Task<Tuple<IEnumerable<string>, int>> GetFilteredPerson3GuidsAsync(int offset, int limit, bool bypassCache, PersonFilterCriteria personFilterCriteria, string personFilter = "")
+        {
+
+            try
+            {
+                string personNamesCriteriaString = null;
+                if ((personFilterCriteria != null) && (personFilterCriteria.Names != null) && (personFilterCriteria.Names.Any()))
+                {
+                    personNamesCriteriaString = String.Join(";", personFilterCriteria.Names.Select(x => x.ToString()));
+                }
+
+                string filteredPersonsCacheKey = CacheSupport.BuildCacheKey(AllFilteredPersonsCache, personFilter,
+                    personFilterCriteria != null ? personFilterCriteria.AlternativeCredentials : null,
+                    personFilterCriteria != null ? personFilterCriteria.Credentials :  null,
+                    personFilterCriteria != null ? personFilterCriteria.Emails : null,
+                    personNamesCriteriaString,
+                    personFilterCriteria != null ? personFilterCriteria.Roles : null,
+                    personFilter);
+                int totalCount = 0;
+
+                string[] subList = null;
+
+                string criteria = "WITH PERSON.CORP.INDICATOR NE 'Y'";
+                //int totalCount = 0;
+                var personGuids = new List<string>();
+                string personFilterKey = string.Empty;
+                List<string> outIds = new List<string>(), colleaguePersonIds = null, elevateIds = null, colleagueusernameIds = null;
+                Collection<DataContracts.Person> people = null;
+
+
+                #region No Filters
+                //If there are no filter criteria passed then search the PERSON file/table. This is for Get All. 
+                if (personFilterCriteria == null && string.IsNullOrWhiteSpace(personFilter))
+                {
+                    var keyCacheNoFilters = await CacheSupport.GetOrAddKeyCacheToCache(
+
+                        this,
+                        ContainsKey,
+                        GetOrAddToCacheAsync,
+                        AddOrUpdateCacheAsync,
+                        transactionInvoker,
+                        filteredPersonsCacheKey,
+                        "PERSON",
+                        offset,
+                        limit,
+                        AllFilteredPersonsCacheTimeout,
+                        async () =>
+                        {
+
+                            var keys = new List<string>();
+
+                            //outIds = (await DataReader.SelectAsync("PERSON", criteria)).ToList();
+
+                            var filteredPersonIds = outIds.ToArray();
+
+                            CacheSupport.KeyCacheRequirements requirements = new CacheSupport.KeyCacheRequirements()
+                            {
+
+                                limitingKeys = keys.Distinct().ToList(),
+                                criteria = criteria.ToString(),
+                            };
+
+                            return requirements;
+                        });
+
+                    if (keyCacheNoFilters == null || keyCacheNoFilters.Sublist == null || !keyCacheNoFilters.Sublist.Any())
+                    {
+                        return new Tuple<IEnumerable<string>, int>(null, 0);
+                    }
+
+                    subList = keyCacheNoFilters.Sublist.ToArray();
+                    totalCount = keyCacheNoFilters.TotalCount.Value;
+
+                    if (totalCount <= offset)
+                    {
+                        return new Tuple<IEnumerable<string>, int>(null, 0);
+                    }
+
+                    var idLookUpList = new List<RecordKeyLookup>();
+                    subList.ForEach(s => idLookUpList.Add(new RecordKeyLookup("PERSON", s, false)));
+
+                    var personGuidLookupList = await DataReader.SelectAsync(idLookUpList.ToArray());
+                    foreach (var o in personGuidLookupList)
+                    {
+                        if (o.Value != null && !string.IsNullOrEmpty(o.Value.Guid))
+                        {
+                            personGuids.Add(o.Value.Guid);
+                        }
+                        else
+                        {
+                            var ex = new RepositoryException();
+                            ex.AddError(new Domain.Entities.RepositoryError(string.Format("PERSON record '{0}' is missing a guid.", o.Key.Split('+')[1])));
+                            throw ex;
+                        }
+                    }
+                    return personGuids != null && personGuids.Any() ? new Tuple<IEnumerable<string>, int>(personGuids, totalCount) : new Tuple<IEnumerable<string>, int>(new List<string>(), 0);
+                }
+                #endregion
+
+                #region Filters                
+                /*
+                    Here check the validity of the personFilter first, if a bad guid is passed then nothing needs to get processed
+                    since we are using "AND" clause between all the params passed between personFilterCriteria and personFilter
+                */
+                if (!string.IsNullOrEmpty(personFilter))
+                {
+                    var idDict = await DataReader.SelectAsync(new GuidLookup[] { new GuidLookup(personFilter) });
+                    if (idDict == null || idDict.Count == 0)
+                    {
+                        return new Tuple<IEnumerable<string>, int>(new List<string>(), 0);
+                    }
+
+                    var foundEntry = idDict.FirstOrDefault();
+                    if (foundEntry.Value == null)
+                    {
+                        return new Tuple<IEnumerable<string>, int>(new List<string>(), 0);
+                    }
+
+                    if (foundEntry.Value.Entity != "SAVE.LIST.PARMS")
+                    {
+                        return new Tuple<IEnumerable<string>, int>(new List<string>(), 0);
+                    }
+                    personFilterKey = foundEntry.Value.PrimaryKey;
+                }
+
+                
+                var keyCache = await CacheSupport.GetOrAddKeyCacheToCache(
+
+                        this,
+                        ContainsKey,
+                        GetOrAddToCacheAsync,
+                        AddOrUpdateCacheAsync,
+                        transactionInvoker,
+                        filteredPersonsCacheKey,
+                        "",
+                        offset,
+                        limit,
+                        AllFilteredPersonsCacheTimeout,
+                        async () =>
+                        {
+
+                            var keys = new List<string>();
+
+                            #region Start with credentials and get first record out and then compare with others
+
+                            #region Credentials
+                            if (personFilterCriteria != null && personFilterCriteria.Credentials != null && personFilterCriteria.Credentials.Any())
+                            {
+                                foreach (var cred in personFilterCriteria.Credentials)
+                                {
+                                    if (cred.Item1.ToLowerInvariant() == "colleaguepersonid")
+                                    {
+                                        colleaguePersonIds = new List<string>();
+                                        // to address issue if there is single quote around ColleagueId
+                                        var personId = cred.Item2;
+                                        if (personId.Contains("'"))
+                                        {
+                                            personId = personId.Replace("'", string.Empty);
+                                        }
+                                        var ids = await DataReader.SelectAsync("PERSON", new string[] { personId }, string.Empty);
+                                        if (ids == null || !ids.Any())
+                                        {
+                                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                        }
+                                        else
+                                        {
+                                            colleaguePersonIds.AddRange(ids);
+                                            if (ids != null && ids.Any() && elevateIds != null && elevateIds.Any())
+                                            {
+                                                var intersectIds = ids.Intersect(elevateIds);
+                                                if (intersectIds == null || !intersectIds.Any())
+                                                {
+                                                    return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                                }
+                                            }
+                                            else if (ids != null && ids.Any() && colleagueusernameIds != null && colleagueusernameIds.Any())
+                                            {
+                                                var intersectIds = ids.Intersect(colleagueusernameIds);
+                                                if (intersectIds == null || !intersectIds.Any())
+                                                {
+                                                    return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                                }
+                                            }
+                                            else
+                                            {
+                                                outIds.AddRange(ids);
+                                            }
+                                        }
+                                    }
+                                    else if (cred.Item1.ToLowerInvariant() == "elevateid")
+                                    {
+                                        elevateIds = new List<string>();
+                                        //there is index in alternate Ids so we can use first and then filter the rest. 
+                                        var altIds = await DataReader.SelectAsync("PERSON", outIds != null && outIds.Any() ? outIds.ToArray() : null,
+                                                                 string.Format("WITH PERSON.ALT.IDS EQ '{0}'", cred.Item2));
+                                        if (altIds == null || !altIds.Any())
+                                        {
+                                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                        }
+                                        else
+                                        {
+                                            //apply the check for alternate Id type of Elevate here
+                                            var elevatePersonIds = new List<string>();
+                                            var elevatePersons = await DataReader.BulkReadRecordAsync<DataContracts.Person>("PERSON", altIds.ToArray());
+
+                                            if ((elevatePersons != null) && (elevatePersons.Any()))
+                                            {
+                                                foreach (var elevatePerson in elevatePersons)
+                                                {
+                                                    var personAltEntityAssociations = elevatePerson.PersonAltEntityAssociation;
+                                                    if ((personAltEntityAssociations != null) && (personAltEntityAssociations.Any())
+                                                        && (personAltEntityAssociations.Any(x => x.PersonAltIdTypesAssocMember == "ELEV" && x.PersonAltIdsAssocMember == cred.Item2)))
+                                                    {
+                                                        elevatePersonIds.Add(elevatePerson.Recordkey);
+                                                    }
+                                                }
+                                            }
+
+                                            //apply the check for alternate Id type of Elevate here
+
+                                            if (elevatePersonIds == null || !elevatePersonIds.Any())
+                                            {
+                                                return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                            }
+                                            elevateIds.AddRange(elevatePersonIds);
+                                            if (elevatePersonIds != null && elevatePersonIds.Any() && colleaguePersonIds != null && colleaguePersonIds.Any())
+                                            {
+                                                var intersectIds = elevatePersonIds.Intersect(colleaguePersonIds);
+                                                if (intersectIds == null || !intersectIds.Any())
+                                                {
+                                                    return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                                }
+                                            }
+                                            else if (elevatePersonIds != null && elevatePersonIds.Any() && colleagueusernameIds != null && colleagueusernameIds.Any())
+                                            {
+                                                var intersectIds = elevatePersonIds.Intersect(colleagueusernameIds);
+                                                if (intersectIds == null || !intersectIds.Any())
+                                                {
+                                                    return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                                }
+                                            }
+                                            else
+                                            {
+                                                outIds.AddRange(elevatePersonIds);
+                                            }
+                                        }
+                                    }
+                                    else if (cred.Item1.ToLowerInvariant() == "colleagueusername")
+                                    {
+                                        colleagueusernameIds = new List<string>();
+                                        var ids = (await DataReader.SelectAsync("PERSON.PIN", outIds != null && outIds.Any() ? outIds.ToArray() : null,
+                                                                  string.Format("WITH PERSON.PIN.USER.ID = '{0}'", cred.Item2))).ToList();
+                                        if (ids == null || !ids.Any())
+                                        {
+                                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                        }
+                                        else
+                                        {
+                                            colleagueusernameIds.AddRange(ids);
+                                            if (ids != null && ids.Any() && elevateIds != null && elevateIds.Any())
+                                            {
+                                                var intersectIds = ids.Intersect(elevateIds);
+                                                if (intersectIds == null || !intersectIds.Any())
+                                                {
+                                                    return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                                }
+                                            }
+                                            else if (ids != null && ids.Any() && colleaguePersonIds != null && colleaguePersonIds.Any())
+                                            {
+                                                var intersectIds = ids.Intersect(colleaguePersonIds);
+                                                if (intersectIds == null || !intersectIds.Any())
+                                                {
+                                                    return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                                }
+                                            }
+                                            else
+                                            {
+                                                outIds.AddRange(ids);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            #endregion
+
+                            #region AlternativeCredentials
+                            if (personFilterCriteria != null && personFilterCriteria.AlternativeCredentials != null && personFilterCriteria.AlternativeCredentials.Any())
+                            {
+                                foreach (var cred in personFilterCriteria.AlternativeCredentials)
+                                {
+                                    //there is index in alternate Ids so we can use first and then filter the rest. 
+                                    var altIds = await DataReader.SelectAsync("PERSON", outIds != null && outIds.Any() ? outIds.ToArray() : null,
+                                                             string.Format("WITH PERSON.ALT.IDS EQ '{0}'", cred.Item2));
+                                    if (altIds == null || !altIds.Any())
+                                    {
+                                        return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                    }
+                                    else
+                                    {
+                                        if (string.IsNullOrEmpty(cred.Item1))
+                                        {
+                                            outIds.AddRange(altIds);
+                                        }
+                                        else
+                                        {
+                                            //apply the check for alternate Id type here
+                                            var alternatePersonIds = new List<string>();
+                                            var alternatePersons = await DataReader.BulkReadRecordAsync<DataContracts.Person>("PERSON", altIds.ToArray());
+
+                                            if ((alternatePersons != null) && (alternatePersons.Any()))
+                                            {
+                                                foreach (var alternatePerson in alternatePersons)
+                                                {
+                                                    var personAltEntityAssociations = alternatePerson.PersonAltEntityAssociation;
+                                                    if ((personAltEntityAssociations != null) && (personAltEntityAssociations.Any())
+                                                        && (personAltEntityAssociations.Any(x => x.PersonAltIdTypesAssocMember == cred.Item1.ToUpperInvariant() && x.PersonAltIdsAssocMember == cred.Item2)))
+                                                    {
+                                                        alternatePersonIds.Add(alternatePerson.Recordkey);
+                                                    }
+                                                }
+                                            }
+
+                                            if (alternatePersonIds == null || !alternatePersonIds.Any())
+                                            {
+                                                return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                            }
+                                            outIds.AddRange(alternatePersonIds);
+                                        }
+                                    }
+                                }
+                            }
+                            #endregion
+
+                            #region Emails
+                            if (personFilterCriteria != null && personFilterCriteria.Emails != null && personFilterCriteria.Emails.Any())
+                            {
+                                var emailCriteria = string.Empty;
+                                foreach (var email in personFilterCriteria.Emails)
+                                {
+                                    if (!string.IsNullOrEmpty(email))
+                                    {
+                                        if (string.IsNullOrEmpty(emailCriteria))
+                                            emailCriteria = string.Format("WITH PERSON.EMAIL.ADDRESSES.IDX EQ '{0}'", email);
+                                        else
+                                            emailCriteria += string.Format(" AND WITH PERSON.EMAIL.ADDRESSES.IDX EQ '{0}'", email);
+                                    }
+                                }
+
+                                //we need to pass in the outIds here
+                                var emailIds = await DataReader.SelectAsync("PERSON", outIds != null && outIds.Any() ? outIds.ToArray() : null, emailCriteria);
+                                if (emailIds == null || !emailIds.Any())
+                                {
+                                    return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                }
+
+                                if (emailIds != null && emailIds.Any())
+                                {
+                                    if (outIds != null && outIds.Any())
+                                    {
+                                        var intersectIds = outIds.Distinct().Intersect(emailIds.ToList()).ToList();
+                                        if (intersectIds == null || !intersectIds.Any())
+                                        {
+                                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                        }
+                                        else
+                                        {
+                                            outIds.AddRange(intersectIds);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        outIds.AddRange(emailIds);
+                                    }
+                                }
+                            }
+                            #endregion
+
+                            #region Roles
+                            if (personFilterCriteria != null && personFilterCriteria.Roles != null && personFilterCriteria.Roles.Any())
+                            {
+                                var rolesIds = await BuildRoleIdsAsync(personFilterCriteria.Roles, outIds);
+
+                                if (rolesIds == null || !rolesIds.Any())
+                                {
+                                    return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                }
+
+                                if (rolesIds != null && rolesIds.Any())
+                                {
+                                    if (outIds != null && outIds.Any())
+                                    {
+                                        var intersectIds = outIds.Distinct().Intersect(rolesIds.ToList()).ToList();
+                                        if (intersectIds == null || !intersectIds.Any())
+                                        {
+                                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                        }
+                                        else
+                                        {
+                                            outIds.AddRange(intersectIds);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        outIds.AddRange(rolesIds);
+                                    }
+                                }
+                            }
+                            #endregion
+
+                            #region Names
+                            /*
+                                Before proceeding with names, I think here we should first examine if we have collected any record keys in "outIds" 
+                                and if there are any then get those records and compare the names provided in the filter as long as personFilter named 
+                                query is also not provided. If personFilter named query parameter is provided then we have to call the CTX to 
+                                perform further processing.If preferred name is there then call the CTX
+                            */
+                            //check if there is preferred name
+                            bool ispreferred = false;
+                            bool useCTX = outIds.Count() >= bulkReadSize;
+                            if (personFilterCriteria != null && personFilterCriteria.Names != null && personFilterCriteria.Names.Any() && personFilterCriteria.Names.Where(p => !string.IsNullOrEmpty(p.PreferredName)).Any())
+                                ispreferred = true;
+
+                            if (outIds != null && outIds.Any() && !useCTX && string.IsNullOrEmpty(personFilter) && !ispreferred)
+                            {
+                                if (personFilterCriteria != null && personFilterCriteria.Names != null && personFilterCriteria.Names.Any())
+                                {
+                                    people = await DataReader.BulkReadRecordAsync<DataContracts.Person>("PERSON", outIds.Distinct().ToArray());
+
+                                    if (people == null || !people.Any())
+                                    {
+                                        return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                    }
+
+                                    Data.Base.DataContracts.Dflts defaults = await DataReader.ReadRecordAsync<Dflts>("CORE.PARMS", "DEFAULTS");
+                                    var lookupType = defaults.DfltsLookupType ?? "S";
+
+                                    List<string> nameIds = new List<string>();
+                                    List<string> titleIds = new List<string>();
+                                    List<string> pedigreeIds = new List<string>();
+                                    List<string> fnameIds = new List<string>();
+                                    List<string> lnameIds = new List<string>();
+                                    List<string> mnameIds = new List<string>();
+                                    List<string> lNamePrefixIds = new List<string>();
+                                    List<string> pnameIds = new List<string>();
+
+                                    var titles = personFilterCriteria.Names.Where(t => !string.IsNullOrEmpty(t.Title)).Select(i => i.Title).ToList();
+                                    var pedigrees = personFilterCriteria.Names.Where(t => !string.IsNullOrEmpty(t.Pedigree)).Select(i => i.Pedigree).ToList();
+                                    var firstNames = personFilterCriteria.Names.Where(p => !string.IsNullOrEmpty(p.FirstName)).Select(i => i.FirstName).ToList();
+                                    var lastNames = personFilterCriteria.Names.Where(p => !string.IsNullOrEmpty(p.LastName)).Select(i => i.LastName).ToList();
+                                    var PrefNames = personFilterCriteria.Names.Where(p => !string.IsNullOrEmpty(p.PreferredName)).Select(i => i.PreferredName).ToList();
+                                    var middleNames = personFilterCriteria.Names.Where(p => !string.IsNullOrEmpty(p.MiddleName)).Select(i => i.MiddleName).ToList();
+                                    var prefix = personFilterCriteria.Names.Where(p => !string.IsNullOrEmpty(p.LastNamePrefix)).Select(i => i.LastNamePrefix).ToList();
+
+                                    #region  Titles
+                                    if (titles != null && titles.Any())
+                                    {
+                                        List<DataContracts.Person> titleList = people.ToList();
+
+                                        foreach (var title in titles)
+                                        {
+                                            titleList = titleList.Where(p => p != null && (!string.IsNullOrEmpty(p.Prefix) && p.Prefix.ToUpperInvariant()
+                                                                 .Equals(title.ToUpperInvariant(), StringComparison.OrdinalIgnoreCase)))
+                                                                 .ToList();
+
+                                            if (titleList == null || !titleList.Any())
+                                            {
+                                                return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                            }
+                                        }
+
+                                        if (titleList != null || titleList.Any())
+                                        {
+                                            if (nameIds != null && nameIds.Any())
+                                            {
+                                                var intersectIds = nameIds.Intersect(titleList.Select(p => p.Recordkey));
+                                                if (intersectIds == null || !intersectIds.Any())
+                                                {
+                                                    return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                                }
+                                                nameIds = intersectIds.ToList();
+                                            }
+                                            else
+                                            {
+                                                nameIds.AddRange(titleList.Select(p => p.Recordkey));
+                                            }
+                                        }
+                                        else
+                                        {
+                                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                        }
+                                    }
+                                    #endregion
+
+                                    #region  Pedigree
+                                    if (pedigrees != null && pedigrees.Any())
+                                    {
+                                        List<DataContracts.Person> pedigreeList = people.ToList();
+
+                                        foreach (var pedigree in pedigrees)
+                                        {
+                                            pedigreeList = pedigreeList.Where(p => p != null && (!string.IsNullOrEmpty(p.Suffix) && p.Suffix.ToUpperInvariant()
+                                                                 .Equals(pedigree.ToUpperInvariant(), StringComparison.OrdinalIgnoreCase)))
+                                                                 .ToList();
+
+                                            if (pedigreeList == null || !pedigreeList.Any())
+                                            {
+                                                return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                            }
+                                        }
+
+                                        if (pedigreeList != null || pedigreeList.Any())
+                                        {
+                                            if (nameIds != null && nameIds.Any())
+                                            {
+                                                var intersectIds = nameIds.Intersect(pedigreeList.Select(p => p.Recordkey));
+                                                if (intersectIds == null || !intersectIds.Any())
+                                                {
+                                                    return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                                }
+                                                nameIds = intersectIds.ToList();
+                                            }
+                                            else
+                                            {
+                                                nameIds.AddRange(pedigreeList.Select(p => p.Recordkey));
+                                            }
+                                        }
+                                        else
+                                        {
+                                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                        }
+                                    }
+                                    #endregion
+
+                                    #region First Name
+                                    if (firstNames != null && firstNames.Any())
+                                    {
+                                        List<DataContracts.Person> fNameList = people.ToList();
+
+                                        foreach (var fn in firstNames)
+                                        {
+                                            if (lookupType.ToUpperInvariant().Equals("S", StringComparison.OrdinalIgnoreCase))
+                                            {
+                                                fNameList = fNameList.Where(p => p != null && !string.IsNullOrEmpty(p.FirstName) && p.FirstName.ToUpperInvariant().Contains(fn.ToUpperInvariant()) ||
+                                                                                              !string.IsNullOrEmpty(p.BirthNameFirst) && p.BirthNameFirst.ToUpperInvariant().Contains(fn.ToUpperInvariant()) ||
+                                                                                              !string.IsNullOrEmpty(p.PersonChosenFirstName) && p.PersonChosenFirstName.ToUpperInvariant().Contains(fn.ToUpperInvariant()) ||
+                                                                                              (p.NameHistoryFirstName != null && p.NameHistoryFirstName
+                                                                                              .Any(h => !string.IsNullOrEmpty(h) && h.ToUpperInvariant().Contains(fn.ToUpperInvariant())))).ToList();
+                                            }
+                                            else
+                                            {
+                                                fNameList = fNameList.Where(p => p != null && !string.IsNullOrEmpty(p.FirstName) && p.FirstName.ToUpperInvariant().StartsWith(fn.ToUpperInvariant()) ||
+                                                          !string.IsNullOrEmpty(p.BirthNameFirst) && p.BirthNameFirst.ToUpperInvariant().StartsWith(fn.ToUpperInvariant()) ||
+                                                          !string.IsNullOrEmpty(p.PersonChosenFirstName) && p.PersonChosenFirstName.ToUpperInvariant().StartsWith(fn.ToUpperInvariant()) ||
+                                                          (p.NameHistoryFirstName != null && p.NameHistoryFirstName
+                                                          .Any(h => !string.IsNullOrEmpty(h) && h.ToUpperInvariant().StartsWith(fn.ToUpperInvariant())))).ToList();
+
+                                            }
+
+                                            if (fNameList == null || !fNameList.Any())
+                                            {
+                                                return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                            }
+                                        }
+
+                                        if (fNameList != null || fNameList.Any())
+                                        {
+                                            if (nameIds != null && nameIds.Any())
+                                            {
+                                                var intersectIds = nameIds.Intersect(fNameList.Select(p => p.Recordkey));
+                                                if (intersectIds == null || !intersectIds.Any())
+                                                {
+                                                    return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                                }
+                                                nameIds = intersectIds.ToList();
+                                            }
+                                            else
+                                            {
+                                                nameIds.AddRange(fNameList.Select(p => p.Recordkey));
+                                            }
+                                        }
+                                        else
+                                        {
+                                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                        }
+                                    }
+
+                                    #endregion
+
+                                    #region Middle Name
+                                    if (middleNames != null && middleNames.Any())
+                                    {
+                                        List<DataContracts.Person> mNameList = people.ToList();
+
+                                        foreach (var mn in middleNames)
+                                        {
+                                            if (lookupType.ToUpperInvariant().Equals("S", StringComparison.OrdinalIgnoreCase))
+                                            {
+                                                mNameList = mNameList.Where(p => p != null && !string.IsNullOrEmpty(p.MiddleName) &&
+                                                                                          !string.IsNullOrEmpty(p.MiddleName) && p.MiddleName.ToUpperInvariant().Contains(mn.ToUpperInvariant()) ||
+                                                                                          !string.IsNullOrEmpty(p.BirthNameMiddle) && p.BirthNameMiddle.ToUpperInvariant().Contains(mn.ToUpperInvariant()) ||
+                                                                                          !string.IsNullOrEmpty(p.PersonChosenMiddleName) && p.PersonChosenMiddleName.ToUpperInvariant().Contains(mn.ToUpperInvariant()) ||
+                                                                                          (p.NameHistoryMiddleName != null && p.NameHistoryMiddleName
+                                                                                          .Any(h => !string.IsNullOrEmpty(h) && h.ToUpperInvariant().Contains(mn.ToUpperInvariant())))).ToList();
+                                            }
+                                            else
+                                            {
+                                                mNameList = mNameList.Where(p => p != null && !string.IsNullOrEmpty(p.MiddleName) &&
+                                                                                         !string.IsNullOrEmpty(p.MiddleName) && p.MiddleName.ToUpperInvariant().StartsWith(mn.ToUpperInvariant()) ||
+                                                                                         !string.IsNullOrEmpty(p.BirthNameMiddle) && p.BirthNameMiddle.ToUpperInvariant().StartsWith(mn.ToUpperInvariant()) ||
+                                                                                         !string.IsNullOrEmpty(p.PersonChosenMiddleName) && p.PersonChosenMiddleName.ToUpperInvariant().StartsWith(mn.ToUpperInvariant()) ||
+                                                                                         (p.NameHistoryMiddleName != null && p.NameHistoryMiddleName
+                                                                                         .Any(h => !string.IsNullOrEmpty(h) && h.ToUpperInvariant().StartsWith(mn.ToUpperInvariant())))).ToList();
+                                            }
+
+                                            if (mNameList == null || !mNameList.Any())
+                                            {
+                                                return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                            }
+                                        }
+
+                                        if (mNameList != null || mNameList.Any())
+                                        {
+                                            if (nameIds != null && nameIds.Any())
+                                            {
+                                                var intersectIds = nameIds.Intersect(mNameList.Select(p => p.Recordkey));
+                                                if (intersectIds == null || !intersectIds.Any())
+                                                {
+                                                    return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                                }
+                                                nameIds = intersectIds.ToList();
+                                            }
+                                            else
+                                            {
+                                                nameIds.AddRange(mNameList.Select(p => p.Recordkey));
+                                            }
+                                        }
+                                        else
+                                        {
+                                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                        }
+                                    }
+
+                                    #endregion
+
+                                    #region LastName
+                                    if (lastNames != null && lastNames.Any())
+                                    {
+                                        List<DataContracts.Person> lNameList = people.ToList();
+
+                                        foreach (var ln in lastNames)
+                                        {
+                                            if (lookupType.ToUpperInvariant().Equals("S", StringComparison.OrdinalIgnoreCase))
+                                            {
+                                                lNameList = lNameList.Where(p => p != null && !string.IsNullOrEmpty(p.LastName) && p.LastName.ToUpperInvariant().Contains(ln.ToUpperInvariant()) ||
+                                                                                          !string.IsNullOrEmpty(p.BirthNameLast) && p.BirthNameLast.ToUpperInvariant().Contains(ln.ToUpperInvariant()) ||
+                                                                                          (p.NameHistoryLastName != null && p.NameHistoryLastName
+                                                                                          .Any(h => !string.IsNullOrEmpty(h) && h.ToUpperInvariant().Contains(ln.ToUpperInvariant())))).ToList();
+                                            }
+                                            else
+                                            {
+                                                lNameList = lNameList.Where(p => p != null && !string.IsNullOrEmpty(p.LastName) && p.LastName.ToUpperInvariant().StartsWith(ln.ToUpperInvariant()) ||
+                                                                     !string.IsNullOrEmpty(p.BirthNameLast) && p.BirthNameLast.ToUpperInvariant().StartsWith(ln.ToUpperInvariant()) ||
+                                                                     (p.NameHistoryLastName != null && p.NameHistoryLastName
+                                                                     .Any(h => !string.IsNullOrEmpty(h) && h.ToUpperInvariant().StartsWith(ln.ToUpperInvariant())))).ToList();
+                                            }
+
+                                            if (lNameList == null || !lNameList.Any())
+                                            {
+                                                return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                            }
+                                        }
+                                        if (lNameList != null || lNameList.Any())
+                                        {
+                                            if (nameIds != null && nameIds.Any())
+                                            {
+                                                var intersectIds = nameIds.Intersect(lNameList.Select(p => p.Recordkey));
+                                                if (intersectIds == null || !intersectIds.Any())
+                                                {
+                                                    return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                                }
+                                                nameIds = intersectIds.ToList();
+                                            }
+                                            else
+                                            {
+                                                nameIds.AddRange(lNameList.Select(p => p.Recordkey));
+                                            }
+                                        }
+                                        else
+                                        {
+                                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                        }
+                                    }
+
+                                    #endregion
+
+                                    #region LastNamePrefix
+                                    if (prefix != null && prefix.Any())
+                                    {
+                                        List<DataContracts.Person> prefixesList = people.ToList();
+
+                                        foreach (var pfx in prefix)
+                                        {
+                                            if (lookupType.ToUpperInvariant().Equals("S", StringComparison.OrdinalIgnoreCase))
+                                            {
+                                                prefixesList = prefixesList.Where(p => p != null && !string.IsNullOrEmpty(p.LastName) && p.LastName.ToUpperInvariant().Contains(pfx.ToUpperInvariant()) ||
+                                                                                                !string.IsNullOrEmpty(p.BirthNameLast) && p.BirthNameLast.ToUpperInvariant().Contains(pfx.ToUpperInvariant()) ||
+                                                                                                !string.IsNullOrEmpty(p.PersonChosenLastName) && p.PersonChosenLastName.ToUpperInvariant().Contains(pfx.ToUpperInvariant()) ||
+                                                                                                (p.NameHistoryLastName != null && p.NameHistoryLastName
+                                                                                                .Any(h => !string.IsNullOrEmpty(h) && h.ToUpperInvariant().Contains(pfx.ToUpperInvariant())))).ToList();
+                                            }
+                                            else
+                                            {
+                                                prefixesList = prefixesList.Where(p => p != null && !string.IsNullOrEmpty(p.LastName) && p.LastName.ToUpperInvariant().StartsWith(pfx.ToUpperInvariant()) ||
+                                                                                                !string.IsNullOrEmpty(p.BirthNameLast) && p.BirthNameLast.ToUpperInvariant().StartsWith(pfx.ToUpperInvariant()) ||
+                                                                                                !string.IsNullOrEmpty(p.PersonChosenLastName) && p.PersonChosenLastName.ToUpperInvariant().StartsWith(pfx.ToUpperInvariant()) ||
+                                                                                                (p.NameHistoryLastName != null && p.NameHistoryLastName
+                                                                                                .Any(h => !string.IsNullOrEmpty(h) && h.ToUpperInvariant().StartsWith(pfx.ToUpperInvariant())))).ToList();
+                                            }
+                                            if (prefixesList == null || !prefixesList.Any())
+                                            {
+                                                return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                            }
+                                        }
+
+                                        if (prefixesList != null || prefixesList.Any())
+                                        {
+                                            if (nameIds != null && nameIds.Any())
+                                            {
+                                                var intersectIds = nameIds.Intersect(prefixesList.Select(p => p.Recordkey));
+                                                if (intersectIds == null || !intersectIds.Any())
+                                                {
+                                                    return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                                }
+                                                nameIds = intersectIds.ToList();
+                                            }
+                                            else
+                                            {
+                                                nameIds.AddRange(prefixesList.Select(p => p.Recordkey));
+                                            }
+                                        }
+                                        else
+                                        {
+                                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                        }
+                                    }
+
+                                    #endregion
+
+                                    if (nameIds == null || !nameIds.Any())
+                                    {
+                                        return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                    }
+                                    else
+                                    {
+                                        var intersectIds = outIds.Intersect(nameIds);
+                                        if (intersectIds == null || !intersectIds.Any())
+                                        {
+                                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                        }
+                                        else
+                                        {
+                                            outIds = intersectIds.Distinct().ToList();
+                                        }
+                                    }
+                                }
+
+
+                                #endregion
+
+                                if (outIds == null || !outIds.Any())
+                                {
+                                    return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                }
+                                keys = outIds;
+
+                            }
+                            #endregion
+
+                            #region personFilter
+                            //if(personFilter value is provided then call the ctx.
+                            else if ((personFilterCriteria != null && personFilterCriteria.Names != null) || !string.IsNullOrEmpty(personFilter) || useCTX)
+                            {
+                                List<GetPersonFilterResultsV2Names> names = new List<GetPersonFilterResultsV2Names>();
+                                if (personFilterCriteria != null && personFilterCriteria.Names != null && personFilterCriteria.Names.Any())
+                                {
+                                    personFilterCriteria.Names.ForEach(i =>
+                                    {
+                                        GetPersonFilterResultsV2Names name = new GetPersonFilterResultsV2Names()
+                                        {
+                                            FirstName = i.FirstName,
+                                            LastName = i.LastName,
+                                            MiddleName = i.MiddleName,
+                                            LastNamePrefix = i.LastNamePrefix,
+                                            Title = i.Title,
+                                            Pedigree = i.Pedigree,
+                                            PreferredName = i.PreferredName
+
+                                        };
+                                        names.Add(name);
+                                    });
+
+                                }
+                                List<GetPersonFilterResultsV2Credentials> creds = new List<GetPersonFilterResultsV2Credentials>();
+                                if (personFilterCriteria != null && personFilterCriteria.Credentials != null && personFilterCriteria.Credentials.Any())
+                                {
+                                    personFilterCriteria.Credentials.ForEach(i =>
+                                    {
+                                        GetPersonFilterResultsV2Credentials cred = new GetPersonFilterResultsV2Credentials()
+                                        {
+                                            CredentialType = i.Item1,
+                                            CredentialValue = i.Item2
+                                        };
+                                        creds.Add(cred);
+                                    });
+                                }
+                                List<GetPersonFilterResultsV2AlternateCredentials> altCreds = new List<GetPersonFilterResultsV2AlternateCredentials>();
+                                if (personFilterCriteria != null && personFilterCriteria.AlternativeCredentials != null && personFilterCriteria.AlternativeCredentials.Any())
+                                {
+                                    personFilterCriteria.AlternativeCredentials.ForEach(i =>
+                                    {
+                                        GetPersonFilterResultsV2AlternateCredentials cred = new GetPersonFilterResultsV2AlternateCredentials()
+                                        {
+                                            AltCredentialType = i.Item1,
+                                            AltCredentialValue = i.Item2
+                                        };
+                                        altCreds.Add(cred);
+                                    });
+                                }
+                                var request = new GetPersonFillterResultsV2Request()
+                                {
+                                    PersonIds = outIds,
+                                    EmailAddresses = personFilterCriteria != null && personFilterCriteria.Emails != null ? personFilterCriteria.Emails : null,
+                                    SaveListParmsId = personFilterKey,
+                                    Role = personFilterCriteria != null && personFilterCriteria.Roles != null ? personFilterCriteria.Roles : null,
+                                    GetPersonFilterResultsV2Names = names,
+                                    GetPersonFilterResultsV2Credentials = creds,
+                                    GetPersonFilterResultsV2AlternateCredentials = altCreds,
+                                    //we do not need to send the Guid again.
+                                    //Guid = personFilter,
+                                    Offset = offset,
+                                    Limit = limit
+                                };
+
+                                // Execute request
+                                var response = await transactionInvoker.ExecuteAsync<GetPersonFillterResultsV2Request, GetPersonFillterResultsV2Response>(request);
+
+                                if (response.ErrorMessages.Any())
+                                {
+                                    var errorMessage = "Error(s) occurred retrieving person data: ";
+                                    var exception = new RepositoryException(errorMessage);
+                                    foreach (var errMsg in response.ErrorMessages)
+                                    {
+                                        response.LogStmt.ForEach(i =>
+                                        {
+                                            logger.Info(i);
+                                        });
+                                        exception.AddError(new Domain.Entities.RepositoryError("person.filter", errMsg));
+                                        errorMessage += string.Join(Environment.NewLine, errMsg);
+                                    }
+                                    throw exception;
+                                }
+
+                                if (response.PersonIds == null || !response.PersonIds.Any())
+                                {
+                                    return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                }
+
+                                Array.Sort(response.PersonIds.ToArray());
+                                keys = response.PersonIds;
+                                totalCount = response.TotalRecords.Value;
+                            }
+                            #endregion
+
+                            CacheSupport.KeyCacheRequirements requirements = new CacheSupport.KeyCacheRequirements()
+                            {
+                                limitingKeys = keys.Distinct().ToList(),
+                                criteria = criteria.ToString(),
+                            };
+
+                            return requirements;
+
+                        });
+
+                if (keyCache == null || keyCache.Sublist == null || !keyCache.Sublist.Any())
+                {
+                    return new Tuple<IEnumerable<string>, int>(new List<string>(), 0);
+                }
+
+                subList = keyCache.Sublist.ToArray();
+                if ( totalCount == 0)
+                    totalCount = keyCache.TotalCount.Value;
+
+                var idLookUpList2 = new List<RecordKeyLookup>();
+                subList.ForEach(s => idLookUpList2.Add(new RecordKeyLookup("PERSON", s, false)));
+
+                var personGuidLookupList2 = await DataReader.SelectAsync(idLookUpList2.ToArray());
+                foreach (var o in personGuidLookupList2)
+                {
+                    if (o.Value != null && !string.IsNullOrEmpty(o.Value.Guid))
+                    {
+                        personGuids.Add(o.Value.Guid);
+                    }
+                    else
+                    {
+                        var ex = new RepositoryException();
+                        ex.AddError(new Domain.Entities.RepositoryError(string.Format("PERSON record '{0}' is missing a guid.", o.Key.Split('+')[1])));
+                        throw ex;
+                    }
+                }
+                return new Tuple<IEnumerable<string>, int>(personGuids, totalCount);              
+            }
+            #endregion
+
+            catch (Exception e)
+            {
+                logger.Error(e.ToString());
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Gets guids based on criteria and list of record keys.
         /// </summary>
         /// <param name="outIds"></param>
@@ -2147,7 +3155,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                 {
                                     roleCriteria = string.Concat(roleCriteria, " AND WITH PER.INTG.ROLE = 'Student'");
                                 }
-                                rolesIds = (await DataReader.SelectAsync("PERSON","WITH WHERE.USED EQ 'STUDENTS'", outIds != null && outIds.Any() ? outIds.ToArray() : inIds != null && inIds.Any() ? inIds.ToArray() : null, "")).ToList();
+                                rolesIds = (await DataReader.SelectAsync("PERSON", "WITH WHERE.USED EQ 'STUDENTS'", outIds != null && outIds.Any() ? outIds.ToArray() : inIds != null && inIds.Any() ? inIds.ToArray() : null, "")).ToList();
                                 if (outIds != null && outIds.Any())
                                 {
                                     var intersectIds = outIds.Intersect(rolesIds);
@@ -2171,8 +3179,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                 {
                                     roleCriteria = string.Concat(roleCriteria, " AND WITH PER.INTG.ROLE = 'Instructor'");
                                 }
-                                
-                                rolesIds = (await DataReader.SelectAsync("PERSON","WITH WHERE.USED EQ 'FACULTY'", outIds != null && outIds.Any() ? outIds.ToArray() : inIds != null && inIds.Any() ? inIds.ToArray() : null, "")).ToList();
+
+                                rolesIds = (await DataReader.SelectAsync("PERSON", "WITH WHERE.USED EQ 'FACULTY'", outIds != null && outIds.Any() ? outIds.ToArray() : inIds != null && inIds.Any() ? inIds.ToArray() : null, "")).ToList();
                                 if (outIds != null && outIds.Any())
                                 {
                                     var intersectIds = outIds.Intersect(rolesIds);
@@ -2197,14 +3205,14 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                 {
                                     roleCriteria = string.Concat(roleCriteria, " AND WITH PER.INTG.ROLE = 'Employee'");
                                 }
-                                
-                                rolesIds = (await DataReader.SelectAsync("PERSON","WITH WHERE.USED EQ 'EMPLOYES'", outIds != null && outIds.Any() ? outIds.ToArray() : inIds != null && inIds.Any() ? inIds.ToArray() : null, "")).ToList();
+
+                                rolesIds = (await DataReader.SelectAsync("PERSON", "WITH WHERE.USED EQ 'EMPLOYES'", outIds != null && outIds.Any() ? outIds.ToArray() : inIds != null && inIds.Any() ? inIds.ToArray() : null, "")).ToList();
 
                                 if (!rolesIds.Any())
                                 {
                                     rolesIds = (await DataReader.SelectAsync("PERSON", "WITH WHERE.USED EQ 'HRPER'", outIds != null && outIds.Any() ? outIds.ToArray() : inIds != null && inIds.Any() ? inIds.ToArray() : null, "")).ToList();
                                 }
-                                
+
 
                                 if (outIds != null && outIds.Any())
                                 {
@@ -2350,104 +3358,145 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             string role, string credentialType, string credentialValue)
         {
             var orgGuids = new List<string>();
-            string criteria = "WITH PERSON.CORP.INDICATOR = 'Y' ";
-            if (!string.IsNullOrEmpty(credentialValue))
-            {
-                criteria = string.Concat(criteria, " AND WITH ID = '", credentialValue, "'");
-            }
-
             int totalCount = 0;
-            //this is all the ids from Person that could be orgs, will also include institutions
-            var orgIds = (await DataReader.SelectAsync("PERSON", criteria)).ToList();
+            string[] subList = null;
+            string criteria = "WITH PERSON.CORP.INDICATOR = 'Y' ";
 
-            //list of institutions
-            var institutionIds = (await DataReader.SelectAsync("INSTITUTIONS", string.Empty)).ToList();
+            string organizationsCacheKey = CacheSupport.BuildCacheKey(AllOrganizationsCache, role, credentialType, credentialValue);
 
-            //remove the existing institutions
-            orgIds.RemoveAll(o => institutionIds.Exists(i => i.Equals(o, StringComparison.OrdinalIgnoreCase)));
 
-            List<string> roleOrgList = new List<string>();
+            var keyCache = await CacheSupport.GetOrAddKeyCacheToCache(
+               this,
+               ContainsKey,
+               GetOrAddToCacheAsync,
+               AddOrUpdateCacheAsync,
+               transactionInvoker,
+               organizationsCacheKey,
+               "",
+               offset,
+               limit,
+               AllOrganizationsCacheTimeout,
+               async () =>
+               {
 
-            //time to check for other role filters
-            //build the orgId list for the role in the filter
-            if (!string.IsNullOrEmpty(role) &&
-                (role.Equals("partner", StringComparison.OrdinalIgnoreCase) ||
-                role.Equals("affiliate", StringComparison.OrdinalIgnoreCase) ||
-                role.Equals("constituent", StringComparison.OrdinalIgnoreCase) ||
-                role.Equals("vendor", StringComparison.OrdinalIgnoreCase)))
+                   if (!string.IsNullOrEmpty(credentialValue))
+                   {
+                       criteria = string.Concat(criteria, " AND WITH ID = '", credentialValue, "'");
+                   }
+
+                   //this is all the ids from Person that could be orgs, will also include institutions
+                   var orgIds = (await DataReader.SelectAsync("PERSON", criteria)).ToList();
+
+                   //list of institutions
+                   var institutionIds = (await DataReader.SelectAsync("INSTITUTIONS", string.Empty)).ToList();
+
+                   //remove the existing institutions
+                   orgIds = orgIds.Except(institutionIds).ToList();
+
+                   List<string> roleOrgList = new List<string>();
+
+                   //time to check for other role filters
+                   //build the orgId list for the role in the filter
+                   if (!string.IsNullOrEmpty(role) &&
+                       (role.Equals("partner", StringComparison.OrdinalIgnoreCase) ||
+                       role.Equals("affiliate", StringComparison.OrdinalIgnoreCase) ||
+                       role.Equals("constituent", StringComparison.OrdinalIgnoreCase) ||
+                       role.Equals("vendor", StringComparison.OrdinalIgnoreCase)))
+                   {
+                       string roleCriteria = string.Empty;
+
+                       switch (role.ToLower())
+                       {
+                           case "partner":
+                               roleCriteria = "WITH PER.INTG.ROLE = 'Partner'";
+                               break;
+                           case "affiliate":
+                               roleCriteria = "WITH PER.INTG.ROLE = 'Affiliate'";
+                               break;
+                           case "constituent":
+                               roleCriteria = "WITH PER.INTG.ROLE = 'Constituent'";
+                               break;
+                           case "vendor":
+                               roleCriteria = "WITH PER.INTG.ROLE = 'Vendor'";
+                               break;
+                       }
+
+                       roleOrgList = (await DataReader.SelectAsync("PERSON.INTG", roleCriteria)).ToList();
+                   }
+
+                   //we have a list of orgs without institutions
+                   //we have a list or per intg ids with vendor role
+                   //we have to get a list or orgs without insitutions that has whre.used vendor
+                   //take those three list and find the correct intersections and we now have a full list of orgs with vendor where.used or per.intg role
+                   if (!string.IsNullOrEmpty(role) && role.Equals("vendor", StringComparison.OrdinalIgnoreCase))
+                   {
+                       criteria = string.Concat(criteria, " AND WITH WHERE.USED = 'VENDORS'");
+
+                       //get orgs that have vendor where used and remove institutions
+                       //original code
+                       var orgIdsUsedVendor = (await DataReader.SelectAsync("PERSON", criteria)).ToList();
+                       orgIdsUsedVendor = orgIdsUsedVendor.Except(institutionIds).ToList();
+
+                       //orgs that are vendors from either per.intg or where.sed will get added in this list
+                       var vendorOrgResultList = new List<string>();
+
+                       if (roleOrgList.Any())
+                       {
+                           //intersect the list of orgs and perintg with role of vendor
+                           var orgsWithVendorPerIntgRole = orgIds.Intersect(roleOrgList);
+
+                           //add intersect result to result list
+                           vendorOrgResultList.AddRange(orgsWithVendorPerIntgRole);
+                       }
+
+                       //add list of orgs that have where.used vendor
+                       vendorOrgResultList.AddRange(orgIdsUsedVendor);
+                       //select distinct from the combinded list, repeats could happen
+                       orgIds = vendorOrgResultList.Distinct().ToList();
+                   }
+                   else if (roleOrgList.Any())
+                   {
+                       //this means it was something other than the vendor role so just remove anything from the filtered list 
+                       //if it isnt in the list of roleOrgids
+                       orgIds.RemoveAll(o => !roleOrgList.Exists(r => r.Equals(o, StringComparison.OrdinalIgnoreCase)));
+                   }
+                   else if (!roleOrgList.Any() && !string.IsNullOrEmpty(role) && (role.Equals("partner", StringComparison.OrdinalIgnoreCase) ||
+                       role.Equals("affiliate", StringComparison.OrdinalIgnoreCase) ||
+                       role.Equals("constituent", StringComparison.OrdinalIgnoreCase)))
+                   {
+                       //this means nothing matched the roles so return nothing
+                       return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                   }
+
+                   if (orgIds == null || !orgIds.Any())
+                   {
+                       return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                   }
+
+                   return new CacheSupport.KeyCacheRequirements()
+                   {
+                       limitingKeys = orgIds.Distinct().ToList()
+                   };
+               }
+            );
+
+            if (keyCache == null || keyCache.Sublist == null || !keyCache.Sublist.Any())
             {
-                string roleCriteria = string.Empty;
-
-                switch (role.ToLower())
-                {
-                    case "partner":
-                        roleCriteria = "WITH PER.INTG.ROLE = 'Partner'";
-                        break;
-                    case "affiliate":
-                        roleCriteria = "WITH PER.INTG.ROLE = 'Affiliate'";
-                        break;
-                    case "constituent":
-                        roleCriteria = "WITH PER.INTG.ROLE = 'Constituent'";
-                        break;
-                    case "vendor":
-                        roleCriteria = "WITH PER.INTG.ROLE = 'Vendor'";
-                        break;
-                }
-
-                roleOrgList = (await DataReader.SelectAsync("PERSON.INTG", roleCriteria)).ToList();
+                return new Tuple<IEnumerable<string>, int>(new List<string>(), 0);
             }
 
-            //we have a list of orgs without institutions
-            //we have a list or per intg ids with vendor role
-            //we have to get a list or orgs without insitutions that has whre.used vendor
-            //take those three list and find the correct intersections and we now have a full list of orgs with vendor where.used or per.intg role
-            if (!string.IsNullOrEmpty(role) && role.Equals("vendor", StringComparison.OrdinalIgnoreCase))
-            {
-                criteria = string.Concat(criteria, " AND WITH WHERE.USED = 'VENDORS'");
+            subList = keyCache.Sublist.ToArray();
 
-                //get orgs that have vendor where used and remove institutions
-                var orgIdsUsedVendor = (await DataReader.SelectAsync("PERSON", criteria)).ToList();
-                orgIdsUsedVendor.RemoveAll(o => institutionIds.Exists(i => i.Equals(o, StringComparison.OrdinalIgnoreCase)));
-
-                //orgs that are vendors from either per.intg or where.sed will get added in this list
-                var vendorOrgResultList = new List<string>();
-
-                if (roleOrgList.Any())
-                {
-                    //intersect the list of orgs and perintg with role of vendor
-                    var orgsWithVendorPerIntgRole = orgIds.Intersect(roleOrgList);
-
-                    //add intersect result to result list
-                    vendorOrgResultList.AddRange(orgsWithVendorPerIntgRole);
-                }
-
-                //add list of orgs that have where.used vendor
-                vendorOrgResultList.AddRange(orgIdsUsedVendor);
-                //select distinct from the combinded list, repeats could happen
-                orgIds = vendorOrgResultList.Distinct().ToList();
-            }
-            else if (roleOrgList.Any())
-            {
-                //this means it was something other than the vendor role so just remove anything from the filtered list 
-                //if it isnt in the list of roleOrgids
-                orgIds.RemoveAll(o => !roleOrgList.Exists(r => r.Equals(o, StringComparison.OrdinalIgnoreCase)));
-            }
-            else if (!roleOrgList.Any() && !string.IsNullOrEmpty(role) && (role.Equals("partner", StringComparison.OrdinalIgnoreCase) ||
-                role.Equals("affiliate", StringComparison.OrdinalIgnoreCase) ||
-                role.Equals("constituent", StringComparison.OrdinalIgnoreCase)))
-            {
-                //this means nothing matched the roles so return nothing
-                orgIds = new List<string>();
-            }
+            totalCount = keyCache.TotalCount.Value;
 
             //return to array form the list now that insitutions have been removed
-            var filteredOrgIds = orgIds.ToArray();
+            //var filteredOrgIds = orgIds.ToArray();
 
-            totalCount = filteredOrgIds.Count();
+            // totalCount = filteredOrgIds.Count();
 
-            Array.Sort(filteredOrgIds);
+            //Array.Sort(filteredOrgIds);
 
-            var subList = filteredOrgIds.Skip(offset).Take(limit).ToArray();
+            //var subList = filteredOrgIds.Skip(offset).Take(limit).ToArray();
 
             var idLookUpList = new List<RecordKeyLookup>();
             subList.ForEach(s => idLookUpList.Add(new RecordKeyLookup("PERSON", s, false)));
@@ -2495,26 +3544,84 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             if (string.IsNullOrEmpty(response.ErrorMessage))
             {
-                logger.Info("Transaction GetPersonLookupStringRequest returns following response :" + response.IndexString);
+                logger.Debug("Transaction GetPersonLookupStringRequest returns following response :" + response.IndexString);
                 // Transaction returns something like ;PARTIAL.NAME.INDEX SMITH_BL. Parse out into valid query clause: WITH PARTIAL.NAME.INDEX EQ SMITH_BL
                 var searchArray = (response.IndexString.Replace(";", string.Empty)).Split(' ');
                 searchString = "WITH " + searchArray.ElementAt(0) + " EQ " + "\"" + searchArray.ElementAt(1) + "\"";
-                logger.Info("String passed for PERSON select :" + searchString);
+                logger.Debug("String passed for PERSON select :" + searchString);
 
                 // Select on person
                 persons = await DataReader.SelectAsync("PERSON", searchString);
             }
 
             watch.Stop();
-            logger.Info("    STEPX.1.1 Select PERSON " + searchString + " ... completed in " + watch.ElapsedMilliseconds.ToString());
+            logger.Debug("    STEPX.1.1 Select PERSON " + searchString + " ... completed in " + watch.ElapsedMilliseconds.ToString());
             if (persons != null)
             {
-                logger.Info("    STEPX.1.1 Select found " + persons.Count() + " PERSONS with search string " + searchString);
+                logger.Debug("    STEPX.1.1 Select found " + persons.Count() + " PERSONS with search string " + searchString);
             }
 
             return persons;
         }
 
+
+        /// <summary>
+        /// We are querying the SORT.NAME, a computed column on PERSON, an upper-cased field which appends last first middle name
+        /// Second query against partial last name and nickname, in the format entered by the user.
+        /// </summary>
+        /// <param name="firstName"></param>
+        /// <param name="middleName"></param>
+        /// <param name="lastName"></param>
+        /// <returns>list of Ids</returns>
+        public async Task<IEnumerable<string>> SearchByNameForExactMatchAsync(string lastName, string firstName = null, string middleName = null)
+        {
+            List<string> persons = new List<string>();
+            string searchString = string.Empty;
+            var watch = new Stopwatch();
+            watch.Start();
+
+            if (lastName == null || lastName.Trim().Count() < 2)
+            {
+                throw new ArgumentNullException("lastName", "Supplied last name must be at least two characters");
+            }
+
+            // Trim spaces from each name part
+            lastName = lastName.Trim();
+            firstName = (firstName != null) ? firstName = firstName.Trim() : null;
+            middleName = (middleName != null) ? middleName = middleName.Trim() : null;
+
+            // Call transaction that returns search string
+            var lookupStringRequest = new GetPersonSearchKeyListRequest();
+            lookupStringRequest.SearchString = lastName + "," + firstName + " " + middleName;
+            var response = await transactionInvoker.ExecuteAsync<GetPersonSearchKeyListRequest, GetPersonSearchKeyListResponse>(lookupStringRequest);
+            watch.Stop();
+            logger.Debug("Transaction GetPersonSearchKeyListRequest completed in " + watch.ElapsedMilliseconds.ToString());
+          
+            if(response==null)
+            {
+                logger.Error("Response from transaction GetPersonSearchKeyListRequest is null");
+                return persons;
+            }
+            if(!string.IsNullOrEmpty(response.ErrorMessage))
+            {
+                logger.Error("Response have error returned from  transaction GetPersonSearchKeyListRequest- " + response.ErrorMessage);
+                return persons;
+            }
+            if(response.KeyList==null)
+            {
+                logger.Error("Response from transaction GetPersonSearchKeyListRequest Person Ids are null");
+                return persons;
+
+            }
+            if(response.KeyList.Count ==0)
+            {
+                logger.Error("Response from transaction GetPersonSearchKeyListRequest Person Ids count is 0");
+                return persons;
+
+            }
+            persons = response.KeyList;
+            return persons;
+        }
         /// <summary>
         /// Retrieves the information for PersonBase for ids provided,
         /// and the matching PersonBases if a first and last name are provided.  
@@ -2557,7 +3664,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 bool isId = int.TryParse(keyword, out personId);
                 if (isId)
                 {
-                    string id = keyword.PadLeft(7, '0');
+                    string id = await PadIdPerPid2ParamsAsync(keyword);
                     personIds.Add(id);
                 }
                 // If search string is alphanumeric, parse names from query and add matching persons to list
@@ -2712,6 +3819,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
         #endregion
 
+
+
         #region Get Person Integration Data
 
         /// <summary>
@@ -2785,6 +3894,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
         /// <summary>
         /// Get person addresses, email addresses and phones used for integration.
+        /// This was originally used by educational-institutions and called by the service.
+        /// Since this uses a CTX, all code was put into the InstitutionRepository and the
+        /// data is now built into the institution entity.  This therefore is obsolete and
+        /// should not be used anywhere.
         /// </summary>
         /// <param name="personId">Person's Colleague ID</param>
         /// <param name="emailAddresses">List of <see cref="EmailAddress"> email addresses</see></param>
@@ -2917,8 +4030,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                             var error = "Person address seasonal start/end information is invalid. PersonId: " + personId;
 
                                             // Log the original exception
-                                            logger.Error(ex.ToString());
-                                            logger.Info(error);
+                                            logger.Error(ex, error);
                                         }
                                     }
                                 }
@@ -2959,6 +4071,36 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         }
 
         /// <summary>
+        /// Pads/removes padding from person ids depending on pid2 fixed length person setting
+        /// </summary>
+        /// <param name="keyword">The person Id being searched.</param>
+        /// <returns>Returns the person Id that is stored in Colleague</returns>
+        protected async Task<string> PadIdPerPid2ParamsAsync(string personId)
+        {
+            var configuration = await GetConfigurationAsync();
+            if (configuration == null)
+            {
+                throw new ArgumentNullException("configuration", "Error retrieving PID2 configuration");
+            }
+
+            //assume there is no fixed length before checking the configuration
+            string id = personId;
+
+            //fixed length is given
+            if (!String.IsNullOrEmpty(configuration.DfltsFixedLenPerson))
+            {
+                var personIdMaxLength = Int32.Parse(configuration.DfltsFixedLenPerson);
+
+                //fixed length is given, searched id length is less than or equal to fixed length, pad with 0s accordingly
+                if (id.Length <= personIdMaxLength)
+                {
+                    id = personId.PadLeft(personIdMaxLength, '0');
+                }
+            }
+            return id;
+        }
+
+        /// <summary>
         /// Gets Configuration
         /// </summary>
         /// <returns></returns>
@@ -2975,20 +4117,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         return dflts;
                     }
                 );
-            return defaults;            
-        }
-
-        /// <summary>
-        /// Prepends Zero to AdviseeID and makes the length equals to DefaultFixedPersonLength
-        /// </summary>
-        protected string PadPersonIdWithZeroes(string personId, string defaultFixedPersonLength)
-        {
-            int personIdMaxLength = Int32.Parse(defaultFixedPersonLength);
-            if (personId.Length < personIdMaxLength)
-            {
-                personId = personId.PadLeft(personIdMaxLength, '0');
-            }
-            return personId;
+            return defaults;
         }
     }
 }

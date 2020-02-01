@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2018 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2019 Ellucian Company L.P. and its affiliates. */
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.HumanResources;
@@ -809,7 +809,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             // Termination Reason
             if (!string.IsNullOrEmpty(employeeEntity.StatusEndReasonCode) && employeeEntity.EmploymentStatus == EmployeeStatus.Terminated)
             {
-                var termReasonId = (await GetEmploymentStatusEndingReasonsAsync(bypassCache)).FirstOrDefault(sr => sr.Code == employeeEntity.StatusEndReasonCode).Guid;
+                var termReasonId = await hrReferenceDataRepository.GetEmploymentStatusEndingReasonsGuidAsync(employeeEntity.StatusEndReasonCode);
                 if (!string.IsNullOrEmpty(termReasonId))
                 {
                     employeeDto.TerminationReason = new GuidObject2(termReasonId);
@@ -998,7 +998,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             // Termination Reason
             if (!string.IsNullOrEmpty(employeeEntity.StatusEndReasonCode) && employeeEntity.EmploymentStatus == EmployeeStatus.Terminated)
             {
-                var termReasonId = (await GetEmploymentStatusEndingReasonsAsync(bypassCache)).FirstOrDefault(sr => sr.Code == employeeEntity.StatusEndReasonCode).Guid;
+                var termReasonId = await hrReferenceDataRepository.GetEmploymentStatusEndingReasonsGuidAsync(employeeEntity.StatusEndReasonCode);
                 if (!string.IsNullOrEmpty(termReasonId))
                 {
                     employeeDto.TerminationReason = new GuidObject2(termReasonId);
@@ -1217,7 +1217,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             // Termination Reason
             if (!string.IsNullOrEmpty(employeeEntity.StatusEndReasonCode) && employeeEntity.EmploymentStatus == EmployeeStatus.Terminated)
             {
-                var termReasonId = (await GetEmploymentStatusEndingReasonsAsync(bypassCache)).FirstOrDefault(sr => sr.Code == employeeEntity.StatusEndReasonCode).Guid;
+                var termReasonId = await hrReferenceDataRepository.GetEmploymentStatusEndingReasonsGuidAsync(employeeEntity.StatusEndReasonCode);
                 if (!string.IsNullOrEmpty(termReasonId))
                 {
                     employeeDto.TerminationReason = new GuidObject2(termReasonId);
@@ -1786,7 +1786,9 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 !HasPermission(HumanResourcesPermissionCodes.ViewEmployeeData) &&
                 !HasPermission(HumanResourcesPermissionCodes.ViewSuperviseeData) &&
                 !HasPermission(HumanResourcesPermissionCodes.ViewEmployeeW2) &&
-                !HasPermission(HumanResourcesPermissionCodes.ViewEmployee1095C))
+                !HasPermission(HumanResourcesPermissionCodes.ViewEmployee1095C) &&
+                !HasPermission(HumanResourcesPermissionCodes.ViewAllTimeHistory) &&
+                !HasPermission(HumanResourcesPermissionCodes.ViewAllTotalCompensation))
             {
                 throw new PermissionsException("Current user is not authorized to view employee data");
             }

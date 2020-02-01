@@ -4,6 +4,7 @@ using Ellucian.Colleague.Dtos.Attributes;
 using Ellucian.Colleague.Dtos.Converters;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using Newtonsoft.Json;
+using System;
 using System.Runtime.Serialization;
 
 namespace Ellucian.Colleague.Dtos.Filters
@@ -27,7 +28,18 @@ namespace Ellucian.Colleague.Dtos.Filters
         [DataMember(Name = "code", EmitDefaultValue = false)]
         [FilterProperty("criteria")]
         public string Code { get; set; }
-
+        /// <summary>
+        /// The term start date.
+        /// </summary>
+        [JsonProperty("startOn")]
+        [FilterProperty("criteria", new string[] { "$eq", "$gte", "$lte" })]
+        public DateTime? StartOn { get; set; }
+        /// <summary>
+        /// The term end date.
+        /// </summary>
+        [JsonProperty("endOn")]
+        [FilterProperty("criteria",  new string[] { "$eq", "$gte", "$lte" })]
+        public DateTime? EndOn { get; set; }
         /// <summary>
         /// The <see cref="AcademicPeriodCategory">Academic Period category</see>
         /// </summary>

@@ -308,9 +308,19 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         /// the DeceasedDate is not set.
         /// </summary>
         public bool IsDeceased { get; set; }
+        
+        /// <summary>
+        /// Primary language of a person
+        /// </summary>
+        public string PrimaryLanguage { get; set; }
+
+        /// <summary>
+        /// Secondary languages of a person
+        /// </summary>
+        public List<string> SecondaryLanguages { get; set; }
 
         #endregion
-
+        
         /// <summary>
         /// Add a formatted name to the person
         /// </summary>

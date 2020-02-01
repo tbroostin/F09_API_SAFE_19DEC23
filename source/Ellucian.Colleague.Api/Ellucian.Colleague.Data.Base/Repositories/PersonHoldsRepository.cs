@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -148,7 +148,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             if (response.DeleteRestrictionErrors.Any())
             {
                 var exception = new RepositoryException("Errors encountered while deleting person hold: " + personHoldsId);
-                response.DeleteRestrictionErrors.ForEach(e => exception.AddError(new RepositoryError(e.ErrorCodes, e.ErrorMessages)));
+                response.DeleteRestrictionErrors.ForEach(e => exception.AddError(new RepositoryError(string.IsNullOrEmpty(e.ErrorCodes) ? "" : e.ErrorCodes, e.ErrorMessages)));
                 throw exception;
             }
 
@@ -199,7 +199,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             if (updateResponse.RestrictionErrorMessages.Any())
             {
                 var errorMessage = string.Empty;
-                errorMessage = string.Format("Error occurred updating person hold '{0} {1}'", request.Id, request.PersonHoldGuid);
+                errorMessage = string.Format("Error occurred updating person hold key '{0}', id '{1}'. ", request.Id, request.PersonHoldGuid);
                 foreach (var message in updateResponse.RestrictionErrorMessages)
                 {
                     errorMessage += string.Join(Environment.NewLine, message.ErrorMsg);

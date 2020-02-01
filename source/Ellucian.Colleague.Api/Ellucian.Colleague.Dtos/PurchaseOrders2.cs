@@ -58,7 +58,7 @@ namespace Ellucian.Colleague.Dtos
         /// </summary>
         [JsonConverter(typeof(DateOnlyConverter))]
         [JsonProperty("deliveredBy", DefaultValueHandling = DefaultValueHandling.Ignore)]
-        public DateTime DeliveredBy { get; set; }
+        public DateTime? DeliveredBy { get; set; }
 
         /// <summary>
         /// The status date for the purchase order.

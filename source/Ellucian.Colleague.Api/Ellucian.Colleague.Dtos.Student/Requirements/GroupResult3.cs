@@ -43,6 +43,12 @@ namespace Ellucian.Colleague.Dtos.Student.Requirements
         /// </summary>
         public List<string> AcademicCreditIdsIncludedInGPA { get; set; }
         /// <summary>
+        /// Collection of student's academic credits that are not applied but are related to this group.
+        /// Related Academic Credits are populated only when AEDF related policy is Together and a flag to honor related policy is Yes. 
+        /// Related Academic Credits will be Null if above conditions are not met.
+        /// </summary>
+        public List<CreditResult> RelatedAcademicCredits { get; set; }
+        /// <summary>
         /// Further explanations related to the group result
         /// </summary>
         public List<GroupExplanation> Explanations {get; set;}

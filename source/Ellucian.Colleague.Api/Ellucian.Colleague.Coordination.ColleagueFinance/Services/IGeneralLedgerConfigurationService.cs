@@ -27,6 +27,12 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// </summary>
         /// <returns>BudgetAdjustmentsEnabled DTO</returns>
         Task<BudgetAdjustmentsEnabled> GetBudgetAdjustmentEnabledAsync();
+
+        /// <summary>
+        /// Get fiscal year configuration information necessary to validate fiscal year dates used in finance query.
+        /// </summary>
+        /// <returns>GlFiscalYearConfiguration DTO</returns>
+        Task<GlFiscalYearConfiguration> GetGlFiscalYearConfigurationAsync();
     }
 }
 

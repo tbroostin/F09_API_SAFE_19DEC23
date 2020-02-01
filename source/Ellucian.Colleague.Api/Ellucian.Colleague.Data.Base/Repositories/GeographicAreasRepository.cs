@@ -1,4 +1,4 @@
-﻿//Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -16,6 +16,8 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Ellucian.Dmi.Runtime;
 using Ellucian.Colleague.Data.Base.Transactions;
+using Ellucian.Colleague.Domain.Base.Services;
+using System.Collections.ObjectModel;
 
 namespace Ellucian.Colleague.Data.Base.Repositories
 {
@@ -23,6 +25,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
     public class GeographicAreasRepository : BaseColleagueRepository, IGeographicAreasRepository
     {
         public static char _VM = Convert.ToChar(DynamicArray.VM);
+        const int AllGeographicAreasCacheTimeout = 20; // Clear from cache every 20 minutes
+        const string AllGeographicAreasCache = "AllGeographicAreas";
 
         /// <summary>
         /// ..ctor
@@ -53,42 +57,75 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             var keys = new List<string>();
 
-            var chapterIds = await DataReader.SelectAsync("CHAPTERS", criteria.ToString());
+            string geographicAreasCacheKey = CacheSupport.BuildCacheKey(AllGeographicAreasCache);
 
-            var chaptersId2 = new List<string>();
-            foreach (var chaptersId in chapterIds)
+            var keyCache = await CacheSupport.GetOrAddKeyCacheToCache(
+                    this,
+                    ContainsKey,
+                    GetOrAddToCacheAsync,
+                    AddOrUpdateCacheAsync,
+                    transactionInvoker,
+                    geographicAreasCacheKey,
+                    "",
+                     offset,
+                    limit,
+                    AllGeographicAreasCacheTimeout,
+
+                    async () =>
+                    {
+                        var chapterIds = await DataReader.SelectAsync("CHAPTERS", criteria.ToString());
+
+                        var chaptersId2 = new List<string>();
+                        foreach (var chaptersId in chapterIds)
+                        {
+                            var chaptersKey = string.Concat("CHAPTERS*" + chaptersId);
+                            keys.Add(chaptersKey);
+                        }
+
+                        var countyIds = await DataReader.SelectAsync("COUNTIES", criteria.ToString());
+
+                        var countiesId2 = new List<string>();
+                        foreach (var countiesId in countyIds)
+                        {
+                            var countiesKey = string.Concat("COUNTIES*" + countiesId);
+                            keys.Add(countiesKey);
+                        }
+
+                        var zipCodeIds = await DataReader.SelectAsync("ZIP.CODE.XLAT", criteria.ToString());
+
+                        var zipCodesId2 = new List<string>();
+                        foreach (var zipCodesId in zipCodeIds)
+                        {
+                            var zipCodesKey = string.Concat("ZIPCODEXLAT*" + zipCodesId);
+                            keys.Add(zipCodesKey);
+                        };
+
+                        if (keys == null || !keys.Any())
+                        {
+                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                        }
+
+                        CacheSupport.KeyCacheRequirements requirements = new CacheSupport.KeyCacheRequirements()
+                        {
+                            limitingKeys = keys.Distinct().ToList(),
+                            criteria = "",
+                        };
+
+                        return requirements;
+                    });
+
+            if (keyCache == null || keyCache.Sublist == null || !keyCache.Sublist.Any())
             {
-                var chaptersKey = string.Concat("CHAPTERS*" + chaptersId);
-                keys.Add(chaptersKey);
+                return new Tuple<IEnumerable<Domain.Base.Entities.GeographicArea>, int>(geographicAreaEntities, 0);
             }
 
-            var countyIds = await DataReader.SelectAsync("COUNTIES", criteria.ToString());
+            var keysSubList = keyCache.Sublist;
+            totalCount = keyCache.TotalCount.Value;                                  
 
-            var countiesId2 = new List<string>();
-            foreach (var countiesId in countyIds)
-            {
-                var countiesKey = string.Concat("COUNTIES*" + countiesId);
-                keys.Add(countiesKey);
-            }
-
-            var zipCodeIds = await DataReader.SelectAsync("ZIP.CODE.XLAT", criteria.ToString());
-
-            var zipCodesId2 = new List<string>();
-            foreach (var zipCodesId in zipCodeIds)
-            {
-                var zipCodesKey = string.Concat("ZIPCODEXLAT*" + zipCodesId);
-                keys.Add(zipCodesKey);
-            }
-
-            totalCount = keys.Count();
-            keys.Sort();
-            
-            var keysSubList = keys.Skip(offset).Take(limit).ToArray();
-            
             if (keysSubList.Any())
             {
                 var chaptersSubListKey = new List<string>();
-
+                Collection<Chapters> chaptersCollection = null;
                 foreach (var key in keysSubList.Where(i => i.Split('*')[0].Equals("CHAPTERS")))
                 {
                     var geographicAreaKey = key.Split('*');
@@ -96,11 +133,13 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     var recordKey = key.Substring(fileName.Length + 1);
                     chaptersSubListKey.Add(recordKey);
                 }
-
-                var chaptersCollection = await DataReader.BulkReadRecordAsync<Chapters>("CHAPTERS", chaptersSubListKey.ToArray());
+                if (chaptersSubListKey.Any())
+                {
+                    chaptersCollection = await DataReader.BulkReadRecordAsync<Chapters>("CHAPTERS", chaptersSubListKey.ToArray());
+                }
 
                 var countiesSubListKey = new List<string>();
-
+                Collection<Counties> countiesCollection = null;
                 foreach (var key in keysSubList.Where(i => i.Split('*')[0].Equals("COUNTIES")))
                 {
                     var geographicAreaKey = key.Split('*');
@@ -108,11 +147,13 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     var recordKey = key.Substring(fileName.Length + 1);
                     countiesSubListKey.Add(recordKey);
                 }
-
-                var countiesCollection = await DataReader.BulkReadRecordAsync<Counties>("COUNTIES", countiesSubListKey.ToArray());
-
+                if (countiesSubListKey.Any())
+                {
+                    countiesCollection = await DataReader.BulkReadRecordAsync<Counties>("COUNTIES", countiesSubListKey.ToArray());
+                }
+                
                 var zipCodesSubListKey = new List<string>();
-
+                Collection<ZipCodeXlat> zipCodesCollection = null;
                 foreach (var key in keysSubList.Where(i => i.Split('*')[0].Equals("ZIPCODEXLAT")))
                 {
                     var geographicAreaKey = key.Split('*');
@@ -120,8 +161,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     var recordKey = key.Substring(fileName.Length + 1);
                     zipCodesSubListKey.Add(recordKey);
                 }
-
-                var zipCodesCollection = await DataReader.BulkReadRecordAsync<ZipCodeXlat>("ZIP.CODE.XLAT", zipCodesSubListKey.ToArray());
+                if (zipCodesSubListKey.Any())
+                {
+                    zipCodesCollection = await DataReader.BulkReadRecordAsync<ZipCodeXlat>("ZIP.CODE.XLAT", zipCodesSubListKey.ToArray());
+                }
 
                 foreach (var key in keysSubList)
                 {
@@ -134,28 +177,49 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         switch (fileName)
                         {
                             case "CHAPTERS":
-                                var chapter = chaptersCollection.FirstOrDefault(x => x.Recordkey == recordKey);
-                                if (chapter == null)
+                                if (chaptersCollection != null && chaptersCollection.Any())
+                                {
+                                    var chapter = chaptersCollection.FirstOrDefault(x => x.Recordkey == recordKey);
+                                    if (chapter == null)
+                                    {
+                                        throw new KeyNotFoundException(string.Format("Geographic area not found for CHAPTERS '{0}'. ", recordKey));
+                                    }
+                                    geographicAreaEntities.Add(new GeographicArea(chapter.RecordGuid, chapter.Recordkey, !string.IsNullOrEmpty(chapter.ChaptersDesc) ? chapter.ChaptersDesc : chapter.Recordkey, "FUND"));
+                                }
+                                else
                                 {
                                     throw new KeyNotFoundException(string.Format("Geographic area not found for CHAPTERS '{0}'. ", recordKey));
                                 }
-                                geographicAreaEntities.Add(new GeographicArea(chapter.RecordGuid, chapter.Recordkey, !string.IsNullOrEmpty(chapter.ChaptersDesc) ? chapter.ChaptersDesc : chapter.Recordkey, "FUND"));
                                 break;
                             case "COUNTIES":
-                                var county = countiesCollection.FirstOrDefault(x => x.Recordkey == recordKey);
-                                if (county == null)
+                                if (countiesCollection != null && countiesCollection.Any())
+                                {
+                                    var county = countiesCollection.FirstOrDefault(x => x.Recordkey == recordKey);
+                                    if (county == null)
+                                    {
+                                        throw new KeyNotFoundException(string.Format("Geographic area not found for COUNTIES '{0}'. ", recordKey));
+                                    }
+                                    geographicAreaEntities.Add(new GeographicArea(county.RecordGuid, county.Recordkey, !string.IsNullOrEmpty(county.CntyDesc) ? county.CntyDesc : county.Recordkey, "GOV"));
+                                }
+                                else
                                 {
                                     throw new KeyNotFoundException(string.Format("Geographic area not found for COUNTIES '{0}'. ", recordKey));
                                 }
-                                geographicAreaEntities.Add(new GeographicArea(county.RecordGuid, county.Recordkey, !string.IsNullOrEmpty(county.CntyDesc) ? county.CntyDesc : county.Recordkey, "GOV"));
                                 break;
                             case "ZIPCODEXLAT":
-                                var zipCode = zipCodesCollection.FirstOrDefault(x => x.Recordkey == recordKey);
-                                if (zipCode == null)
+                                if (zipCodesCollection != null && zipCodesCollection.Any())
+                                {
+                                    var zipCode = zipCodesCollection.FirstOrDefault(x => x.Recordkey == recordKey);
+                                    if (zipCode == null)
+                                    {
+                                        throw new KeyNotFoundException(string.Format("Geographic area not found for ZIP.CODE.XLAT '{0}'. ", recordKey));
+                                    }
+                                    geographicAreaEntities.Add(new GeographicArea(zipCode.RecordGuid, zipCode.Recordkey, "Zipcode", "POST"));
+                                }      
+                                else
                                 {
                                     throw new KeyNotFoundException(string.Format("Geographic area not found for ZIP.CODE.XLAT '{0}'. ", recordKey));
                                 }
-                                geographicAreaEntities.Add(new GeographicArea(zipCode.RecordGuid, zipCode.Recordkey, "Zipcode", "POST"));
                                 break;
                         }
                     }

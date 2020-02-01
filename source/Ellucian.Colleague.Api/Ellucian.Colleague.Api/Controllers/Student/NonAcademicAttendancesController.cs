@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
@@ -44,6 +44,9 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="studentId">Unique identifier for the person whose nonacademic attendances are being retrieved</param>
         /// <returns>All <see cref="NonAcademicAttendance">nonacademic events attended</see> for a person</returns>
+        /// <accessComments>
+        /// Student must be retrieving their own attendance data
+        /// </accessComments>
         public async Task<IEnumerable<NonAcademicAttendance>> GetNonAcademicAttendancesAsync(string studentId)
         {
             try

@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,6 +19,7 @@ using System.Text;
 using Microsoft.Practices.EnterpriseLibrary.Common.Utility;
 using Ellucian.Web.Http.Configuration;
 using Ellucian.Dmi.Runtime;
+using Ellucian.Colleague.Configuration;
 
 namespace Ellucian.Colleague.Data.Base.Repositories
 {
@@ -27,6 +28,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
     {
         private readonly string colleagueTimeZone;
         private readonly string orgIndicator;
+        private IColleagueTransactionInvoker anonymousTransactionInvoker;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ConfigurationRepository"/> class.
@@ -35,13 +37,18 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <param name="transactionFactory">The transaction factory.</param>
         /// <param name="logger">The logger.</param>
         public ConfigurationRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory,
-            ApiSettings settings, ILogger logger)
+            ApiSettings settings, ILogger logger, ColleagueSettings colleagueSettings)
             : base(cacheProvider, transactionFactory, logger)
         {
             // Using level 1 cache time out value for data that rarely changes.
             CacheTimeout = Level1CacheTimeoutValue;
             orgIndicator = "ORG";
             colleagueTimeZone = settings.ColleagueTimeZone;
+
+            // transactionInvoker will only be non-null when a user is logged in
+            // If this is being requested anonymously, create a transaction invoker 
+            // without any user context.
+            anonymousTransactionInvoker = transactionInvoker ?? new ColleagueTransactionInvoker(null, null, logger, colleagueSettings.DmiSettings);
         }
 
         #region Public Methods
@@ -125,9 +132,30 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 var extendConfigData = (await GetEthosExtensibilityConfiguration()).ToList();
 
+                // Look for version specific configuration first
                 var matchingExtendedConfigData = extendConfigData.FirstOrDefault(e =>
                     e.EdmvResourceName.Equals(resourceName, StringComparison.OrdinalIgnoreCase) &&
                     e.EdmvVersionNumber.Equals(resourceVersionNumber, StringComparison.OrdinalIgnoreCase));
+
+                // Look for a major version match.
+                if (matchingExtendedConfigData == null)
+                {
+                    if (!string.IsNullOrEmpty(resourceVersionNumber) && resourceVersionNumber.Contains('.'))
+                    {
+                        var majorVersion = resourceVersionNumber.Split('.')[0];
+                        matchingExtendedConfigData = extendConfigData.FirstOrDefault(e =>
+                            e.EdmvResourceName.Equals(resourceName, StringComparison.OrdinalIgnoreCase) &&
+                            e.EdmvVersionNumber.Equals(majorVersion, StringComparison.OrdinalIgnoreCase));
+                    }
+                }
+
+                // If we don't have a version specific or major version configuration, then look for versionless match.
+                if (matchingExtendedConfigData == null)
+                {
+                    matchingExtendedConfigData = extendConfigData.FirstOrDefault(e =>
+                        e.EdmvResourceName.Equals(resourceName, StringComparison.OrdinalIgnoreCase) &&
+                        string.IsNullOrEmpty(e.EdmvVersionNumber));
+                }
 
                 //make sure there is extended config data and row data, if not return null
                 if (matchingExtendedConfigData == null || matchingExtendedConfigData.EdmvColumnsEntityAssociation == null ||
@@ -213,9 +241,30 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             char _VM = Convert.ToChar(DynamicArray.VM);
             var extendConfigData = (await GetEthosExtensibilityConfiguration(bypassCache)).ToList();
 
+            // Look for version specific configuration first
             var matchingExtendedConfigData = extendConfigData.FirstOrDefault(e =>
                 e.EdmvResourceName.Equals(resourceName, StringComparison.OrdinalIgnoreCase) &&
                 e.EdmvVersionNumber.Equals(resourceVersionNumber, StringComparison.OrdinalIgnoreCase));
+
+            // Look for a major version match.
+            if (matchingExtendedConfigData == null)
+            {
+                if (!string.IsNullOrEmpty(resourceVersionNumber) && resourceVersionNumber.Contains('.'))
+                {
+                    var majorVersion = resourceVersionNumber.Split('.')[0];
+                    matchingExtendedConfigData = extendConfigData.FirstOrDefault(e =>
+                        e.EdmvResourceName.Equals(resourceName, StringComparison.OrdinalIgnoreCase) &&
+                        e.EdmvVersionNumber.Equals(majorVersion, StringComparison.OrdinalIgnoreCase));
+                }
+            }
+
+            // If we don't have a version specific or major version configuration, then look for versionless match.
+            if (matchingExtendedConfigData == null)
+            {
+                matchingExtendedConfigData = extendConfigData.FirstOrDefault(e =>
+                    e.EdmvResourceName.Equals(resourceName, StringComparison.OrdinalIgnoreCase) &&
+                    string.IsNullOrEmpty(e.EdmvVersionNumber));
+            }
 
             // TODO: SRM Uncomment when we want to support the metadata Object
             //if (matchingExtendedConfigData == null)
@@ -250,7 +299,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
             // TODO: SRM Uncomment when we want to support the metadata Object
             //matchingExtendedConfigData = await AddEthosMetadataConfigurationData(matchingExtendedConfigData, idDict, bypassCache);
-            
+
             //make sure there is extended config data and row data, if not return empty list
             if (matchingExtendedConfigData == null || matchingExtendedConfigData.EdmvColumnsEntityAssociation == null || !matchingExtendedConfigData.EdmvColumnsEntityAssociation.Any())
             {
@@ -259,7 +308,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             //get the filenames from the config data, extended data can come from any file keyed to the main entity
             var fileNameStrList = matchingExtendedConfigData.EdmvColumnsEntityAssociation.Select(e => e.EdmvFileNameAssocMember).ToList().Distinct();
-            
+
             var allColumnData = new Dictionary<string, Dictionary<string, string>>();
             var colleagueFileAndKeys = new Dictionary<string, List<string>>();
             var colleagueSecondaryKeys = new Dictionary<string, string>();
@@ -550,10 +599,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <param name="matchingExtendedConfigData">Configuration for extended data.</param>
         /// <param name="idDict">dictionary containing the ids for the resources in guidlookup form</param>
         /// <returns>List of extensions with all of the metadata objects defined.</returns>
-        private async Task<EdmExtVersions> AddEthosMetadataConfigurationData(EdmExtVersions matchingExtendedConfigData, Dictionary<string,GuidLookupResult> idDict, bool bypassCache = false)
+        private async Task<EdmExtVersions> AddEthosMetadataConfigurationData(EdmExtVersions matchingExtendedConfigData, Dictionary<string, GuidLookupResult> idDict, bool bypassCache = false)
         {
             var matchingColumnConfigDetails = new List<EdmExtVersionsEdmvColumns>();
-           
+
             var allFileNames = new List<string>();
             var fileNamesForGuids = idDict.Where(i => i.Value != null && i.Value.Entity != null).Select(i => i.Value.Entity).Distinct().ToList();
             foreach (var fileName in fileNamesForGuids)
@@ -1647,8 +1696,9 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <summary>
         /// Retrieve user profile configuration.
         /// </summary>
+        /// <param name="allAdrelTypes">Address Relation Type codes</param>
         /// <returns>User profile configuration</returns>
-        public async Task<UserProfileConfiguration2> GetUserProfileConfiguration2Async()
+        public async Task<UserProfileConfiguration2> GetUserProfileConfiguration2Async(List<AddressRelationType> allAdrelTypes)
         {
             UserProfileConfiguration2 configuration = new UserProfileConfiguration2();
 
@@ -1666,7 +1716,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 configuration.UpdateAddressTypeConfiguration(string.Equals(corewebDefaultsRecord.CorewebAllAddrViewable, "Y", StringComparison.OrdinalIgnoreCase),
                     corewebDefaultsRecord.CorewebAddressViewTypes,
-                    corewebDefaultsRecord.CorewebAddressUpdtTypes);
+                    corewebDefaultsRecord.CorewebAddressUpdtTypes,
+                    allAdrelTypes);
 
                 configuration.UpdateEmailTypeConfiguration(string.Equals(corewebDefaultsRecord.CorewebAllEmailViewable, "Y", StringComparison.OrdinalIgnoreCase),
                     corewebDefaultsRecord.CorewebEmailViewTypes,
@@ -1779,7 +1830,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         {
             if (code == null)
             {
-                return  defaultSortField;
+                return defaultSortField;
             }
 
             switch (code.ToUpperInvariant())
@@ -1795,7 +1846,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 case "OFFICE":
                     return WebSortField.OfficeDescription;
                 default:
-                    return defaultSortField; 
+                    return defaultSortField;
             }
         }
 
@@ -1805,7 +1856,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <returns>Required document configuration</returns>
         public async Task<RequiredDocumentConfiguration> GetRequiredDocumentConfigurationAsync()
         {
-            RequiredDocumentConfiguration configuration = null;  
+            RequiredDocumentConfiguration configuration = null;
 
             CorewebDefaults corewebDefaultsRecord = null;
             try
@@ -2028,7 +2079,34 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
 
         #endregion
-        
+
+        /// <summary>
+        /// Gets the Session Configuration.
+        /// </summary>
+        /// <returns>Session Configuration entity</returns>
+        public async Task<SessionConfiguration> GetSessionConfigurationAsync()
+        {
+            try
+            {
+                var sessionConfigurationResponse = await anonymousTransactionInvoker.ExecuteAnonymousAsync<GetSessionConfigurationRequest, GetSessionConfigurationResponse>(new GetSessionConfigurationRequest());
+                if (!string.IsNullOrEmpty(sessionConfigurationResponse.ErrorOccurred) && !string.Equals(sessionConfigurationResponse.ErrorOccurred, "0", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    throw new ApplicationException(string.Format("Error occurred during session configuration transaction: {0} {1}", sessionConfigurationResponse.ErrorOccurred, sessionConfigurationResponse.ErrorMessage));
+                }
+                var sessionConfiguration = new SessionConfiguration()
+                {
+                    UsernameRecoveryEnabled = string.Equals(sessionConfigurationResponse.UsernameRecoveryEnabled, "Y", StringComparison.InvariantCultureIgnoreCase),
+                    PasswordResetEnabled = string.Equals(sessionConfigurationResponse.PasswordResetEnabled, "Y", StringComparison.InvariantCultureIgnoreCase)
+                };
+                return sessionConfiguration;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Error retrieving session configuration.");
+                throw;
+            }
+        }
+
         #endregion
 
         #region Private Methods
@@ -2185,9 +2263,9 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// 
         private async Task<IntegrationConfiguration> BuildIntegrationConfiguration(string integrationConfigurationId)
         {
-            
+
             IntegrationConfiguration configuration = null;
-            
+
             var cdmIntegration = await DataReader.ReadRecordAsync<CdmIntegration>("CDM.INTEGRATION", integrationConfigurationId.ToUpper());
             if (cdmIntegration == null)
             {
@@ -2218,7 +2296,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             bool? cintUseIntegrationHub = false;
             cintUseIntegrationHub = cdmIntegration.CintUseIntegrationHub.ToUpper() == "Y";
 
-            configuration = new IntegrationConfiguration(cdmIntegration.Recordkey, cdmIntegration.CintDesc, uri.Host, (uri.Scheme == "https"), uri.Port,
+            configuration = new IntegrationConfiguration(cdmIntegration.Recordkey, cdmIntegration.CintDesc, uri.Host, (uri.Scheme == "https" || uri.Scheme == "amqps"), uri.Port,
                 cdmIntegration.CintServerUsername, cdmIntegration.CintServerPassword, cdmIntegration.CintBusEventExchange,
                 cdmIntegration.CintBusEventQueue, cdmIntegration.CintOutboundExchange, cdmIntegration.CintInboundExchange,
                 cdmIntegration.CintInboundQueue, cdmIntegration.CintApiUsername, cdmIntegration.CintApiPassword,
@@ -2246,7 +2324,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 configuration.InboundExchangeRoutingKeys.AddRange(cdmIntegration.CintInboundRoutingKeys);
             }
-            
+
             return configuration;
         }
 

@@ -408,6 +408,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task SectionInstructorsController_PostSectionInstructorsAsync()
             {
                 serviceMock.Setup(x => x.CreateSectionInstructorsAsync(It.IsAny<SectionInstructors>())).ReturnsAsync(sectionInstructor);
+                sectionInstructor = new SectionInstructors() { Id = "00000000-0000-0000-0000-000000000000" };
                 var result = await controller.PostSectionInstructorsAsync(sectionInstructor);
 
                 Assert.IsNotNull(result);
@@ -474,8 +475,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task PutSectionInstructorsAsync_ArgumentNullException_SectionInstructors_Null()
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PutSectionInstructorsAsync_IntegrationApiException_SectionInstructors_Null()
             {
                 await controller.PutSectionInstructorsAsync(guid, null);
             }
@@ -490,7 +491,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             }
 
             [TestMethod]
-            [ExpectedException(typeof(InvalidOperationException))]
+            [ExpectedException(typeof(HttpResponseException))]
             public async Task PutSectionInstructorsAsync_IntegrationApiException_Guid_Empty()
             {
                 sectionInstructor.Id = null;

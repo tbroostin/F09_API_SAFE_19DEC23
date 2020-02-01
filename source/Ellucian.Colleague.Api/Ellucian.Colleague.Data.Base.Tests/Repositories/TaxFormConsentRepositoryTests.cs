@@ -403,6 +403,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         private void InitializeMockStatements()
         {
             #region W-2 consents
+            var w2Now = DateTime.Now;
             w2ConsentHistoryContracts = new Collection<W2ConsentHistory>()
             {
                 new W2ConsentHistory()
@@ -410,20 +411,20 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     Recordkey = "1234",
                     W2chHrperId = personId,
                     W2chNewStatus = "C",
-                    W2chStatusDate = DateTime.Now,
-                    W2chStatusTime = DateTime.Now,
-                    W2ConsentHistoryAdddate = DateTime.Now,
-                    W2ConsentHistoryAddtime = DateTime.Now
+                    W2chStatusDate = w2Now,
+                    W2chStatusTime = w2Now,
+                    W2ConsentHistoryAdddate = w2Now,
+                    W2ConsentHistoryAddtime = w2Now
                 },
                 new W2ConsentHistory()
                 {
                     Recordkey = "1235",
                     W2chHrperId = personId,
                     W2chNewStatus = "W",
-                    W2chStatusDate = DateTime.Now,
-                    W2chStatusTime = DateTime.Now,
-                    W2ConsentHistoryAdddate = DateTime.Now,
-                    W2ConsentHistoryAddtime = DateTime.Now
+                    W2chStatusDate = w2Now,
+                    W2chStatusTime = w2Now,
+                    W2ConsentHistoryAdddate = w2Now,
+                    W2ConsentHistoryAddtime = w2Now
                 },
             };
             dataReaderMock.Setup<Task<Collection<W2ConsentHistory>>>(datareader => datareader.BulkReadRecordAsync<W2ConsentHistory>(It.IsAny<string>(), true)).Returns(() =>
@@ -433,6 +434,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             #endregion
 
             #region DOC.CONSENT.HISTORY
+            var now = DateTime.Now;
             docConsentHistoryContracts = new Collection<DocConsentHistory>()
             {
                 new DocConsentHistory()
@@ -441,8 +443,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     DchistDocument = "1095C",
                     DchistPersonId = personId,
                     DchistStatus = "C",
-                    DchistStatusDate = DateTime.Now,
-                    DchistStatusTime = DateTime.Now
+                    DchistStatusDate = now,
+                    DchistStatusTime = now
                 },
                 new DocConsentHistory()
                 {
@@ -450,8 +452,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     DchistDocument = "1095C",
                     DchistPersonId = personId,
                     DchistStatus = "W",
-                    DchistStatusDate = DateTime.Now,
-                    DchistStatusTime = DateTime.Now
+                    DchistStatusDate = now,
+                    DchistStatusTime = now
                 },
                 new DocConsentHistory()
                 {
@@ -459,8 +461,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     DchistDocument = "1098",
                     DchistPersonId = personId,
                     DchistStatus = "C",
-                    DchistStatusDate = DateTime.Now,
-                    DchistStatusTime = DateTime.Now
+                    DchistStatusDate = now,
+                    DchistStatusTime = now
                 },
                 new DocConsentHistory()
                 {
@@ -468,8 +470,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     DchistDocument = "1098",
                     DchistPersonId = personId,
                     DchistStatus = "W",
-                    DchistStatusDate = DateTime.Now,
-                    DchistStatusTime = DateTime.Now
+                    DchistStatusDate = now,
+                    DchistStatusTime = now
                 },
                 new DocConsentHistory()
                 {
@@ -477,8 +479,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     DchistDocument = "T2202A",
                     DchistPersonId = personId,
                     DchistStatus = "C",
-                    DchistStatusDate = DateTime.Now,
-                    DchistStatusTime = DateTime.Now
+                    DchistStatusDate = now,
+                    DchistStatusTime = now
                 },
                 new DocConsentHistory()
                 {
@@ -486,8 +488,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     DchistDocument = "T2202A",
                     DchistPersonId = personId,
                     DchistStatus = "W",
-                    DchistStatusDate = DateTime.Now,
-                    DchistStatusTime = DateTime.Now
+                    DchistStatusDate = now,
+                    DchistStatusTime = now
                 },
                  new DocConsentHistory()
                 {
@@ -495,8 +497,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     DchistDocument = "1099MI",
                     DchistPersonId = personId,
                     DchistStatus = "C",
-                    DchistStatusDate = DateTime.Now,
-                    DchistStatusTime = DateTime.Now
+                    DchistStatusDate = now,
+                    DchistStatusTime = now
                 },
                  new DocConsentHistory()
                 {
@@ -504,8 +506,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     DchistDocument = "1099MI",
                     DchistPersonId = personId,
                     DchistStatus = "W",
-                    DchistStatusDate = DateTime.Now,
-                    DchistStatusTime = DateTime.Now
+                    DchistStatusDate = now,
+                    DchistStatusTime = now
                 },
             };
             dataReaderMock.Setup<Task<Collection<DocConsentHistory>>>(datareader => datareader.BulkReadRecordAsync<DocConsentHistory>(It.IsAny<string>(), true)).Returns(() =>
@@ -516,6 +518,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             #endregion
 
             #region T4 consents
+            var t4Now = DateTime.Now;
             t4ConsentHistoryContracts = new Collection<T4ConsentHistory>()
             {
                 new T4ConsentHistory()
@@ -523,20 +526,20 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     Recordkey = "1234",
                     T4chHrperId = personId,
                     T4chNewStatus = "C",
-                    T4chStatusDate = DateTime.Now,
-                    T4chStatusTime = DateTime.Now,
-                    T4ConsentHistoryAdddate = DateTime.Now,
-                    T4ConsentHistoryAddtime = DateTime.Now
+                    T4chStatusDate = t4Now,
+                    T4chStatusTime = t4Now,
+                    T4ConsentHistoryAdddate = t4Now,
+                    T4ConsentHistoryAddtime = t4Now
                 },
                 new T4ConsentHistory()
                 {
                     Recordkey = "1235",
                     T4chHrperId = personId,
                     T4chNewStatus = "W",
-                    T4chStatusDate = DateTime.Now,
-                    T4chStatusTime = DateTime.Now,
-                    T4ConsentHistoryAdddate = DateTime.Now,
-                    T4ConsentHistoryAddtime = DateTime.Now
+                    T4chStatusDate = t4Now,
+                    T4chStatusTime = t4Now,
+                    T4ConsentHistoryAdddate = t4Now,
+                    T4ConsentHistoryAddtime = t4Now
                 },
             };
             dataReaderMock.Setup<Task<Collection<T4ConsentHistory>>>(datareader => datareader.BulkReadRecordAsync<T4ConsentHistory>(It.IsAny<string>(), true)).Returns(() =>
@@ -546,6 +549,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             #endregion
 
             #region T4A consents
+            var t4aNow = DateTime.Now;
             t4aConsentHistoryContracts = new Collection<T4aConsentHistory>()
             {
                 new T4aConsentHistory()
@@ -553,20 +557,20 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     Recordkey = "1234",
                     T4achHrperId = personId,
                     T4achNewStatus = "C",
-                    T4achStatusDate = DateTime.Now,
-                    T4achStatusTime = DateTime.Now,
-                    T4aConsentHistoryAdddate = DateTime.Now,
-                    T4aConsentHistoryAddtime = DateTime.Now
+                    T4achStatusDate = t4aNow,
+                    T4achStatusTime = t4aNow,
+                    T4aConsentHistoryAdddate = t4aNow,
+                    T4aConsentHistoryAddtime = t4aNow
                 },
                 new T4aConsentHistory()
                 {
                     Recordkey = "1235",
                     T4achHrperId = personId,
                     T4achNewStatus = "W",
-                    T4achStatusDate = DateTime.Now,
-                    T4achStatusTime = DateTime.Now,
-                    T4aConsentHistoryAdddate = DateTime.Now,
-                    T4aConsentHistoryAddtime = DateTime.Now
+                    T4achStatusDate = t4aNow,
+                    T4achStatusTime = t4aNow,
+                    T4aConsentHistoryAdddate = t4aNow,
+                    T4aConsentHistoryAddtime = t4aNow
                 },
             };
             dataReaderMock.Setup<Task<Collection<T4aConsentHistory>>>(datareader => datareader.BulkReadRecordAsync<T4aConsentHistory>(It.IsAny<string>(), true)).Returns(() =>

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using Ellucian.Colleague.Domain.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -62,7 +63,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 {
                     try
                     {
-                        var grade = new Grade(grd.RecordGuid, grd.Recordkey, grd.GrdGrade, grd.GrdCmplCredFlag, grd.GrdLegend, grd.GrdGradeScheme);
+                        var includeInWebFinalGradesList = !string.IsNullOrEmpty(grd.GrdUseInFinalGrdList) && grd.GrdUseInFinalGrdList.ToUpper() == "Y";
+                        var includeInWebMidtermGradesList = !string.IsNullOrEmpty(grd.GrdUseInMidtermGrdList) && grd.GrdUseInMidtermGrdList.ToUpper() == "Y";
+                        var canBeUsedAfterDropGradeRequiredDate = !string.IsNullOrEmpty(grd.GrdUseAfterDropGrdReqd) && grd.GrdUseAfterDropGrdReqd.ToUpper() == "Y";
+                        var grade = new Grade(grd.RecordGuid, grd.Recordkey, grd.GrdGrade, grd.GrdCmplCredFlag, grd.GrdLegend, grd.GrdGradeScheme, includeInWebFinalGradesList, includeInWebMidtermGradesList, canBeUsedAfterDropGradeRequiredDate);
                         grade.GradeValue = grd.GrdValue;//?? 0m;
                         grade.GradePriority = grd.GrdRepeatValue ?? 0m;
                         grade.IncompleteGrade = grd.GrdIncompleteGrade;
@@ -168,6 +172,50 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             );
             }
         }
+
+        /// <summary>
+        /// Get guid for Grades code
+        /// </summary>
+        /// <param name="code">Grades code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetGradesGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetHedmAsync(false);
+            Grade codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Id.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
+
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetHedmAsync(true);
+                if (allCodesCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'GRADES', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Id.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'GRADES', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'GRADES', Record ID:'", code, "'"));
+            }
+            return guid;
+
+        }
+
 
         /// <summary>
         /// Gets HeDM Grade based on Id

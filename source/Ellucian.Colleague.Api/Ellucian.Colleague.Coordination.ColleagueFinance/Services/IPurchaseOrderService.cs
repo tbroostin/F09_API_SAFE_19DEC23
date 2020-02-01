@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 
 using System.Threading.Tasks;
 using Ellucian.Colleague.Dtos.ColleagueFinance;
@@ -50,6 +50,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <param name="purchaseOrders"></param>
         /// <returns></returns>
         Task<Ellucian.Colleague.Dtos.PurchaseOrders2> PostPurchaseOrdersAsync2(Ellucian.Colleague.Dtos.PurchaseOrders2 purchaseOrders);
+
+        /// <summary>
+        /// Returns the list of Purchase Order summary object for the user
+        /// </summary>
+        /// <param name="id">Person ID</param>
+        /// <returns>Purchase Order Summary DTOs</returns>
+       Task<IEnumerable<Ellucian.Colleague.Dtos.ColleagueFinance.PurchaseOrderSummary>> GetPurchaseOrderSummaryByPersonIdAsync(string personId);
 
     }
 }

@@ -215,13 +215,6 @@ namespace Ellucian.Colleague.Dtos
         /// </summary>
         public Section6() : base()
         {
-            Credits = new List<SectionCreditDtoProperty>();
-            AcademicLevels = new List<GuidObject2>();
-            GradeSchemes = new List<GuidObject2>();
-            CourseLevels = new List<GuidObject2>();
-            CourseCategories = new List<GuidObject2>();
-            InstructionalMethods = new List<GuidObject2>();
-            OwningInstitutionUnits = new List<OwningInstitutionUnit>();
         }
     }
 }

@@ -173,6 +173,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         [TestMethod]
         public async Task RelationshipStatusesController_GetRelationshipStatusesByGuidAsync_ValidateFields()
         {
+            relationshipStatusesController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
             var expected = relationshipStatusesCollection.FirstOrDefault();
             relationshipStatusesServiceMock.Setup(x => x.GetRelationshipStatusesByGuidAsync(expected.Id)).ReturnsAsync(expected);
 

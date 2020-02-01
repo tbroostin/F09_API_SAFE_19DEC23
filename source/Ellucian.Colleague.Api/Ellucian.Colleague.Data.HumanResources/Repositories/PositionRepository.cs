@@ -161,7 +161,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// <param name="startOn">The date when the position is first available</param>
         /// <param name="endOn">The date when the position is last available</param>
         /// <returns>List of Position Entities</returns>
-        public async Task<Tuple<IEnumerable<Position>, int>> GetPositionsAsync(int offset, int limit, string campus = "", string status = "", string bargainingUnit = "",
+        public async Task<Tuple<IEnumerable<Position>, int>> GetPositionsAsync(int offset, int limit, string code = "", string campus = "", string status = "", string bargainingUnit = "",
             List<string> reportsToPositions = null, string exemptionType = "", string compensationType = "", string startOn = "", string endOn = "", bool bypassCache = false)
         {
             try
@@ -271,9 +271,13 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                             break;
                     }
                 }
-                
+                var limitingKeys = new List<string>();
+                if (!string.IsNullOrEmpty(code))
+                {
+                    limitingKeys.Add(code);
+                }
 
-                var positionIds = await DataReader.SelectAsync("POSITION", criteria.ToString());
+                var positionIds = await DataReader.SelectAsync("POSITION", limitingKeys.ToArray(), criteria.ToString());
                 var totalCount = positionIds.Count();
                 Array.Sort(positionIds);
                 var subList = positionIds.Skip(offset).Take(limit).ToArray();

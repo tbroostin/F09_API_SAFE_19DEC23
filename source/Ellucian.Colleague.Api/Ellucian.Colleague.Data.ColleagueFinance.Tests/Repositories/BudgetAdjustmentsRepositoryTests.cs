@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
@@ -41,6 +41,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         private string personId = "0000001";
         private List<string> personIds;
         private List<string> hierarchies;
+        private List<string> majorComponentStartPositions = new List<string>() { "1", "4", "7", "10", "13", "19" };
 
         private IEnumerable<BudgetAdjustmentSummary> budgetAdjustmentSummaries;
         private IEnumerable<BudgetAdjustmentPendingApprovalSummary> budgetAdjustmentPendingApprovalSummaries;
@@ -177,7 +178,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             adjustmentInputEntity.NextApprovers = nextApprovers;
             adjustmentInputEntity.Approvers = new List<Approver>();
 
-            var adjustmentOutputEntity = await actualBudgetAdjustmentRepository.CreateAsync(adjustmentInputEntity);
+            var adjustmentOutputEntity = await actualBudgetAdjustmentRepository.CreateAsync(adjustmentInputEntity, majorComponentStartPositions);
 
             Assert.AreEqual(this.journalNumber, adjustmentOutputEntity.Id);
             Assert.AreEqual(adjustmentInputEntity.TransactionDate, adjustmentOutputEntity.TransactionDate);
@@ -237,7 +238,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             deleteDraftResponse.AErrorCode = "MissingRecord";
             deleteDraftResponse.AErrorMessage = "Record Locked - unable to delete DRAFT.BUDGET.ENTRIES record for ID = <V.A.DRAFT.BE.ID>";
 
-            var adjustmentOutputEntity = await actualBudgetAdjustmentRepository.CreateAsync(adjustmentInputEntity);
+            var adjustmentOutputEntity = await actualBudgetAdjustmentRepository.CreateAsync(adjustmentInputEntity, majorComponentStartPositions);
 
             Assert.AreEqual(journalNumber, adjustmentOutputEntity.Id);
             Assert.AreEqual(transactionDate, adjustmentOutputEntity.TransactionDate);
@@ -286,7 +287,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             var adjustmentInputEntity = new BudgetAdjustment(transactionDate, reason, personId, adjustmentLines);
             adjustmentInputEntity.Initiator = initiator;
             adjustmentInputEntity.Comments = comments;
-            var adjustmentOutputEntity = await actualBudgetAdjustmentRepository.CreateAsync(adjustmentInputEntity);
+            var adjustmentOutputEntity = await actualBudgetAdjustmentRepository.CreateAsync(adjustmentInputEntity, majorComponentStartPositions);
 
             foreach (var errorMessage in budgetAdjustmentResponse.AlMessage)
             {
@@ -336,7 +337,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             adjustmentInputEntity.Comments = comments;
             adjustmentInputEntity.NextApprovers = nextApprovers;
 
-            var adjustmentOutputEntity = await actualBudgetAdjustmentRepository.UpdateAsync(adjustmentInputEntity.Id, adjustmentInputEntity);
+            var adjustmentOutputEntity = await actualBudgetAdjustmentRepository.UpdateAsync(adjustmentInputEntity.Id, adjustmentInputEntity, majorComponentStartPositions);
 
             Assert.AreEqual(this.journalNumber, adjustmentOutputEntity.Id);
             Assert.AreEqual(transactionDate, adjustmentOutputEntity.TransactionDate);
@@ -386,7 +387,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             var adjustmentInputEntity = new BudgetAdjustment(id, transactionDate, reason, personId, adjustmentLines);
             adjustmentInputEntity.Initiator = initiator;
             adjustmentInputEntity.Comments = comments;
-            var adjustmentOutputEntity = await actualBudgetAdjustmentRepository.UpdateAsync(adjustmentInputEntity.Id, adjustmentInputEntity);
+            var adjustmentOutputEntity = await actualBudgetAdjustmentRepository.UpdateAsync(adjustmentInputEntity.Id, adjustmentInputEntity, majorComponentStartPositions);
 
             foreach (var errorMessage in budgetAdjustmentResponse.AlMessage)
             {
@@ -428,7 +429,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             var adjustmentInputEntity = new BudgetAdjustment(transactionDate, reason, personId, adjustmentLines);
             adjustmentInputEntity.Initiator = initiator;
             adjustmentInputEntity.Comments = comments;
-            var adjustmentOutputEntity = await actualBudgetAdjustmentRepository.UpdateAsync(id, adjustmentInputEntity);
+            var adjustmentOutputEntity = await actualBudgetAdjustmentRepository.UpdateAsync(id, adjustmentInputEntity, majorComponentStartPositions);
         }
 
         [TestMethod]
@@ -440,7 +441,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
             BudgetAdjustment adjustmentInputEntity = null;
 
-            var adjustmentOutputEntity = await actualBudgetAdjustmentRepository.UpdateAsync(id, adjustmentInputEntity);
+            var adjustmentOutputEntity = await actualBudgetAdjustmentRepository.UpdateAsync(id, adjustmentInputEntity, majorComponentStartPositions);
         }
 
         #endregion

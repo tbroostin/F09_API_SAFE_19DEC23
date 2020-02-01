@@ -839,9 +839,16 @@ namespace Ellucian.Colleague.Api.Controllers.FinancialAid
                 var awardLetterDto = await awardLetterService.GetAwardLetterById2Async(studentId, awardLetterId);
                 if (awardLetterDto == null) throw new KeyNotFoundException();
 
+                var reportPath = "";
                 //get Path of the .rdlc template
-                var reportPath = HttpContext.Current.Server.MapPath("~/Reports/FinancialAid/AwardLetter3.rdlc");
-
+                if (awardLetterDto.AwardLetterHistoryType == "OLTR")
+                {
+                    reportPath = HttpContext.Current.Server.MapPath("~/Reports/FinancialAid/ConfigurableOfferLetter.rdlc");
+                }
+                else
+                {
+                    reportPath = HttpContext.Current.Server.MapPath("~/Reports/FinancialAid/AwardLetter3.rdlc");
+                }
                 //get the path of the school's logo
                 var reportLogoPath = string.Empty;
                 if (!string.IsNullOrEmpty(apiSettings.ReportLogoPath))

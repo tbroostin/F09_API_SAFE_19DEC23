@@ -13,7 +13,7 @@ namespace Ellucian.Colleague.Dtos
     /// The standard method of paying employees. 
     /// </summary>
     [JsonObject(MemberSerialization.OptIn)]
-    public class PayClasses2 : CodeItem2
+    public class PayClasses2 : FilterCodeItem2
     {    
         /// <summary>
        /// The number of pays per year employees are scheduled to receive.

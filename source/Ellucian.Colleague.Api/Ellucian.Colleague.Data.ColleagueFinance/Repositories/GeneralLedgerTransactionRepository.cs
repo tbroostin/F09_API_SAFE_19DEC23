@@ -546,7 +546,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 var exception = new RepositoryException(errorMessage);
                 foreach (var errMsg in updateResponse.CreateGlPostingError)
                 {
-                    exception.AddError(new RepositoryError(errMsg.ErrorCodes, errMsg.ErrorMessages));
+                    exception.AddError(new RepositoryError(string.IsNullOrEmpty(errMsg.ErrorCodes) ? "" : errMsg.ErrorCodes, errMsg.ErrorMessages));
                     errorMessage += string.Join(Environment.NewLine, errMsg.ErrorMessages);
                 }
                 logger.Error(errorMessage.ToString());
@@ -837,11 +837,15 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             // If there is any error message - throw an exception 
             if (!string.IsNullOrEmpty(updateResponse.Error) && !updateResponse.Error.Equals("0", StringComparison.OrdinalIgnoreCase))
             {
-                var errorMessage = string.Format("Error(s) occurred updating general-ledger-transactions for id: '{0}'.", request.PostingGuid);
+                var errorMessage = "Error(s) occurred updating general-ledger-transactions";
                 var exception = new RepositoryException(errorMessage);
                 foreach (var errMsg in updateResponse.CreateGlPostingError)
                 {
-                    exception.AddError(new RepositoryError(errMsg.ErrorCodes, errMsg.ErrorMessages));
+                    exception.AddError(new RepositoryError("Create.Update.Exception", string.Concat(errMsg.ErrorCodes, " ", errMsg.ErrorMessages))
+                    {
+                        Id = updateResponse.PostingGuid,
+                        SourceId = updateResponse.PostingId
+                    });
                     errorMessage += string.Join(Environment.NewLine, errMsg.ErrorMessages);
                 }
                 logger.Error(errorMessage.ToString());

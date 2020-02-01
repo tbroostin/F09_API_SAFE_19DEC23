@@ -1,5 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates
-
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Transactions;
@@ -42,6 +41,13 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         private IEnumerable<SectionStatusCode> _sectionStatusCodes;
         private Data.Base.DataContracts.IntlParams internationalParameters;
         //private IEnumerable<CourseCategory> _courseCategories;
+        private RepositoryException exception;
+        private bool addToErrorCollection = false;
+
+        const int SectionMeetingCacheTimeout = 20; // Clear from cache every 20 minutes
+        const int SectionInstructorCacheTimeout = 20;
+        const string AllSectionInstructorCache = "AllSectionInstructor";
+
 
         private async Task<IEnumerable<SectionStatusCode>> GetSectionStatusCodesAsync()
         {
@@ -231,7 +237,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             }
                             catch (Exception ex)
                             {
-                                LogDataError("ampus calendar", calendarData.Recordkey, calendarData, ex);
+                                LogDataError("Campus calendar", calendarData.Recordkey, calendarData, ex);
                                 throw new KeyNotFoundException("Calendar record not found for ID " + coreParameters.DfltsCampusCalendar);
                             }
 
@@ -239,7 +245,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         }
                         else
                         {
-                            throw new ArgumentException("Core Parameters does not have a dafault campus calendar id defined.");
+                            throw new ArgumentException("Core Parameters does not have a default campus calendar id defined.");
                         }
                     }, Level1CacheTimeoutValue);
             }
@@ -274,6 +280,87 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         const string SectionMeetingInstancesCache = "SectionMeetingInstances_";
         const int sectionMeetingInstanceCacheTimeout = 20; // Rebuild every 20 minutes
 
+        // setting for AllSections Cache
+        const string AllSectionsCache = "AllSections";
+        const int AllSectionsCacheTimeout = 20; // Clear from cache every 20 minutes
+
+        /// <summary>
+        /// Get a <see cref="SectionWaitlist"/> for a given course section ID
+        /// </summary>
+        /// <param name="sectionId">Course section ID</param>
+        /// <returns>A <see cref="SectionWaitlist"/></returns>
+        public async Task<SectionWaitlist> GetSectionWaitlistAsync(string sectionId)
+        {
+            if (string.IsNullOrEmpty(sectionId))
+            {
+                throw new ArgumentNullException("sectionId", "Cannot build a section waitlist without a course section ID.");
+            }
+            List<WaitList> waitlistStudents = await GetWaitListsAsync(new List<string>() { sectionId });
+
+            SectionWaitlist sectionWailitst = new SectionWaitlist(sectionId);
+
+            foreach (var item in waitlistStudents)
+            {
+                string waitListStatusValcode = await GetWaitlistStatusActionCodeAsync(item.WaitStatus);
+                /* Waitlist status val codes
+                 * 1. Active
+                 * 4. Permission to register
+                 */
+                if (!string.IsNullOrEmpty(waitListStatusValcode) && (waitListStatusValcode == "1" || waitListStatusValcode == "4"))
+                    sectionWailitst.AddStudentId(item.WaitStudent);
+            }
+
+            return sectionWailitst;
+        }
+
+
+        /// <summary>
+        /// Get a list of<see cref="SectionWaitlist"/> for a given course section ID
+        /// </summary>
+        /// <param name="sectionId">Course section ID</param>
+        /// <returns>A list of<see cref="SectionWaitlist"/></returns>
+        public async Task<IEnumerable<SectionWaitlistStudent>> GetSectionWaitlist2Async(string sectionId)
+        {
+            if (string.IsNullOrEmpty(sectionId))
+            {
+                throw new ArgumentNullException("sectionId", "Cannot build a section waitlist without a course section ID.");
+            }
+            List<WaitList> waitlistStudents = await GetWaitListsAsync(new List<string>() { sectionId });
+            List<SectionWaitlistStudent> WaitlistDetails = new List<SectionWaitlistStudent>();
+            int rank = 0;
+            var stwebSettings = await GetStwebDefaultsAsync();
+            List<string> nonActiveStudentsStatuses = new List<string>();
+            if (stwebSettings != null)
+            {
+                nonActiveStudentsStatuses = stwebSettings.StwebShowOthWaitStatuses;
+            }
+
+            if (waitlistStudents != null && waitlistStudents.Any())
+            {
+                var waitlist = waitlistStudents.Where(ws => ws != null).OrderByDescending(s => s.WaitRating).ThenBy(s => s.WaitStatusDate).ThenBy(s => s.WaitTime);
+                foreach (var item in waitlist)
+                {
+                    string waitListStatusValcode = await GetWaitlistStatusActionCodeAsync(item.WaitStatus);
+                    /* Waitlist status val codes
+                     * 1. Active
+                     * 4. Permission to register
+                     */                    
+                    if (!string.IsNullOrEmpty(waitListStatusValcode) && (waitListStatusValcode == "1" || waitListStatusValcode == "4"))
+                    {
+                        rank++;
+                        SectionWaitlistStudent sectionWaitlist = new SectionWaitlistStudent(item.WaitCourseSection, item.WaitStudent, rank, item.WaitRating, waitListStatusValcode, item.WaitStatusDate, item.WaitTime);
+                        WaitlistDetails.Add(sectionWaitlist);
+                    }
+                   else if(nonActiveStudentsStatuses.Count() > 0 && nonActiveStudentsStatuses.Contains(item.WaitStatus))
+                    {                        
+                        SectionWaitlistStudent sectionWaitlist = new SectionWaitlistStudent(item.WaitCourseSection, item.WaitStudent, 0, 0, waitListStatusValcode, item.WaitStatusDate, item.WaitTime);
+                        WaitlistDetails.Add(sectionWaitlist);
+                    }
+
+                }
+            }
+            return WaitlistDetails;
+        }
 
         /// <summary>
         /// Get a <see cref="SectionRoster"/> for a given course section ID
@@ -301,7 +388,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             if (courseSection.SecFaculty != null)
             {
                 // Remove null/empty IDs from list of records to read
-                string[] sanitizedCsfIds = courseSection.SecFaculty.Where(csf => !string.IsNullOrEmpty(csf)).ToArray();
+                string[] sanitizedCsfIds = courseSection.SecFaculty.Where(csf => !string.IsNullOrEmpty(csf)).Distinct().ToArray();
 
                 // Read COURSE.SEC.FACULTY records
                 Collection<CourseSecFaculty> courseSecFacultys = await DataReader.BulkReadRecordAsync<CourseSecFaculty>(sanitizedCsfIds);
@@ -318,7 +405,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 {
                     string message = string.Format("Unable to retrieve COURSE.SEC.FACULTY data for IDs: {0}", String.Join(", ", missingCourseSecFacultys));
                     logger.Error(message);
-                    throw new KeyNotFoundException(message);
                 }
 
                 // Extract faculty IDs from STUDENT.COURSE.SEC records
@@ -342,7 +428,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             if (courseSection.SecActiveStudents != null)
             {
                 // Remove null/empty IDs from list of records to read
-                string[] sanitizedScsIds = courseSection.SecActiveStudents.Where(sas => !string.IsNullOrEmpty(sas)).ToArray();
+                string[] sanitizedScsIds = courseSection.SecActiveStudents.Where(sas => !string.IsNullOrEmpty(sas)).Distinct().ToArray();
 
                 // Read STUDENT.COURSE.SEC records
                 Collection<StudentCourseSec> studentCourseSecs = await DataReader.BulkReadRecordAsync<StudentCourseSec>(sanitizedScsIds);
@@ -359,7 +445,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 {
                     string message = string.Format("Unable to retrieve STUDENT.COURSE.SECTION data for IDs: {0}", String.Join(", ", missingStudentCourseSecs));
                     logger.Error(message);
-                    throw new KeyNotFoundException(message);
                 }
 
                 // Extract student IDs from STUDENT.COURSE.SEC records
@@ -491,7 +576,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 var exception = new RepositoryException("Errors encountered while deleting sectioncrosslist " + id);
                 foreach (var error in response.DeleteCrossListErrors)
                 {
-                    exception.AddError(new RepositoryError(error.ErrorCode, error.ErrorMsg));
+                    exception.AddError(new RepositoryError(string.IsNullOrEmpty(error.ErrorCode) ? "" : error.ErrorCode, error.ErrorMsg));
                 }
                 throw exception;
             }
@@ -821,6 +906,23 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         }
 
         /// <summary>
+        /// Get a single section using a GUID
+        /// </summary>
+        /// <param name="guid">The GUID</param>
+        /// <returns>The section</returns>
+        public async Task<Section> GetSectionByGuid2Async(string guid, bool addToErrorCollection = false)
+        {
+            this.addToErrorCollection = addToErrorCollection;
+
+            var section = await GetSectionByGuidAsync(guid);
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
+            return section;
+        }
+
+        /// <summary>
         /// Get a list of sections using criteria
         /// </summary>
         /// <returns>A list of sections Entities</returns>
@@ -865,16 +967,125 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             string subject = "", List<string> instructors = null, string scheduleTermId = "")
         {
             IEnumerable<Section> sections = new List<Section>();
-            string[] limitingKeys = null;
+            int totalCount = 0;
+            string[] subList = null;
+           
+            string sectionsCacheKey = CacheSupport.BuildCacheKey(AllSectionsCache, title, startDate, endDate, code, number, learningProvider, termId,
+                reportingTermId, academicLevels, course, location, status, departments, subject, instructors, scheduleTermId);
 
+            var keyCacheObject = await CacheSupport.GetOrAddKeyCacheToCache(
+                   this,
+                   ContainsKey,
+                   GetOrAddToCacheAsync,
+                   AddOrUpdateCacheAsync,
+                   transactionInvoker,
+                   sectionsCacheKey,
+                   "COURSE.SECTIONS",
+                   offset,
+                   limit,
+                   SectionMeetingCacheTimeout,
+                   async () =>
+                   {
+                       var keys = new List<string>();        
+                       var sectionTuple = await GetSectionsForFiltersAsync(title, startDate, endDate, code, number, learningProvider, termId, reportingTermId, 
+                                                                    academicLevels, course, location, status, departments, subject, instructors, scheduleTermId);
+                       if (sectionTuple != null)
+                       {                          
+                           return sectionTuple;
+                       }
+                       return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                   }
+            );
+
+            if (keyCacheObject == null || keyCacheObject.Sublist == null || !keyCacheObject.Sublist.Any())
+            {
+                return new Tuple<IEnumerable<Section>, int>(sections, 0);
+            }
+
+            subList = keyCacheObject.Sublist.ToArray();
+            totalCount = keyCacheObject.TotalCount.Value;
+            var sectionData = await DataReader.BulkReadRecordAsync<CourseSections>("COURSE.SECTIONS", subList);
+
+            sections = await BuildNonCachedSectionsAsync(sectionData.ToList());
+
+            return new Tuple<IEnumerable<Section>, int>(sections, totalCount);
+        }
+
+        /// <summary>
+        /// Get a list of sections using criteria
+        /// </summary>
+        /// <returns>A list of sections Entities</returns>
+        public async Task<Tuple<IEnumerable<Section>, int>> GetSections2Async(int offset, int limit, string title = "", string startDate = "", string endDate = "",
+            string code = "", string number = "", string learningProvider = "", string termId = "", string reportingTermId = "",
+            List<string> academicLevels = null, string course = "", string location = "", string status = "", List<string> departments = null,
+            string subject = "", List<string> instructors = null, string scheduleTermId = "", bool addToCollection = false)
+        {
+            IEnumerable<Section> sections = new List<Section>();
+            int totalCount = 0;
+            string[] subList = null;
+
+            this.addToErrorCollection = addToCollection;
+
+            string sectionsCacheKey = CacheSupport.BuildCacheKey(AllSectionsCache, title, startDate, endDate, code, number, learningProvider, termId,
+                reportingTermId, academicLevels, course, location, status, departments, subject, instructors, scheduleTermId);
+
+            var keyCacheObject = await CacheSupport.GetOrAddKeyCacheToCache(
+                    this,
+                    ContainsKey,
+                    GetOrAddToCacheAsync,
+                    AddOrUpdateCacheAsync,
+                    transactionInvoker,
+                    sectionsCacheKey,
+                    "COURSE.SECTIONS",
+                    offset,
+                    limit,
+                    SectionMeetingCacheTimeout,
+                    async () =>
+                    {
+                        var keys = new List<string>();
+
+                        var sectionTuple = await GetSectionsForFiltersAsync(title, startDate, endDate, code, number, learningProvider, termId, reportingTermId,
+                                                                        academicLevels, course, location, status, departments, subject, instructors, scheduleTermId);
+                        if (sectionTuple != null)
+                        {                            
+                            return sectionTuple;
+                        }
+                        return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                    }
+            );
+
+            if (keyCacheObject == null || keyCacheObject.Sublist == null || !keyCacheObject.Sublist.Any())
+            {
+                return new Tuple<IEnumerable<Section>, int>(sections, 0);
+            }
+
+            subList = keyCacheObject.Sublist.ToArray();
+            totalCount = keyCacheObject.TotalCount.Value;
+            var sectionData = await DataReader.BulkReadRecordAsync<CourseSections>("COURSE.SECTIONS", subList);
+
+            sections = await BuildNonCachedSectionsAsync(sectionData.ToList());
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
+            return new Tuple<IEnumerable<Section>, int>(sections, totalCount);
+        }
+
+        private async Task<CacheSupport.KeyCacheRequirements> GetSectionsForFiltersAsync(string title = "", string startDate = "", string endDate = "",
+            string code = "", string number = "", string learningProvider = "", string termId = "", string reportingTermId = "",
+            List<string> academicLevels = null, string course = "", string location = "", string status = "", List<string> departments = null,
+            string subject = "", List<string> instructors = null, string scheduleTermId = "")
+        { 
+            string[] limitingKeys = null;
             string criteria = "";
+          
             // If we have a course, then select the limited list from the COURSES record first
             if (!string.IsNullOrEmpty(course))
             {
                 limitingKeys = await DataReader.SelectAsync("COURSES", new string[] { course }, "BY.EXP CRS.SECTIONS SAVING CRS.SECTIONS");
                 if (limitingKeys == null || !limitingKeys.Any())
                 {
-                    return new Tuple<IEnumerable<Section>, int>(sections, 0);
+                    return new CacheSupport.KeyCacheRequirements() { criteria = string.Empty, limitingKeys = new List<string>(), NoQualifyingRecords = true };
                 }
             }
             // Process all indexes first, starting with term
@@ -901,7 +1112,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 limitingKeys = await DataReader.SelectAsync("COURSE.SECTIONS", limitingKeys, criteria);
                 if (limitingKeys == null || !limitingKeys.Any())
                 {
-                    return new Tuple<IEnumerable<Section>, int>(sections, 0);
+                    return new CacheSupport.KeyCacheRequirements() { criteria = string.Empty, limitingKeys = new List<string>(), NoQualifyingRecords = true };
                 }
                 criteria = "";
             }
@@ -928,7 +1139,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 limitingKeys = await DataReader.SelectAsync("COURSE.SECTIONS", limitingKeys, criteria);
                 if (limitingKeys == null || !limitingKeys.Any())
                 {
-                    return new Tuple<IEnumerable<Section>, int>(sections, 0);
+                    return new CacheSupport.KeyCacheRequirements() { criteria = criteria, limitingKeys = new List<string>(), NoQualifyingRecords = true };
                 }
                 criteria = "";
             }
@@ -943,7 +1154,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 limitingKeys = await DataReader.SelectAsync("COURSE.SECTIONS", limitingKeys, criteria);
                 if (limitingKeys == null || !limitingKeys.Any())
                 {
-                    return new Tuple<IEnumerable<Section>, int>(sections, 0);
+                    return new CacheSupport.KeyCacheRequirements() { criteria = string.Empty, limitingKeys = new List<string>(), NoQualifyingRecords = true };
                 }
                 criteria = "";
             }
@@ -959,7 +1170,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 limitingKeys = await DataReader.SelectAsync("COURSE.SECTIONS", limitingKeys, criteria);
                 if (limitingKeys == null || !limitingKeys.Any())
                 {
-                    return new Tuple<IEnumerable<Section>, int>(sections, 0);
+                    return new CacheSupport.KeyCacheRequirements() { criteria = string.Empty, limitingKeys = new List<string>(), NoQualifyingRecords = true };
                 }
                 criteria = "";
             }
@@ -970,11 +1181,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     criteria += " AND ";
                 }
                 // index on SEC.NAME but using LIKE here
-                criteria += "WITH SEC.NAME LIKE '..." + code + "...'";
+                criteria += string.Concat("WITH SEC.NAME LIKE ", '"', "...'", code, "'...", '"');
                 limitingKeys = await DataReader.SelectAsync("COURSE.SECTIONS", limitingKeys, criteria);
                 if (limitingKeys == null || !limitingKeys.Any())
                 {
-                    return new Tuple<IEnumerable<Section>, int>(sections, 0);
+                    return new CacheSupport.KeyCacheRequirements() { criteria = string.Empty, limitingKeys = new List<string>(), NoQualifyingRecords = true };
                 }
                 criteria = "";
             }
@@ -990,7 +1201,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 limitingKeys = await DataReader.SelectAsync("COURSE.SECTIONS", limitingKeys, criteria);
                 if (limitingKeys == null || !limitingKeys.Any())
                 {
-                    return new Tuple<IEnumerable<Section>, int>(sections, 0);
+                    return new CacheSupport.KeyCacheRequirements() { criteria = string.Empty, limitingKeys = new List<string>(), NoQualifyingRecords = true };
                 }
                 criteria = "";
             }
@@ -1032,7 +1243,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 {
                     criteria += " AND ";
                 }
-                criteria += "WITH SEC.SHORT.TITLE LIKE '..." + title + "...'";
+                criteria += string.Concat("WITH SEC.SHORT.TITLE LIKE ", '"', "...'", title, "'...", '"');
             }
             if (!string.IsNullOrEmpty(endDate))
             {
@@ -1043,7 +1254,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
                 criteria += "WITH SEC.END.DATE NE '' AND SEC.END.DATE LE '" + endDate + "'";
             }
-
             if (academicLevels != null && academicLevels.Any())
             {
                 if (criteria != "")
@@ -1061,7 +1271,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     i++;
                 }
             }
-
             if (departments != null && departments.Any())
             {
                 if (criteria != "")
@@ -1104,7 +1313,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         instructorKeys = await DataReader.SelectAsync("COURSE.SECTIONS", limitingKeys, criteria);
                         if (instructorKeys == null || !instructorKeys.Any())
                         {
-                            return new Tuple<IEnumerable<Section>, int>(sections, 0);
+                            return new CacheSupport.KeyCacheRequirements() { criteria = string.Empty, limitingKeys = new List<string>(), NoQualifyingRecords = true };
                         }
                         criteria = "";
                     }
@@ -1113,7 +1322,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     var courseSecFacultyIds = await DataReader.SelectAsync("COURSE.SEC.FACULTY", instructorKeys, instructorCriteria);
                     if (courseSecFacultyIds == null || !courseSecFacultyIds.Any())
                     {
-                        return new Tuple<IEnumerable<Section>, int>(sections, 0);
+                        return new CacheSupport.KeyCacheRequirements() { criteria = string.Empty, limitingKeys = new List<string>(), NoQualifyingRecords = true };
                     }
                     // build list of COURSE.SEC.FACULTY records with all instructors assigned
                     // so, if we have 2 or more instructors in the filter, then only sections taught
@@ -1132,7 +1341,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                         if (limitingKeys == null || !limitingKeys.Any())
                         {
-                            return new Tuple<IEnumerable<Section>, int>(sections, 0);
+                            return new CacheSupport.KeyCacheRequirements() { criteria = string.Empty, limitingKeys = new List<string>(), NoQualifyingRecords = true };
                         }
                     }
                     else
@@ -1140,30 +1349,35 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         limitingKeys = await DataReader.SelectAsync("COURSE.SEC.FACULTY", courseSecFacultyIds, "SAVING UNIQUE CSF.COURSE.SECTION");
                         if (limitingKeys == null || !limitingKeys.Any())
                         {
-                            return new Tuple<IEnumerable<Section>, int>(sections, 0);
+                            return new CacheSupport.KeyCacheRequirements() { criteria = string.Empty, limitingKeys = new List<string>(), NoQualifyingRecords = true };
                         }
                     }
                 }
             }
 
             //execute existing criteria to limit potential sections
-            var sectionIds = await DataReader.SelectAsync("COURSE.SECTIONS", limitingKeys, criteria);
+            //sectionIds = await DataReader.SelectAsync("COURSE.SECTIONS", limitingKeys, criteria);
+            return new CacheSupport.KeyCacheRequirements() { criteria = criteria, limitingKeys = limitingKeys != null && limitingKeys.Any()? limitingKeys.ToList() : null, NoQualifyingRecords = false };
+        }
 
-            if (sectionIds == null || !sectionIds.Any())
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="offset"></param>
+        /// <param name="limit"></param>
+        /// <param name="searchable"></param>
+        /// <param name="addToCollection"></param>
+        /// <returns></returns>
+        public async Task<Tuple<IEnumerable<Section>, int>> GetSectionsSearchable1Async(int offset, int limit,
+            string searchable, bool addToCollection = false)
+        {
+            this.addToErrorCollection = addToCollection;
+            var sections = await GetSectionsSearchableAsync(offset, limit, searchable);
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
             {
-                return new Tuple<IEnumerable<Section>, int>(sections, 0);
+                throw exception;
             }
-            
-            int totalCount = sectionIds.Count();
-
-            Array.Sort(sectionIds);
-
-            var subList = sectionIds.Skip(offset).Take(limit).ToArray();
-            var sectionData = await DataReader.BulkReadRecordAsync<CourseSections>("COURSE.SECTIONS", subList);
-
-            sections = await BuildNonCachedSectionsAsync(sectionData.ToList());
-
-            return new Tuple<IEnumerable<Section>, int>(sections, totalCount);
+            return sections;
         }
 
         /// <summary>        
@@ -1174,8 +1388,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <param name="searchable">Check if a section is searchable or hidden.  Required.</param>
         /// <returns>IEnumerable Sections domain entity</returns>  
         public async Task<Tuple<IEnumerable<Section>, int>> GetSectionsSearchableAsync(int offset, int limit,
-            string searchable)
+        string searchable)
         {
+
             IEnumerable<Section> sections = new List<Section>();
             string criteria = "";
             var totalCount = 0;
@@ -1183,12 +1398,12 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             if (string.IsNullOrWhiteSpace(searchable))
             {
-                throw new ArgumentNullException("searchable is a required field. ");
+                throw new ArgumentNullException("searchable is a required field.");
             }
             var stwebDefaults = await GetStwebDefaultsAsync();
             if (stwebDefaults == null)
             {
-                throw new Exception("Unable to access STWEB.DEFAULTS values");
+                throw new Exception("Unable to access STWEB.DEFAULTS values.");
 
             }
             var stwebRegTermsAllowed = string.Empty;
@@ -1393,7 +1608,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return new Tuple<IEnumerable<Section>, int>(sections, totalCount);
         }
 
-
         private async Task<Dictionary<string, string>> GetRegControlsIdsAsync(IEnumerable<string> ids)
         {
             var regControlsIdsDict = new Dictionary<string, string>();
@@ -1441,6 +1655,27 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return ldmdRegUsersId;
         }
 
+        /// <summary>
+        /// EEDM method to catch all errors for standards.
+        /// </summary>
+        /// <param name="offset"></param>
+        /// <param name="limit"></param>
+        /// <param name="keyword"></param>
+        /// <param name="bypassCache"></param>
+        /// <param name="caseSensitive"></param>
+        /// <param name="addToCollection"></param>
+        /// <returns></returns>
+        public async Task<Tuple<IEnumerable<Section>, int>> GetSectionsKeyword1Async(int offset, int limit, string keyword, bool bypassCache = false, bool caseSensitive = false, 
+            bool addToCollection = false)
+        {
+            this.addToErrorCollection = addToCollection;
+            var sections = await GetSectionsKeywordAsync(offset, limit, keyword, bypassCache);
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
+            return sections;
+        }
         /// <summary>        
         /// Get an IEnumerable Sections domain entity using keyword search criteria
         /// </summary>
@@ -1460,7 +1695,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             if (string.IsNullOrEmpty(keyword))
             {
-                throw new ArgumentNullException("Must provide a keyword for section search");
+                throw new ArgumentNullException("Must provide a keyword for section search.");
             }
             keyword = caseSensitive ? keyword : keyword.ToLower();
 
@@ -1583,7 +1818,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             sectionData.AddRange(bulkData);
 
             sections = await BuildNonCachedSectionsAsync(sectionData);
-
 
             return new Tuple<IEnumerable<Section>, int>(sections, totalCount);
         }
@@ -2249,6 +2483,83 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 return new Tuple<IEnumerable<StudentSectionWaitlist>, int>(new List<StudentSectionWaitlist>(), 0);
             }
         }
+        /// <summary>
+        /// To get the waitlist details based on the section and student id
+        /// Sends back the details on rank and rating of the waitlisted student for the section along with the config details of show rank and show rating
+        /// </summary>
+        /// <param name="sectionId"> section Id </param>
+        /// <param name="studentId"> student Id </param>
+        /// <returns>StudentSectionWaitlistInfo</returns>
+        public async Task<StudentSectionWaitlistInfo> GetStudentSectionWaitlistsByStudentAndSectionIdAsync(string sectionId, string studentId)
+        {
+            try
+            {
+                StudentSectionWaitlistInfo studentSectionWaitlistInfo = new StudentSectionWaitlistInfo();
+                if (string.IsNullOrEmpty(sectionId))
+                {
+                    throw new ArgumentNullException("sectionId", "Cannot build a section waitlist student without a course section ID.");
+                }
+                if (string.IsNullOrEmpty(studentId))
+                {
+                    throw new ArgumentNullException("studentId", "Cannot build a section waitlist student without a student ID.");
+                }
+                List<WaitList> waitlistStudents = await GetWaitListsAsync(new List<string>() { sectionId });
+                int rank = 0;
+                //caluclate the rank and assign the rating here
+                if (waitlistStudents != null && waitlistStudents.Any())
+                {
+                    var waitlist = waitlistStudents.Where(ws => ws != null).OrderByDescending(s => s.WaitRating).ThenBy(s => s.WaitStatusDate).ThenBy(s => s.WaitTime);
+                    foreach (var item in waitlist)
+                    {
+                        string waitListStatusValcode = await GetWaitlistStatusActionCodeAsync(item.WaitStatus);
+                        /* Waitlist status val codes
+                         * 1. Active
+                         * 4. Permission to register
+                         */
+                        if (!string.IsNullOrEmpty(waitListStatusValcode) && (waitListStatusValcode == "1" || waitListStatusValcode == "4"))
+                        {
+                            rank++;
+                            if (item.WaitStudent == studentId)
+                            {
+                                studentSectionWaitlistInfo.SectionWaitlistStudent = new SectionWaitlistStudent(sectionId, studentId, rank, item.WaitRating, waitListStatusValcode, item.WaitStatusDate, null);
+                                break;
+                            }
+                        }
+                    }
+                }
+                bool displayRank = false;
+                bool displayRating = false;               
+                var stwebSettings = await GetStwebDefaultsAsync();
+                var query = "WITH COURSE.SECTIONS.ID EQ " + sectionId;
+                Collection<CourseSections> courseSection = await DataReader.BulkReadRecordAsync<CourseSections>("COURSE.SECTIONS", query);
+                int? noOfDaysToEnroll= null;
+                if (stwebSettings != null)
+                {
+                    if (!string.IsNullOrEmpty(stwebSettings.StwebShowWaitlistRank))
+                    {
+                        if (stwebSettings.StwebShowWaitlistRank.ToUpper() == "Y")
+                        {
+                            displayRank = true;
+                        }
+                    }
+                    if (courseSection != null && courseSection.FirstOrDefault() != null && !string.IsNullOrEmpty(stwebSettings.StwebShowWaitlistRating))
+                    {
+                        var courseSec = courseSection.FirstOrDefault();
+                        noOfDaysToEnroll = courseSec.SecWaitlistNoDays;
+                        if (!string.IsNullOrEmpty(courseSec.SecWaitlistRating) && stwebSettings.StwebShowWaitlistRating.ToUpper() == "Y")
+                        {
+                            displayRating = true;
+                        }
+                    }
+                }           
+                studentSectionWaitlistInfo.SectionWaitlistConfig = new SectionWaitlistConfig(sectionId, displayRank, displayRating, noOfDaysToEnroll);
+                return studentSectionWaitlistInfo;
+            }
+            catch (Exception)
+            {               
+                throw;
+            }
+        }
 
         public async Task<StudentSectionWaitlist> GetWaitlistFromGuidAsync(string waitlistGuid)
         {
@@ -2570,6 +2881,29 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return sectionsRequested;
         }
 
+        /// <summary>
+        /// Checks addErrorToCollection boolean to determine of error message should be added to the repository exception
+        /// Note - the exception is not thrown, but is only added to the collection.
+        /// </summary>
+        /// <param name="dataName"></param>
+        /// <param name="id"></param>
+        /// <param name="dataObject"></param>
+        /// <param name="ex"></param>
+        private void LogRepoError(string errorMessage, string guid = "", string sourceId = "")
+        {
+            if (addToErrorCollection)
+            {
+                if (exception == null)
+                    exception = new RepositoryException();
+
+                exception.AddError(new RepositoryError("Bad.Data", errorMessage)
+                {
+                    SourceId = string.IsNullOrEmpty(sourceId) ? "" : sourceId,
+                    Id = string.IsNullOrEmpty(guid) ? "" : guid
+                });
+            }
+        }
+
         private async Task<IEnumerable<Section>> BuildNonCachedSectionsAsync(List<CourseSections> sectionsToBuild, bool bestFit = false)
         {
 
@@ -2610,21 +2944,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 sectionsToBuild = sectionsToBuild.Distinct().ToList();
 
                 // We now have a complete list of sections to build - pull additional data.
-                var meetingIds = sectionsToBuild.Where(cs => cs.SecMeeting != null && cs.SecMeeting.Count > 0).SelectMany(sm => sm.SecMeeting).Distinct().ToList();
-                List<CourseSecMeeting> meetingData = new List<CourseSecMeeting>();
-                if (meetingIds != null && meetingIds.Count > 0)
-                {
-                    meetingData = (await DataReader.BulkReadRecordAsync<CourseSecMeeting>("COURSE.SEC.MEETING", meetingIds.ToArray())).ToList();
-
-                }
+                var meetingIds = sectionsToBuild.Where(cs => cs.SecMeeting != null && cs.SecMeeting.Count > 0).SelectMany(sm => sm.SecMeeting).Distinct().ToArray();
+                var meetingData = await GetCourseSecMeetingAsync(meetingIds);
 
                 var facultyIds = sectionsToBuild.Where(cs => cs.SecFaculty != null && cs.SecFaculty.Count > 0).SelectMany(sf => sf.SecFaculty).Distinct().ToList();
-                Collection<CourseSecFaculty> facultyData = new Collection<CourseSecFaculty>();
-                if (facultyIds != null && facultyIds.Count > 0)
-                {
-                    facultyData = await DataReader.BulkReadRecordAsync<CourseSecFaculty>("COURSE.SEC.FACULTY", facultyIds.ToArray());
-
-                }
+                var facultyData = await GetCourseSecFacultyAsync(facultyIds);
 
                 var studentCourseSecIds = sectionsToBuild.Where(cs => cs.SecActiveStudents != null && cs.SecActiveStudents.Count > 0)
                     .SelectMany(s => s.SecActiveStudents).Distinct().ToList();
@@ -2818,7 +3142,43 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return sectionsSeats;
         }
 
+        public async Task<SectionWaitlistConfig> GetSectionWaitlistConfigAsync(string sectionId)
+        {
+            try
+            {
+                bool displayRank = false;
+                bool displayRating = false;
+                var query = "COURSE.SECTIONS.ID EQ " + sectionId;
+                var stwebSettings = await GetStwebDefaultsAsync();
+                Collection<CourseSections> courseSection = await DataReader.BulkReadRecordAsync<CourseSections>("COURSE.SECTIONS", query);
+                if (stwebSettings != null)
+                {
+                    if (!string.IsNullOrEmpty(stwebSettings.StwebShowWlRankRating))
+                    {
+                        if (stwebSettings.StwebShowWlRankRating.ToUpper() == "Y")
+                        {
+                            displayRank = true;
+                        }
+                    }
+                }
 
+                if (courseSection != null && stwebSettings != null)
+                {
+                    if (!string.IsNullOrEmpty(courseSection.FirstOrDefault().SecWaitlistRating) && stwebSettings.StwebShowWlRankRating.ToUpper() == "Y")
+                    {
+                        displayRating = true;
+                    }
+                }
+
+                SectionWaitlistConfig sectionWaitlistSetting = new SectionWaitlistConfig(sectionId, displayRank, displayRating,null);
+                return sectionWaitlistSetting;
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+
+        }
 
         private async Task<List<WaitList>> GetWaitListsAsync(List<string> sectionsToBuildIds)
         {
@@ -2836,7 +3196,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             return waitlistData;
         }
-
         private async Task<Collection<CourseSecPending>> GetPendingSectionsAsync(List<string> sectionsToBuildIds)
         {
             var pendingData = new Collection<CourseSecPending>();
@@ -2881,14 +3240,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 {
                     foreach (var sectionId in sectionIds)
                     {
-                        if (regSectionsDict.ContainsKey(sectionId))
-                        {
-                            sectionsRequested.Add(regSectionsDict[sectionId]);
-                        }
-                        else
-                        {
-                            sectionsNotFound.Add(sectionId);
-                        }
+                            if (regSectionsDict.ContainsKey(sectionId))
+                            {
+                                sectionsRequested.Add(regSectionsDict[sectionId]);
+                            }
+                            else
+                            {
+                                sectionsNotFound.Add(sectionId);
+                            }                       
                     }
                 }
                 else
@@ -3057,276 +3416,285 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 try
                 {
-                    if (sec.SecStartDate != null)
+
+                    var section = await BuildSectionAsync(sec, bestFit);
+
+                    var secFaculty = new List<CourseSecFaculty>();
+                    if (groupedFaculty.ContainsKey(sec.Recordkey) && groupedFaculty[sec.Recordkey] != null)
                     {
-                        var section = await BuildSectionAsync(sec, bestFit);
+                        secFaculty = groupedFaculty[sec.Recordkey];
+                    }
 
-                        var secFaculty = new List<CourseSecFaculty>();
-                        if (groupedFaculty.ContainsKey(sec.Recordkey) && groupedFaculty[sec.Recordkey] != null)
+                    var courseSecMeetings = new List<CourseSecMeeting>();
+                    if (groupedMeetings.ContainsKey(sec.Recordkey) && groupedMeetings[sec.Recordkey] != null)
+                    {
+                        courseSecMeetings = groupedMeetings[sec.Recordkey];
+                        foreach (var meeting in groupedMeetings[sec.Recordkey])
                         {
-                            secFaculty = groupedFaculty[sec.Recordkey];
-                        }
-
-                        if (groupedMeetings.ContainsKey(sec.Recordkey) && groupedMeetings[sec.Recordkey] != null)
-                        {
-                            foreach (var meeting in groupedMeetings[sec.Recordkey])
+                            try
                             {
-                                try
-                                {
-                                    // For each meeting pattern in Colleague, Instructional method, start date, end date and frequency are all required, thus all
-                                    // are required in constructor. Anything with a missing item will be caught and not included in the section meetings.
-                                    var sectionMeeting = await BuildSectionMeetingAsync(meeting, secFaculty);
-                                    section.AddSectionMeeting(sectionMeeting);
-                                }
-                                catch (Exception ex)
-                                {
-                                    LogDataError("CourseSecMeeting", meeting.Recordkey, meeting, ex);
-                                }
-
+                                // For each meeting pattern in Colleague, Instructional method, start date, end date and frequency are all required, thus all
+                                // are required in constructor. Anything with a missing item will be caught and not included in the section meetings.
+                                var sectionMeeting = await BuildSectionMeetingAsync(meeting, secFaculty);
+                                section.AddSectionMeeting(sectionMeeting);
+                            }
+                            catch (Exception ex)
+                            {
+                                LogDataError("CourseSecMeeting", meeting.Recordkey, meeting, ex);
+                                LogRepoError(ex.Message, string.IsNullOrWhiteSpace(sec.RecordGuid) ? "" : sec.RecordGuid, string.IsNullOrWhiteSpace(sec.Recordkey) ? "" : sec.Recordkey);
                             }
 
                         }
 
-                        if (groupedFaculty.ContainsKey(sec.Recordkey) && groupedFaculty[sec.Recordkey] != null)
+                    }
+
+                    if (groupedFaculty.ContainsKey(sec.Recordkey) && groupedFaculty[sec.Recordkey] != null)
+                    {
+                        foreach (var courseSecFaculty in groupedFaculty[sec.Recordkey])
                         {
-                            foreach (var sf in groupedFaculty[sec.Recordkey])
+                            try
                             {
-                                try
-                                {
-                                    section.AddFaculty(sf.CsfFaculty);
-                                    section.AddSectionFaculty(BuildSectionFaculty(sf));
-                                }
-                                catch (Exception ex)
-                                {
-                                    LogDataError("CourseSecFaculty", sf.Recordkey, sf, ex);
-                                }
+                                section.AddFaculty(courseSecFaculty.CsfFaculty);
+                                var sectionFaculty = BuildSectionFaculty(courseSecFaculty);
+                                var ethosSectionFaculty = BuildEthosSectionFaculty(sectionFaculty, sec, courseSecMeetings);
+                                section.AddSectionFaculty(ethosSectionFaculty);
+                            }
+                            catch (Exception ex)
+                            {
+                                LogDataError("CourseSecFaculty", courseSecFaculty.Recordkey, courseSecFaculty, ex);
+                                LogRepoError(ex.Message, string.IsNullOrWhiteSpace(sec.RecordGuid) ? "" : sec.RecordGuid, string.IsNullOrWhiteSpace(sec.Recordkey) ? "" : sec.Recordkey);
                             }
                         }
+                    }
 
-                        try
-                        {
-                            // Create a dictionary of the instructional methods and associated loads
-                            var sectionInstrMethodLoads = sec.SecContactEntityAssociation.ToDictionary(i => i.SecInstrMethodsAssocMember, i => i.SecLoadAssocMember.GetValueOrDefault());
-                            // Initialize the logger for the section processor service
-                            SectionProcessor.InitializeLogger(logger);
-                            // Call domain service method to update the FacultyRoster MeetingLoadFactor for each Meeting
-                            SectionProcessor.CalculateMeetingLoadFactor(section.Meetings, sectionInstrMethodLoads);
-                        }
-                        catch (Exception ex)
-                        {
-                            logger.Info("Unable to Calculate Meeting Load Factor for section " + section.Id + ": " + ex.Message);
-                        }
+                    try
+                    {
+                        // Create a dictionary of the instructional methods and associated loads
+                        var sectionInstrMethodLoads = sec.SecContactEntityAssociation.ToDictionary(i => i.SecInstrMethodsAssocMember, i => i.SecLoadAssocMember.GetValueOrDefault());
+                        // Initialize the logger for the section processor service
+                        SectionProcessor.InitializeLogger(logger);
+                        // Call domain service method to update the FacultyRoster MeetingLoadFactor for each Meeting
+                        SectionProcessor.CalculateMeetingLoadFactor(section.Meetings, sectionInstrMethodLoads);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.Info("Unable to Calculate Meeting Load Factor for section " + section.Id + ": " + ex.Message);
+                        LogRepoError(ex.Message, string.IsNullOrWhiteSpace(sec.RecordGuid) ? "" : sec.RecordGuid, string.IsNullOrWhiteSpace(sec.Recordkey) ? "" : sec.Recordkey);
+                    }
 
-                        if (groupedRosters.ContainsKey(sec.Recordkey) && groupedRosters[sec.Recordkey] != null)
+                    if (groupedRosters.ContainsKey(sec.Recordkey) && groupedRosters[sec.Recordkey] != null)
+                    {
+                        foreach (var scs in groupedRosters[sec.Recordkey])
                         {
-                            foreach (var scs in groupedRosters[sec.Recordkey])
+                            try
                             {
-                                try
-                                {
-                                    section.AddActiveStudent(scs.StudentIds);
-                                }
-                                catch (Exception ex)
-                                {
-                                    LogDataError("StudentCourseSec", scs.CourseSectionIds, scs, ex);
-                                }
+                                section.AddActiveStudent(scs.StudentIds);
+                            }
+                            catch (Exception ex)
+                            {
+                                LogDataError("StudentCourseSec", scs.CourseSectionIds, scs, ex);
                             }
                         }
+                    }
 
-                        // Compile a list of all section requisites
-                        var requisites = new List<Requisite>();
-                        var sectionRequisites = new List<SectionRequisite>();
+                    // Compile a list of all section requisites
+                    var requisites = new List<Requisite>();
+                    var sectionRequisites = new List<SectionRequisite>();
 
-                        if (await RequisitesConvertedAsync())
+                    if (await RequisitesConvertedAsync())
+                    {
+
+                        // Get the requisite information from the post-conversion data fields in Section
+                        if (sec.SecOverrideCrsReqsFlag == "Y")
                         {
-
-                            // Get the requisite information from the post-conversion data fields in Section
-                            if (sec.SecOverrideCrsReqsFlag == "Y")
+                            // If this flag is true, we bring in the section requisites defined for the section in Colleague.
+                            // If not set, this section inherits course requisites and we ignore any requisites that may be
+                            // defined on the section. It is legitimate that the section could be set to override with 
+                            // no section requisites defined.
+                            section.OverridesCourseRequisites = true;
+                            if (sec.SecReqs != null)
                             {
-                                // If this flag is true, we bring in the section requisites defined for the section in Colleague.
-                                // If not set, this section inherits course requisites and we ignore any requisites that may be
-                                // defined on the section. It is legitimate that the section could be set to override with 
-                                // no section requisites defined.
-                                section.OverridesCourseRequisites = true;
-                                if (sec.SecReqs != null)
-                                {
-                                    foreach (var secReq in sec.SecReqs)
-                                    {
-                                        try
-                                        {
-                                            if (string.IsNullOrEmpty(secReq))
-                                            {
-                                                throw new ArgumentNullException("Cannot build a requisite with a null requisite code.");
-                                            }
-                                            var acadReqmt = requisiteData.Where(r => r.Recordkey == secReq).First();
-                                            RequisiteCompletionOrder completionOrder;
-                                            switch (acadReqmt.AcrReqsTiming)
-                                            {
-                                                case "C":
-                                                    completionOrder = RequisiteCompletionOrder.Concurrent;
-                                                    break;
-                                                case "P":
-                                                    completionOrder = RequisiteCompletionOrder.Previous;
-                                                    break;
-                                                case "E":
-                                                    completionOrder = RequisiteCompletionOrder.PreviousOrConcurrent;
-                                                    break;
-                                                default:
-                                                    throw new ArgumentOutOfRangeException("AcadReqmt requisite completion order is invalid.");
-                                            }
-                                            // Note: in the case of a requisite on a section, the isProtected flag will always be false because it is only
-                                            // applicable on the requisites of a course.
-                                            var req = new Requisite(secReq, (acadReqmt.AcrReqsEnforcement == "RQ") ? true : false, completionOrder, false);
-                                            requisites.Add(req);
-                                        }
-                                        catch (Exception ex)
-                                        {
-                                            logger.Error("Error building requisite " + secReq + " for section " + sec.Recordkey + ": " + ex);
-                                        }
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                // If the section does not override course requisites, ignore any secReqs and set this flag. The API
-                                // needs to know this for validation. If this flag is set to False, course requisites are relevant
-                                // to the section.
-                                section.OverridesCourseRequisites = false;
-                            }
-
-                            // Build the required corequisite section requisites.
-                            if (sec.SecCoreqSecs != null && sec.SecCoreqSecs.Any())
-                            {
-                                // If the number required matches the number of required sections, create a separate requisite for each
-                                int minNoCoreqSecs;
-                                try
-                                {
-                                    minNoCoreqSecs = (sec.SecMinNoCoreqSecs.HasValue && sec.SecMinNoCoreqSecs > 0) ? sec.SecMinNoCoreqSecs.Value : sec.SecCoreqSecs.Count();
-                                }
-                                catch
-                                {
-                                    minNoCoreqSecs = sec.SecCoreqSecs.Count();
-                                }
-                                if (sec.SecCoreqSecs.Any() && sec.SecCoreqSecs.Count() == minNoCoreqSecs)
-                                {
-                                    foreach (var secCoreq in sec.SecCoreqSecs)
-                                    {
-                                        try
-                                        {
-                                            var secReq = new SectionRequisite(secCoreq, true);
-                                            sectionRequisites.Add(secReq);
-                                        }
-                                        catch (Exception ex)
-                                        {
-                                            logger.Error("Error constructing single-section requisite for required section " + secCoreq + " for requiring section " + sec.Recordkey + ": " + ex);
-                                        }
-                                    }
-                                }
-                                else
-                                // Otherwise, create a multi-section requisite treating all the requisite sections as a group, indicating how many in the group are required
+                                foreach (var secReq in sec.SecReqs)
                                 {
                                     try
                                     {
-                                        var secReq = new SectionRequisite(sec.SecCoreqSecs, minNoCoreqSecs);
+                                        if (string.IsNullOrEmpty(secReq))
+                                        {
+                                            throw new ArgumentNullException("Cannot build a requisite with a null requisite code.");
+                                        }
+                                        var acadReqmt = requisiteData.Where(r => r.Recordkey == secReq).First();
+                                        RequisiteCompletionOrder completionOrder;
+                                        switch (acadReqmt.AcrReqsTiming)
+                                        {
+                                            case "C":
+                                                completionOrder = RequisiteCompletionOrder.Concurrent;
+                                                break;
+                                            case "P":
+                                                completionOrder = RequisiteCompletionOrder.Previous;
+                                                break;
+                                            case "E":
+                                                completionOrder = RequisiteCompletionOrder.PreviousOrConcurrent;
+                                                break;
+                                            default:
+                                                throw new ArgumentOutOfRangeException("AcadReqmt requisite completion order is invalid.");
+                                        }
+                                        // Note: in the case of a requisite on a section, the isProtected flag will always be false because it is only
+                                        // applicable on the requisites of a course.
+                                        var req = new Requisite(secReq, (acadReqmt.AcrReqsEnforcement == "RQ") ? true : false, completionOrder, false);
+                                        requisites.Add(req);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        logger.Error("Error building requisite " + secReq + " for section " + sec.Recordkey + ": " + ex);
+                                        LogRepoError(ex.Message, string.IsNullOrWhiteSpace(sec.RecordGuid) ? "" : sec.RecordGuid, string.IsNullOrWhiteSpace(sec.Recordkey) ? "" : sec.Recordkey);
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // If the section does not override course requisites, ignore any secReqs and set this flag. The API
+                            // needs to know this for validation. If this flag is set to False, course requisites are relevant
+                            // to the section.
+                            section.OverridesCourseRequisites = false;
+                        }
+
+                        // Build the required corequisite section requisites.
+                        if (sec.SecCoreqSecs != null && sec.SecCoreqSecs.Any())
+                        {
+                            // If the number required matches the number of required sections, create a separate requisite for each
+                            int minNoCoreqSecs;
+                            try
+                            {
+                                minNoCoreqSecs = (sec.SecMinNoCoreqSecs.HasValue && sec.SecMinNoCoreqSecs > 0) ? sec.SecMinNoCoreqSecs.Value : sec.SecCoreqSecs.Count();
+                            }
+                            catch
+                            {
+                                minNoCoreqSecs = sec.SecCoreqSecs.Count();
+                            }
+                            if (sec.SecCoreqSecs.Any() && sec.SecCoreqSecs.Count() == minNoCoreqSecs)
+                            {
+                                foreach (var secCoreq in sec.SecCoreqSecs)
+                                {
+                                    try
+                                    {
+                                        var secReq = new SectionRequisite(secCoreq, true);
                                         sectionRequisites.Add(secReq);
                                     }
                                     catch (Exception ex)
                                     {
-                                        logger.Error("Error constructing required multi-section requisite for requiring section " + sec.Recordkey + ": " + ex);
+                                        logger.Error("Error constructing single-section requisite for required section " + secCoreq + " for requiring section " + sec.Recordkey + ": " + ex);
                                     }
                                 }
                             }
-
-                            // Build the recommended section requisites
-                            if (sec.SecRecommendedSecs != null && sec.SecRecommendedSecs.Any())
+                            else
+                            // Otherwise, create a multi-section requisite treating all the requisite sections as a group, indicating how many in the group are required
                             {
-                                foreach (var recommendedSection in sec.SecRecommendedSecs)
+                                try
                                 {
-                                    try
-                                    {
-                                        var secreq = new SectionRequisite(recommendedSection, false);
-                                        sectionRequisites.Add(secreq);
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        logger.Error("Error constructing recommended section requisite for section " + sec.Recordkey + ": " + ex);
-                                    }
+                                    var secReq = new SectionRequisite(sec.SecCoreqSecs, minNoCoreqSecs);
+                                    sectionRequisites.Add(secReq);
                                 }
-                            }
-                        }
-
-                        else
-
-                        // Get Requisite data from the pre-conversion data fields on Section
-                        {
-
-                            // Pre-conversion, set override to false. Requisites with a requisite code are always inherited pre-conversion. But
-                            // Course corequisites are not inherited pre-conversion. (Pre-conversion requisites get special treatment in the UI
-                            // so that the course coreqs are always overridden in the UI, even though the requirement-coded requisites are not.)
-                            section.OverridesCourseRequisites = false;
-
-                            // Bring in course and section Corequisites into Requisite form
-                            if (sec.SecCourseCoreqsEntityAssociation != null)
-                            {
-
-                                foreach (var crsCoreq in sec.SecCourseCoreqsEntityAssociation)
+                                catch (Exception ex)
                                 {
-                                    try
-                                    {
-                                        var coreq = new Requisite(crsCoreq.SecCoreqCoursesAssocMember, (crsCoreq.SecCoreqCoursesReqdFlagAssocMember == "Y") ? true : false);
-                                        requisites.Add(coreq);
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        logger.Error("Exception occurred while creating course requisite for section Id " + sec.Recordkey + " requisite course Id " + crsCoreq.SecCoreqCoursesAssocMember + ". Error: " + ex.Message);
-                                    }
+                                    logger.Error("Error constructing required multi-section requisite for requiring section " + sec.Recordkey + ": " + ex);
                                 }
                             }
-                            if (sec.SecCoreqsEntityAssociation != null)
+                        }
+
+                        // Build the recommended section requisites
+                        if (sec.SecRecommendedSecs != null && sec.SecRecommendedSecs.Any())
+                        {
+                            foreach (var recommendedSection in sec.SecRecommendedSecs)
                             {
-                                // Create a separate section requisite for each required/recommended section
-                                var requiredCoreqSections = new List<string>();
-                                var recommendedCoreqSections = new List<string>();
-                                foreach (var secCoreq in sec.SecCoreqsEntityAssociation)
+                                try
                                 {
-                                    try
-                                    {
-                                        // Create the required section requisite
-                                        var coreq = new SectionRequisite(secCoreq.SecCoreqSectionsAssocMember, secCoreq.SecCoreqSecReqdFlagAssocMember == "Y" ? true : false);
-                                        sectionRequisites.Add(coreq);
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        logger.Error("Exception occurred while creating requisite of required sections for section Id " + sec.Recordkey + ". Error: " + ex.Message);
-                                    }
+                                    var secreq = new SectionRequisite(recommendedSection, false);
+                                    sectionRequisites.Add(secreq);
+                                }
+                                catch (Exception ex)
+                                {
+                                    logger.Error("Error constructing recommended section requisite for section " + sec.Recordkey + ": " + ex);
                                 }
                             }
                         }
-                        section.Requisites = requisites;
-                        section.SectionRequisites = sectionRequisites;
+                    }
 
-                        // Add books to section
-                        AddBooksToSection(section, sec, bookOptions);
+                    else
 
-                        // Find reserved seat information.
-                        var pendingSection = new CourseSecPending();
-                        if (pendingData != null)
-                        {
-                            pendingSection = pendingData.Where(ps => ps.Recordkey == section.Id).FirstOrDefault();
-                        }
-                        if (pendingSection != null)
-                        {
-                            section.ReservedSeats = pendingSection.CspReservedSeats;
-                        }
+                    // Get Requisite data from the pre-conversion data fields on Section
+                    {
 
-                        // Add only "active" or "PermissionToRegister" waitlist information to the section.
-                        // Ignore the rest of the waitlist items for now.
-                        List<string> sectionWaitlistStudents = new List<string>();
-                        List<string> sectionPermittedToRegisterStudents = new List<string>();
-                        if (groupedWaitlists.ContainsKey(sec.Recordkey) && groupedWaitlists[sec.Recordkey] != null)
+                        // Pre-conversion, set override to false. Requisites with a requisite code are always inherited pre-conversion. But
+                        // Course corequisites are not inherited pre-conversion. (Pre-conversion requisites get special treatment in the UI
+                        // so that the course coreqs are always overridden in the UI, even though the requirement-coded requisites are not.)
+                        section.OverridesCourseRequisites = false;
+
+                        // Bring in course and section Corequisites into Requisite form
+                        if (sec.SecCourseCoreqsEntityAssociation != null)
                         {
-                            foreach (var wlItem in groupedWaitlists[sec.Recordkey])
+
+                            foreach (var crsCoreq in sec.SecCourseCoreqsEntityAssociation)
                             {
-                                if (!String.IsNullOrEmpty(wlItem.WaitStatus))
+                                try
+                                {
+                                    var coreq = new Requisite(crsCoreq.SecCoreqCoursesAssocMember, (crsCoreq.SecCoreqCoursesReqdFlagAssocMember == "Y") ? true : false);
+                                    requisites.Add(coreq);
+                                }
+                                catch (Exception ex)
+                                {
+                                    logger.Error("Exception occurred while creating course requisite for section Id " + sec.Recordkey + " requisite course Id " + crsCoreq.SecCoreqCoursesAssocMember + ". Error: " + ex.Message);
+                                }
+                            }
+                        }
+                        if (sec.SecCoreqsEntityAssociation != null)
+                        {
+                            // Create a separate section requisite for each required/recommended section
+                            var requiredCoreqSections = new List<string>();
+                            var recommendedCoreqSections = new List<string>();
+                            foreach (var secCoreq in sec.SecCoreqsEntityAssociation)
+                            {
+                                try
+                                {
+                                    // Create the required section requisite
+                                    var coreq = new SectionRequisite(secCoreq.SecCoreqSectionsAssocMember, secCoreq.SecCoreqSecReqdFlagAssocMember == "Y" ? true : false);
+                                    sectionRequisites.Add(coreq);
+                                }
+                                catch (Exception ex)
+                                {
+                                    logger.Error("Exception occurred while creating requisite of required sections for section Id " + sec.Recordkey + ". Error: " + ex.Message);
+                                }
+                            }
+                        }
+                    }
+                    section.Requisites = requisites;
+                    section.SectionRequisites = sectionRequisites;
+
+                    // Add books to section
+                    AddBooksToSection(section, sec, bookOptions);
+                    // Find reserved seat information.
+                    CourseSecPending pendingSection = null;
+                    if (pendingData != null)
+                    {
+                        var matchingPendingSections = pendingData.Where(ps => ps.Recordkey == section.Id);
+                        pendingSection = (matchingPendingSections != null) ? matchingPendingSections.FirstOrDefault() : null;
+                    }
+                    if (pendingSection != null)
+                    {
+                        section.ReservedSeats = pendingSection.CspReservedSeats;
+                    }
+
+                    // Add only "active" or "PermissionToRegister" waitlist information to the section.
+                    // Ignore the rest of the waitlist items for now.
+                    List<string> sectionWaitlistStudents = new List<string>();
+                    List<string> sectionPermittedToRegisterStudents = new List<string>();
+                    if (groupedWaitlists.ContainsKey(sec.Recordkey) && groupedWaitlists[sec.Recordkey] != null)
+                    {
+                        foreach (var wlItem in groupedWaitlists[sec.Recordkey])
+                        {
+                            if (!String.IsNullOrEmpty(wlItem.WaitStatus))
+                            {
+                                try
                                 {
                                     if ((await GetWaitlistStatusAsync(wlItem.WaitStatus)) == WaitlistStatus.WaitingToEnroll)
                                     {
@@ -3338,38 +3706,43 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                         sectionPermittedToRegisterStudents.Add(wlItem.WaitStudent);
                                     }
                                 }
-                            }
-                        }
-                        section.NumberOnWaitlist = sectionWaitlistStudents.Distinct().Count();
-                        section.PermittedToRegisterOnWaitlist = sectionPermittedToRegisterStudents.Distinct().Count();
-
-                        // determine portal site ID, learning provider and provider specific ID for Intelligent Learning Platform
-                        if (!string.IsNullOrEmpty(sec.SecPortalSite))
-                        {
-                            var portalSite = new PortalSites();
-                            if (portalSiteData != null)
-                            {
-                                portalSite = portalSiteData.Where(ps => ps.Recordkey == sec.SecPortalSite).FirstOrDefault();
-                            }
-                            else
-                            {
-                                logger.Info("Warning: No portal site data found.");
-                            }
-
-                            if (portalSite != null)
-                            {
-                                section.LearningProvider = portalSite.PsLearningProvider;
-                                section.LearningProviderSiteId = portalSite.PsPrtlSiteGuid;
-                                if (string.IsNullOrEmpty(section.LearningProvider))
+                                catch(Exception ex)
                                 {
-                                    // if ILP is not licensed, then learning provider is not set in Colleague, and defaults to SHAREPOINT
-                                    section.LearningProvider = "SHAREPOINT";
+                                    LogRepoError(ex.Message, string.IsNullOrWhiteSpace(sec.RecordGuid) ? "" : sec.RecordGuid, string.IsNullOrWhiteSpace(sec.Recordkey) ? "" : sec.Recordkey);
+                                    if (!this.addToErrorCollection)
+                                    {
+                                        throw;
+                                    }
                                 }
                             }
-                            else
+                        }
+                    }
+                    section.NumberOnWaitlist = sectionWaitlistStudents.Distinct().Count();
+                    section.PermittedToRegisterOnWaitlist = sectionPermittedToRegisterStudents.Distinct().Count();
+
+                    // determine portal site ID, learning provider and provider specific ID for Intelligent Learning Platform
+                    if (!string.IsNullOrEmpty(sec.SecPortalSite))
+                    {
+                        PortalSites portalSite = null;
+                        if (portalSiteData != null)
+                        {
+                            var matchingPortalSites = portalSiteData.Where(ps => ps.Recordkey == sec.SecPortalSite);
+                            portalSite = (matchingPortalSites != null) ? matchingPortalSites.FirstOrDefault() : null;
+                        }
+                        else
+                        {
+                            logger.Info("Warning: No portal site data found.");
+                            LogRepoError("Warning: No portal site data found.", string.IsNullOrWhiteSpace(sec.RecordGuid) ? "" : sec.RecordGuid, string.IsNullOrWhiteSpace(sec.Recordkey) ? "" : sec.Recordkey);
+                        }
+
+                        if (portalSite != null)
+                        {
+                            section.LearningProvider = portalSite.PsLearningProvider;
+                            section.LearningProviderSiteId = portalSite.PsPrtlSiteGuid;
+                            if (string.IsNullOrEmpty(section.LearningProvider))
                             {
-                                section.LearningProviderSiteId = null;
-                                section.LearningProvider = sec.SecLearningProvider;
+                                // if ILP is not licensed, then learning provider is not set in Colleague, and defaults to SHAREPOINT
+                                section.LearningProvider = "SHAREPOINT";
                             }
                         }
                         else
@@ -3377,49 +3750,63 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             section.LearningProviderSiteId = null;
                             section.LearningProvider = sec.SecLearningProvider;
                         }
-                        // See if there is a section specific bookstore URL that should be constructed
-                        if (!string.IsNullOrEmpty(sectionBookstoreUrlTemplate))
-                        {
-                            // If the template has a query parameter portion substitute encoded values within that.
-                            int index = sectionBookstoreUrlTemplate.IndexOf('?');
-                            if (index > 0)
-                            {
-                                string query = sectionBookstoreUrlTemplate.Substring(index);
-                                query = query.Replace("{0}", !string.IsNullOrEmpty(sec.SecTerm) ? HttpUtility.UrlEncode(sec.SecTerm) : string.Empty);
-                                query = query.Replace("{1}", !string.IsNullOrEmpty(sec.SecSubject) ? HttpUtility.UrlEncode(sec.SecSubject) : string.Empty);
-                                query = query.Replace("{2}", !string.IsNullOrEmpty(sec.SecCourseNo) ? HttpUtility.UrlEncode(sec.SecCourseNo) : string.Empty);
-                                query = query.Replace("{3}", !string.IsNullOrEmpty(sec.SecNo) ? HttpUtility.UrlEncode(sec.SecNo) : string.Empty);
-                                query = query.Replace("{4}", !string.IsNullOrEmpty(sec.Recordkey) ? HttpUtility.UrlEncode(sec.Recordkey) : string.Empty);
-                                query = query.Replace("{5}", !string.IsNullOrEmpty(sec.SecCourse) ? HttpUtility.UrlEncode(sec.SecCourse) : string.Empty);
-                                query = query.Replace("{6}", !string.IsNullOrEmpty(sec.SecLocation) ? HttpUtility.UrlEncode(sec.SecLocation) : string.Empty);
-                                section.BookstoreURL = sectionBookstoreUrlTemplate.Substring(0, index) + query;
-                            }
-                            else
-                            {
-                                // Pass it through without substitutions
-                                section.BookstoreURL = sectionBookstoreUrlTemplate;
-                            }
-                        }
-                        // Create a RegistrationDates object if the section has any registration date overrides.
-                        if (sec.SecOvrAddEndDate != null ||
-                            sec.SecOvrAddStartDate != null ||
-                            sec.SecOvrDropEndDate != null ||
-                            sec.SecOvrDropStartDate != null ||
-                            sec.SecOvrPreregEndDate != null ||
-                            sec.SecOvrPreregStartDate != null ||
-                            sec.SecOvrRegEndDate != null ||
-                            sec.SecOvrRegStartDate != null ||
-                            sec.SecOvrDropGrReqdDate != null ||
-                            sec.SecOvrCensusDates != null && sec.SecOvrCensusDates.Any())
-                        {
-                            section.RegistrationDateOverrides = new RegistrationDate(sec.SecLocation, sec.SecOvrRegStartDate, sec.SecOvrRegEndDate, sec.SecOvrPreregStartDate, sec.SecOvrPreregEndDate, sec.SecOvrAddStartDate, sec.SecOvrAddEndDate, sec.SecOvrDropStartDate, sec.SecOvrDropEndDate, sec.SecOvrDropGrReqdDate, sec.SecOvrCensusDates);
-                        }
-
-                        // Add financial charges for section
-                        AddChargesToSection(section, sec, regBillingRateData);
-
-                        sections[section.Id] = section;
                     }
+                    else
+                    {
+                        section.LearningProviderSiteId = null;
+                        section.LearningProvider = sec.SecLearningProvider;
+                    }
+                    // See if there is a section specific bookstore URL that should be constructed
+                    if (!string.IsNullOrEmpty(sectionBookstoreUrlTemplate))
+                    {
+                        // If the template has a query parameter portion substitute encoded values within that.
+                        int index = sectionBookstoreUrlTemplate.IndexOf('?');
+                        if (index > 0)
+                        {
+                            string query = sectionBookstoreUrlTemplate.Substring(index);
+                            query = query.Replace("{0}", !string.IsNullOrEmpty(sec.SecTerm) ? HttpUtility.UrlEncode(sec.SecTerm) : string.Empty);
+                            query = query.Replace("{1}", !string.IsNullOrEmpty(sec.SecSubject) ? HttpUtility.UrlEncode(sec.SecSubject) : string.Empty);
+                            query = query.Replace("{2}", !string.IsNullOrEmpty(sec.SecCourseNo) ? HttpUtility.UrlEncode(sec.SecCourseNo) : string.Empty);
+                            query = query.Replace("{3}", !string.IsNullOrEmpty(sec.SecNo) ? HttpUtility.UrlEncode(sec.SecNo) : string.Empty);
+                            query = query.Replace("{4}", !string.IsNullOrEmpty(sec.Recordkey) ? HttpUtility.UrlEncode(sec.Recordkey) : string.Empty);
+                            query = query.Replace("{5}", !string.IsNullOrEmpty(sec.SecCourse) ? HttpUtility.UrlEncode(sec.SecCourse) : string.Empty);
+                            query = query.Replace("{6}", !string.IsNullOrEmpty(sec.SecLocation) ? HttpUtility.UrlEncode(sec.SecLocation) : string.Empty);
+                            section.BookstoreURL = sectionBookstoreUrlTemplate.Substring(0, index) + query;
+                        }
+                        else
+                        {
+                            // Pass it through without substitutions
+                            section.BookstoreURL = sectionBookstoreUrlTemplate;
+                        }
+                    }
+                    // Create a RegistrationDates object if the section has any registration date overrides.
+                    if (sec.SecOvrAddEndDate != null ||
+                        sec.SecOvrAddStartDate != null ||
+                        sec.SecOvrDropEndDate != null ||
+                        sec.SecOvrDropStartDate != null ||
+                        sec.SecOvrPreregEndDate != null ||
+                        sec.SecOvrPreregStartDate != null ||
+                        sec.SecOvrRegEndDate != null ||
+                        sec.SecOvrRegStartDate != null ||
+                        sec.SecOvrDropGrReqdDate != null ||
+                        sec.SecOvrCensusDates != null && sec.SecOvrCensusDates.Any())
+                    {
+                        section.RegistrationDateOverrides = new RegistrationDate(sec.SecLocation, sec.SecOvrRegStartDate, sec.SecOvrRegEndDate, sec.SecOvrPreregStartDate, sec.SecOvrPreregEndDate, sec.SecOvrAddStartDate, sec.SecOvrAddEndDate, sec.SecOvrDropStartDate, sec.SecOvrDropEndDate, sec.SecOvrDropGrReqdDate, sec.SecOvrCensusDates);
+                    }
+
+                    // Add financial charges for section
+                    AddChargesToSection(section, sec, regBillingRateData);
+
+                    sections[section.Id] = section;
+                }
+                catch (RepositoryException rex)
+                {
+                    var secString = "Error building section: Section Id: " + sec.Recordkey + " Section Title: " + sec.SecShortTitle + " Section Course: " + sec.SecCourse + " Section Term: " + sec.SecTerm;
+                    secString += " Section GUID: " + sec.RecordGuid + " " + rex.Message;
+                    LogDataError("Section", sec.Recordkey, null, rex, secString);
+                    //throw new RepositoryException(secString);
+                    // Removed because this may break self service.  Will revisit in 1.25 when we upgrade error messaging.
+
                 }
                 catch (Exception ex)
                 {
@@ -3428,8 +3815,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     var secString = "Section Id: " + sec.Recordkey + " Section Title: " + sec.SecShortTitle + " Section Course: " + sec.SecCourse + " Section Term: " + sec.SecTerm;
                     LogDataError("Section", sec.Recordkey, null, ex, secString);
                 }
-            }
 
+            }
 
             // Now that the Sections have been built - use the cross list data to link up cross listed sections and add any global info
             // to the appropriate sections.
@@ -3499,6 +3886,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         {
                             var sectionError = "Unable to update Cross List info for section " + crossListSectionId;
                             LogDataError("Section Cross List", crossListSectionId, crossList, ex, sectionError);
+                            LogRepoError(sectionError);
                         }
 
                     }
@@ -3512,7 +3900,18 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             List<SectionStatusItem> statuses = null;
             if (sec.SecStatusesEntityAssociation != null)
             {
-                statuses = await BuildSectionStatusItemAsync(sec);
+                try
+                {
+                    statuses = await BuildSectionStatusItemAsync(sec);
+                }
+                catch(Exception ex)
+                {
+                    LogRepoError(ex.Message, string.IsNullOrWhiteSpace(sec.RecordGuid) ? "" : sec.RecordGuid, string.IsNullOrWhiteSpace(sec.Recordkey) ? "" : sec.Recordkey);
+                    if (!this.addToErrorCollection)
+                    {
+                        throw;
+                    }
+                }
             }
             bool allowPassNoPass = sec.SecAllowPassNopassFlag == "Y";
             bool allowAudit = sec.SecAllowAuditFlag == "Y";
@@ -3533,49 +3932,58 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
 
             //
-
-
-            var section = new Section(sec.Recordkey,
-                sec.SecCourse,
-                sec.SecNo,
-                sec.SecStartDate.GetValueOrDefault(DateTime.MinValue),
-                sec.SecMinCred,
-                sec.SecCeus,
-                sec.SecShortTitle,
-                sec.SecCredType,
-                departments,
-                sec.SecCourseLevels,
-                sec.SecAcadLevel,
-                statuses,
-                allowPassNoPass,
-                allowAudit,
-                onlyPassNoPass,
-                allowWaitlist,
-                waitlistClosed,
-                consentRequired,
-                hideInCatalog
-                )
+            Section section;
+            try
             {
-                Guid = sec.RecordGuid,
-                TermId = sec.SecTerm,
-                Location = sec.SecLocation,
-                MaximumCredits = sec.SecMaxCred,
-                VariableCreditIncrement = sec.SecVarCredIncrement,
-                EndDate = sec.SecEndDate,
-                TopicCode = sec.SecTopicCode,
-                GradeSchemeCode = sec.SecGradeScheme,
-                NumberOfWeeks = sec.SecNoWeeks,
-                Name = sec.SecName,
-                SectionCapacity = sec.SecCapacity,
-                WaitlistMaximum = sec.SecWaitlistMax,
-                WaitlistRatingCode = sec.SecWaitlistRating,
-                CourseName = sec.SecSubject + "-" + sec.SecCourseNo,
-                TransferStatus = sec.SecTransferStatus,
-                Comments = sectionComments,
-                CensusDates = sec.SecOvrCensusDates == null ? new List<DateTime?>() : sec.SecOvrCensusDates,
-                WaitListNumberOfDays = sec.SecWaitlistNoDays,
-
-            };
+                section = new Section(sec.Recordkey,
+                 sec.SecCourse,
+                 sec.SecNo,
+                 sec.SecStartDate.GetValueOrDefault(DateTime.MinValue),
+                 sec.SecMinCred,
+                 sec.SecCeus,
+                 sec.SecShortTitle,
+                 sec.SecCredType,
+                 departments,
+                 sec.SecCourseLevels,
+                 sec.SecAcadLevel,
+                 statuses,
+                 allowPassNoPass,
+                 allowAudit,
+                 onlyPassNoPass,
+                 allowWaitlist,
+                 waitlistClosed,
+                 consentRequired,
+                 hideInCatalog
+                 )
+                {
+                    Guid = sec.RecordGuid,
+                    TermId = sec.SecTerm,
+                    Location = sec.SecLocation,
+                    MaximumCredits = sec.SecMaxCred,
+                    VariableCreditIncrement = sec.SecVarCredIncrement,
+                    EndDate = sec.SecEndDate,
+                    TopicCode = sec.SecTopicCode,
+                    GradeSchemeCode = sec.SecGradeScheme,
+                    NumberOfWeeks = sec.SecNoWeeks,
+                    Name = sec.SecName,
+                    SectionCapacity = sec.SecCapacity,
+                    WaitlistMaximum = sec.SecWaitlistMax,
+                    WaitlistRatingCode = sec.SecWaitlistRating,
+                    CourseName = sec.SecSubject + "-" + sec.SecCourseNo,
+                    TransferStatus = sec.SecTransferStatus,
+                    Comments = sectionComments,
+                    CensusDates = sec.SecOvrCensusDates == null ? new List<DateTime?>() : sec.SecOvrCensusDates,
+                    WaitListNumberOfDays = sec.SecWaitlistNoDays,
+                    GradeSubschemeCode = sec.SecGradeSubschemesId,
+                    Synonym = sec.SecSynonym
+                };
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, e.Message); 
+                LogRepoError(e.Message, string.IsNullOrWhiteSpace(sec.RecordGuid)? "" : sec.RecordGuid, string.IsNullOrWhiteSpace(sec.Recordkey) ? "" : sec.Recordkey);
+                throw new RepositoryException(e.Message);
+            }
 
             // Make sure bad colleague data doesn't get in
             section.CensusDates.RemoveAll(cd => cd == null);
@@ -3605,13 +4013,24 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 foreach (var contact in sec.SecContactEntityAssociation)
                 {
-                    section.AddInstructionalContact(new InstructionalContact(contact.SecInstrMethodsAssocMember)
+                    try
                     {
-                        Load = contact.SecLoadAssocMember,
-                        ClockHours = contact.SecClockHoursAssocMember,
-                        ContactHours = contact.SecContactHoursAssocMember,
-                        ContactMeasure = contact.SecContactMeasuresAssocMember
-                    });
+                        section.AddInstructionalContact(new InstructionalContact(contact.SecInstrMethodsAssocMember)
+                        {
+                            Load = contact.SecLoadAssocMember,
+                            ClockHours = contact.SecClockHoursAssocMember,
+                            ContactHours = contact.SecContactHoursAssocMember,
+                            ContactMeasure = contact.SecContactMeasuresAssocMember
+                        });
+                    }
+                    catch(Exception e)
+                    {
+                        LogRepoError(e.Message, string.IsNullOrWhiteSpace(sec.RecordGuid) ? "" : sec.RecordGuid, string.IsNullOrWhiteSpace(sec.Recordkey) ? "" : sec.Recordkey);
+                        if (!this.addToErrorCollection)
+                        {
+                            throw;
+                        }
+                    }
                 }
             }
 
@@ -3632,8 +4051,19 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             //section.WaitlistStatus = await GetSectionWaitlistStatusAsync(sec.Recordkey);
 
             // Set the attendance tracking type
-            section.AttendanceTrackingType = ConvertStringToAttendanceTrackingType(sec);
+            try
+            {
+                section.AttendanceTrackingType = ConvertStringToAttendanceTrackingType(sec);
+            }
+            catch(Exception e)
+            {
+                LogRepoError(e.Message, string.IsNullOrWhiteSpace(sec.RecordGuid) ? "" : sec.RecordGuid, string.IsNullOrWhiteSpace(sec.Recordkey) ? "" : sec.Recordkey);
+                if (!this.addToErrorCollection)
+                {
+                    throw;
+                }
 
+            }
             return section;
         }
 
@@ -3660,7 +4090,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             }
                             if (sec.SecBookOptions != null && sec.SecBookOptions.Count > 0)
                             {
-                                var option = bookOptions.Where(op => op.Code == sec.SecBookOptions[i]).FirstOrDefault();
+                                var matchingOptions = bookOptions.Where(op => op.Code == sec.SecBookOptions[i]);
+                                var option = (matchingOptions != null) ? matchingOptions.FirstOrDefault() : null;
                                 if (option != null)
                                 {
                                     section.AddBook(bookId, sec.SecBookOptions[i], option.IsRequired);
@@ -3674,7 +4105,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         }
                         catch (Exception ex)
                         {
-                            LogDataError(String.Format("COURSE.SECTIONS {0} SEC.BOOKS {1} SEC.BOOK.OPTIONS {2}", sec.Recordkey, bookId, sec.SecBookOptions[i]), sec.Recordkey, sec, ex);
+                            string errorMsg = String.Format("COURSE.SECTIONS {0} SEC.BOOKS {1} SEC.BOOK.OPTIONS {2}", sec.Recordkey, bookId, sec.SecBookOptions[i]);
+                            LogDataError(errorMsg, sec.Recordkey, sec, ex);
+                            LogRepoError(errorMsg, string.IsNullOrWhiteSpace(sec.RecordGuid) ? "" : sec.RecordGuid, string.IsNullOrWhiteSpace(sec.Recordkey) ? "" : sec.Recordkey);
                         }
                     }
                 }
@@ -3702,7 +4135,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             {
                                 throw new ApplicationException("Registration billing rate data could not be retrieved.");
                             }
-                            var rbr = regBillingRateData.Where(rb => rb.Recordkey == otherBillingRate).FirstOrDefault();
+                            var matchingRegBillingRateData = regBillingRateData.Where(rb => rb.Recordkey == otherBillingRate);
+                            var rbr = (matchingRegBillingRateData != null) ? matchingRegBillingRateData.FirstOrDefault() : null;
                             if (rbr != null)
                             {
                                 decimal baseAmount = (rbr.RgbrChargeAmt ?? 0 - rbr.RgbrCrAmt ?? 0);
@@ -3717,7 +4151,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         }
                         catch (Exception ex)
                         {
-                            LogDataError(String.Format("COURSE.SECTIONS {0} SEC.OTHER.REG.BILLING.RATES {1}", sec.Recordkey, otherBillingRate), otherBillingRate, sec, ex);
+                            string errorMsg = String.Format("COURSE.SECTIONS {0} SEC.OTHER.REG.BILLING.RATES {1}", sec.Recordkey, otherBillingRate);
+                            LogDataError(errorMsg, otherBillingRate, sec, ex);
+                            LogRepoError(errorMsg, string.IsNullOrWhiteSpace(sec.RecordGuid) ? "" : sec.RecordGuid, string.IsNullOrWhiteSpace(sec.Recordkey) ? "" : sec.Recordkey);
                         }
                     }
                 }
@@ -3756,6 +4192,34 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             // Now we have a record, so we can pass of the rest of the work to another routine
             return await BuildSectionMeetingAsync(meeting);
+        }
+
+        /// <summary>
+        /// Get a list of course sec meeting using an array of IDs
+        /// </summary>
+        /// <param name="secMeetingIds">CourseSecMeeting IDs</param>
+        /// <returns>course sec meeting</returns>
+        public async Task<List<CourseSecMeeting>> GetCourseSecMeetingAsync(string[] secMeetingIds)
+        {
+            if ((secMeetingIds == null) || (!secMeetingIds.Any()))
+            {
+                return new List<CourseSecMeeting>();
+            }
+            return (await DataReader.BulkReadRecordAsync<CourseSecMeeting>("COURSE.SEC.MEETING", secMeetingIds)).ToList();
+        }
+
+        /// <summary>
+        /// Get a collection of course sec faculty using a list of IDs
+        /// </summary>
+        /// <param name="secFacultyIds">CourseSecFaculty IDs</param>
+        /// <returns>course sec faculty</returns>
+        public async Task<Collection<CourseSecFaculty>> GetCourseSecFacultyAsync(List<string> secFacultyIds)
+        {
+            if ((secFacultyIds == null) || (!secFacultyIds.Any()))
+            {
+                return new Collection<CourseSecFaculty>();
+            }
+            return await DataReader.BulkReadRecordAsync<CourseSecFaculty>("COURSE.SEC.FACULTY", secFacultyIds.ToArray());
         }
 
         /// <summary>
@@ -3879,7 +4343,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     var courseSectionKeys = await DataReader.SelectAsync("COURSE.SEC.FACULTY", instructorSelect);
                     if (courseSectionKeys != null && courseSectionKeys.Any())
                     {
-                        var meetingKeys = await DataReader.SelectAsync("COURSE.SECTIONS", courseSectionKeys, "WITH SEC.MEETING BY.EXP SEC.MEETING SAVING SEC.MEETING"); 
+                        var meetingKeys = await DataReader.SelectAsync("COURSE.SECTIONS", courseSectionKeys, "WITH SEC.MEETING BY.EXP SEC.MEETING SAVING SEC.MEETING");
                         if (limitingKeys != null && limitingKeys.Any())
                         {
                             limitingKeys = limitingKeys.Distinct().Intersect(meetingKeys).ToArray();
@@ -3950,6 +4414,230 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return new Tuple<IEnumerable<SectionMeeting>, int>(meetings, totalCount);
         }
 
+
+        /// <summary>
+        /// Get a section meeting using its record ID
+        /// </summary>
+        /// <param name="offset">offset</param>
+        /// <param name="limit">limit</param>
+        /// <param name="section">Section Id</param>
+        /// <param name="startDate">Meeting Start Date</param>
+        /// <param name="startTime">Meeting Start Time</param>
+        /// <param name="endDate">Meeting End Date</param>
+        /// <param name="endTime">Meeting End Time</param>
+        /// <param name="room">Meeting Room Id</param>
+        /// <param name="instructor">Instructor Id</param>
+        /// <returns>Section meeting</returns>
+        public async Task<Tuple<IEnumerable<SectionMeeting>, int>> GetSectionMeeting2Async(int offset, int limit, string section, string startDate, string endDate, string startTime, string endTime, List<string> buildings, List<string> rooms, List<string> instructors, string termId)
+        {
+            List<SectionMeeting> meetings = new List<SectionMeeting>();
+            var selectStatement = new StringBuilder();
+            string[] limitingKeys = null;
+
+            int totalCount = 0;
+            string[] subList = null;
+
+            string sectionMeegtingCacheKey = CacheSupport.BuildCacheKey("GetSectionMeeting2", section, startDate, endDate, startTime, endTime, buildings, rooms, instructors, termId);
+
+            var keyCache = await CacheSupport.GetOrAddKeyCacheToCache(
+                this,
+                ContainsKey,
+                GetOrAddToCacheAsync,
+                AddOrUpdateCacheAsync,
+                transactionInvoker,
+                sectionMeegtingCacheKey,
+                "COURSE.SEC.MEETING",
+                offset,
+                limit,
+                SectionMeetingCacheTimeout,
+
+                async () =>
+                {
+                    // If we have a section, then select the limited list from the COURSE.SECTIONS record first
+                    if (!string.IsNullOrEmpty(section))
+                    {
+                        limitingKeys = await DataReader.SelectAsync("COURSE.SECTIONS", new string[] { section }, "WITH SEC.MEETING BY.EXP SEC.MEETING SAVING SEC.MEETING");
+                        if (limitingKeys == null || !limitingKeys.Any())
+                        {
+                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                        }
+                        selectStatement.AppendFormat("WITH CSM.COURSE.SECTION EQ '{0}'", section);
+                    }
+                    // Look at any index fields first
+                    if (!string.IsNullOrEmpty(termId) && string.IsNullOrEmpty(section))
+                    {
+                        limitingKeys = await DataReader.SelectAsync("COURSE.SECTIONS", string.Format("WITH SEC.TERM = '{0}' WITH SEC.MEETING BY.EXP SEC.MEETING SAVING SEC.MEETING", termId));
+                        if (limitingKeys == null || !limitingKeys.Any())
+                        {
+                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                        }
+                    }
+                    else
+                    {
+                        if (!string.IsNullOrEmpty(termId))
+                        {
+                            if (selectStatement.Length > 0)
+                            {
+                                selectStatement.Append(" AND ");
+                            }
+                            selectStatement.AppendFormat("WITH SEC.TERM EQ '{0}'", termId);
+                        }
+                    }
+                    if (!string.IsNullOrEmpty(startDate))
+                    {
+                        if (selectStatement.Length > 0)
+                        {
+                            selectStatement.Append(" AND ");
+                        }
+                        selectStatement.AppendFormat("WITH CSM.START.DATE EQ '{0}'", startDate);
+                    }
+                    if (!string.IsNullOrEmpty(endDate))
+                    {
+                        if (selectStatement.Length > 0)
+                        {
+                            selectStatement.Append(" AND ");
+                        }
+                        selectStatement.AppendFormat("WITH CSM.END.DATE EQ '{0}'", endDate);
+                    }
+                    if (!string.IsNullOrEmpty(startTime))
+                    {
+                        if (selectStatement.Length > 0)
+                        {
+                            selectStatement.Append(" AND ");
+                        }
+                        selectStatement.AppendFormat("WITH CSM.START.TIME EQ '{0}'", startTime);
+                    }
+                    if (!string.IsNullOrEmpty(endTime))
+                    {
+                        if (selectStatement.Length > 0)
+                        {
+                            selectStatement.Append(" AND ");
+                        }
+                        selectStatement.AppendFormat("WITH CSM.END.TIME EQ '{0}'", endTime);
+                    }
+                    if (buildings != null && buildings.Any())
+                    {
+                        int x = 0;
+                        foreach (var building in buildings)
+                        {
+                            var room = rooms != null && rooms.Any() && rooms.ElementAt(x) != null ? rooms.ElementAt(x) : string.Empty;
+                            if (!string.IsNullOrEmpty(building) && !string.IsNullOrEmpty(room))
+                            {
+                                if (selectStatement.Length > 0)
+                                {
+                                    if (x == 0)
+                                    {
+                                        selectStatement.Append(" AND ");
+                                    }
+                                    else
+                                    {
+                                        selectStatement.Append(" OR ");
+                                    }
+                                }
+                                selectStatement.AppendFormat("WITH CSM.BLDG = '{0}' AND WITH CSM.ROOM = '{1}'", building, room);
+                            }
+                            x++;
+                        }
+                    }
+                    if (instructors != null && instructors.Any())
+                    {
+                        string instructorSelect = string.Empty;
+                        foreach (var instructor in instructors)
+                        {
+                            if (!string.IsNullOrEmpty(instructor))
+                            {
+                                instructorSelect = string.Concat(instructorSelect, "'", instructor, "'");
+                            }
+                        }
+                        if (!string.IsNullOrEmpty(instructorSelect))
+                        {
+                            instructorSelect = string.Concat("WITH CSF.FACULTY = ", instructorSelect, "SAVING UNIQUE CSF.COURSE.SECTION");
+                            var courseSectionKeys = await DataReader.SelectAsync("COURSE.SEC.FACULTY", instructorSelect);
+                            if (courseSectionKeys != null && courseSectionKeys.Any())
+                            {
+                                var meetingKeys = await DataReader.SelectAsync("COURSE.SECTIONS", courseSectionKeys, "WITH SEC.MEETING BY.EXP SEC.MEETING SAVING SEC.MEETING");
+                                if (limitingKeys != null && limitingKeys.Any())
+                                {
+                                    limitingKeys = limitingKeys.Distinct().Intersect(meetingKeys).ToArray();
+                                }
+                                else
+                                {
+                                    limitingKeys = meetingKeys.Distinct().ToArray();
+                                }
+                            }
+                            if (limitingKeys == null || !limitingKeys.Any())
+                            {
+                                return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                            }
+                        }
+                    }
+                    // Instructional Method is required in the API so do not select items without
+                    // an instructional method
+                    if (selectStatement.Length > 0)
+                    {
+                        selectStatement.Append(" AND ");
+                    }
+                    if (string.IsNullOrEmpty(section))
+                    {
+                        selectStatement.Append("WITH CSM.INSTR.METHOD NE '' AND WITH CSM.COURSE.SECTION NE ''");
+                    }
+                    else
+                    {
+                        selectStatement.Append("WITH CSM.INSTR.METHOD NE ''");
+                    }
+
+                    string criteria = selectStatement.ToString();
+                   
+                    CacheSupport.KeyCacheRequirements requirements = new CacheSupport.KeyCacheRequirements()
+                    {
+                        limitingKeys = limitingKeys != null && limitingKeys.Any() ? limitingKeys.Distinct().ToList() : null, // secMeetingIds.Distinct().ToList(),
+                        criteria = criteria.ToString(),
+                    };
+
+                    return requirements;
+                });
+
+            if (keyCache == null || keyCache.Sublist == null || !keyCache.Sublist.Any())
+            {
+                return new Tuple<IEnumerable<SectionMeeting>, int>(meetings, 0);
+            }
+
+           subList = keyCache.Sublist.ToArray();
+
+           totalCount = keyCache.TotalCount.Value;
+                // Now we have criteria, so we can select and read the records
+            var sectionMeetings = await DataReader.BulkReadRecordAsync<CourseSecMeeting>("COURSE.SEC.MEETING", subList);
+            
+            if (sectionMeetings != null || sectionMeetings.Any())
+            {
+                var meetingIds = sectionMeetings.Where(cs => cs.CsmCourseSection != null).Select(sm => sm.CsmCourseSection).Distinct().ToArray();
+                var courseSecFacultyData = new List<CourseSecFaculty>();
+                if (meetingIds != null && meetingIds.Any())
+                {
+                    var courseSecFacLimitingKeys = await DataReader.SelectAsync("COURSE.SECTIONS",
+                         meetingIds != null && meetingIds.Any() ? meetingIds : null, "WITH SEC.FACULTY BY.EXP SEC.FACULTY SAVING SEC.FACULTY");
+
+                    if (courseSecFacLimitingKeys != null && courseSecFacLimitingKeys.Any())
+                    {
+                        for (int i = 0; i < courseSecFacLimitingKeys.Count(); i += readSize)
+                        {
+                            var subList2 = courseSecFacLimitingKeys.Skip(i).Take(readSize).ToArray();
+                            courseSecFacultyData.AddRange(await DataReader.BulkReadRecordAsync<CourseSecFaculty>(subList2));
+                        }
+                    }
+                }
+
+                foreach (var meeting in sectionMeetings)
+                {
+                    var secFaculty = courseSecFacultyData.Where(x => !string.IsNullOrEmpty(x.CsfCourseSection) && x.CsfCourseSection == meeting.CsmCourseSection).ToList();
+                    var sectionMeeting = await BuildSectionMeetingAsync(meeting, secFaculty);
+                    meetings.Add(sectionMeeting);
+                }
+            }
+
+            return new Tuple<IEnumerable<SectionMeeting>, int>(meetings, totalCount);
+        }
+
         /// <summary>
         /// Get a section facult using filters
         /// </summary>
@@ -3960,93 +4648,115 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns>Section faculty</returns>
         public async Task<Tuple<IEnumerable<SectionFaculty>, int>> GetSectionFacultyAsync(int offset, int limit, string section, string instructor, List<string> instructionalEvents)
         {
+            exception = new RepositoryException();
+
             List<SectionFaculty> faculties = new List<SectionFaculty>();
+            Collection<CourseSecFaculty> sectionFaculties = null;
+            string[] subList = null;
             var selectStatement = new StringBuilder();
             string[] limitingKeys = null;
-            if (!string.IsNullOrEmpty(section))
-            {
-                limitingKeys = await DataReader.SelectAsync("COURSE.SECTIONS", new string[] { section }, "WITH SEC.FACULTY BY.EXP SEC.FACULTY SAVING SEC.FACULTY");
-                if (limitingKeys == null || !limitingKeys.Any())
+            int totalCount = 0;
+
+            string sectionMeegtingCacheKey = CacheSupport.BuildCacheKey(AllSectionInstructorCache, section, section, instructor, instructionalEvents);
+
+            var keyCacheObject = await CacheSupport.GetOrAddKeyCacheToCache(
+                this,
+                ContainsKey,
+                GetOrAddToCacheAsync,
+                AddOrUpdateCacheAsync,
+                transactionInvoker,
+                sectionMeegtingCacheKey,
+                "",
+                offset,
+                limit,
+                SectionInstructorCacheTimeout,
+                async () =>
                 {
-                    return new Tuple<IEnumerable<SectionFaculty>, int>(faculties, 0);
-                }
-                selectStatement.AppendFormat("WITH CSF.COURSE.SECTION EQ '{0}'", section);
-            }
-            if (!string.IsNullOrEmpty(instructor))
-            {
-                if (selectStatement.Length > 0)
-                {
-                    selectStatement.Append(" AND ");
-                }
-                selectStatement.AppendFormat("WITH CSF.FACULTY EQ '{0}'", instructor);
-            }
-            if (instructionalEvents.Any())
-            {
-                foreach (var instructionalEvent in instructionalEvents)
-                {
-                    if (!string.IsNullOrEmpty(instructionalEvent))
+                    if (!string.IsNullOrEmpty(section))
                     {
-                        var sectionMeeting = await GetSectionMeetingAsync(instructionalEvent);
-                        if (sectionMeeting != null && !string.IsNullOrEmpty(sectionMeeting.InstructionalMethodCode) && !string.IsNullOrEmpty(sectionMeeting.SectionId))
+                        limitingKeys = await DataReader.SelectAsync("COURSE.SECTIONS", new string[] { section }, "WITH SEC.FACULTY BY.EXP SEC.FACULTY SAVING SEC.FACULTY");
+                        if (limitingKeys == null || !limitingKeys.Any())
                         {
-                            if (selectStatement.Length > 0)
-                            {
-                                selectStatement.Append(" AND ");
-                            }
-                            selectStatement.AppendFormat("WITH CSF.COURSE.SECTION EQ '{0}' AND WITH CSF.INSTR.METHOD = '{1}'", sectionMeeting.SectionId, sectionMeeting.InstructionalMethodCode);
+                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
                         }
-                        else
+                        selectStatement.AppendFormat("WITH CSF.COURSE.SECTION EQ '{0}'", section);
+                    }
+                    if (!string.IsNullOrEmpty(instructor))
+                    {
+                        if (selectStatement.Length > 0)
                         {
-                            throw new ArgumentException(string.Format("Invalid instructional event Id argument '{0}'", instructionalEvent));
+                            selectStatement.Append(" AND ");
+                        }
+                        selectStatement.AppendFormat("WITH CSF.FACULTY EQ '{0}'", instructor);
+                    }
+                    if (instructionalEvents.Any())
+                    {
+                        foreach (var instructionalEvent in instructionalEvents)
+                        {
+                            if (!string.IsNullOrEmpty(instructionalEvent))
+                            {
+                                var sectionMeeting = await GetSectionMeetingAsync(instructionalEvent);
+                                if (sectionMeeting != null && !string.IsNullOrEmpty(sectionMeeting.InstructionalMethodCode) && !string.IsNullOrEmpty(sectionMeeting.SectionId))
+                                {
+                                    if (selectStatement.Length > 0)
+                                    {
+                                        selectStatement.Append(" AND ");
+                                    }
+                                    selectStatement.AppendFormat("WITH CSF.COURSE.SECTION EQ '{0}' AND WITH CSF.INSTR.METHOD = '{1}'", sectionMeeting.SectionId, sectionMeeting.InstructionalMethodCode);
+                                }
+                                else
+                                {
+                                    return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                }
+                            }
                         }
                     }
-                }
-            }
-            else
-            {
-                // Instructional Method is required in Colleague so do not select items without
-                // an instructional method; these would be invalid records.
-                if (selectStatement.Length > 0)
-                {
-                    selectStatement.Append(" AND ");
-                }
-                selectStatement.Append("WITH CSF.INSTR.METHOD NE '' AND WITH CSF.COURSE.SECTION NE ''");
-            }
-            // Start and End dates and percentage are required in Colleague so do not select items without
-            // an start and end dates; these would be invalid records.
-            if (selectStatement.Length > 0)
-            {
-                selectStatement.Append(" AND ");
-            }
-            selectStatement.Append("WITH CSF.START.DATE NE '' AND WITH CSF.END.DATE NE '' AND CSF.FACULTY.LOAD NE ''");
+                    else
+                    {
+                        // Instructional Method is required in Colleague so do not select items without
+                        // an instructional method; these would be invalid records.
+                        if (selectStatement.Length > 0)
+                        {
+                            selectStatement.Append(" AND ");
+                        }
+                        selectStatement.Append("WITH CSF.INSTR.METHOD NE '' AND WITH CSF.COURSE.SECTION NE ''");
+                    }
+                    // Start and End dates and percentage are required in Colleague so do not select items without
+                    // an start and end dates; these would be invalid records.
+                    if (selectStatement.Length > 0)
+                    {
+                        selectStatement.Append(" AND ");
+                    }
+                    selectStatement.Append("WITH CSF.START.DATE NE '' AND WITH CSF.END.DATE NE ''");
 
-            int totalCount = 0;
-            string criteria = selectStatement.ToString();
-            Collection<CourseSecFaculty> sectionFaculties = null;
+                    
+                    string criteria = selectStatement.ToString();
 
-            // Now we have criteria, so we can select and read the records
-            if (limitingKeys != null && limitingKeys.Any()) limitingKeys = limitingKeys.Distinct().ToArray();
-            var secFacultyIds = await DataReader.SelectAsync("COURSE.SEC.FACULTY", limitingKeys, criteria);
-            if (secFacultyIds == null || !secFacultyIds.Any())
+                    // Now we have criteria, so we can select and read the records
+                    if (limitingKeys != null && limitingKeys.Any()) limitingKeys = limitingKeys.Distinct().ToArray();
+                    var secFacultyIds = await DataReader.SelectAsync("COURSE.SEC.FACULTY", limitingKeys, criteria);
+                    if (secFacultyIds == null || !secFacultyIds.Any())
+                    {
+                        return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                    }
+
+                    CacheSupport.KeyCacheRequirements requirements = new CacheSupport.KeyCacheRequirements()
+                    {
+                        limitingKeys = secFacultyIds.Distinct().ToList(),
+                        criteria = criteria.ToString()
+                    };
+
+                    return requirements;
+                });
+
+            if (keyCacheObject == null || keyCacheObject.Sublist == null || !keyCacheObject.Sublist.Any())
             {
                 return new Tuple<IEnumerable<SectionFaculty>, int>(faculties, 0);
             }
-            if (limit == 0 && offset == 0)
-            {
-                sectionFaculties = await DataReader.BulkReadRecordAsync<CourseSecFaculty>(secFacultyIds);
-                totalCount = sectionFaculties.Count();
-            }
-            else
-            {
-                totalCount = secFacultyIds.Count();
 
-                Array.Sort(secFacultyIds);
-
-                var subList = secFacultyIds.Skip(offset).Take(limit).ToArray();
-
-                // Now we have criteria, so we can select and read the records
-                sectionFaculties = await DataReader.BulkReadRecordAsync<CourseSecFaculty>("COURSE.SEC.FACULTY", subList);
-            }
+            subList = keyCacheObject.Sublist.ToArray();
+            totalCount = keyCacheObject.TotalCount.Value;
+            sectionFaculties = await DataReader.BulkReadRecordAsync<CourseSecFaculty>("COURSE.SEC.FACULTY", subList);
 
             // Read in course sections records to get Primary indicator and meeting pointers
             var courseSectionIds = sectionFaculties.Select(sf => sf.CsfCourseSection).Distinct().ToArray();
@@ -4058,17 +4768,26 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 foreach (var faculty in sectionFaculties)
                 {
-
                     var sectionFacultyEntity = BuildSectionFaculty(faculty);
                     // Update from Section
                     var courseSection = courseSections.FirstOrDefault(cs => cs.Recordkey == sectionFacultyEntity.SectionId);
-                    var courseMeetings = courseSecMeetings.Where(csm => csm.CsmCourseSection == sectionFacultyEntity.SectionId && csm.CsmInstrMethod == sectionFacultyEntity.InstructionalMethodCode);
-                    var sectionFaculty = BuildEthosSectionFaculty(sectionFacultyEntity, courseSection, courseMeetings);
-                    faculties.Add(sectionFaculty);
-
+                    if (courseSection != null)
+                    {
+                        var courseMeetings = courseSecMeetings.Where(csm => csm.CsmCourseSection == sectionFacultyEntity.SectionId && csm.CsmInstrMethod == sectionFacultyEntity.InstructionalMethodCode);
+                        var sectionFaculty = BuildEthosSectionFaculty(sectionFacultyEntity, courseSection, courseMeetings);
+                        faculties.Add(sectionFaculty);
+                    }
+                    else
+                    {
+                        exception.AddError(new RepositoryError(faculty.RecordGuid, faculty.Recordkey, "Invalid.Section", string.Concat("Course section '" + faculty.CsfCourseSection
+                            + "' does not exist")));
+                    }
                 }
             }
-
+            if (exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
             return new Tuple<IEnumerable<SectionFaculty>, int>(faculties, totalCount);
         }
 
@@ -4183,15 +4902,22 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             // Read in course sections records to get Primary indicator and meeting pointers
             var courseSectionId = faculty.CsfCourseSection;
             var courseSection = await DataReader.ReadRecordAsync<CourseSections>("COURSE.SECTIONS", courseSectionId);
-            var courseSecMeetingIds = courseSection.SecMeeting.ToArray();
-            var courseSecMeetings = await DataReader.BulkReadRecordAsync<CourseSecMeeting>("COURSE.SEC.MEETING", courseSecMeetingIds);
+            if (courseSection != null)
+            {
+                var courseSecMeetingIds = courseSection.SecMeeting.ToArray();
+                var courseSecMeetings = await DataReader.BulkReadRecordAsync<CourseSecMeeting>("COURSE.SEC.MEETING", courseSecMeetingIds);
 
-            var sectionFacultyEntity = BuildSectionFaculty(faculty);
-            // Update from Section
-            var courseMeetings = courseSecMeetings.Where(csm => csm.CsmInstrMethod == sectionFacultyEntity.InstructionalMethodCode);
-            var sectionFaculty = BuildEthosSectionFaculty(sectionFacultyEntity, courseSection, courseMeetings);
-            return sectionFaculty;
-
+                var sectionFacultyEntity = BuildSectionFaculty(faculty);
+                // Update from Section
+                var courseMeetings = courseSecMeetings.Where(csm => csm.CsmInstrMethod == sectionFacultyEntity.InstructionalMethodCode);
+                var sectionFaculty = BuildEthosSectionFaculty(sectionFacultyEntity, courseSection, courseMeetings);
+                return sectionFaculty;
+            }
+            else
+            {
+                var exception = new RepositoryException(string.Concat("Course section '" + faculty.CsfCourseSection + "' does not exist"));
+                throw exception;
+            }
         }
 
         /// <summary>
@@ -4275,7 +5001,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 var exception = new RepositoryException("Errors encountered while deleting instructional event " + id);
                 foreach (var error in response.DeleteInstructionalEventErrors)
                 {
-                    exception.AddError(new RepositoryError(error.ErrorCodes, error.ErrorMessages));
+                    exception.AddError(new RepositoryError(string.IsNullOrEmpty(error.ErrorCodes) ? "" : error.ErrorCodes, error.ErrorMessages));
                 }
                 throw exception;
             }
@@ -4405,7 +5131,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 logger.Info(string.Format("Section with id {0} is already in dictionary with its calendar schedules", section.Id));
                             }
                         }
-                        catch(Exception ex)
+                        catch (Exception ex)
                         {
                             logger.Error(ex, ex.Message);
                         }
@@ -4413,7 +5139,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
                 calendarEvents = BuildEvents(sectionWiseCalData);
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 logger.Error("Error occured while retrieving section's calendar schedule events for iCal");
                 logger.Error(e, e.Message);
@@ -4421,15 +5147,266 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return calendarEvents;
         }
 
+        /// <summary>
+        /// Get all midterm grading complete indications for a section
+        /// </summary>
+        /// <param name="sectionId">The section ID</param>
+        /// <returns></returns>
+        public async Task<SectionMidtermGradingComplete> GetSectionMidtermGradingCompleteAsync(string sectionId)
+        {
+            if (string.IsNullOrEmpty(sectionId))
+            {
+                throw new ArgumentNullException("sectionID", "Section ID is required to get grading complete information for a section.");
+            }
+
+            // If no grading completion indications have been recorded, this will just return an object with only the section ID
+            var sectionGradingComplete = new SectionMidtermGradingComplete(sectionId);
+
+            var secGradingStatuses = await DataReader.ReadRecordAsync<SecGradingStatus>("SEC.GRADING.STATUS", sectionId);
+
+            // A SEC.GRADING.STATUS record may not exist for the section which is a valid condition. Just return the object with no 
+            // midterm grading complete data.
+            if (secGradingStatuses != null)
+            {
+                foreach (SecGradingStatusSgsMidGrade1Complete sgsMidGradeComplete in secGradingStatuses.SgsMidGrade1CompleteEntityAssociation)
+                {
+                    // Log and discard record if operator is null
+                    if (string.IsNullOrEmpty(sgsMidGradeComplete.SgsMidGrade1CmplOpersAssocMember))
+                    {
+                        var errorMessage = "The grading complete operator for a midterm grading 1 complete indication is blank. Not returning this grading complete indicator for the section {0}";
+                        logger.Info(errorMessage, sectionId);
+                    } else
+                    {
+                        DateTimeOffset? completeDate = sgsMidGradeComplete.SgsMidGrade1CmplTimesAssocMember.ToPointInTimeDateTimeOffset(
+                                sgsMidGradeComplete.SgsMidGrade1CmplDatesAssocMember, colleagueTimeZone);
+
+                        // The date/time stamp should never be null. If it is, log and discard this record.
+                        if (completeDate == null)
+                        {
+                            var errorMessage = "The date and time indicator for midterm grading 1 produced a null return value from ToPointInTimeDateTimeOffset. Not returning this grading complete indicator for the section {0}";
+                            logger.Info(errorMessage, sectionId);
+                        }
+                        else
+                        {
+                            // We know the date is not null, but must coalesce to match the expected non-nullable DateTime type
+                            sectionGradingComplete.AddMidtermGrading1Complete(sgsMidGradeComplete.SgsMidGrade1CmplOpersAssocMember, completeDate ?? new DateTime());
+                        }
+                    }
+                }
+
+                foreach (SecGradingStatusSgsMidGrade2Complete sgsMidGradeComplete in secGradingStatuses.SgsMidGrade2CompleteEntityAssociation)
+                {
+                    // Log and discard record if operator is null
+                    if (string.IsNullOrEmpty(sgsMidGradeComplete.SgsMidGrade2CmplOpersAssocMember))
+                    {
+                        var errorMessage = "The grading complete operator for a midterm grading 2 complete indication is blank. Not returning this grading complete indicator for the section {0}";
+                        logger.Info(errorMessage, sectionId);
+                    }
+                    else
+                    {
+                        DateTimeOffset? completeDate = sgsMidGradeComplete.SgsMidGrade2CmplTimesAssocMember.ToPointInTimeDateTimeOffset(
+                            sgsMidGradeComplete.SgsMidGrade2CmplDatesAssocMember, colleagueTimeZone);
+
+                        // The date/time stamp should never be null. If it is, log and discard this record.
+                        if (completeDate == null)
+                        {
+                            var errorMessage = "The date and time indicator for midterm grading 2 produced a null return value from ToPointInTimeDateTimeOffset. Not returning this grading complete indicator for the section {0}";
+                            logger.Info(errorMessage, sectionId);
+                        }
+                        else
+                        {
+                            // We know the date is not null, but must coalesce to match the expected non-nullable DateTime type
+                            sectionGradingComplete.AddMidtermGrading2Complete(sgsMidGradeComplete.SgsMidGrade2CmplOpersAssocMember, completeDate ?? new DateTime());
+                        }
+                    }
+                }
+
+                foreach (SecGradingStatusSgsMidGrade3Complete sgsMidGradeComplete in secGradingStatuses.SgsMidGrade3CompleteEntityAssociation)
+                {
+                    // Log and discard record if operator is null
+                    if (string.IsNullOrEmpty(sgsMidGradeComplete.SgsMidGrade3CmplOpersAssocMember))
+                    {
+                        var errorMessage = "The grading complete operator for a midterm grading 3 complete indication is blank. Not returning this grading complete indicator for the section {0}";
+                        logger.Info(errorMessage, sectionId);
+                    }
+                    else
+                    {
+                        DateTimeOffset? completeDate = sgsMidGradeComplete.SgsMidGrade3CmplTimesAssocMember.ToPointInTimeDateTimeOffset(
+                            sgsMidGradeComplete.SgsMidGrade3CmplDatesAssocMember, colleagueTimeZone);
+
+                        // The date/time stamp should never be null. If it is, log and discard this record.
+                        if (completeDate == null)
+                        {
+                            var errorMessage = "The date and time indicator for midterm grading 3 produced a null return value from ToPointInTimeDateTimeOffset. Not returning this grading complete indicator for the section {0}";
+                            logger.Info(errorMessage, sectionId);
+                        }
+                        else
+                        {
+                            // We know the date is not null, but must coalesce to match the expected non-nullable DateTime type
+                            sectionGradingComplete.AddMidtermGrading3Complete(sgsMidGradeComplete.SgsMidGrade3CmplOpersAssocMember, completeDate ?? new DateTime());
+                        }
+                    }
+                }
+
+                foreach (SecGradingStatusSgsMidGrade4Complete sgsMidGradeComplete in secGradingStatuses.SgsMidGrade4CompleteEntityAssociation)
+                {
+                    // Log and discard record if operator is null
+                    if (string.IsNullOrEmpty(sgsMidGradeComplete.SgsMidGrade4CmplOpersAssocMember))
+                    {
+                        var errorMessage = "The grading complete operator for a midterm grading 4 complete indication is blank. Not returning this grading complete indicator for the section {0}";
+                        logger.Info(errorMessage, sectionId);
+                    }
+                    else
+                    {
+                        DateTimeOffset? completeDate = sgsMidGradeComplete.SgsMidGrade4CmplTimesAssocMember.ToPointInTimeDateTimeOffset(
+                            sgsMidGradeComplete.SgsMidGrade4CmplDatesAssocMember, colleagueTimeZone);
+
+                        // The date/time stamp should never be null. If it is, log and discard this record.
+                        if (completeDate == null)
+                        {
+                            var errorMessage = "The date and time indicator for midterm grading 4 produced a null return value from ToPointInTimeDateTimeOffset. Not returning this grading complete indicator for the section {0}";
+                            logger.Info(errorMessage, sectionId);
+                        }
+                        else
+                        {
+                            // We know the date is not null, but must coalesce to match the expected non-nullable DateTime type
+                            sectionGradingComplete.AddMidtermGrading4Complete(sgsMidGradeComplete.SgsMidGrade4CmplOpersAssocMember, completeDate ?? new DateTime());
+                        }
+                    }
+                }
+
+                foreach (SecGradingStatusSgsMidGrade5Complete sgsMidGradeComplete in secGradingStatuses.SgsMidGrade5CompleteEntityAssociation)
+                {
+                    // Log and discard record if operator is null
+                    if (string.IsNullOrEmpty(sgsMidGradeComplete.SgsMidGrade5CmplOpersAssocMember))
+                    {
+                        var errorMessage = "The grading complete operator for a midterm grading 5 complete indication is blank. Not returning this grading complete indicator for the section {0}";
+                        logger.Info(errorMessage, sectionId);
+                    }
+                    else
+                    {
+                        DateTimeOffset? completeDate = sgsMidGradeComplete.SgsMidGrade5CmplTimesAssocMember.ToPointInTimeDateTimeOffset(
+                            sgsMidGradeComplete.SgsMidGrade5CmplDatesAssocMember, colleagueTimeZone);
+
+                        // The date/time stamp should never be null. If it is, log and discard this record.
+                        if (completeDate == null)
+                        {
+                            var errorMessage = "The date and time indicator for midterm grading 5 produced a null return value from ToPointInTimeDateTimeOffset. Not returning this grading complete indicator for the section {0}";
+                            logger.Info(errorMessage, sectionId);
+                        }
+                        else
+                        {
+                            // We know the date is not null, but must coalesce to match the expected non-nullable DateTime type
+                            sectionGradingComplete.AddMidtermGrading5Complete(sgsMidGradeComplete.SgsMidGrade5CmplOpersAssocMember, completeDate ?? new DateTime());
+                        }
+                    }
+                }
+
+                foreach (SecGradingStatusSgsMidGrade6Complete sgsMidGradeComplete in secGradingStatuses.SgsMidGrade6CompleteEntityAssociation)
+                {
+                    // Log and discard record if operator is null
+                    if (string.IsNullOrEmpty(sgsMidGradeComplete.SgsMidGrade6CmplOpersAssocMember))
+                    {
+                        var errorMessage = "The grading complete operator for a midterm grading 6 complete indication is blank. Not returning this grading complete indicator for the section {0}";
+                        logger.Info(errorMessage, sectionId);
+                    }
+                    else
+                    {
+                        DateTimeOffset? completeDate = sgsMidGradeComplete.SgsMidGrade6CmplTimesAssocMember.ToPointInTimeDateTimeOffset(
+                            sgsMidGradeComplete.SgsMidGrade6CmplDatesAssocMember, colleagueTimeZone);
+
+                        // The date/time stamp should never be null. If it is, log and discard this record.
+                        if (completeDate == null)
+                        {
+                            var errorMessage = "The date and time indicator for midterm grading 6 produced a null return value from ToPointInTimeDateTimeOffset. Not returning this grading complete indicator for the section {0}";
+                            logger.Info(errorMessage, sectionId);
+                        }
+                        else
+                        {
+                            // We know the date is not null, but must coalesce to match the expected non-nullable DateTime type
+                            sectionGradingComplete.AddMidtermGrading6Complete(sgsMidGradeComplete.SgsMidGrade6CmplOpersAssocMember, completeDate ?? new DateTime());
+                        }
+                    }
+                }
+            }
+
+            return sectionGradingComplete;
+        }
+        public async Task<SectionMidtermGradingComplete> PostSectionMidtermGradingCompleteAsync(string sectionId, int? midtermGradeNumber, string completeOperator, DateTimeOffset? dateAndTime)
+        {
+            if (sectionId == null)
+            {
+                throw new ArgumentNullException("SectionId", "SectionId is not provided");
+            }
+
+            if (midtermGradeNumber == null)
+            {
+                throw new ArgumentNullException("MidtermGradeNumber", "MidtermGradeNumber is not provided");
+            }
+
+            if ((midtermGradeNumber < 1) || (midtermGradeNumber > 6))
+            {
+                throw new ArgumentException("MidtermGradeNumber", "MidtermGradeNumber must be between 1 and 6");
+            }
+
+            if (string.IsNullOrEmpty(completeOperator))
+            {
+                throw new ArgumentNullException("CompleteOperator", "CompleteOperator is not provided");
+            }
+
+            if (dateAndTime == null)
+            {
+                throw new ArgumentNullException("DateAndTime", "DateAndTime is not provided");
+            }
+
+            var request = new AddMidtermGradeCompleteRequest();
+            request.ACourseSectionId = sectionId;
+            request.AMidtermGradeNumber = midtermGradeNumber;
+            request.AOperator = completeOperator;
+            // Convert the date/time, already checked for NULL, to local time, then divide into date and time parts expected by the CTX.
+            DateTimeOffset? localDateTime = dateAndTime.ToLocalDateTime(colleagueTimeZone);
+            request.ADate = localDateTime.Value.Date;
+            request.ATime = localDateTime.Value.DateTime;
+
+            var response = new AddMidtermGradeCompleteResponse();
+
+            try
+            {
+                response = await transactionInvoker.ExecuteAsync<AddMidtermGradeCompleteRequest, AddMidtermGradeCompleteResponse>(request);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "The Colleague transaction failed recording midterm grading complete for section {0}" , sectionId);
+                throw new ApplicationException("Unable to record midterm grading complete");
+            }
+
+            if (!string.IsNullOrEmpty(response.AErrorMsg))
+            {
+                logger.Error("The Colleague transaction returned the following error recording midterm grading complete for section {0}. " + response.AErrorMsg, sectionId);
+                throw new ApplicationException("Unable to record midterm grading complete");
+            }
+
+            // Return the updated midterm grading complete information for the section
+            return await GetSectionMidtermGradingCompleteAsync(sectionId);
+
+        }
+
         private async Task<SectionFaculty> UpdateSectionFacultyAsync(SectionFaculty sectionFaculty, string guid)
         {
+            var exception = new RepositoryException();
+
             if (sectionFaculty == null)
             {
-                throw new ArgumentNullException("section");
+                exception.AddError(new RepositoryError("section", "Section Faculty cannot be null."));
             }
             if (guid == null)
             {
-                throw new ArgumentNullException("guid");
+                exception.AddError(new RepositoryError("guid", "Section Faculty GUID cannot be null."));
+            }
+
+            if (exception.Errors.Any())
+            {
+                throw exception;
             }
 
             // Pass the section faculty data down to a Colleague transaction to do the record add/update
@@ -4472,7 +5449,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             if (response.UpdateSectionFacultyErrors != null && response.UpdateSectionFacultyErrors.Count > 0)
             {
-                var exception = new RepositoryException("Errors encountered while updating section-instructors " + sectionFaculty.Id);
+                exception.AddError(new RepositoryError("section", "Errors encountered while updating section-instructors " + sectionFaculty.Id));
                 foreach (var error in response.UpdateSectionFacultyErrors)
                 {
                     // If the code is null, just log the error message, unless it's blank, too
@@ -4523,7 +5500,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 var exception = new RepositoryException("Errors encountered while deleting section instructors " + guid);
                 foreach (var error in response.DeleteSectionInstructorsErrors)
                 {
-                    exception.AddError(new RepositoryError(error.ErrorCodes, error.ErrorMessages));
+                    exception.AddError(new RepositoryError(string.IsNullOrEmpty(error.ErrorCodes) ? "" : error.ErrorCodes, error.ErrorMessages));
                 }
                 throw exception;
             }
@@ -4649,7 +5626,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             meetingEndTime);
                         if (sectionMeetingData != null && sectionMeetingData.Any())
                         {
-                            var secMeeting = sectionMeetingData.Where(sm => sm.Recordkey == cal.CalsCourseSecMeeting).FirstOrDefault();
+                            var matchingSecMeetings = sectionMeetingData.Where(sm => sm.Recordkey == cal.CalsCourseSecMeeting);
+                            var secMeeting = (matchingSecMeetings != null) ? matchingSecMeetings.FirstOrDefault() : null;
                             if (secMeeting != null)
                             {
                                 calEvent.InstructionalMethod = string.IsNullOrEmpty(secMeeting.CsmInstrMethod) ? null : secMeeting.CsmInstrMethod.ToUpper();
@@ -4809,15 +5787,15 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns>SectionFaculty object</returns>
         private SectionFaculty BuildEthosSectionFaculty(SectionFaculty sectionFacultyEntity, CourseSections courseSection, IEnumerable<CourseSecMeeting> sectionMeeting)
         {
-            if (sectionMeeting.Any())
+            if (sectionMeeting != null && sectionMeeting.Any())
             {
                 sectionFacultyEntity.SecMeetingIds = new List<string>();
-            }
-            foreach (var meeting in sectionMeeting)
-            {
-                if (meeting != null && !string.IsNullOrEmpty(meeting.Recordkey) && meeting.CsmInstrMethod == sectionFacultyEntity.InstructionalMethodCode)
+                foreach (var meeting in sectionMeeting)
                 {
-                    sectionFacultyEntity.SecMeetingIds.Add(meeting.Recordkey);
+                    if (meeting != null && !string.IsNullOrEmpty(meeting.Recordkey) && meeting.CsmInstrMethod == sectionFacultyEntity.InstructionalMethodCode)
+                    {
+                        sectionFacultyEntity.SecMeetingIds.Add(meeting.Recordkey);
+                    }
                 }
             }
             if (courseSection.SecFaculty != null && courseSection.SecFaculty.Contains(sectionFacultyEntity.Id))
@@ -4828,6 +5806,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     sectionFacultyEntity.PrimaryIndicator = true;
                 }
             }
+
             return sectionFacultyEntity;
         }
 
@@ -4852,7 +5831,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
         private async Task<bool> IsInstructionOnlineAsync(string instrMethod)
         {
-            var instruction = (await InstructionalMethodsAsync()).Where(x => x.Code == instrMethod).FirstOrDefault();
+            var matchingInstructionalMethods = (await InstructionalMethodsAsync()).Where(x => x.Code == instrMethod);
+            var instruction = (matchingInstructionalMethods != null) ? matchingInstructionalMethods.FirstOrDefault() : null;
             return instruction != null && instruction.IsOnline;
         }
 
@@ -4866,7 +5846,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 throw new ArgumentNullException("meetingGuid");
             }
-            var meeting = section.Meetings.FirstOrDefault(x => x.Guid == meetingGuid);
+            var meeting = (section.Meetings != null) ? section.Meetings.FirstOrDefault(x => x.Guid == meetingGuid) : null;
             if (meeting == null)
             {
                 throw new KeyNotFoundException("Section meeting not found with GUID " + meetingGuid);
@@ -5000,7 +5980,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 throw new ArgumentNullException("meetingGuid");
             }
-            var meeting = section.Meetings.FirstOrDefault(x => x.Guid == meetingGuid);
+            var meeting = (section.Meetings != null) ? section.Meetings.FirstOrDefault(x => x.Guid == meetingGuid) : null;
             if (meeting == null)
             {
                 throw new KeyNotFoundException("Section meeting not found with GUID " + meetingGuid);
@@ -5126,7 +6106,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
         private async Task<SectionStatus> ConvertStatusCodeToSectionStatusAsync(string status)
         {
-            var statusEntry = (await GetSectionStatusCodesAsync()).FirstOrDefault(ss => ss.Code == status);
+            var statusCodes = await GetSectionStatusCodesAsync();
+            var statusEntry = (statusCodes != null) ? statusCodes.FirstOrDefault(ss => ss.Code == status) : null;
             return statusEntry == null || !statusEntry.StatusType.HasValue ? SectionStatus.Inactive : statusEntry.StatusType.Value;
         }
 
@@ -5145,30 +6126,32 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
         private async Task<SectionStatusIntegration> ConvertStatusCodeToSectionIntegrationStatusAsync(string status)
         {
-            var statusEntry = (await GetSectionStatusCodesAsync()).FirstOrDefault(ss => ss.Code == status);
+            var statusCodes = await GetSectionStatusCodesAsync();
+            var statusEntry = (statusCodes != null) ? statusCodes.FirstOrDefault(ss => ss.Code == status) : null;
             return statusEntry == null || !statusEntry.IntegrationStatusType.HasValue ? SectionStatusIntegration.Pending : statusEntry.IntegrationStatusType.Value;
         }
 
         public async Task<string> ConvertSectionIntegrationStatusToStatusCodeAsync(SectionStatusIntegration status)
         {
             var retval = string.Empty;
+            var statusCodes = await GetSectionStatusCodesAsync();
 
             switch (status)
             {
                 case SectionStatusIntegration.Open:
-                    var sectionStatusCodeOpen = (await GetSectionStatusCodesAsync()).FirstOrDefault(ss => ss.IntegrationStatusType == SectionStatusIntegration.Open);
+                    var sectionStatusCodeOpen = (statusCodes != null) ? statusCodes.FirstOrDefault(ss => ss.IntegrationStatusType == SectionStatusIntegration.Open) : null;
                     if (sectionStatusCodeOpen != null) retval = sectionStatusCodeOpen.Code;
                     break;
                 case SectionStatusIntegration.Closed:
-                    var sectionStatusCodeClosed = (await GetSectionStatusCodesAsync()).FirstOrDefault(ss => ss.IntegrationStatusType == SectionStatusIntegration.Closed);
+                    var sectionStatusCodeClosed = (statusCodes != null) ? statusCodes.FirstOrDefault(ss => ss.IntegrationStatusType == SectionStatusIntegration.Closed) : null;
                     if (sectionStatusCodeClosed != null) retval = sectionStatusCodeClosed.Code;
                     break;
                 case SectionStatusIntegration.Cancelled:
-                    var sectionStatusCodeCancelled = (await GetSectionStatusCodesAsync()).FirstOrDefault(ss => ss.IntegrationStatusType == SectionStatusIntegration.Cancelled);
+                    var sectionStatusCodeCancelled = (statusCodes != null) ? statusCodes.FirstOrDefault(ss => ss.IntegrationStatusType == SectionStatusIntegration.Cancelled) : null;
                     if (sectionStatusCodeCancelled != null) retval = sectionStatusCodeCancelled.Code;
                     break;
                 default:
-                    var sectionStatusCodePending = (await GetSectionStatusCodesAsync()).FirstOrDefault(ss => ss.IntegrationStatusType == SectionStatusIntegration.Pending);
+                    var sectionStatusCodePending = (statusCodes != null) ? statusCodes.FirstOrDefault(ss => ss.IntegrationStatusType == SectionStatusIntegration.Pending) : null;
                     if (sectionStatusCodePending != null) retval = sectionStatusCodePending.Code;
                     break;
             }
@@ -5434,7 +6417,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     Data.Student.DataContracts.CdDefaults courseParams = await DataReader.ReadRecordAsync<Data.Student.DataContracts.CdDefaults>("ST.PARMS", "CD.DEFAULTS");
                     if (courseParams == null)
                     {
-                        var errorMessage = "Unable to access course parameters CD.DEFAULTS to determine CoreqPrereq convertion flag. Defaulting to unconverted.";
+                        var errorMessage = "Unable to access course parameters CD.DEFAULTS to determine CoreqPrereq conversion flag. Defaulting to unconverted.";
                         logger.Info(errorMessage);
                         // If we cannot read the course parameters - default to "unconverted".
                         // throw new Exception(errorMessage);
@@ -5804,13 +6787,24 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         {
             if (!String.IsNullOrEmpty(waitlistStatusCode))
             {
-                var codeAssoc = (await GetWaitlistStatusesAsync()).ValsEntityAssociation.Where(v => v.ValInternalCodeAssocMember == waitlistStatusCode).FirstOrDefault();
+                var matchingWaitlistStatuses = (await GetWaitlistStatusesAsync()).ValsEntityAssociation.Where(v => v.ValInternalCodeAssocMember == waitlistStatusCode);
+                var codeAssoc = (matchingWaitlistStatuses != null) ? matchingWaitlistStatuses.FirstOrDefault() : null;
                 if (codeAssoc != null)
                 {
                     return codeAssoc.ValActionCode1AssocMember;
                 }
             }
             return null;
+        }
+
+        /// <summary>
+        /// Get the list of student waitlist statuses
+        /// </summary>
+        /// <returns></returns>
+        public async Task<IEnumerable<StudentWaitlistStatus>> GetStudentWaitlistStatusesAsync()
+        {           
+            List<StudentWaitlistStatus> studentWaitlistStatuses = (await GetWaitlistStatusesAsync()).ValsEntityAssociation.Select(y => new StudentWaitlistStatus(statuscode: y.ValActionCode1AssocMember, status: y.ValInternalCodeAssocMember, statusdescription: y.ValExternalRepresentationAssocMember)).ToList();                                                                                 
+            return studentWaitlistStatuses; 
         }
 
         /// <summary>
@@ -6018,13 +7012,13 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         }
                     }
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     logger.Error(e, e.Message);
 
                 }
             }
-        
+
             return cals;
         }
     }

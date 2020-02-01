@@ -227,7 +227,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             List<StudentRequest> studentRequestEntityList = new List<StudentRequest>();
             if (string.IsNullOrEmpty(studentId))
             {
-                logger.Info("You must provide the student Id");
+                logger.Error("You must provide the student Id");
                 throw new ArgumentNullException("studentId", "You must provide the student Id");
             }
             try
@@ -245,9 +245,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         {
                             requestEntity = GenerateRequest(request);
                         }
-                        catch
+                        catch (Exception ex)
                         {
-                            LogDataError("Bad StudentRequestLogs record", request.Recordkey, request);
+                            logger.Error(ex, string.Format("An error occurred building student request data for record {0}", request.Recordkey));
                         }
                         if (requestEntity != null)
                         {
@@ -261,7 +261,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             catch (Exception ex)
             {
                 var errorMessage = string.Format("Unable to access student request log records for student Id {0}", studentId);
-                logger.Info(ex, errorMessage);
+                logger.Error(ex, errorMessage);
                 throw;
             }
         }

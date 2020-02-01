@@ -1,4 +1,4 @@
-﻿/*Copyright 2015-2017 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2015-2019 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -232,9 +232,9 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
                 throw new Exception(message);
             }
 
-            var communications = AwardPackageChangeRequestDomainService.GetCommunications(newChangeRequestEntity, studentAward);
+            var communications = AwardPackageChangeRequestDomainService.GetCommunications(newChangeRequestEntity, studentAward, awardStatuses);
             
-            if (communications != null && communications.Count() > 0)
+            if (communications != null && communications.Any())
             {
                 foreach (var communication in communications)
                 {

@@ -1015,7 +1015,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 
             var tuple = new Tuple<IEnumerable<Dtos.InstitutionJobs3>, int>(InstitutionJobList, 5);
 
-            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<Dictionary<string, string>>())).ReturnsAsync(tuple);
             var institutionJobs = await InstitutionJobsController.GetInstitutionJobs3Async(new Paging(10, 0), criteriaFilter);
 
             var cancelToken = new System.Threading.CancellationToken(false);
@@ -1044,7 +1044,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 
             var tuple = new Tuple<IEnumerable<Dtos.InstitutionJobs3>, int>(InstitutionJobList, 5);
 
-            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<Dictionary<string, string>>())).ReturnsAsync(tuple);
 
             var filterGroupName = "criteria";
             InstitutionJobsController.Request.Properties.Add(
@@ -1082,7 +1082,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 
             var tuple = new Tuple<IEnumerable<Dtos.InstitutionJobs3>, int>(InstitutionJobList, 5);
 
-            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<Dictionary<string, string>>())).ReturnsAsync(tuple);
 
             var filterGroupName = "criteria";
             InstitutionJobsController.Request.Properties.Add(
@@ -1120,7 +1120,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 
             var tuple = new Tuple<IEnumerable<Dtos.InstitutionJobs3>, int>(InstitutionJobList, 5);
 
-            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<Dictionary<string, string>>())).ReturnsAsync(tuple);
 
             var filterGroupName = "criteria";
             InstitutionJobsController.Request.Properties.Add(
@@ -1158,7 +1158,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 
             var tuple = new Tuple<IEnumerable<Dtos.InstitutionJobs3>, int>(InstitutionJobList, 5);
 
-            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<Dictionary<string, string>>())).ReturnsAsync(tuple);
 
             var filterGroupName = "criteria";
             InstitutionJobsController.Request.Properties.Add(
@@ -1196,7 +1196,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 
             var tuple = new Tuple<IEnumerable<Dtos.InstitutionJobs3>, int>(InstitutionJobList, 5);
 
-            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<Dictionary<string, string>>())).ReturnsAsync(tuple);
 
             var filterGroupName = "criteria";
             InstitutionJobsController.Request.Properties.Add(
@@ -1234,7 +1234,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 
             var tuple = new Tuple<IEnumerable<Dtos.InstitutionJobs3>, int>(InstitutionJobList, 5);
 
-            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<Dictionary<string, string>>())).ReturnsAsync(tuple);
 
             var filterGroupName = "criteria";
             InstitutionJobsController.Request.Properties.Add(
@@ -1272,7 +1272,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 
             var tuple = new Tuple<IEnumerable<Dtos.InstitutionJobs3>, int>(InstitutionJobList, 5);
 
-            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<Dictionary<string, string>>())).ReturnsAsync(tuple);
 
             var filterGroupName = "criteria";
             InstitutionJobsController.Request.Properties.Add(
@@ -1311,7 +1311,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 
             var tuple = new Tuple<IEnumerable<Dtos.InstitutionJobs3>, int>(InstitutionJobList, 5);
 
-            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<Dictionary<string, string>>())).ReturnsAsync(tuple);
 
             var filterGroupName = "criteria";
             InstitutionJobsController.Request.Properties.Add(
@@ -1362,7 +1362,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 
             var tuple = new Tuple<IEnumerable<Dtos.InstitutionJobs3>, int>(InstitutionJobList, 5);
 
-            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<Dictionary<string, string>>())).ReturnsAsync(tuple);
             var institutionJobs = await InstitutionJobsController.GetInstitutionJobs3Async(new Paging(10, 0), criteriaFilter);
 
             var cancelToken = new System.Threading.CancellationToken(false);
@@ -1393,7 +1393,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 
             var tuple = new Tuple<IEnumerable<Dtos.InstitutionJobs3>, int>(InstitutionJobList, 5);
 
-            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<Dictionary<string, string>>())).ReturnsAsync(tuple);
             var institutionJobs = await InstitutionJobsController.GetInstitutionJobs3Async(new Paging(10, 0), criteriaFilter);
 
             var cancelToken = new System.Threading.CancellationToken(false);
@@ -1424,7 +1424,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 
             var tuple = new Tuple<IEnumerable<Dtos.InstitutionJobs3>, int>(InstitutionJobList, 5);
 
-            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<Dictionary<string, string>>())).ReturnsAsync(tuple);
             var institutionJobs = await InstitutionJobsController.GetInstitutionJobs3Async(new Paging(10, 0), criteriaFilter);
 
             var cancelToken = new System.Threading.CancellationToken(false);
@@ -1462,7 +1462,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
         [ExpectedException(typeof(HttpResponseException))]
         public async Task InstitutionJobsController_GetThrowsIntAppiExc()
         {
-            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<Exception>();
+            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<Dictionary<string, string>>())).Throws<Exception>();
 
             await InstitutionJobsController.GetInstitutionJobs3Async(new Paging(100, 0), criteriaFilter);
         }
@@ -1471,7 +1471,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
         [ExpectedException(typeof(HttpResponseException))]
         public async Task InstitutionJobsController_GetThrowsIntAppiKeyNotFoundExc()
         {
-            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<KeyNotFoundException>();
+            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<Dictionary<string, string>>())).Throws<KeyNotFoundException>();
 
             await InstitutionJobsController.GetInstitutionJobs3Async(new Paging(100, 0), criteriaFilter);
         }
@@ -1480,7 +1480,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
         [ExpectedException(typeof(HttpResponseException))]
         public async Task InstitutionJobsController_GetThrowsIntAppiArgumentExc()
         {
-            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<ArgumentException>();
+            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<Dictionary<string, string>>())).Throws<ArgumentException>();
 
             await InstitutionJobsController.GetInstitutionJobs3Async(new Paging(100, 0), criteriaFilter);
         }
@@ -1489,7 +1489,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
         [ExpectedException(typeof(HttpResponseException))]
         public async Task InstitutionJobsController_GetThrowsIntAppiRepositoryExc()
         {
-            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<RepositoryException>();
+            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<Dictionary<string, string>>())).Throws<RepositoryException>();
 
             await InstitutionJobsController.GetInstitutionJobs3Async(new Paging(100, 0), criteriaFilter);
         }
@@ -1498,7 +1498,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
         [ExpectedException(typeof(HttpResponseException))]
         public async Task InstitutionJobsController_GetThrowsIntAppiIntegrationExc()
         {
-            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<IntegrationApiException>();
+            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<Dictionary<string, string>>())).Throws<IntegrationApiException>();
 
             await InstitutionJobsController.GetInstitutionJobs3Async(new Paging(100, 0), criteriaFilter);
         }
@@ -1507,7 +1507,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
         [ExpectedException(typeof(HttpResponseException))]
         public async Task InstitutionJobsController_GetThrowsIntAppiPermissionExc()
         {
-            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<PermissionsException>();
+            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<Dictionary<string, string>>())).Throws<PermissionsException>();
 
             await InstitutionJobsController.GetInstitutionJobs3Async(new Paging(100, 0), criteriaFilter);
         }

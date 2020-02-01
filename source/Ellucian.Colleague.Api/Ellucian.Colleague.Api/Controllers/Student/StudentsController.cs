@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -161,6 +161,22 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="studentId">Student's ID</param>
         /// <param name="currentOnly">Boolean to indicate whether this request is for active student programs, or ended/past programs as well</param>
         /// <returns>All <see cref="StudentProgram">Programs</see> in which the specified student is enrolled.</returns>
+        /// <accessComments>
+        /// Student information can be retrieved only when:
+        /// 1. A Student is accessing its own data.
+        /// 2. Proxy user is accessing the student's data.
+        /// 3. An Advisor with any of the following codes is accessing the student's data if the student is not assigned advisee.
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// 4. An Advisor with any of the following codes is accessing the student's data if the student is assigned advisee.
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// 5. A user with permission of VIEW.STUDENT.INFORMATION is accessing the student's data.
+        /// </accessComments>
         [Obsolete("Obsolete as of Api version 1.10, use version 2 of this API")]
         public async Task<IEnumerable<StudentProgram>> GetStudentProgramsAsync(string studentId, bool currentOnly = true)
         {
@@ -215,6 +231,21 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="filter">(Optional) used to filter to active credit only.</param>
         /// <param name="term">(Optional) used to return only a specific term of data.</param>
         /// <returns>The <see cref="AcademicHistory">Academic History</see> for the student.</returns>
+        /// <accessComments>
+        /// Student academic history can be retrieved by:
+        /// 1. A Student is accessing its own data
+        /// 2. An Advisor with any of the following permissions is accessing any student
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// 3. An Advisor with any of the following permissions is accessing one of his or her assigned advisees
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// 4. A user with permission of VIEW.STUDENT.INFORMATION is accessing the student's data.
+        /// </accessComments>
         [Obsolete("Obsolete as of Api version 1.5, use version 2 of this API")]
         public async Task<AcademicHistory> GetAcademicHistoryAsync(string studentId, bool bestFit = false, bool filter = true, string term = null)
         {
@@ -240,6 +271,21 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="filter">(Optional) used to filter to active credit only.</param>
         /// <param name="term">(Optional) used to return only a specific term of data.</param>
         /// <returns>The <see cref="AcademicHistory2">Academic History</see> for the student.</returns>
+        /// <accessComments>
+        /// Student academic history can be retrieved by:
+        /// 1. A Student is accessing its own data
+        /// 2. An Advisor with any of the following permissions is accessing any student
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// 3. An Advisor with any of the following permissions is accessing one of his or her assigned advisees
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// 4. A user with permission of VIEW.STUDENT.INFORMATION is accessing the student's data.
+        /// </accessComments>
         [Obsolete("Obsolete as of API version 1.11, use GetAcademicHistory3Async instead")]
         public async Task<AcademicHistory2> GetAcademicHistory2Async(string studentId, bool bestFit = false, bool filter = true, string term = null)
         {
@@ -265,6 +311,22 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="filter">(Optional) used to filter to active credit only.</param>
         /// <param name="term">(Optional) used to return only a specific term of data.</param>
         /// <returns>The <see cref="AcademicHistory3">Academic History</see> for the student.</returns>
+        /// <accessComments>
+        /// Student academic history can be retrieved by:
+        /// 1. A Student is accessing its own data,
+        /// 2. A proxy is accessing data for allowed student,
+        /// 3. An Advisor with any of the following permissions is accessing any student
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// 4. An Advisor with any of the following permissions is accessing one of his or her assigned advisees
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// 5. A user with permission of VIEW.STUDENT.INFORMATION is accessing the student's data.
+        /// </accessComments>
         [Obsolete("Obsolete as of API version 1.18, use GetAcademicHistory4Async instead")]
         public async Task<AcademicHistory3> GetAcademicHistory3Async(string studentId, bool bestFit = false, bool filter = true, string term = null)
         {
@@ -291,6 +353,22 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="term">(Optional) used to return only a specific term of data.</param>
         /// <param name="includeDrops">(Optional) used to include dropped academic credits</param>
         /// <returns>The <see cref="AcademicHistory4">Academic History</see> for the student.</returns>
+        /// <accessComments>
+        /// Student academic history can be retrieved by:
+        /// 1. A Student is accessing its own data,
+        /// 2. A proxy is accessing data for allowed student,
+        /// 3. An Advisor with any of the following permissions is accessing any student
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// 4. An Advisor with any of the following permissions is accessing one of his or her assigned advisees
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// 5. A user with permission of VIEW.STUDENT.INFORMATION is accessing the student's data.
+        /// </accessComments>
         public async Task<AcademicHistory4> GetAcademicHistory4Async(string studentId, bool bestFit = false, bool filter = true, string term = null, bool includeDrops = false)
         {
             try
@@ -312,6 +390,22 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="studentId">Id of the student</param>
         /// <returns>All  <see cref="PersonRestriction">Student Restrictions</see> for the provided student.</returns>
+        /// <accessComments>
+        /// Student restrictions can be retrieved by:
+        /// 1. A Student is accessing its own data,
+        /// 2. A proxy is accessing data for allowed student,
+        /// 3. An Advisor with any of the following permissions is accessing any student
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// 4. An Advisor with any of the following permissions is accessing one of his or her assigned advisees
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// 5. A user with permission of VIEW.STUDENT.INFORMATION is accessing the student's data.
+        /// </accessComments>
         [Obsolete("Obsolete as of API version 1.11, use GetStudentRestrictionsAsync2")]
         public async Task<IEnumerable<PersonRestriction>> GetStudentRestrictionsAsync(string studentId)
         {
@@ -337,6 +431,22 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="studentId">Id of the student</param>
         /// <returns>All  <see cref="PersonRestriction">Student Restrictions</see> for the provided student.</returns>
+        /// <accessComments>
+        /// Student restrictions can be retrieved by:
+        /// 1. A Student is accessing its own data,
+        /// 2. A proxy is accessing data for allowed student and has 1 or more proxy permissions,
+        /// 3. An Advisor with any of the following permissions is accessing any student
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// 4. An Advisor with any of the following permissions is accessing one of his or her assigned advisees
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// 5. A user with permission of VIEW.STUDENT.INFORMATION is accessing the student's data.
+        /// </accessComments>
         [Obsolete("Obsolete as of API version 1.16, use GetStudentRestrictions3Async")]
         public async Task<IEnumerable<PersonRestriction>> GetStudentRestrictionsAsync2(string studentId)
         {
@@ -376,6 +486,12 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="studentId">Id of the student</param>
         /// <returns>All  <see cref="PersonRestriction">Student Restrictions</see> for the provided student.</returns>
+        /// <accessComments>
+        /// Student restrictions can be retrieved by:
+        /// 1. A Student is accessing its own data,
+        /// 2. A person who has been granted Core Notification workflow proxy access for the student,
+        /// 3. A user with permission of VIEW.PERSON.RESTRICTIONS is accessing the student's data.
+        /// </accessComments>
         public async Task<IEnumerable<PersonRestriction>> GetStudentRestrictions3Async(string studentId)
         {
             if (string.IsNullOrEmpty(studentId))
@@ -446,6 +562,9 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="id">The user's ID</param>
         /// <returns>A list of <see cref="RegistrationMessage"/>Registration Messages.</returns>
+        /// <accessComments>        /// A person may retrieve their own registration eligibility.        /// A proxy may retrieve data for allowed student.        /// An authenticated user (advisor) with any of the following permission codes may retrieve registration eligibility for one of their assigned advisees        /// VIEW.ASSIGNED.ADVISEES        /// REVIEW.ASSIGNED.ADVISEES        /// UPDATE.ASSIGNED.ADVISEES        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// An authenticated user (advisor) with any of the following permission codes may retrieve registration eligibility for any student
+        /// VIEW.ANY.ADVISEE        /// REVIEW.ANY.ADVISEE        /// UPDATE.ANY.ADVISEE        /// ALL.ACCESS.ANY.ADVISEE        /// </accessComments>
         [Obsolete("Obsolete as of API version 1.3, use version 2 of this API")]
         public async Task<IEnumerable<RegistrationMessage>> GetRegistrationEligibilityAsync(string id)
         {
@@ -471,6 +590,10 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="studentId">Id of the student</param>
         /// <returns><see cref="RegistrationEligibility">Registration Eligibility </see> information containing messages, which, if present, indicate the student
         /// is ineligible, in addition to a boolean HasOverride, set to true if the current user has the ability to override ineligibility.</returns>
+        /// <accessComments>        /// A person may retrieve their own registration eligibility.        ///         /// An authenticated user (advisor) with any of the following permission codes may retrieve registration eligibility for one of their assigned advisees        /// VIEW.ASSIGNED.ADVISEES        /// REVIEW.ASSIGNED.ADVISEES        /// UPDATE.ASSIGNED.ADVISEES        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// 
+        /// An authenticated user (advisor) with any of the following permission codes may retrieve registration eligibility for any student
+        /// VIEW.ANY.ADVISEE        /// REVIEW.ANY.ADVISEE        /// UPDATE.ANY.ADVISEE        /// ALL.ACCESS.ANY.ADVISEE        /// </accessComments>
         public async Task<Dtos.Student.RegistrationEligibility> GetRegistrationEligibility2Async(string studentId)
         {
             if (string.IsNullOrEmpty(studentId))
@@ -494,6 +617,19 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="studentId">Id of the student</param>
         /// <returns>Information used to determine if a student should be prevented from seeing or requesting their transcript.</returns>
+        /// <accessComments>
+        /// 1. User must be requesting their own data.
+        /// 2. An Advisor with any of the following codes is accessing the student's data if the student is not assigned advisee.
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// 3. An Advisor with any of the following codes is accessing the student's data if the student is assigned advisee.
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// </accessComments>
         public async Task<Dtos.Student.TranscriptAccess> GetTranscriptRestrictions2Async(string studentId)
         {
             try
@@ -515,6 +651,9 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="studentId">Id of the student</param>
         /// <returns>All transcript restrictions for the provided student.</returns>
+        /// <accessComments>
+        /// User must be requesting their own data, or requesting information for advisee with adequate permissions
+        /// </accessComments>
         public async Task<IEnumerable<Dtos.Student.TranscriptRestriction>> GetTranscriptRestrictionsAsync(string studentId)
         {
             try
@@ -553,9 +692,9 @@ namespace Ellucian.Colleague.Api.Controllers
         /// 1. A Student is accessing its own data.
         /// 3. An Advisor with any of the following codes is accessing the student's data if the student is not assigned advisee.
         /// VIEW.ANY.ADVISEE
-        /// REVIEW.ANY.ADVISEES
-        /// UPDATE.ANY.ADVISEES
-        /// ALL.ACCESS.ANY.ADVISEES
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
         /// 4. An Advisor with any of the following codes is accessing the student's data if the student is assigned advisee.
         /// VIEW.ASSIGNED.ADVISEES
         /// REVIEW.ASSIGNED.ADVISEES
@@ -626,6 +765,9 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="transcriptRequest">PESC XML Transcript Request</param>
         /// <returns>HTTP 201 if successful; in the body, the status of the request, and the date, if any, of expected future processing.</returns>
+        /// <accessComments>
+        /// Users must have the VIEW.ANY.ADVISEE permission to create transcript orders
+        /// </accessComments>
         public async Task<HttpResponseMessage> PostTranscriptOrderAsync([FromBody] TranscriptRequest transcriptRequest)
         {
 
@@ -679,6 +821,9 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="orderId">Third-party-generated order ID</param>
         /// <param name="currentStatusCode">The cloud's current understanding of the order's status</param>
         /// <returns>Base-64 encoded PESC XML Transcript Response</returns>
+        /// <accessComments>
+        /// Users must have the VIEW.ANY.ADVISEE permission to check transcript order statuses
+        /// </accessComments>
         public async Task<HttpResponseMessage> GetTranscriptOrderStatusAsync(string orderId, string currentStatusCode)
         {
 
@@ -719,6 +864,19 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="studentId">The system id for the student whose transcript is being requested</param>
         /// <param name="transcriptGrouping">The transcript grouping of transcript to return. If empty, transcripts of all grouping types will be returned for the student</param>
         /// <returns>A pdf of the student's unofficial transcript</returns>
+        /// <accessComments>
+        /// 1. User must be requesting their own data.
+        /// 2. An Advisor with any of the following codes is accessing the student's data if the student is not assigned advisee.
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// 3. An Advisor with any of the following codes is accessing the student's data if the student is assigned advisee.
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// </accessComments>
         public async Task<HttpResponseMessage> GetUnofficialTranscriptAsync(string studentId, string transcriptGrouping = null)
         {
             try
@@ -740,8 +898,8 @@ namespace Ellucian.Colleague.Api.Controllers
                     reportWatermarkPath = HttpContext.Current.Server.MapPath(reportWatermarkPath);
                     string filenameToUse = string.Empty;
                     var officialTranscriptInfo = await _studentService.GetUnofficialTranscriptAsync(studentId, path, transcriptGrouping, reportWatermarkPath, deviceInfoPath);
-                    var renderedBytes=officialTranscriptInfo.Item1;
-                    var fileNameToUse=officialTranscriptInfo.Item2;
+                    var renderedBytes = officialTranscriptInfo.Item1;
+                    var fileNameToUse = officialTranscriptInfo.Item2;
                     // Create the http response object, use the byte array for the response content, and set header content type to the mime type of the report
                     var response = new HttpResponseMessage();
                     response.Content = new ByteArrayContent(renderedBytes);
@@ -841,6 +999,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="studentId">Id of student</param>
         /// <param name="sectionRegistrations">Registration requests to process</param>
         /// <returns>A registration response which includes any messages from registration</returns>
+        /// <accessComments>        /// A person may perform registration actions (register, drop, waitlist, etc) for themselves.          /// An advisor with ALL.ACCESS.ANY.ADVISEE may perform registration actions for any student.        /// An advisor with ALL.ACCESS.ASSIGNED.ADVISEES may perform registration actions for one of their assigned advisees.        /// </accessComments>
         [HttpPut]
         public async Task<RegistrationResponse> RegisterAsync(string studentId, [FromBody] IEnumerable<SectionRegistration> sectionRegistrations)
         {
@@ -882,9 +1041,9 @@ namespace Ellucian.Colleague.Api.Controllers
         /// 2. Proxy user is accessing the student's data.
         /// 3. An Advisor with any of the following codes is accessing the student's data if the student is not assigned advisee.
         /// VIEW.ANY.ADVISEE
-        /// REVIEW.ANY.ADVISEES
-        /// UPDATE.ANY.ADVISEES
-        /// ALL.ACCESS.ANY.ADVISEES
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
         /// 4. An Advisor with any of the following codes is accessing the student's data if the student is assigned advisee.
         /// VIEW.ASSIGNED.ADVISEES
         /// REVIEW.ASSIGNED.ADVISEES
@@ -907,7 +1066,7 @@ namespace Ellucian.Colleague.Api.Controllers
                     HttpContext.Current.Response.AppendHeader("X-Content-Restricted", "partial");
                 }
                 return student;
-                
+
             }
             catch (PermissionsException pex)
             {
@@ -975,6 +1134,22 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="studentId">Student's ID</param>
         /// <param name="currentOnly">Boolean to indicate whether this request is for active student programs, or ended/past programs as well</param>
         /// <returns>All <see cref="StudentProgram2">Programs</see> in which the specified student is enrolled.</returns>
+        /// <accessComments>
+        /// Student information can be retrieved only if:
+        /// 1. A Student is accessing its own data.
+        /// 2. Proxy user is accessing the student's data.
+        /// 3. An Advisor with any of the following codes is accessing the student's data if the student is not assigned advisee.
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// 4. An Advisor with any of the following codes is accessing the student's data if the student is assigned advisee.
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// 5. A user with permission of VIEW.STUDENT.INFORMATION is accessing the student's data.
+        /// </accessComments>
         public async Task<IEnumerable<StudentProgram2>> GetStudentPrograms2Async(string studentId, bool currentOnly = true)
         {
             try
@@ -1029,6 +1204,9 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="cohorts">GUID for the groupings of students for reporting/tracking purposes (cohorts) to which the student is associated.</param>
         /// <param name="residency">GUID for the residency type for selecting students.</param>
         /// <returns>List of Students <see cref="Dtos.Students"/> objects representing matching Students</returns>
+        /// <accessComments>
+        /// Authenticated users with VIEW.STUDENT.INFORMATION can query students.
+        /// </accessComments>
         [HttpGet, FilteringFilter(IgnoreFiltering = true)]
         [ValidateQueryStringFilter(new string[] { "person", "type", "cohorts", "residency" }, false, true)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
@@ -1073,7 +1251,7 @@ namespace Ellucian.Colleague.Api.Controllers
 
                 return new PagedHttpActionResult<IEnumerable<Students>>(pageOfItems.Item1, page, pageOfItems.Item2, this.Request);
 
-            
+
             }
             catch (PermissionsException e)
             {
@@ -1109,24 +1287,16 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="criteria">Person search criteria in JSON format</param>
         /// <param name="personFilter">Selection from SaveListParms definition or person-filters</param>
         /// <returns>List of Students <see cref="Dtos.Students"/> objects representing matching Students</returns>
-        [HttpGet, FilteringFilter(IgnoreFiltering = true)]        
+        /// <accessComments>
+        /// Authenticated users with VIEW.STUDENT.INFORMATION permission can query students.
+        /// </accessComments>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("criteria", typeof(Dtos.Students2))]
-        [QueryStringFilterFilter("personFilter", typeof(Dtos.Filters.PersonFilterFilter))]
+        [QueryStringFilterFilter("personFilter", typeof(Dtos.Filters.PersonFilterFilter2))]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
-        public async Task<IHttpActionResult> GetStudents2Async(Paging page, QueryStringFilter criteria, QueryStringFilter personFilter)        
+        public async Task<IHttpActionResult> GetStudents2Async(Paging page, QueryStringFilter criteria, QueryStringFilter personFilter)
         {
-            string personFilterValue = string.Empty;
-            var personFilterObj = GetFilterObject<Dtos.Filters.PersonFilterFilter>(_logger, "personFilter");
-            if (personFilterObj != null)
-            {
-                personFilterValue = personFilterObj.personFilterId != null ? personFilterObj.personFilterId : null;
-            }
-
-            var criteriaFilter = GetFilterObject<Dtos.Students2>(_logger, "criteria");
-
-            if (CheckForEmptyFilterParameters())
-                return new PagedHttpActionResult<IEnumerable<Dtos.Students2>>(new List<Dtos.Students2>(), page, 0, this.Request);
-            
             var bypassCache = false;
             if (Request.Headers.CacheControl != null)
             {
@@ -1135,20 +1305,38 @@ namespace Ellucian.Colleague.Api.Controllers
                     bypassCache = true;
                 }
             }
+            if (page == null)
+            {
+                page = new Paging(100, 0);
+            }
+
+            //if (CheckForEmptyFilterParameters())
+            //    return new PagedHttpActionResult<IEnumerable<Dtos.Addresses>>(new List<Dtos.Addresses>(), page, 0, this.Request);
+
+            string personFilterValue = string.Empty;
+            var personFilterObj = GetFilterObject<Dtos.Filters.PersonFilterFilter2>(_logger, "personFilter");
+            if (personFilterObj != null)
+            {
+                if (personFilterObj.personFilter != null)
+                {
+                    personFilterValue = personFilterObj.personFilter.Id;
+                }
+            }
+
+            var criteriaFilter = GetFilterObject<Dtos.Students2>(_logger, "criteria");
+
+            if (CheckForEmptyFilterParameters())
+                return new PagedHttpActionResult<IEnumerable<Dtos.Students2>>(new List<Dtos.Students2>(), page, 0, this.Request);
+
             try
             {
-                if (page == null)
-                {
-                    page = new Paging(100, 0);
-                }
-              
                 var pageOfItems = await _studentService.GetStudents2Async(page.Offset, page.Limit, criteriaFilter, personFilterValue, bypassCache);
 
                 AddEthosContextProperties(await _studentService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                               await _studentService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
                               pageOfItems.Item1.Select(a => a.Id).ToList()));
 
-                return new PagedHttpActionResult<IEnumerable<Students2>>(pageOfItems.Item1, page, pageOfItems.Item2, this.Request);               
+                return new PagedHttpActionResult<IEnumerable<Students2>>(pageOfItems.Item1, page, pageOfItems.Item2, this.Request);
             }
             catch (PermissionsException e)
             {
@@ -1252,6 +1440,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <returns>An <see cref="Dtos.Students">Students</see>object.</returns>
         [HttpGet, EedmResponseFilter]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Students2> GetStudentsByGuid2Async(string guid)
         {
             if (string.IsNullOrEmpty(guid))
@@ -1352,5 +1541,58 @@ namespace Ellucian.Colleague.Api.Controllers
             //Delete is not supported for Colleague but Data Model requires full crud support.
             throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
         }
+
+        /// <summary>
+        /// Retrieves a student that contains only information needed for degree planning.
+        /// </summary>
+        /// <param name="studentId"></param>
+        /// <returns>A <see cref="PlanningStudent">PlanningStudent</see> object.  </returns>
+        /// <accessComments>
+        /// Student information can be retrieved only if:
+        /// 1. A Student is accessing its own data.
+        /// 2. Proxy user is accessing the student's data.
+        /// 3. An Advisor with any of the following codes is accessing the student's data if the student is not assigned advisee.
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// 4. An Advisor with any of the following codes is accessing the student's data if the student is assigned advisee.
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// 5. A user with permission of VIEW.STUDENT.INFORMATION is accessing the student's data.
+        /// 
+        ///  Privacy is enforced by this response. If any student has an assigned privacy code that the advisor or faculty is not authorized to access, the PlanningStudent response object is returned with a
+        /// X-Content-Restricted header with a value of "partial" to indicate only partial information is returned. In this situation, 
+        /// all details except the student name are cleared from the specific planning student object.
+        /// </accessComments>
+        public async Task<PlanningStudent> GetPlanningStudentAsync(string studentId)
+        {
+            try
+            {
+
+                var privacyWrapper = await _studentService.GetPlanningStudentAsync(studentId);
+                var planningStudent = privacyWrapper.Dto as PlanningStudent;
+                if (privacyWrapper.HasPrivacyRestrictions)
+                {
+                    HttpContext.Current.Response.AppendHeader("X-Content-Restricted", "partial");
+                }
+                return planningStudent;
+
+            }
+            catch (PermissionsException pex)
+            {
+                _logger.Error(pex.Message);
+                throw CreateHttpResponseException("User does not have permissions to access this student.", HttpStatusCode.Forbidden);
+            }
+            catch (Exception exception)
+            {
+                _logger.Error(exception.ToString());
+                throw CreateHttpResponseException(exception.Message, HttpStatusCode.BadRequest);
+            }
+        }
+
+
     }
 }

@@ -108,7 +108,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 gradeRepositoryMock.Setup(repo => repo.GetHedmAsync(false)).ReturnsAsync(gradeCollection);
                 
                 var results = await gradeService.GetAsync();
-                Assert.AreEqual(15, results.Count());
+                Assert.AreEqual(16, results.Count());
             }
 
             [TestMethod]
@@ -283,7 +283,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 gradeRepositoryMock.Setup(repo => repo.GetHedmAsync(false)).ReturnsAsync(gradeCollection);
 
                 var results = await gradeService.GetGradesDefinitionsMaximumAsync();
-                Assert.AreEqual(15, results.Count());
+                Assert.AreEqual(16, results.Count());
             }
 
             [TestMethod]

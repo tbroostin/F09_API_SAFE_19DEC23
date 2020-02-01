@@ -33,6 +33,56 @@ namespace Ellucian.Colleague.Dtos.FinancialAid
         public bool IsNeedBlockActive { get; set; }
 
         /// <summary>
+        /// placeholder
+        /// </summary>
+        public bool IsEfcActive { get; set; }
+
+        /// <summary>
+        /// placeholder
+        /// </summary>
+        public bool IsBudgetActive { get; set; }
+
+        /// <summary>
+        /// placeholder
+        /// </summary>
+        public bool IsDirectCostActive { get; set; }
+
+        /// <summary>
+        /// placeholder
+        /// </summary>
+        public bool IsIndirectCostActive { get; set; }
+
+        /// <summary>
+        /// placeholder
+        /// </summary>
+        public bool IsPreAwardTextActive { get; set; }
+
+        /// <summary>
+        /// placeholder
+        /// </summary>
+        public bool IsPostAwardTextActive { get; set; }
+
+        /// <summary>
+        /// placeholder
+        /// </summary>
+        public bool IsPostClosingTextActive { get; set; }
+
+        /// <summary>
+        /// placeholder
+        /// </summary>
+        public bool IsEnrollmentActive { get; set; }
+
+        /// <summary>
+        /// placeholder
+        /// </summary>
+        public bool IsRenewalActive { get; set; }
+
+        /// <summary>
+        /// placeholder
+        /// </summary>
+        public bool IsPellEntitlementActive { get; set; }
+
+        /// <summary>
         /// Paragraph spacing for the opening and closing paragraphs of an award letter:
         /// single or double; single by default
         /// </summary>

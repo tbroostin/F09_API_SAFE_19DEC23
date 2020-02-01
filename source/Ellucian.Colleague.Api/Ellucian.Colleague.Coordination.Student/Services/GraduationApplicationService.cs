@@ -64,14 +64,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (string.IsNullOrEmpty(studentId) || string.IsNullOrEmpty(programCode))
             {
                 var message = "Student Id and program Code must be provided";
-                logger.Info(message);
+                logger.Error(message);
                 throw new ArgumentNullException(message);
             }
             // Make sure the person requesting the application is the student.
             if (CurrentUser.PersonId != studentId)
             {
                 var message = "Current user is not the student of requested graduation application and therefore cannot access it.";
-                logger.Info(message);
+                logger.Error(message);
                 throw new PermissionsException(message);
             }
             Domain.Student.Entities.GraduationApplication graduationApplicationEntity = null;
@@ -83,20 +83,20 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             catch (KeyNotFoundException)
             {
-                logger.Info(string.Format("Graduation Application not found in repository for given student Id {0} and program Id {1}", studentId, programCode));
+                logger.Error(string.Format("Graduation Application not found in repository for given student Id {0} and program Id {1}", studentId, programCode));
                 throw;
             }
             catch (Exception ex)
             {
                 var message = string.Format("Exception occurred while trying to read graduation application from repository using  student Id {0} and program Id {1}  Exception message: ", studentId, programCode, ex.Message);
-                logger.Info(ex, message);
+                logger.Error(ex, message);
                 throw;
             }
             // Make sure the person requesting the application is the student.
             if (graduationApplicationEntity.StudentId != studentId || graduationApplicationEntity.ProgramCode != programCode)
             {
                 var message = "Current user is not the student of requested graduation application and therefore cannot access it.";
-                logger.Info(message);
+                logger.Error(message);
                 throw new PermissionsException(message);
             }
             try
@@ -220,7 +220,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             catch (Exception ex)
             {
-                logger.Info(ex, ex.ToString());
+                logger.Error(ex, ex.ToString());
                 throw;
             }
         }
@@ -239,13 +239,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (string.IsNullOrEmpty(studentId))
             {
                 var message = "Student Id must be provided";
-                logger.Info(message);
+                logger.Error(message);
                 throw new ArgumentNullException(message);
             }
             if (CurrentUser.PersonId != studentId && !(await UserIsAdvisorAsync(studentId)))
             {
                 var message = "Current user is not the student of requested graduation applications or current user is advisor but doesn't have appropriate permissions and therefore cannot access it.";
-                logger.Info(message);
+                logger.Error(message);
                 throw new PermissionsException(message);
             }
             try
@@ -274,13 +274,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             catch (KeyNotFoundException)
             {
-                logger.Info(string.Format("Graduation Applications not found in repository for given student Id {0}", studentId));
+                logger.Error(string.Format("Graduation Applications not found in repository for given student Id {0}", studentId));
                 throw;
             }
             catch (Exception ex)
             {
                 var message = string.Format("Exception occurred while trying to retrieve graduation applications from repository for  student Id {0} - Exception message: ", studentId, ex.Message);
-                logger.Info(ex, message);
+                logger.Error(ex, message);
                 throw;
             }
             try
@@ -363,14 +363,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 if (application == null)
                 {
                     var errorMessage = string.Format("Unable to retrieve graduate record for student Id {0} and program Code {1} ", graduationApplicationDto.StudentId, graduationApplicationDto.ProgramCode);
-                    logger.Info(errorMessage);
+                    logger.Error(errorMessage);
                     throw new KeyNotFoundException(errorMessage);
                 }
                 Domain.Student.Entities.GraduationConfiguration studentConfiguration = await studentConfigurationRepository.GetGraduationConfigurationAsync();
                 if (studentConfiguration.GraduationTerms == null || (studentConfiguration.GraduationTerms != null && !studentConfiguration.GraduationTerms.Contains(application.GraduationTerm)))
                 {
                     var errorMessage = string.Format("Unable to update Graduates record with student Id {0} and program Code {1}, Term {2} is closed", graduationApplicationDto.StudentId, graduationApplicationDto.ProgramCode, application.GraduationTerm);
-                    logger.Info(errorMessage);
+                    logger.Error(errorMessage);
                     throw new Exception(errorMessage);
                 }
                 //if there are no diploma address provided, save preferred address in graduation file
@@ -399,12 +399,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             catch (KeyNotFoundException)
             {
-                logger.Info(string.Format("Graduation Application not found in repository for given student Id {0} and program Id {1}", graduationApplicationDto.StudentId, graduationApplicationDto.ProgramCode));
+                logger.Error(string.Format("Graduation Application not found in repository for given student Id {0} and program Id {1}", graduationApplicationDto.StudentId, graduationApplicationDto.ProgramCode));
                 throw;
             }
             catch (Exception ex)
             {
-                logger.Info(ex, ex.ToString());
+                logger.Error(ex, ex.ToString());
                 throw;
             }
         }
@@ -423,13 +423,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (string.IsNullOrEmpty(studentId) || string.IsNullOrEmpty(programCode))
             {
                 var message = "Student Id and program Code must be provided";
-                logger.Info(message);
+                logger.Error(message);
                 throw new ArgumentNullException(message);
             }
             if (!CurrentUser.IsPerson(studentId))
             {
                 var message = string.Format("Authenticated user {0} cannot request graduation application fee information for student {1}; users may only request their own graduation application fee information.", CurrentUser.PersonId, studentId);
-                logger.Info(message);
+                logger.Error(message);
                 throw new PermissionsException(message);
             }
             Domain.Student.Entities.GraduationApplicationFee graduationApplicationFeeEntity = null;
@@ -440,7 +440,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             catch (Exception ex)
             {
                 var message = string.Format("Exception occurred while trying to get graduation application fee from repository using  student Id {0} and program Id {1}  Exception message: ", studentId, programCode, ex.Message);
-                logger.Info(ex, message);
+                logger.Error(ex, message);
                 throw;
             }
             try

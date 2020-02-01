@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2014 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using System;
 
 namespace Ellucian.Colleague.Domain.Student.Entities
@@ -54,6 +54,24 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         private readonly string _description;
 
         /// <summary>
+        /// Flag indicating whether or not this grade may be used for web-based final grade entry
+        /// </summary>
+        public bool IncludeInWebFinalGradesList { get { return _includeInWebFinalGradesList; } }
+        private readonly bool _includeInWebFinalGradesList;
+
+        /// <summary>
+        /// Flag indicating whether or not this grade may be used for web-based midterm grade entry
+        /// </summary>
+        public bool IncludeInWebMidtermGradesList { get { return _includeInWebMidtermGradesList; } }
+        private readonly bool _includeInWebMidtermGradesList;
+
+        /// <summary>
+        /// Flag indicating whether or not this grade may be used after a course section's Drop Grade Required date
+        /// </summary>
+        public bool CanBeUsedAfterDropGradeRequiredDate { get { return _canBeUsedAfterDropGradeRequiredDate; } }
+        private readonly bool _canBeUsedAfterDropGradeRequiredDate;
+
+        /// <summary>
         /// The numeric value associated with this grade
         /// </summary>
         public decimal? GradeValue { get; set; }
@@ -89,29 +107,35 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         public bool RequireLastAttendanceDate { get; set; }
 
         /// <summary>
-        /// Grade object constructor
+        /// Creates a new <see cref="Grade"/> object
         /// </summary>
         /// <param name="id">Grade ID</param>
-        /// <param name="letterGrade">Letter Grade</param>
-        /// <param name="description">Description for this grade</param>
-        /// <param name="scheme"></param>
-        public Grade(string id, string letterGrade, string description, string scheme)
-            : this(letterGrade, description, scheme)
+        /// <param name="letterGrade">The externally appearing letter grade</param>
+        /// <param name="description">The description for this grade</param>
+        /// <param name="scheme">The grade scheme to which this grade belongs</param>
+        /// <param name="includeInWebFinalGradesList">Flag indicating whether or not this grade may be used for web-based final grade entry</param>
+        /// <param name="includeInWebMidtermGradesList">Flag indicating whether or not this grade may be used for web-based midterm grade entry</param>
+        /// <param name="canBeUsedAfterDropGradeRequiredDate">Flag indicating whether or not this grade may be used after a course section's Drop Grade Required date</param>
+        public Grade(string id, string letterGrade, string description, string scheme, bool includeInWebFinalGradesList = false, bool includeInWebMidtermGradesList = false, bool canBeUsedAfterDropGradeRequiredDate = false)
+            : this(letterGrade, description, scheme, includeInWebFinalGradesList, includeInWebMidtermGradesList, canBeUsedAfterDropGradeRequiredDate)
         {
             _id = id;
             ExcludeFromFacultyGrading = false;
         }
 
         /// <summary>
-        /// Grade object constructor
+        /// Creates a new <see cref="Grade"/> object
         /// </summary>
         /// <param name="guid">Grade guid</param>
         /// <param name="id">Grade ID</param>
-        /// <param name="letterGrade">Letter Grade</param>
-        /// <param name="description">Description for this grade</param>
-        /// <param name="scheme"></param>
-        public Grade(string guid, string id, string letterGrade, string credit, string description, string scheme)
-            : this(letterGrade, description, scheme)
+        /// <param name="letterGrade">The externally appearing letter grade</param>
+        /// <param name="description">The description for this grade</param>
+        /// <param name="scheme">The grade scheme to which this grade belongs</param>
+        /// <param name="includeInWebFinalGradesList">Flag indicating whether or not this grade may be used for web-based final grade entry</param>
+        /// <param name="includeInWebMidtermGradesList">Flag indicating whether or not this grade may be used for web-based midterm grade entry</param>
+        /// <param name="canBeUsedAfterDropGradeRequiredDate">Flag indicating whether or not this grade may be used after a course section's Drop Grade Required date</param>
+        public Grade(string guid, string id, string letterGrade, string credit, string description, string scheme, bool includeInWebFinalGradesList = false, bool includeInWebMidtermGradesList = false, bool canBeUsedAfterDropGradeRequiredDate = false)
+            : this(letterGrade, description, scheme, includeInWebFinalGradesList, includeInWebMidtermGradesList, canBeUsedAfterDropGradeRequiredDate)
         {
             if (string.IsNullOrEmpty(guid))
             {
@@ -127,7 +151,16 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             ExcludeFromFacultyGrading = false;
         }
 
-        public Grade(string letterGrade, string description, string scheme)
+        /// <summary>
+        /// Creates a new <see cref="Grade"/> object
+        /// </summary>
+        /// <param name="letterGrade">The externally appearing letter grade</param>
+        /// <param name="description">The description for this grade</param>
+        /// <param name="scheme">The grade scheme to which this grade belongs</param>
+        /// <param name="includeInWebFinalGradesList">Flag indicating whether or not this grade may be used for web-based final grade entry</param>
+        /// <param name="includeInWebMidtermGradesList">Flag indicating whether or not this grade may be used for web-based midterm grade entry</param>
+        /// <param name="canBeUsedAfterDropGradeRequiredDate">Flag indicating whether or not this grade may be used after a course section's Drop Grade Required date</param>
+        public Grade(string letterGrade, string description, string scheme, bool includeInWebFinalGradesList = false, bool includeInWebMidtermGradesList = false, bool canBeUsedAfterDropGradeRequiredDate = false)
         {
             if (string.IsNullOrEmpty(letterGrade))
             {
@@ -147,6 +180,9 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             IsWithdraw = false;
             ExcludeFromFacultyGrading = false;
             RequireLastAttendanceDate = false;
+            _includeInWebFinalGradesList = includeInWebFinalGradesList;
+            _includeInWebMidtermGradesList = includeInWebMidtermGradesList;
+            _canBeUsedAfterDropGradeRequiredDate = canBeUsedAfterDropGradeRequiredDate;
         }
 
         /// <summary>

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student;
@@ -88,11 +88,103 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 catch (Exception ex)
                 {
-                    _logger.Info(ex, "Unable to retrieve student academic program data.");
+                    _logger.Error(ex, "Unable to retrieve student academic program data.");
                 }
             }
             return studentProgramDto;
         }
+
+        /// <summary>
+        /// Add new academic program for a student
+        /// </summary>
+        /// <param name="studentAcademicProgram">Student Academic program information</param>
+        /// <returns><see cref="Dtos.Student.StudentProgram2">Newly added student program</returns>
+        public async Task<Dtos.Student.StudentProgram2> AddStudentProgram(Dtos.Student.StudentAcademicProgram studentAcademicProgram)
+        {
+            if (studentAcademicProgram == null)
+            {
+                throw new ArgumentNullException("studentAcademicProgram", "Academic Prgoram information must specify to add to student.");
+            }
+            if (string.IsNullOrEmpty(studentAcademicProgram.StudentId))
+            {
+                throw new ArgumentException("add program must have a student Id to add a program to student.");
+            }
+            //Check Permissions to be sure user is advisor.
+            if (!(await UserIsAdvisorAsync(studentAcademicProgram.StudentId)))
+            {
+                throw new PermissionsException(string.Format("User does not have permissions to add program for student {0}.", studentAcademicProgram.StudentId));
+            }
+            var addProgramDtoAdapter = _adapterRegistry.GetAdapter<Dtos.Student.StudentAcademicProgram, StudentAcademicProgram>();
+            var addProgramDto = addProgramDtoAdapter.MapToType(studentAcademicProgram);
+
+            var programDto = new Dtos.Student.StudentProgram2();
+
+            List<string> activePrograms = new List<string>();
+            List<string> endDates = new List<string>();
+
+            if (studentAcademicProgram.ActivePrograms != null && studentAcademicProgram.ActivePrograms.Any())
+            {
+                foreach (var prog in studentAcademicProgram.ActivePrograms)
+                {
+                    activePrograms.Add(prog.ProgramCode);
+                    endDates.Add(!string.IsNullOrEmpty(prog.EndDate) ? DateTime.Parse(prog.EndDate).ToShortDateString() : "");
+                }
+            }
+
+            var studentProgram = await _studentProgramRepository.AddStudentProgram(addProgramDto, activePrograms, endDates);
+
+            var studentProgramDtoAdapter = _adapterRegistry.GetAdapter<StudentProgram, Dtos.Student.StudentProgram2>();
+            // Map the student programs entity to the student programs DTO
+            programDto = studentProgramDtoAdapter.MapToType(studentProgram);
+            return programDto;
+        }
+
+
+        /// <summary>
+        /// Update academic program for a student
+        /// </summary>
+        /// <param name="studentAcademicProgram">Student Academic program information</param>
+        /// <returns><see cref="Dtos.Student.StudentProgram2">Updated student program</returns>
+        public async Task<Dtos.Student.StudentProgram2> UpdateStudentProgram(Dtos.Student.StudentAcademicProgram studentAcademicProgram)
+        {
+            if (studentAcademicProgram == null)
+            {
+                throw new ArgumentNullException("studentAcademicProgram", "Academic Prgoram information must specify to update.");
+            }
+            if (string.IsNullOrEmpty(studentAcademicProgram.StudentId))
+            {
+                throw new ArgumentException("add program must have a student Id to update a student program.");
+            }
+            //Check Permissions to be sure user is advisor.
+            if (!(await UserIsAdvisorAsync(studentAcademicProgram.StudentId)))
+            {
+                throw new PermissionsException(string.Format("User does not have permissions to update program for student {0}.", studentAcademicProgram.StudentId));
+            }
+            var addProgramDtoAdapter = _adapterRegistry.GetAdapter<Dtos.Student.StudentAcademicProgram, StudentAcademicProgram>();
+            var addProgramDto = addProgramDtoAdapter.MapToType(studentAcademicProgram);
+
+            var programDto = new Dtos.Student.StudentProgram2();
+
+            List<string> activePrograms = new List<string>();
+            List<string> endDates = new List<string>();
+
+            if (studentAcademicProgram.ActivePrograms != null && studentAcademicProgram.ActivePrograms.Any())
+            {
+                foreach (var prog in studentAcademicProgram.ActivePrograms)
+                {
+                    activePrograms.Add(prog.ProgramCode);
+                    endDates.Add(!string.IsNullOrEmpty(prog.EndDate) ? DateTime.Parse(prog.EndDate).ToShortDateString() : "");
+                }
+            }
+
+            var studentProgram = await _studentProgramRepository.UpdateStudentProgram(addProgramDto, activePrograms, endDates);
+
+            var studentProgramDtoAdapter = _adapterRegistry.GetAdapter<StudentProgram, Dtos.Student.StudentProgram2>();
+            // Map the student programs entity to the student programs DTO
+            programDto = studentProgramDtoAdapter.MapToType(studentProgram);
+            return programDto;
+        }
+
 
         /// <summary>
         /// Find a term for the Student Program Entity

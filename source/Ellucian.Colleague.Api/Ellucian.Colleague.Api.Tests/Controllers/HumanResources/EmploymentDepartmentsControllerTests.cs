@@ -33,6 +33,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
         private IEnumerable<Domain.HumanResources.Entities.EmploymentDepartment> allDepts;
         private List<Dtos.EmploymentDepartments> employmentDepartmentsCollection;
         private string expectedGuid = "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc";
+        private Ellucian.Web.Http.Models.QueryStringFilter criteriaFilter = new Web.Http.Models.QueryStringFilter("criteria", "");
 
         [TestInitialize]
         public void Initialize() 
@@ -88,7 +89,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             
             employmentDepartmentsServiceMock.Setup(x => x.GetEmploymentDepartmentsAsync(false)).ReturnsAsync(employmentDepartmentsCollection);
        
-            var sourceContexts = (await employmentDepartmentsController.GetEmploymentDepartmentsAsync()).ToList();
+            var sourceContexts = (await employmentDepartmentsController.GetEmploymentDepartmentsAsync(criteriaFilter)).ToList();
             Assert.AreEqual(employmentDepartmentsCollection.Count, sourceContexts.Count);
             for (var i = 0; i < sourceContexts.Count; i++)
             {
@@ -108,7 +109,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 
             employmentDepartmentsServiceMock.Setup(x => x.GetEmploymentDepartmentsAsync(true)).ReturnsAsync(employmentDepartmentsCollection);
 
-            var sourceContexts = (await employmentDepartmentsController.GetEmploymentDepartmentsAsync()).ToList();
+            var sourceContexts = (await employmentDepartmentsController.GetEmploymentDepartmentsAsync(criteriaFilter)).ToList();
             Assert.AreEqual(employmentDepartmentsCollection.Count, sourceContexts.Count);
             for (var i = 0; i < sourceContexts.Count; i++)
             {
@@ -120,14 +121,34 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             }
         }
 
-         [TestMethod]
+        [TestMethod]
+        public async Task EmploymentDepartmentsController_GetEmploymentDepartments_ValidateFields_Filter()
+        {
+            employmentDepartmentsController.Request.Headers.CacheControl =
+                new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+
+            employmentDepartmentsServiceMock.Setup(x => x.GetEmploymentDepartmentsAsync(true)).ReturnsAsync(employmentDepartmentsCollection);
+            var filterGroupName = "criteria";
+            var filterRecord = employmentDepartmentsCollection.FirstOrDefault(i => i.Code.Equals("AT"));
+            employmentDepartmentsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName), filterRecord);
+            var sourceContexts = (await employmentDepartmentsController.GetEmploymentDepartmentsAsync(criteriaFilter)).ToList();
+            Assert.AreEqual(sourceContexts.Count, 1);
+            var expected = filterRecord;
+            var actual = sourceContexts[0];
+            Assert.AreEqual(expected.Id, actual.Id);
+            Assert.AreEqual(expected.Title, actual.Title);
+            Assert.AreEqual(expected.Code, actual.Code);
+
+        }
+
+        [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task EmploymentDepartmentsController_GetEmploymentDepartments_KeyNotFoundException()
         {
             //
             employmentDepartmentsServiceMock.Setup(x => x.GetEmploymentDepartmentsAsync(false))
                 .Throws<KeyNotFoundException>();
-            await employmentDepartmentsController.GetEmploymentDepartmentsAsync();
+            await employmentDepartmentsController.GetEmploymentDepartmentsAsync(criteriaFilter);
         }
 
         [TestMethod]
@@ -137,7 +158,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             
             employmentDepartmentsServiceMock.Setup(x => x.GetEmploymentDepartmentsAsync(false))
                 .Throws<PermissionsException>();
-            await employmentDepartmentsController.GetEmploymentDepartmentsAsync();
+            await employmentDepartmentsController.GetEmploymentDepartmentsAsync(criteriaFilter);
         }
 
         [TestMethod]
@@ -147,7 +168,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             
             employmentDepartmentsServiceMock.Setup(x => x.GetEmploymentDepartmentsAsync(false))
                 .Throws<ArgumentException>();
-            await employmentDepartmentsController.GetEmploymentDepartmentsAsync();
+            await employmentDepartmentsController.GetEmploymentDepartmentsAsync(criteriaFilter);
         }
 
         [TestMethod]
@@ -157,7 +178,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             
             employmentDepartmentsServiceMock.Setup(x => x.GetEmploymentDepartmentsAsync(false))
                 .Throws<RepositoryException>();
-            await employmentDepartmentsController.GetEmploymentDepartmentsAsync();
+            await employmentDepartmentsController.GetEmploymentDepartmentsAsync(criteriaFilter);
         }
 
         [TestMethod]
@@ -167,7 +188,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             
             employmentDepartmentsServiceMock.Setup(x => x.GetEmploymentDepartmentsAsync(false))
                 .Throws<IntegrationApiException>();
-            await employmentDepartmentsController.GetEmploymentDepartmentsAsync();
+            await employmentDepartmentsController.GetEmploymentDepartmentsAsync(criteriaFilter);
         }
 
         [TestMethod]
@@ -188,7 +209,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
         public async Task EmploymentDepartmentsController_GetEmploymentDepartments_Exception()
         {
             employmentDepartmentsServiceMock.Setup(x => x.GetEmploymentDepartmentsAsync(false)).Throws<Exception>();
-            await employmentDepartmentsController.GetEmploymentDepartmentsAsync();       
+            await employmentDepartmentsController.GetEmploymentDepartmentsAsync(criteriaFilter);       
         }
 
         [TestMethod]

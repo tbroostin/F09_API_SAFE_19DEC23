@@ -1,14 +1,12 @@
-﻿/*Copyright 2015-2017 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2015-2019 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.FinancialAid.Entities;
 using Ellucian.Colleague.Domain.FinancialAid.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Ellucian.Colleague.Domain.Base.Entities;
 
 namespace Ellucian.Colleague.Domain.FinancialAid.Tests.Services
 {
@@ -416,6 +414,132 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests.Services
                     exceptionThrown = true;
                 }
                 Assert.IsFalse(exceptionThrown);
+            }
+        }
+
+        [TestClass]
+        public class GetCommunicationsTests : AwardPackageChangeRequestDomainServiceTests
+        {
+            private AwardPackageChangeRequest changeRequest;
+            private StudentAward studentAward;
+            private List<AwardStatus> awardStatuses;
+
+            private List<Communication> actualCommunications;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                StudentAwardDomainServiceTestsInitialize();
+                awardStatuses = financialAidReferenceDataRepository.AwardStatuses.ToList();
+                studentAward = studentAwardRepository.GetAllStudentAwardsAsync(
+                    studentId,
+                    studentAwardYearRepository.GetStudentAwardYears(studentId, new CurrentOfficeService(financialAidOfficeRepository.GetFinancialAidOffices())),
+                    financialAidReferenceDataRepository.Awards,
+                    awardStatuses).Result.First(sa => sa.Award.Code == "UNSUB1");
+                changeRequest = awardPackageChangeRequestRepository.GetAwardPackageChangeRequestsAsync(studentId).Result
+                    .FirstOrDefault(r => r.AwardId == studentAward.Award.Code);                
+            }
+
+            [TestMethod]
+            public void GetCommunications_DeclineLoan_ReturnsExpectedResultTest()
+            {
+                actualCommunications = AwardPackageChangeRequestDomainService.GetCommunications(changeRequest, studentAward, awardStatuses).ToList();
+                Assert.IsNotNull(actualCommunications);
+                Assert.IsTrue(actualCommunications.Count == 1);
+                Assert.AreEqual("WEBREJECT", actualCommunications.First().Code);
+            }
+            
+            [TestMethod]
+            public void GetCommunications_NoRejectCode_NoCommunicationReturnedTest()
+            {
+                financialAidOfficeRepository.officeParameterRecordData.ForEach(pr => pr.RejectedAwardCommunicationCode = null);
+                studentAward = studentAwardRepository.GetAllStudentAwardsAsync(
+                    studentId,
+                    studentAwardYearRepository.GetStudentAwardYears(studentId, new CurrentOfficeService(financialAidOfficeRepository.GetFinancialAidOffices())),
+                    financialAidReferenceDataRepository.Awards,
+                    awardStatuses).Result.First(sa => sa.Award.Code == "UNSUB1");
+                changeRequest = awardPackageChangeRequestRepository.GetAwardPackageChangeRequestsAsync(studentId).Result
+                    .FirstOrDefault(r => r.AwardId == studentAward.Award.Code);
+                actualCommunications = AwardPackageChangeRequestDomainService.GetCommunications(changeRequest, studentAward, awardStatuses).ToList();
+                Assert.IsFalse(actualCommunications.Any());
+            }
+
+            [TestMethod]
+            public void GetCommunications_NoStatusChanges_NoCommunicationReturnedTest()
+            {
+                changeRequest = awardPackageChangeRequestRepository.GetAwardPackageChangeRequestsAsync(studentId).Result
+                    .FirstOrDefault(r => r.AwardId == studentAward.Award.Code);
+                changeRequest.AwardPeriodChangeRequests.ForEach(pcr => pcr.NewAwardStatusId = string.Empty);
+                actualCommunications = AwardPackageChangeRequestDomainService.GetCommunications(changeRequest, studentAward, awardStatuses).ToList();
+                Assert.IsFalse(actualCommunications.Any());
+            }
+
+            [TestMethod]
+            public void GetCommunications_RequestNonPendingStatus_NoCommunicationReturnedTest()
+            {
+                changeRequest = awardPackageChangeRequestRepository.GetAwardPackageChangeRequestsAsync(studentId).Result
+                    .FirstOrDefault(r => r.AwardId == studentAward.Award.Code);
+                changeRequest.AwardPeriodChangeRequests.ForEach(pcr => pcr.Status = AwardPackageChangeRequestStatus.RejectedBySystem);
+                actualCommunications = AwardPackageChangeRequestDomainService.GetCommunications(changeRequest, studentAward, awardStatuses).ToList();
+                Assert.IsFalse(actualCommunications.Any());
+            }
+
+            [TestMethod]
+            public void GetCommunications_NonDeclineNewStatus_NoCommunicationReturnedTest()
+            {
+                changeRequest = awardPackageChangeRequestRepository.GetAwardPackageChangeRequestsAsync(studentId).Result
+                    .FirstOrDefault(r => r.AwardId == studentAward.Award.Code);
+                changeRequest.AwardPeriodChangeRequests.ForEach(pcr => pcr.NewAwardStatusId = "A");
+                actualCommunications = AwardPackageChangeRequestDomainService.GetCommunications(changeRequest, studentAward, awardStatuses).ToList();
+                Assert.IsFalse(actualCommunications.Any());
+            }
+
+            [TestMethod]
+            public void GetCommunications_ChangeLoanAmount_ReturnsExpectedResultTest()
+            {
+                GetLoanChangeRequest();
+                actualCommunications = AwardPackageChangeRequestDomainService.GetCommunications(changeRequest, studentAward, awardStatuses).ToList();
+                Assert.IsNotNull(actualCommunications);
+                Assert.IsTrue(actualCommunications.Count == 1);
+                Assert.AreEqual("WEBLOANCHANGE", actualCommunications.First().Code);
+            }
+
+            [TestMethod]
+            public void GetCommunications_NoLoanChangeCode_NoCommunicationReturnedTest()
+            {
+                financialAidOfficeRepository.officeParameterRecordData.ForEach(pr => pr.LoanChangeCommunicationCode = null);
+                GetLoanChangeRequest();
+                actualCommunications = AwardPackageChangeRequestDomainService.GetCommunications(changeRequest, studentAward, awardStatuses).ToList();
+                Assert.IsFalse(actualCommunications.Any());
+            }
+
+            [TestMethod]
+            public void GetCommunications_NoAmountChanges_NoCommunicationReturnedTest()
+            {
+                GetLoanChangeRequest();
+                changeRequest.AwardPeriodChangeRequests.ForEach(pcr => pcr.NewAmount = null);
+                actualCommunications = AwardPackageChangeRequestDomainService.GetCommunications(changeRequest, studentAward, awardStatuses).ToList();
+                Assert.IsFalse(actualCommunications.Any());
+            }
+
+            [TestMethod]
+            public void GetCommunications_AmountChangeRequestNonPendingStatus_NoCommunicationReturnedTest()
+            {
+                GetLoanChangeRequest();
+                changeRequest.AwardPeriodChangeRequests.ForEach(pcr => pcr.Status = AwardPackageChangeRequestStatus.RejectedBySystem);
+                actualCommunications = AwardPackageChangeRequestDomainService.GetCommunications(changeRequest, studentAward, awardStatuses).ToList();
+                Assert.IsFalse(actualCommunications.Any());
+            }
+
+            private void GetLoanChangeRequest()
+            {
+                studentAward = studentAwardRepository.GetAllStudentAwardsAsync(
+                                    studentId,
+                                    studentAwardYearRepository.GetStudentAwardYears(studentId, new CurrentOfficeService(financialAidOfficeRepository.GetFinancialAidOffices())),
+                                    financialAidReferenceDataRepository.Awards,
+                                    awardStatuses).Result.First(sa => sa.Award.Code == "SNEEZY");
+                changeRequest = awardPackageChangeRequestRepository.GetAwardPackageChangeRequestsAsync(studentId).Result
+                    .FirstOrDefault(r => r.AwardId == studentAward.Award.Code);
             }
         }
     }

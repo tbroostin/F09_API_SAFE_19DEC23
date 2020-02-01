@@ -16,6 +16,7 @@ using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 {    
@@ -113,27 +114,54 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof (KeyNotFoundException))]
+        [ExpectedException(typeof (IntegrationApiException))]
         public async Task EmploymentDepartmentsService_GetEmploymentDepartmentsByGuidAsync_Empty()
         {
-            await _employmentDepartmentsService.GetEmploymentDepartmentsByGuidAsync("");
+            try
+            {
+                await _employmentDepartmentsService.GetEmploymentDepartmentsByGuidAsync("");
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex.Errors);
+                Assert.AreEqual("keyNotFound", ex.Errors[0].Code);
+                throw;
+            }
         }
 
         [TestMethod]
-        [ExpectedException(typeof (KeyNotFoundException))]
+        [ExpectedException(typeof (IntegrationApiException))]
         public async Task EmploymentDepartmentsService_GetEmploymentDepartmentsByGuidAsync_Null()
         {
-            await _employmentDepartmentsService.GetEmploymentDepartmentsByGuidAsync(null);
+            try
+            {
+                await _employmentDepartmentsService.GetEmploymentDepartmentsByGuidAsync(null);
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex.Errors);
+                Assert.AreEqual("keyNotFound", ex.Errors[0].Code);
+                throw;
+            }
         }
 
         [TestMethod]
-        [ExpectedException(typeof (KeyNotFoundException))]
+        [ExpectedException(typeof (IntegrationApiException))]
         public async Task EmploymentDepartmentsService_GetEmploymentDepartmentsByGuidAsync_InvalidId()
         {
             _referenceRepositoryMock.Setup(repo => repo.GetEmploymentDepartmentsAsync(It.IsAny<bool>()))
                 .Throws<KeyNotFoundException>();
 
-            await _employmentDepartmentsService.GetEmploymentDepartmentsByGuidAsync("99");
+            try
+            {
+                await _employmentDepartmentsService.GetEmploymentDepartmentsByGuidAsync("99");
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex.Errors);
+                Assert.AreEqual("keyNotFound", ex.Errors[0].Code);
+                throw;
+            }
         }
 
         [TestMethod]

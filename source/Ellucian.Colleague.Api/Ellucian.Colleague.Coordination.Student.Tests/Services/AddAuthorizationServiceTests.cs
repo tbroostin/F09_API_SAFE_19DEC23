@@ -1,11 +1,11 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
-using Ellucian.Colleague.Coordination.Student.Services;
-using Ellucian.Colleague.Domain.Base.Exceptions;
-using Ellucian.Colleague.Domain.Repositories;
-using Ellucian.Colleague.Domain.Student.Entities;
-using Ellucian.Colleague.Domain.Student.Repositories;
+﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
+using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Colleague.Domain.Student;
+using Ellucian.Colleague.Domain.Student.Entities;
+using Ellucian.Colleague.Domain.Student.Repositories;
+using Ellucian.Colleague.Coordination.Student.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
@@ -752,6 +752,308 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         {
             _adapterRegistryMock.Setup(reg => reg.GetAdapter<Dtos.Student.AddAuthorizationInput, Domain.Student.Entities.AddAuthorization>()).Throws(new Exception());
             var serviceResult = await _addAuthorizationService.CreateAddAuthorizationAsync(authorizationToCreate);
+        }
+    }
+
+    [TestClass]
+    public class AddAuthorizationServiceTests_GetStudentAddAuthorizationsAsync : CurrentUserFactorySetup
+    {
+        private AddAuthorizationService _addAuthorizationService;
+        private Mock<IAdapterRegistry> _adapterRegistryMock;
+        private IAdapterRegistry _adapterRegistry;
+        private ICurrentUserFactory _currentUserFactory;
+        private IRoleRepository _roleRepository;
+        private ILogger _logger;
+        private Mock<IAddAuthorizationRepository> addAuthorizationRepoMock;
+        private IAddAuthorizationRepository _addAuthorizationRepo;
+        private Mock<ISectionRepository> sectionRepoMock;
+        private Mock<IStudentRepository> studentRepoMock;
+        private Mock<IRoleRepository> _roleRepositoryMock;
+
+        private ISectionRepository _sectionRepo;
+        private IStudentRepository _studentRepo;
+        private Dtos.Student.AddAuthorization authorizationToUpdate;
+        private IEnumerable<AddAuthorization> addAuthorizationEntities;
+        private string sectionId;
+
+        [TestInitialize]
+        public void Initialize()
+        {
+            sectionRepoMock = new Mock<ISectionRepository>();
+            _sectionRepo = sectionRepoMock.Object;
+            studentRepoMock = new Mock<IStudentRepository>();
+            _studentRepo = studentRepoMock.Object;
+            var advisorRole = new Domain.Entities.Role(1, "Advisor");
+            advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.AllAccessAssignedAdvisees));
+            _roleRepositoryMock = new Mock<IRoleRepository>();
+            _roleRepositoryMock.Setup(rr => rr.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role> { advisorRole });
+            _roleRepositoryMock.Setup(rr => rr.Roles).Returns(new List<Domain.Entities.Role> { advisorRole });
+            _roleRepository = _roleRepositoryMock.Object;
+            addAuthorizationRepoMock = new Mock<IAddAuthorizationRepository>();
+            _addAuthorizationRepo = addAuthorizationRepoMock.Object;
+            _logger = new Mock<ILogger>().Object;
+            _currentUserFactory = new CurrentUserFactorySetup.StudentUserFactory();
+            _adapterRegistryMock = new Mock<IAdapterRegistry>();
+            _adapterRegistry = _adapterRegistryMock.Object;
+
+            authorizationToUpdate = new Dtos.Student.AddAuthorization
+            {
+                Id = "AddAuth1",
+                SectionId = "SectionId",
+                AddAuthorizationCode = "abCD1234",
+                StudentId = "studentId",
+                AssignedBy = "FacultyId",
+                AssignedTime = DateTime.Now.AddDays(-1),
+                IsRevoked = true,
+                RevokedBy = "otherId",
+                RevokedTime = DateTime.Now
+
+            };
+
+            addAuthorizationEntities = new List<AddAuthorization>() {
+                new Domain.Student.Entities.AddAuthorization("AddAuth1", "SectionId")
+                    {
+                    AddAuthorizationCode = "abCD1234",
+                    StudentId = "studentId",
+                    AssignedBy = "FacultyId",
+                    AssignedTime = DateTime.Now.AddDays(-1),
+                    IsRevoked = true,
+                    RevokedBy = "otherId",
+                    RevokedTime = DateTime.Now
+                    },
+                new Domain.Student.Entities.AddAuthorization("AddAuth2", "SectionId")
+                    {
+                    AddAuthorizationCode = "abCD1111",
+                    StudentId = "studentId2",
+                    AssignedBy = "FacultyId2",
+                    AssignedTime = DateTime.Now.AddDays(-2),
+
+                    }
+            };
+
+            sectionId = _currentUserFactory.CurrentUser.PersonId;
+
+            var studentEntity = new Domain.Student.Entities.StudentAccess("1234567");
+            studentEntity.AddAdvisement(new CurrentUserFactorySetup.AdvisorUserFactory().CurrentUser.PersonId, DateTime.Today.AddDays(-1), DateTime.Today.AddDays(1), null);
+            studentRepoMock.Setup(x => x.GetStudentAccessAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(new List<StudentAccess>() { studentEntity });
+
+            var AddAuthorizationEntityToDtoAdapter = new AutoMapperAdapter<Domain.Student.Entities.AddAuthorization, Dtos.Student.AddAuthorization>(_adapterRegistry, _logger);
+            _adapterRegistryMock.Setup(reg => reg.GetAdapter<Domain.Student.Entities.AddAuthorization, Dtos.Student.AddAuthorization>()).Returns(AddAuthorizationEntityToDtoAdapter);
+
+            // Mock return from the repo on update
+            addAuthorizationRepoMock.Setup(repo => repo.GetStudentAddAuthorizationsAsync(It.IsAny<string>())).ReturnsAsync(addAuthorizationEntities);
+
+            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, _studentRepo, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
+
+        }
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            _addAuthorizationService = null;
+            _adapterRegistryMock = null;
+            _adapterRegistry = null;
+            _currentUserFactory = null;
+            _roleRepository = null;
+            _logger = null;
+            addAuthorizationRepoMock = null;
+            _addAuthorizationRepo = null;
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetStudentAddAuthorizationsAsync_NullStudentId()
+        {
+            var serviceResult = await _addAuthorizationService.GetStudentAddAuthorizationsAsync(null);
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetStudentAddAuthorizationsAsync_EmptyStudentId()
+        {
+            var serviceResult = await _addAuthorizationService.GetStudentAddAuthorizationsAsync(string.Empty);
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task GetStudentAddAuthorizationsAsync_NotRequestedStudent_NotAdvisor()
+        {
+            _currentUserFactory = new CurrentUserFactorySetup.StudentUserFactory();
+            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, _studentRepo, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
+            var serviceResult = await _addAuthorizationService.GetStudentAddAuthorizationsAsync(_currentUserFactory.CurrentUser.PersonId + "1");
+        }
+
+        [TestMethod]
+        public async Task GetStudentAddAuthorizationsAsync_NotRequestedStudent_Advisor_Assigned_to_Student_with_AllAccessAssignedAdvisees()
+        {
+            var advisorRole = new Domain.Entities.Role(1, "Advisor");
+            advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.AllAccessAssignedAdvisees));
+            _roleRepositoryMock.Setup(rr => rr.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role> { advisorRole });
+            _roleRepositoryMock.Setup(rr => rr.Roles).Returns(new List<Domain.Entities.Role> { advisorRole });
+
+            _currentUserFactory = new CurrentUserFactorySetup.AdvisorUserFactory();
+            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, _studentRepo, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
+            var serviceResult = await _addAuthorizationService.GetStudentAddAuthorizationsAsync("1234567");
+        }
+
+        [TestMethod]
+        public async Task GetStudentAddAuthorizationsAsync_NotRequestedStudent_Advisor_Assigned_to_Student_with_UpdateAssignedAdvisees()
+        {
+            var advisorRole = new Domain.Entities.Role(1, "Advisor");
+            advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.UpdateAssignedAdvisees));
+            _roleRepositoryMock.Setup(rr => rr.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role> { advisorRole });
+            _roleRepositoryMock.Setup(rr => rr.Roles).Returns(new List<Domain.Entities.Role> { advisorRole });
+
+            _currentUserFactory = new CurrentUserFactorySetup.AdvisorUserFactory();
+            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, _studentRepo, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
+            var serviceResult = await _addAuthorizationService.GetStudentAddAuthorizationsAsync("1234567");
+        }
+
+        [TestMethod]
+        public async Task GetStudentAddAuthorizationsAsync_NotRequestedStudent_Advisor_Assigned_to_Student_with_ReviewAssignedAdvisees()
+        {
+            var advisorRole = new Domain.Entities.Role(1, "Advisor");
+            advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.ReviewAssignedAdvisees));
+            _roleRepositoryMock.Setup(rr => rr.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role> { advisorRole });
+            _roleRepositoryMock.Setup(rr => rr.Roles).Returns(new List<Domain.Entities.Role> { advisorRole });
+
+            _currentUserFactory = new CurrentUserFactorySetup.AdvisorUserFactory();
+            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, _studentRepo, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
+            var serviceResult = await _addAuthorizationService.GetStudentAddAuthorizationsAsync("1234567");
+        }
+
+        [TestMethod]
+        public async Task GetStudentAddAuthorizationsAsync_NotRequestedStudent_Advisor_Assigned_to_Student_with_ViewAssignedAdvisees()
+        {
+            var advisorRole = new Domain.Entities.Role(1, "Advisor");
+            advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.ViewAssignedAdvisees));
+            _roleRepositoryMock.Setup(rr => rr.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role> { advisorRole });
+            _roleRepositoryMock.Setup(rr => rr.Roles).Returns(new List<Domain.Entities.Role> { advisorRole });
+
+            _currentUserFactory = new CurrentUserFactorySetup.AdvisorUserFactory();
+            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, _studentRepo, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
+            var serviceResult = await _addAuthorizationService.GetStudentAddAuthorizationsAsync("1234567");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task GetStudentAddAuthorizationsAsync_NotRequestedStudent_Advisor_Assigned_to_Student_insufficient_permission()
+        {
+            var advisorRole = new Domain.Entities.Role(1, "Advisor");
+            _roleRepositoryMock.Setup(rr => rr.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role> { advisorRole });
+            _roleRepositoryMock.Setup(rr => rr.Roles).Returns(new List<Domain.Entities.Role> { advisorRole });
+
+            _currentUserFactory = new CurrentUserFactorySetup.AdvisorUserFactory();
+            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, _studentRepo, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
+            var serviceResult = await _addAuthorizationService.GetStudentAddAuthorizationsAsync("1234567");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task GetStudentAddAuthorizationsAsync_NotRequestedStudent_Advisor_Not_Assigned_to_Student_insufficient_permissions()
+        {
+            var studentEntity = new Domain.Student.Entities.StudentAccess("1234567");
+            studentRepoMock.Setup(x => x.GetStudentAccessAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(new List<StudentAccess>() { studentEntity });
+
+            _currentUserFactory = new CurrentUserFactorySetup.AdvisorUserFactory();
+            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, _studentRepo, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
+            var serviceResult = await _addAuthorizationService.GetStudentAddAuthorizationsAsync("1234567");
+        }
+
+        [TestMethod]
+        public async Task GetStudentAddAuthorizationsAsync_NotRequestedStudent_Advisor_Not_Assigned_to_Student_with_AllAccessAnyAdvisee()
+        {
+            var advisorRole = new Domain.Entities.Role(1, "Advisor");
+            advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.AllAccessAnyAdvisee));
+            _roleRepositoryMock.Setup(rr => rr.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role> { advisorRole });
+            _roleRepositoryMock.Setup(rr => rr.Roles).Returns(new List<Domain.Entities.Role> { advisorRole });
+
+            _currentUserFactory = new CurrentUserFactorySetup.AdvisorUserFactory();
+            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, _studentRepo, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
+            var serviceResult = await _addAuthorizationService.GetStudentAddAuthorizationsAsync("1234567");
+        }
+
+        [TestMethod]
+        public async Task GetStudentAddAuthorizationsAsync_NotRequestedStudent_Advisor_Not_Assigned_to_Student_with_UpdateAnyAdvisee()
+        {
+            var advisorRole = new Domain.Entities.Role(1, "Advisor");
+            advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.UpdateAnyAdvisee));
+            _roleRepositoryMock.Setup(rr => rr.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role> { advisorRole });
+            _roleRepositoryMock.Setup(rr => rr.Roles).Returns(new List<Domain.Entities.Role> { advisorRole });
+
+            _currentUserFactory = new CurrentUserFactorySetup.AdvisorUserFactory();
+            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, _studentRepo, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
+            var serviceResult = await _addAuthorizationService.GetStudentAddAuthorizationsAsync("1234567");
+        }
+
+        [TestMethod]
+        public async Task GetStudentAddAuthorizationsAsync_NotRequestedStudent_Advisor_Not_Assigned_to_Student_with_ReviewAnyAdvisee()
+        {
+            var advisorRole = new Domain.Entities.Role(1, "Advisor");
+            advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.ReviewAnyAdvisee));
+            _roleRepositoryMock.Setup(rr => rr.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role> { advisorRole });
+            _roleRepositoryMock.Setup(rr => rr.Roles).Returns(new List<Domain.Entities.Role> { advisorRole });
+
+            _currentUserFactory = new CurrentUserFactorySetup.AdvisorUserFactory();
+            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, _studentRepo, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
+            var serviceResult = await _addAuthorizationService.GetStudentAddAuthorizationsAsync("1234567");
+        }
+
+        [TestMethod]
+        public async Task GetStudentAddAuthorizationsAsync_NotRequestedStudent_Advisor_Not_Assigned_to_Student_with_ViewAnyAdvisee()
+        {
+            var advisorRole = new Domain.Entities.Role(1, "Advisor");
+            advisorRole.AddPermission(new Domain.Entities.Permission(PlanningPermissionCodes.ViewAnyAdvisee));
+            _roleRepositoryMock.Setup(rr => rr.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role> { advisorRole });
+            _roleRepositoryMock.Setup(rr => rr.Roles).Returns(new List<Domain.Entities.Role> { advisorRole });
+
+            _currentUserFactory = new CurrentUserFactorySetup.AdvisorUserFactory();
+            _addAuthorizationService = new AddAuthorizationService(_addAuthorizationRepo, _sectionRepo, _studentRepo, null, _adapterRegistry, _currentUserFactory, _roleRepository, _logger);
+            var serviceResult = await _addAuthorizationService.GetStudentAddAuthorizationsAsync("1234567");
+        }
+
+        [TestMethod]
+        public async Task GetStudentAddAuthorizationsAsync_NullRepoResponse()
+        {
+            IEnumerable<AddAuthorization> addAuthorizationEntities = null;
+            addAuthorizationRepoMock.Setup(x => x.GetStudentAddAuthorizationsAsync(It.IsAny<string>())).ReturnsAsync(addAuthorizationEntities);
+
+            // Student is current user
+            var serviceResult = await _addAuthorizationService.GetStudentAddAuthorizationsAsync(sectionId);
+
+            Assert.AreEqual(0, serviceResult.Count());
+        }
+
+        [TestMethod]
+        public async Task GetStudentAddAuthorizationsAsync_Success()
+        {
+            var serviceResult = await _addAuthorizationService.GetStudentAddAuthorizationsAsync(sectionId);
+            Assert.AreEqual(2, serviceResult.Count());
+            foreach (var auth in serviceResult)
+            {
+                var expectedAuth = addAuthorizationEntities.Where(aa => aa.Id == auth.Id).FirstOrDefault();
+                Assert.IsNotNull(expectedAuth);
+                Assert.AreEqual(expectedAuth.Id, auth.Id);
+                Assert.AreEqual(expectedAuth.StudentId, auth.StudentId);
+                Assert.AreEqual(expectedAuth.SectionId, auth.SectionId);
+                Assert.AreEqual(expectedAuth.AddAuthorizationCode, auth.AddAuthorizationCode);
+                Assert.AreEqual(expectedAuth.AssignedBy, auth.AssignedBy);
+                Assert.AreEqual(expectedAuth.AssignedTime, auth.AssignedTime);
+                Assert.AreEqual(expectedAuth.IsRevoked, auth.IsRevoked);
+                Assert.AreEqual(expectedAuth.RevokedBy, auth.RevokedBy);
+                Assert.AreEqual(expectedAuth.RevokedTime, auth.RevokedTime);
+            }
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(Exception))]
+        public async Task GetStudentAddAuthorizationsAsync_AdapterException()
+        {
+            _adapterRegistryMock.Setup(reg => reg.GetAdapter<Domain.Student.Entities.AddAuthorization, Dtos.Student.AddAuthorization>()).Throws(new Exception());
+            var serviceResult = await _addAuthorizationService.GetStudentAddAuthorizationsAsync(sectionId);
         }
     }
 

@@ -1,4 +1,4 @@
-//Copyright 2018 Ellucian Company L.P. and its affiliates.
+//Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
@@ -211,5 +211,29 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
 
         }
+
+        /// <summary>
+        /// Return all Fixed asset transfer flags
+        /// </summary>
+        /// <returns>List of Fixed asset transfer flag <see cref="Dtos.ColleagueFinance.FixedAssetsFlag"/> objects representing matching FixedAssetsFlag</returns>
+        /// <accessComments>
+        /// Any authenticated user can get the Fixed asset transfer flags
+        /// </accessComments>
+        [HttpGet]
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.ColleagueFinance.FixedAssetsFlag>> GetFixedAssetTransferFlagsAsync()
+        {
+            try
+            {
+                var fixedAssetFlags = await _fixedAssetsService.GetFixedAssetTransferFlagsAsync();
+                return fixedAssetFlags;
+            }
+            // Application exceptions will be caught below.
+            catch (Exception ex)
+            {
+                _logger.Error(ex, ex.Message);
+                throw CreateHttpResponseException("Unable to get Fixed asset transfer flags.", HttpStatusCode.BadRequest);
+            }
+        }
+
     }
 }

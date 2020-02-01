@@ -37,5 +37,12 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// <param name="code">AcademicPeriods code</param>
         /// <returns>Guid</returns>
         Task<string> GetAcademicPeriodsGuidAsync(string code);
+
+        /// <summary>
+        /// Get code for AcademicPeriods guid
+        /// </summary>
+        /// <param name="code">AcademicPeriods guid</param>
+        /// <returns>code</returns>
+        Task<string> GetAcademicPeriodsCodeFromGuidAsync(string guid);
     }
 }

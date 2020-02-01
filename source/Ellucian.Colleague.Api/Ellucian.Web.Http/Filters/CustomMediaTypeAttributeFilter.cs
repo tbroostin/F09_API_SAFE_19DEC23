@@ -1,11 +1,8 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
+
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Web.Http.Filters;
-using Ellucian.Web.Http.Routes;
 
 namespace Ellucian.Web.Http.Filters
 {
@@ -33,10 +30,13 @@ namespace Ellucian.Web.Http.Filters
                 if (actionExecutedContext.Response.IsSuccessStatusCode)
                 {
                     var RequestedContentTypeval = actionExecutedContext.ActionContext.RequestContext.RouteData.Values["RequestedContentType"];
-                    if (RequestedContentTypeval != null)
+                 
+                    IEnumerable<string> customMediaTypeValue = null;
+                    if ((RequestedContentTypeval != null) && (!actionExecutedContext.Response.Content.Headers.TryGetValues(CustomMediaType, out customMediaTypeValue)))
                         actionExecutedContext.Response.Content.Headers.Add(CustomMediaType, RequestedContentTypeval.ToString());
+
                 }
-                else if (!string.IsNullOrEmpty(this.ErrorContentType))
+                else if (!string.IsNullOrEmpty(ErrorContentType))
                 {
                     actionExecutedContext.Response.Content.Headers.Add(CustomMediaType, this.ErrorContentType);
                 }

@@ -1,4 +1,4 @@
-﻿// Copyright 2014 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Text;
 using System.Collections.Generic;
@@ -149,7 +149,8 @@ namespace Ellucian.Colleague.Coordination.Finance.Tests.Services
                 ShowCreditAmounts = true,
                 SupportEmailAddress = "support@ellucian.edu",
                 StatementTitle = "Student Statement",
-                UseGuaranteedChecks = true
+                UseGuaranteedChecks = true,
+                DisplayPotentialD7Amounts = true,
             };
 
             ipcConfigurationEntity = new Domain.Finance.Entities.ImmediatePaymentControl(true)

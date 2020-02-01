@@ -57,13 +57,21 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CurrentBenefit.cs" />
     <Compile Include="DirectDeposits.cs" />
     <Compile Include="EarningsCategory.cs" />
     <Compile Include="EarningsMethod.cs" />
+    <Compile Include="EmployeeSummaryQueryCriteria.cs" />
+    <Compile Include="EmployeeSummary.cs" />
     <Compile Include="EarningsType.cs" />
     <Compile Include="EarningsTypeGroup.cs" />
     <Compile Include="EarningsTypeGroupItem.cs" />
+    <Compile Include="EmployeeBended.cs" />
+    <Compile Include="EmployeeBenefits.cs" />
+    <Compile Include="EmployeeCompensation.cs" />
     <Compile Include="EmployeeLeavePlan.cs" />
+    <Compile Include="EmployeeStipend.cs" />
+    <Compile Include="EmployeeTax.cs" />
     <Compile Include="EmploymentProficiencyLevel.cs" />
     <Compile Include="HourlySalaryIndicator.cs" />
     <Compile Include="HumanResourceDemographics.cs" />
@@ -89,6 +97,7 @@
     <Compile Include="PersonPosition.cs" />
     <Compile Include="PersonPositionWage.cs" />
     <Compile Include="PersonEmploymentStatus.cs" />
+    <Compile Include="PersonStipend.cs" />
     <Compile Include="Position.cs" />
     <Compile Include="PositionFundingSource.cs" />
     <Compile Include="ProficiencyLicensingAuthority.cs" />
@@ -96,12 +105,17 @@
     <Compile Include="TaxFormNotations.cs" />
     <Compile Include="TaxFormStatement.cs" />
     <Compile Include="TimecardType.cs" />
+    <Compile Include="WorkScheduleItem.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Ellucian.Colleague.Domain.Base\Ellucian.Colleague.Domain.Base.csproj">
+      <Project>{A3B49510-737B-4FFD-8BCA-17BCCE7FBAF7}</Project>
+      <Name>Ellucian.Colleague.Domain.Base</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Ellucian.Colleague.Domain.HumanResources\Ellucian.Colleague.Domain.HumanResources.csproj">
       <Project>{0CDA322D-5DB6-466C-86C4-49A808B02284}</Project>
       <Name>Ellucian.Colleague.Domain.HumanResources</Name>
@@ -109,6 +123,10 @@
     <ProjectReference Include="..\Ellucian.Colleague.Dtos.Base\Ellucian.Colleague.Dtos.Base.csproj">
       <Project>{a147bd58-ecc6-409b-a633-128946aaa456}</Project>
       <Name>Ellucian.Colleague.Dtos.Base</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ellucian.Colleague.Dtos\Ellucian.Colleague.Dtos.csproj">
+      <Project>{0CA929CA-2370-4763-BE71-C91C244E0743}</Project>
+      <Name>Ellucian.Colleague.Dtos</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup />

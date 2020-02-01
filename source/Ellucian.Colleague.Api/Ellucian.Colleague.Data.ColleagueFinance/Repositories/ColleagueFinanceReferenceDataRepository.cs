@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
 using Ellucian.Colleague.Domain.Base.Exceptions;
@@ -62,7 +62,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             var recordInfo = await GetRecordInfoFromGuidAsync(Guid);
             if (recordInfo == null || string.IsNullOrEmpty(recordInfo.PrimaryKey))
             {
-                throw new KeyNotFoundException(string.Format("No accounting string componenent value was found for guid '{0}'. ", Guid));
+                throw new KeyNotFoundException(string.Format("No accounting string component value was found for guid '{0}'. ", Guid));
             }
             AccountingStringComponentValues ASCV = new AccountingStringComponentValues();
             switch (recordInfo.Entity)
@@ -89,9 +89,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 default:
                     throw new KeyNotFoundException(string.Format("No accounting string component value was found for guid '{0}'. ", Guid));
             }
-
             return ASCV;
-
         }
 
         public async Task<AccountingStringComponentValues> GetAccountingStringComponentValue2ByGuid(string Guid)
@@ -99,7 +97,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             var recordInfo = await GetRecordInfoFromGuidAsync(Guid);
             if (recordInfo == null || string.IsNullOrEmpty(recordInfo.PrimaryKey))
             {
-                throw new KeyNotFoundException(string.Format("No accounting string componenent value was found for guid '{0}'. ", Guid));
+                throw new KeyNotFoundException(string.Format("No accounting string component value was found for guid '{0}'. ", Guid));
             }
             AccountingStringComponentValues ASCV = new AccountingStringComponentValues();
             switch (recordInfo.Entity)
@@ -108,7 +106,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     var project = await DataReader.ReadRecordAsync<Projects>(recordInfo.PrimaryKey);
                     if (project == null)
                     {
-                        throw new KeyNotFoundException(string.Format("No accounting string componenent value was found for guid '{0}'. ", Guid));
+                        throw new KeyNotFoundException(string.Format("No accounting string component value was found for guid '{0}'. ", Guid));
                     }
                     ASCV = convertProjectsToASCV(project);
                     break;
@@ -116,7 +114,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     var glAccount = await DataReader.ReadRecordAsync<DataContracts.GlAccts>(recordInfo.PrimaryKey);
                     if (glAccount == null)
                     {
-                        throw new KeyNotFoundException(string.Format("No accounting string componenent value was found for guid '{0}'. ", Guid));
+                        throw new KeyNotFoundException(string.Format("No accounting string component value was found for guid '{0}'. ", Guid));
                     }
                     var glClassDef = await DataReader.ReadRecordAsync<DataContracts.Glclsdef>("ACCOUNT.PARAMETERS", "GL.CLASS.DEF", true);
                     var glAcctCC = await DataReader.ReadRecordAsync<DataContracts.GlAcctsCc>(recordInfo.PrimaryKey);
@@ -124,11 +122,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     ASCV = ConvertGLtoASCV2Async(glAccount, glClassDef, glAcctCC, fiscalYearDataContract);
                     break;
                 default:
-                    throw new KeyNotFoundException(string.Format("No accounting string componenent value was found for guid '{0}'. ", Guid));
+                    throw new KeyNotFoundException(string.Format("No accounting string component value was found for guid '{0}'. ", Guid));
             }
-
             return ASCV;
-
         }
 
         public async Task<Tuple<IEnumerable<AccountingStringComponentValues>, int>> GetAccountingStringComponentValuesAsync(int Offset, int Limit, string component,
@@ -201,10 +197,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <param name="guid"></param>
         /// <returns></returns>
         public async Task<string> GetAccountingStringComponentValuesGuidFromIdAsync(string id)
-        {              
+        {
             try
             {
-                return await GetGuidFromRecordInfoAsync("GL.ACCTS", id); 
+                return await GetGuidFromRecordInfoAsync("GL.ACCTS", id);
             }
             catch (ArgumentNullException)
             {
@@ -216,7 +212,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 throw ex;
             }
         }
-    
+
 
         /// <summary>
         /// Get a collection of AccountComponents
@@ -269,6 +265,49 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         }
 
         /// <summary>
+        /// Get guid for AccountsPayableSource code
+        /// </summary>
+        /// <param name="code">AccountsPayableSource code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetAccountsPayableSourceGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetAccountsPayableSourcesAsync(false);
+            AccountsPayableSources codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
+
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetAccountsPayableSourcesAsync(true);
+                if (allCodesCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'AP.TYPES', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'AP.TYPES', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'AP.TYPES', Record ID:'", code, "'"));
+            }
+            return guid;
+
+        }
+
+        /// <summary>
         /// Return a list of Accounts Payable Tax codes.
         /// Cache them for the maximum time. It is very stable information.
         /// </summary>
@@ -277,7 +316,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             return await GetOrAddToCacheAsync<IEnumerable<AccountsPayableTax>>("AccountsPayableTaxes", async () =>
             {
                 return await GetCodeItemAsync<ApTaxes, AccountsPayableTax>("AllApTaxes", "AP.TAXES",
-                itemCode => new AccountsPayableTax(itemCode.Recordkey, itemCode.ApTaxDesc));
+                itemCode => new AccountsPayableTax(itemCode.Recordkey, itemCode.ApTaxDesc) {
+                    AllowAccountsPayablePurchaseEntry = !string.IsNullOrEmpty(itemCode.ApTaxAppurEntryFlag) ? (itemCode.ApTaxAppurEntryFlag.ToLowerInvariant() == "y" ? true : false) :false,
+                    IsUseTaxCategory = !string.IsNullOrEmpty(itemCode.ApUseTaxFlag) ? (itemCode.ApUseTaxFlag.ToLowerInvariant() == "y" ? true : false) : false,
+                    TaxCategory = itemCode.ApTaxCategory
+                });
             });
         }
 
@@ -290,7 +333,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             return await GetOrAddToCacheAsync<IEnumerable<AccountsPayableType>>("AccountsPayableTypes", async () =>
             {
                 return await GetCodeItemAsync<ApTypes, AccountsPayableType>("AllApTypes", "AP.TYPES",
-                itemCode => new AccountsPayableType(itemCode.Recordkey, itemCode.ApTypesDesc) { BankCode = itemCode.AptBankCode });
+                itemCode => new AccountsPayableType(itemCode.Recordkey, itemCode.ApTypesDesc) { BankCode = itemCode.AptBankCode, Source =itemCode.AptSource });
             });
         }
 
@@ -324,7 +367,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 return await GetOrAddToCacheAsync<IEnumerable<Domain.ColleagueFinance.Entities.AssetTypes>>("AllAssetTypes", async () => await BuildAssetTypes());
             }
         }
-        
+
         /// <summary>
         /// Builds asset types.
         /// </summary>
@@ -343,7 +386,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             foreach (var assetTypeDataContract in assetTypeDataContracts)
             {
-                Domain.ColleagueFinance.Entities.AssetTypes assetTypeEntity = new Domain.ColleagueFinance.Entities.AssetTypes(assetTypeDataContract.RecordGuid, 
+                Domain.ColleagueFinance.Entities.AssetTypes assetTypeEntity = new Domain.ColleagueFinance.Entities.AssetTypes(assetTypeDataContract.RecordGuid,
                     assetTypeDataContract.Recordkey, (string.IsNullOrEmpty(assetTypeDataContract.AstpDesc)? assetTypeDataContract.Recordkey : assetTypeDataContract.AstpDesc))
                 {
                     AstpSalvagePoint = assetTypeDataContract.AstpSalvagePct,
@@ -391,6 +434,48 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         }
 
         /// <summary>
+        /// Get guid for CommodityCode code
+        /// </summary>
+        /// <param name="code">CommodityCode code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetCommodityCodeGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetCommodityCodesAsync(false);
+            CommodityCode codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
+
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetCommodityCodesAsync(true);
+                if (allCodesCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'COMMODITY.CODES', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'COMMODITY.CODES', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'COMMODITY.CODES', Record ID:'", code, "'"));
+            }
+            return guid;
+        }
+
+        /// <summary>
         /// Gets CommodityUnitTypes
         /// </summary>
         /// <param name="ignoreCache"></param>
@@ -399,6 +484,49 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         {
             return await GetGuidCodeItemAsync<UnitIssues, CommodityUnitType>("AllCommodityUnitTypes", "UNIT.ISSUES",
             (cu, g) => new CommodityUnitType(g, cu.Recordkey, cu.UiDesc), bypassCache: ignoreCache);
+        }
+
+
+        /// <summary>
+        /// Get guid for CommodityUnitType code
+        /// </summary>
+        /// <param name="code">CommodityUnitType code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetCommodityUnitTypeGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetCommodityUnitTypesAsync(false);
+            CommodityUnitType codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
+
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetCommodityUnitTypesAsync(true);
+                if (allCodesCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'UNIT.ISSUES', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'UNIT.ISSUES', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'UNIT.ISSUES', Record ID:'", code, "'"));
+            }
+            return guid;
         }
 
         /// <summary>
@@ -462,6 +590,48 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         }
 
         /// <summary>
+        /// Get guid for FreeOnBoardType code
+        /// </summary>
+        /// <param name="code">FreeOnBoardType code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetFreeOnBoardTypeGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetFreeOnBoardTypesAsync(false);
+            FreeOnBoardType codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
+
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetFreeOnBoardTypesAsync(true);
+                if (allCodesCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'FOBS', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'FOBS', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'FOBS', Record ID:'", code, "'"));
+            }
+            return guid;
+
+        }
+        /// <summary>
         /// Gets ShippingMethod
         /// </summary>
         /// <param name="ignoreCache"></param>
@@ -493,6 +663,49 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         }
 
         /// <summary>
+        /// Get guid for ShipToDestination code
+        /// </summary>
+        /// <param name="code">ShipToDestination code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetShipToDestinationGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetShipToDestinationsAsync(false);
+            ShipToDestination codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
+
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetShipToDestinationsAsync(true);
+                if (allCodesCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'SHIP.TO.CODES', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'SHIP.TO.CODES', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'SHIP.TO.CODES', Record ID:'", code, "'"));
+            }
+            return guid;
+
+        }
+
+        /// <summary>
         /// Get a collection of Collection of VendorHoldReasons domain objects
         /// </summary>
         /// <param name="ignoreCache">Bypass cache flag</param>
@@ -513,6 +726,49 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         {
             return await GetGuidCodeItemAsync<VendorTerms, VendorTerm>("AllVendorTerms", "VENDOR.TERMS",
                 (e, g) => new VendorTerm(g, e.Recordkey, e.VendorTermsDesc), bypassCache: ignoreCache);
+        }
+
+        /// <summary>
+        /// Get guid for VendorTerm code
+        /// </summary>
+        /// <param name="code">VendorTerm code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetVendorTermGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetVendorTermsAsync(false);
+            VendorTerm codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
+
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetVendorTermsAsync(true);
+                if (allCodesCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'VENDOR.TERMS', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'VENDOR.TERMS', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'VENDOR.TERMS', Record ID:'", code, "'"));
+            }
+            return guid;
+
         }
 
         /// <summary>
@@ -769,7 +1025,79 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             return await GetGuidFromRecordInfoAsync(entity, primaryKey, secondaryField, secondaryKey);
         }
 
-       
+
+        /// <summary>
+        /// Get a collection of ShipToCodes
+        /// </summary>
+        /// <returns>Collection of ShipToCodes</returns>
+        public async Task<IEnumerable<ShipToCode>> GetShipToCodesAsync()
+        {
+            return await GetOrAddToCacheAsync<IEnumerable<ShipToCode>>("ShipToCodes", async () =>
+            {
+                return await GetCodeItemAsync<ShipToCodes, ShipToCode>("AllShipToCodes", "SHIP.TO.CODES",
+                itemCode => new ShipToCode(itemCode.Recordkey, itemCode.ShptName));
+            });
+        }
+
+        /// <summary>
+        /// Get a collection of Commodity Codes
+        /// </summary>
+        /// <returns>Collection of Commodity Codes</returns>
+        public async Task<IEnumerable<Domain.ColleagueFinance.Entities.ProcurementCommodityCode>> GetAllCommodityCodesAsync()
+        {
+            return await GetOrAddToCacheAsync("ProcurementCommodityCodes", async () =>
+            {
+                return await GetCodeItemAsync("GetAllCommodityCodes", "COMMODITY.CODES",
+               (DataContracts.CommodityCodes cc) => new Domain.ColleagueFinance.Entities.ProcurementCommodityCode(cc.Recordkey, cc.CmdtyDesc));
+
+            });
+        }
+
+        /// <summary>
+        /// Get a collection of fixed asset transfer flags
+        /// </summary>
+        /// <returns>Collection of FixedAssetsFlag</returns>
+        public async Task<IEnumerable<FixedAssetsFlag>> GetFixedAssetTransferFlagsAsync()
+        {
+            return await GetOrAddToCacheAsync("FxaTransferFlags", async () =>
+            {
+                return  await GetValcodeAsync<FixedAssetsFlag>("CF", "FXA.TRANSFER.FLAGS",
+                   fxaFlag => new FixedAssetsFlag(fxaFlag.ValInternalCodeAssocMember, fxaFlag.ValExternalRepresentationAssocMember));
+            });
+        }
+
+        /// <summary>
+        /// Gets CommodityUnitTypes
+        /// </summary>
+        /// <returns>List of unit types objects.</returns>
+        public async Task<IEnumerable<CommodityUnitType>> GetAllCommodityUnitTypesAsync()
+        {
+            return await GetOrAddToCacheAsync("CommodityCodeUnitTypes", async () =>
+            {
+                return await GetCodeItemAsync("AllCommodityUnitTypes", "UNIT.ISSUES",
+               (DataContracts.UnitIssues cc) => new Domain.ColleagueFinance.Entities.CommodityUnitType(cc.RecordGuid, cc.Recordkey, cc.UiDesc));
+
+            });
+        }
+
+        /// <summary>
+        /// Get a Commodity Code
+        /// </summary>
+        /// <returns>Commodity Code entity</returns>
+        public async Task<Domain.ColleagueFinance.Entities.ProcurementCommodityCode> GetCommodityCodeByCodeAsync(string recordKey)
+        {
+            var cc = await DataReader.ReadRecordAsync<CommodityCodes>(recordKey);
+            if (cc != null)
+            {
+                var procurementCommodityCode = new Domain.ColleagueFinance.Entities.ProcurementCommodityCode(cc.Recordkey, cc.CmdtyDesc);
+                procurementCommodityCode.DefaultDescFlag = !string.IsNullOrEmpty(cc.CmdtyDefaultDescFlag) ? cc.CmdtyDefaultDescFlag.ToUpper().Equals("Y") : false;
+                procurementCommodityCode.FixedAssetsFlag = cc.CmdtyFixedAssetsFlag;
+                procurementCommodityCode.Price = cc.CmdtyPrice;
+                procurementCommodityCode.TaxCodes = cc.CmdtyTaxCodes;
+                return procurementCommodityCode;
+            }
+            return null;
+        }
 
         #endregion
 
@@ -1134,14 +1462,18 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     AllGlAccounts.Add(newASCV);
                 }
             }
+            catch(RepositoryException e)
+            {
+                throw;
+            }
             catch (Exception e)
             {
-                throw new Exception("Failed becuase " + e.Message);
+                logger.Error(e.Message);
+                throw new RepositoryException("Failed to retrieve accounting string components.");
             }
-
             return AllGlAccounts;
         }
-        
+
 
         private AccountingStringComponentValues convertProjectsToASCV(Projects project)
         {
@@ -1167,7 +1499,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     break;
             }
             return newASCV;
-        }        
+        }
 
         private AccountingStringComponentValues ConvertGLtoASCV(GlAccts glAccount, Glclsdef glClassDef, GlAcctsCc glAcctCC, Fiscalyr fiscalYearDataContract)
         {
@@ -1217,7 +1549,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
             catch (Exception e)
             {
-                throw new Exception(" failed in status retrieval; GL number " + glAccount.Recordkey);
+                RepositoryException exception = new RepositoryException();
+                exception.AddError(new RepositoryError("avail.funds.controller.NotFoundInFiscalYear", string.Format("The record associated to the accounting string component value contains an invalid element. guid: '{0}'", glAccount.RecordGuid)));
+                throw exception;
             }
 
 
@@ -1318,7 +1652,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             {
                 var monthName = string.Empty;
                 var yearName = string.Empty;
-                
+
                 var fiscalPeriodIntg = new Domain.ColleagueFinance.Entities.FiscalPeriodsIntg(fiscalPeriodIntgRecord.RecordGuid, fiscalPeriodIntgRecord.Recordkey);
 
                 if ((fiscalPeriodIntgRecord.FpiFiscalPeriod.HasValue) && (fiscalPeriodIntgRecord.FpiFiscalYear.HasValue))
@@ -1486,74 +1820,214 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <param name="ignoreCache"></param>
         /// <returns></returns>
         public async Task<Tuple<IEnumerable<AccountingStringComponentValues>, int>> GetAccountingStringComponentValues2Async(int Offset, int Limit, string component,
-           string transactionStatus, string typeAccount, string typeFund, bool ignoreCache)
+           string transactionStatus, string typeAccount)
         {
             List<AccountingStringComponentValues> glAccounts = new List<AccountingStringComponentValues>();
             List<AccountingStringComponentValues> projects = new List<AccountingStringComponentValues>();
-            if (ignoreCache)
+            string[] glLimitingKeys = null;
+            string[] prLimitingKeys = null;
+            List<string> combinedIds = new List<string>();
+            string[] glIds = null;
+            string[] prIds = null;
+            int totalCount = 0;
+
+            string glcriteria = string.Empty;
+            string prCriteria = string.Empty;
+
+            #region component, either GL.ACCT or PROJECT or BOTH
+            if (!string.IsNullOrEmpty(component))
             {
-                switch (component)
+                if (component.Equals("GL.ACCT", StringComparison.OrdinalIgnoreCase))
                 {
-                    case "GL.ACCT":
-                        glAccounts = await BuildAllGLAccounts2();
-                        break;
-                    case "PROJECT":
-                        projects = await BuildAllProjects();
-                        break;
-                    default:
-                        glAccounts = await BuildAllGLAccounts2();
-                        projects = await BuildAllProjects();
-                        break;
+                    glLimitingKeys = await DataReader.SelectAsync("GL.ACCTS", string.Empty);
+                    if (glLimitingKeys == null || !glLimitingKeys.Any())
+                    {
+                        return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
+                    }
+                }
+                else if (component.Equals("PROJECT", StringComparison.OrdinalIgnoreCase))
+                {
+                    prLimitingKeys = await DataReader.SelectAsync("PROJECTS", string.Empty);
+                    if (prLimitingKeys == null || !prLimitingKeys.Any())
+                    {
+                        return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
+                    }
                 }
             }
             else
             {
-                string GlcacheId = "AllAccountStringCompValuesGLA";
-                string prjtCacheId = "AllAccountStringCompValuesPRJTS";
-                switch (component)
+                glLimitingKeys = await DataReader.SelectAsync("GL.ACCTS", string.Empty);
+                prLimitingKeys = await DataReader.SelectAsync("PROJECTS", string.Empty);
+                //If both collections are empty then return empty set.
+                if ((glLimitingKeys == null || !glLimitingKeys.Any()) && (prLimitingKeys == null || !prLimitingKeys.Any()))
                 {
-                    case "GL.ACCT":
-                        glAccounts = await GetOrAddToCacheAsync<List<AccountingStringComponentValues>>(GlcacheId, async () => await this.BuildAllGLAccounts2(), Level1CacheTimeoutValue);
+                    return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
+                }
+            }
+            #endregion
+
+            #region transactionStatus, status
+            if (!string.IsNullOrEmpty(transactionStatus))
+            {
+                glcriteria = "WITH GL.INACTIVE EQ 'A'";
+                prCriteria = "WITH PRJ.CURRENT.STATUS EQ 'A'";
+                glLimitingKeys = await DataReader.SelectAsync("GL.ACCTS", glLimitingKeys, glcriteria);
+                prLimitingKeys = await DataReader.SelectAsync("PROJECTS", prLimitingKeys, prCriteria);
+                //If both collections are empty then return empty set.
+                if ((glLimitingKeys == null || !glLimitingKeys.Any()) && (prLimitingKeys == null || !prLimitingKeys.Any()))
+                {
+                    return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
+                }
+            }
+            #endregion
+
+            #region type.account
+            //TO DO: come back to it later
+            if (!string.IsNullOrEmpty(typeAccount))
+            {
+                var glClassDef = await DataReader.ReadRecordAsync<DataContracts.Glclsdef>("ACCOUNT.PARAMETERS", "GL.CLASS.DEF", true);
+                int startPos = glClassDef.GlClassLocation.ElementAt(0).GetValueOrDefault() - 1;
+                int length = glClassDef.GlClassLocation.ElementAt(1).GetValueOrDefault();
+
+                switch (typeAccount)
+                {
+                    case "asset":
+                        if (glClassDef.GlClassAssetValues != null && glClassDef.GlClassAssetValues.Any())
+                        {
+                            prLimitingKeys = null;
+                            glLimitingKeys = glLimitingKeys
+                                .Where(k => !string.IsNullOrEmpty(k) && glClassDef.GlClassAssetValues.Contains(k.Substring(startPos, length)))
+                                .Select(i => i).ToArray();
+                        }
+                        else
+                        {
+                            return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
+                        }
                         break;
-                    case "PROJECT":
-                        projects = await GetOrAddToCacheAsync<List<AccountingStringComponentValues>>(prjtCacheId, async () => await this.BuildAllProjects(), Level1CacheTimeoutValue);
+                    case "liability":
+                        if (glClassDef.GlClassLiabilityValues != null && glClassDef.GlClassLiabilityValues.Any())
+                        {
+                            prLimitingKeys = null;
+                            glLimitingKeys = glLimitingKeys
+                                .Where(k => !string.IsNullOrEmpty(k) && glClassDef.GlClassLiabilityValues.Contains(k.Substring(startPos, length)))
+                                .Select(i => i).ToArray();
+                        }
+                        else
+                        {
+                            return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
+                        }
+                        break;
+                    case "fundBalance":
+                        if (glClassDef.GlClassFundBalValues != null && glClassDef.GlClassFundBalValues.Any())
+                        {
+                            prLimitingKeys = null;
+                            glLimitingKeys = glLimitingKeys
+                                .Where(k => !string.IsNullOrEmpty(k) && glClassDef.GlClassFundBalValues.Contains(k.Substring(startPos, length)))
+                                .Select(i => i).ToArray();
+                        }
+                        else
+                        {
+                            return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
+                        }
+                        break;
+                    case "revenue":
+                        if (glClassDef.GlClassRevenueValues != null && glClassDef.GlClassRevenueValues.Any())
+                        {
+                            prLimitingKeys = null;
+                            glLimitingKeys = glLimitingKeys
+                                .Where(k => !string.IsNullOrEmpty(k) && glClassDef.GlClassRevenueValues.Contains(k.Substring(startPos, length)))
+                                .Select(i => i).ToArray();
+                        }
+                        else
+                        {
+                            return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
+                        }
+                        break;
+                    case "expense":
+                        if (glClassDef.GlClassExpenseValues != null && glClassDef.GlClassExpenseValues.Any())
+                        {
+                            glLimitingKeys = glLimitingKeys
+                                .Where(k => !string.IsNullOrEmpty(k) && glClassDef.GlClassExpenseValues.Contains(k.Substring(startPos, length)))
+                                .Select(i => i).ToArray();
+                        }
+                        else
+                        {
+                            return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
+                        }
                         break;
                     default:
-                        glAccounts = await GetOrAddToCacheAsync<List<AccountingStringComponentValues>>(GlcacheId, async () => await this.BuildAllGLAccounts2(), Level1CacheTimeoutValue);
-                        projects = await GetOrAddToCacheAsync<List<AccountingStringComponentValues>>(prjtCacheId, async () => await this.BuildAllProjects(), Level1CacheTimeoutValue);
-                        break;
+                        return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
                 }
+            }
+            #endregion
+
+            //here combine the keys to get the total count.
+            if (glLimitingKeys != null && glLimitingKeys.Any())
+            {
+                foreach (var glKey in glLimitingKeys)
+                {
+                    combinedIds.Add(string.Concat("GL*", glKey));
+                }
+            }
+
+            if (prLimitingKeys != null && prLimitingKeys.Any())
+            {
+                foreach (var prKey in prLimitingKeys)
+                {
+                    combinedIds.Add(string.Concat("PR*", prKey));
+                }
+            }
+            if(!combinedIds.Any())
+            {
+                return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
+            }
+            totalCount = combinedIds.Count();
+
+            //sort & page
+            combinedIds.Sort();
+            var sublist = combinedIds.Skip(Offset).Take(Limit);
+
+            //Get the ids used in bulk read.
+            glIds = sublist.Where(i => !string.IsNullOrEmpty(i) && i.Split('*')[0].Equals("GL", StringComparison.OrdinalIgnoreCase)).Select(k => k.Split('*')[1]).ToArray();
+            prIds = sublist.Where(i => !string.IsNullOrEmpty(i) && i.Split('*')[0].Equals("PR", StringComparison.OrdinalIgnoreCase)).Select(k => k.Split('*')[1]).ToArray();
+
+            //component, either GL.ACCT or PROJECT
+            switch (component)
+            {
+                case "GL.ACCT":
+                    if (glLimitingKeys == null || !glLimitingKeys.Any())
+                    {
+                        return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
+                    }
+                    glAccounts = await BuildAllGLAccounts2(glIds);
+                    break;
+                case "PROJECT":
+                    if (prLimitingKeys == null || !prLimitingKeys.Any())
+                    {
+                        return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
+                    }
+                    projects = await BuildAllProjects2(prIds);
+                    break;
+                default:
+                    glAccounts = await BuildAllGLAccounts2(glIds);
+                    projects = await BuildAllProjects2(prIds);
+                    break;
             }
 
             List<AccountingStringComponentValues> allASCV = new List<AccountingStringComponentValues>();
             allASCV.AddRange(glAccounts);
             allASCV.AddRange(projects);
-            if (!string.IsNullOrEmpty(transactionStatus) && allASCV.Count > 0)
-            {
-                var temp = allASCV.Where(x => x.Status == transactionStatus);
-                allASCV = new List<AccountingStringComponentValues>();
-                allASCV.AddRange(temp);
-            }
-            if (!string.IsNullOrEmpty(typeAccount) && allASCV.Count > 0)
-            {
-                var temp = allASCV.Where(x => x.Type == typeAccount);
-                allASCV = new List<AccountingStringComponentValues>();
-                allASCV.AddRange(temp);
-            }
 
-            allASCV.OrderBy(o => o.AccountNumber);
-            int totalCount = allASCV.Count();
-            var pageList = allASCV.Skip(Offset).Take(Limit).ToArray();
+            return allASCV.Any() ? new Tuple<IEnumerable<AccountingStringComponentValues>, int>(allASCV, totalCount) :
+                   new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
+        }
 
-            return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(pageList, totalCount);
-        }        
-               
-        private async Task<List<AccountingStringComponentValues>> BuildAllGLAccounts2()
+        private async Task<List<AccountingStringComponentValues>> BuildAllGLAccounts2(IEnumerable<string> ids)
         {
             List<AccountingStringComponentValues> AllGlAccounts = new List<AccountingStringComponentValues>();
             try
             {
-                var glAccounts = await DataReader.BulkReadRecordAsync<DataContracts.GlAccts>("GL.ACCTS", "");
+                var glAccounts = await DataReader.BulkReadRecordAsync<DataContracts.GlAccts>("GL.ACCTS", ids.ToArray());
                 var glClassDefs = await DataReader.ReadRecordAsync<DataContracts.Glclsdef>("ACCOUNT.PARAMETERS", "GL.CLASS.DEF", true);
                 var glAcctCCs = await DataReader.BulkReadRecordAsync<DataContracts.GlAcctsCc>("GL.ACCTS.CC", "");
                 var fiscalYearDataContract = await DataReader.ReadRecordAsync<Fiscalyr>("ACCOUNT.PARAMETERS", "FISCAL.YEAR", true);
@@ -1566,12 +2040,15 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     AllGlAccounts.Add(newASCV);
                 }
             }
+            catch(RepositoryException e)
+            {
+                throw;
+            }
             catch (Exception e)
             {
                 logger.Error(e.Message);
-                throw new RepositoryException("Failed to retrieve data.");
+                throw new RepositoryException("Failed to retrieve accounting string components.");
             }
-
             return AllGlAccounts;
         }
 
@@ -1585,7 +2062,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             var recordInfo = await GetRecordInfoFromGuidAsync(Guid);
             if (recordInfo == null || string.IsNullOrEmpty(recordInfo.PrimaryKey))
             {
-                throw new KeyNotFoundException(string.Format("No accounting string componenent value was found for guid '{0}'. ", Guid));
+                throw new KeyNotFoundException(string.Format("No accounting string component value was found for guid '{0}'. ", Guid));
             }
             AccountingStringComponentValues ASCV = new AccountingStringComponentValues();
             switch (recordInfo.Entity)
@@ -1594,7 +2071,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     var project = await DataReader.ReadRecordAsync<Projects>(recordInfo.PrimaryKey);
                     if (project == null)
                     {
-                        throw new KeyNotFoundException(string.Format("No accounting string componenent value was found for guid '{0}'. ", Guid));
+                        throw new KeyNotFoundException(string.Format("No accounting string component value was found for guid '{0}'. ", Guid));
                     }
                     ASCV = ConvertProjectsToASCV2(project);
                     break;
@@ -1602,7 +2079,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     var glAccount = await DataReader.ReadRecordAsync<DataContracts.GlAccts>(recordInfo.PrimaryKey);
                     if (glAccount == null)
                     {
-                        throw new KeyNotFoundException(string.Format("No accounting string componenent value was found for guid '{0}'. ", Guid));
+                        throw new KeyNotFoundException(string.Format("No accounting string component value was found for guid '{0}'. ", Guid));
                     }
                     var glClassDef = await DataReader.ReadRecordAsync<DataContracts.Glclsdef>("ACCOUNT.PARAMETERS", "GL.CLASS.DEF", true);
                     var glAcctCC = await DataReader.ReadRecordAsync<DataContracts.GlAcctsCc>(recordInfo.PrimaryKey);
@@ -1610,11 +2087,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     ASCV = ConvertGLtoASCV3Async(glAccount, glClassDef, glAcctCC, fiscalYearDataContract);
                     break;
                 default:
-                    throw new KeyNotFoundException(string.Format("No accounting string componenent value was found for guid '{0}'. ", Guid));
+                    throw new KeyNotFoundException(string.Format("No accounting string component value was found for guid '{0}'. ", Guid));
             }
-
             return ASCV;
-
         }
 
         /// <summary>
@@ -1632,130 +2107,295 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <param name="ignoreCache"></param>
         /// <returns></returns>
         public async Task<Tuple<IEnumerable<AccountingStringComponentValues>, int>> GetAccountingStringComponentValues3Async(int Offset, int Limit, string component,
-           string typeAccount, string status, IEnumerable<string> grants, DateTime? effectiveOn, bool ignoreCache)
+           string typeAccount, string status, IEnumerable<string> grants, DateTime? effectiveOn)
         {
             List<AccountingStringComponentValues> glAccounts = new List<AccountingStringComponentValues>();
             List<AccountingStringComponentValues> projects = new List<AccountingStringComponentValues>();
+            string[] glLimitingKeys = null;
+            string[] prLimitingKeys = null;
+            List<string> combinedIds = new List<string>();
+            string[] glIds = null;
+            string[] prIds = null;
+            int totalCount = 0;
 
-            if (ignoreCache)
+            string glcriteria = string.Empty;
+            string prCriteria = string.Empty;
+            string criteria = string.Empty;
+
+            /*
+                Notes: 
+                    If filters are not requested then we can cache the data?
+                Filters: 
+                    component: where to get data from, GL.ACCT or PROJECT or both
+                    transactionStatus & status: If any value of GL.FREEZE.FLAGS is "O" or "A", then return "available". In case of PROJECT PrjCurrentStatus = "A"
+                    account: Based on the glClassDef figure out the record keys
+                    fund: This concept does not apply to Colleague so filtering on it cannot match any records. Therefore, return an empty set if it's used.
+                    grants: Translate the GUID to a PROJECTS.CF key. Select GL.ACCTS with GL.PROJECTS.ID = the project.
+                    effectiveOn: Look at glAccount.GlAcctsAddDate, glAccount.GlAcctsChgdate, project.PrjStartDate, project.PrjEndDate
+            */
+            #region component, either GL.ACCT or PROJECT or BOTH
+            if(!string.IsNullOrEmpty(component))
             {
-                switch (component)
+                if(component.Equals("GL.ACCT", StringComparison.OrdinalIgnoreCase))
                 {
-                    case "GL.ACCT":
-                        glAccounts = await BuildAllGLAccounts3();
-                        break;
-                    case "PROJECT":
-                        projects = await BuildAllProjects2();
-                        break;
-                    default:
-                        glAccounts = await BuildAllGLAccounts3();
-                        projects = await BuildAllProjects2();
-                        break;
+                    glLimitingKeys = await DataReader.SelectAsync("GL.ACCTS", string.Empty);
+                    if(glLimitingKeys == null || !glLimitingKeys.Any())
+                    {
+                        return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
+                    }
+                }
+                else if (component.Equals("PROJECT", StringComparison.OrdinalIgnoreCase))
+                {
+                    prLimitingKeys = await DataReader.SelectAsync("PROJECTS", string.Empty);
+                    if (prLimitingKeys == null || !prLimitingKeys.Any())
+                    {
+                        return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
+                    }
                 }
             }
             else
             {
-                string GlcacheId = "AllAccountStringCompValuesGLA";
-                string prjtCacheId = "AllAccountStringCompValuesPRJTS";
-                switch (component)
+                glLimitingKeys = await DataReader.SelectAsync("GL.ACCTS", string.Empty);
+                prLimitingKeys = await DataReader.SelectAsync("PROJECTS", string.Empty);
+                //If both collections are empty then return empty set.
+                if ((glLimitingKeys == null || !glLimitingKeys.Any()) && (prLimitingKeys == null || !prLimitingKeys.Any()))
                 {
-                    case "GL.ACCT":
-                        glAccounts = await GetOrAddToCacheAsync<List<AccountingStringComponentValues>>(GlcacheId, async () => await this.BuildAllGLAccounts3(), Level1CacheTimeoutValue);
+                    return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
+                }
+            }
+            #endregion
+
+            #region transactionStatus, status
+            if (!string.IsNullOrEmpty(status))
+            {
+                glcriteria = "WITH GL.INACTIVE EQ 'A'";
+                prCriteria = "WITH PRJ.CURRENT.STATUS EQ 'A'";
+                glLimitingKeys = await DataReader.SelectAsync("GL.ACCTS", glLimitingKeys, glcriteria);
+                prLimitingKeys = await DataReader.SelectAsync("PROJECTS", prLimitingKeys, prCriteria);
+                //If both collections are empty then return empty set.
+                if ((glLimitingKeys == null || !glLimitingKeys.Any()) && (prLimitingKeys == null || !prLimitingKeys.Any()))
+                {
+                    return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
+                }
+
+            }
+            #endregion
+
+            #region type.account
+            //TO DO: come back to it later
+            if (!string.IsNullOrEmpty(typeAccount))
+            {
+                var glClassDef = await DataReader.ReadRecordAsync<DataContracts.Glclsdef>("ACCOUNT.PARAMETERS", "GL.CLASS.DEF", true);
+                int startPos = glClassDef.GlClassLocation.ElementAt(0).GetValueOrDefault() - 1;
+                int length = glClassDef.GlClassLocation.ElementAt(1).GetValueOrDefault();
+
+                switch (typeAccount)
+                {
+                    case "asset":
+                        if (glClassDef.GlClassAssetValues != null && glClassDef.GlClassAssetValues.Any())
+                        {
+                            prLimitingKeys = null;
+                            glLimitingKeys = glLimitingKeys
+                                .Where(k => !string.IsNullOrEmpty(k) && glClassDef.GlClassAssetValues.Contains(k.Substring(startPos, length)))
+                                .Select(i => i).ToArray();
+                        }
+                        else
+                        {
+                            return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
+                        }
                         break;
-                    case "PROJECT":
-                        projects = await GetOrAddToCacheAsync<List<AccountingStringComponentValues>>(prjtCacheId, async () => await this.BuildAllProjects2(), Level1CacheTimeoutValue);
+                    case "liability":
+                        if (glClassDef.GlClassLiabilityValues != null && glClassDef.GlClassLiabilityValues.Any())
+                        {
+                            prLimitingKeys = null;
+                            glLimitingKeys = glLimitingKeys
+                                .Where(k => !string.IsNullOrEmpty(k) && glClassDef.GlClassLiabilityValues.Contains(k.Substring(startPos, length)))
+                                .Select(i => i).ToArray();
+                        }
+                        else
+                        {
+                            return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
+                        }
+                        break;
+                    case "fundBalance":
+                        if (glClassDef.GlClassFundBalValues != null && glClassDef.GlClassFundBalValues.Any())
+                        {
+                            prLimitingKeys = null;
+                            glLimitingKeys = glLimitingKeys
+                                .Where(k => !string.IsNullOrEmpty(k) && glClassDef.GlClassFundBalValues.Contains(k.Substring(startPos, length)))
+                                .Select(i => i).ToArray();
+                        }
+                        else
+                        {
+                            return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
+                        }
+                        break;
+                    case "revenue":
+                        if (glClassDef.GlClassRevenueValues != null && glClassDef.GlClassRevenueValues.Any())
+                        {
+                            prLimitingKeys = null;
+                            glLimitingKeys = glLimitingKeys
+                                .Where(k => !string.IsNullOrEmpty(k) && glClassDef.GlClassRevenueValues.Contains(k.Substring(startPos, length)))
+                                .Select(i => i).ToArray();
+                        }
+                        else
+                        {
+                            return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
+                        }
+                        break;
+                    case "expense":
+                        if (glClassDef.GlClassExpenseValues != null && glClassDef.GlClassExpenseValues.Any())
+                        {
+                            glLimitingKeys = glLimitingKeys
+                                .Where(k => !string.IsNullOrEmpty(k) && glClassDef.GlClassExpenseValues.Contains(k.Substring(startPos, length)))
+                                .Select(i => i).ToArray();
+                        }
+                        else
+                        {
+                            return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
+                        }
                         break;
                     default:
-                        glAccounts = await GetOrAddToCacheAsync<List<AccountingStringComponentValues>>(GlcacheId, async () => await this.BuildAllGLAccounts3(), Level1CacheTimeoutValue);
-                        projects = await GetOrAddToCacheAsync<List<AccountingStringComponentValues>>(prjtCacheId, async () => await this.BuildAllProjects2(), Level1CacheTimeoutValue);
-                        break;
+                        return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
                 }
+            }
+            #endregion
+
+            #region grants
+            if (grants != null && grants.Any())
+            {
+                //GL.ACCT
+                glcriteria = "WITH GL.PROJECTS.ID EQ '?'";
+                //PROJECT
+                prCriteria = "WITH PROJECTS.ID EQ '?'";
+                glLimitingKeys = await DataReader.SelectAsync("GL.ACCTS", glcriteria, grants.ToArray());
+                prLimitingKeys = await DataReader.SelectAsync("PROJECTS",prCriteria, grants.ToArray());
+                //If both collections are empty then return empty set.
+                if ((glLimitingKeys == null || !glLimitingKeys.Any()) && (prLimitingKeys == null || !prLimitingKeys.Any()))
+                {
+                    return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
+                }
+            }
+            #endregion
+
+            #region effectiveOn
+            if (effectiveOn.HasValue)
+            {
+                var date = await GetUnidataFormattedDate(effectiveOn.Value.ToShortDateString());
+                //GL.ACCT
+                glcriteria = string.Format("WITH GL.ACCTS.ADD.DATE <= '{0}' AND ((GL.INACTIVE EQ 'A' OR GL.INACTIVE EQ '') OR GL.INACTIVE EQ 'I' OR GL.ACCTS.CHGDATE >= '{0}')", date);
+                //PROJECT
+                prCriteria = string.Format("WITH PRJ.START.DATE <= '{0}' AND (PRJ.END.DATE EQ '' OR PRJ.END.DATE >= '{0}')", date);
+                glLimitingKeys = await DataReader.SelectAsync("GL.ACCTS", glLimitingKeys, glcriteria);
+                prLimitingKeys = await DataReader.SelectAsync("PROJECTS", prLimitingKeys, prCriteria);
+                //If both collections are empty then return empty set.
+                if ((glLimitingKeys == null || !glLimitingKeys.Any()) && (prLimitingKeys == null || !prLimitingKeys.Any()))
+                {
+                    return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
+                }
+            }
+            #endregion
+
+            //here combine the keys to get the total count.
+            if (glLimitingKeys != null && glLimitingKeys.Any())
+            {
+                foreach (var glKey in glLimitingKeys)
+                {
+                    combinedIds.Add(string.Concat("GL*", glKey));
+                }
+            }
+            if (prLimitingKeys != null && prLimitingKeys.Any())
+            {
+                foreach (var prKey in prLimitingKeys)
+                {
+                    combinedIds.Add(string.Concat("PR*", prKey));
+                }
+            }
+
+            if (!combinedIds.Any())
+            {
+                return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
+            }
+
+            totalCount = combinedIds.Count();
+
+            //sort & page
+            combinedIds.Sort();
+            var sublist = combinedIds.Skip(Offset).Take(Limit);
+
+            //Get the ids used in bulk read.
+            glIds = sublist.Where(i => !string.IsNullOrEmpty(i) && i.Split('*')[0].Equals("GL", StringComparison.OrdinalIgnoreCase)).Select(k => k.Split('*')[1]).ToArray();
+            prIds = sublist.Where(i => !string.IsNullOrEmpty(i) && i.Split('*')[0].Equals("PR", StringComparison.OrdinalIgnoreCase)).Select(k => k.Split('*')[1]).ToArray();
+
+            //component, either GL.ACCT or PROJECT
+            switch (component)
+            {
+                case "GL.ACCT":
+                    if (glLimitingKeys == null || !glLimitingKeys.Any())
+                    {
+                        return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
+                    }
+                    glAccounts = await BuildAllGLAccounts3(glIds);
+                    break;
+                case "PROJECT":
+                    if (prLimitingKeys == null || !prLimitingKeys.Any())
+                    {
+                        return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
+                    }
+                    projects = await BuildAllProjects2(prIds);
+                    break;
+                default:
+                    glAccounts = await BuildAllGLAccounts3(glIds);
+                    projects = await BuildAllProjects2(prIds);
+                    break;
             }
 
             List<AccountingStringComponentValues> allASCV = new List<AccountingStringComponentValues>();
             allASCV.AddRange(glAccounts);
             allASCV.AddRange(projects);
-            if (!string.IsNullOrEmpty(status) && allASCV.Any())
+
+            return allASCV.Any() ? new Tuple<IEnumerable<AccountingStringComponentValues>, int>(allASCV, totalCount) :
+                   new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
+        }
+
+        /// <summary>
+        /// Return a Unidata Formatted Date string from an input argument of string type
+        /// </summary>
+        /// <param name="date">String representing a Date</param>
+        /// <returns>Unidata formatted Date string for use in Colleague Selection.</returns>
+        private async Task<string> GetUnidataFormattedDate(string date)
+        {
+            var internationalParameters = await InternationalParametersAsync();
+            var newDate = DateTime.Parse(date).Date;
+            return UniDataFormatter.UnidataFormatDate(newDate, internationalParameters.HostShortDateFormat, internationalParameters.HostDateDelimiter);
+        }
+
+        private Ellucian.Data.Colleague.DataContracts.IntlParams _internationalParameters;
+        /// <summary>
+        /// Gets international parameters.
+        /// </summary>
+        /// <returns></returns>
+        private async Task<Ellucian.Data.Colleague.DataContracts.IntlParams> InternationalParametersAsync()
+        {
+
+            if (_internationalParameters == null)
             {
-                var temp = allASCV.Where(x => !string.IsNullOrWhiteSpace(x.Status) && x.Status.ToUpperInvariant() == status.ToUpperInvariant()).ToList();
-                if(temp == null || !temp.Any())
-                {
-                    return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
-                }
-                allASCV = new List<AccountingStringComponentValues>();
-                allASCV.AddRange(temp);
+                _internationalParameters = await GetInternationalParametersAsync();
             }
-            if (!string.IsNullOrEmpty(typeAccount) && allASCV.Any())
-            {
-                var temp = allASCV.Where(x => !string.IsNullOrWhiteSpace(x.Type) && x.Type.ToUpperInvariant() == typeAccount.ToUpperInvariant());
-                if (temp == null || !temp.Any())
-                {
-                    return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
-                }
-                allASCV = new List<AccountingStringComponentValues>();
-                allASCV.AddRange(temp);
-            }
-
-            //grants
-            if(grants != null && grants.Any() && allASCV.Any())
-            {
-                var grIds = allASCV.Where(gr => gr.GrantIds != null && gr.GrantIds.Any()).SelectMany(id => id.GrantIds);
-                var intersectIds = grants.ToList().Intersect(grIds.ToList());
-                if(intersectIds == null || !intersectIds.Any())
-                {
-                    return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
-                }
-                var ascvWithGrants = new List<AccountingStringComponentValues>();
-                intersectIds.ToList().ForEach(id => 
-                {
-                    var temp = allASCV.Where(ascv => ascv.GrantIds.Contains(id));
-                    ascvWithGrants.AddRange(temp);
-                });
-                allASCV = new List<AccountingStringComponentValues>();
-                allASCV.AddRange(ascvWithGrants);
-            }
-
-            //effectiveOn
-            if(effectiveOn.HasValue && allASCV.Any())
-            {
-                try
-                {
-                    var temp = allASCV
-                    .Where(ascv => ((ascv.StartDate.HasValue && ascv.StartDate.Value.Date <= effectiveOn.Value.Date && (!string.IsNullOrEmpty(ascv.Status) && ascv.Status.Equals("available", StringComparison.OrdinalIgnoreCase)) || 
-                    string.IsNullOrEmpty(ascv.Status))) || 
-                    (ascv.Status.Equals("unavailable", StringComparison.OrdinalIgnoreCase) && ascv.EndDate.HasValue && ascv.EndDate.Value.Date >= effectiveOn.Value.Date)).ToList();
-
-                    if (temp == null ||!temp.Any())
-                    {
-                        return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
-                    }
-                    allASCV = new List<AccountingStringComponentValues>();
-                    allASCV.AddRange(temp);
-                }
-                catch (Exception e)
-                {
-                    logger.Error(e.Message);
-                    return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
-                }
-            }
-
-            allASCV.OrderBy(o => o.AccountNumber);
-            int totalCount = allASCV.Count();
-            var pageList = allASCV.Skip(Offset).Take(Limit).ToArray();
-
-            return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(pageList, totalCount);
+            return _internationalParameters;
         }
 
         /// <summary>
         /// Builds GL Accounts.
         /// </summary>
         /// <returns></returns>
-        private async Task<List<AccountingStringComponentValues>> BuildAllGLAccounts3()
+        private async Task<List<AccountingStringComponentValues>> BuildAllGLAccounts3(IEnumerable<string> glIds)
         {
             List<AccountingStringComponentValues> AllGlAccounts = new List<AccountingStringComponentValues>();
+
             try
             {
-                var glAccounts = await DataReader.BulkReadRecordAsync<DataContracts.GlAccts>("GL.ACCTS", "");
+                var glAccounts = await DataReader.BulkReadRecordAsync<DataContracts.GlAccts>("GL.ACCTS", glIds.ToArray());
                 var glClassDefs = await DataReader.ReadRecordAsync<DataContracts.Glclsdef>("ACCOUNT.PARAMETERS", "GL.CLASS.DEF", true);
                 var glAcctCCs = await DataReader.BulkReadRecordAsync<DataContracts.GlAcctsCc>("GL.ACCTS.CC", "");
                 var fiscalYearDataContract = await DataReader.ReadRecordAsync<Fiscalyr>("ACCOUNT.PARAMETERS", "FISCAL.YEAR", true);
@@ -1764,16 +2404,18 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 {
                     var glAcctCc = glAcctCCs.FirstOrDefault(x => x.Recordkey == glAccount.Recordkey);
                     var newASCV = ConvertGLtoASCV3Async(glAccount, glClassDefs, glAcctCc, fiscalYearDataContract);
-
                     AllGlAccounts.Add(newASCV);
                 }
+            }
+            catch(RepositoryException)
+            {
+                throw;
             }
             catch (Exception e)
             {
                 logger.Error(e.Message);
                 throw new RepositoryException("Failed to retrieve accounting string components.");
             }
-
             return AllGlAccounts;
         }
 
@@ -1789,14 +2431,23 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         {
             AccountingStringComponentValues newASCV = new AccountingStringComponentValues();
 
-            newASCV = new AccountingStringComponentValues()
+            try
             {
-                Guid = glAccount.RecordGuid,
-                AccountDef = "GL",
-                AccountNumber = glAccount.Recordkey,
-                Id = glAccount.Recordkey,
-                PooleeAccounts = BuildPooleeAccountsAsync(glAccount.MemosEntityAssociation)
-            };
+                newASCV = new AccountingStringComponentValues()
+                {
+                    Guid = glAccount.RecordGuid,
+                    AccountDef = "GL",
+                    AccountNumber = glAccount.Recordkey,
+                    Id = glAccount.Recordkey,
+                    PooleeAccounts = BuildPooleeAccountsAsync(glAccount.MemosEntityAssociation)
+                };
+            }
+            catch
+            {
+                RepositoryException exception = new RepositoryException();
+                exception.AddError(new RepositoryError("avail.funds.controller.NotFound", string.Format("The record associated to the accounting string component value contains an invalid element. guid: '{0}'", glAccount.RecordGuid)));
+                throw exception;
+            }
 
             //effectiveStartOn
             newASCV.StartDate = glAccount.GlAcctsAddDate;
@@ -1822,7 +2473,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 var fiscalYearStatus = glAccount.MemosEntityAssociation.FirstOrDefault(x => x.AvailFundsControllerAssocMember == fiscalYearDataContract.CfCurrentFiscalYear);
                 if (fiscalYearStatus == null)
                 {
-                    throw new RepositoryException(string.Format("Current fiscal year not found for {0}: fiscalYearDataContract.CfCurrentFiscalYear."));
+                    RepositoryException exception = new RepositoryException();
+                    exception.AddError(new RepositoryError("avail.funds.controller.NotFoundInFiscalYear", string.Format("The record associated to the accounting string component value contains an invalid element. guid: '{0}'", glAccount.RecordGuid)));
+                    throw exception;
                 }
                 string glFFA = fiscalYearStatus.GlFreezeFlagsAssocMember;
 
@@ -1908,10 +2561,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// Builds projects.
         /// </summary>
         /// <returns></returns>
-        private async Task<List<AccountingStringComponentValues>> BuildAllProjects2()
+        private async Task<List<AccountingStringComponentValues>> BuildAllProjects2(IEnumerable<string> prjIds)
         {
             List<AccountingStringComponentValues> allProjects = new List<AccountingStringComponentValues>();
-            var projects = await DataReader.BulkReadRecordAsync<DataContracts.Projects>("PROJECTS", "");
+            var projects = await DataReader.BulkReadRecordAsync<DataContracts.Projects>("PROJECTS", prjIds.ToArray());
 
             foreach (var project in projects)
             {
@@ -1982,9 +2635,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     PooleeAccounts = BuildPooleeAccountsAsync(glAccount.MemosEntityAssociation)
                 };
             }
-            catch (Exception e)
+            catch
             {
-                throw new Exception("failed to load accountingstring");
+                RepositoryException exception = new RepositoryException();
+                exception.AddError(new RepositoryError("avail.funds.controller.NotFound", string.Format("The record associated to the accounting string component value contains an invalid element. guid: '{0}'", glAccount.RecordGuid)));
+                throw exception;
             }
 
             try
@@ -2018,7 +2673,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
             catch (Exception e)
             {
-                throw new Exception(" failed in status retrieval; GL number " + glAccount.Recordkey);
+                RepositoryException exception = new RepositoryException();
+                exception.AddError(new RepositoryError("avail.funds.controller.NotFoundInFiscalYear", string.Format("The record associated to the accounting string component value contains an invalid element. guid: '{0}'", glAccount.RecordGuid)));
+                throw exception;
             }
 
 
@@ -2079,7 +2736,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             return newASCV;
         }
-             
+
         /// <summary>
         /// Builds poolee accounts
         /// </summary>
@@ -2092,9 +2749,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             {
                 foreach (var item in memosEntityAssociation)
                 {
-                    if (!dict.ContainsKey(item.AvailFundsControllerAssocMember) &&
-                        !string.IsNullOrEmpty(item.AvailFundsControllerAssocMember) &&
-                        item.GlPooledTypeAssocMember != null && item.GlPooledTypeAssocMember.Equals("P"))
+                    if (!string.IsNullOrEmpty(item.AvailFundsControllerAssocMember) &&
+                        !dict.ContainsKey(item.AvailFundsControllerAssocMember) &&
+                        !string.IsNullOrEmpty(item.GlPooledTypeAssocMember)  && item.GlPooledTypeAssocMember.Equals("P"))
                     {
                         dict.Add(item.AvailFundsControllerAssocMember, item.GlBudgetLinkageAssocMember);
                     }
@@ -2148,6 +2805,19 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 acctStructureIntgEntities.Add(acctStructureIntgEntity);
             }
             return acctStructureIntgEntities;
+        }
+
+        /// <summary>
+        /// Get a collection of tax forms
+        /// </summary>
+        /// <returns>Collection of TaxForm</returns>
+        public async Task<IEnumerable<TaxForm>> GetTaxFormsAsync()
+        {
+            return await GetOrAddToCacheAsync("TaxFormCodes", async () =>
+            {
+                return await GetValcodeAsync<TaxForm>("CORE", "TAX.FORMS",
+                   taxForm => new TaxForm(taxForm.ValInternalCodeAssocMember, taxForm.ValExternalRepresentationAssocMember));
+            });
         }
         #endregion
 

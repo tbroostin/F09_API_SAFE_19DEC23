@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.ComponentModel;
@@ -86,10 +86,13 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             try
             {
                 var pdfData = await taxFormPdfService.GetFormT4aPdfDataAsync(personId, recordId);
-
+                
                 // Determine which PDF template to use.
                 switch (pdfData.TaxYear)
                 {
+                    case "2019":
+                        pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/ColleagueFinance/2019-T4A.rdlc");
+                        break;
                     case "2018":
                         pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/ColleagueFinance/2018-T4A.rdlc");
                         break;
@@ -117,12 +120,18 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                     case "2010":
                         pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/ColleagueFinance/2010-T4A.rdlc");
                         break;
+                    case "2009":
+                        pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/ColleagueFinance/2009-T4A.rdlc");
+                        break;
+                    case "2008":
+                        pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/ColleagueFinance/2008-T4A.rdlc");
+                        break;
                     default:
                         var message = string.Format("Incorrect Tax Year {0}", pdfData.TaxYear);
                         logger.Error(message);
                         throw new ApplicationException(message);
                 }
-
+                
                 var pdfBytes = taxFormPdfService.PopulateT4aPdf(pdfData, pdfTemplatePath);
 
                 // Create and return the HTTP response object
@@ -182,10 +191,14 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             {
                 var pdfData = await taxFormPdfService.Get1099MiscPdfDataAsync(personId, recordId);
                 // Determine which PDF template to use.
+                // Any new year has to be added to the list in the ColleagueFinanceConstants class.
                 switch (pdfData.TaxYear)
                 {
                     case "2009":
                         pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/ColleagueFinance/2009-1099MI.rdlc");
+                        break;
+                    case "2008":
+                        pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/ColleagueFinance/2008-1099MI.rdlc");
                         break;
                     case "2018":
                     case "2017":
@@ -194,6 +207,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                     case "2011":
                     case "2010":
                     case "2012":
+                    case "2019":
                         pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/ColleagueFinance/20XX-1099MI.rdlc");
                         break;
                     case "2014":

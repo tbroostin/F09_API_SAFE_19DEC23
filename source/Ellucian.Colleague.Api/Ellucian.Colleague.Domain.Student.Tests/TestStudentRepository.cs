@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -60,13 +60,13 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                                     {"00004008",     "Dharma", "808",         "MATH.BS",  ""     }, // HIST-100, MATH-100
                                     {"00004009",        "Dio",    "", "HIST.BA,MATH.BS",  ""     }, //               Two programs
                                     {"00004010",  "Kilmister", "802",         "MATH.BS",  "20,21,22,1001" }, // MATH-100, MATH-200       one spanish, two dance a noncourse
-                                    {"00004011",   "Morrison",    "",         "MATH.BS",  "56,74"   }, //                          MATH-4003 (withdrawn)
+                                    {"00004011",   "Morrison",    "",         "MATH.BS",  "56,74"   }, //                       MATH-4003 (withdrawn)
                                     {"00004012",     "Waters",    "",         "MATH.BS",  "57"   }, //                          MATH-502 (graduate course)
                                     {"00004013",    "Hendrix",    "",         "MATH.BS",  "26"   }, //                          ENGL-102
-                                    {"00004014",   "Sortbaby",    "",         "MATH.BS",  "13,16,14,8,63,11"   }, // test to prove sort by type, then start date then descending academic credit ID
-                                                                                                            // academic credits: 13: MUSC-100 TR 2010SP, 16: MATH-362 IN 2010SP, 14: MUSC-207 TR 2010SP, 
+                                    {"00004014",   "Sortbaby",    "",         "MATH.BS",  "13,16,14,8,63,11" }, // test to prove sort by type, then start date then descending academic credit ID
+                                                                                                                // academic credits: 13: MUSC-100 TR 2010SP, 16: MATH-362 IN 2010SP, 14: MUSC-207 TR 2010SP, 
                                        
-                                        {"00004015",      "Scott", "",         "MATH.BS", "26,36,8,39" },                                                                    //                    8: MATH-100 IN 2009FA, 63: MUSC-209 IN 2010SP, 11: MATH-150 IN 2009FA 
+                                    {"00004015",      "Scott", "",         "MATH.BS", "26,36,8,39" },                                                                    //                    8: MATH-100 IN 2009FA, 63: MUSC-209 IN 2010SP, 11: MATH-150 IN 2009FA 
 
                                     // Colldev data
                                     {"1143352",     "Hawking",    "",  "STSS.MATH.BS", "46,47,48,49,50"}, //      
@@ -74,70 +74,95 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                                     {"0000895",     "Generic",    "",         "MATH.BS",  "26"}, // Needed for "self" permissions tests
                                     {"0000999", "TrickOrTreatMinGroups", "3", "MATH.BS","1,2,35,3,5,10,12,4,6,37,38,30,27,26" },
                                     {"0000111","CourseReuse","","PROG.COURSE.REUSE", "103,104,105,106,107"},   //ENGL-200  COMPLETED ,ENGL-300  COMPLETED, COMM-1321  COMPLETED, COMM-100  COMPLETED,MATH-200  IN-PROGRESS
-                                    {"0000112", "OverrideTranscriptGrouping","","MATH.BS", "36,33" }, //                          ENGL-101, MATH-460, MATH-502 (GR level course)
+                                    {"0000112", "OverrideTranscriptGrouping","","MATH.BS", "36,33" }, // ENGL-101, MATH-460, MATH-502 (GR level course)
 
                                     //create replace and replacement statuses data to validate replace and Replacement statuses
                                     //this scenarios are for program MATH.BB with acad credits from MATH-300BB course. This course have retake for credit flag set to N.
                                     {"0016285","ReplaceAndReplacement-student-1","","REPEAT.BB","110,111,112" } ,//3 acad credits. all are inprogress
-                                     {"0016286","ReplaceAndReplacement-student-2","","REPEAT.BB","113,114,115" },//3 acad credits. all are completed and graded
-                                     {"0016287","ReplaceAndReplacement-student-3","","REPEAT.BB","111,113,115" }, //3 acad credits. 2 are completed
-                                      {"0016288","ReplaceAndReplacement-student-4","","REPEAT.BB","110,112,114" }, //3 acad credits. 1 is completed
-                                       {"0016289","ReplaceAndReplacement-student-5","","REPEAT.BB","113" }, //1 acad credits completed
-                                        {"0016290","ReplaceAndReplacement-student-6","","REPEAT.BB","110" }, //1 acad credit inprogress
+                                    {"0016286","ReplaceAndReplacement-student-2","","REPEAT.BB","113,114,115" },//3 acad credits. all are completed and graded
+                                    {"0016287","ReplaceAndReplacement-student-3","","REPEAT.BB","111,113,115" }, //3 acad credits. 2 are completed
+                                    {"0016288","ReplaceAndReplacement-student-4","","REPEAT.BB","110,112,114" }, //3 acad credits. 1 is completed
+                                    {"0016289","ReplaceAndReplacement-student-5","","REPEAT.BB","113" }, //1 acad credits completed
+                                    {"0016290","ReplaceAndReplacement-student-6","","REPEAT.BB","110" }, //1 acad credit inprogress
+
+                                    {"0016291","ReplaceAndReplacement-student-7", "","REPEAT.BB","122,124" }, //1 drop ungraded, 1 inprogress
+                                    {"0016292","ReplaceAndReplacement-student-8", "","REPEAT.BB","121,124" }, //1 drop graded, 1 inprogress
+                                    {"0016293","ReplaceAndReplacement-student-9", "","REPEAT.BB","120,114" }, //1 drop graded, 1 completed
+                                    {"0016294","ReplaceAndReplacement-student-10","","REPEAT.BB","120,121,122,124" }, //2 drop graded, 1 drop ungraded, 1 inprogress
+                                    {"0016295","ReplaceAndReplacement-student-11","","REPEAT.BB","120,121,122,123" }, //2 drop graded, 1 drop ungraded, 1 completed
+                                    {"0016296","ReplaceAndReplacement-student-12","","REPEAT.BB","120,122,114,124" }, //1 drop graded, 1 drop ungraded, 1 complete, 1 inprogress
+                                    {"0016297","ReplaceAndReplacement-student-13","","REPEAT.BB","120,122,114,123" }, //1 drop graded, 1 drop ungraded, 2 complete (1 is replacement)
 
                                         //set up acad credits for course that have retake for credits set to Y
 
                                         //test for replace/retake with planned courses
+
+                                        //test data for releasing extra courses from one requirment to other when those requirments are excluding each other
+                                        //releaseuser/Tesing123! on devcoll
+                                    {"0017053","ReleaseUser","","PROG.RELEASE.2.BB,PROG.RELEASE.BB","116,117,118,119" },
+                                    //student have academic credits mix of GR and UG levels, but due to filter on GR on program, only GR level credits are processed
+                                    {"0016298","Transcript grouping","","TRANSCRIPT.GROUPING.FILTER","116,117,120,121" },
+                                    //will have credits from all the subjects but only MATH should be taken since that is filter on program
+                                     {"0016299","Transcript grouping subjects","","TRANSCRIPT.GROUPING.FILTER.SUBJECTS","116,117,120,121" },
+                                     //filter on additional criteria- will mock this
+                                      {"0016300","Transcript grouping additional criteria","","TRANSCRIPT.GROUPING.FILTER.ADDL.SELECT","116,117,120,121" },
                                     };
 
 
             for (int i = 0; i < (studentdata.Length / 5); i++)
             {
-                string id = null;
-                string lastname = null;
-                int? dpid = null;
-                List<string> programids = new List<string>();
-                List<string> credids = new List<string>();
+                try
+                {
+                    string id = null;
+                    string lastname = null;
+                    int? dpid = null;
+                    List<string> programids = new List<string>();
+                    List<string> credids = new List<string>();
 
-                id = studentdata[i, 0];
-                lastname = studentdata[i, 1];
-                if (!string.IsNullOrEmpty(studentdata[i, 2]))
-                {
-                    dpid = Int32.Parse(studentdata[i, 2]);
-                }
-                programids = studentdata[i, 3].Split(',').ToList();
-
-                if (studentdata[i, 4] == "")
-                {
-                    credids = new List<string>();
-                }
-                else if (studentdata[i, 4] != "ALL")
-                {
-                    credids = studentdata[i, 4].Split(',').ToList();  // just listed
-                }
-                else
-                {
-                    credids = new TestAcademicCreditRepository().GetAsync().Result.Select(stc => stc.Id).ToList();  // all credits in test STC repo
-                }
-                var student = new Ellucian.Colleague.Domain.Student.Entities.Student(id, lastname, dpid, programids, credids);
-
-                var faStudent = faStudentData.FirstOrDefault(f => f.studentId == id);
-                if (faStudent != null)
-                {
-                    if (faStudent.faCounselors != null && faStudent.faCounselors.Count() > 0)
+                    id = studentdata[i, 0];
+                    lastname = studentdata[i, 1];
+                    if (!string.IsNullOrEmpty(studentdata[i, 2]))
                     {
-                        student.FinancialAidCounselorId = faStudent.faCounselors.First().counselorId;
+                        dpid = Int32.Parse(studentdata[i, 2]);
                     }
-                }
+                    programids = studentdata[i, 3].Split(',').ToList();
 
-                // Add advisor to one student for evaluation permissions checking
-                if (id == "00004012")
+                    if (studentdata[i, 4] == "")
+                    {
+                        credids = new List<string>();
+                    }
+                    else if (studentdata[i, 4] != "ALL")
+                    {
+                        credids = studentdata[i, 4].Split(',').ToList();  // just listed
+                    }
+                    else
+                    {
+                        credids = new TestAcademicCreditRepository().GetAsync().Result.Select(stc => stc.Id).ToList();  // all credits in test STC repo
+                    }
+                    var student = new Ellucian.Colleague.Domain.Student.Entities.Student(Guid.NewGuid().ToString(), id, lastname, dpid, programids, credids);
+
+                    var faStudent = faStudentData.FirstOrDefault(f => f.studentId == id);
+                    if (faStudent != null)
+                    {
+                        if (faStudent.faCounselors != null && faStudent.faCounselors.Count() > 0)
+                        {
+                            student.FinancialAidCounselorId = faStudent.faCounselors.First().counselorId;
+                        }
+                    }
+
+                    // Add advisor to one student for evaluation permissions checking
+                    if (id == "00004012")
+                    {
+                        student.AddAdvisement("0000111", new DateTime(2014, 01, 01), null, "MAJOR");
+                        student.AddAdvisor("0000111");
+                    }
+
+                    students.Add(student);
+                }
+                catch (Exception ex)
                 {
-                    student.AddAdvisement("0000111", new DateTime(2014, 01, 01), null, "MAJOR");
-                    student.AddAdvisor("0000111");
+                    var offset = i;
                 }
-
-                students.Add(student);
             }
 
             return await Task.FromResult(students);
@@ -363,7 +388,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests
             throw new NotImplementedException();
         }
 
-        public async Task<Tuple<IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Student>, int>> GetDataModelStudents2Async(int offset, int limit, bool bypassCache, string personFilter, string person, List<string> types, List<string> cohorts, List<string> residencies)
+        public async Task<Tuple<IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Student>, int>> GetDataModelStudents2Async(int offset, int limit, bool bypassCache, string[] filterPersonIds, string person, List<string> types, List<string> residencies)
         {
             throw new NotImplementedException();
         }
@@ -407,6 +432,11 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         }
 
         public async Task<IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Student>> GetStudentAcademicPeriodProfileStudentInfoAsync(IEnumerable<string> ids)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<Student.Entities.Student>> GetStudentSearchByNameForExactMatchAsync(string lastName, string firstName = null, string middleName = null, int pageSize = int.MaxValue, int pageIndex = 1)
         {
             throw new NotImplementedException();
         }

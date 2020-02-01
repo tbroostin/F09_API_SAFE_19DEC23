@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Ellucian.Colleague.Coordination.Base.Services;
 
 namespace Ellucian.Colleague.Coordination.Base.Services
 {
@@ -11,9 +12,21 @@ namespace Ellucian.Colleague.Coordination.Base.Services
     /// </summary>
     public interface IRelationshipTypesService : IBaseService
     {
-          
-         Task<IEnumerable<Ellucian.Colleague.Dtos.RelationshipTypes>> GetRelationshipTypesAsync(bool bypassCache = false);
-               
-        Task<Ellucian.Colleague.Dtos.RelationshipTypes> GetRelationshipTypesByGuidAsync(string id);
+        /// <summary>
+        /// Gets all relationship-types
+        /// </summary>
+        /// <param name="bypassCache">Flag to bypass cache</param>
+        /// <returns>Collection of <see cref="RelationshipTypes">relationshipTypes</see> objects</returns>          
+        Task<IEnumerable<Ellucian.Colleague.Dtos.RelationshipTypes>> GetRelationshipTypesAsync(bool bypassCache = false);
+
+        /// <summary>
+        /// Get a relationshipTypes by guid.
+        /// </summary>
+        /// <param name="guid">Guid of the relationshipTypes in Colleague.</param>
+        /// <param name="bypassCache">Flag to bypass cache</param>
+        /// <returns>The <see cref="RelationshipTypes">relationshipTypes</see></returns>
+        Task<Ellucian.Colleague.Dtos.RelationshipTypes> GetRelationshipTypesByGuidAsync(string guid, bool bypassCache = true);
+
+
     }
 }

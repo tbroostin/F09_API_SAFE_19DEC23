@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -355,56 +355,64 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             #endregion
 
-            private Mock<IStudentAptitudeAssessmentsService> StudentAptitudeAssessmentsServiceMock;
-            private StudentAptitudeAssessmentsController StudentAptitudeAssessmentsController;
-            private IStudentAptitudeAssessmentsService StudentAptitudeAssessmentsService;
+            private Mock<IStudentAptitudeAssessmentsService> studentAptitudeAssessmentsServiceMock;
+            private StudentAptitudeAssessmentsController studentAptitudeAssessmentsController;
+            private IStudentAptitudeAssessmentsService studentAptitudeAssessmentsService;
             private IEnumerable<StudentAptitudeAssessments> studentAptAssesmentsDtos;
+            private IEnumerable<StudentAptitudeAssessments2> studentAptAssesmentsDtos2;
             private ILogger logger = new Mock<ILogger>().Object;
             private Paging page;
             private int limit;
             private int offset;
             private Tuple<IEnumerable<StudentAptitudeAssessments>, int> stuAptAssessmentsDtosTuple;
+            private Tuple<IEnumerable<StudentAptitudeAssessments2>, int> stuAptAssessmentsDtosTuple2;
+            private Ellucian.Web.Http.Models.QueryStringFilter criteriaFilter = new Web.Http.Models.QueryStringFilter("criteria", "");
+            private Ellucian.Web.Http.Models.QueryStringFilter personFilter = new Web.Http.Models.QueryStringFilter("personFilter", "");
 
             [TestInitialize]
             public void Initialize()
             {
                 LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
                 EllucianLicenseProvider.RefreshLicense(Path.Combine(TestContext.DeploymentDirectory, "App_Data"));
-                StudentAptitudeAssessmentsServiceMock = new Mock<IStudentAptitudeAssessmentsService>();
+                studentAptitudeAssessmentsServiceMock = new Mock<IStudentAptitudeAssessmentsService>();
 
-                StudentAptitudeAssessmentsService = StudentAptitudeAssessmentsServiceMock.Object;
+                studentAptitudeAssessmentsService = studentAptitudeAssessmentsServiceMock.Object;
                 studentAptAssesmentsDtos = StudentAptitudeAssessmentsControllerTests.BuildStudentAptitudeAssessments();
-                string guid = studentAptAssesmentsDtos.ElementAt(0).Id;
-
-                StudentAptitudeAssessmentsServiceMock.Setup(s => s.GetDataPrivacyListByApi(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(new List<string>());
-                StudentAptitudeAssessmentsController = new StudentAptitudeAssessmentsController(StudentAptitudeAssessmentsService, logger)
+                studentAptAssesmentsDtos2 = StudentAptitudeAssessmentsControllerTests.BuildStudentAptitudeAssessments2();
+               
+                //studentAptitudeAssessmentsServiceMock.Setup(s => s.GetDataPrivacyListByApi(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(new List<string>());
+                studentAptitudeAssessmentsController = new StudentAptitudeAssessmentsController(studentAptitudeAssessmentsService, logger)
                 {
                     Request = new HttpRequestMessage()
                 };
-                StudentAptitudeAssessmentsController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
+                studentAptitudeAssessmentsController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
 
                 limit = 200;
                 offset = 0;
                 page = new Paging(limit, offset);
                 stuAptAssessmentsDtosTuple = new Tuple<IEnumerable<StudentAptitudeAssessments>, int>(studentAptAssesmentsDtos, 3);
+                stuAptAssessmentsDtosTuple2 = new Tuple<IEnumerable<StudentAptitudeAssessments2>, int>(studentAptAssesmentsDtos2, 3);
+
+                studentAptitudeAssessmentsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+                studentAptitudeAssessmentsController.Request.Properties.Add("PartialInputJsonObject", JObject.FromObject(studentAptAssesmentsDtos.ElementAt(0)));
             }
 
             [TestCleanup]
             public void Cleanup()
             {
-                StudentAptitudeAssessmentsServiceMock = null;
-                StudentAptitudeAssessmentsService = null;
-                StudentAptitudeAssessmentsController = null;
+                studentAptitudeAssessmentsServiceMock = null;
+                studentAptitudeAssessmentsService = null;
+                studentAptitudeAssessmentsController = null;
             }
 
             [TestMethod]
-            public async Task ReturnsStudentAptitudeAssessmentsByGuid2Async()
+            public async Task ReturnsStudentAptitudeAssessmentsByGuid3Async()
             {
                 string guid = studentAptAssesmentsDtos.ElementAt(0).Id;
-                StudentAptitudeAssessmentsServiceMock.Setup(x => x.GetStudentAptitudeAssessmentsByGuid2Async(guid, It.IsAny<bool>())).ReturnsAsync(studentAptAssesmentsDtos.ElementAt(0));
-                var StudentAptitudeAssessments = await StudentAptitudeAssessmentsController.GetStudentAptitudeAssessmentsByGuid2Async(guid);
+                studentAptitudeAssessmentsServiceMock.Setup(x => x.GetStudentAptitudeAssessmentsByGuid3Async(guid, It.IsAny<bool>())).ReturnsAsync(studentAptAssesmentsDtos2.ElementAt(0));
+                var StudentAptitudeAssessments = await studentAptitudeAssessmentsController.GetStudentAptitudeAssessmentsByGuid3Async(guid);
                 var expected = StudentAptitudeAssessments;
-                var actual = studentAptAssesmentsDtos.ElementAt(0);
+                var actual = studentAptAssesmentsDtos2.ElementAt(0);
                 Assert.AreEqual(expected.Id, actual.Id);
                 Assert.AreEqual(expected.AssessedOn, actual.AssessedOn);
                 Assert.AreEqual(expected.Assessment, actual.Assessment);
@@ -421,19 +429,19 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             }
 
             [TestMethod]
-            public async Task ReturnsStudentAptitudeAssessments2AsyncCache()
+            public async Task ReturnsStudentAptitudeAssessments3AsyncCache()
             {
-                StudentAptitudeAssessmentsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
-                StudentAptitudeAssessmentsController.Request.Headers.CacheControl =
+                studentAptitudeAssessmentsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+                studentAptitudeAssessmentsController.Request.Headers.CacheControl =
                  new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
-                StudentAptitudeAssessmentsServiceMock.Setup(x => x.GetStudentAptitudeAssessments2Async("", offset, limit, It.IsAny<bool>())).ReturnsAsync(stuAptAssessmentsDtosTuple);
-                var acadProg = await StudentAptitudeAssessmentsController.GetStudentAptitudeAssessments2Async(page);
+                studentAptitudeAssessmentsServiceMock.Setup(x => x.GetStudentAptitudeAssessments3Async( It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), offset, limit, It.IsAny<bool>())).ReturnsAsync(stuAptAssessmentsDtosTuple2);
+                var acadProg = await studentAptitudeAssessmentsController.GetStudentAptitudeAssessments3Async(page, criteriaFilter, personFilter);
                 var cancelToken = new System.Threading.CancellationToken(false);
                 System.Net.Http.HttpResponseMessage httpResponseMessage = await acadProg.ExecuteAsync(cancelToken);
-                List<Dtos.StudentAptitudeAssessments> StudentAptitudeAssessments = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.StudentAptitudeAssessments>>)httpResponseMessage.Content).Value as List<Dtos.StudentAptitudeAssessments>;
+                List<Dtos.StudentAptitudeAssessments2> StudentAptitudeAssessments = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.StudentAptitudeAssessments2>>)httpResponseMessage.Content).Value as List<Dtos.StudentAptitudeAssessments2>;
                 for (var i = 0; i < StudentAptitudeAssessments.Count; i++)
                 {
-                    var expected = studentAptAssesmentsDtos.ToList()[i];
+                    var expected = studentAptAssesmentsDtos2.ToList()[i];
                     var actual = StudentAptitudeAssessments[i];
                     Assert.AreEqual(expected.Id, actual.Id);
                     Assert.AreEqual(expected.AssessedOn, actual.AssessedOn);
@@ -452,19 +460,19 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             }
 
             [TestMethod]
-            public async Task ReturnsStudentAptitudeAssessments2AsyncNoCache()
+            public async Task ReturnsStudentAptitudeAssessments3AsyncNoCache()
             {
-                StudentAptitudeAssessmentsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
-                StudentAptitudeAssessmentsController.Request.Headers.CacheControl =
+                studentAptitudeAssessmentsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+                studentAptitudeAssessmentsController.Request.Headers.CacheControl =
                  new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
-                StudentAptitudeAssessmentsServiceMock.Setup(x => x.GetStudentAptitudeAssessments2Async("", It.IsAny<int>(), It.IsAny<int>(), true)).ReturnsAsync(stuAptAssessmentsDtosTuple);
-                var HttpAction = (await StudentAptitudeAssessmentsController.GetStudentAptitudeAssessments2Async(page));
+                studentAptitudeAssessmentsServiceMock.Setup(x => x.GetStudentAptitudeAssessments3Async(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), true)).ReturnsAsync(stuAptAssessmentsDtosTuple2);
+                var HttpAction = (await studentAptitudeAssessmentsController.GetStudentAptitudeAssessments3Async(page, criteriaFilter, personFilter));
                 var cancelToken = new System.Threading.CancellationToken(false);
                 System.Net.Http.HttpResponseMessage httpResponseMessage = await HttpAction.ExecuteAsync(cancelToken);
-                List<Dtos.StudentAptitudeAssessments> StudentAptitudeAssessments = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.StudentAptitudeAssessments>>)httpResponseMessage.Content).Value as List<Dtos.StudentAptitudeAssessments>;
+                List<Dtos.StudentAptitudeAssessments2> StudentAptitudeAssessments = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.StudentAptitudeAssessments2>>)httpResponseMessage.Content).Value as List<Dtos.StudentAptitudeAssessments2>;
                 for (var i = 0; i < StudentAptitudeAssessments.Count; i++)
                 {
-                    var expected = studentAptAssesmentsDtos.ToList()[i];
+                    var expected = studentAptAssesmentsDtos2.ToList()[i];
                     var actual = StudentAptitudeAssessments[i];
                     Assert.AreEqual(expected.Id, actual.Id);
                     Assert.AreEqual(expected.AssessedOn, actual.AssessedOn);
@@ -483,19 +491,19 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             }
 
             [TestMethod]
-            public async Task ReturnsStudentAptitudeAssessments2AsyncNoPaging()
+            public async Task ReturnsStudentAptitudeAssessments3AsyncNoPaging()
             {
-                StudentAptitudeAssessmentsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
-                StudentAptitudeAssessmentsController.Request.Headers.CacheControl =
+                studentAptitudeAssessmentsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+                studentAptitudeAssessmentsController.Request.Headers.CacheControl =
                  new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
-                StudentAptitudeAssessmentsServiceMock.Setup(x => x.GetStudentAptitudeAssessments2Async("", It.IsAny<int>(), It.IsAny<int>(), true)).ReturnsAsync(stuAptAssessmentsDtosTuple);
-                var HttpAction = (await StudentAptitudeAssessmentsController.GetStudentAptitudeAssessments2Async(null));
+                studentAptitudeAssessmentsServiceMock.Setup(x => x.GetStudentAptitudeAssessments3Async(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), true)).ReturnsAsync(stuAptAssessmentsDtosTuple2);
+                var HttpAction = (await studentAptitudeAssessmentsController.GetStudentAptitudeAssessments3Async(null, criteriaFilter, personFilter));
                 var cancelToken = new System.Threading.CancellationToken(false);
                 System.Net.Http.HttpResponseMessage httpResponseMessage = await HttpAction.ExecuteAsync(cancelToken);
-                List<Dtos.StudentAptitudeAssessments> StudentAptitudeAssessments = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.StudentAptitudeAssessments>>)httpResponseMessage.Content).Value as List<Dtos.StudentAptitudeAssessments>;
+                List<Dtos.StudentAptitudeAssessments2> StudentAptitudeAssessments = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.StudentAptitudeAssessments2>>)httpResponseMessage.Content).Value as List<Dtos.StudentAptitudeAssessments2>;
                 for (var i = 0; i < StudentAptitudeAssessments.Count; i++)
                 {
-                    var expected = studentAptAssesmentsDtos.ToList()[i];
+                    var expected = studentAptAssesmentsDtos2.ToList()[i];
                     var actual = StudentAptitudeAssessments[i];
                     Assert.AreEqual(expected.Id, actual.Id);
                     Assert.AreEqual(expected.AssessedOn, actual.AssessedOn);
@@ -517,129 +525,195 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             [TestMethod]
             public async Task StudentAptitudeAssessmentsController_DeleteStudentAptitudeAssessmentsAsync_HttpResponseMessage()
             {
-                StudentAptitudeAssessmentsServiceMock.Setup(s => s.DeleteStudentAptitudeAssessmentAsync("1234")).Returns(Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)));
+                studentAptitudeAssessmentsServiceMock.Setup(s => s.DeleteStudentAptitudeAssessmentAsync("1234")).Returns(Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)));
 
-                await StudentAptitudeAssessmentsController.DeleteStudentAptitudeAssessmentsAsync("1234");
+                await studentAptitudeAssessmentsController.DeleteStudentAptitudeAssessmentsAsync("1234");
             }
             #endregion
+
             #region Exception Tests
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentAptitudeAssessmentsController_GetStudentAptitudeAssessmentsByGuid2Async_PermissionsException()
+            public async Task StudentAptitudeAssessmentsController_GetStudentAptitudeAssessmentsByGuid3Async_PermissionsException()
             {
-                StudentAptitudeAssessmentsServiceMock
-                    .Setup(s => s.GetStudentAptitudeAssessmentsByGuid2Async("asdf", It.IsAny<bool>()))
+                studentAptitudeAssessmentsServiceMock
+                    .Setup(s => s.GetStudentAptitudeAssessmentsByGuid3Async("asdf", It.IsAny<bool>()))
                     .ThrowsAsync(new PermissionsException());
-                await StudentAptitudeAssessmentsController.GetStudentAptitudeAssessmentsByGuid2Async("asdf");
+                await studentAptitudeAssessmentsController.GetStudentAptitudeAssessmentsByGuid3Async("asdf");
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentAptitudeAssessmentsController_GetStudentAptitudeAssessmentsByGuid2Async_ArgumentNullException()
+            public async Task StudentAptitudeAssessmentsController_GetStudentAptitudeAssessmentsByGuid3Async_ArgumentNullException()
             {
-                StudentAptitudeAssessmentsServiceMock
-                    .Setup(s => s.GetStudentAptitudeAssessmentsByGuid2Async("asdf", It.IsAny<bool>()))
+                studentAptitudeAssessmentsServiceMock
+                    .Setup(s => s.GetStudentAptitudeAssessmentsByGuid3Async("asdf", It.IsAny<bool>()))
                     .ThrowsAsync(new ArgumentNullException());
-                await StudentAptitudeAssessmentsController.GetStudentAptitudeAssessmentsByGuid2Async("asdf");
+                await studentAptitudeAssessmentsController.GetStudentAptitudeAssessmentsByGuid3Async("asdf");
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentAptitudeAssessmentsController_GetStudentAptitudeAssessmentsByGuid2Async_KeyNotFoundException()
+            public async Task StudentAptitudeAssessmentsController_GetStudentAptitudeAssessmentsByGuid3Async_KeyNotFoundException()
             {
-                StudentAptitudeAssessmentsServiceMock
-                    .Setup(s => s.GetStudentAptitudeAssessmentsByGuid2Async("asdf", It.IsAny<bool>()))
+                studentAptitudeAssessmentsServiceMock
+                    .Setup(s => s.GetStudentAptitudeAssessmentsByGuid3Async("asdf", It.IsAny<bool>()))
                     .ThrowsAsync(new KeyNotFoundException());
-                await StudentAptitudeAssessmentsController.GetStudentAptitudeAssessmentsByGuid2Async("asdf");
+                await studentAptitudeAssessmentsController.GetStudentAptitudeAssessmentsByGuid3Async("asdf");
             }
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentAptitudeAssessmentsController_GetStudentAptitudeAssessmentsByGuid2Async_RepositoryException()
+            public async Task StudentAptitudeAssessmentsController_GetStudentAptitudeAssessmentsByGuid3Async_RepositoryException()
             {
-                StudentAptitudeAssessmentsServiceMock
-                    .Setup(s => s.GetStudentAptitudeAssessmentsByGuid2Async("asdf", It.IsAny<bool>()))
+                studentAptitudeAssessmentsServiceMock
+                    .Setup(s => s.GetStudentAptitudeAssessmentsByGuid3Async("asdf", It.IsAny<bool>()))
                     .ThrowsAsync(new RepositoryException());
-                await StudentAptitudeAssessmentsController.GetStudentAptitudeAssessmentsByGuid2Async("asdf");
+                await studentAptitudeAssessmentsController.GetStudentAptitudeAssessmentsByGuid3Async("asdf");
             }
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentAptitudeAssessmentsController_GetStudentAptitudeAssessmentsByGuid2Async_IntegrationApiException()
+            public async Task StudentAptitudeAssessmentsController_GetStudentAptitudeAssessmentsByGuid3Async_IntegrationApiException()
             {
-                StudentAptitudeAssessmentsServiceMock
-                    .Setup(s => s.GetStudentAptitudeAssessmentsByGuid2Async("asdf", It.IsAny<bool>()))
+                studentAptitudeAssessmentsServiceMock
+                    .Setup(s => s.GetStudentAptitudeAssessmentsByGuid3Async("asdf", It.IsAny<bool>()))
                     .ThrowsAsync(new IntegrationApiException());
-                await StudentAptitudeAssessmentsController.GetStudentAptitudeAssessmentsByGuid2Async("asdf");
+                await studentAptitudeAssessmentsController.GetStudentAptitudeAssessmentsByGuid3Async("asdf");
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentAptitudeAssessmentsController_GetStudentAptitudeAssessmentsByGuid2Async_Exception()
+            public async Task StudentAptitudeAssessmentsController_GetStudentAptitudeAssessmentsByGuid3Async_Exception()
             {
-                StudentAptitudeAssessmentsServiceMock
-                    .Setup(s => s.GetStudentAptitudeAssessmentsByGuid2Async("asdf", It.IsAny<bool>()))
+                studentAptitudeAssessmentsServiceMock
+                    .Setup(s => s.GetStudentAptitudeAssessmentsByGuid3Async("asdf", It.IsAny<bool>()))
                     .ThrowsAsync(new Exception());
-                await StudentAptitudeAssessmentsController.GetStudentAptitudeAssessmentsByGuid2Async("asdf");
+                await studentAptitudeAssessmentsController.GetStudentAptitudeAssessmentsByGuid3Async("asdf");
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentAptitudeAssessmentsController_GetStudentAptitudeAssessments2Async_PermissionsException()
+            public async Task StudentAptitudeAssessmentsController_GetStudentAptitudeAssessments3Async_PermissionsException()
             {
-                StudentAptitudeAssessmentsServiceMock
-                    .Setup(s => s.GetStudentAptitudeAssessments2Async("", It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>()))
+                studentAptitudeAssessmentsServiceMock
+                    .Setup(s => s.GetStudentAptitudeAssessments3Async(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>()))
                     .ThrowsAsync(new PermissionsException());
-                await StudentAptitudeAssessmentsController.GetStudentAptitudeAssessments2Async(page);
+                await studentAptitudeAssessmentsController.GetStudentAptitudeAssessments3Async(page, criteriaFilter, personFilter);
             }
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentAptitudeAssessmentsController_GetStudentAptitudeAssessments2Async_ArgumentNullException()
+            public async Task StudentAptitudeAssessmentsController_GetStudentAptitudeAssessments3Async_ArgumentNullException()
             {
-                StudentAptitudeAssessmentsServiceMock
-                    .Setup(s => s.GetStudentAptitudeAssessments2Async("", It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>()))
+                studentAptitudeAssessmentsServiceMock
+                    .Setup(s => s.GetStudentAptitudeAssessments3Async(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>()))
                     .ThrowsAsync(new ArgumentNullException());
-                await StudentAptitudeAssessmentsController.GetStudentAptitudeAssessments2Async(page);
+                await studentAptitudeAssessmentsController.GetStudentAptitudeAssessments3Async(page, criteriaFilter, personFilter);
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentAptitudeAssessmentsController_GetStudentAptitudeAssessments2Async_KeyNotFoundException()
+            public async Task StudentAptitudeAssessmentsController_GetStudentAptitudeAssessments3Async_KeyNotFoundException()
             {
-                StudentAptitudeAssessmentsServiceMock
-                    .Setup(s => s.GetStudentAptitudeAssessments2Async("", It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>()))
+                studentAptitudeAssessmentsServiceMock
+                    .Setup(s => s.GetStudentAptitudeAssessments3Async(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>()))
                     .ThrowsAsync(new KeyNotFoundException());
-                await StudentAptitudeAssessmentsController.GetStudentAptitudeAssessments2Async(page);
+                await studentAptitudeAssessmentsController.GetStudentAptitudeAssessments3Async(page, criteriaFilter, personFilter);
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentAptitudeAssessmentsController_GetStudentAptitudeAssessments2Async_RepositoryException()
+            public async Task StudentAptitudeAssessmentsController_GetStudentAptitudeAssessments3Async_RepositoryException()
             {
-                StudentAptitudeAssessmentsServiceMock
-                    .Setup(s => s.GetStudentAptitudeAssessments2Async("", It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>()))
+                studentAptitudeAssessmentsServiceMock
+                    .Setup(s => s.GetStudentAptitudeAssessments3Async(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>()))
                     .ThrowsAsync(new RepositoryException());
-                await StudentAptitudeAssessmentsController.GetStudentAptitudeAssessments2Async(page);
+                await studentAptitudeAssessmentsController.GetStudentAptitudeAssessments3Async(page, criteriaFilter, personFilter);
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentAptitudeAssessmentsController_GetStudentAptitudeAssessments2Async_IntegrationApiException()
+            public async Task StudentAptitudeAssessmentsController_GetStudentAptitudeAssessments3Async_IntegrationApiException()
             {
-                StudentAptitudeAssessmentsServiceMock
-                    .Setup(s => s.GetStudentAptitudeAssessmentsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>()))
+                studentAptitudeAssessmentsServiceMock
+                    .Setup(s => s.GetStudentAptitudeAssessments3Async(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>()))
                     .ThrowsAsync(new IntegrationApiException());
-                await StudentAptitudeAssessmentsController.GetStudentAptitudeAssessments2Async(page);
+                await studentAptitudeAssessmentsController.GetStudentAptitudeAssessments3Async(page, criteriaFilter, personFilter);
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentAptitudeAssessmentsController_GetStudentAptitudeAssessments2Async_Exception()
+            public async Task StudentAptitudeAssessmentsController_GetStudentAptitudeAssessments3Async_Exception()
             {
-                StudentAptitudeAssessmentsServiceMock
-                    .Setup(s => s.GetStudentAptitudeAssessments2Async("", It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>()))
+                studentAptitudeAssessmentsServiceMock
+                    .Setup(s => s.GetStudentAptitudeAssessments3Async(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>()))
                     .ThrowsAsync(new Exception());
-                await StudentAptitudeAssessmentsController.GetStudentAptitudeAssessmentsAsync(page);
+                await studentAptitudeAssessmentsController.GetStudentAptitudeAssessments3Async(page, criteriaFilter, personFilter);
             }
 
+            //delete
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentAptitudeAssessmentsController_DeleteStudentAptitudeAssessmentsAsync_EmptyArguement()
+            {
+                await studentAptitudeAssessmentsController.DeleteStudentAptitudeAssessmentsAsync("");
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentAptitudeAssessmentsController_DeleteStudentAptitudeAssessmentsAsync_PermissionsException()
+            {
+                studentAptitudeAssessmentsServiceMock
+                    .Setup(s => s.DeleteStudentAptitudeAssessmentAsync(It.IsAny<string>())).Throws(new PermissionsException());
+                await studentAptitudeAssessmentsController.DeleteStudentAptitudeAssessmentsAsync(Guid.NewGuid().ToString());
+            }
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentAptitudeAssessmentsController_DeleteStudentAptitudeAssessmentsAsync_ArgumentNullException()
+            {
+                studentAptitudeAssessmentsServiceMock
+                     .Setup(s => s.DeleteStudentAptitudeAssessmentAsync(It.IsAny<string>())).Throws(new ArgumentNullException());
+                await studentAptitudeAssessmentsController.DeleteStudentAptitudeAssessmentsAsync(Guid.NewGuid().ToString());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentAptitudeAssessmentsController_DeleteStudentAptitudeAssessmentsAsync_KeyNotFoundException()
+            {
+                studentAptitudeAssessmentsServiceMock
+                    .Setup(s => s.DeleteStudentAptitudeAssessmentAsync(It.IsAny<string>()))
+                    .Throws(new KeyNotFoundException());
+                await studentAptitudeAssessmentsController.DeleteStudentAptitudeAssessmentsAsync(Guid.NewGuid().ToString());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentAptitudeAssessmentsController_DeleteStudentAptitudeAssessmentsAsync_RepositoryException()
+            {
+                studentAptitudeAssessmentsServiceMock
+                    .Setup(s => s.DeleteStudentAptitudeAssessmentAsync(It.IsAny<string>()))
+                    .Throws(new RepositoryException());
+                await studentAptitudeAssessmentsController.DeleteStudentAptitudeAssessmentsAsync(Guid.NewGuid().ToString());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentAptitudeAssessmentsController_DeleteStudentAptitudeAssessmentsAsync_IntegrationApiException()
+            {
+                studentAptitudeAssessmentsServiceMock
+                   .Setup(s => s.DeleteStudentAptitudeAssessmentAsync(It.IsAny<string>()))
+                    .Throws(new IntegrationApiException());
+                await studentAptitudeAssessmentsController.DeleteStudentAptitudeAssessmentsAsync(Guid.NewGuid().ToString());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentAptitudeAssessmentsController_DeleteStudentAptitudeAssessmentsAsync_Exception()
+            {
+                studentAptitudeAssessmentsServiceMock
+                    .Setup(s => s.DeleteStudentAptitudeAssessmentAsync(It.IsAny<string>()))
+                    .Throws(new Exception());
+                await studentAptitudeAssessmentsController.DeleteStudentAptitudeAssessmentsAsync(Guid.NewGuid().ToString());
+            }
             #endregion
 
         }
@@ -654,6 +728,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             private StudentAptitudeAssessmentsController StudentAptitudeAssessmentsController;
             private IStudentAptitudeAssessmentsService StudentAptitudeAssessmentsService;
             private IEnumerable<StudentAptitudeAssessments> StudentAptitudeAssessmentsCollection;
+            private IEnumerable<StudentAptitudeAssessments2> StudentAptitudeAssessmentsCollection2;
             private StudentAptitudeAssessments studentAptAssesment;
             private ILogger logger = new Mock<ILogger>().Object;
             private Paging page;
@@ -674,6 +749,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
                 StudentAptitudeAssessmentsService = StudentAptitudeAssessmentsServiceMock.Object;
                 StudentAptitudeAssessmentsCollection = StudentAptitudeAssessmentsControllerTests.BuildStudentAptitudeAssessments();
+                StudentAptitudeAssessmentsCollection2 = StudentAptitudeAssessmentsControllerTests.BuildStudentAptitudeAssessments2();
                 string guid = StudentAptitudeAssessmentsCollection.ElementAt(0).Id;
                 studentAptAssesment = StudentAptitudeAssessmentsCollection.ElementAt(0);
                 StudentAptitudeAssessmentsServiceMock.Setup(s => s.GetDataPrivacyListByApi(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(new List<string>());
@@ -694,14 +770,14 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             #endregion
 
             [TestMethod]
-            public async Task StudentAptitudeAssessmentsController_PostStudentAptitudeAssessments()
+            public async Task StudentAptitudeAssessmentsController_PostStudentAptitudeAssessments3()
             {
-                var expected = StudentAptitudeAssessmentsCollection.FirstOrDefault();
-                StudentAptitudeAssessmentsServiceMock.Setup(x => x.CreateStudentAptitudeAssessmentsAsync(expected)).ReturnsAsync(expected);
+                var expected = StudentAptitudeAssessmentsCollection2.FirstOrDefault();
+                StudentAptitudeAssessmentsServiceMock.Setup(x => x.CreateStudentAptitudeAssessments2Async(expected)).ReturnsAsync(expected);
 
                 expected.Id = "00000000-0000-0000-0000-000000000000";
 
-                var actual = await StudentAptitudeAssessmentsController.PostStudentAptitudeAssessments2Async(expected);
+                var actual = await StudentAptitudeAssessmentsController.PostStudentAptitudeAssessments3Async(expected);
                 //Assert.AreEqual(expected.Id, actual.Id, "Id");
                 Assert.AreEqual(expected.AssessedOn, actual.AssessedOn, "AssessedOn");
                 Assert.AreEqual(expected.Assessment.Id, actual.Assessment.Id, "Assessment.Id");
@@ -719,64 +795,64 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentAptitudeAssessmentsController_PostStudentAptitudeAssessments_NullArgument()
+            public async Task StudentAptitudeAssessmentsController_PostStudentAptitudeAssessments3_NullArgument()
             {
-                await StudentAptitudeAssessmentsController.PostStudentAptitudeAssessments2Async(null);
+                await StudentAptitudeAssessmentsController.PostStudentAptitudeAssessments3Async(null);
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentAptitudeAssessmentsController_PostStudentAptitudeAssessments_PermissionsException()
+            public async Task StudentAptitudeAssessmentsController_PostStudentAptitudeAssessments3_PermissionsException()
             {
-                var expected = StudentAptitudeAssessmentsCollection.FirstOrDefault();
-                StudentAptitudeAssessmentsServiceMock.Setup(x => x.CreateStudentAptitudeAssessmentsAsync(expected)).Throws<PermissionsException>();
-                await StudentAptitudeAssessmentsController.PostStudentAptitudeAssessments2Async(expected);
+                var expected = StudentAptitudeAssessmentsCollection2.FirstOrDefault();
+                StudentAptitudeAssessmentsServiceMock.Setup(x => x.CreateStudentAptitudeAssessments2Async(expected)).Throws<PermissionsException>();
+                await StudentAptitudeAssessmentsController.PostStudentAptitudeAssessments3Async(expected);
 
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentAptitudeAssessmentsController_PostStudentAptitudeAssessments_ArgumentException()
+            public async Task StudentAptitudeAssessmentsController_PostStudentAptitudeAssessments3_ArgumentException()
             {
-                var expected = StudentAptitudeAssessmentsCollection.FirstOrDefault();
-                StudentAptitudeAssessmentsServiceMock.Setup(x => x.CreateStudentAptitudeAssessmentsAsync(expected)).Throws<ArgumentException>();
-                await StudentAptitudeAssessmentsController.PostStudentAptitudeAssessments2Async(expected);
+                var expected = StudentAptitudeAssessmentsCollection2.FirstOrDefault();
+                StudentAptitudeAssessmentsServiceMock.Setup(x => x.CreateStudentAptitudeAssessments2Async(expected)).Throws<ArgumentException>();
+                await StudentAptitudeAssessmentsController.PostStudentAptitudeAssessments3Async(expected);
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentAptitudeAssessmentsController_PostStudentAptitudeAssessments_RepositoryException()
+            public async Task StudentAptitudeAssessmentsController_PostStudentAptitudeAssessments3_RepositoryException()
             {
-                var expected = StudentAptitudeAssessmentsCollection.FirstOrDefault();
-                StudentAptitudeAssessmentsServiceMock.Setup(x => x.CreateStudentAptitudeAssessmentsAsync(expected)).Throws<RepositoryException>();
-                await StudentAptitudeAssessmentsController.PostStudentAptitudeAssessments2Async(expected);
+                var expected = StudentAptitudeAssessmentsCollection2.FirstOrDefault();
+                StudentAptitudeAssessmentsServiceMock.Setup(x => x.CreateStudentAptitudeAssessments2Async(expected)).Throws<RepositoryException>();
+                await StudentAptitudeAssessmentsController.PostStudentAptitudeAssessments3Async(expected);
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentAptitudeAssessmentsController_PostStudentAptitudeAssessments_IntegrationApiException()
+            public async Task StudentAptitudeAssessmentsController_PostStudentAptitudeAssessments3_IntegrationApiException()
             {
-                var expected = StudentAptitudeAssessmentsCollection.FirstOrDefault();
-                StudentAptitudeAssessmentsServiceMock.Setup(x => x.CreateStudentAptitudeAssessmentsAsync(expected)).Throws<IntegrationApiException>();
-                await StudentAptitudeAssessmentsController.PostStudentAptitudeAssessments2Async(expected);
+                var expected = StudentAptitudeAssessmentsCollection2.FirstOrDefault();
+                StudentAptitudeAssessmentsServiceMock.Setup(x => x.CreateStudentAptitudeAssessments2Async(expected)).Throws<IntegrationApiException>();
+                await StudentAptitudeAssessmentsController.PostStudentAptitudeAssessments3Async(expected);
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentAptitudeAssessmentsController_PostStudentAptitudeAssessments_ConfigurationException()
+            public async Task StudentAptitudeAssessmentsController_PostStudentAptitudeAssessments3_ConfigurationException()
             {
-                var expected = StudentAptitudeAssessmentsCollection.FirstOrDefault();
-                StudentAptitudeAssessmentsServiceMock.Setup(x => x.CreateStudentAptitudeAssessmentsAsync(expected)).Throws<ConfigurationException>();
-                await StudentAptitudeAssessmentsController.PostStudentAptitudeAssessments2Async(expected);
+                var expected = StudentAptitudeAssessmentsCollection2.FirstOrDefault();
+                StudentAptitudeAssessmentsServiceMock.Setup(x => x.CreateStudentAptitudeAssessments2Async(expected)).Throws<ConfigurationException>();
+                await StudentAptitudeAssessmentsController.PostStudentAptitudeAssessments3Async(expected);
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentAptitudeAssessmentsController_PostStudentAptitudeAssessments_Exception()
+            public async Task StudentAptitudeAssessmentsController_PostStudentAptitudeAssessments3_Exception()
             {
-                var expected = StudentAptitudeAssessmentsCollection.FirstOrDefault();
-                StudentAptitudeAssessmentsServiceMock.Setup(x => x.CreateStudentAptitudeAssessmentsAsync(expected)).Throws<Exception>();
-                await StudentAptitudeAssessmentsController.PostStudentAptitudeAssessments2Async(expected);
+                var expected = StudentAptitudeAssessmentsCollection2.FirstOrDefault();
+                StudentAptitudeAssessmentsServiceMock.Setup(x => x.CreateStudentAptitudeAssessments2Async(expected)).Throws<Exception>();
+                await StudentAptitudeAssessmentsController.PostStudentAptitudeAssessments3Async(expected);
             }
            
         }
@@ -792,6 +868,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             private StudentAptitudeAssessmentsController StudentAptitudeAssessmentsController;
             private IStudentAptitudeAssessmentsService StudentAptitudeAssessmentsService;
             private IEnumerable<StudentAptitudeAssessments> StudentAptitudeAssessmentsCollection;
+            private IEnumerable<StudentAptitudeAssessments2> StudentAptitudeAssessmentsCollection2;
             private StudentAptitudeAssessments studentAptAssesment;
             private ILogger logger = new Mock<ILogger>().Object;
             private Paging page;
@@ -812,6 +889,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
                 StudentAptitudeAssessmentsService = StudentAptitudeAssessmentsServiceMock.Object;
                 StudentAptitudeAssessmentsCollection = StudentAptitudeAssessmentsControllerTests.BuildStudentAptitudeAssessments();
+                StudentAptitudeAssessmentsCollection2 = StudentAptitudeAssessmentsControllerTests.BuildStudentAptitudeAssessments2();
                 string guid = StudentAptitudeAssessmentsCollection.ElementAt(0).Id;
                 studentAptAssesment = StudentAptitudeAssessmentsCollection.ElementAt(0);
                 StudentAptitudeAssessmentsServiceMock.Setup(s => s.GetDataPrivacyListByApi(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(new List<string>());
@@ -836,13 +914,13 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
            
             [TestMethod]
-            public async Task StudentAptitudeAssessmentsController_PutStudentAptitudeAssessments()
+            public async Task StudentAptitudeAssessmentsController_PutStudentAptitudeAssessments3()
             {
-                var expected = StudentAptitudeAssessmentsCollection.FirstOrDefault();
-                StudentAptitudeAssessmentsServiceMock.Setup(x => x.UpdateStudentAptitudeAssessmentsAsync(It.IsAny<Dtos.StudentAptitudeAssessments>())).ReturnsAsync(expected);
-                StudentAptitudeAssessmentsServiceMock.Setup(x => x.GetStudentAptitudeAssessmentsByGuidAsync(expected.Id, It.IsAny<bool>())).ReturnsAsync(expected);
+                var expected = StudentAptitudeAssessmentsCollection2.FirstOrDefault();
+                StudentAptitudeAssessmentsServiceMock.Setup(x => x.UpdateStudentAptitudeAssessments2Async(It.IsAny<Dtos.StudentAptitudeAssessments2>())).ReturnsAsync(expected);
+                StudentAptitudeAssessmentsServiceMock.Setup(x => x.GetStudentAptitudeAssessmentsByGuid3Async(expected.Id, It.IsAny<bool>())).ReturnsAsync(expected);
 
-                var actual = await StudentAptitudeAssessmentsController.PutStudentAptitudeAssessments2Async(expected.Id, expected);
+                var actual = await StudentAptitudeAssessmentsController.PutStudentAptitudeAssessments3Async(expected.Id, expected);
                 Assert.AreEqual(expected.Id, actual.Id, "Id");
                 Assert.AreEqual(expected.AssessedOn, actual.AssessedOn, "AssessedOn");
                 Assert.AreEqual(expected.Assessment.Id, actual.Assessment.Id, "Assessment.Id");
@@ -860,71 +938,71 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentAptitudeAssessmentsController_PutStudentAptitudeAssessments_NullArgument()
+            public async Task StudentAptitudeAssessmentsController_PutStudentAptitudeAssessments3_NullArgument()
             {
-                await StudentAptitudeAssessmentsController.PutStudentAptitudeAssessments2Async(null, null);
+                await StudentAptitudeAssessmentsController.PutStudentAptitudeAssessments3Async(null, null);
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentAptitudeAssessmentsController_PutStudentAptitudeAssessments_EmptyArgument()
+            public async Task StudentAptitudeAssessmentsController_PutStudentAptitudeAssessments3_EmptyArgument()
             {
-                await StudentAptitudeAssessmentsController.PutStudentAptitudeAssessments2Async("", null);
+                await StudentAptitudeAssessmentsController.PutStudentAptitudeAssessments3Async("", null);
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentAptitudeAssessmentsController_PutStudentAptitudeAssessments_PermissionsException()
+            public async Task StudentAptitudeAssessmentsController_PutStudentAptitudeAssessments3_PermissionsException()
             {
-                var expected = StudentAptitudeAssessmentsCollection.FirstOrDefault();
-                StudentAptitudeAssessmentsServiceMock.Setup(x => x.UpdateStudentAptitudeAssessmentsAsync(expected)).Throws<PermissionsException>();
-                await StudentAptitudeAssessmentsController.PutStudentAptitudeAssessments2Async(expected.Id, expected);
+                var expected = StudentAptitudeAssessmentsCollection2.FirstOrDefault();
+                StudentAptitudeAssessmentsServiceMock.Setup(x => x.UpdateStudentAptitudeAssessments2Async(expected)).Throws<PermissionsException>();
+                await StudentAptitudeAssessmentsController.PutStudentAptitudeAssessments3Async(expected.Id, expected);
 
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentAptitudeAssessmentsController_PutStudentAptitudeAssessments_ArgumentException()
+            public async Task StudentAptitudeAssessmentsController_PutStudentAptitudeAssessments3_ArgumentException()
             {
-                var expected = StudentAptitudeAssessmentsCollection.FirstOrDefault();
-                StudentAptitudeAssessmentsServiceMock.Setup(x => x.UpdateStudentAptitudeAssessmentsAsync(expected)).Throws<ArgumentException>();
-                await StudentAptitudeAssessmentsController.PutStudentAptitudeAssessments2Async(expected.Id, expected);
+                var expected = StudentAptitudeAssessmentsCollection2.FirstOrDefault();
+                StudentAptitudeAssessmentsServiceMock.Setup(x => x.UpdateStudentAptitudeAssessments2Async(expected)).Throws<ArgumentException>();
+                await StudentAptitudeAssessmentsController.PutStudentAptitudeAssessments3Async(expected.Id, expected);
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentAptitudeAssessmentsController_PutStudentAptitudeAssessments_RepositoryException()
+            public async Task StudentAptitudeAssessmentsController_PutStudentAptitudeAssessments3_RepositoryException()
             {
-                var expected = StudentAptitudeAssessmentsCollection.FirstOrDefault();
-                StudentAptitudeAssessmentsServiceMock.Setup(x => x.UpdateStudentAptitudeAssessmentsAsync(expected)).Throws<RepositoryException>();
-                await StudentAptitudeAssessmentsController.PutStudentAptitudeAssessments2Async(expected.Id, expected);
+                var expected = StudentAptitudeAssessmentsCollection2.FirstOrDefault();
+                StudentAptitudeAssessmentsServiceMock.Setup(x => x.UpdateStudentAptitudeAssessments2Async(expected)).Throws<RepositoryException>();
+                await StudentAptitudeAssessmentsController.PutStudentAptitudeAssessments3Async(expected.Id, expected);
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentAptitudeAssessmentsController_PutStudentAptitudeAssessments_IntegrationApiException()
+            public async Task StudentAptitudeAssessmentsController_PutStudentAptitudeAssessments3_IntegrationApiException()
             {
-                var expected = StudentAptitudeAssessmentsCollection.FirstOrDefault();
-                StudentAptitudeAssessmentsServiceMock.Setup(x => x.UpdateStudentAptitudeAssessmentsAsync(expected)).Throws<IntegrationApiException>();
-                await StudentAptitudeAssessmentsController.PutStudentAptitudeAssessments2Async(expected.Id, expected);
+                var expected = StudentAptitudeAssessmentsCollection2.FirstOrDefault();
+                StudentAptitudeAssessmentsServiceMock.Setup(x => x.UpdateStudentAptitudeAssessments2Async(expected)).Throws<IntegrationApiException>();
+                await StudentAptitudeAssessmentsController.PutStudentAptitudeAssessments3Async(expected.Id, expected);
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentAptitudeAssessmentsController_PutStudentAptitudeAssessments_ConfigurationException()
+            public async Task StudentAptitudeAssessmentsController_PutStudentAptitudeAssessments3_ConfigurationException()
             {
-                var expected = StudentAptitudeAssessmentsCollection.FirstOrDefault();
-                StudentAptitudeAssessmentsServiceMock.Setup(x => x.UpdateStudentAptitudeAssessmentsAsync(expected)).Throws<ConfigurationException>();
-                await StudentAptitudeAssessmentsController.PutStudentAptitudeAssessments2Async(expected.Id, expected);
+                var expected = StudentAptitudeAssessmentsCollection2.FirstOrDefault();
+                StudentAptitudeAssessmentsServiceMock.Setup(x => x.UpdateStudentAptitudeAssessments2Async(expected)).Throws<ConfigurationException>();
+                await StudentAptitudeAssessmentsController.PutStudentAptitudeAssessments3Async(expected.Id, expected);
             }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentAptitudeAssessmentsController_PutStudentAptitudeAssessments_Exception()
+            public async Task StudentAptitudeAssessmentsController_PutStudentAptitudeAssessments3_Exception()
             {
-                var expected = StudentAptitudeAssessmentsCollection.FirstOrDefault();
-                StudentAptitudeAssessmentsServiceMock.Setup(x => x.UpdateStudentAptitudeAssessmentsAsync(expected)).Throws<Exception>();
-                await StudentAptitudeAssessmentsController.PutStudentAptitudeAssessments2Async(expected.Id, expected);
+                var expected = StudentAptitudeAssessmentsCollection2.FirstOrDefault();
+                StudentAptitudeAssessmentsServiceMock.Setup(x => x.UpdateStudentAptitudeAssessments2Async(expected)).Throws<Exception>();
+                await StudentAptitudeAssessmentsController.PutStudentAptitudeAssessments3Async(expected.Id, expected);
             }
             
         }
@@ -965,6 +1043,64 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 Update = Dtos.EnumProperties.StudentAptitudeAssessmentsUpdateStatus.Revised
             };
             var stuAssessmentDto3 = new Dtos.StudentAptitudeAssessments()
+            {
+                Id = "CD1234567890",
+                AssessedOn = new DateTimeOffset(DateTime.Today),
+                Assessment = new GuidObject2("P12345678910"),
+                Form = new StudentAptitudeAssessmentsForm() { Name = "ACT", Number = "3" },
+                Percentile = new List<StudentAptitudeAssessmentsPercentile>() { new StudentAptitudeAssessmentsPercentile() { Type = new GuidObject2("1df164eb-8178-4321-a9f7-24f27f3991d8"), Value = 79 } },
+                Preference = Dtos.EnumProperties.StudentAptitudeAssessmentsPreference.NotSet,
+                Reported = Dtos.EnumProperties.StudentAptitudeAssessmentsReported.Official,
+                Score = new StudentAptitudeAssessmentsScore() { Type = Dtos.EnumProperties.StudentAptitudeAssessmentsScoreType.Numeric, Value = 190 },
+                Source = new GuidObject2("S12345678910"),
+                SpecialCircumstances = new List<GuidObject2>() { new GuidObject2("1df164eb-8178-5678-a9f7-24f27f3991d8"), new GuidObject2("1df164eb-8178-4321-a9f7-24f27f3991d8") },
+                Status = Dtos.EnumProperties.StudentAptitudeAssessmentsStatus.Active,
+                Student = new GuidObject2("1df164eb-8178-4321-a9f7-24f27f3991d8"),
+                Update = Dtos.EnumProperties.StudentAptitudeAssessmentsUpdateStatus.Recentered
+
+            };
+            StudentAptitudeAssessmentsDtos.Add(stuAssessmentDto1);
+            StudentAptitudeAssessmentsDtos.Add(stuAssessmentDto2);
+            StudentAptitudeAssessmentsDtos.Add(stuAssessmentDto3);
+            return StudentAptitudeAssessmentsDtos;
+        }
+
+        private static List<StudentAptitudeAssessments2> BuildStudentAptitudeAssessments2()
+        {
+            var StudentAptitudeAssessmentsDtos = new List<Dtos.StudentAptitudeAssessments2>();
+            var stuAssessmentDto1 = new Dtos.StudentAptitudeAssessments2()
+            {
+                Id = "AB1234567890",
+                AssessedOn = new DateTimeOffset(DateTime.Today),
+                Assessment = new GuidObject2("P12345678910"),
+                Form = new StudentAptitudeAssessmentsForm() { Name = "ACT", Number = "1" },
+                Percentile = new List<StudentAptitudeAssessmentsPercentile>() { new StudentAptitudeAssessmentsPercentile() { Type = new GuidObject2("C12345678910"), Value = 79 } },
+                Preference = Dtos.EnumProperties.StudentAptitudeAssessmentsPreference.Primary,
+                Reported = Dtos.EnumProperties.StudentAptitudeAssessmentsReported.Official,
+                Score = new StudentAptitudeAssessmentsScore() { Type = Dtos.EnumProperties.StudentAptitudeAssessmentsScoreType.Numeric, Value = 200 },
+                Source = new GuidObject2("S12345678910"),
+                SpecialCircumstances = new List<GuidObject2>() { new GuidObject2("L12345678910"), new GuidObject2("AL1234567890") },
+                Status = Dtos.EnumProperties.StudentAptitudeAssessmentsStatus.Active,
+                Student = new GuidObject2("1df164eb-8178-4321-a9f7-24f27f3991d8"),
+                Update = Dtos.EnumProperties.StudentAptitudeAssessmentsUpdateStatus.Original
+            };
+            var stuAssessmentDto2 = new Dtos.StudentAptitudeAssessments2()
+            {
+                Id = "BC1234567890",
+                AssessedOn = new DateTimeOffset(DateTime.Today),
+                Assessment = new GuidObject2("P12345678910"),
+                Form = new StudentAptitudeAssessmentsForm() { Name = "ACT", Number = "2" },
+                Percentile = new List<StudentAptitudeAssessmentsPercentile>() { new StudentAptitudeAssessmentsPercentile() { Type = new GuidObject2("1df164eb-8178-4321-a9f7-24f27f3991d8"), Value = 79 } },
+                Preference = Dtos.EnumProperties.StudentAptitudeAssessmentsPreference.Primary,
+                Reported = Dtos.EnumProperties.StudentAptitudeAssessmentsReported.Official,
+                Score = new StudentAptitudeAssessmentsScore() { Type = Dtos.EnumProperties.StudentAptitudeAssessmentsScoreType.Numeric, Value = 190 },
+                Source = new GuidObject2("S12345678910"),
+                SpecialCircumstances = new List<GuidObject2>() { new GuidObject2("1df164eb-8178-5678-a9f7-24f27f3991d8"), new GuidObject2("1df164eb-8178-4321-a9f7-24f27f3991d8") },
+                Status = Dtos.EnumProperties.StudentAptitudeAssessmentsStatus.Inactive,
+                Student = new GuidObject2("1df164eb-8178-4321-a9f7-24f27f3991d8"),
+                Update = Dtos.EnumProperties.StudentAptitudeAssessmentsUpdateStatus.Revised
+            };
+            var stuAssessmentDto3 = new Dtos.StudentAptitudeAssessments2()
             {
                 Id = "CD1234567890",
                 AssessedOn = new DateTimeOffset(DateTime.Today),

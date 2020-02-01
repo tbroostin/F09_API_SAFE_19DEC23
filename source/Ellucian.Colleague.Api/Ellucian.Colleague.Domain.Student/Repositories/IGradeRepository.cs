@@ -9,5 +9,6 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         Task<ICollection<Grade>> GetAsync();
         Task<ICollection<Grade>> GetHedmAsync(bool bypassCache);
         Task<Grade> GetHedmGradeByIdAsync(string id);
+        Task<string> GetGradesGuidAsync(string code);
     }
 }

@@ -783,7 +783,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             var spTuple = new Tuple<IEnumerable<StudentPayment2>, int>(_studentPaymentsCollection, _studentPaymentsCollection.Count);
 
             _studentPayementService.Setup(x => x.GetAsync2(It.IsAny<int>(), It.IsAny<int>(),
-                false, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(spTuple);
+                false, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(spTuple);
 
             var sourceContexts = await _studentPaymentController.GetAsync2(It.IsAny<Paging>(), criteriaFilter);
 
@@ -823,7 +823,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             var spTuple = new Tuple<IEnumerable<StudentPayment2>, int>(_studentPaymentsCollection, _studentPaymentsCollection.Count);
 
             _studentPayementService.Setup(x => x.GetAsync2(It.IsAny<int>(), It.IsAny<int>(),
-                true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(spTuple);
+                true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(spTuple);
 
             var sourceContexts = await _studentPaymentController.GetAsync2(It.IsAny<Paging>(), criteriaFilter);
 
@@ -867,7 +867,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             var spTuple = new Tuple<IEnumerable<StudentPayment2>, int>(newSp, 1);
 
             _studentPayementService.Setup(x => x.GetAsync2(1, 1,
-                true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(spTuple);
+                true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(spTuple);
 
             var sourceContexts = await _studentPaymentController.GetAsync2(new Paging(1, 1), criteriaFilter);
 
@@ -919,7 +919,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             var spTuple = new Tuple<IEnumerable<StudentPayment2>, int>(newSp, 1);
             
             _studentPayementService.Setup(x => x.GetAsync2(1, 1,
-                true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(spTuple);
+                true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(spTuple);
 
             var sourceContexts = await _studentPaymentController.GetAsync2(new Paging(1, 1), criteriaFilter);
 
@@ -971,7 +971,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             var spTuple = new Tuple<IEnumerable<StudentPayment2>, int>(newSp, 1);
          
             _studentPayementService.Setup(x => x.GetAsync2(1, 1,
-                true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(spTuple);
+                true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(spTuple);
 
             var sourceContexts = await _studentPaymentController.GetAsync2(new Paging(1, 1), criteriaFilter);
 
@@ -1023,7 +1023,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             var spTuple = new Tuple<IEnumerable<StudentPayment2>, int>(newSp, 1);
             
             _studentPayementService.Setup(x => x.GetAsync2(1, 1,
-                true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(spTuple);
+                true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(spTuple);
 
             var sourceContexts = await _studentPaymentController.GetAsync2(new Paging(1, 1), criteriaFilter);
 
@@ -1074,7 +1074,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             var spTuple = new Tuple<IEnumerable<StudentPayment2>, int>(newSp, 1);
 
             _studentPayementService.Setup(x => x.GetAsync2(1, 1,
-                true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(spTuple);
+                true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(spTuple);
 
             var sourceContexts = await _studentPaymentController.GetAsync2(new Paging(1, 1), criteriaFilter);
 
@@ -1172,7 +1172,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         {
 
             _studentPayementService.Setup(x => x.GetAsync2(It.IsAny<int>(), It.IsAny<int>(),
-                It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).Throws<PermissionsException>();
+                It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).Throws<PermissionsException>();
             await _studentPaymentController.GetAsync2(It.IsAny<Paging>(), criteriaFilter);
 
         }
@@ -1183,7 +1183,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         {
 
             _studentPayementService.Setup(x => x.GetAsync2(It.IsAny<int>(), It.IsAny<int>(),
-                It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).Throws<ArgumentException>();
+                It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).Throws<ArgumentException>();
             await _studentPaymentController.GetAsync2(It.IsAny<Paging>(), criteriaFilter);
 
         }
@@ -1194,7 +1194,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         {
 
             _studentPayementService.Setup(x => x.GetAsync2(It.IsAny<int>(), It.IsAny<int>(),
-                It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).Throws<RepositoryException>();
+                It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).Throws<RepositoryException>();
             await _studentPaymentController.GetAsync2(It.IsAny<Paging>(), criteriaFilter);
 
         }
@@ -1205,7 +1205,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         {
 
             _studentPayementService.Setup(x => x.GetAsync2(It.IsAny<int>(), It.IsAny<int>(),
-                It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).Throws<Exception>();
+                It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).Throws<Exception>();
             await _studentPaymentController.GetAsync2(It.IsAny<Paging>(), criteriaFilter);
 
         }

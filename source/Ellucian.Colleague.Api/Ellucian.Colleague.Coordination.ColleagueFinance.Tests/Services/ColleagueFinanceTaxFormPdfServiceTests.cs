@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Tests.UserFactories;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
@@ -9,6 +9,7 @@ using Ellucian.Colleague.Domain.ColleagueFinance.Tests;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
+using Microsoft.Reporting.WebForms;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using PdfSharp.Pdf;
@@ -29,7 +30,6 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         private ColleagueFinanceTaxFormPdfService service = null;
         private Mock<IColleagueFinanceTaxFormPdfDataRepository> mockTaxFormPdfDataRepository;
         private TestColleagueFinanceTaxFormPdfDataRepository TestPdfDataRepository;
-        private Mock<IPdfSharpRepository> mockPdfSharpRepository;
         private ICurrentUserFactory currentUserFactory;
         private FormT4aPdfData t4aPdfData = null;
         private Form1099MIPdfData form1099MiPdfData = null;
@@ -78,36 +78,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             {
                 throw new Exception("An exception occurred.");
             });
-            mockPdfSharpRepository = new Mock<IPdfSharpRepository>();
 
-            // Mock for a populated path
-            mockPdfSharpRepository.Setup<PdfDocument>(pdfu => pdfu.OpenDocument(fakePdfPath)).Returns(() =>
-            {
-                return new PdfDocument();
-            });
-
-            // Mock for a null path
-            mockPdfSharpRepository.Setup<PdfDocument>(pdfu => pdfu.OpenDocument(null)).Returns(() =>
-            {
-                throw new ApplicationException("Path cannot be null.");
-            });
-
-            // Mock for an empty path
-            mockPdfSharpRepository.Setup<PdfDocument>(pdfu => pdfu.OpenDocument("")).Returns(() =>
-            {
-                throw new ApplicationException("Path cannot be empty.");
-            });
-
-            // Mock for a thrown exception from OpenDocument
-            mockPdfSharpRepository.Setup<PdfDocument>(pdfu => pdfu.OpenDocument(exceptionString)).Returns(() =>
-            {
-                throw new ApplicationException("Path cannot be empty.");
-            });
-
-            mockPdfSharpRepository.Setup<MemoryStream>(pdfu => pdfu.FinalizePdfDocument(It.IsAny<PdfDocument>())).Returns(() =>
-            {
-                return new MemoryStream();
-            });
             BuildTaxFormPdfService();
         }
 
@@ -117,7 +88,6 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             service = null;
             mockTaxFormPdfDataRepository = null;
             TestPdfDataRepository = null;
-            mockPdfSharpRepository = null;
         }
         #endregion
 
@@ -232,6 +202,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             form1099MiPdfData.RecipientId = "000003";
             mockTaxFormPdfDataRepository.Setup(rep => rep.GetForm1099MiPdfDataAsync(personId, "1")).ReturnsAsync(form1099MiPdfData);
             var pdfData = await service.Get1099MiscPdfDataAsync(personId, "1");
+        }
+
+        [TestMethod]
+        public async Task Get1099MiscPdfDataAsync_Success_2019()
+        {
+            var pdfData = await service.Get1099MiscPdfDataAsync(personId, "2019");
+            Assert.IsTrue(pdfData is Form1099MIPdfData);
         }
 
         [TestMethod]
@@ -356,6 +333,15 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             var pdfData = TestPdfDataRepository.Form1099MiPdfDataObjects.Where(x => x.TaxYear == "2017").FirstOrDefault();
             var pdfBytes = service.Populate1099MiscPdf(null, null);
             Assert.IsTrue(pdfBytes is byte[]);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(LocalProcessingException))]
+        public void Populate1099MiscPdfReport_Success()
+        {
+            // There is no way to mock the local report used by rdlc. This test is here for reference.
+            var pdfData = TestPdfDataRepository.Form1099MiPdfDataObjects.Where(x => x.TaxYear == "2017").FirstOrDefault();
+            var pdfBytes = service.Populate1099MiscPdf(pdfData, fakePdfPath);
         }
         #endregion
 

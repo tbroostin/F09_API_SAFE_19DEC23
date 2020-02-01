@@ -1,21 +1,22 @@
-﻿// Copyright 2012-2017 Ellucian Company L.P. and its affiliates.
-using System;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Net.Http;
-using Ellucian.Web.Http.TestUtil;
-using System.Text;
-using System.Net;
-using Moq;
-using slf4net;
-using Ellucian.Web.Infrastructure.TestUtil;
-using Ellucian.Logging;
-using System.Threading.Tasks;
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Client.Exceptions;
-using Ellucian.Rest.Client.Exceptions;
-using Newtonsoft.Json;
-using System.Linq;
-using System.Collections.Generic;
 using Ellucian.Colleague.Dtos.Base;
+using Ellucian.Logging;
+using Ellucian.Web.Http.TestUtil;
+using Ellucian.Web.Infrastructure.TestUtil;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
+using Newtonsoft.Json;
+using slf4net;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Api.Client.Tests
 {
@@ -681,5 +682,6 @@ namespace Ellucian.Colleague.Api.Client.Tests
 
             // no response content to assert
         }
+
     }
 }

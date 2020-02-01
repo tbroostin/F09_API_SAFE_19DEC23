@@ -1,4 +1,4 @@
-﻿/*Copyright 2014-2018 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2014-2019 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -171,6 +171,8 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
             public List<string> IgnoreAwardsOnChecklist;
             public List<string> IgnoreActionStatusesOnChecklist;
             public List<string> IgnoreAwardCategoriesOnChecklist;
+            public string ShowBudgetDetailsOnAwardLetter;
+            public string StudentAwardLetterBudgetDetailsDescription;
         }
 
         public List<OfficeParameterRecord> officeParameterRecordData = new List<OfficeParameterRecord>()
@@ -241,7 +243,9 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                 SuppressDisbursementInfoDisplay = "",
                 IgnoreAwardsOnChecklist = new List<string>() {"SUB" },
                 IgnoreActionStatusesOnChecklist = new List<string>() {"E" },
-                IgnoreAwardCategoriesOnChecklist = new List<string>() {"LOAN" }
+                IgnoreAwardCategoriesOnChecklist = new List<string>() {"LOAN" },
+                ShowBudgetDetailsOnAwardLetter = "N",
+                StudentAwardLetterBudgetDetailsDescription = "2014/2015 Budget breakdown"
             },
             new OfficeParameterRecord() 
             { 
@@ -309,7 +313,9 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                 SuppressDisbursementInfoDisplay = "",
                 IgnoreAwardsOnChecklist = new List<string>() {"SUB" },
                 IgnoreActionStatusesOnChecklist = new List<string>() {"E" },
-                IgnoreAwardCategoriesOnChecklist = new List<string>()
+                IgnoreAwardCategoriesOnChecklist = new List<string>(),
+                ShowBudgetDetailsOnAwardLetter = "N",
+                StudentAwardLetterBudgetDetailsDescription = "2013/2014 Budget details"
             },
             new OfficeParameterRecord() 
             { 
@@ -377,7 +383,9 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                 SuppressDisbursementInfoDisplay = "",
                 IgnoreAwardsOnChecklist = new List<string>() {"SUB" },
                 IgnoreActionStatusesOnChecklist = new List<string>() {"E", "O" },
-                IgnoreAwardCategoriesOnChecklist = new List<string>() {"LOAN" }
+                IgnoreAwardCategoriesOnChecklist = new List<string>() {"LOAN" },
+                ShowBudgetDetailsOnAwardLetter = "N",
+                StudentAwardLetterBudgetDetailsDescription = "2014/2015 Budget breakdown"
             },
             new OfficeParameterRecord() 
             { 
@@ -445,7 +453,9 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                 SuppressDisbursementInfoDisplay = "",
                 IgnoreAwardsOnChecklist = new List<string>() {"UNSDL" },
                 IgnoreActionStatusesOnChecklist = new List<string>(),
-                IgnoreAwardCategoriesOnChecklist = new List<string>()
+                IgnoreAwardCategoriesOnChecklist = new List<string>(),
+                ShowBudgetDetailsOnAwardLetter = "N",
+                StudentAwardLetterBudgetDetailsDescription = "2014/2015 Budget breakdown"
                 },
             new OfficeParameterRecord()
             {
@@ -513,7 +523,9 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                 SuppressDisbursementInfoDisplay = "",
                 IgnoreAwardsOnChecklist = new List<string>(),
                 IgnoreActionStatusesOnChecklist = new List<string>(),
-                IgnoreAwardCategoriesOnChecklist = new List<string>() 
+                IgnoreAwardCategoriesOnChecklist = new List<string>(),
+                ShowBudgetDetailsOnAwardLetter = "N",
+                StudentAwardLetterBudgetDetailsDescription = "2015/2016 Budget breakdown"
             },            
             new OfficeParameterRecord()
             {
@@ -581,7 +593,9 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                 SuppressDisbursementInfoDisplay = "",
                 IgnoreAwardsOnChecklist = new List<string>() {"SUB", "UNSUB" },
                 IgnoreActionStatusesOnChecklist = new List<string>(),
-                IgnoreAwardCategoriesOnChecklist = new List<string>()
+                IgnoreAwardCategoriesOnChecklist = new List<string>(),
+                ShowBudgetDetailsOnAwardLetter = "N",
+                StudentAwardLetterBudgetDetailsDescription = "2016/2017 Budget breakdown"
             },
             new OfficeParameterRecord() 
             { 
@@ -649,7 +663,9 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                 SuppressDisbursementInfoDisplay = "",
                 IgnoreAwardsOnChecklist = new List<string>(),
                 IgnoreActionStatusesOnChecklist = new List<string>(),
-                IgnoreAwardCategoriesOnChecklist = new List<string>()
+                IgnoreAwardCategoriesOnChecklist = new List<string>(),
+                ShowBudgetDetailsOnAwardLetter = "N",
+                StudentAwardLetterBudgetDetailsDescription = "2017/2018 Budget breakdown"
             }
         };
 

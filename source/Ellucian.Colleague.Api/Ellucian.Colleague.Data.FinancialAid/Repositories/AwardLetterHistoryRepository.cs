@@ -1,4 +1,4 @@
-﻿/*Copyright 2015-2018 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2015-2019 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -107,21 +107,15 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
         }
 
         /// <summary>
-        /// Gets the award letter entity for the specified student, year, and with specified record id
+        /// Gets the award letter entity for the specified record id
         /// </summary>
-        /// <param name="studentId">award letter history record student id</param>
         /// <param name="recordId">award letter history record id</param>
-        /// <param name="studentAwardYear">student award year</param>
-        /// <param name="fafsaRecord">fafsa record</param>
+        /// <param name="studentAwardYears">list of student award years</param>
         /// <param name="allAwards">list of all reference award data</param>
         /// <returns>AwardLetter2 entity</returns>
         [Obsolete("Obsolete as of Api version 1.22, use GetAwardLetterById2Async instead")]
-        public async Task<AwardLetter2> GetAwardLetterByIdAsync(string studentId, string recordId, IEnumerable<StudentAwardYear> studentAwardYears, IEnumerable<Award> allAwards)
+        public async Task<AwardLetter2> GetAwardLetterByIdAsync(string recordId, IEnumerable<StudentAwardYear> studentAwardYears, IEnumerable<Award> allAwards)
         {
-            if (string.IsNullOrEmpty(studentId))
-            {
-                throw new ArgumentNullException("studentId");
-            }
             if (studentAwardYears == null || !studentAwardYears.Any())
             {
                 throw new ArgumentNullException("studentAwardYears");
@@ -134,7 +128,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
             AwardLetter2 awardLetterEntity;
             try
             {
-                awardLetterEntity = await BuildAwardLetter(studentId, studentAwardYears, allAwards, recordId);
+                awardLetterEntity = await BuildAwardLetter(studentAwardYears, allAwards, recordId);
             }
             catch (Exception e)
             {
@@ -190,7 +184,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
 
             var studentAwardYears = new List<StudentAwardYear>();
             studentAwardYears.Add(studentAwardYear);
-            var updatedAwardLetter = await GetAwardLetterByIdAsync(studentId, request.AwardLetterHistId, studentAwardYears, allAwards);
+            var updatedAwardLetter = await GetAwardLetterByIdAsync(request.AwardLetterHistId, studentAwardYears, allAwards);
 
             return updatedAwardLetter;
 
@@ -271,20 +265,14 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
         }        
 
         /// <summary>
-        /// Gets the award letter entity for the specified student, year, and with specified record id
+        /// Gets the award letter entity for the specified record id
         /// </summary>
-        /// <param name="studentId">award letter history record student id</param>
         /// <param name="recordId">award letter history record id</param>
-        /// <param name="studentAwardYear">student award year</param>
-        /// <param name="fafsaRecord">fafsa record</param>
+        /// <param name="studentAwardYears">a list of student award years</param>
         /// <param name="allAwards">list of all reference award data</param>
         /// <returns>AwardLetter3 entity</returns>
-        public async Task<AwardLetter3> GetAwardLetterById2Async(string studentId, string recordId, IEnumerable<StudentAwardYear> studentAwardYears, IEnumerable<Award> allAwards)
+        public async Task<AwardLetter3> GetAwardLetterById2Async(string recordId, IEnumerable<StudentAwardYear> studentAwardYears, IEnumerable<Award> allAwards)
         {
-            if (string.IsNullOrEmpty(studentId))
-            {
-                throw new ArgumentNullException("studentId");
-            }
             if (studentAwardYears == null || !studentAwardYears.Any())
             {
                 throw new ArgumentNullException("studentAwardYears");
@@ -297,7 +285,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
             AwardLetter3 awardLetterEntity;
             try
             {
-                awardLetterEntity = await BuildAwardLetter2(studentId, studentAwardYears, allAwards, recordId);
+                awardLetterEntity = await BuildAwardLetter2(studentAwardYears, allAwards, recordId);
             }
             catch (Exception e)
             {
@@ -361,7 +349,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
 
             var studentAwardYears = new List<StudentAwardYear>();
             studentAwardYears.Add(studentAwardYear);
-            var updatedAwardLetter = await GetAwardLetterById2Async(studentId, request.AwardLetterHistId, studentAwardYears, allAwards);
+            var updatedAwardLetter = await GetAwardLetterById2Async(request.AwardLetterHistId, studentAwardYears, allAwards);
 
             return updatedAwardLetter;
 
@@ -403,47 +391,47 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                 logger.Warn(message);
             }
 
-            return await BuildAwardLetterEntity(studentId, studentAwardYear, allAwards, mostRecentRecord);
+            return await BuildAwardLetterEntity(studentAwardYear, allAwards, mostRecentRecord);
         }
 
         /// <summary>
         /// Retrieves award letter history record by id and returns an AwardLetter2 entity
         /// </summary>
-        /// <param name="studentId">student id</param>
         /// <param name="studentAwardYears">list of student award years</param>
         /// <param name="allAwards">list of reference awards</param>
         /// <param name="recordId">record id of the award letter history record</param>
+        /// 
         /// <returns></returns>
         [Obsolete("Obsolete as of Api version 1.22, use BuildAwardLetter2 instead")]
-        private async Task<AwardLetter2> BuildAwardLetter(string studentId, IEnumerable<StudentAwardYear> studentAwardYears, IEnumerable<Award> allAwards, string recordId)
+        private async Task<AwardLetter2> BuildAwardLetter(IEnumerable<StudentAwardYear> studentAwardYears, IEnumerable<Award> allAwards, string recordId)
         {
             //Get the award letter history record by the record id            
             var awardLetterHistoryRecord = await DataReader.ReadRecordAsync<AwardLetterHistory>(recordId);
             if (awardLetterHistoryRecord == null)
             {
-                throw new KeyNotFoundException(string.Format("Award letter history record {0} does not exist for student {1}", recordId, studentId));
+                throw new KeyNotFoundException(string.Format("No award letter history record {0} was found for the student", recordId));
             }
             var awardYear = awardLetterHistoryRecord.AlhAwardYear;
 
-            return await BuildAwardLetterEntity(studentId, studentAwardYears.FirstOrDefault(y => y.Code == awardYear), allAwards, awardLetterHistoryRecord);
+            return await BuildAwardLetterEntity(studentAwardYears.FirstOrDefault(y => y.Code == awardYear), allAwards, awardLetterHistoryRecord);
         }
 
         /// <summary>
         /// Builds an AwardLetter2 entity
         /// </summary>
-        /// <param name="studentId">studentId</param>
         /// <param name="studentAwardYear">student award year</param>
         /// <param name="allAwards">awards reference data</param>
-        /// <param name="awardLetterParametersData">award letter parametere data</param>
         /// <param name="awardLetterHistoryRecord">award letter history record</param>
         /// <returns>AwardLetter2 entity</returns>
         [Obsolete("Obsolete as of Api version 1.22, use BuildAwardLetterEntity2 instead")]
-        private async Task<AwardLetter2> BuildAwardLetterEntity(string studentId, StudentAwardYear studentAwardYear, IEnumerable<Award> allAwards, AwardLetterHistory awardLetterHistoryRecord)
+        private async Task<AwardLetter2> BuildAwardLetterEntity(StudentAwardYear studentAwardYear, IEnumerable<Award> allAwards, AwardLetterHistory awardLetterHistoryRecord)
         {
             if (studentAwardYear == null)
             {
                 throw new ArgumentNullException("studentAwardYear cannot be null");
             }
+
+            string studentId = awardLetterHistoryRecord != null ? awardLetterHistoryRecord.AlhStudentId : null;
 
             //Evaluate the award letter rule table to get the parameters record id
             AltrParameters awardLetterParametersData = await GetAwardLetterParametersData(studentId, studentAwardYear);
@@ -546,50 +534,51 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                 throw new KeyNotFoundException(message);
             }
 
-            return await BuildAwardLetterEntity2(studentId, studentAwardYear, allAwards, mostRecentAwardLetterHistoryRecordForYear);
+            return await BuildAwardLetterEntity2(studentAwardYear, allAwards, mostRecentAwardLetterHistoryRecordForYear);
         }
         
 
         /// <summary>
         /// Retrieves award letter history record by id and returns an AwardLetter3 entity
         /// </summary>
-        /// <param name="studentId">student id</param>
         /// <param name="studentAwardYears">list of student award years</param>
         /// <param name="allAwards">list of reference awards</param>
         /// <param name="recordId">record id of the award letter history record</param>
+        /// 
         /// <returns>AwardLetter3 entity</returns>
-        private async Task<AwardLetter3> BuildAwardLetter2(string studentId, IEnumerable<StudentAwardYear> studentAwardYears, IEnumerable<Award> allAwards, string recordId)
+        private async Task<AwardLetter3> BuildAwardLetter2(IEnumerable<StudentAwardYear> studentAwardYears, IEnumerable<Award> allAwards, string recordId)
         {
             //Get the award letter history record by the record id            
             var awardLetterHistoryRecord = await DataReader.ReadRecordAsync<AwardLetterHistory>(recordId);
             if (awardLetterHistoryRecord == null)
             {
-                throw new KeyNotFoundException(string.Format("Award letter history record {0} does not exist for student {1}", recordId, studentId));
+                throw new KeyNotFoundException(string.Format("No award letter history record {0} was found for the student", recordId));
             }
             var awardYear = awardLetterHistoryRecord.AlhAwardYear;
 
-            return await BuildAwardLetterEntity2(studentId, studentAwardYears.FirstOrDefault(y => y.Code == awardYear), allAwards, awardLetterHistoryRecord);
+            return await BuildAwardLetterEntity2(studentAwardYears.FirstOrDefault(y => y.Code == awardYear), allAwards, awardLetterHistoryRecord);
         }
         
 
         /// <summary>
         /// Builds an AwardLetter3 entity
         /// </summary>
-        /// <param name="studentId">studentId</param>
         /// <param name="studentAwardYear">student award year</param>
         /// <param name="allAwards">awards reference data</param>
-        /// <param name="awardLetterParametersData">award letter parametere data</param>
         /// <param name="awardLetterHistoryRecord">award letter history record</param>
         /// <returns>AwardLetter3 entity</returns>
-        private async Task<AwardLetter3> BuildAwardLetterEntity2(string studentId, StudentAwardYear studentAwardYear, IEnumerable<Award> allAwards, AwardLetterHistory awardLetterHistoryRecord)
+        private async Task<AwardLetter3> BuildAwardLetterEntity2(StudentAwardYear studentAwardYear, IEnumerable<Award> allAwards, AwardLetterHistory awardLetterHistoryRecord)
         {
             if (studentAwardYear == null)
             {
                 throw new ArgumentNullException("studentAwardYear cannot be null");
             }
 
+            string studentId = awardLetterHistoryRecord != null ? awardLetterHistoryRecord.AlhStudentId : null;
+
+
             //Evaluate the award letter rule table to get the parameters record id
-            AltrParameters awardLetterParametersData = await GetAwardLetterParametersData(studentId, studentAwardYear);
+            AltrParameters awardLetterParametersData = await GetAwardLetterParametersData(studentId, studentAwardYear, awardLetterHistoryRecord.AlhAwardLetterParamsId);
 
             var awardLetter3Entity = new AwardLetter3(studentId, studentAwardYear);
 
@@ -607,6 +596,54 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                 awardLetter3Entity.AcceptedDate = awardLetterHistoryRecord.AlhAcceptedDate;
                 awardLetter3Entity.CreatedDate = awardLetterHistoryRecord.AlhAwardLetterDate;
                 awardLetter3Entity.StudentOfficeCode = awardLetterHistoryRecord.AlhOfficeId;
+                string alhLetterType = awardLetterHistoryRecord.AlhLetterType;
+
+                if (string.IsNullOrEmpty(alhLetterType))
+                {
+                    alhLetterType = "ALTR";
+                }
+
+                awardLetter3Entity.AwardLetterHistoryType = alhLetterType;
+
+                // Check to see if Award Letter History Type is anything other than old. If so, do new calculations
+                if (alhLetterType == "OLTR")
+                {
+                    // Logic to assign 
+                    awardLetter3Entity.PreAwardText = awardLetterHistoryRecord.AlhPreAwardText;
+                    awardLetter3Entity.PostAwardText = awardLetterHistoryRecord.AlhPostAwardText;
+                    awardLetter3Entity.PostClosingText = awardLetterHistoryRecord.AlhPostClosingText;
+
+                    // Assignment of Direct cost information from Record to AwardLetter3 Entity.
+                    var alhDirectCostAmount = new List<int>();
+                    foreach (var amount in awardLetterHistoryRecord.AlhDirectCostAmount)
+                    {
+                        var nonNullAmount = amount.GetValueOrDefault();
+                        alhDirectCostAmount.Add(nonNullAmount);
+                    }
+                    awardLetter3Entity.AlhDirectCostAmount = alhDirectCostAmount;
+                    awardLetter3Entity.AlhDirectCostDesc = awardLetterHistoryRecord.AlhDirectCostDesc;
+                    awardLetter3Entity.AlhDirectCostComp = awardLetterHistoryRecord.AlhDirectCostComp;
+
+                    // Assignment of Indirect cost information from Record to AwardLetter3 Entity.
+                    var alhIndirectCostAmount = new List<int>();
+                    foreach (var amount in awardLetterHistoryRecord.AlhIndirectCostAmount)
+                    {
+                        var nonNullAmount = amount.GetValueOrDefault();
+                        alhIndirectCostAmount.Add(nonNullAmount);
+                    }
+                    awardLetter3Entity.AlhIndirectCostAmount = alhIndirectCostAmount;
+                    awardLetter3Entity.AlhIndirectCostDesc = awardLetterHistoryRecord.AlhIndirectCostDesc;
+                    awardLetter3Entity.AlhIndirectCostComp = awardLetterHistoryRecord.AlhIndirectCostComp;
+
+                    //Assignment of Enrollment Status & Housing Status information to AwardLetter3 Entity.
+                    var enrollmentStatuses = awardLetterHistoryRecord.AlhEnrollmentStatus;
+                    awardLetter3Entity.AlhEnrollmentStatus = awardLetterHistoryRecord.AlhEnrlDesc;
+                    awardLetter3Entity.AlhHousingInd = awardLetterHistoryRecord.AlhHousingInd;
+                    awardLetter3Entity.AlhHousingDesc = awardLetterHistoryRecord.AlhHousingDesc;
+
+                    //Assignment of Pell Entitlement Information
+                    awardLetter3Entity.AlhPellEntitlementList = awardLetterHistoryRecord.AlhPellEntitlements;
+                }
 
                 //Paragraph spacing parameter
                 var paragraphSpacing = awardLetterParametersData.AltrParaSpacing;
@@ -956,6 +993,27 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
             return allAwards.FirstOrDefault(a => a.Code == awardId).Description;
         }
 
+        /// <summary>
+        /// Get and cache Awards data
+        /// </summary>
+        /// <returns>Awards DataContract</returns>
+        private string SetAwardRenewableFlag(string awardId, IEnumerable<Award> allAwards)
+        {
+            return allAwards.FirstOrDefault(a => a.Code == awardId).AwRenewableFlag;
+        }
+
+        /// <summary>
+        /// Get and cache Awards data
+        /// </summary>
+        /// <returns>Awards DataContract</returns>
+        private string SetAwardRenewableText(string awardId, IEnumerable<Award> allAwards)
+        {
+            var renewableText = allAwards.FirstOrDefault(a => a.Code == awardId).AwRenewableText;
+            var formattedRenewableText = renewableText.Replace("ý", "");
+            return formattedRenewableText;
+        }
+
+
         private List<AwardLetterAnnualAward> GetAwardLetterAnnualAwards(IEnumerable<Award> allAwards, AwardLetterHistory awardLetterHistoryRecord, List<AwardLetterGroup2> awardLetterGroups)
         {
             var awardLetterAnnualAwards = new List<AwardLetterAnnualAward>();
@@ -966,6 +1024,8 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                 newAnnualAward.AwardId = singleAward.AlhAnnualAwardIdAssocMember;
                 newAnnualAward.AnnualAnnualAmount = singleAward.AlhAnnualAwardAmountsAssocMember;
                 newAnnualAward.AwardDescription = SetAwardDescription(newAnnualAward.AwardId, allAwards);
+                newAnnualAward.AwRenewableFlag = SetAwardRenewableFlag(newAnnualAward.AwardId, allAwards);
+                newAnnualAward.AwRenewableText = SetAwardRenewableText(newAnnualAward.AwardId, allAwards);
 
                 int groupNumber;
                 groupNumber = singleAward.AlhAnnualGroupNumberAssocMember.HasValue ? singleAward.AlhAnnualGroupNumberAssocMember.Value : -1;
@@ -1000,10 +1060,14 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
             return awardLetterAnnualAwards;
         }
 
-        private async Task<AltrParameters> GetAwardLetterParametersData(string studentId, StudentAwardYear studentAwardYear)
+        private async Task<AltrParameters> GetAwardLetterParametersData(string studentId, StudentAwardYear studentAwardYear, string awardLetterParametersId = null)
         {
-            var awardLetterParametersId = await GetAwardLetterParametersRecordIdAsync(studentAwardYear.Code, studentId);
             var awardLetterParameterRecordsData = await GetAwardLetterParametersRecordDataAsync();
+
+            if (string.IsNullOrEmpty(awardLetterParametersId))
+            {
+                awardLetterParametersId = await GetAwardLetterParametersRecordIdAsync(studentAwardYear.Code, studentId);
+            }
 
             //get the parameters data record. if it doesn't exist, log a message and move on to the next year
             var awardLetterParametersData = awardLetterParameterRecordsData.FirstOrDefault(alp => alp.Recordkey == awardLetterParametersId);

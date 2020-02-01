@@ -1,7 +1,9 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -30,6 +32,9 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         private List<string> criteriaIds;
         private string searchString;
         private List<PersonBase> personBaseObjects;
+        private OrganizationalRelationshipPermissionUserFactory currentUserFactoryFake;
+        private Mock<IRoleRepository> roleRepoMock;
+        private IRoleRepository roleRepo;
 
 
         [TestInitialize]
@@ -42,8 +47,16 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             _orgPersonPositionRepo = _orgPersonPositionRepoMock.Object;
             _personBaseRepoMock = new Mock<IPersonBaseRepository>();
             _personBaseRepo = _personBaseRepoMock.Object;
+            currentUserFactoryFake = new OrganizationalRelationshipPermissionUserFactory();
+            roleRepoMock = new Mock<IRoleRepository>();
+            var viewOrganizationalRelationshipsRole = new Domain.Entities.Role(1, "View Organizational Relationships");
+            viewOrganizationalRelationshipsRole.AddPermission(new Domain.Entities.Permission(BasePermissionCodes.ViewOrganizationalRelationships));
+            var updateOrganizationalRelationshipsRole = new Domain.Entities.Role(2, "Update Organizational Relationships");
+            updateOrganizationalRelationshipsRole.AddPermission(new Domain.Entities.Permission(BasePermissionCodes.UpdateOrganizationalRelationships));
+            roleRepoMock.Setup(rr => rr.Roles).Returns(new List<Domain.Entities.Role> { viewOrganizationalRelationshipsRole, updateOrganizationalRelationshipsRole });
+            roleRepo = roleRepoMock.Object;
 
-            _orgPersonPositionService = new OrganizationalPersonPositionService(_adapterRegistry, _orgPersonPositionRepo, _personBaseRepo, _logger);
+            _orgPersonPositionService = new OrganizationalPersonPositionService(_adapterRegistry, _orgPersonPositionRepo, _personBaseRepo, currentUserFactoryFake, roleRepo, _logger);
 
             orgPersonPositionsDomainObject = BuildOrgPersonPositionRepoResponse();
 
@@ -88,22 +101,24 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
-        public async Task GetOrganizationalPersonPositionsAsync_CriteriaNull_ThrowsException()
+        public async Task QueryOrganizationalPersonPositionsAsync_CriteriaNull_ThrowsException()
         {
             var orgPerPositionsDto = await _orgPersonPositionService.QueryOrganizationalPersonPositionAsync(null);
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
-        public async Task GetOrganizationalPersonPositionsAsync_NoCriteria_ThrowsException()
+        public async Task QueryOrganizationalPersonPositionsAsync_NoCriteria_ThrowsException()
         {
+            currentUserFactoryFake.HasViewOrganizationalRelationshipsRole = true;
             var criteria = new Dtos.Base.OrganizationalPersonPositionQueryCriteria() { Ids = new List<string>(), SearchString = string.Empty };
             var orgPerPositionsDto = await _orgPersonPositionService.QueryOrganizationalPersonPositionAsync(criteria);
         }
 
         [TestMethod]
-        public async Task GetOrganizationalPersonPositionsAsync_OnlyCriteriaIds_ReturnsResults()
+        public async Task QueryOrganizationalPersonPositionsAsync_OnlyCriteriaIds_ReturnsResults()
         {
+            currentUserFactoryFake.HasViewOrganizationalRelationshipsRole = true;
             _orgPersonPositionRepoMock.Setup(repo => repo.GetOrganizationalPersonPositionsByIdsAsync(It.IsAny<List<string>>())).ReturnsAsync(orgPersonPositionsDomainObject);
             _personBaseRepoMock.Setup(repo => repo.GetPersonsBaseAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>())).ReturnsAsync(personBaseObjects);
             var criteria = new Dtos.Base.OrganizationalPersonPositionQueryCriteria() { Ids = criteriaIds, SearchString = null };
@@ -141,8 +156,9 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         }
 
         [TestMethod]
-        public async Task GetOrganizationalPersonPositionsAsync_JustSearchString_ReturnsResults()
+        public async Task QueryOrganizationalPersonPositionsAsync_JustSearchString_ReturnsResults()
         {
+            currentUserFactoryFake.HasViewOrganizationalRelationshipsRole = true;
             _orgPersonPositionRepoMock.Setup(repo => repo.GetOrganizationalPersonPositionAsync(It.IsAny<List<string>>(), It.IsAny<List<string>>())).ReturnsAsync(orgPersonPositionsDomainObject);
             _personBaseRepoMock.Setup(repo => repo.SearchByIdsOrNamesAsync(new List<string>(), searchString, true)).ReturnsAsync(personBaseObjects);
             _personBaseRepoMock.Setup(repo => repo.GetPersonsBaseAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>())).ReturnsAsync(personBaseObjects);
@@ -181,6 +197,38 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         }
 
         [TestMethod]
+        public async Task QueryOrganizationalPersonPositionsAsync_WithViewRole_ReturnsResults()
+        {
+            currentUserFactoryFake.HasViewOrganizationalRelationshipsRole = true;
+            _orgPersonPositionRepoMock.Setup(repo => repo.GetOrganizationalPersonPositionAsync(It.IsAny<List<string>>(), It.IsAny<List<string>>())).ReturnsAsync(orgPersonPositionsDomainObject);
+            _personBaseRepoMock.Setup(repo => repo.SearchByIdsOrNamesAsync(new List<string>(), searchString, true)).ReturnsAsync(personBaseObjects);
+            _personBaseRepoMock.Setup(repo => repo.GetPersonsBaseAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>())).ReturnsAsync(personBaseObjects);
+            var criteria = new Dtos.Base.OrganizationalPersonPositionQueryCriteria() { Ids = new List<string>(), SearchString = searchString };
+            var orgPerPositionsDto = await _orgPersonPositionService.QueryOrganizationalPersonPositionAsync(criteria);
+            Assert.IsNotNull(orgPerPositionsDto);
+        }
+
+        [TestMethod]
+        public async Task QueryOrganizationalPersonPositionsAsync_WithUpdateRole_ReturnsResults()
+        {
+            currentUserFactoryFake.HasUpdateOrganizationalRelationshipsRole = true;
+            _orgPersonPositionRepoMock.Setup(repo => repo.GetOrganizationalPersonPositionAsync(It.IsAny<List<string>>(), It.IsAny<List<string>>())).ReturnsAsync(orgPersonPositionsDomainObject);
+            _personBaseRepoMock.Setup(repo => repo.SearchByIdsOrNamesAsync(new List<string>(), searchString, true)).ReturnsAsync(personBaseObjects);
+            _personBaseRepoMock.Setup(repo => repo.GetPersonsBaseAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>())).ReturnsAsync(personBaseObjects);
+            var criteria = new Dtos.Base.OrganizationalPersonPositionQueryCriteria() { Ids = new List<string>(), SearchString = searchString };
+            var orgPerPositionsDto = await _orgPersonPositionService.QueryOrganizationalPersonPositionAsync(criteria);
+            Assert.IsNotNull(orgPerPositionsDto);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task QueryOrganizationalPersonPositionsAsync_WithoutPermission_ThrowsException()
+        {
+            var criteria = new Dtos.Base.OrganizationalPersonPositionQueryCriteria() { Ids = new List<string>(), SearchString = searchString };
+            var orgPerPositionsDto = await _orgPersonPositionService.QueryOrganizationalPersonPositionAsync(criteria);
+        }
+
+        [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
         public async Task GetOrganizationalPersonPositionByIdAsync_IdIsNull_ThrowsException()
         {
@@ -190,6 +238,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         [TestMethod]
         public async Task GetOrganizationalPersonPositionByIdAsync_IdIsValid_ReturnsDto()
         {
+            currentUserFactoryFake.HasViewOrganizationalRelationshipsRole = true;
             var orgPersonPosition1 = new Domain.Base.Entities.OrganizationalPersonPosition("OPP1", "P1", "POS1", "Position1", null, null);
             var relationship = new OrganizationalRelationship("1", "OPP1", "P1", "POS1", "Position1", null, null, "OPP2", "P2", "POS2", "Position2", null, null, "Manager");
             orgPersonPosition1.AddRelationship(relationship);
@@ -203,6 +252,80 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             Assert.AreEqual(orgPersonPosition1.PositionTitle, orgPerPositionDto.PositionTitle);
             Assert.AreEqual(orgPersonPosition1.Relationships.Count, orgPerPositionDto.Relationships.Count());
 
+        }
+
+        [TestMethod]
+        public async Task GetOrganizationalPersonPositionByIdAsync_WithViewRole_ReturnsDto()
+        {
+            currentUserFactoryFake.HasViewOrganizationalRelationshipsRole = true;
+            var orgPersonPosition1 = new Domain.Base.Entities.OrganizationalPersonPosition("OPP1", "P1", "POS1", "Position1", null, null);
+            var relationship = new OrganizationalRelationship("1", "OPP1", "P1", "POS1", "Position1", null, null, "OPP2", "P2", "POS2", "Position2", null, null, "Manager");
+            orgPersonPosition1.AddRelationship(relationship);
+            var orgPersonPositionRepoResponse = new List<Domain.Base.Entities.OrganizationalPersonPosition> { orgPersonPosition1 };
+            _orgPersonPositionRepoMock.Setup(repo => repo.GetOrganizationalPersonPositionsByIdsAsync(new List<string> { "OPP1" })).ReturnsAsync(orgPersonPositionRepoResponse);
+            _personBaseRepoMock.Setup(repo => repo.GetPersonsBaseAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>())).ReturnsAsync(personBaseObjects);
+
+            var orgPerPositionDto = await _orgPersonPositionService.GetOrganizationalPersonPositionByIdAsync("OPP1");
+            Assert.IsNotNull(orgPerPositionDto);
+        }
+
+        [TestMethod]
+        public async Task GetOrganizationalPersonPositionByIdAsync_WithUpdateRole_ReturnsDto()
+        {
+            currentUserFactoryFake.HasUpdateOrganizationalRelationshipsRole = true;
+            var orgPersonPosition1 = new Domain.Base.Entities.OrganizationalPersonPosition("OPP1", "P1", "POS1", "Position1", null, null);
+            var relationship = new OrganizationalRelationship("1", "OPP1", "P1", "POS1", "Position1", null, null, "OPP2", "P2", "POS2", "Position2", null, null, "Manager");
+            orgPersonPosition1.AddRelationship(relationship);
+            var orgPersonPositionRepoResponse = new List<Domain.Base.Entities.OrganizationalPersonPosition> { orgPersonPosition1 };
+            _orgPersonPositionRepoMock.Setup(repo => repo.GetOrganizationalPersonPositionsByIdsAsync(new List<string> { "OPP1" })).ReturnsAsync(orgPersonPositionRepoResponse);
+            _personBaseRepoMock.Setup(repo => repo.GetPersonsBaseAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>())).ReturnsAsync(personBaseObjects);
+
+            var orgPerPositionDto = await _orgPersonPositionService.GetOrganizationalPersonPositionByIdAsync("OPP1");
+            Assert.IsNotNull(orgPerPositionDto);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task GetOrganizationalPersonPositionByIdAsync_WithoutPermission_ThrowsException()
+        {
+            var orgPerPositionDto = await _orgPersonPositionService.GetOrganizationalPersonPositionByIdAsync("OPP1");
+        }
+
+        // Fake an ICurrentUserFactory implementation that allows toggling organizational relationship permissions
+        public class OrganizationalRelationshipPermissionUserFactory : ICurrentUserFactory
+        {
+            public bool HasViewOrganizationalRelationshipsRole { get; set; }
+
+            public bool HasUpdateOrganizationalRelationshipsRole { get; set; }
+
+            public ICurrentUser CurrentUser
+            {
+                get
+                {
+                    var roles = new List<string>();
+                    if (HasViewOrganizationalRelationshipsRole)
+                    {
+                        roles.Add("View Organizational Relationships");
+                    }
+
+                    if (HasUpdateOrganizationalRelationshipsRole)
+                    {
+                        roles.Add("Update Organizational Relationships");
+                    }
+
+                    return new CurrentUser(new Claims()
+                    {
+                        ControlId = "123",
+                        Name = "Fred",
+                        PersonId = "001",
+                        SecurityToken = "321",
+                        SessionTimeout = 30,
+                        UserName = "Student",
+                        Roles = roles,
+                        SessionFixationId = "abc123"
+                    });
+                }
+            }
         }
     }
 }

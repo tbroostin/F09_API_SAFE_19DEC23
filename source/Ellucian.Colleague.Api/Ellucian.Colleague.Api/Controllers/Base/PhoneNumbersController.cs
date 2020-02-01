@@ -1,24 +1,21 @@
-﻿// Copyright 2012-2014 Ellucian Company L.P. and its affiliates.
-using System;
-using System.Collections.Generic;
-using Ellucian.Web.Http.Controllers;
-using System.ComponentModel;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Net;
-using System.Web.Http;
-using Ellucian.Web.Http.Filters;
-using Ellucian.Colleague.Data.Base.DataContracts;
-using Ellucian.Colleague.Data.Base.Repositories;
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Api.Licensing;
+using Ellucian.Colleague.Configuration.Licensing;
+using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Dtos.Base;
-using Ellucian.Colleague.Api.Licensing;
-using slf4net;
-using Ellucian.Colleague.Domain.Base.Entities;
-using Ellucian.Colleague.Configuration.Licensing;
-using Ellucian.Web.License;
 using Ellucian.Web.Adapters;
+using Ellucian.Web.Http.Controllers;
+using Ellucian.Web.License;
 using Ellucian.Web.Security;
+using slf4net;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Linq;
+using System.Net;
+using System.Threading.Tasks;
+using System.Web.Http;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -31,6 +28,7 @@ namespace Ellucian.Colleague.Api.Controllers
     public class PhoneNumbersController : BaseCompressedApiController
     {
         private readonly IPhoneNumberRepository _phoneNumberRepository;
+        private readonly IPhoneNumberService _phoneNumberService;
         private readonly IConfigurationRepository _configurationRepository;
         private readonly IAdapterRegistry _adapterRegistry;
         private readonly ILogger _logger;
@@ -40,13 +38,15 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="adapterRegistry">Adapter registry of type <see cref="IAdapterRegistry">IAdapterRegistry</see></param>
         /// <param name="phoneNumberRepository">Repository of type <see cref="IPhoneNumberRepository">IPhoneNumberRepository</see></param>        
-        /// <param name="configurationRepository">Repository of type<see cref="IConfigurationRepository">IConfigurationRepository</see></param>        
+        /// <param name="configurationRepository">Repository of type<see cref="IConfigurationRepository">IConfigurationRepository</see></param>   
+        /// <param name="phoneNumberService">Service of type <see cref="IPhoneNumberService">IPhoneNumberService</see></param>
         /// <param name="logger">Logger of type <see cref="ILogger">ILogger</see></param>
-        public PhoneNumbersController(IAdapterRegistry adapterRegistry, IPhoneNumberRepository phoneNumberRepository, IConfigurationRepository configurationRepository, ILogger logger)
+        public PhoneNumbersController(IAdapterRegistry adapterRegistry, IPhoneNumberRepository phoneNumberRepository, IConfigurationRepository configurationRepository, IPhoneNumberService phoneNumberService, ILogger logger)
         {
             _adapterRegistry = adapterRegistry;
             _phoneNumberRepository = phoneNumberRepository;
             _configurationRepository = configurationRepository;
+            _phoneNumberService = phoneNumberService;
             _logger = logger;
         }
         /// <summary>
@@ -54,6 +54,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="personId">Person to get phone numbers for</param>
         /// <returns>PhoneNumber Object <see cref="Ellucian.Colleague.Dtos.Base.PhoneNumber">PhoneNumber</see></returns>
+        
         public Ellucian.Colleague.Dtos.Base.PhoneNumber GetPersonPhones(string personId)
         {
             if (string.IsNullOrEmpty(personId))
@@ -83,30 +84,26 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="criteria">Selection Criteria including PersonIds list.</param>
         /// <returns>List of Phone Number Objects <see cref="Ellucian.Colleague.Dtos.Base.PhoneNumber">PhoneNumber</see></returns>
-        public IEnumerable<Ellucian.Colleague.Dtos.Base.PhoneNumber> QueryPhoneNumbers(PhoneNumberQueryCriteria criteria)
+        /// <accessComments>
+        /// Authenticated users can query their own phone numbers only. Users with the QUERY.PHONE.NUMBERS permission can query phone numbers for anyone.
+        /// </accessComments>
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.Base.PhoneNumber>> QueryPhoneNumbersAsync(PhoneNumberQueryCriteria criteria)
         {
-            if (criteria.PersonIds == null || criteria.PersonIds.Count() == 0)
+            if (criteria == null || criteria.PersonIds == null || criteria.PersonIds.Count() == 0)
             {
                 _logger.Error("Invalid personIds parameter: null or empty.");
                 throw CreateHttpResponseException("No person IDs provided.", HttpStatusCode.BadRequest);
             }
             try
             {
-                var phoneDtoCollection = new List<Ellucian.Colleague.Dtos.Base.PhoneNumber>();
-                var phoneCollection = _phoneNumberRepository.GetPersonPhonesByIds(criteria.PersonIds.ToList());
-                // Get the right adapter for the type mapping
-                var phoneDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Base.Entities.PhoneNumber, Ellucian.Colleague.Dtos.Base.PhoneNumber>();
-                // Map the Address entity to the Address DTO
-                foreach (var address in phoneCollection)
-                {
-                    phoneDtoCollection.Add(phoneDtoAdapter.MapToType(address));
-                }
-
+                var phoneDtoCollection = await _phoneNumberService.QueryPhoneNumbersAsync(criteria);
                 return phoneDtoCollection;
             }
             catch (PermissionsException pex)
             {
-                throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
+                var permissionsMessage = "You do not have permission to query phone numbers.";
+                _logger.Error(pex, permissionsMessage);
+                throw CreateHttpResponseException(permissionsMessage, HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {
@@ -120,32 +117,26 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="criteria">Selection Criteria including PersonIds list.</param>
         /// <returns>List of Phone Number Objects <see cref="Ellucian.Colleague.Dtos.Base.PhoneNumber">PhoneNumber</see></returns>
+        /// <accessComments>
+        /// Authenticated users can query their own phone numbers only. Users with the QUERY.PHONE.NUMBERS permission can query phone numbers for anyone.
+        /// </accessComments>
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.Base.PilotPhoneNumber>> QueryPilotPhoneNumbersAsync(PhoneNumberQueryCriteria criteria)
         {
-            if (criteria.PersonIds == null || criteria.PersonIds.Count() == 0)
+            if (criteria == null || criteria.PersonIds == null || criteria.PersonIds.Count() == 0)
             {
                 _logger.Error("Invalid personIds parameter: null or empty.");
                 throw CreateHttpResponseException("No person IDs provided.", HttpStatusCode.BadRequest);
             }
             try
             {
-                var pilotConfiguration = await _configurationRepository.GetPilotConfigurationAsync();                
-                var pilotPhoneDtoCollection = new List<Ellucian.Colleague.Dtos.Base.PilotPhoneNumber>();
-                var pilotPhoneCollection = await _phoneNumberRepository.GetPilotPersonPhonesByIdsAsync(criteria.PersonIds.ToList(), pilotConfiguration); 
-                //var pilotPhoneCollection = _phoneNumberRepository.GetPilotPersonPhonesByIds(criteria.PersonIds.ToList(), pilotConfiguration);                         
-                // Get the right adapter for the type mapping
-                var pilotPhoneDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Base.Entities.PilotPhoneNumber, Ellucian.Colleague.Dtos.Base.PilotPhoneNumber>();
-                // Map the Pilot phone number entity to the Pilot phone number DTO
-                foreach (var person in pilotPhoneCollection)
-                {
-                    pilotPhoneDtoCollection.Add(pilotPhoneDtoAdapter.MapToType(person));
-                }
-
+                var pilotPhoneDtoCollection = await _phoneNumberService.QueryPilotPhoneNumbersAsync(criteria); 
                 return pilotPhoneDtoCollection;
             }
             catch (PermissionsException pex)
             {
-                throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
+                var permissionsMessage = "You do not have permission to query phone numbers.";
+                _logger.Error(pex, permissionsMessage);
+                throw CreateHttpResponseException(permissionsMessage, HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {

@@ -1,4 +1,4 @@
-﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2019 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Data.HumanResources.Repositories;
@@ -58,6 +58,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                                 PpwgPerposId = r.personPositionId,
                                 PpwgPositionId = r.positionId,
                                 PpwgHrpId = r.personId,
+                                PpwgType = r.wageType,
                                 PpwitemsEntityAssociation = r.payItems.Select(p => new PerposwgPpwitems()
                                 {
                                     PpwgPiFndsrcIdAssocMember = p.fundSourceId,
@@ -244,7 +245,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
 
                 var actual = await getActual();
 
-                Assert.AreEqual(4, actual.Count);
+                Assert.AreEqual(5, actual.Count);
                 Assert.AreEqual(null, actual.ElementAt(0).EarningsTypeGroupId);
             }
         }

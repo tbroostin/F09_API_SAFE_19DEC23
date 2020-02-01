@@ -16,7 +16,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         private readonly bool canGrantFacultyConsent;
         private readonly bool canGrantStudentPetition;
         private readonly bool canUpdateGrades;
-
+        private readonly bool canSearchStudents;
 
         /// <summary>
         /// Faculty can waive prerequisite requirements for their sections
@@ -38,6 +38,10 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// </summary>
         public bool CanUpdateGrades { get { return canUpdateGrades; } }
 
+        /// <summary>
+        /// Faculty can search for students in the sections
+        /// </summary>
+        public bool CanSearchStudents { get { return canSearchStudents; } }
 
         /// <summary>
         /// Creates a new <see cref="FacultyPermissions"/> object.
@@ -48,7 +52,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             canGrantFacultyConsent = false;
             canGrantStudentPetition = false;
             canUpdateGrades = false;
-
+            canSearchStudents = false;
         }
 
         /// <summary>
@@ -82,7 +86,12 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             {
                 canUpdateGrades = true;
             }
-            
+
+            if (permissionCodes.Contains(StudentPermissionCodes.ViewStudentInformation))
+            {
+                canSearchStudents = true;
+            }
+
         }
     }
 }

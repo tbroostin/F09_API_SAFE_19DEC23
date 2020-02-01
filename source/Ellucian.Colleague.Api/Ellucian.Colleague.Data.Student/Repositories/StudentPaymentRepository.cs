@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates
 
 using System;
 using System.Collections.Generic;
@@ -16,6 +16,7 @@ using slf4net;
 using System.Text;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Entities;
+using Ellucian.Colleague.Domain.Base.Services;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -25,6 +26,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class StudentPaymentRepository : BaseColleagueRepository, IStudentPaymentRepository
     {
+
+        const string AllStudentPaymentsCache = "AllStudentPayments";
+
+        const int AllStudentPaymentsCacheTimeout = 20; // Clear from cache every 20 minutes
+
         /// <summary>
         /// Constructor to instantiate a student payments repository object
         /// </summary>
@@ -34,7 +40,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         public StudentPaymentRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger)
             : base(cacheProvider, transactionFactory, logger)
         {
-
         }
 
         /// <summary>
@@ -64,7 +69,19 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
             }
 
-            return await BuildStudentPayment(intgStudentPayments);
+            var exception = new RepositoryException();
+            StudentPayment studentPayment = null;
+            try
+            {
+                studentPayment = await BuildStudentPayment(intgStudentPayments);
+            }
+            catch (Exception ex)
+            {
+                exception.AddError(new RepositoryError("Global.Internal.Error", ex.Message));
+                throw exception;
+            }
+
+            return studentPayment;
         }
 
         /// <summary>
@@ -143,62 +160,98 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns>A list of StudentPayment domain entities</returns>
         /// <exception cref="ArgumentNullException">Thrown if the id argument is null or empty</exception>
         /// <exception cref="KeyNotFoundException">Thrown if no database records exist for the given id argument</exception>
-        public async Task<Tuple<IEnumerable<StudentPayment>, int>> GetAsync2(int offset, int limit, bool bypassCache, string personId = "", string term = "", string distrCode = "", string paymentType = "", string arType = "")
+        public async Task<Tuple<IEnumerable<StudentPayment>, int>> GetAsync2(int offset, int limit, bool bypassCache, string personId = "", string term = "", string distrCode = "", string paymentType = "", string arType = "", string usage = "")
         {
             var intgStudentPaymentsEntities = new List<StudentPayment>();
-            var criteria = new StringBuilder();
-            // Read the AR.PAY.ITEMS.INTG records
-            if (!string.IsNullOrEmpty(personId))
-            {
-                criteria.AppendFormat("WITH ARP.INTG.PERSON.ID = '{0}'", personId);
-            }
-            if (!string.IsNullOrEmpty(term))
-            {
-                if (criteria.Length > 0)
-                {
-                    criteria.Append(" AND ");
-                }
-                criteria.AppendFormat("WITH ARP.INTG.TERM = '{0}'", term);
-            }
-            if (!string.IsNullOrEmpty(distrCode))
-            {
-                if (criteria.Length > 0)
-                {
-                    criteria.Append(" AND ");
-                }
-                criteria.AppendFormat("WITH ARP.INTG.DISTR.MTHD = '{0}'", distrCode);
 
-                //// If filter value is the default value, check for null payment type too.
-                var ldmDefaults = DataReader.ReadRecord<Base.DataContracts.LdmDefaults>("CORE.PARMS", "LDM.DEFAULTS");
-                var defaultDistrCode = ldmDefaults.LdmdDefaultDistr;
-                if (defaultDistrCode == distrCode)
-                {
-                    criteria.AppendFormat("''");
-                }
-            }
-            if (!string.IsNullOrEmpty(paymentType))
-            {
-                if (criteria.Length > 0)
-                {
-                    criteria.Append(" AND ");
-                }
-                criteria.AppendFormat("WITH ARP.INTG.PAYMENT.TYPE = '{0}'", paymentType.ToLowerInvariant());
-            }
-            if (!string.IsNullOrEmpty(arType))
-            {
-                if (criteria.Length > 0)
-                {
-                    criteria.Append(" AND ");
-                }
-                criteria.AppendFormat("WITH ARP.INTG.AR.TYPE = '{0}'", arType);
-            }
-            string select = criteria.ToString();
-            string[] intgStudentPaymentIds = await DataReader.SelectAsync("AR.PAY.ITEMS.INTG", select);
-            var totalCount = intgStudentPaymentIds.Count();
+            int totalCount = 0;
+            string[] subList = null;
 
-            Array.Sort(intgStudentPaymentIds);
+            string studentPaymentsCacheKey = CacheSupport.BuildCacheKey(AllStudentPaymentsCache, personId, term, distrCode, paymentType, arType, usage);
 
-            var subList = intgStudentPaymentIds.Skip(offset).Take(limit).ToArray();
+            var keyCache = await CacheSupport.GetOrAddKeyCacheToCache(
+               this,
+               ContainsKey,
+               GetOrAddToCacheAsync,
+               AddOrUpdateCacheAsync,
+               transactionInvoker,
+               studentPaymentsCacheKey,
+               "AR.PAY.ITEMS.INTG",
+               offset,
+               limit,
+               AllStudentPaymentsCacheTimeout,
+               async () =>
+               {
+                   var criteria = new StringBuilder();
+                   // Read the AR.PAY.ITEMS.INTG records
+                   if (!string.IsNullOrEmpty(personId))
+                   {
+                       criteria.AppendFormat("WITH ARP.INTG.PERSON.ID = '{0}'", personId);
+                   }
+                   if (!string.IsNullOrEmpty(term))
+                   {
+                       if (criteria.Length > 0)
+                       {
+                           criteria.Append(" AND ");
+                       }
+                       criteria.AppendFormat("WITH ARP.INTG.TERM = '{0}'", term);
+                   }
+                   if (!string.IsNullOrEmpty(distrCode))
+                   {
+                       if (criteria.Length > 0)
+                       {
+                           criteria.Append(" AND ");
+                       }
+                       criteria.AppendFormat("WITH ARP.INTG.DISTR.MTHD = '{0}'", distrCode);
+
+                       //// If filter value is the default value, check for null payment type too.
+                       var ldmDefaults = DataReader.ReadRecord<Base.DataContracts.LdmDefaults>("CORE.PARMS", "LDM.DEFAULTS");
+                       var defaultDistrCode = ldmDefaults != null ? ldmDefaults.LdmdDefaultDistr : string.Empty;
+                       if (defaultDistrCode == distrCode)
+                       {
+                           criteria.AppendFormat("''");
+                       }
+                   }
+                   if (!string.IsNullOrEmpty(paymentType))
+                   {
+                       if (criteria.Length > 0)
+                       {
+                           criteria.Append(" AND ");
+                       }
+                       criteria.AppendFormat("WITH ARP.INTG.PAYMENT.TYPE = '{0}'", paymentType.ToLowerInvariant());
+                   }
+                   if (!string.IsNullOrEmpty(arType))
+                   {
+                       if (criteria.Length > 0)
+                       {
+                           criteria.Append(" AND ");
+                       }
+                       criteria.AppendFormat("WITH ARP.INTG.AR.TYPE = '{0}'", arType);
+                   }
+                   if (!string.IsNullOrEmpty(usage))
+                   {
+                       if (criteria.Length > 0)
+                       {
+                           criteria.Append(" AND ");
+                       }
+                       criteria.AppendFormat("WITH ARP.INTG.USAGE = '{0}'", usage);
+                   }
+                   CacheSupport.KeyCacheRequirements requirements = new CacheSupport.KeyCacheRequirements()
+                   {
+                      criteria = criteria.ToString(),
+                   };
+                   return requirements;
+               });
+
+            if (keyCache == null || keyCache.Sublist == null || !keyCache.Sublist.Any())
+            {
+                return new Tuple<IEnumerable<StudentPayment>, int>(intgStudentPaymentsEntities, 0);
+            }
+
+            
+            subList = keyCache.Sublist.ToArray();
+            totalCount = keyCache.TotalCount.Value;
+
             var intgStudentPayments = await DataReader.BulkReadRecordAsync<ArPayItemsIntg>("AR.PAY.ITEMS.INTG", subList);
             {
                 if (intgStudentPayments == null)
@@ -207,10 +260,24 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
             }
 
+            var exception = new RepositoryException();
             foreach (var intgStudentPaymentsEntity in intgStudentPayments)
             {
-                intgStudentPaymentsEntities.Add(await BuildStudentPayment(intgStudentPaymentsEntity));
+                try
+                {
+                    intgStudentPaymentsEntities.Add(await BuildStudentPayment(intgStudentPaymentsEntity));
+                }
+                catch (Exception ex)
+                {
+                    exception.AddError(new RepositoryError("Global.Internal.Error", ex.Message));
+                }
             }
+
+            if (exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
+
             return new Tuple<IEnumerable<StudentPayment>, int>(intgStudentPaymentsEntities, totalCount);
         }
 
@@ -307,7 +374,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             if (response.DeleteStudentPaymentErrors.Any())
             {
                 var exception = new RepositoryException("Errors encountered while deleting student-payments: " + id);
-                response.DeleteStudentPaymentErrors.ForEach(e => exception.AddError(new RepositoryError(e.ErrorCode, e.ErrorMsg)));
+                response.DeleteStudentPaymentErrors.ForEach(e => exception.AddError(new RepositoryError(string.IsNullOrEmpty(e.ErrorCode) ? "" : e.ErrorCode, e.ErrorMsg)));
                 throw exception;
             }
             return null;
@@ -318,6 +385,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             var studentPayment = new StudentPayment(intgStudentPayment.ArpIntgPersonId,
                 intgStudentPayment.ArpIntgPaymentType, intgStudentPayment.ArpIntgPaymentDate)
             {
+                RecordKey = intgStudentPayment.Recordkey,
                 AccountsReceivableCode = intgStudentPayment.ArpIntgArCode,
                 AccountsReceivableTypeCode = intgStudentPayment.ArpIntgArType,
                 PaymentAmount = intgStudentPayment.ArpIntgAmt,
@@ -325,63 +393,48 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 Comments = !string.IsNullOrEmpty(intgStudentPayment.ArpIntgComments) ? new List<string> { intgStudentPayment.ArpIntgComments } : null,
                 Guid = intgStudentPayment.RecordGuid,
                 PaymentID = intgStudentPayment.ArpIntgArPaymentsIds.Any() ? intgStudentPayment.ArpIntgArPaymentsIds.ElementAt(0) : string.Empty,
-                Term = intgStudentPayment.ArpIntgTerm
+                Term = intgStudentPayment.ArpIntgTerm,
+                Usage = intgStudentPayment.ArpIntgUsage,
+                OriginatedOn = intgStudentPayment.ArpIntgOriginatedOn,
+                OverrideDescription = intgStudentPayment.ArpIntgOverrideDesc
             };
-
-            CashRcpts cashRcpts = null;
-            ArInvoices arInvoices = null;
-            if (intgStudentPayment.ArpIntgArPaymentsIds.Any() && intgStudentPayment.ArpIntgArPaymentsIds != null)
-            {    //Need the cash Rcpt or the AR invoice record
-                string select = "WITH RCPT.PAYMENTS EQ '" + intgStudentPayment.ArpIntgArPaymentsIds[0] + "'";
-                string[] cashRcptsIds = await DataReader.SelectAsync("CASH.RCPTS", select);
-                //should only be one record
-                if (cashRcptsIds.Any() && cashRcptsIds.Count() > 0)
-                    cashRcpts = await DataReader.ReadRecordAsync<CashRcpts>(cashRcptsIds[0]);
-            }
-            if (cashRcpts == null && intgStudentPayment.ArpIntgArPaymentsIds.Any() && intgStudentPayment.ArpIntgArPaymentsIds != null)
-            {
-                string select = "WITH INVI.PAYMENT.ITEMS = '" + intgStudentPayment.ArpIntgArPaymentsIds[0] + "'";
-                string[] arInvoiceItemsIds = await DataReader.SelectAsync("AR.INVOICE.ITEMS", select);
-                //should only be one record
-                if (arInvoiceItemsIds.Any() && arInvoiceItemsIds.Count() > 0)
-                {
-                    var arInvoiceItems = await DataReader.ReadRecordAsync<ArInvoiceItems>(arInvoiceItemsIds[0]);
-                    arInvoices = await DataReader.ReadRecordAsync<ArInvoices>(arInvoiceItems.InviInvoice);
-                }
-            }
-
             // Derive the distribution method. This is a required field so We'll insure we get a value
             if (!string.IsNullOrWhiteSpace(intgStudentPayment.ArpIntgDistrMthd))
             {
                 //if it stored in the INTG table then get it from there
                 studentPayment.DistributionCode = intgStudentPayment.ArpIntgDistrMthd;
-            } else if (cashRcpts != null && !string.IsNullOrWhiteSpace(cashRcpts.RcptTenderGlDistrCode))
-            {
-                //If we have a cashRcpt that has it then get it form there.
-                studentPayment.DistributionCode = cashRcpts.RcptTenderGlDistrCode;
-            } else
-            {
-                //If all else fails get the default record. as this is a required field for V11.
-                //it could mean this record was created by a previous version which didn't have the ArpIntgDistrMthd
-                //populated yet. This should only be a case for Sponsor types.
-                var ldmDefaults = DataReader.ReadRecord<Base.DataContracts.LdmDefaults>("CORE.PARMS", "LDM.DEFAULTS");
-                studentPayment.DistributionCode = ldmDefaults.LdmdDefaultDistr;
             }
-            
+            else
+            {
+                CashRcpts cashRcpts = null;
+                if (intgStudentPayment.ArpIntgArPaymentsIds.Any() && intgStudentPayment.ArpIntgArPaymentsIds != null)
+                {
+                    var arPaymentsId = intgStudentPayment.ArpIntgArPaymentsIds[0];
+                    var arPaymentsColumns = new string[] { "ARP.CASH.RCPT" };
+                    var arPayments = await DataReader.ReadRecordColumnsAsync("AR.PAYMENTS", arPaymentsId, arPaymentsColumns);
+                    if (arPayments != null && arPayments.Any())
+                    {
+                        var cashRcptsId = arPayments.ElementAt(0).Value;
+                        if (!string.IsNullOrEmpty(cashRcptsId))
+                            cashRcpts = await DataReader.ReadRecordAsync<CashRcpts>(cashRcptsId);
+                    }
+                }
 
-            ////Derive the GL posting. This is a required field so we'll ensure that a value is returned
-            //if (cashRcpts != null)
-            //{
-            //    studentPayment.GlPosted = string.IsNullOrWhiteSpace(cashRcpts.RcptGlReferenceNo) ? false : true;
-            //} else if (arInvoices != null)
-            //{
-            //    studentPayment.GlPosted = string.IsNullOrWhiteSpace(arInvoices.InvGlReferenceNos[0]) ? false : true;
-            //} else
-            //{
-            //    //this should never happen as this process has to create either a cash receipt or a AR invoice record
-            //    // Just incase we don't find either record then we'll always return a false.
-            //    studentPayment.GlPosted = false;
-            //}
+                // Derive the distribution method. This is a required field so We'll insure we get a value
+                if (cashRcpts != null && !string.IsNullOrWhiteSpace(cashRcpts.RcptTenderGlDistrCode))
+                {
+                    //If we have a cashRcpt that has it then get it form there.
+                    studentPayment.DistributionCode = cashRcpts.RcptTenderGlDistrCode;
+                }
+                else
+                {
+                    //If all else fails get the default record. as this is a required field for V11.
+                    //it could mean this record was created by a previous version which didn't have the ArpIntgDistrMthd
+                    //populated yet. This should only be a case for Sponsor types.
+                    var ldmDefaults = DataReader.ReadRecord<Base.DataContracts.LdmDefaults>("CORE.PARMS", "LDM.DEFAULTS");
+                    studentPayment.DistributionCode = ldmDefaults.LdmdDefaultDistr;
+                }
+            }
 
             return studentPayment;
         }
@@ -401,20 +454,21 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
             }
             var request = new PostStudentPaymentsRequest()
-                {
-                    ArpIntgAmt = studentPayment.PaymentAmount,
-                    ArpIntgAmtCurrency = studentPayment.PaymentCurrency,
-                    ArpIntgArCode = studentPayment.AccountsReceivableCode,
-                    ArpIntgArType = studentPayment.AccountsReceivableTypeCode,
-                    ArpIntgPaymentType = studentPayment.PaymentType,
-                    ArpIntgComments = comments.ToString(),
-                    ArpIntgPaymentDate = studentPayment.PaymentDate,
-                    ArpIntgGuid = studentPayment.Guid,
-                    ArpIntgPersonId = studentPayment.PersonId,
-                    ArpIntgTerm = studentPayment.Term,
-                    //ArpGlPosted = studentPayment.GlPosted.HasValue == true ? studentPayment.GlPosted.Value:false,
-                    ArpIntgDistrMthd = studentPayment.DistributionCode
-                };
+            {
+                ArpIntgAmt = studentPayment.PaymentAmount,
+                ArpIntgAmtCurrency = studentPayment.PaymentCurrency,
+                ArpIntgArCode = studentPayment.AccountsReceivableCode,
+                ArpIntgArType = studentPayment.AccountsReceivableTypeCode,
+                ArpIntgPaymentType = studentPayment.PaymentType,
+                ArpIntgComments = comments.ToString(),
+                ArpIntgPaymentDate = studentPayment.PaymentDate,
+                ArpIntgGuid = studentPayment.Guid,
+                ArpIntgPersonId = studentPayment.PersonId,
+                ArpIntgTerm = studentPayment.Term,
+                ElevateFlag = studentPayment.ChargeFromElevate,
+                //ArpGlPosted = studentPayment.GlPosted.HasValue == true ? studentPayment.GlPosted.Value:false,
+                ArpIntgDistrMthd = studentPayment.DistributionCode
+            };
 
             ////Guid reqdness HEDM-2628, since transaction doesn't support 00000000-0000-0000-0000-000000000000, we have to assign empty string
             if (request.ArpIntgGuid.Equals(Guid.Empty.ToString(), StringComparison.OrdinalIgnoreCase))
@@ -438,7 +492,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 var exception = new RepositoryException(errorMessage);
                 foreach (var errMsg in updateResponse.StudentPaymentErrors)
                 {
-                    exception.AddError(new RepositoryError(errMsg.ErrorCodes, errMsg.ErrorMessages));
+                    exception.AddError(new RepositoryError(string.IsNullOrEmpty(errMsg.ErrorCodes) ? "" : errMsg.ErrorCodes, errMsg.ErrorMessages));
                     errorMessage += string.Join(Environment.NewLine, errMsg.ErrorMessages);
                 }
                 logger.Error(errorMessage.ToString());
@@ -475,14 +529,16 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 ArpIntgPersonId = studentPayment.PersonId,
                 ArpIntgTerm = studentPayment.Term,
                 ElevateFlag = studentPayment.ChargeFromElevate,
-                //ArpGlPosted = studentPayment.GlPosted.HasValue == true ? studentPayment.GlPosted.Value : false,
-                ArpIntgDistrMthd = studentPayment.DistributionCode
+                ArpIntgDistrMthd = studentPayment.DistributionCode,
+                ArpIntgUsage = studentPayment.Usage,
+                ArpIntgOriginatedOn = studentPayment.OriginatedOn,
+                ArpIntgOverrideDesc = studentPayment.OverrideDescription
             };
 
             //Since Sponsor types require a AR code and that has been removed from the payload we need to grab
             //a default value to pass to the subroutine.
             var ldmDefaults = DataReader.ReadRecord<Base.DataContracts.LdmDefaults>("CORE.PARMS", "LDM.DEFAULTS");
-            request.ArpIntgArCode = ldmDefaults.LdmdSponsorArCode;
+            request.ArpIntgArCode = ldmDefaults != null ? ldmDefaults.LdmdSponsorArCode : string.Empty;
 
             ////Guid reqdness HEDM-2628, since transaction doesn't support 00000000-0000-0000-0000-000000000000, we have to assign empty string
             if (request.ArpIntgGuid.Equals(Guid.Empty.ToString(), StringComparison.OrdinalIgnoreCase))
@@ -506,7 +562,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 var exception = new RepositoryException(errorMessage);
                 foreach (var errMsg in updateResponse.StudentPaymentErrors)
                 {
-                    exception.AddError(new RepositoryError(errMsg.ErrorCodes, errMsg.ErrorMessages));
+                    exception.AddError(new RepositoryError(string.IsNullOrEmpty(errMsg.ErrorCodes) ? "" : errMsg.ErrorCodes, errMsg.ErrorMessages));
                     errorMessage += string.Join(Environment.NewLine, errMsg.ErrorMessages);
                 }
                 logger.Error(errorMessage.ToString());

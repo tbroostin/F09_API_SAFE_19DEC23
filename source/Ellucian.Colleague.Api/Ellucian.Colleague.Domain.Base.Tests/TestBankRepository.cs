@@ -76,7 +76,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests
 
         }
 
-        public async Task<Dictionary<string, Bank>> GetAllBanksAsync(bool updateCache = false)
+        public async Task<Dictionary<string, Bank>> GetAllBanksAsync()
         {
             return await BankTransferInformation();
         }

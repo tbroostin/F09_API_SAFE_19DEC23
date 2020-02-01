@@ -53,12 +53,12 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// Gets institution employers
         /// </summary>
         /// <returns>Collection of InstitutionEmployers DTO objects</returns>
-        public async Task<IEnumerable<Dtos.InstitutionEmployers>> GetInstitutionEmployersAsync()
+        public async Task<IEnumerable<Dtos.InstitutionEmployers>> GetInstitutionEmployersAsync(bool bypassCache = false)
         {
             try
             {
                 var institutionEmployerCollection = new List<Ellucian.Colleague.Dtos.InstitutionEmployers>();
-                var institutionEmployerEntities = await _institutionEmployersRepository.GetInstitutionEmployersAsync();
+                var institutionEmployerEntities = await _institutionEmployersRepository.GetInstitutionEmployersAsync(bypassCache);
                 if (institutionEmployerEntities != null && institutionEmployerEntities.Count() > 0)
                 {                    
                     foreach (var institutionEmployer in institutionEmployerEntities)

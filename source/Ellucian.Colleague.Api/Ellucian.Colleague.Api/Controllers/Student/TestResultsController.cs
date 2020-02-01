@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -54,6 +54,19 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="studentId">Student ID to retrieve test scores for</param>
         /// <param name="type">Type of test to select (admissions, placement, other).  If no type is provided all tests will be returned. </param>
         /// <returns>The <see cref="TestResult">Test Results</see> for the given student, limited to type requested.</returns>
+        /// <accessComments>
+        /// 1. User must be requesting their own data.
+        /// 2. An Advisor with any of the following codes is accessing the student's data if the student is not assigned advisee.
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// 3. An Advisor with any of the following codes is accessing the student's data if the student is assigned advisee.
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// </accessComments>
         [Obsolete("Obsolete as of Api version 1.15, use version 2")]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.Student.TestResult>> GetAsync(string studentId, string type = null)
         {
@@ -77,6 +90,19 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="studentId">Student ID to retrieve test scores for</param>
         /// <param name="type">Type of test to select (admissions, placement, other).  If no type is provided all tests will be returned. </param>
         /// <returns>The <see cref="TestResult2">Test Results</see> for the given student, limited to type requested.</returns>
+        /// <accessComments>
+        /// 1. User must be requesting their own data.
+        /// 2. An Advisor with any of the following codes is accessing the student's data if the student is not assigned advisee.
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// 3. An Advisor with any of the following codes is accessing the student's data if the student is assigned advisee.
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// </accessComments>
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.Student.TestResult2>> Get2Async(string studentId, string type = null)
         {
             try
@@ -98,6 +124,9 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="criteria">DTO Object containing a list of student Ids and Type.</param>
         /// <returns>TestResults DTO Objects</returns>
+        /// <accessComments>
+        /// API endpoint is secured with VIEW.STUDENT.INFORMATION permission.
+        /// </accessComments>
         [Obsolete("Obsolete as of Api version 1.15, use version 2")]
         [HttpPost]   
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.Student.TestResult>> QueryTestResultsAsync([FromBody] TestResultsQueryCriteria criteria)
@@ -124,6 +153,9 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="criteria">DTO Object containing a list of student Ids and Type.</param>
         /// <returns>TestResults DTO Objects</returns>
+        /// <accessComments>
+        /// User with VIEW.STUDENT.INFORMATION permission can retrieve test results for the students. 
+        /// </accessComments>
         [HttpPost]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.Student.TestResult2>> QueryTestResults2Async([FromBody] TestResultsQueryCriteria criteria)
         {

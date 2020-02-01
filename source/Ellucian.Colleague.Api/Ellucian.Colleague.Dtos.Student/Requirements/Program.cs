@@ -36,7 +36,14 @@ namespace Ellucian.Colleague.Dtos.Student.Requirements
         /// Anticiapted Completion Date of the Program
         /// </summary>
         public DateTime? AnticipatedCompletionDate { get; set; }
-
+        /// <summary>
+        /// Start Date of Student Program
+        /// </summary>
+        public DateTime? ProgramStartDate { get; set; }
+        /// <summary>
+        /// End Date of Student Program (when inactive or graduated).
+        /// </summary>
+        public DateTime? ProgramEndDate { get; set; }
         /// <summary>
         /// List of Majors included in this program
         /// </summary>

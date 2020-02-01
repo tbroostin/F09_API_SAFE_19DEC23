@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -63,7 +63,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     {
                         throw new PermissionsException("Insufficient access to 1098 data.");
                     }
-                    break;                
+                    break;
                 case Dtos.Base.TaxForms.FormT2202A:
                     taxFormDomainId = TaxForms.FormT2202A;
                     if (!(HasPermission(StudentPermissionCodes.ViewT2202A) && CurrentUser.IsPerson(personId)) && !HasPermission(StudentPermissionCodes.ViewStudentT2202A))
@@ -109,7 +109,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 if (taxFormConfiguration == null)
                     throw new ApplicationException("taxFormConfiguration cannot be null.");
             }
-           
+
             var adapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.TaxFormStatement2, Dtos.Base.TaxFormStatement2>();
 
             var statementDtos = new List<Dtos.Base.TaxFormStatement2>();
@@ -127,11 +127,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                             {
                                 // Get the availability record for the 1098T for the statement tax year (if one exists)
                                 TaxFormAvailability availability1098T = null;
-                                if(taxFormConfigurationFor1098T != null && taxFormConfigurationFor1098T.Availabilities != null)
+                                if (taxFormConfigurationFor1098T != null && taxFormConfigurationFor1098T.Availabilities != null)
                                 {
                                     availability1098T = taxFormConfigurationFor1098T.Availabilities.FirstOrDefault(x => x.TaxYear == entity.TaxYear);
                                 }
-                                
+
                                 // Mark the statement as Not Available and remove the PDF record ID,
                                 // if the following conditions are true:
                                 //   1) The availablility entry is not present
@@ -146,11 +146,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                             {
                                 // Get the availability record for the 1098E for the statement tax year (if one exists)
                                 TaxFormAvailability availability1098E = null;
-                                if(taxFormConfigurationFor1098E != null && taxFormConfigurationFor1098E.Availabilities != null)
+                                if (taxFormConfigurationFor1098E != null && taxFormConfigurationFor1098E.Availabilities != null)
                                 {
                                     availability1098E = taxFormConfigurationFor1098E.Availabilities.FirstOrDefault(x => x.TaxYear == entity.TaxYear);
                                 }
-                                
+
                                 // Mark the statement as Not Available and remove the PDF record ID,
                                 // if the following conditions are true:
                                 //   1) The availablility entry is not present
@@ -175,6 +175,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                                 statementDto.Notation = Dtos.Base.TaxFormNotations2.NotAvailable;
                                 statementDto.PdfRecordId = string.Empty;
                             }
+
+                            // Remove the PdfRecordId if the statement is marked as cancelled.
+                            if (statementDto.Notation == Dtos.Base.TaxFormNotations2.Cancelled)
+                            {
+                                statementDto.PdfRecordId = string.Empty;
+                            }
+
                             break;
                     }
 

@@ -1,4 +1,4 @@
-﻿/* Copyright 2017-2018 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2017-2019 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Coordination.Base.Reports;
 using Ellucian.Colleague.Coordination.HumanResources.Adapters;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
@@ -239,7 +239,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         private PayStatementReportDataContext createReportDataContext(PayStatementSourceData source)
         {
             return new PayStatementReportDataContext(source,
-                new PayrollRegisterEntry(source.Id, source.EmployeeId, source.PeriodEndDate.AddMonths(-1).AddDays(1), source.PeriodEndDate, "BW", 1, source.PaycheckReferenceId, source.StatementReferenceId),
+                new PayrollRegisterEntry(source.Id, source.EmployeeId, source.PeriodEndDate.AddMonths(-1).AddDays(1), source.PeriodEndDate, "BW", 1, source.PaycheckReferenceId, source.StatementReferenceId, false),
                 testPersonBenefitDeductionData.GetPersonBenefitDeductions(source.EmployeeId),
                 testPersonEmploymentStatusData.GetPersonEmploymentStatuses(new string[1] { source.EmployeeId }));
         }

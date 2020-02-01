@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -15,6 +15,7 @@ using Ellucian.Web.Dependency;
 using slf4net;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Entities;
+using Ellucian.Colleague.Data.ColleagueFinance.Utilities;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 {
@@ -25,7 +26,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
     public class RequisitionRepository : BaseColleagueRepository, IRequisitionRepository
     {
         private Ellucian.Data.Colleague.DataContracts.IntlParams _internationalParameters;
-        
+
         /// <summary>
         /// The constructor to instantiate a requisition repository object
         /// </summary>
@@ -35,7 +36,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         public RequisitionRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger)
             : base(cacheProvider, transactionFactory, logger)
         {
-            
+
         }
 
         /// <summary>
@@ -214,6 +215,15 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             requisitionDomainEntity.Comments = requisition.ReqPrintedComments;
             requisitionDomainEntity.InternalComments = requisition.ReqComments;
             requisitionDomainEntity.ShipToCode = requisition.ReqShipTo;
+            if (string.IsNullOrEmpty(requisition.ReqShipTo))
+            {
+                var requisitionDefaults = await DataReader.ReadRecordAsync<PurDefaults>("CF.PARMS", "PUR.DEFAULTS");
+                if (requisitionDefaults != null)
+                {
+                    requisitionDomainEntity.ShipToCode = requisitionDefaults.PurShipToCode;
+                }
+            }
+            requisitionDomainEntity.CommodityCode = requisition.ReqDefaultCommodity;
 
             // Add any associated purchase orders to the requisition domain entity
             if ((requisition.ReqPoNo != null) && (requisition.ReqPoNo.Count > 0))
@@ -302,17 +312,24 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     }
                     else if (glAccessLevel == GlAccessLevel.Possible_Access)
                     {
-                        // Put together a list of unique GL accounts for all the items
-                        foreach (var lineItem in lineItemRecords)
+                        if (CanUserByPassGlAccessCheck(personId, requisition, requisitionDomainEntity))
                         {
-                            if ((lineItem.ItemReqEntityAssociation != null) && (lineItem.ItemReqEntityAssociation.Count > 0))
+                            hasGlAccess = true;
+                        }
+                        else
+                        {
+                            // Put together a list of unique GL accounts for all the items
+                            foreach (var lineItem in lineItemRecords)
                             {
-                                foreach (var glDist in lineItem.ItemReqEntityAssociation)
+                                if ((lineItem.ItemReqEntityAssociation != null) && (lineItem.ItemReqEntityAssociation.Count > 0))
                                 {
-                                    if (expenseAccounts.Contains(glDist.ItmReqGlNoAssocMember))
+                                    foreach (var glDist in lineItem.ItemReqEntityAssociation)
                                     {
-                                        hasGlAccess = true;
-                                        glAccountsAllowed.Add(glDist.ItmReqGlNoAssocMember);
+                                        if (expenseAccounts.Contains(glDist.ItmReqGlNoAssocMember))
+                                        {
+                                            hasGlAccess = true;
+                                            glAccountsAllowed.Add(glDist.ItmReqGlNoAssocMember);
+                                        }
                                     }
                                 }
                             }
@@ -364,8 +381,38 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         lineItemDomainEntity.TaxForm = lineItem.ItmTaxForm;
                         lineItemDomainEntity.TaxFormCode = lineItem.ItmTaxFormCode;
                         lineItemDomainEntity.TaxFormLocation = lineItem.ItmTaxFormLoc;
-                        lineItemDomainEntity.Comments = lineItem.ItmComments;
+                        var comments = string.Empty;
+                        if (!string.IsNullOrEmpty(lineItem.ItmComments))
+                        {
+                            comments = CommentsUtility.ConvertCommentsToParagraphs(lineItem.ItmComments);
+                        }
+                        lineItemDomainEntity.Comments = comments;
                         lineItemDomainEntity.VendorPart = lineItem.ItmVendorPart;
+                        lineItemDomainEntity.CommodityCode = lineItem.ItmCommodityCode;
+                        lineItemDomainEntity.FixedAssetsFlag = lineItem.ItmFixedAssetsFlag;
+                        lineItemDomainEntity.TradeDiscountAmount = lineItem.ItmReqTradeDiscAmt;
+                        lineItemDomainEntity.TradeDiscountPercentage = lineItem.ItmReqTradeDiscPct;
+
+                        //Populate the Line Item tax codes for Requisition
+                        if (lineItem.ItmTaxCodes != null)
+                        {
+                            List<LineItemReqTax> itemTaxes = new List<LineItemReqTax>();
+                            foreach (var tax in lineItem.ItmTaxCodes)
+                            {
+                                var lineitemReqTaxCodes = tax;
+                                LineItemReqTax itemTax = new LineItemReqTax(lineitemReqTaxCodes);
+                                itemTaxes.Add(itemTax);
+                            }
+                            //sort the itemtaxes before adding to entities
+                            itemTaxes = itemTaxes.OrderBy(tax => tax.TaxReqTaxCode).ToList();
+                            //add the sorted taxes in the entities
+                            foreach (var itemTax in itemTaxes)
+                            {
+                                lineItemDomainEntity.AddReqTax(itemTax);
+                            }
+                            
+                        }
+
 
                         // Populate the GL distribution domain entities and add them to the line items
                         if ((lineItem.ItemReqEntityAssociation != null) && (lineItem.ItemReqEntityAssociation.Count > 0))
@@ -412,6 +459,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         // Add taxes to the line item
                         if ((lineItem.ReqGlTaxesEntityAssociation != null) && (lineItem.ReqGlTaxesEntityAssociation.Count > 0))
                         {
+                            var sortedGlTaxesAssociation = lineItem.ReqGlTaxesEntityAssociation.OrderBy(x => x.ItmReqLineGlNoAssocMember);
                             foreach (var taxGlDist in lineItem.ReqGlTaxesEntityAssociation)
                             {
                                 decimal itemTaxAmount = 0;
@@ -462,30 +510,39 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                             }
                             else
                             {
-                                // We have the list of GL accounts the user can access in the argument fron the CTX.
-                                // Check if the user has GL access to at least one GL account in the list of GL accounts for this item
-                                // If the user has access to at least one GL account in the line item, add it to the domain
-
-                                if ((lineItemDomainEntity.GlDistributions != null) && (lineItemDomainEntity.GlDistributions.Count > 0))
+                                if (CanUserByPassGlAccessCheck(personId, requisition, requisitionDomainEntity))
                                 {
-                                    foreach (var glDististribution in lineItemDomainEntity.GlDistributions)
+                                    addItem = true;
+                                }
+                                else
+                                {
+                                    // We have the list of GL accounts the user can access in the argument fron the CTX.
+                                    // Check if the user has GL access to at least one GL account in the list of GL accounts for this item
+                                    // If the user has access to at least one GL account in the line item, add it to the domain
+                                    if ((lineItemDomainEntity.GlDistributions != null) && (lineItemDomainEntity.GlDistributions.Count > 0))
                                     {
-                                        if (glAccountsAllowed.Contains(glDististribution.GlAccountNumber))
+                                        foreach (var glDististribution in lineItemDomainEntity.GlDistributions)
                                         {
-                                            addItem = true;
-                                        }
-                                        else
-                                        {
-                                            glDististribution.Masked = true;
+                                            if (glAccountsAllowed.Contains(glDististribution.GlAccountNumber))
+                                            {
+                                                addItem = true;
+                                            }
+                                            else
+                                            {
+                                                glDististribution.Masked = true;
+                                            }
                                         }
                                     }
                                 }
+
+
                             }
                             if (addItem)
                             {
                                 requisitionDomainEntity.AddLineItem(lineItemDomainEntity);
                             }
                         }
+
                     }
 
                     // If there are project IDs, we need to get the project number,
@@ -541,6 +598,107 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             return requisitionDomainEntity;
         }
 
+
+
+
+        /// <summary>
+        /// Get a collection of requisition summary domain entity objects
+        /// </summary>
+        /// <param name="id">Person ID</param>        
+        /// <returns>collection of requisition summary domain entity objects</returns>
+        public async Task<IEnumerable<RequisitionSummary>> GetRequisitionsSummaryByPersonIdAsync(string personId)
+        {
+            List<string> filteredRequisitions = new List<string>();
+
+            if (string.IsNullOrEmpty(personId))
+            {
+                throw new ArgumentNullException("personId");
+            }
+
+            var cfWebDefaults = await DataReader.ReadRecordAsync<CfwebDefaults>("CF.PARMS", "CFWEB.DEFAULTS");
+            filteredRequisitions = await ApplyFilterCriteriaAsync(personId, filteredRequisitions, cfWebDefaults);
+
+            if (!filteredRequisitions.Any())
+                return null;
+            var requisitionData = await DataReader.BulkReadRecordAsync<DataContracts.Requisitions>("REQUISITIONS", filteredRequisitions.ToArray());
+
+            var requisitionList = new List<RequisitionSummary>();
+            if (requisitionData != null && requisitionData.Any())
+            {
+                Dictionary<string, string> hierarchyNameDictionary = await GetPersonHierarchyNamesDictionaryAsync(requisitionData);
+                Dictionary<string, PurchaseOrders> poDictionary = new Dictionary<string, PurchaseOrders>();
+                Dictionary<string, Bpo> bpoDictionary = new Dictionary<string, Bpo>();
+
+                poDictionary = await BuildPurchaseOrderDictionaryAsync(requisitionData);
+                bpoDictionary = await BuildBlanketPODictionaryAsync(requisitionData);
+
+                foreach (var requisition in requisitionData)
+                {
+                    try
+                    {
+                        string initiatorName = string.Empty;
+                        if (!string.IsNullOrEmpty(requisition.ReqDefaultInitiator))
+                            hierarchyNameDictionary.TryGetValue(requisition.ReqDefaultInitiator, out initiatorName);
+
+                        string requestorName = string.Empty;
+                        if (!string.IsNullOrEmpty(requisition.ReqRequestor))
+                            hierarchyNameDictionary.TryGetValue(requisition.ReqRequestor, out requestorName);
+
+                        // If there is no vendor name and there is a vendor id, use the PO hierarchy to get the vendor name.
+                        var requisitionVendorName = requisition.ReqMiscName != null && requisition.ReqMiscName.Any() ? requisition.ReqMiscName.FirstOrDefault() : string.Empty;
+                        if ((string.IsNullOrEmpty(requisitionVendorName)) && (!string.IsNullOrEmpty(requisition.ReqVendor)))
+                        {
+                            hierarchyNameDictionary.TryGetValue(requisition.ReqVendor, out requisitionVendorName);
+                        }
+                        requisitionList.Add(BuildRequisitionSummary(requisition, poDictionary, bpoDictionary, requisitionVendorName, initiatorName, requestorName));
+                    }
+                    catch (Exception ex)
+                    {
+                        throw ex;
+                    }
+                }
+            }
+            return requisitionList.AsEnumerable();
+        }
+
+        private async Task<Dictionary<string, PurchaseOrders>> BuildPurchaseOrderDictionaryAsync(System.Collections.ObjectModel.Collection<Requisitions> requisitionData)
+        {
+            Dictionary<string, PurchaseOrders> poDictionary = new Dictionary<string, PurchaseOrders>();
+            //fetch purchase order no's from all requisitions
+            var reqPoNos = requisitionData.Where(x => x.ReqPoNo != null && x.ReqPoNo.Any()).Select(s => s.ReqPoNo).ToList();
+            if (reqPoNos != null && reqPoNos.Any())
+            {
+                List<string> purchaseOrderIds = reqPoNos.SelectMany(x => x).Distinct().ToList();
+                //fetch purchase order details and build dictionary
+                var purchaseOrders = await DataReader.BulkReadRecordAsync<DataContracts.PurchaseOrders>("PURCHASE.ORDERS", purchaseOrderIds.ToArray());
+
+
+                if (purchaseOrders != null && purchaseOrders.Any())
+                    poDictionary = purchaseOrders.ToDictionary(x => x.Recordkey);
+            }
+
+            return poDictionary;
+        }
+
+        private async Task<Dictionary<string, Bpo>> BuildBlanketPODictionaryAsync(System.Collections.ObjectModel.Collection<Requisitions> requisitionData)
+        {
+            Dictionary<string, Bpo> bpoDictionary = new Dictionary<string, Bpo>();
+            //fetch blanket purchase order no's from all requisitions
+            var reqBpoNos = requisitionData.Where(x => x.ReqBpoNo != null && x.ReqBpoNo.Any()).Select(s => s.ReqBpoNo).ToList();
+            if (reqBpoNos != null && reqBpoNos.Any())
+            {
+                List<string> blanketPurchaseOrderIds = reqBpoNos.SelectMany(x => x).Distinct().ToList();
+                //fetch blanket purchase order details and build dictionary
+                var Bpos = await DataReader.BulkReadRecordAsync<DataContracts.Bpo>("BPO", blanketPurchaseOrderIds.ToArray());
+
+
+                if (Bpos != null && Bpos.Any())
+                    bpoDictionary = Bpos.ToDictionary(x => x.Recordkey);
+            }
+
+            return bpoDictionary;
+        }
+
         /// <summary>
         /// Get a collection of requisition domain entity objects
         /// </summary>
@@ -549,19 +707,13 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <returns>collection of requisition domain entity objects</returns>
         public async Task<Tuple<IEnumerable<Requisition>, int>> GetRequisitionsAsync(int offset, int limit)
         {
-            var requisitionIds = await DataReader.SelectAsync("REQUISITIONS", "WITH REQ.NO NE '' AND WITH REQ.STATUS NE 'U'");
+            var requisitionIds = await DataReader.SelectAsync("REQUISITIONS", "WITH REQ.CURRENT.STATUS NE 'U'");
 
             var totalCount = requisitionIds.Count();
             Array.Sort(requisitionIds);
             var subList = requisitionIds.Skip(offset).Take(limit).ToArray();
 
             var requisitionData = await DataReader.BulkReadRecordAsync<DataContracts.Requisitions>("REQUISITIONS", subList);
-
-            if (requisitionData == null)
-            {
-                throw new KeyNotFoundException("No records selected from REQUISITIONS file in Colleague.");
-            }
-
             var requisitions = await BuildRequisitionsAsync(requisitionData);
 
             return new Tuple<IEnumerable<Requisition>, int>(requisitions, totalCount);
@@ -584,16 +736,19 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             if (id == null)
             {
-                throw new KeyNotFoundException(string.Format("Requisition record {0} does not exist.", guid));
+                throw new KeyNotFoundException("No requisitions was found for guid " + guid);
             }
-            var requisition = await DataReader.ReadRecordAsync<Requisitions>(id);
-
-            if (requisition == null)
+            var requisitionData = await DataReader.ReadRecordAsync<Requisitions>(id);
+            if (requisitionData == null)
             {
-                throw new KeyNotFoundException(string.Format("Requisition record {0} does not exist.", guid));
+                throw new KeyNotFoundException("No requisitions was found for guid " + guid);
             }
-
-            return await BuildRequisitionAsync(requisition);
+            // exclude those PO that are inprogress
+            if (requisitionData != null && requisitionData.ReqStatus != null && requisitionData.ReqStatus.Any() && requisitionData.ReqStatus.FirstOrDefault().Equals("U", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new KeyNotFoundException("The guid specified " + guid + " for record key " + requisitionData.Recordkey + " from file REQUISITIONS is not valid for requisitions.");
+            }
+            return await BuildRequisitionAsync(requisitionData);
         }
 
         /// <summary>
@@ -673,11 +828,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
                 if (updateResponse.ReqErrors.Any())
                 {
-                    var errorMessage = string.Format("Error(s) occurred updating requisition '{0}':", requisitionEntity.Guid);
-                    var exception = new RepositoryException(errorMessage);
+                    var exception = new RepositoryException();
                     updateResponse.ReqErrors.ForEach(e => exception.AddError(new RepositoryError("requisition", e.ErrorMessages)));
-                    
-                    logger.Error(errorMessage);
                     throw exception;
                 }
 
@@ -714,15 +866,101 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             if (createResponse.ReqErrors.Any())
             {
-                var errorMessage = string.Format("Error(s) occurred creating requisition '{0}':", requisitionEntity.Guid);
-                var exception = new RepositoryException(errorMessage);
+                var exception = new RepositoryException();
                 createResponse.ReqErrors.ForEach(e => exception.AddError(new RepositoryError("requisition", e.ErrorMessages)));
-                logger.Error(errorMessage);
                 throw exception;
             }
 
             // get the newly created requisition from the database
             return await GetRequisitionsByGuidAsync(createResponse.Guid);
+        }
+
+        /// <summary>
+        /// Create / Update a requisition.
+        /// </summary>       
+        /// <param name="requisitionCreateUpdateRequest">The requisition create update request domain entity.</param>        
+        /// <returns>The requisition create update response entity</returns>
+        public async Task<RequisitionCreateUpdateResponse> CreateRequisitionsAsync(RequisitionCreateUpdateRequest createUpdateRequest)
+        {
+            if (createUpdateRequest == null)
+                throw new ArgumentNullException("requisitionEntity", "Must provide a createUpdateRequest to create.");
+
+            RequisitionCreateUpdateResponse response = new RequisitionCreateUpdateResponse();
+            var createRequest = BuildRequisitionCreateRequest(createUpdateRequest);
+
+            try
+            {
+                // write the  data
+                var createResponse = await transactionInvoker.ExecuteAsync<TxCreateWebRequisitionRequest, TxCreateWebRequisitionResponse>(createRequest);
+                if (string.IsNullOrEmpty(createResponse.AError) && (createResponse.AlErrorMessages == null || !createResponse.AlErrorMessages.Any()))
+                {
+                    response.ErrorOccured = false;
+                    response.ErrorMessages = new List<string>();
+                    response.RequisitionId = createResponse.ARequisitionId;
+                    response.RequisitionNumber = createResponse.ARequisitionNo;
+                    response.RequisitionDate = createResponse.AReqDate.Value;
+                }
+                else
+                {
+                    response.ErrorOccured = true;
+                    response.ErrorMessages = createResponse.AlErrorMessages;
+                    response.ErrorMessages.RemoveAll(message => string.IsNullOrEmpty(message));
+                }
+                response.WarningOccured = (!string.IsNullOrEmpty(createResponse.AWarning) && createResponse.AWarning == "1") ? true : false;
+                response.WarningMessages = (createResponse.AlWarningMessages != null || createResponse.AlWarningMessages.Any()) ? createResponse.AlWarningMessages : new List<string>();
+
+            }
+            catch (Exception e)
+            {
+                logger.Error(e.Message);
+                throw e;
+            }
+
+            return response;
+        }
+
+        /// <summary>
+        /// Update a requisition.
+        /// </summary>       
+        /// <param name="requisitionCreateUpdateRequest">The requisition create update request domain entity.</param>        
+        /// <returns>The requisition create update response entity</returns>
+        public async Task<RequisitionCreateUpdateResponse> UpdateRequisitionsAsync(RequisitionCreateUpdateRequest createUpdateRequest, Requisition originalRequisition)
+        {
+            if (createUpdateRequest == null)
+                throw new ArgumentNullException("createUpdateRequest", "Must provide a createUpdateRequest entity to update.");
+
+            RequisitionCreateUpdateResponse response = new RequisitionCreateUpdateResponse();
+            var updateRequest = BuildRequisitionUpdateRequest(createUpdateRequest, originalRequisition);
+
+            try
+            {
+                // write the  data
+                var updateResponse = await transactionInvoker.ExecuteAsync<TxUpdateWebRequisitionRequest, TxUpdateWebRequisitionResponse>(updateRequest);
+                if (string.IsNullOrEmpty(updateResponse.AError) && (updateResponse.AlErrorMessages == null || !updateResponse.AlErrorMessages.Any()))
+                {
+                    response.ErrorOccured = false;
+                    response.ErrorMessages = new List<string>();
+                    response.RequisitionId = updateResponse.ARequisitionId;
+                    response.RequisitionNumber = createUpdateRequest.Requisition.Number;
+                    response.RequisitionDate = createUpdateRequest.Requisition.Date;
+                }
+                else
+                {
+                    response.ErrorOccured = true;
+                    response.ErrorMessages = updateResponse.AlErrorMessages;
+                    response.ErrorMessages.RemoveAll(message => string.IsNullOrEmpty(message));
+                }
+                response.WarningOccured = (!string.IsNullOrEmpty(updateResponse.AWarning) && updateResponse.AWarning == "1") ? true : false;
+                response.WarningMessages = (updateResponse.AlWarningMessages != null || updateResponse.AlWarningMessages.Any()) ? updateResponse.AlWarningMessages : new List<string>();
+
+            }
+            catch (Exception e)
+            {
+                logger.Error(e.Message);
+                throw e;
+            }
+
+            return response;
         }
 
         /// <summary>
@@ -732,7 +970,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <returns>requisition domain entity</returns>
         private async Task<Requisition> BuildRequisitionAsync(Requisitions requisitionDataContract)
         {
-            
+
             if (requisitionDataContract == null)
             {
                 throw new ArgumentNullException("requisition");
@@ -798,21 +1036,22 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             requisitionDomainEntity.Comments = requisitionDataContract.ReqPrintedComments;
             requisitionDomainEntity.InternalComments = requisitionDataContract.ReqComments;
             requisitionDomainEntity.ShipToCode = requisitionDataContract.ReqShipTo;
-            /*if (string.IsNullOrEmpty(requisitionDataContract.ReqShipTo))
+            if (string.IsNullOrEmpty(requisitionDataContract.ReqShipTo))
             {
                 var requisitionDefaults = await DataReader.ReadRecordAsync<PurDefaults>("CF.PARMS", "PUR.DEFAULTS");
                 if (requisitionDefaults != null)
                 {
                     requisitionDomainEntity.ShipToCode = requisitionDefaults.PurShipToCode;
                 }
-            }*/
+            }
+            requisitionDomainEntity.CommodityCode = requisitionDataContract.ReqDefaultCommodity;
             requisitionDomainEntity.Fob = requisitionDataContract.ReqFob;
             requisitionDomainEntity.VendorTerms = requisitionDataContract.ReqVendorTerms;
 
             requisitionDomainEntity.VendorAlternativeAddressId = requisitionDataContract.ReqIntgAddressId;
             requisitionDomainEntity.AltShippingAddress = requisitionDataContract.ReqAltShipAddress;
             requisitionDomainEntity.AltShippingCity = requisitionDataContract.ReqAltShipCity;
-            
+
             requisitionDomainEntity.AltShippingName = requisitionDataContract.ReqAltShipName;
             requisitionDomainEntity.AltShippingPhone = requisitionDataContract.ReqAltShipPhone;
             requisitionDomainEntity.AltShippingPhoneExt = requisitionDataContract.ReqAltShipExt;
@@ -843,7 +1082,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     }
                 }
             }
-            
+
 
             // Add any associated purchase orders to the requisition domain entity
             if ((requisitionDataContract.ReqPoNo != null) && (requisitionDataContract.ReqPoNo.Count > 0))
@@ -1025,6 +1264,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         lineItemDomainEntity.CommodityCode = lineItem.ItmCommodityCode;
                         lineItemDomainEntity.TradeDiscountAmount = lineItem.ItmReqTradeDiscAmt;
                         lineItemDomainEntity.TradeDiscountPercentage = lineItem.ItmReqTradeDiscPct;
+                        lineItemDomainEntity.FixedAssetsFlag = lineItem.ItmFixedAssetsFlag;
 
                         // Populate the GL distribution domain entities and add them to the line items
                         if ((lineItem.ItemReqEntityAssociation != null) && (lineItem.ItemReqEntityAssociation.Count > 0))
@@ -1044,7 +1284,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                                 {
                                     gldistGlAmount = glDist.ItmReqGlForeignAmtAssocMember.HasValue ? glDist.ItmReqGlForeignAmtAssocMember.Value : 0;
                                 }
-                               
+
                                 decimal gldistGlPercent = glDist.ItmReqGlPctAssocMember.HasValue ? glDist.ItmReqGlPctAssocMember.Value : 0;
                                 LineItemGlDistribution glDistribution = new LineItemGlDistribution(glDist.ItmReqGlNoAssocMember, gldistGlQty, gldistGlAmount, gldistGlPercent);
 
@@ -1118,8 +1358,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                                 }
                             }
                         }
-                          requisitionDomainEntity.AddLineItem(lineItemDomainEntity);
-                                               
+                        requisitionDomainEntity.AddLineItem(lineItemDomainEntity);
+
                     }
 
                     // If there are project IDs, we need to get the project number,
@@ -1182,11 +1422,13 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         {
             var requisitionCollection = new List<Requisition>();
 
-            foreach (var requisition in requisitionDataContracts)
+            if (requisitionDataContracts != null && requisitionDataContracts.Any())
             {
-                requisitionCollection.Add(await BuildRequisitionAsync(requisition));
+                foreach (var requisition in requisitionDataContracts)
+                {
+                    requisitionCollection.Add(await BuildRequisitionAsync(requisition));
+                }
             }
-
             return requisitionCollection.AsEnumerable();
         }
 
@@ -1260,7 +1502,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 request.TransactionDate = requisitionEntity.MaintenanceDate;
 
             if (!string.IsNullOrEmpty(requisitionEntity.Number))
-                request.RequisitionNumber = requisitionEntity.Number;         
+                request.RequisitionNumber = requisitionEntity.Number;
 
             if (requisitionEntity.DeliveryDate != null && requisitionEntity.DeliveryDate.HasValue)
                 request.DeliveredBy = requisitionEntity.DeliveryDate;
@@ -1278,12 +1520,12 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 request.ShipToId = requisitionEntity.ShipToCode;
 
             request.Status = requisitionEntity.Status.ToString();
-                 
+
             if (!string.IsNullOrEmpty(requisitionEntity.Fob))
                 request.FreeOnBoardId = requisitionEntity.Fob;
 
-           if (!string.IsNullOrEmpty(requisitionEntity.AltShippingName))
-              request.OverrideDescription = requisitionEntity.AltShippingName;
+            if (!string.IsNullOrEmpty(requisitionEntity.AltShippingName))
+                request.OverrideDescription = requisitionEntity.AltShippingName;
 
             if (requisitionEntity.AltShippingAddress != null && requisitionEntity.AltShippingAddress.Any())
                 request.OverrideAddressLines = requisitionEntity.AltShippingAddress;
@@ -1297,7 +1539,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             if (!string.IsNullOrEmpty(requisitionEntity.AltShippingCity))
                 request.OverrideCity = requisitionEntity.AltShippingCity;
 
-           if (!string.IsNullOrEmpty(requisitionEntity.AltShippingZip))
+            if (!string.IsNullOrEmpty(requisitionEntity.AltShippingZip))
                 request.OverrideZip = requisitionEntity.AltShippingZip;
 
             if (!string.IsNullOrEmpty(requisitionEntity.AltShippingPhoneExt))
@@ -1310,7 +1552,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 request.VendorId = requisitionEntity.VendorId;
 
             if (!string.IsNullOrEmpty(requisitionEntity.VendorAlternativeAddressId))
-                request.AlternativeVendorAddressId= requisitionEntity.VendorAlternativeAddressId;
+                request.AlternativeVendorAddressId = requisitionEntity.VendorAlternativeAddressId;
 
 
             if (requisitionEntity.MiscName != null && requisitionEntity.MiscName.Any())
@@ -1319,8 +1561,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             if (requisitionEntity.MiscAddress != null && requisitionEntity.MiscAddress.Any())
                 request.ManualAddressLines = requisitionEntity.MiscAddress;
 
-           
-           if (!string.IsNullOrEmpty(requisitionEntity.MiscCountry))
+
+            if (!string.IsNullOrEmpty(requisitionEntity.MiscCountry))
                 request.ManualCountry = requisitionEntity.MiscCountry;
 
             if (!string.IsNullOrEmpty(requisitionEntity.MiscState))
@@ -1350,6 +1592,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             if (!string.IsNullOrEmpty(requisitionEntity.Comments))
                 request.PrintedComment = requisitionEntity.Comments;
 
+            request.BypassApprovalFlag = requisitionEntity.bypassApprovals;
+            request.PopulateTaxForm = requisitionEntity.bypassTaxForms;
+
             if (requisitionEntity.LineItems != null && requisitionEntity.LineItems.Any())
             {
                 var lineItems = new List<Transactions.ReqLineItems>();
@@ -1363,7 +1608,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         LinePartNumber = apLineItem.VendorPart,
                         LineDesiredDate = apLineItem.DesiredDate,
                         LineQuantity = apLineItem.Quantity.ToString(),
-                        LineUnitOfMeasureId  = apLineItem.UnitOfIssue,
+                        LineUnitOfMeasureId = apLineItem.UnitOfIssue,
                         LineUnitPrice = apLineItem.Price,
                         LineTradeDiscountAmt = apLineItem.TradeDiscountAmount,
                         LineTradeDiscountPct = apLineItem.TradeDiscountPercentage.ToString(),
@@ -1375,8 +1620,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         lineItem.LineItemId = apLineItem.Id;
                     }
                     else { lineItem.LineItemId = "NEW"; }
-                    
-                   
+
+
                     if (apLineItem.LineItemTaxes != null && apLineItem.LineItemTaxes.Any())
                     {
                         var taxCodes = new List<string>();
@@ -1418,5 +1663,499 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             return request;
         }
 
+        private async Task<Dictionary<string, string>> GetPersonHierarchyNamesDictionaryAsync(System.Collections.ObjectModel.Collection<Requisitions> requisitionData)
+        {
+            #region Get Hierarchy Names
+
+            // Use a colleague transaction to get all names at once. 
+            List<string> personIds = new List<string>();
+            List<string> hierarchies = new List<string>();
+            List<string> personNames = new List<string>();
+            List<string> ioPersonIds = new List<string>();
+            List<string> ioHierarchies = new List<string>();
+
+            Dictionary<string, string> hierarchyNameDictionary = new Dictionary<string, string>();
+
+            GetHierarchyNamesForIdsResponse response = null;
+
+            //Get all unique requestor & initiator personIds
+            personIds = requisitionData.Where(x => !string.IsNullOrEmpty(x.ReqRequestor)).Select(s => s.ReqRequestor)
+                .Union(requisitionData.Where(x => !string.IsNullOrEmpty(x.ReqDefaultInitiator)).Select(s => s.ReqDefaultInitiator)).Distinct().ToList();
+
+            if ((personIds != null) && (personIds.Count > 0))
+            {
+                hierarchies = Enumerable.Repeat("PREFERRED", personIds.Count).ToList();
+                ioPersonIds.AddRange(personIds);
+                ioHierarchies.AddRange(hierarchies);
+            }
+
+            //Get all unique ReqVendor Ids where ReqMiscName is missing
+            var vendorIds = requisitionData.Where(x => !string.IsNullOrEmpty(x.ReqVendor) && !x.ReqMiscName.Any()).Select(s => s.ReqVendor).Distinct().ToList();
+            if ((vendorIds != null) && (vendorIds.Count > 0))
+            {
+                hierarchies = new List<string>();
+                hierarchies = Enumerable.Repeat("PO", vendorIds.Count).ToList();
+                ioPersonIds.AddRange(vendorIds);
+                ioHierarchies.AddRange(hierarchies);
+            }
+
+            // Call a colleague transaction to get the person names based on their hierarchies.
+            GetHierarchyNamesForIdsRequest request = new GetHierarchyNamesForIdsRequest()
+            {
+                IoPersonIds = ioPersonIds,
+                IoHierarchies = ioHierarchies
+            };
+
+            response = await transactionInvoker.ExecuteAsync<GetHierarchyNamesForIdsRequest, GetHierarchyNamesForIdsResponse>(request);
+
+            // The transaction returns the hierarchy names. If the name is multivalued, 
+            // the transaction only returns the first value of the name.
+            if (response != null)
+            {
+                for (int i = 0; i < response.IoPersonIds.Count; i++)
+                {
+                    string key = response.IoPersonIds[i];
+                    string value = response.OutPersonNames[i];
+                    if (!hierarchyNameDictionary.ContainsKey(key))
+                    {
+                        hierarchyNameDictionary.Add(key, value);
+                    }
+                }
+
+            }
+            #endregion
+            return hierarchyNameDictionary;
+        }
+
+        private RequisitionSummary BuildRequisitionSummary(Requisitions requisitionDataContract, Dictionary<string, PurchaseOrders> poDictionary, Dictionary<string, Bpo> bpoDictionary, string vendorName, string initiatorName, string requestorName)
+        {
+            if (requisitionDataContract == null)
+            {
+                throw new ArgumentNullException("requisitionDataContract");
+            }
+
+            if (string.IsNullOrEmpty(requisitionDataContract.Recordkey))
+            {
+                throw new ArgumentNullException("id");
+            }
+
+            if (!requisitionDataContract.ReqDate.HasValue)
+            {
+                throw new ApplicationException("Missing date for requisition id: " + requisitionDataContract.Recordkey);
+            }
+
+            if (requisitionDataContract.ReqStatusDate == null || !requisitionDataContract.ReqStatusDate.First().HasValue)
+            {
+                throw new ApplicationException("Missing status date for requisition id: " + requisitionDataContract.Recordkey);
+            }
+
+            var requisitionStatusDate = requisitionDataContract.ReqStatusDate.First().Value;
+            var requisitionStatus = ConvertRequisitionStatus(requisitionDataContract.ReqStatus, requisitionDataContract.Recordkey);
+
+            var requisitionSummaryEntity = new RequisitionSummary(requisitionDataContract.Recordkey, requisitionDataContract.ReqNo, vendorName, requisitionDataContract.ReqDate.Value.Date)
+            {
+                Status = requisitionStatus,
+                VendorId = requisitionDataContract.ReqVendor,
+                InitiatorName = initiatorName,
+                RequestorName = requestorName,
+                Amount = requisitionDataContract.ReqTotalAmt.HasValue ? requisitionDataContract.ReqTotalAmt.Value : 0
+            };
+
+            // Add any associated purchase orders to the requisition summary domain entity
+            if ((requisitionDataContract.ReqPoNo != null) && (requisitionDataContract.ReqPoNo.Count > 0))
+            {
+                foreach (var purchaseOrderId in requisitionDataContract.ReqPoNo)
+                {
+                    if (!string.IsNullOrEmpty(purchaseOrderId))
+                    {
+                        PurchaseOrders purchaseOrder = null;
+                        if (poDictionary.TryGetValue(purchaseOrderId, out purchaseOrder))
+                        {
+                            var purchaseOrderSummaryEntity = new PurchaseOrderSummary(purchaseOrder.Recordkey, purchaseOrder.PoNo, vendorName, purchaseOrder.PoDate.Value.Date);
+                            requisitionSummaryEntity.AddPurchaseOrder(purchaseOrderSummaryEntity);
+                        }
+                    }
+                }
+            }
+
+            // Add any associated blanket purchase orders to the requisition domain entity.
+            // Even though ReqBpoNo is a list of string, only one bpo can be associated to a requisition
+            if ((requisitionDataContract.ReqBpoNo != null) && (requisitionDataContract.ReqBpoNo.Count > 0))
+            {
+                if (requisitionDataContract.ReqBpoNo.Count > 1)
+                {
+                    throw new ApplicationException("Only one blanket purchase order can be associated with the requisition: " + requisitionDataContract.Recordkey);
+                }
+                else
+                {
+                    var blanketPONo = requisitionDataContract.ReqBpoNo.FirstOrDefault();
+                    if (!string.IsNullOrEmpty(blanketPONo))
+                    {
+                        Bpo bpo = null;
+                        if (bpoDictionary.TryGetValue(blanketPONo, out bpo))
+                        {
+                            requisitionSummaryEntity.BlanketPurchaseOrderId = blanketPONo;
+                            requisitionSummaryEntity.BlanketPurchaseOrderNumber = bpo.BpoNo;
+                        }
+                    }
+
+                }
+            }
+
+            return requisitionSummaryEntity;
+        }
+
+        private async Task<List<string>> ApplyFilterCriteriaAsync(string personId, List<string> filteredRequisitions, CfwebDefaults cfWebDefaults)
+        {
+            string reqStartEndTransDateQuery = string.Empty;
+
+            if (cfWebDefaults != null)
+            {
+                //Filter by CfwebReqStartDate, CfwebReqEndDate values configured in CFWP form
+                //when CfwebReqStartDate & CfwebReqEndDate has a value
+                if (cfWebDefaults.CfwebReqStartDate.HasValue && cfWebDefaults.CfwebReqEndDate.HasValue)
+                {
+                    var startDate = await GetUnidataFormatDateAsync(cfWebDefaults.CfwebReqStartDate.Value);
+                    var endDate = await GetUnidataFormatDateAsync(cfWebDefaults.CfwebReqEndDate.Value);
+                    reqStartEndTransDateQuery = string.Format("WITH (REQ.MAINT.GL.TRAN.DATE GE '{0}' AND REQ.MAINT.GL.TRAN.DATE LE '{1}') OR WITH (REQ.DATE GE '{0}' AND REQ.DATE LE '{1}') BY.DSND REQ.NO", startDate, endDate);
+                }
+                //when CfwebReqStartDate has value but CfwebReqEndDate is null
+                else if (cfWebDefaults.CfwebReqStartDate.HasValue && !cfWebDefaults.CfwebReqEndDate.HasValue)
+                {
+                    var startDate = await GetUnidataFormatDateAsync(cfWebDefaults.CfwebReqStartDate.Value);
+                    reqStartEndTransDateQuery = string.Format("REQ.MAINT.GL.TRAN.DATE GE '{0}' OR WITH REQ.DATE GE '{0}' BY.DSND REQ.NO", startDate);
+                }
+                //when CfwebReqStartDate is null but CfwebReqEndDate has value
+                else if (!cfWebDefaults.CfwebReqStartDate.HasValue && cfWebDefaults.CfwebReqEndDate.HasValue)
+                {
+                    var endDate = await GetUnidataFormatDateAsync(cfWebDefaults.CfwebReqEndDate.Value);
+                    reqStartEndTransDateQuery = string.Format("WITH ((REQ.MAINT.GL.TRAN.DATE NE '') AND (REQ.MAINT.GL.TRAN.DATE LE '{0}')) OR WITH ((REQ.DATE NE '') AND (REQ.DATE LE '{0}')) BY.DSND REQ.NO", endDate);
+                }
+
+                if (!string.IsNullOrEmpty(reqStartEndTransDateQuery))
+                {
+                    filteredRequisitions = await ExecuteQueryStatementAsync(filteredRequisitions, reqStartEndTransDateQuery);
+                }
+
+                //query by CfwebReqStatuses if statuses are configured in CFWP form.
+                if (cfWebDefaults.CfwebReqStatuses != null && cfWebDefaults.CfwebReqStatuses.Any() && cfWebDefaults.CfwebReqStatuses != null)
+                {
+                    var reqStatusesCriteria = string.Join(" ", cfWebDefaults.CfwebReqStatuses.Select(x => string.Format("'{0}'", x.ToUpper())));
+                    reqStatusesCriteria = "WITH REQ.CURRENT.STATUS EQ " + reqStatusesCriteria;
+                    filteredRequisitions = await ExecuteQueryStatementAsync(filteredRequisitions, reqStatusesCriteria);
+                }
+            }
+
+            //where personId is Initiator OR requestor
+            string reqPersonIdQuery = string.Format("WITH REQ.DEFAULT.INITIATOR EQ '{0}' OR WITH REQ.REQUESTOR EQ '{0}' BY.DSND REQ.NO", personId);
+            filteredRequisitions = await ExecuteQueryStatementAsync(filteredRequisitions, reqPersonIdQuery);
+            return filteredRequisitions;
+        }
+
+        private async Task<List<string>> ExecuteQueryStatementAsync(List<string> filteredRequisitions, string queryCriteria)
+        {
+            string[] filteredByQueryCriteria = null;
+            if (string.IsNullOrEmpty(queryCriteria))
+                return null;
+            if (filteredRequisitions != null && filteredRequisitions.Any())
+            {
+                filteredByQueryCriteria = await DataReader.SelectAsync("REQUISITIONS", filteredRequisitions.ToArray(), queryCriteria);
+            }
+            else
+            {
+                filteredByQueryCriteria = await DataReader.SelectAsync("REQUISITIONS", queryCriteria);
+            }
+            return filteredByQueryCriteria.ToList();
+        }
+
+
+        private TxCreateWebRequisitionRequest BuildRequisitionCreateRequest(RequisitionCreateUpdateRequest createUpdateRequest)
+        {
+            var request = new TxCreateWebRequisitionRequest();
+            var personId = createUpdateRequest.PersonId;
+            var initiatorInitials = createUpdateRequest.InitiatorInitials;
+            var confirmationEmailAddresses = createUpdateRequest.ConfEmailAddresses;
+            var requisitionEntity = createUpdateRequest.Requisition;
+            bool isPersonVendor = createUpdateRequest.IsPersonVendor;
+            if (!string.IsNullOrEmpty(personId))
+            {
+                request.APersonId = personId;
+            }
+            if (requisitionEntity.Date != null)
+            {
+                request.AReqDate = DateTime.SpecifyKind(requisitionEntity.Date, DateTimeKind.Unspecified);
+            }
+            if (requisitionEntity.DesiredDate != null)
+            {
+                request.AReqDesiredDate = requisitionEntity.DesiredDate;
+            }
+            if (!string.IsNullOrEmpty(initiatorInitials))
+            {
+                request.AReqInitiatorInitials = initiatorInitials;
+            }
+            if (confirmationEmailAddresses != null && confirmationEmailAddresses.Any())
+            {
+                request.AlConfEmailAddresses = confirmationEmailAddresses;
+            }
+            if (!string.IsNullOrEmpty(requisitionEntity.ShipToCode))
+            {
+                request.AReqShipToAddress = requisitionEntity.ShipToCode;
+            }
+
+            if (!string.IsNullOrEmpty(requisitionEntity.ApType))
+            {
+                request.AApType = requisitionEntity.ApType;
+            }
+
+            request.AlPrintedComments = new List<string>() { requisitionEntity.Comments };
+            request.AlInternalComments = new List<string>() { requisitionEntity.InternalComments };
+
+            if (requisitionEntity.Approvers != null && requisitionEntity.Approvers.Any())
+            {
+                request.AlNextApprovers = new List<string>();
+                foreach (var nextApprover in requisitionEntity.Approvers)
+                {
+                    request.AlNextApprovers.Add(nextApprover.ApproverId);
+                }
+            }
+
+            // TaxCodes - In create requisition, take taxcodes from first lineitem and assign to Tax code parameter 
+            if (requisitionEntity.LineItems != null && requisitionEntity.LineItems.Any())
+            {
+                //Check if first lineitem has taxcode, as in create request it is auto applied to all lineitems
+                var firstLineItem = requisitionEntity.LineItems.FirstOrDefault();
+                if (firstLineItem != null && firstLineItem.ReqLineItemTaxCodes != null && firstLineItem.ReqLineItemTaxCodes.Any())
+                {
+                    var taxCodeList = new List<string>();
+                    foreach (var item in firstLineItem.ReqLineItemTaxCodes)
+                    {
+                        taxCodeList.Add(!string.IsNullOrEmpty(item.TaxReqTaxCode) ? item.TaxReqTaxCode : string.Empty);
+                    }
+                    request.AlTaxCodes = taxCodeList;
+                }
+            }
+            if (requisitionEntity.LineItems != null && requisitionEntity.LineItems.Any())
+            {
+                var lineItems = new List<Transactions.AlReqLineItems>();
+
+                foreach (var apLineItem in requisitionEntity.LineItems)
+                {
+                    var lineItem = new Transactions.AlReqLineItems()
+                    {
+                        AlLineItemDescs = apLineItem.Description,
+                        AlLineItemQtys = apLineItem.Quantity.ToString(),
+                        AlItemPrices = apLineItem.Price.ToString(),
+                        AlUnitOfIssues = apLineItem.UnitOfIssue,
+                        AlVendorItems = apLineItem.VendorPart
+                    };
+                    var glAccts = new List<string>();
+                    var glDistributionAmounts = new List<decimal?>();
+                    var projectNos = new List<string>();
+                    foreach (var item in apLineItem.GlDistributions)
+                    {
+                        glAccts.Add(!string.IsNullOrEmpty(item.GlAccountNumber) ? item.GlAccountNumber : string.Empty);
+                        glDistributionAmounts.Add(item.Amount);
+                        projectNos.Add(!string.IsNullOrEmpty(item.ProjectNumber) ? item.ProjectNumber : string.Empty);
+                    }
+                    lineItem.AlGlAccts = string.Join("|", glAccts);
+                    lineItem.AlGlAcctAmts = string.Join("|", glDistributionAmounts);
+                    lineItem.AlProjects = string.Join("|", projectNos);
+                    lineItems.Add(lineItem);
+                }
+                request.AlReqLineItems = lineItems;
+            }
+
+            if (!string.IsNullOrEmpty(requisitionEntity.VendorId))
+            {
+                request.AVendorId = requisitionEntity.VendorId;
+            }
+            else if (!string.IsNullOrEmpty(requisitionEntity.VendorName))
+            {
+                request.AVendorId = requisitionEntity.VendorName;
+            }
+            request.AVendorIsPersonFlag = isPersonVendor;
+            request.AReqDesiredDate = requisitionEntity.DesiredDate.HasValue ? requisitionEntity.DesiredDate.Value : (DateTime?)null;
+
+            return request;
+        }
+
+        private TxUpdateWebRequisitionRequest BuildRequisitionUpdateRequest(RequisitionCreateUpdateRequest createUpdateRequest, Requisition originalRequisition)
+        {
+            var request = new TxUpdateWebRequisitionRequest();
+            var personId = createUpdateRequest.PersonId;
+            var confirmationEmailAddresses = createUpdateRequest.ConfEmailAddresses;
+            var requisitionEntity = createUpdateRequest.Requisition;
+            bool isPersonVendor = createUpdateRequest.IsPersonVendor;
+
+            if (!string.IsNullOrEmpty(createUpdateRequest.PersonId))
+            {
+                request.APersonId = personId;
+            }
+
+            if (confirmationEmailAddresses != null && confirmationEmailAddresses.Any())
+            {
+                request.AlConfEmailAddresses = confirmationEmailAddresses;
+            }
+
+            if (!string.IsNullOrEmpty(requisitionEntity.Id) && !requisitionEntity.Id.Equals("NEW"))
+            {
+                request.ARequisitionId = requisitionEntity.Id;
+            }
+            if (!string.IsNullOrEmpty(requisitionEntity.ShipToCode))
+            {
+                request.AShipTo = requisitionEntity.ShipToCode;
+            }
+
+            if (!string.IsNullOrEmpty(requisitionEntity.ApType))
+            {
+                request.AApType = requisitionEntity.ApType;
+            }
+
+            request.AlPrintedComments = new List<string>() { requisitionEntity.Comments };
+            request.AlInternalComments = new List<string>() { requisitionEntity.InternalComments };
+
+            var lineItems = new List<Transactions.AlUpdatedReqLineItems>();
+
+            if (requisitionEntity.LineItems != null && requisitionEntity.LineItems.Any())
+            {
+                foreach (var apLineItem in requisitionEntity.LineItems)
+                {
+                    var lineItem = new Transactions.AlUpdatedReqLineItems();
+
+                    bool addLineItemToModify = true;
+                    if (string.IsNullOrEmpty(apLineItem.Id) || apLineItem.Id.Equals("NEW"))
+                    {
+                        //New line item added
+                        lineItem.AlLineItemIds = "";
+                    }
+                    else
+                    {
+                        lineItem.AlLineItemIds = apLineItem.Id;
+                        var originalLineItem = originalRequisition.LineItems.FirstOrDefault(x => x.Id == apLineItem.Id);
+                        if (originalLineItem != null)
+                        {
+                            //if user doesnt have access to any of the gl account/s, send only lineItemId to CTX.
+                            if (originalLineItem.GlDistributions != null && originalLineItem.GlDistributions.Any())
+                            {
+                                addLineItemToModify = originalLineItem.GlDistributions.Any(x => x.Masked) ? false : true;
+                            }
+                            //SS - cannot maintain more than 3 tax codes, so if line item has more than 3  tax codes send the original taxcodes back to CTX.
+                            if (originalLineItem.ReqLineItemTaxCodes != null && (originalLineItem.ReqLineItemTaxCodes.Any() && originalLineItem.ReqLineItemTaxCodes.Count > 3))
+                            {
+                                addLineItemToModify = false;
+                            }
+                        }
+                    }
+
+                    if (addLineItemToModify)
+                    {
+                        lineItem.AlLineItemDescs = apLineItem.Description;
+                        lineItem.AlLineItemQtys = apLineItem.Quantity.ToString();
+                        lineItem.AlItemPrices = apLineItem.Price.ToString();
+                        lineItem.AlItemUnitIssues = apLineItem.UnitOfIssue;
+                        lineItem.AlItemVendorParts = apLineItem.VendorPart;
+                        lineItem.AlItemComments = apLineItem.Comments;
+                        lineItem.AlItemTrdDscPcts = apLineItem.TradeDiscountPercentage.HasValue ? apLineItem.TradeDiscountPercentage.Value.ToString() : null;
+                        lineItem.AlItemTrdDscAmts = apLineItem.TradeDiscountAmount.HasValue ? apLineItem.TradeDiscountAmount.Value.ToString() : null;
+                        lineItem.AlItemFxaFlags = apLineItem.FixedAssetsFlag;
+
+                        lineItem.AlItemCommodityCode = !string.IsNullOrEmpty(apLineItem.CommodityCode) ? apLineItem.CommodityCode : "";
+
+                        if (apLineItem.DesiredDate.HasValue)
+                        {
+                            lineItem.AlItemDesiredDate = DateTime.SpecifyKind(apLineItem.DesiredDate.Value.Date, DateTimeKind.Unspecified);
+                        }
+                        else
+                        {
+                            lineItem.AlItemDesiredDate = null;
+                        }
+                        lineItem.AlItemTaxForm = !string.IsNullOrEmpty(apLineItem.TaxForm) ? apLineItem.TaxForm : "";
+                        lineItem.AlItemTaxFormCode = !string.IsNullOrEmpty(apLineItem.TaxFormCode) ? apLineItem.TaxFormCode : "";
+                        lineItem.AlItemTaxFormLoc = !string.IsNullOrEmpty(apLineItem.TaxFormLocation) ? apLineItem.TaxFormLocation : ""; ;
+
+                        var taxCodes = new List<string>();
+                        foreach (var taxCode in apLineItem.ReqLineItemTaxCodes)
+                        {
+                            if (!string.IsNullOrEmpty(taxCode.TaxReqTaxCode))
+                                taxCodes.Add(taxCode.TaxReqTaxCode);
+                        }
+                        lineItem.AlItemTaxCodes = string.Join("|", taxCodes);
+
+                        var glAccts = new List<string>();
+                        var glDistributionAmounts = new List<decimal?>();
+                        var projectNos = new List<string>();
+                        foreach (var item in apLineItem.GlDistributions)
+                        {
+                            glAccts.Add(!string.IsNullOrEmpty(item.GlAccountNumber) ? item.GlAccountNumber : string.Empty);
+                            glDistributionAmounts.Add(item.Amount);
+                            projectNos.Add(!string.IsNullOrEmpty(item.ProjectNumber) ? item.ProjectNumber : string.Empty);
+                        }
+                        lineItem.AlItemGlAccts = string.Join("|", glAccts);
+                        lineItem.AlItemGlAcctAmts = string.Join("|", glDistributionAmounts);
+                        lineItem.AlItemProjectNos = string.Join("|", projectNos);
+                        lineItems.Add(lineItem);
+                    }
+                }
+            }
+            if (originalRequisition.LineItems != null && originalRequisition.LineItems.Any())
+            {
+                var deletedLineItems = originalRequisition.LineItems.Where(x => !requisitionEntity.LineItems.Any(u => !string.IsNullOrEmpty(u.Id) && u.Id == x.Id));
+                if (deletedLineItems != null && deletedLineItems.Any())
+                {
+                    foreach (var deletedItem in deletedLineItems)
+                    {
+                        var deletedLineItem = new Transactions.AlUpdatedReqLineItems();
+                        //when user has no access to any of the gl account, nullify the values sent for update.
+                        //CTX will validate the GL access against lineItem Id and skips the update.
+                        deletedLineItem.AlLineItemIds = deletedItem.Id;
+                        deletedLineItem.AlLineItemDescs = string.Empty;
+                        deletedLineItem.AlLineItemQtys = string.Empty;
+                        deletedLineItem.AlItemPrices = string.Empty;
+                        deletedLineItem.AlItemUnitIssues = string.Empty;
+                        deletedLineItem.AlItemVendorParts = string.Empty;
+                        deletedLineItem.AlItemGlAccts = string.Empty;
+                        deletedLineItem.AlItemGlAcctAmts = null;
+                        deletedLineItem.AlItemProjectNos = string.Empty;
+                        lineItems.Add(deletedLineItem);
+                    }
+
+                }
+            }
+            request.AlUpdatedReqLineItems = lineItems;
+
+
+            if (!string.IsNullOrEmpty(requisitionEntity.VendorId))
+            {
+                request.AVendor = requisitionEntity.VendorId;
+            }
+            else if (!string.IsNullOrEmpty(requisitionEntity.VendorName))
+            {
+                request.AVendor = requisitionEntity.VendorName;
+            }
+            request.AVendorIsPersonFlag = isPersonVendor;
+
+            if (requisitionEntity.Approvers != null && requisitionEntity.Approvers.Any())
+            {
+                request.AlNextApprovers = new List<string>();
+                foreach (var nextApprover in requisitionEntity.Approvers)
+                {
+                    request.AlNextApprovers.Add(nextApprover.ApproverId);
+                }
+            }
+
+            return request;
+        }
+
+        /// <summary>
+        /// Determine whether gl access check can be by passed, based on two conditions Requisition status should be "In-Progress" & person id should be either requestor or initiator
+        /// </summary>
+        /// <param name="personId">PersonId</param>
+        /// <param name="requisition">Requisitions data contract</param>
+        /// <param name="requisitionDomainEntity">Requisition domain entity</param>
+        /// <returns></returns>
+        private static bool CanUserByPassGlAccessCheck(string personId, Requisitions requisition, Requisition requisitionDomainEntity)
+        {
+            return requisitionDomainEntity.Status == RequisitionStatus.InProgress && (requisition.ReqRequestor == personId || requisition.ReqDefaultInitiator == personId);
+        }
     }
 }

@@ -1,4 +1,4 @@
-﻿// Copyright 2014 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -48,6 +48,9 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="studentId">The student's ID</param>
         /// <returns>List of student's current Preferred Sections and applicable messages.</returns>
+        /// <accessComments>
+        /// Student must be requesting their own sections
+        /// </accessComments>
         public async Task<Dtos.Student.PreferredSectionsResponse> GetPreferredSectionsAsync(string studentId)
         {
             if (string.IsNullOrEmpty(studentId))
@@ -77,6 +80,9 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="studentId">The student's ID</param>
         /// <param name="preferredSections">List of preferred sections to create and/or update.</param>
         /// <returns>List of student's current Preferred Sections and applicable messages.</returns>
+        /// <accessComments>
+        /// Student must be updating their own section
+        /// </accessComments>
         [HttpPost]
         public async Task<IEnumerable<Dtos.Student.PreferredSectionMessage>> UpdatePreferredSectionsAsync(string studentId, [FromBody] IEnumerable<Dtos.Student.PreferredSection> preferredSections)
         {
@@ -113,6 +119,9 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="studentId">The student's ID</param>
         /// <param name="sectionId">The Section Id to delete.</param>
         /// <returns></returns>
+        /// <accessComments>
+        /// Student must be deleting their own section
+        /// </accessComments>
         [HttpDelete]
         public async Task<IEnumerable<Dtos.Student.PreferredSectionMessage>> DeletePreferredSectionsAsync(string studentId, string sectionId)
         {

@@ -1,5 +1,4 @@
-//Copyright 2017 Ellucian Company L.P. and its affiliates.
-
+//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
 using System.Web.Http;
@@ -18,7 +17,6 @@ using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Http.Filters;
-using Ellucian.Web.Http;
 using System.Linq;
 
 namespace Ellucian.Colleague.Api.Controllers.HumanResources
@@ -49,11 +47,14 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// Return all employmentDepartments
         /// </summary>
         /// <returns>List of EmploymentDepartments <see cref="Dtos.EmploymentDepartments"/> objects representing matching employmentDepartments</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpGet, EedmResponseFilter]
-        [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
-        public async Task<IEnumerable<Ellucian.Colleague.Dtos.EmploymentDepartments>> GetEmploymentDepartmentsAsync()
+        [ValidateQueryStringFilter()]
+        [QueryStringFilterFilter("criteria", typeof(Dtos.EmploymentDepartments))]
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.EmploymentDepartments>> GetEmploymentDepartmentsAsync(QueryStringFilter criteria)
         {
             var bypassCache = false;
+            string code = string.Empty;
             if (Request.Headers.CacheControl != null)
             {
                 if (Request.Headers.CacheControl.NoCache)
@@ -63,11 +64,18 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             try
             {
+                var criteriaObj = GetFilterObject<Dtos.EmploymentDepartments>(_logger, "criteria");
+                if (CheckForEmptyFilterParameters())
+                    return new List<Dtos.EmploymentDepartments>(new List<Dtos.EmploymentDepartments>());
                 var items = await _employmentDepartmentsService.GetEmploymentDepartmentsAsync(bypassCache);
-
+                if (criteriaObj != null && !string.IsNullOrEmpty(criteriaObj.Code) && items != null && items.Any())
+                {
+                    code = criteriaObj.Code;
+                    items = items.Where(c => c.Code == code);                    
+                }
                 AddEthosContextProperties(await _employmentDepartmentsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
-                              await _employmentDepartmentsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
-                              items.Select(a => a.Id).ToList()));
+                                  await _employmentDepartmentsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                                  items.Select(a => a.Id).ToList()));
 
                 return items;
             }
@@ -108,6 +116,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <param name="guid">GUID to desired employmentDepartments</param>
         /// <returns>A employmentDepartments object <see cref="Dtos.EmploymentDepartments"/> in EEDM format</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpGet, EedmResponseFilter]
         public async Task<Dtos.EmploymentDepartments> GetEmploymentDepartmentsByGuidAsync(string guid)
         {
@@ -175,6 +184,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <param name="employmentDepartments">DTO of the new employmentDepartments</param>
         /// <returns>A employmentDepartments object <see cref="Dtos.EmploymentDepartments"/> in EEDM format</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpPost]
         public async Task<Dtos.EmploymentDepartments> PostEmploymentDepartmentsAsync([FromBody] Dtos.EmploymentDepartments employmentDepartments)
         {
@@ -189,6 +199,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <param name="guid">GUID of the employmentDepartments to update</param>
         /// <param name="employmentDepartments">DTO of the updated employmentDepartments</param>
         /// <returns>A employmentDepartments object <see cref="Dtos.EmploymentDepartments"/> in EEDM format</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpPut]
         public async Task<Dtos.EmploymentDepartments> PutEmploymentDepartmentsAsync([FromUri] string guid, [FromBody] Dtos.EmploymentDepartments employmentDepartments)
         {
@@ -201,6 +212,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// Delete (DELETE) a employmentDepartments
         /// </summary>
         /// <param name="guid">GUID to desired employmentDepartments</param>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpDelete]
         public async Task DeleteEmploymentDepartmentsAsync(string guid)
         {

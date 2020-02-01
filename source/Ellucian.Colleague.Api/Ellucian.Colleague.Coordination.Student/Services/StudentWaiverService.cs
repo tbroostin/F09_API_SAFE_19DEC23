@@ -64,7 +64,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (!IsSectionFaculty(section))
             {
                 var message = "Current user is not a faculty of requested section " + sectionId + " and therefore cannot access waivers";
-                logger.Info(message);
+                logger.Error(message);
                 throw new PermissionsException(message);
             }
 
@@ -87,7 +87,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             catch (Exception ex)
             {
                 var message = "Exception occurred while trying to read waivers from repository using section id " + sectionId + "Exception message: " + ex.Message;
-                logger.Info(message);
+                logger.Error(message);
                 throw new Exception(message);
             }
 
@@ -176,7 +176,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (string.IsNullOrEmpty(studentWaiverId))
             {
                 var message = "StudentWaiver Id must be provided";
-                logger.Info(message);
+                logger.Error(message);
                 throw new ArgumentNullException(message);
             }
 
@@ -189,13 +189,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             catch (KeyNotFoundException)
             {
-                logger.Info("StudentWaiver not found in repository for given waiver Id " + studentWaiverId);
+                logger.Error("StudentWaiver not found in repository for given waiver Id " + studentWaiverId);
                 throw;
             }
             catch (Exception ex)
             {
                 var message = "Exception occurred while trying to read waiver from repository using student waiver id " + studentWaiverId + " Exception message: " + ex.Message;
-                logger.Info(message);
+                logger.Error(message);
                 throw new Exception(message);
             }
 
@@ -214,7 +214,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (!IsSectionFaculty(section))
             {
                 var message = "Current user is not a faculty of requested section " + studentWaiver.SectionId + " and therefore cannot access student waivers";
-                logger.Info(message);
+                logger.Error(message);
                 throw new PermissionsException(message);
             }
 
@@ -239,7 +239,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 if (section == null)
                 {
                     var message = "Repository returned a null section for Id " + sectionId;
-                    logger.Info(message);
+                    logger.Error(message);
                     throw new KeyNotFoundException(message);
                 }
                 return section;
@@ -247,19 +247,19 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             catch (ArgumentNullException aex)
             {
                 var message = "Section ID must be specified.";
-                logger.Info(message);
+                logger.Error(message);
                 throw aex;
             }
             catch (KeyNotFoundException kex)
             {
                 var message = "sectionId " + sectionId + " not found in repository. Exception message: " + kex.Message;
-                logger.Info(message);
+                logger.Error(message);
                 throw kex;
             }
             catch (Exception ex)
             {
                 var message = "Exception occurred while trying to read section from repository using id " + sectionId + "Exception message: " + ex.ToString();
-                logger.Info(message);
+                logger.Error(message);
                 throw new Exception(ex.Message);
             }
         }
@@ -289,13 +289,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (string.IsNullOrEmpty(studentId))
             {
                 var message = "Student Id must be provided";
-                logger.Info(message);
+                logger.Error(message);
                 throw new ArgumentNullException(message);
             }
             if (!CurrentUser.IsPerson(studentId) && !(await UserIsAdvisorAsync(studentId)))
             {
                 var message = "Either the current user is not the student of requested waivers or current user is not an advisor with appropriate permissions and therefore cannot access it.";
-                logger.Info(message);
+                logger.Error(message);
                 throw new PermissionsException(message);
             }
             List<Dtos.Student.StudentWaiver> waivers = new List<Dtos.Student.StudentWaiver>();
@@ -315,7 +315,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             catch (Exception ex)
             {
                 var message = "Exception occurred while trying to read waivers from repository using student id " + studentId + "Exception message: " + ex.Message;
-                logger.Info(message);
+                logger.Error(message);
                 throw;
             }
         }

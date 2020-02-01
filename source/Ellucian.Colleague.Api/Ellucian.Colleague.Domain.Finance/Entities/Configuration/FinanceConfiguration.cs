@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -36,6 +36,7 @@ namespace Ellucian.Colleague.Domain.Finance.Entities.Configuration
             Periods = new List<FinancialPeriod>();
             StatementMessage = new List<string>();
             Links = new List<StudentFinanceLink>();
+            DisplayPotentialD7Amounts = false;
         }
 
         /// <summary>
@@ -253,6 +254,11 @@ namespace Ellucian.Colleague.Domain.Finance.Entities.Configuration
             }
             return true;
         }
+
+        /// <summary>
+        /// Flag indicating whether or not to display potential D7 award amounts
+        /// </summary>
+        public bool DisplayPotentialD7Amounts { get; set; }
     }
 }
  

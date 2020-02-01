@@ -1,12 +1,15 @@
-﻿using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
+﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Data.Base.DataContracts;
+using Ellucian.Colleague.Data.Base.Tests;
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
+using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Repositories;
-using Ellucian.Colleague.Domain.Student.Tests;
 using Ellucian.Web.Http.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
@@ -14,319 +17,222 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
     [TestClass]
     public class FacultyRepositoryTests : BaseRepositorySetup
     {
-        FacultyRepository repository;
-        Collection<Ellucian.Colleague.Data.Base.DataContracts.Person> personResponseData;
-        Collection<Ellucian.Colleague.Data.Base.DataContracts.Address> personAddressResponseData;
-        IEnumerable<string> personIds;
-        ICollection<Ellucian.Colleague.Domain.Student.Entities.Faculty> facultyEntities;
-        IDictionary<string, Ellucian.Colleague.Domain.Student.Entities.Faculty> allFacultyDict;
-        ApiSettings apiSettingsMock;
+        private FacultyRepository repository;
+        private ApiSettings apiSettingsMock;
 
         [TestInitialize]
-        public async void Initialize()
+        public void Initialize()
         {
             // Initialize Mock framework
             MockInitialize();
 
-            apiSettingsMock = new ApiSettings("null");
+            // Set up data reads
+            FacultyRepository_DataReader_Setup();
 
-            // Mock the call for getting multiple person records
-            facultyEntities = await new TestFacultyRepository().GetAllAsync();
-            allFacultyDict = new Dictionary<string, Ellucian.Colleague.Domain.Student.Entities.Faculty>();
-            foreach (var fac in facultyEntities)
-            {
-                allFacultyDict[fac.Id] = fac; 
-            }
-            personIds = facultyEntities.Select(f => f.Id);
-
-            personResponseData = BuildPersonResponseData(facultyEntities);
-
-            dataReaderMock.Setup(acc => acc.SelectAsync("FACULTY", "")).Returns(Task.FromResult(personResponseData.Select(c => c.Recordkey).ToArray()));
-            dataReaderMock.Setup<Task<Collection<Ellucian.Colleague.Data.Base.DataContracts.Person>>>(acc => acc.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>("PERSON", It.IsAny<string[]>(), true)).Returns(Task.FromResult(personResponseData));
-
-            // Mock the call for getting address records
-            personAddressResponseData = BuildAddressResponseData();
-            dataReaderMock.Setup<Task<Collection<Ellucian.Colleague.Data.Base.DataContracts.Address>>>(acc => acc.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Address>("ADDRESS", It.IsAny<string[]>(), true)).Returns(Task.FromResult(personAddressResponseData));
+            // Initialize API settings
+            apiSettingsMock = new ApiSettings("TEST");
 
             // Build the test repository
             repository = new FacultyRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettingsMock);
         }
 
-        [TestMethod]
-        public async Task SingleFacultyGet_TestProperties()
+        [TestClass]
+        public class FacultyRepository_SearchFacultyIdsAsync_Tests : FacultyRepositoryTests
         {
-            foreach (var fac in facultyEntities)
+            [TestInitialize]
+            public void FacultyRepository_SearchFacultyIdsAsync_Initialize()
             {
-                var result = await repository.GetAsync(fac.Id);
-                Assert.AreEqual(fac.Id, result.Id);
-                Assert.AreEqual(fac.LastName, result.LastName);
-                Assert.AreEqual(fac.FirstName, result.FirstName);
-                Assert.AreEqual(fac.ProfessionalName, result.ProfessionalName);
+                base.Initialize();
+                dataReaderMock.Setup(r => r.SelectAsync("FACULTY", "WITH FAC.ADVISE.FLAG NE 'Y'")).Returns(Task.FromResult(TestFacultyRepository.GetAllFacultyRecords().Take(10).Select(fac => fac.Recordkey).ToArray()));
             }
 
-        }
-
-        [TestMethod]
-        public async Task MultiGet()
-        {
-            var result = await repository.GetAsync(personIds);
-            Assert.AreEqual(10, result.Count());
-        }
-
-        [TestMethod]
-        public async Task TestFormattedNames()
-        {
-            var facultyResults = await repository.GetAsync(personIds);
-            foreach (var fac in facultyResults)
+            [TestMethod]
+            public async Task FacultyRepository_SearchFacultyIdsAsync_Defaults()
             {
-                Ellucian.Colleague.Domain.Student.Entities.Faculty faculty = facultyEntities.Where(f => f.Id == fac.Id).FirstOrDefault();
-                Assert.AreEqual(faculty.ProfessionalName, fac.ProfessionalName);
+                var facultyIds = await repository.SearchFacultyIdsAsync();
+                CollectionAssert.AreEqual(TestFacultyRepository.GetAllFacultyRecords().Select(fac => fac.Recordkey).ToList(), facultyIds.ToList());
             }
-        }
 
-        [TestMethod]
-        public async Task Property_FacultyEmails()
-        {
-            var facultyResults = await repository.GetAsync(personIds);
-            foreach (var fac in facultyResults)
+            [TestMethod]
+            public async Task FacultyRepository_SearchFacultyIdsAsync_faculty_who_are_advisors()
             {
-                IEnumerable<string> repofacultyEmails = fac.GetFacultyEmailAddresses("BUS");
-                Ellucian.Colleague.Domain.Student.Entities.Faculty faculty = facultyEntities.Where(f => f.Id == fac.Id).FirstOrDefault();
-                IEnumerable<string> testFacultyEmails = faculty.GetFacultyEmailAddresses("BUS");
-                Assert.AreEqual(testFacultyEmails.Count(), repofacultyEmails.Count());
+                var facultyIds = await repository.SearchFacultyIdsAsync(false, true);
+                CollectionAssert.AreEqual(TestFacultyRepository.GetAllFacultyRecords().Select(fac => fac.Recordkey).ToList(), facultyIds.ToList());
             }
-            Ellucian.Colleague.Domain.Student.Entities.Faculty faculty48 = facultyResults.Where(f => f.Id == "0000048").FirstOrDefault();
-            IEnumerable<string> faculty48Emails = faculty48.GetFacultyEmailAddresses("BUS");
-            Assert.AreEqual("aDenardi@ccc.com", faculty48Emails.ElementAt(0));
-        }
 
-        [TestMethod]
-        public async Task Property_FacultyPhones()
-        {
-            var facultyResults = await repository.GetAsync(personIds);
-            Ellucian.Colleague.Domain.Student.Entities.Faculty faculty45 = facultyResults.Where(f => f.Id == "0000045").FirstOrDefault();
-            IEnumerable<Ellucian.Colleague.Domain.Base.Entities.Phone> faculty45Phones = faculty45.GetFacultyPhones("CELL");
-            Assert.AreEqual("703-666-7777", faculty45Phones.ElementAt(0).Number);
-        }
-
-        [TestMethod]
-        public async Task MultiGetNotFoundReturnsEmptyList()
-        {
-            List<string> idsNotFound = new List<string>() { "0987654", "4567890" };
-            Collection<Ellucian.Colleague.Data.Base.DataContracts.Person> noPersonContracts = new Collection<Ellucian.Colleague.Data.Base.DataContracts.Person>();
-            dataReaderMock.Setup<Task<Collection<Ellucian.Colleague.Data.Base.DataContracts.Person>>>(acc => acc.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>(idsNotFound.ToArray(), true)).Returns(Task.FromResult(noPersonContracts));
-            var result = await repository.GetAsync(new List<string>() { "0987654", "4567890" });
-            Assert.AreEqual(0, result.Count());
-        }
-
-        [TestMethod]
-        public async Task GetFacultyByIds()
-        {
-            var result = await repository.GetFacultyByIdsAsync(personIds);
-            Assert.AreEqual(10, result.Count());
-        }
-
-        [TestMethod]
-        public async Task GetFacultyByIds_TestFormattedNames()
-        {
-            var facultyResults = await repository.GetFacultyByIdsAsync(personIds);
-            foreach (var fac in facultyResults)
+            [TestMethod]
+            public async Task FacultyRepository_SearchFacultyIdsAsync_faculty_who_are_not_advisors()
             {
-                Ellucian.Colleague.Domain.Student.Entities.Faculty faculty = facultyEntities.Where(f => f.Id == fac.Id).FirstOrDefault();
-                Assert.AreEqual(faculty.ProfessionalName, fac.ProfessionalName);
+                var facultyIds = await repository.SearchFacultyIdsAsync(true, false);
+                Assert.AreEqual(10, facultyIds.Count());
+            }
+
+            [TestMethod]
+            public async Task FacultyRepository_SearchFacultyIdsAsync_advisors_only_faculty_only()
+            {
+                var facultyIds = await repository.SearchFacultyIdsAsync(true, true);
+                CollectionAssert.AreEqual(TestFacultyRepository.GetAllFacultyRecords().Select(fac => fac.Recordkey).ToList(), facultyIds.ToList());
+            }
+
+            [TestMethod]
+            public async Task FacultyRepository_SearchFacultyIdsAsync_no_exclusions()
+            {
+                var facultyIds = await repository.SearchFacultyIdsAsync(false, false);
+                CollectionAssert.AreEqual(TestFacultyRepository.GetAllFacultyRecords().Select(fac => fac.Recordkey).ToList(), facultyIds.ToList());
             }
         }
 
-        [TestMethod]
-        public async Task GetFacultyByIds_FacultyEmails()
+        [TestClass]
+        public class FacultyRepository_GetAsync_Tests : FacultyRepositoryTests
         {
-            var facultyResults = await repository.GetFacultyByIdsAsync(personIds);
-            foreach (var fac in facultyResults)
+            [ExpectedException(typeof(ArgumentNullException))]
+            [TestMethod]
+            public async Task FacultyRepository_GetAsync_null_ID()
             {
-                IEnumerable<string> repofacultyEmails = fac.GetFacultyEmailAddresses("BUS");
-                Ellucian.Colleague.Domain.Student.Entities.Faculty faculty = facultyEntities.Where(f => f.Id == fac.Id).FirstOrDefault();
-                IEnumerable<string> testFacultyEmails = faculty.GetFacultyEmailAddresses("BUS");
-                Assert.AreEqual(testFacultyEmails.Count(), repofacultyEmails.Count());
+                string id = null;
+                var faculty = await repository.GetAsync(id);
             }
-            Ellucian.Colleague.Domain.Student.Entities.Faculty faculty48 = facultyResults.Where(f => f.Id == "0000048").FirstOrDefault();
-            IEnumerable<string> faculty48Emails = faculty48.GetFacultyEmailAddresses("BUS");
-            Assert.AreEqual("aDenardi@ccc.com", faculty48Emails.ElementAt(0));
-        }
 
-        [TestMethod]
-        public async Task GetFacultyByIds_FacultyPhones()
-        {
-            var facultyResults =await repository.GetFacultyByIdsAsync(personIds);
-            Ellucian.Colleague.Domain.Student.Entities.Faculty faculty45 = facultyResults.Where(f => f.Id == "0000045").FirstOrDefault();
-            IEnumerable<Ellucian.Colleague.Domain.Base.Entities.Phone> faculty45Phones = faculty45.GetFacultyPhones("CELL");
-            Assert.AreEqual("703-666-7777", faculty45Phones.ElementAt(0).Number);
-        }
-
-        [TestMethod]
-        public async Task GetFacultyByIds_GetNotFoundReturnsEmptyList()
-        {
-            List<string> idsNotFound = new List<string>() { "0987654", "4567890" };
-            Collection<Ellucian.Colleague.Data.Base.DataContracts.Person> noPersonContracts = new Collection<Ellucian.Colleague.Data.Base.DataContracts.Person>();
-            dataReaderMock.Setup<Task<Collection<Ellucian.Colleague.Data.Base.DataContracts.Person>>>(acc => acc.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>(idsNotFound.ToArray(), true)).Returns(Task.FromResult(noPersonContracts));
-            var result = await repository.GetFacultyByIdsAsync(new List<string>() { "0987654", "4567890" });
-            Assert.AreEqual(0, result.Count());
-        }
-
-        [TestMethod]
-        public async Task SearchFacultyIdsAsync_AllFacultyTypes()
-        {
-            // In this case both arguments are false so no selection criteria is added and we want all Ids
-
-            // Arrange
-            List<string> facultyOnlyIds = new List<string>() { "faculty1", "faculty2", "faculty3" };
-            List<string> advisorOnlyIds = new List<string>() { "advisor1", "advisor2" };
-            List<string> allIds = new List<string>() { "faculty1", "faculty2", "faculty3", "advisor1", "advisor2" };
-            dataReaderMock.Setup<Task<string[]>>(acc => acc.SelectAsync("FACULTY", "WITH FAC.ADVISE.FLAG NE 'Y'")).Returns(Task.FromResult(facultyOnlyIds.ToArray()));
-            dataReaderMock.Setup<Task<string[]>>(acc => acc.SelectAsync("FACULTY", "WITH FAC.ADVISE.FLAG = 'Y'")).Returns(Task.FromResult(advisorOnlyIds.ToArray()));
-            dataReaderMock.Setup<Task<string[]>>(acc => acc.SelectAsync("FACULTY", "")).Returns(Task.FromResult(allIds.ToArray()));
-
-            // Act
-            var result = await repository.SearchFacultyIdsAsync(false, false);
-
-            // Evaluate
-            Assert.AreEqual(allIds.Count(), result.Count());
-        }
-
-        [TestMethod]
-        public async Task SearchFacultyIdsAsync_FacultyOnly()
-        {
-            // In this case we only want faculty WITH FAC.ADVISE.FLAG NE 'Y'. Second argument is false, first argument is true.
-            // Arrange
-            List<string> facultyOnlyIds = new List<string>() { "faculty1", "faculty2", "faculty3" };
-            List<string> advisorOnlyIds = new List<string>() { "advisor1", "advisor2" };
-            List<string> allIds = new List<string>() { "faculty1", "faculty2", "faculty3", "advisor1", "advisor2" };
-            dataReaderMock.Setup<Task<string[]>>(acc => acc.SelectAsync("FACULTY", "WITH FAC.ADVISE.FLAG NE 'Y'")).Returns(Task.FromResult(facultyOnlyIds.ToArray()));
-            dataReaderMock.Setup<Task<string[]>>(acc => acc.SelectAsync("FACULTY", "WITH FAC.ADVISE.FLAG = 'Y'")).Returns(Task.FromResult(advisorOnlyIds.ToArray()));
-            dataReaderMock.Setup<Task<string[]>>(acc => acc.SelectAsync("FACULTY", "")).Returns(Task.FromResult(allIds.ToArray()));
-
-            // Act
-            var result = await repository.SearchFacultyIdsAsync(true, false);
-
-            // Evaluate
-            Assert.AreEqual(facultyOnlyIds.Count(), result.Count());
-        }
-
-        [TestMethod]
-        public async Task SearchFacultyIdsAsync_AdvisorOnly()
-        {
-            // In this case we only want faculty "WITH FAC.ADVISE.FLAG = 'Y'".  Second argument is true. First argument doesn't matter
-            // Arrange
-            List<string> facultyOnlyIds = new List<string>() { "faculty1", "faculty2", "faculty3" };
-            List<string> advisorOnlyIds = new List<string>() { "advisor1", "advisor2" };
-            List<string> allIds = new List<string>() { "faculty1", "faculty2", "faculty3", "advisor1", "advisor2" };
-            dataReaderMock.Setup<Task<string[]>>(acc => acc.SelectAsync("FACULTY", "WITH FAC.ADVISE.FLAG NE 'Y'")).Returns(Task.FromResult(facultyOnlyIds.ToArray()));
-            dataReaderMock.Setup<Task<string[]>>(acc => acc.SelectAsync("FACULTY", "WITH FAC.ADVISE.FLAG = 'Y'")).Returns(Task.FromResult(advisorOnlyIds.ToArray()));
-            dataReaderMock.Setup<Task<string[]>>(acc => acc.SelectAsync("FACULTY", "")).Returns(Task.FromResult(allIds.ToArray()));
-
-            // Act
-            var result = await repository.SearchFacultyIdsAsync(true, true);
-
-            // Evaluate
-            Assert.AreEqual(advisorOnlyIds.Count(), result.Count());
-        }
-
-        private Collection<Ellucian.Colleague.Data.Base.DataContracts.Person> BuildPersonResponseData(ICollection<Ellucian.Colleague.Domain.Student.Entities.Faculty> facultyEntities)
-        {
-            Collection<Ellucian.Colleague.Data.Base.DataContracts.Person> personContracts = new Collection<Ellucian.Colleague.Data.Base.DataContracts.Person>();
-            foreach (var fac in facultyEntities)
+            [ExpectedException(typeof(KeyNotFoundException))]
+            [TestMethod]
+            public async Task FacultyRepository_GetAsync_nonexistent_ID()
             {
-                //personContracts.Add(personItem.Value);
-                Ellucian.Colleague.Data.Base.DataContracts.Person facultyPerson = new Ellucian.Colleague.Data.Base.DataContracts.Person();
-                facultyPerson.Recordkey = fac.Id;
-                facultyPerson.LastName = fac.LastName;
-                facultyPerson.FirstName = fac.FirstName;
-                facultyPerson.MiddleName = fac.MiddleName;
-                facultyPerson.PersonEmailAddresses = new List<string>();
-                facultyPerson.PersonEmailTypes = new List<string>();
-                facultyPerson.PersonalPhoneNumber = new List<string>();
-                facultyPerson.PersonalPhoneType = new List<string>();
-                facultyPerson.PersonalPhoneExtension = new List<string>();
-                facultyPerson.PersonAddresses = new List<string>();
-                facultyPerson.PersonFormattedNames = new List<string>();
-                facultyPerson.PersonFormattedNameTypes = new List<string>();
-                IEnumerable<string> personalFacultyEmails = fac.GetFacultyEmailAddresses("PER");
-                foreach (var fEmail in personalFacultyEmails)
-                {
-                    facultyPerson.PersonEmailAddresses.Add(fEmail);
-                    facultyPerson.PersonEmailTypes.Add("PER");
-                }
-                IEnumerable<string> businessFacultyEmails = fac.GetFacultyEmailAddresses("BUS");
-                foreach (var fEmail in businessFacultyEmails)
-                {
-                    facultyPerson.PersonEmailAddresses.Add(fEmail);
-                    facultyPerson.PersonEmailTypes.Add("BUS");
-                }
-                IEnumerable<Ellucian.Colleague.Domain.Base.Entities.Phone> facultyCellPhones = fac.GetFacultyPhones("CELL");
-                foreach (var ph in facultyCellPhones)
-                {
-                    facultyPerson.PersonalPhoneType.Add(ph.TypeCode);
-                    facultyPerson.PersonalPhoneNumber.Add(ph.Number);
-                }
-                IEnumerable<Ellucian.Colleague.Domain.Base.Entities.Phone> facultyHomePhones = fac.GetFacultyPhones("HOME");
-                foreach (var ph in facultyHomePhones)
-                {
-                    facultyPerson.PersonalPhoneType.Add(ph.TypeCode);
-                    facultyPerson.PersonalPhoneNumber.Add(ph.Number);
-                }
-                // Update professional names 
-                if (fac.Id == "0000036")
-                {
-                    facultyPerson.PersonFormattedNames.Add("Miltons Smith");
-                    facultyPerson.PersonFormattedNames.Add("M.K. Smith");
-                    facultyPerson.PersonFormattedNameTypes.Add("PF");
-                    facultyPerson.PersonFormattedNameTypes.Add("FAC");
-                }
-                else
-                {
-                    facultyPerson.PersonFormattedNames.Add(fac.LastName + ", " + fac.FirstName);
-                    facultyPerson.PersonFormattedNameTypes.Add("FAC");
-                }
-                // Update an additional phone in an address record.
-                if (fac.Id == "0000036")
-                {
-                    facultyPerson.PersonAddresses.Add("10");
-                }
-                if (fac.Id == "0000045")
-                {
-                    facultyPerson.PersonAddresses.Add("11");
-                }
-                facultyPerson.buildAssociations();
-                personContracts.Add(facultyPerson);
+                string id = "INVALID_KEY";
+                var faculty = await repository.GetAsync(id);
             }
-            return personContracts;
+
+            [TestMethod]
+            public async Task FacultyRepository_GetAsync_valid_ID()
+            {
+                string id = TestFacultyRepository.GetAllFacultyRecords().First().Recordkey;
+                var faculty = await repository.GetAsync(id);
+                Assert.IsNotNull(faculty);
+            }
+
+            [ExpectedException(typeof(KeyNotFoundException))]
+            [TestMethod]
+            public async Task FacultyRepository_GetAsync_invalid_ID()
+            {
+                dataReaderMock.Setup(rdr => rdr.BulkReadRecordWithInvalidKeysAndRecordsAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>("PERSON", It.IsAny<string[]>(), It.IsAny<bool>()))
+                    .ReturnsAsync(new Ellucian.Data.Colleague.BulkReadOutput<Person>() { BulkRecordsRead = null, InvalidKeys = new string[] { "1234567" }, InvalidRecords = new Dictionary<string, string>() { { "1234567", "" } } });
+                string id = "1234567";
+                var faculty = await repository.GetAsync(id);
+                loggerMock.Verify(l => l.Info("Unable to retrieve faculty information for ID 1234567."));
+            }
         }
 
-        private Collection<Ellucian.Colleague.Data.Base.DataContracts.Address> BuildAddressResponseData()
+        [TestClass]
+        public class FacultyRepository_GetFacultyByIdsAsync_Tests : FacultyRepositoryTests
         {
-            Collection<Ellucian.Colleague.Data.Base.DataContracts.Address> addressContracts = new Collection<Ellucian.Colleague.Data.Base.DataContracts.Address>();
-            Ellucian.Colleague.Data.Base.DataContracts.Address address1 = new Ellucian.Colleague.Data.Base.DataContracts.Address();
-            address1.Recordkey = "10";
-            address1.AddressPhones = new List<string>();
-            address1.AddressPhoneType = new List<string>();
-            address1.AddressPhoneExtension = new List<string>();
-            address1.AddressPhoneType.Add("BUS");
-            address1.AddressPhones.Add("703-444-5555");
-            address1.AddressPhoneExtension.Add("ext 1");
-            address1.buildAssociations();
-            addressContracts.Add(address1);
-            Ellucian.Colleague.Data.Base.DataContracts.Address address2 = new Ellucian.Colleague.Data.Base.DataContracts.Address();
-            address2.Recordkey = "11";
-            address2.AddressPhones = new List<string>();
-            address2.AddressPhoneType = new List<string>();
-            address2.AddressPhoneExtension = new List<string>();
-            address2.AddressPhoneType.Add("CELL");
-            address2.AddressPhones.Add("703-666-7777");
-            address2.AddressPhoneExtension.Add("ext 1");
-            address2.buildAssociations();
-            addressContracts.Add(address2);
-            return addressContracts;
+            [TestMethod]
+            public async Task FacultyRepository_GetFacultyByIdsAsync_null_IDs()
+            {
+                List<string> ids = null;
+                var faculty = await repository.GetFacultyByIdsAsync(ids);
+                CollectionAssert.AreEqual(new List<Domain.Student.Entities.Faculty>(), faculty.ToList());
+            }
+
+            [TestMethod]
+            public async Task FacultyRepository_GetFacultyByIdsAsync_no_IDs()
+            {
+                List<string> ids = new List<string>();
+                var faculty = await repository.GetFacultyByIdsAsync(ids);
+                CollectionAssert.AreEqual(new List<Domain.Student.Entities.Faculty>(), faculty.ToList());
+            }
+
+
+            [TestMethod]
+            public async Task FacultyRepository_GetFacultyByIdsAsync_invalid_IDs()
+            {
+                List<string> ids = new List<string>() { "INVALID_KEY" };
+                var faculty = await repository.GetFacultyByIdsAsync(ids);
+                CollectionAssert.AreEqual(new List<Domain.Student.Entities.Faculty>(), faculty.ToList());
+                loggerMock.Verify(l => l.Error("Unable to retrieve faculty information for IDs  INVALID_KEY."));
+            }
+
+            [TestMethod]
+            public async Task FacultyRepository_GetFacultyByIdsAsync_valid_IDs()
+            {
+                List<string> ids = new List<string>() { TestFacultyRepository.GetAllFacultyRecords().First().Recordkey };
+                var faculty = await repository.GetFacultyByIdsAsync(ids);
+                Assert.IsNotNull(faculty.ElementAt(0));
+            }
+
+            [TestMethod]
+            public async Task FacultyRepository_GetFacultyByIdsAsync_valid_and_invalid_ID()
+            {
+                dataReaderMock.Setup(rdr => rdr.BulkReadRecordWithInvalidKeysAndRecordsAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>("PERSON", It.IsAny<string[]>(), It.IsAny<bool>()))
+                    .ReturnsAsync(new Ellucian.Data.Colleague.BulkReadOutput<Person>() { BulkRecordsRead = new System.Collections.ObjectModel.Collection<Person>() { TestFacultyRepository.GetAllFacultyPersonRecords().First() }, InvalidKeys = new string[] { "1234567" }, InvalidRecords = new Dictionary<string, string>() { { "1234567", "" } } });
+                List<string> ids = new List<string>() { TestFacultyRepository.GetAllFacultyRecords().First().Recordkey, "1234567" };
+                var faculty = await repository.GetFacultyByIdsAsync(ids);
+                Assert.IsNotNull(faculty.ElementAt(0));
+                loggerMock.Verify(l => l.Error("Unable to retrieve faculty information for IDs  1234567."));
+            }
         }
 
+        [TestClass]
+        public class FacultyRepository_GetAsync_Multiple_Tests : FacultyRepositoryTests
+        {
+            [TestMethod]
+            public async Task FacultyRepository_GetAsync_null_IDs()
+            {
+                List<string> ids = null;
+                var faculty = await repository.GetAsync(ids);
+                CollectionAssert.AreEqual(new List<Domain.Student.Entities.Faculty>(), faculty.ToList());
+            }
 
+            [TestMethod]
+            public async Task FacultyRepository_GetAsync_no_IDs()
+            {
+                List<string> ids = new List<string>();
+                var faculty = await repository.GetAsync(ids);
+                CollectionAssert.AreEqual(new List<Domain.Student.Entities.Faculty>(), faculty.ToList());
+            }
+
+
+            [TestMethod]
+            public async Task FacultyRepository_GetAsync_invalid_IDs()
+            {
+                List<string> ids = new List<string>() { "INVALID_KEY" };
+                var faculty = await repository.GetAsync(ids);
+                CollectionAssert.AreEqual(new List<Domain.Student.Entities.Faculty>(), faculty.ToList());
+                loggerMock.Verify(l => l.Error("The following requested faculty ids were not found:  INVALID_KEY"));
+            }
+
+            [TestMethod]
+            public async Task FacultyRepository_GetAsync_valid_IDs()
+            {
+                List<string> ids = new List<string>() { TestFacultyRepository.GetAllFacultyRecords().First().Recordkey };
+                var faculty = await repository.GetAsync(ids);
+                Assert.IsNotNull(faculty.ElementAt(0));
+            }
+
+            [TestMethod]
+            public async Task FacultyRepository_GetAsync_valid_and_invalid_IDs()
+            {
+                List<string> ids = new List<string>() { TestFacultyRepository.GetAllFacultyRecords().First().Recordkey, "INVALID_KEY" };
+                var faculty = await repository.GetAsync(ids);
+                Assert.IsNotNull(faculty.ElementAt(0));
+                loggerMock.Verify(l => l.Error("The following requested faculty ids were not found:  INVALID_KEY"));
+            }
+        }
+
+        /// <summary>
+        /// Set up data reads
+        /// </summary>
+        private void FacultyRepository_DataReader_Setup()
+        {
+            // COUNTRIES
+            MockRecordsAsync<Countries>("COUNTRIES", TestCountriesRepository.GetAllCountriesRecords());
+
+            // FACULTY
+            MockRecordsAsync<Faculty>("FACULTY", TestFacultyRepository.GetAllFacultyRecords());
+
+            // PERSON
+            MockRecordsAsync<Base.DataContracts.Person>("PERSON", TestFacultyRepository.GetAllFacultyPersonRecords());
+
+            // ADDRESS
+            MockRecordsAsync<Base.DataContracts.Address>("ADDRESS", TestFacultyRepository.GetAllFacultyAddressRecords());
+        }
     }
 }

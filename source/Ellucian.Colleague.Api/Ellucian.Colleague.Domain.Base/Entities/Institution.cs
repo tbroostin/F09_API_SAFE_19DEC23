@@ -44,6 +44,22 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         /// of the Financial Aid Shopping Sheet
         /// </summary>
         public string FinancialAidInstitutionName { get; set; }
+        /// <summary>
+        /// Email addresses required by educational-institutions
+        /// </summary>
+        public List<EmailAddress> EmailAddresses { get; set; }
+        /// <summary>
+        /// Phones required by educational-institutions
+        /// </summary>
+        public List<Phone> Phones { get; set; }
+        /// <summary>
+        /// List of addresses as required by educational-institutions
+        /// </summary>
+        public List<Domain.Base.Entities.Address> Addresses { get; set; }
+        /// <summary>
+        /// List of social media as required by educational-institutions
+        /// </summary>
+        public List<Domain.Base.Entities.SocialMedia> SocialMedia { get; set; }
 
         /// <summary>
         /// Constructor

@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using System.Runtime.Serialization;
@@ -28,20 +28,7 @@ namespace Ellucian.Colleague.Dtos
         /// </summary>        
         [JsonProperty("types", DefaultValueHandling = DefaultValueHandling.Ignore)]
         public List<StudentTypesDtoProperty> Types { get; set; }
-
-        /// <summary>
-        /// Groupings of students for reporting/tracking purposes (cohorts) to which the student is associated.
-        /// </summary>    
-        [JsonProperty("cohorts", DefaultValueHandling = DefaultValueHandling.Ignore)]
-        public List<StudentCohortsDtoProperty> Cohorts { get; set; }
-
-        /// <summary>
-        /// A list of custom defined attributes or characteristics (tags) assigned to the student for a period of time.
-        /// Banner-only
-        /// </summary>
-        [DataMember(Name = "tags", EmitDefaultValue = false)]
-        public List<StudentTagsDtoProperty> Tags { get; set; }
-        
+       
         /// <summary>
         /// A list of residency types of the student (e.g.: international, in state, out of state, etc.).
         /// </summary>

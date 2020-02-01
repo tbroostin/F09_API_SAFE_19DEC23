@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base.Adapters;
 using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -33,6 +33,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         private IApiSettingsRepository apiSettingsRepository;
         private ISettingsRepository xmlSettingsRepository;
         private IResourceRepository resourceRepository;
+        private IReferenceDataRepository referenceDataRepository;
         private string environmentName;
 
         private const string CreateApiBackupConfigPermission = "CREATE.API.BACKUP.CONFIGURATION";
@@ -52,7 +53,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository,
             ApiSettings settings, ISettingsRepository xmlSettingsRepository,
             IApiSettingsRepository apiSettingsRepository,
-            IResourceRepository resourceRepository, ILogger logger)
+            IResourceRepository resourceRepository, IReferenceDataRepository referenceDataRepository, ILogger logger)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger)
         {
             this.configurationRepository = configurationRepository;
@@ -67,6 +68,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             this.apiSettingsRepository = apiSettingsRepository;
             this.xmlSettingsRepository = xmlSettingsRepository;
             this.resourceRepository = resourceRepository;
+            this.referenceDataRepository = referenceDataRepository;
 
             var xmlSettings = this.xmlSettingsRepository.Get();
             environmentName = "";
@@ -173,7 +175,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <returns><see cref="Dtos.Base.UserProfileConfiguration2">User Profile Configuration</see> data transfer object.</returns>
         public async Task<Dtos.Base.UserProfileConfiguration2> GetUserProfileConfiguration2Async()
         {
-            var configuration = await configurationRepository.GetUserProfileConfiguration2Async();
+            // Retrieve all ADREL.TYPE codes.
+            var allAdrelTypes = referenceDataRepository.AddressRelationTypes;
+            var configuration = await configurationRepository.GetUserProfileConfiguration2Async(allAdrelTypes.ToList());
             var adapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.UserProfileConfiguration2, Dtos.Base.UserProfileConfiguration2>();
             var configurationDto = adapter.MapToType(configuration);
             return configurationDto;
@@ -397,6 +401,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             AddOrUpdateAppSettings("BulkReadSize", apiBackupConfigData.ApiSettings.BulkReadSize.ToString());
             AddOrUpdateAppSettings("IncludeLinkSelfHeaders", apiBackupConfigData.ApiSettings.IncludeLinkSelfHeaders.ToString());
             AddOrUpdateAppSettings("EnableConfigBackup", apiBackupConfigData.ApiSettings.EnableConfigBackup.ToString());
+            AddOrUpdateAppSettings("AttachRequestMaxSize", apiBackupConfigData.ApiSettings.AttachRequestMaxSize.ToString());
 
             // plus any other appSettings values in web.config that's not in appsettings
             var maxQueryAttributeLimit = apiBackupConfigData.WebConfigAppSettingsMaxQueryAttributeLimit;
@@ -526,6 +531,18 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         {
             var configuration = await configurationRepository.GetRequiredDocumentConfigurationAsync();
             var adapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.RequiredDocumentConfiguration, Dtos.Base.RequiredDocumentConfiguration>();
+            var configurationDto = adapter.MapToType(configuration);
+            return configurationDto;
+        }
+
+        /// <summary>
+        /// Returns the session configuration
+        /// </summary>
+        /// <returns>Session configuration</returns>
+        public async Task<Dtos.Base.SessionConfiguration> GetSessionConfigurationAsync()
+        {
+            var configuration = await configurationRepository.GetSessionConfigurationAsync();
+            var adapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.SessionConfiguration, Dtos.Base.SessionConfiguration>();
             var configurationDto = adapter.MapToType(configuration);
             return configurationDto;
         }

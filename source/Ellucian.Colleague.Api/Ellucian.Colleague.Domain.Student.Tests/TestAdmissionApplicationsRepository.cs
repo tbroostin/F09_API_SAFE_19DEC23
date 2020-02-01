@@ -44,6 +44,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                 var application = new AdmissionApplication(applicationData[x, 0], applicationData[x, 1]);
                 application.ApplicantPersonId = applicationData[x, 2];
                 application.ApplicationAcadProgram = applicationData[x, 3];
+                application.ApplicationAcadProgramGuid = Guid.NewGuid().ToString();
+                application.ApplicationSchool = string.Empty;
                 application.ApplicationAdmissionsRep = applicationData[x, 4];
                 application.ApplicationAdmitStatus = applicationData[x, 5];
                 application.ApplicationAttendedInstead = applicationData[x, 6];
@@ -107,12 +109,12 @@ namespace Ellucian.Colleague.Domain.Student.Tests
             return Task.FromResult(new Tuple<IEnumerable<AdmissionApplication>, int>(applicationEntities, totalRecords));
         }
 
-        //public Task<Tuple<IEnumerable<AdmissionApplication>, int>> GetAdmissionApplications2Async(int offset, int limit, bool bypassCache)
-        //{
-        //    Populate();
-        //    var totalRecords = applicationEntities.Count();
-        //    return Task.FromResult(new Tuple<IEnumerable<AdmissionApplication>, int>(applicationEntities, totalRecords));
-        //}
+        public Task<Tuple<IEnumerable<AdmissionApplication>, int>> GetAdmissionApplications2Async(int offset, int limit, string applicant, string academicPeriod, string personFilter, string[] filterPersonIds = null, bool bypassCache = false)
+        {
+            Populate();
+            var totalRecords = applicationEntities.Count();
+            return Task.FromResult(new Tuple<IEnumerable<AdmissionApplication>, int>(applicationEntities, totalRecords));
+        }
 
         public Task<Dictionary<string, string>> GetPersonGuidsAsync(IEnumerable<string> aptitudeAssessmentKeys)
         {
@@ -147,6 +149,26 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         }
 
         public Tuple<List<string>, List<string>> GetEthosExtendedDataLists()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<AdmissionApplication> GetAdmissionApplicationSubmissionByIdAsync(string guid, bool bypassCache = false)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<AdmissionApplication> CreateAdmissionApplicationSubmissionAsync(AdmissionApplication entity)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<AdmissionApplication> UpdateAdmissionApplicationSubmissionAsync(AdmissionApplication entity)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> GetDefaultApplicationStatus()
         {
             throw new NotImplementedException();
         }

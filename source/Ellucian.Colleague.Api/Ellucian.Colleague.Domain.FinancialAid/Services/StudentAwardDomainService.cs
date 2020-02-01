@@ -58,14 +58,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Services
             {
                 throw new ApplicationException(string.Format("No Loan Limitation object exists for student {0} awardYear {1}", studentAwardYear.StudentId, studentAwardYear.Code));
             }
-            //If all incoming awards are unsubsidized loans(can be one or a collection), and there are some pending subsidized loans for the year, throw an Exception since
-            //all subsidized loans must be accepted/rejected before taking action on unsubsidized ones
-            if (newStudentAwardsForYear.All(a => a.Award.LoanType.HasValue && a.Award.LoanType.Value == LoanType.UnsubsidizedLoan) 
-                && currentAwardsForYear.Any(sa => sa.Award.LoanType.HasValue && sa.Award.LoanType.Value == LoanType.SubsidizedLoan && sa.StudentAwardPeriods.Any(sap => sap.IsStatusModifiable
-                                                                                                                        && sap.AwardStatus.Category != AwardStatusCategory.Accepted)))
-            {
-                throw new InvalidOperationException("All subsidized loans must be accepted/rejected before taking action on unsubsidized loans");
-            }
+            
 
             var isDeclineActionTaken = false;
             foreach (var newStudentAward in newStudentAwardsForYear)
@@ -210,8 +203,9 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Services
                     potentialTotalLoanAmount = potentialTotalLoanAmount - currentAmount + newAmount;
                 }
 
-                //If the flag to suppress loan limits is false, check if loans are within their max limits
-                if (!suppressMaximumLoanLimits)
+                //If the flag to suppress loan limits is false, and if the student override is set to Yes, check if loans are within their max limits. if the student override is true then no   more checking to be done.
+                if (!suppressMaximumLoanLimits &&
+                      !studentLoanLimitation.SuppressStudentMaximumAmounts == true)
                 {
                     if (newStudentAward.Award.LoanType == LoanType.SubsidizedLoan && allSubsidizedLoansCount == 0)
                     {

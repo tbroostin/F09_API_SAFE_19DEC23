@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -48,6 +48,11 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// This is the blanket purchase order general ledger distribution expensed amount
         /// </summary>
         public decimal ExpensedAmount { get; set; }
+
+        /// <summary>
+        /// The percentage of the line item amount allocated to the accounting string.
+        /// </summary>
+        public decimal Percentage { get; set; }
 
         /// <summary>
         /// This constructor initializes a blanket purchase order general ledger distribution domain entity

@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.Student.DataContracts;
@@ -8,11 +8,9 @@ using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.DataContracts;
-using Ellucian.Web.Cache;
 using Ellucian.Web.Http.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -60,9 +58,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             MockCleanup();
         }
 
-
         [TestMethod]
-        public async Task GetAsync_True()
+        public async Task StudentTestScoresRepository_GetAsync_True()
         {
             var pageOfItems = await _studentAptitudeAssessmentsRepository.GetStudentTestScoresAsync("", offset, limit, true);
             Assert.IsNotNull(pageOfItems);
@@ -91,8 +88,39 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
         }
 
+
         [TestMethod]
-        public async Task GetAsync_False()
+        public async Task StudentTestScoresRepository_Get2Async_True()
+        {
+            var pageOfItems = await _studentAptitudeAssessmentsRepository.GetStudentTestScores2Async(offset, limit, "", "", null, "", true);
+            Assert.IsNotNull(pageOfItems);
+
+            var ctr = 0;
+            foreach (var result in pageOfItems.Item1)
+            {
+                var expected = _studentTestScoresEntities.ElementAt(ctr);
+                Assert.AreEqual(result.Code, expected.Code);
+                Assert.AreEqual(result.DateTaken, expected.DateTaken);
+                Assert.AreEqual(result.Description, expected.Description);
+                Assert.AreEqual(result.FormName, expected.FormName);
+                Assert.AreEqual(result.FormNo, expected.FormNo);
+                Assert.AreEqual(result.Guid, expected.Guid);
+                Assert.AreEqual(result.Percentile1, expected.Percentile1);
+                Assert.AreEqual(result.Percentile2, expected.Percentile2);
+                Assert.AreEqual(result.Score, expected.Score);
+                Assert.AreEqual(result.Source, expected.Source);
+                Assert.AreEqual(result.SpecialFactors, expected.SpecialFactors);
+                Assert.AreEqual(result.StatusCode, expected.StatusCode);
+                Assert.AreEqual(result.StatusCodeSpProcessing, expected.StatusCodeSpProcessing);
+                Assert.AreEqual(result.StatusDate, expected.StatusDate);
+                Assert.AreEqual(result.StudentId, expected.StudentId);
+
+                ctr += 1;
+            }
+        }
+
+        [TestMethod]
+        public async Task StudentTestScoresRepository_GetAsync_False()
         {
             var pageOfItems = await _studentAptitudeAssessmentsRepository.GetStudentTestScoresAsync("", offset, limit, false);
             Assert.IsNotNull(pageOfItems);
@@ -122,7 +150,209 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         }
 
         [TestMethod]
-        public async Task GetByIdAsync()
+        public async Task StudentTestScoresRepository_Get2Async_False()
+        {
+            var pageOfItems = await _studentAptitudeAssessmentsRepository.GetStudentTestScores2Async(offset, limit, "", "", null,  "", false);
+            Assert.IsNotNull(pageOfItems);
+
+            var ctr = 0;
+            foreach (var result in pageOfItems.Item1)
+            {
+                var expected = _studentTestScoresEntities.ElementAt(ctr);
+                Assert.AreEqual(result.Code, expected.Code);
+                Assert.AreEqual(result.DateTaken, expected.DateTaken);
+                Assert.AreEqual(result.Description, expected.Description);
+                Assert.AreEqual(result.FormName, expected.FormName);
+                Assert.AreEqual(result.FormNo, expected.FormNo);
+                Assert.AreEqual(result.Guid, expected.Guid);
+                Assert.AreEqual(result.Percentile1, expected.Percentile1);
+                Assert.AreEqual(result.Percentile2, expected.Percentile2);
+                Assert.AreEqual(result.Score, expected.Score);
+                Assert.AreEqual(result.Source, expected.Source);
+                Assert.AreEqual(result.SpecialFactors, expected.SpecialFactors);
+                Assert.AreEqual(result.StatusCode, expected.StatusCode);
+                Assert.AreEqual(result.StatusCodeSpProcessing, expected.StatusCodeSpProcessing);
+                Assert.AreEqual(result.StatusDate, expected.StatusDate);
+                Assert.AreEqual(result.StudentId, expected.StudentId);
+
+                ctr += 1;
+            }
+        }
+
+        [TestMethod]
+        public async Task StudentTestScoresRepository_GetAsync_StudentFilter()
+        {
+            var pageOfItems = await _studentAptitudeAssessmentsRepository.GetStudentTestScoresAsync("0003784", offset, limit, true);
+            Assert.IsNotNull(pageOfItems);
+
+            var ctr = 0;
+            foreach (var result in pageOfItems.Item1)
+            {
+                var expected = _studentTestScoresEntities.ElementAt(ctr);
+                Assert.AreEqual(result.Code, expected.Code);
+                Assert.AreEqual(result.DateTaken, expected.DateTaken);
+                Assert.AreEqual(result.Description, expected.Description);
+                Assert.AreEqual(result.FormName, expected.FormName);
+                Assert.AreEqual(result.FormNo, expected.FormNo);
+                Assert.AreEqual(result.Guid, expected.Guid);
+                Assert.AreEqual(result.Percentile1, expected.Percentile1);
+                Assert.AreEqual(result.Percentile2, expected.Percentile2);
+                Assert.AreEqual(result.Score, expected.Score);
+                Assert.AreEqual(result.Source, expected.Source);
+                Assert.AreEqual(result.SpecialFactors, expected.SpecialFactors);
+                Assert.AreEqual(result.StatusCode, expected.StatusCode);
+                Assert.AreEqual(result.StatusCodeSpProcessing, expected.StatusCodeSpProcessing);
+                Assert.AreEqual(result.StatusDate, expected.StatusDate);
+                Assert.AreEqual(result.StudentId, expected.StudentId);
+
+                ctr += 1;
+            }
+        }
+
+        [TestMethod]
+        public async Task StudentTestScoresRepository_Get2Async_StudentFilter()
+        {
+            var pageOfItems = await _studentAptitudeAssessmentsRepository.GetStudentTestScores2Async(offset, limit, "0003784", "", null, "", true);
+            Assert.IsNotNull(pageOfItems);
+
+            var ctr = 0;
+            foreach (var result in pageOfItems.Item1)
+            {
+                var expected = _studentTestScoresEntities.ElementAt(ctr);
+                Assert.AreEqual(result.Code, expected.Code);
+                Assert.AreEqual(result.DateTaken, expected.DateTaken);
+                Assert.AreEqual(result.Description, expected.Description);
+                Assert.AreEqual(result.FormName, expected.FormName);
+                Assert.AreEqual(result.FormNo, expected.FormNo);
+                Assert.AreEqual(result.Guid, expected.Guid);
+                Assert.AreEqual(result.Percentile1, expected.Percentile1);
+                Assert.AreEqual(result.Percentile2, expected.Percentile2);
+                Assert.AreEqual(result.Score, expected.Score);
+                Assert.AreEqual(result.Source, expected.Source);
+                Assert.AreEqual(result.SpecialFactors, expected.SpecialFactors);
+                Assert.AreEqual(result.StatusCode, expected.StatusCode);
+                Assert.AreEqual(result.StatusCodeSpProcessing, expected.StatusCodeSpProcessing);
+                Assert.AreEqual(result.StatusDate, expected.StatusDate);
+                Assert.AreEqual(result.StudentId, expected.StudentId);
+
+                ctr += 1;
+            }
+        }
+
+        [TestMethod]
+        public async Task StudentTestScoresRepository_Get2Async_AssessmentFilter()
+        {
+            var pageOfItems = await _studentAptitudeAssessmentsRepository.GetStudentTestScores2Async(offset, limit, "", "SAT Test", null, "", true);
+            Assert.IsNotNull(pageOfItems);
+
+            var ctr = 0;
+            foreach (var result in pageOfItems.Item1)
+            {
+                var expected = _studentTestScoresEntities.ElementAt(ctr);
+                Assert.AreEqual(result.Code, expected.Code);
+                Assert.AreEqual(result.DateTaken, expected.DateTaken);
+                Assert.AreEqual(result.Description, expected.Description);
+                Assert.AreEqual(result.FormName, expected.FormName);
+                Assert.AreEqual(result.FormNo, expected.FormNo);
+                Assert.AreEqual(result.Guid, expected.Guid);
+                Assert.AreEqual(result.Percentile1, expected.Percentile1);
+                Assert.AreEqual(result.Percentile2, expected.Percentile2);
+                Assert.AreEqual(result.Score, expected.Score);
+                Assert.AreEqual(result.Source, expected.Source);
+                Assert.AreEqual(result.SpecialFactors, expected.SpecialFactors);
+                Assert.AreEqual(result.StatusCode, expected.StatusCode);
+                Assert.AreEqual(result.StatusCodeSpProcessing, expected.StatusCodeSpProcessing);
+                Assert.AreEqual(result.StatusDate, expected.StatusDate);
+                Assert.AreEqual(result.StudentId, expected.StudentId);
+
+                ctr += 1;
+            }
+        }
+
+
+        [TestMethod]
+        public async Task StudentTestScoresRepository_Get2Async_PersonFilter()
+        {
+            var pageOfItems = await _studentAptitudeAssessmentsRepository.GetStudentTestScores2Async(offset, limit, "", "", new string[] { "1" }, "LastNameSmith", true);
+            Assert.IsNotNull(pageOfItems);
+
+            var ctr = 0;
+            foreach (var result in pageOfItems.Item1)
+            {
+                var expected = _studentTestScoresEntities.ElementAt(ctr);
+                Assert.AreEqual(result.Code, expected.Code);
+                Assert.AreEqual(result.DateTaken, expected.DateTaken);
+                Assert.AreEqual(result.Description, expected.Description);
+                Assert.AreEqual(result.FormName, expected.FormName);
+                Assert.AreEqual(result.FormNo, expected.FormNo);
+                Assert.AreEqual(result.Guid, expected.Guid);
+                Assert.AreEqual(result.Percentile1, expected.Percentile1);
+                Assert.AreEqual(result.Percentile2, expected.Percentile2);
+                Assert.AreEqual(result.Score, expected.Score);
+                Assert.AreEqual(result.Source, expected.Source);
+                Assert.AreEqual(result.SpecialFactors, expected.SpecialFactors);
+                Assert.AreEqual(result.StatusCode, expected.StatusCode);
+                Assert.AreEqual(result.StatusCodeSpProcessing, expected.StatusCodeSpProcessing);
+                Assert.AreEqual(result.StatusDate, expected.StatusDate);
+                Assert.AreEqual(result.StudentId, expected.StudentId);
+
+                ctr += 1;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(RepositoryException))]
+        public async Task StudentTestScoresRepository_GetAsync_RepositoryException_InvalidRecords()
+        {
+            var invalidRecords = new Dictionary<string, string>();
+            invalidRecords.Add("1", "invalid data");
+
+            var results = new Ellucian.Data.Colleague.BulkReadOutput<DataContracts.StudentNonCourses>()
+            {
+                InvalidRecords = invalidRecords,
+                InvalidKeys = new string[] { }
+            };
+            dataReaderMock.Setup(d => d.BulkReadRecordWithInvalidKeysAndRecordsAsync<DataContracts.StudentNonCourses>("STUDENT.NON.COURSES", It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(results);
+
+            var pageOfItems = await _studentAptitudeAssessmentsRepository.GetStudentTestScoresAsync("", offset, limit,  false);
+            Assert.IsNotNull(pageOfItems);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(RepositoryException))]
+        public async Task StudentTestScoresRepository_Get2Async_RepositoryException_InvalidRecords()
+        {
+            var invalidRecords = new Dictionary<string, string>();
+            invalidRecords.Add("1", "invalid data");
+
+            var results = new Ellucian.Data.Colleague.BulkReadOutput<DataContracts.StudentNonCourses>()
+            {
+               InvalidRecords = invalidRecords, InvalidKeys = new string[] { }
+            };
+            dataReaderMock.Setup(d => d.BulkReadRecordWithInvalidKeysAndRecordsAsync<DataContracts.StudentNonCourses>("STUDENT.NON.COURSES", It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(results);
+
+            var pageOfItems = await _studentAptitudeAssessmentsRepository.GetStudentTestScores2Async(offset, limit, "", "", null, "", false);
+            Assert.IsNotNull(pageOfItems);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(RepositoryException))]
+        public async Task StudentTestScoresRepository_GetAsync_RepositoryException_InvalidKeys()
+        {
+           
+            var results = new Ellucian.Data.Colleague.BulkReadOutput<DataContracts.StudentNonCourses>()
+            {
+                InvalidKeys = new string[] { "1" },
+                InvalidRecords = new Dictionary<string, string>()
+            };
+            dataReaderMock.Setup(d => d.BulkReadRecordWithInvalidKeysAndRecordsAsync<DataContracts.StudentNonCourses>("STUDENT.NON.COURSES", It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(results);
+
+            var pageOfItems = await _studentAptitudeAssessmentsRepository.GetStudentTestScores2Async(offset, limit, "", "", null, "", false);
+            Assert.IsNotNull(pageOfItems);
+        }
+
+        [TestMethod]
+        public async Task StudentTestScoresRepository_GetByIdAsync()
         {
             var id = "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc";
             var expected = _studentTestScoresEntities.FirstOrDefault();
@@ -148,14 +378,14 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
-        public async Task GetByIdAsync_Null_Argument()
+        public async Task StudentTestScoresRepository_GetByIdAsync_Null_Argument()
         {
             await _studentAptitudeAssessmentsRepository.GetStudentTestScoresByGuidAsync(null);
         }
 
         [TestMethod]
         [ExpectedException(typeof(KeyNotFoundException))]
-        public async Task GetByIdAsync_KeyNotFoundException()
+        public async Task StudentTestScoresRepository_GetByIdAsync_KeyNotFoundException()
         {
             var id = "3d390690-7b66-4b66-820e-7610c96c5974";
             await _studentAptitudeAssessmentsRepository.GetStudentTestScoresByGuidAsync(id);
@@ -163,7 +393,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
         [TestMethod]
         [ExpectedException(typeof(KeyNotFoundException))]
-        public async Task GetByIdAsync_DataContract_NotFound_KeyNotFoundException()
+        public async Task StudentTestScoresRepository_GetByIdAsync_DataContract_NotFound_KeyNotFoundException()
         {
             var id = "3d390690-7b66-4b66-820e-7610c96c5973";
             var key = "1";
@@ -173,10 +403,11 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
-        public async Task GetByIdAsync_NonCourse_NotFound_ArgumentException()
+        public async Task StudentTestScoresRepository_GetByIdAsync_NonCourse_NotFound_ArgumentException()
         {
             var record = records.FirstOrDefault();
             record.StncNonCourse = "X";
+            record.StncCategory = "X";
             var id = record.RecordGuid;
             var key = record.Recordkey;
 
@@ -198,10 +429,11 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
-        public async Task GetByIdAsync_NoCourseCategory_NotFound_ArgumentException()
+        public async Task StudentTestScoresRepository_GetByIdAsync_NoCourseCategory_NotFound_ArgumentException()
         {
             var record = records.FirstOrDefault();
             record.StncNonCourse = "4";
+            record.StncCategory = "G";
             var id = record.RecordGuid;
             var key = record.Recordkey;
 
@@ -399,17 +631,33 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 record.StncTitle = item.Description;
                 record.StncStatus = item.StatusCode;
                 record.StncStatusDate = item.StatusDate;
+                record.StncCategory = "AD";
                 records.Add(record);
             }
             dataReaderMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.StudentNonCourses>(It.IsAny<string>(), true)).ReturnsAsync(records);
             dataReaderMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.StudentNonCourses>(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(records);
             dataReaderMock.Setup(acc => acc.ReadRecordAsync<DataContracts.StudentNonCourses>(It.IsAny<string>(), true)).ReturnsAsync(records[0]);
             dataReaderMock.Setup(acc => acc.BulkReadRecordAsync<NonCourses>("", true)).ReturnsAsync(_nonCourseDataContracts);
+
+            var results = new Ellucian.Data.Colleague.BulkReadOutput<DataContracts.StudentNonCourses>() { BulkRecordsRead = new Collection<StudentNonCourses>() { records[0] },
+                InvalidKeys = new string[] { } ,
+                InvalidRecords = new Dictionary<string, string>()
+            };
+            dataReaderMock.Setup(d => d.BulkReadRecordWithInvalidKeysAndRecordsAsync<DataContracts.StudentNonCourses>("STUDENT.NON.COURSES", It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(results);
+
+
             dataReaderMock.Setup(acc => acc.ReadRecordAsync<NonCourses>(It.IsAny<string>(),It.IsAny<bool>())).ReturnsAsync(_nonCourseDataContracts.FirstOrDefault());
+
+
+
             dataReaderMock.Setup(acc => acc.ReadRecord<ApplValcodes>("ST.VALCODES", "NON.COURSE.CATEGORIES", true)).Returns(_nonCourseCats);
             dataReaderMock.Setup(acc => acc.ReadRecord<ApplValcodes>("ST.VALCODES", "STUDENT.NON.COURSE.STATUSES", true)).Returns(_nonCourseStats);
             dataReaderMock.Setup(acc => acc.ReadRecord<ApplValcodes>("ST.VALCODES", "APPL.TEST.SOURCES", true)).Returns(_nonAplicationTestSources);
             dataReaderMock.Setup(acc => acc.SelectAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(new string[] { "1", "2", "3", "4" });
+
+            dataReaderMock.Setup(acc => acc.SelectAsync("STUDENT.NON.COURSES", It.IsAny<string[]>(), It.IsAny<string>()))
+                    .ReturnsAsync(new string[] { "1", "2", "3", "4" });
+
 
             dicResult = new Dictionary<string, GuidLookupResult>()
                 {
@@ -467,14 +715,14 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
-        public async Task StudentTestScoresService_CreateStudentTestScoresAsync_ArgumentNullException_studentTestScore_Null()
+        public async Task StudentTestScoresRepository_CreateStudentTestScoresAsync_ArgumentNullException_studentTestScore_Null()
         {
             await _studentAptitudeAssessmentsRepository.CreateStudentTestScoresAsync(null);
         }
 
         [TestMethod]
         [ExpectedException(typeof(RepositoryException))]
-        public async Task StudentTestScoresService_CreateStudentTestScoresAsync_RepositoryException()
+        public async Task StudentTestScoresRepository_CreateStudentTestScoresAsync_RepositoryException()
         {
             var studentTestScore = _studentTestScoresEntities.FirstOrDefault(x => x.Guid == guid);
             response.UpdateStudentAptitudeAsessmentErrors = new List<UpdateStudentAptitudeAsessmentErrors>()
@@ -486,7 +734,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
         [TestMethod]
         [ExpectedException(typeof(KeyNotFoundException))]
-        public async Task StudentTestScoresService_CreateStudentTestScoresAsync_Get_BuildstudentTestScore_ArgumentNullException_studentTestScore_Null()
+        public async Task StudentTestScoresRepository_CreateStudentTestScoresAsync_Get_BuildstudentTestScore_ArgumentNullException_studentTestScore_Null()
         {
             var studentTestScore = _studentTestScoresEntities.FirstOrDefault(x => x.Guid == guid);
 
@@ -496,7 +744,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
 
         [TestMethod]
-        public async Task StudentTestScoresService_CreateStudentTestScoresAsync()
+        public async Task StudentTestScoresRepository_CreateStudentTestScoresAsync()
         {
             var studentTestScore = _studentTestScoresEntities.FirstOrDefault(x => x.Guid == guid);
             var result = await _studentAptitudeAssessmentsRepository.CreateStudentTestScoresAsync(studentTestScore);
@@ -522,7 +770,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
         [TestMethod]
         [ExpectedException(typeof(RepositoryException))]
-        public async Task StudentTestScoresService_DeleteStudentTestScoresAsync()
+        public async Task StudentTestScoresRepository_DeleteStudentTestScoresAsync()
         {
             transManagerMock.Setup(i => i.ExecuteAsync<DeleteStudentAptitudeAssessmentRequest, DeleteStudentAptitudeAssessmentResponse>(It.IsAny<DeleteStudentAptitudeAssessmentRequest>()))
                 .ReturnsAsync(new DeleteStudentAptitudeAssessmentResponse()
@@ -541,14 +789,14 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
-        public async Task StudentTestScoresService_UpdateStudentTestScoresAsync_ArgumentNullException_studentTestScore_Null()
+        public async Task StudentTestScoresRepository_UpdateStudentTestScoresAsync_ArgumentNullException_studentTestScore_Null()
         {
             await _studentAptitudeAssessmentsRepository.UpdateStudentTestScoresAsync(null);
         }
 
         [TestMethod]
         [ExpectedException(typeof(RepositoryException))]
-        public async Task StudentTestScoresService_UpdateStudentTestScoresAsync_RepositoryException()
+        public async Task StudentTestScoresRepository_UpdateStudentTestScoresAsync_RepositoryException()
         {
             var studentTestScore = _studentTestScoresEntities.FirstOrDefault(x => x.Guid == guid);
             response.UpdateStudentAptitudeAsessmentErrors = new List<UpdateStudentAptitudeAsessmentErrors>()
@@ -558,7 +806,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
         [TestMethod]
         [ExpectedException(typeof(KeyNotFoundException))]
-        public async Task StudentTestScoresService_UpdateStudentTestScoresAsync_Get_BuildstudentTestScore_ArgumentNullException_studentTestScore_Null()
+        public async Task StudentTestScoresRepository_UpdateStudentTestScoresAsync_Get_BuildstudentTestScore_ArgumentNullException_studentTestScore_Null()
         {
             var studentTestScore = _studentTestScoresEntities.FirstOrDefault(x => x.Guid == guid);
             dataReaderMock.Setup(r => r.ReadRecordAsync<DataContracts.StudentNonCourses>(It.IsAny<string>(), true)).ReturnsAsync(null);
@@ -567,22 +815,20 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
-        public async Task StudentTestScoresService_DeleteStudentTestScoresAsync_ArgumentNullException()
+        public async Task StudentTestScoresRepository_DeleteStudentTestScoresAsync_ArgumentNullException()
         {
             await _studentAptitudeAssessmentsRepository.DeleteAsync("");
         }
 
         [TestMethod]
         [ExpectedException(typeof(KeyNotFoundException))]
-        public async Task StudentTestScoresService_DeleteStudentTestScoresAsync_KeyNotFoundException()
+        public async Task StudentTestScoresRepository_DeleteStudentTestScoresAsync_KeyNotFoundException()
         {
             await _studentAptitudeAssessmentsRepository.DeleteAsync("1234");
         }
 
-
-
         [TestMethod]
-        public async Task StudentTestScoresService_UpdateStudentTestScoresAsync()
+        public async Task StudentTestScoresRepository_UpdateStudentTestScoresAsync()
         {
             var studentTestScore = _studentTestScoresEntities.FirstOrDefault(x => x.Guid == guid);
             var result = await _studentAptitudeAssessmentsRepository.UpdateStudentTestScoresAsync(studentTestScore);

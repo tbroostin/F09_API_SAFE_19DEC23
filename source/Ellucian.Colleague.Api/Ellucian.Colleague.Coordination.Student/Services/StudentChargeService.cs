@@ -1,21 +1,21 @@
 ﻿// Copyright 2016 Ellucian Company L.P. and its affiliates
 
-using System;
-using System.Threading.Tasks;
 using Ellucian.Colleague.Coordination.Base.Services;
-using Ellucian.Colleague.Domain.Student.Repositories;
+using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Colleague.Domain.Student;
+using Ellucian.Colleague.Domain.Student.Entities;
+using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
 using slf4net;
+using System;
 using System.Collections.Generic;
-using Ellucian.Colleague.Domain.Base.Repositories;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using Ellucian.Colleague.Domain.Student;
-using Ellucian.Colleague.Domain.Student.Entities;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
@@ -43,7 +43,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             ICurrentUserFactory currentUserFactory,
             IRoleRepository roleRepository,
             ILogger logger)
-            : base(adapterRegistry, currentUserFactory, roleRepository, logger, configurationRepository:configurationRepository)
+            : base(adapterRegistry, currentUserFactory, roleRepository, logger, configurationRepository: configurationRepository)
         {
             this.studentChargeRepository = studentChargeRepository;
             this.personRepository = personRepository;
@@ -148,9 +148,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     studentChargeDtos.Add(chargeDto);
                 }
             }
-            return new Tuple<IEnumerable<Dtos.StudentCharge>,int>(studentChargeDtos, totalRecords);
+            return new Tuple<IEnumerable<Dtos.StudentCharge>, int>(studentChargeDtos, totalRecords);
         }
-        
+
         /// <summary>
         /// Create a single student charges for the data model version 6
         /// </summary>
@@ -181,7 +181,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 await personRepository.GetPersonGuidFromIdAsync(studentChargeEntity.PersonId) :
                 string.Empty);
             studentChargeDto.Id = studentChargeEntity.Guid;
-            if (string.IsNullOrEmpty(studentChargeDto.Id)) studentChargeDto.Id = "00000000-0000-0000-0000-000000000000";
+            if (string.IsNullOrEmpty(studentChargeDto.Id))
+            {
+                studentChargeDto.Id = "00000000-0000-0000-0000-000000000000";
+            }
+
             if (!string.IsNullOrEmpty(studentChargeEntity.Term))
             {
                 var termEntity = (await termRepository.GetAsync()).FirstOrDefault(t => t.Code == studentChargeEntity.Term);
@@ -310,6 +314,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 UnitCurrency = (studentChargeDto.ChargedAmount != null && studentChargeDto.ChargedAmount.UnitCost != null && studentChargeDto.ChargedAmount.UnitCost.Cost != null) ? studentChargeDto.ChargedAmount.UnitCost.Cost.Currency.ToString() : string.Empty
             };
 
+            studentChargeEntity.ChargeFromElevate = false;
+            if (studentChargeDto.MetadataObject != null && studentChargeDto.MetadataObject.CreatedBy != null)
+            {
+                studentChargeEntity.ChargeFromElevate = studentChargeDto.MetadataObject.CreatedBy == "Elevate" ? true : false;
+            }
+
             try
             {
                 studentChargeEntity.InvoiceItemID = (studentChargeDto.Id != null && !string.IsNullOrEmpty(studentChargeDto.Id)) ? (await referenceDataRepository.GetGuidLookupResultFromGuidAsync(studentChargeDto.Id)).PrimaryKey : string.Empty;
@@ -362,7 +372,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 throw new ArgumentException("A charge amount of zero is not allowed.", "studentCharges.chargedAmount.unitCost.cost.value");
             }
-            if (studentCharge.ChargeType == Dtos.EnumProperties.StudentChargeTypes.notset )
+            if (studentCharge.ChargeType == Dtos.EnumProperties.StudentChargeTypes.notset)
             {
                 throw new ArgumentException("The chargeType is either invalid or empty and is required when submitting a student charge. ", "studentCharges.chargeType");
             }
@@ -409,7 +419,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             string arType = "";
             if (!string.IsNullOrEmpty(student))
             {
-                personId = await personRepository.GetPersonIdFromGuidAsync(student);
+                try
+                {
+                    personId = await personRepository.GetPersonIdFromGuidAsync(student);
+                }
+                catch
+                {
+                    personId = string.Empty;
+                }
                 if (string.IsNullOrEmpty(personId))
                 {
                     return new Tuple<IEnumerable<Dtos.StudentCharge1>, int>(studentChargeDtos, 0);
@@ -512,7 +529,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 await personRepository.GetPersonGuidFromIdAsync(studentChargeEntity.PersonId) :
                 string.Empty);
             studentChargeDto.Id = studentChargeEntity.Guid;
-            if (string.IsNullOrEmpty(studentChargeDto.Id)) studentChargeDto.Id = "00000000-0000-0000-0000-000000000000";
+            if (string.IsNullOrEmpty(studentChargeDto.Id))
+            {
+                studentChargeDto.Id = "00000000-0000-0000-0000-000000000000";
+            }
+
             if (!string.IsNullOrEmpty(studentChargeEntity.Term))
             {
                 var termEntity = (await GetTerms()).FirstOrDefault(t => t.Code == studentChargeEntity.Term);
@@ -572,27 +593,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 };
             }
             return studentChargeDto;
-        }
-
-        private async Task<IEnumerable<Term>> GetTerms()
-        {
-            if (_allTerms == null)
-                _allTerms = await termRepository.GetAsync();
-            return _allTerms;
-        }
-
-        private async Task<IEnumerable<Domain.Student.Entities.AccountingCode>> GetArCodes(bool bypassCache = false)
-        {
-            if (_allArCodes == null)
-                _allArCodes = await studentReferenceDataRepository.GetAccountingCodesAsync(bypassCache);
-            return _allArCodes;
-        }
-
-        private async Task<IEnumerable<Domain.Student.Entities.AccountReceivableType>> GetArTypes(bool bypassCache = false)
-        {
-            if (_allArTypes == null)
-                _allArTypes = await studentReferenceDataRepository.GetAccountReceivableTypesAsync(bypassCache);
-            return _allArTypes;
         }
 
         private async Task<Ellucian.Colleague.Domain.Student.Entities.StudentCharge> BuildStudentChargeEntityAsync1(Dtos.StudentCharge1 studentChargeDto, bool bypassCache = true)
@@ -664,7 +664,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             studentChargeEntity.ChargeFromElevate = false;
             if (studentChargeDto.MetadataObject != null && studentChargeDto.MetadataObject.CreatedBy != null)
+            {
                 studentChargeEntity.ChargeFromElevate = studentChargeDto.MetadataObject.CreatedBy == "Elevate" ? true : false;
+            }
 
             //try
             //{
@@ -729,6 +731,475 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         }
         #endregion
 
+        #region EEDM Student charge V16.0.0
+        /// <summary>
+        /// Returns the DTO for the specified student charges
+        /// </summary>
+        /// <param name="id">Guid to General Ledger Transaction</param>
+        /// <returns>General Ledger Transaction DTO</returns>
+        public async Task<Dtos.StudentCharge2> GetStudentChargesByIdAsync(string id)
+        {
+            CheckViewStudentChargesPermission();
+            // Get the student charges domain entity from the repository
+            var studentChargeDomainEntity = await studentChargeRepository.GetByIdAsync(id);
+
+            if (studentChargeDomainEntity == null)
+            {
+                throw new KeyNotFoundException("Student Charge not found for GUID " + id);
+            }
+
+            // Convert the student charge object into DTO.
+            var studentChargeDto = await BuildStudentChargeDto2Async(studentChargeDomainEntity);
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+            return studentChargeDto;
+        }
+
+        /// <summary>
+        /// Returns all student charges for the data model version 6
+        /// </summary>
+        /// <returns>Collection of StudentCharges</returns>
+        public async Task<Tuple<IEnumerable<Dtos.StudentCharge2>, int>> GetStudentChargesAsync(int offset, int limit, bool bypassCache, string student = "", string academicPeriod = "", string fundingDestination = "", string fundingSource = "", string usage = "")
+        {
+            CheckViewStudentChargesPermission();
+
+            var studentChargeDtos = new List<Dtos.StudentCharge2>();
+            string personId = "";
+            string term = "";
+            string arCode = "";
+            string arType = "";
+            if (!string.IsNullOrEmpty(student))
+            {
+                try
+                {
+                    personId = await personRepository.GetPersonIdFromGuidAsync(student);
+                }
+                catch
+                {
+                    // Do not throw an exception when the person id is invalid or missing.
+                    // Just return an empty set.
+                    personId = string.Empty;
+                }
+                if (string.IsNullOrEmpty(personId))
+                {
+                    return new Tuple<IEnumerable<Dtos.StudentCharge2>, int>(studentChargeDtos, 0);
+                }
+            }
+            if (!string.IsNullOrEmpty(academicPeriod))
+            {
+                var termEntity = (await termRepository.GetAsync(bypassCache)).FirstOrDefault(t => t.RecordGuid == academicPeriod);
+                if (termEntity == null || string.IsNullOrEmpty(termEntity.Code))
+                {
+                    return new Tuple<IEnumerable<Dtos.StudentCharge2>, int>(studentChargeDtos, 0);
+                }
+                term = termEntity.Code;
+            }
+            if (!string.IsNullOrEmpty(fundingDestination))
+            {
+                var arCodeEntity = (await studentReferenceDataRepository.GetAccountingCodesAsync(bypassCache)).FirstOrDefault(ac => ac.Guid == fundingDestination);
+                if (arCodeEntity == null || string.IsNullOrEmpty(arCodeEntity.Code))
+                {
+                    return new Tuple<IEnumerable<Dtos.StudentCharge2>, int>(studentChargeDtos, 0);
+                }
+                arCode = arCodeEntity.Code;
+            }
+            if (!string.IsNullOrEmpty(fundingSource))
+            {
+                var accountReceivalbeTypesEntity = (await studentReferenceDataRepository.GetAccountReceivableTypesAsync(bypassCache)).FirstOrDefault(at => at.Guid == fundingSource);
+
+                if (accountReceivalbeTypesEntity == null || string.IsNullOrEmpty(accountReceivalbeTypesEntity.Code))
+                {
+                    return new Tuple<IEnumerable<Dtos.StudentCharge2>, int>(studentChargeDtos, 0);
+                }
+                arType = accountReceivalbeTypesEntity.Code;
+            }
+            if (!string.IsNullOrEmpty(usage))
+            {
+                try
+                {
+                    var enumChargType = (Dtos.EnumProperties.StudentChargeUsageTypes)Enum.Parse(typeof(Dtos.EnumProperties.StudentChargeUsageTypes), usage);
+                }
+                catch
+                {
+                    return new Tuple<IEnumerable<Dtos.StudentCharge2>, int>(studentChargeDtos, 0);
+                }
+            }
+
+            // Get the student charges domain entity from the repository
+            var studentChargeDomainTuple = await studentChargeRepository.GetAsync(offset, limit, bypassCache, personId, term, arCode, arType, "", usage);
+            var studentChargeDomainEntities = studentChargeDomainTuple.Item1;
+            var totalRecords = studentChargeDomainTuple.Item2;
+
+            if (studentChargeDomainEntities == null)
+            {
+                throw new ArgumentNullException("StudentChargeDomainEntity", "StudentChargeDomainEntity cannot be null. ");
+            }
+
+            // Convert the student charges and all its child objects into DTOs.
+            foreach (var entity in studentChargeDomainEntities)
+            {
+                if (entity != null)
+                {
+                    var chargeDto = await BuildStudentChargeDto2Async(entity, bypassCache);
+                    studentChargeDtos.Add(chargeDto);
+                }
+            }
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+            return new Tuple<IEnumerable<Dtos.StudentCharge2>, int>(studentChargeDtos, totalRecords);
+        }
+
+        /// <summary>
+        /// Create a single student charges for the data model version 6
+        /// </summary>
+        /// <returns>A single StudentCharge</returns>
+        public async Task<Dtos.StudentCharge2> CreateStudentChargesAsync(Dtos.StudentCharge2 studentCharge)
+        {
+            CheckCreateStudentChargesPermission();
+
+            var guid = studentCharge.Id;
+            var sourceId = string.Empty;
+
+            ValidateStudentCharges2(studentCharge, guid, sourceId);
+
+            studentChargeRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
+
+            var studentChargeDto = new Dtos.StudentCharge2();
+
+            var studentChargeEntity = await BuildStudentChargeEntity2Async(studentCharge, guid, sourceId);
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+
+            try
+            {
+                var entity = await studentChargeRepository.CreateAsync(studentChargeEntity);
+                studentChargeDto = await BuildStudentChargeDto2Async(entity);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex, "Create.Update.Exception", guid, sourceId);
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+
+            return studentChargeDto;
+        }
+
+        private async Task<Dtos.StudentCharge2> BuildStudentChargeDto2Async(Domain.Student.Entities.StudentCharge studentChargeEntity, bool bypassCache = true)
+        {
+            Dtos.StudentCharge2 studentChargeDto = new Dtos.StudentCharge2();
+            try
+            {
+                studentChargeDto.Person = new GuidObject2((!string.IsNullOrEmpty(studentChargeEntity.PersonId)) ?
+                    await personRepository.GetPersonGuidFromIdAsync(studentChargeEntity.PersonId) :
+                    string.Empty);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                IntegrationApiExceptionAddError(ex.Message, "Validation.Exception", studentChargeEntity.Guid);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(string.Concat("Person GUID for ID " + studentChargeEntity.PersonId + " not found.", ": ", ex.Message), "Validation.Exception");
+            }
+
+            studentChargeDto.Id = studentChargeEntity.Guid;
+            if (string.IsNullOrEmpty(studentChargeDto.Id))
+            {
+                studentChargeDto.Id = "00000000-0000-0000-0000-000000000000";
+            }
+
+            if (!string.IsNullOrEmpty(studentChargeEntity.Term))
+            {
+                var termEntity = (await GetTerms(bypassCache)).FirstOrDefault(t => t.Code == studentChargeEntity.Term);
+                if (termEntity != null && !string.IsNullOrEmpty(termEntity.RecordGuid))
+                {
+                    studentChargeDto.AcademicPeriod = new GuidObject2(termEntity.RecordGuid);
+                }
+                else
+                {
+                    IntegrationApiExceptionAddError(string.Format("Academic Period GUID for Term '{0}' not found", studentChargeEntity.Term), "Validation.Exception");
+                }
+            }
+            if (!string.IsNullOrEmpty(studentChargeEntity.AccountsReceivableCode))
+            {
+                var accountingCodeEntity = (await GetArCodes(bypassCache)).FirstOrDefault(acc => acc.Code == studentChargeEntity.AccountsReceivableCode);
+                if (accountingCodeEntity != null)
+                {
+                    studentChargeDto.FundingDestination = new GuidObject2(accountingCodeEntity.Guid);
+                }
+                else
+                {
+                    IntegrationApiExceptionAddError(string.Format("Funding Destination GUID for AR code '{0}' not found", studentChargeEntity.Term), "Validation.Exception");
+                }
+            }
+            if (!string.IsNullOrEmpty(studentChargeEntity.AccountsReceivableTypeCode))
+            {
+                var accountReceivalbeTypesEntity = (await GetArTypes(bypassCache)).FirstOrDefault(acc => acc.Code == studentChargeEntity.AccountsReceivableTypeCode);
+                if (accountReceivalbeTypesEntity != null)
+                {
+                    studentChargeDto.FundingSource = new GuidObject2(accountReceivalbeTypesEntity.Guid);
+                }
+                else
+                {
+                    IntegrationApiExceptionAddError(string.Format("Funding Source GUID for AR type '{0}' not found", studentChargeEntity.Term), "Validation.Exception");
+                }
+            }
+            studentChargeDto.ChargeableOn = studentChargeEntity.ChargeDate.Date;
+            studentChargeDto.Comments = studentChargeEntity.Comments != null && studentChargeEntity.Comments.Any() ?
+                studentChargeEntity.Comments :
+                null;
+
+            if (!string.IsNullOrEmpty(studentChargeEntity.Usage) || (studentChargeEntity.OriginatedOn != null && studentChargeEntity.OriginatedOn.HasValue))
+            {
+                studentChargeDto.ReportingDetail = new Dtos.DtoProperties.StudentChargesReportingDtoProperty()
+                {
+                    Usage = Dtos.EnumProperties.StudentChargeUsageTypes.taxReportingOnly,
+                    OriginatedOn = studentChargeEntity.OriginatedOn != null && studentChargeEntity.OriginatedOn.HasValue ? studentChargeEntity.OriginatedOn : studentChargeEntity.ChargeDate.Date
+                };
+            }
+            if (!string.IsNullOrEmpty(studentChargeEntity.OverrideDescription))
+            {
+                studentChargeDto.OverrideDescription = studentChargeEntity.OverrideDescription;
+            }
+
+            if (studentChargeEntity.UnitCost != 0 && !string.IsNullOrEmpty(studentChargeEntity.UnitCurrency))
+            {
+                studentChargeDto.ChargedAmount = new Dtos.DtoProperties.ChargedAmountDtoProperty()
+                {
+                    UnitCost = new Dtos.DtoProperties.ChargedAmountUnitCostDtoProperty()
+                    {
+                        Quantity = studentChargeEntity.UnitQuantity,
+                        Cost = new Dtos.DtoProperties.AmountDtoProperty()
+                        {
+                            Currency = (Dtos.EnumProperties.CurrencyCodes)Enum.Parse(typeof(Dtos.EnumProperties.CurrencyCodes), studentChargeEntity.UnitCurrency),
+                            Value = studentChargeEntity.UnitCost
+                        }
+                    }
+                };
+            }
+            else
+            {
+                studentChargeDto.ChargedAmount = new Dtos.DtoProperties.ChargedAmountDtoProperty()
+                {
+                    Amount = new Dtos.DtoProperties.AmountDtoProperty()
+                    {
+                        Currency = (Dtos.EnumProperties.CurrencyCodes)Enum.Parse(typeof(Dtos.EnumProperties.CurrencyCodes), studentChargeEntity.ChargeCurrency),
+                        Value = studentChargeEntity.ChargeAmount
+                    }
+                };
+            }
+            return studentChargeDto;
+        }
+
+        private async Task<Ellucian.Colleague.Domain.Student.Entities.StudentCharge> BuildStudentChargeEntity2Async(Dtos.StudentCharge2 studentChargeDto, string guid, string sourceId, bool bypassCache = true)
+        {
+            string personId = string.Empty;
+            string arCode = string.Empty;
+            string arType = string.Empty;
+            string term = string.Empty;
+
+            if (studentChargeDto.Person == null || string.IsNullOrEmpty(studentChargeDto.Person.Id))
+            {
+                IntegrationApiExceptionAddError("The Student id cannot be null. ", "Validation.Exception", guid, sourceId);
+            }
+            else
+            {
+                try
+                {
+                    personId = await personRepository.GetPersonIdFromGuidAsync(studentChargeDto.Person.Id);
+                }
+                catch (KeyNotFoundException ex)
+                {
+                    IntegrationApiExceptionAddError(ex.Message, "Validation.Exception", guid, sourceId);
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex, "Validation.Exception", guid, sourceId);
+                }
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError(string.Concat("Person GUID " + studentChargeDto.Person.Id + " not found.", ": ", ex.Message), "Validation.Exception", guid, sourceId);
+                }
+            }
+            var chargeDate = studentChargeDto.ChargeableOn.HasValue ? new DateTime(studentChargeDto.ChargeableOn.Value.Date.Year, studentChargeDto.ChargeableOn.Value.Date.Month, studentChargeDto.ChargeableOn.Value.Date.Day) : DateTime.Today.Date;
+
+            if (studentChargeDto.FundingDestination != null && !string.IsNullOrEmpty(studentChargeDto.FundingDestination.Id))
+            {
+                var arCodeEntity = (await GetArCodes(bypassCache)).FirstOrDefault(acc => acc.Guid == studentChargeDto.FundingDestination.Id);
+                if (arCodeEntity != null)
+                {
+                    arCode = arCodeEntity.Code;
+                }
+                else
+                {
+                    IntegrationApiExceptionAddError(string.Format("The accountingCode id '{0}' is not valid. ", studentChargeDto.FundingDestination.Id), "Validation.Exception", guid, sourceId);
+                }
+            }
+            if (studentChargeDto.FundingSource != null && !string.IsNullOrEmpty(studentChargeDto.FundingSource.Id))
+            {
+                var arTypeEntity = (await GetArTypes(bypassCache)).FirstOrDefault(acc => acc.Guid == studentChargeDto.FundingSource.Id);
+                if (arTypeEntity != null)
+                {
+                    arType = arTypeEntity.Code;
+                }
+                else
+                {
+                    IntegrationApiExceptionAddError(string.Format("The accountReceivableType id '{0}' is not valid. ", studentChargeDto.FundingSource.Id), "Validation.Exception", guid, sourceId);
+                }
+            }
+            var termEntity = (studentChargeDto.AcademicPeriod != null && !string.IsNullOrEmpty(studentChargeDto.AcademicPeriod.Id)) ?
+                (await GetTerms(bypassCache)).FirstOrDefault(acc => acc.RecordGuid == studentChargeDto.AcademicPeriod.Id) :
+                null;
+            if (termEntity == null)
+            {
+                if (studentChargeDto.AcademicPeriod != null && !string.IsNullOrEmpty(studentChargeDto.AcademicPeriod.Id))
+                {
+                    IntegrationApiExceptionAddError(string.Format("The Academic Period id {0} is invalid. ", studentChargeDto.AcademicPeriod.Id), "Validation.Exception", guid, sourceId);
+                }
+                else
+                {
+                    IntegrationApiExceptionAddError("The Academic Period is required for Colleague. ", "Validation.Exception", guid, sourceId);
+                }
+            }
+            else
+            {
+                term = termEntity.Code;
+            }
+
+            var studentChargeEntity = new Ellucian.Colleague.Domain.Student.Entities.StudentCharge(personId, chargeDate)
+            {
+                Guid = (studentChargeDto.Id != null && !string.IsNullOrEmpty(studentChargeDto.Id)) ? studentChargeDto.Id : string.Empty,
+                AccountsReceivableCode = arCode,
+                AccountsReceivableTypeCode = arType,
+                Comments = studentChargeDto.Comments,
+                Term = term,
+                ChargeAmount = (studentChargeDto.ChargedAmount != null && studentChargeDto.ChargedAmount.Amount != null) ? studentChargeDto.ChargedAmount.Amount.Value : 0,
+                ChargeCurrency = (studentChargeDto.ChargedAmount != null && studentChargeDto.ChargedAmount.Amount != null) ? studentChargeDto.ChargedAmount.Amount.Currency.ToString() : string.Empty,
+                UnitQuantity = (studentChargeDto.ChargedAmount != null && studentChargeDto.ChargedAmount.UnitCost != null) ? studentChargeDto.ChargedAmount.UnitCost.Quantity : 0,
+                UnitCost = (studentChargeDto.ChargedAmount != null && studentChargeDto.ChargedAmount.UnitCost != null && studentChargeDto.ChargedAmount.UnitCost.Cost != null) ? studentChargeDto.ChargedAmount.UnitCost.Cost.Value : 0,
+                UnitCurrency = (studentChargeDto.ChargedAmount != null && studentChargeDto.ChargedAmount.UnitCost != null && studentChargeDto.ChargedAmount.UnitCost.Cost != null) ? studentChargeDto.ChargedAmount.UnitCost.Cost.Currency.ToString() : string.Empty,
+                Usage = (studentChargeDto.ReportingDetail != null && studentChargeDto.ReportingDetail.Usage != null && studentChargeDto.ReportingDetail.Usage != Dtos.EnumProperties.StudentChargeUsageTypes.notset) ? studentChargeDto.ReportingDetail.Usage.ToString() : string.Empty,
+                OriginatedOn = (studentChargeDto.ReportingDetail != null && studentChargeDto.ReportingDetail.OriginatedOn != null && studentChargeDto.ReportingDetail.OriginatedOn.HasValue) ? studentChargeDto.ReportingDetail.OriginatedOn.Value : new DateTime?(),
+                OverrideDescription = studentChargeDto.OverrideDescription
+            };
+
+            studentChargeEntity.ChargeFromElevate = false;
+            if (studentChargeDto.MetadataObject != null && studentChargeDto.MetadataObject.CreatedBy != null)
+            {
+                studentChargeEntity.ChargeFromElevate = studentChargeDto.MetadataObject.CreatedBy == "Elevate" ? true : false;
+            }
+
+            return studentChargeEntity;
+        }
+
+        /// <summary>
+        /// Helper method to validate Student Charges.
+        /// </summary>
+        private void ValidateStudentCharges2(Dtos.StudentCharge2 studentCharge, string guid, string sourceId)
+        {
+            if (studentCharge.AcademicPeriod == null)
+            {
+                IntegrationApiExceptionAddError("The academic period is required when submitting a student charge. ", "Validation.Exception", guid, sourceId);
+            }
+            if (studentCharge.ChargedAmount == null)
+            {
+                IntegrationApiExceptionAddError("The charged amount cannot be null when submitting a student charge. ", "Validation.Exception", guid, sourceId);
+            }
+            else
+            {
+                if (studentCharge.ChargedAmount.Amount == null && studentCharge.ChargedAmount.UnitCost == null)
+                {
+                    IntegrationApiExceptionAddError("The charged amount must contain either amount or unitCost when submitting a student charge. ", "Validation.Exception", guid, sourceId);
+                }
+                if (studentCharge.ChargedAmount.Amount != null && studentCharge.ChargedAmount.UnitCost != null)
+                {
+                    IntegrationApiExceptionAddError("Both amount and unitCost can not be used together. ", "Validation.Exception", guid, sourceId);
+                }
+                if (studentCharge.ChargedAmount.Amount != null && studentCharge.ChargedAmount.Amount.Currency != Dtos.EnumProperties.CurrencyCodes.USD && studentCharge.ChargedAmount.Amount.Currency != Dtos.EnumProperties.CurrencyCodes.CAD)
+                {
+                    IntegrationApiExceptionAddError("The currency code must be set to either 'USD' or 'CAD'. ", "Validation.Exception", guid, sourceId);
+                }
+                if (studentCharge.ChargedAmount.Amount != null && (studentCharge.ChargedAmount.Amount.Value == null || studentCharge.ChargedAmount.Amount.Value == 0))
+                {
+                    IntegrationApiExceptionAddError("A charge amount of zero is not allowed.", "Validation.Exception", guid, sourceId);
+                }
+                if (studentCharge.ChargedAmount.UnitCost != null && studentCharge.ChargedAmount.UnitCost.Cost != null && studentCharge.ChargedAmount.UnitCost.Cost.Currency != Dtos.EnumProperties.CurrencyCodes.USD && studentCharge.ChargedAmount.UnitCost.Cost.Currency != Dtos.EnumProperties.CurrencyCodes.CAD)
+                {
+                    IntegrationApiExceptionAddError("The currency code must be set to either 'USD' or 'CAD'. ", "Validation.Exception", guid, sourceId);
+                }
+                if (studentCharge.ChargedAmount.UnitCost != null && (studentCharge.ChargedAmount.UnitCost.Quantity == null || studentCharge.ChargedAmount.UnitCost.Quantity <= 0))
+                {
+                    IntegrationApiExceptionAddError("The charged amount unit cost quantity must be greater than 0 when using unit costs. ", "Validation.Exception", guid, sourceId);
+                }
+                if (studentCharge.ChargedAmount.UnitCost != null && (studentCharge.ChargedAmount.UnitCost.Cost == null || studentCharge.ChargedAmount.UnitCost.Cost.Value == null || studentCharge.ChargedAmount.UnitCost.Cost.Value == 0))
+                {
+                    IntegrationApiExceptionAddError("A charge amount of zero is not allowed.", "Validation.Exception", guid, sourceId);
+                }
+            }
+            if (studentCharge.FundingDestination == null || string.IsNullOrEmpty(studentCharge.FundingDestination.Id))
+            {
+                IntegrationApiExceptionAddError("The fundingDestination is required when submitting a student charge.", "Validation.Exception", guid, sourceId);
+            }
+            if (studentCharge.Person == null || string.IsNullOrEmpty(studentCharge.Person.Id))
+            {
+                IntegrationApiExceptionAddError("The student id is required when submitting a student charge. ", "Validation.Exception", guid, sourceId);
+            }
+            if (studentCharge.ReportingDetail != null)
+            {
+                if (studentCharge.ReportingDetail.Usage != null && studentCharge.ReportingDetail.Usage != Dtos.EnumProperties.StudentChargeUsageTypes.taxReportingOnly)
+                {
+                    IntegrationApiExceptionAddError(string.Format("The usage attribute of '{0}' is not permitted when submitting usage associated with this charge.", studentCharge.ReportingDetail.Usage.ToString()), "Validation.Exception", guid, sourceId);
+                }
+                else
+                {
+                    if (studentCharge.ReportingDetail.Usage == null)
+                    {
+                        if (studentCharge.ReportingDetail.OriginatedOn != null && studentCharge.ReportingDetail.OriginatedOn.HasValue)
+                        {
+                            IntegrationApiExceptionAddError("The originatedOn is not permitted without usage set to 'taxReportingOnly'.", "Validation.Exception", guid, sourceId);
+                        }
+                    }
+                    else
+                    {
+                        if (studentCharge.ReportingDetail.OriginatedOn == null || !studentCharge.ReportingDetail.OriginatedOn.HasValue)
+                        {
+                            IntegrationApiExceptionAddError("The usage set to 'taxReportingOnly' is not permitted without originatedOn .", "Validation.Exception", guid, sourceId);
+                        }
+                        else
+                        {
+                            if (studentCharge.ReportingDetail.OriginatedOn.Value.Date > studentCharge.ChargeableOn.Value.Date)
+                            {
+                                IntegrationApiExceptionAddError("The originatedOn date must be on or before the chargeableOn date.", "Validation.Exception", guid, sourceId);
+                            }
+                            if (studentCharge.ReportingDetail.OriginatedOn.Value.Date > DateTime.Now.Date)
+                            {
+                                IntegrationApiExceptionAddError("The originatedOn date may only be set to a date on or before the current date.", "Validation.Exception", guid, sourceId);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        #endregion
+
         #region Shared methods
 
         /// <summary>
@@ -747,7 +1218,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             var studentChargeEntity = await BuildStudentChargeEntityAsync(studentCharge);
             var entity = await studentChargeRepository.UpdateAsync(id, studentChargeEntity);
-            
+
             studentChargeDto = await BuildStudentChargeDtoAsync(entity);
 
             return studentChargeDto;
@@ -766,6 +1237,36 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
             await studentChargeRepository.DeleteAsync(id);
+        }
+
+        private async Task<IEnumerable<Term>> GetTerms(bool bypassCache = false)
+        {
+            if (_allTerms == null)
+            {
+                _allTerms = await termRepository.GetAsync(bypassCache);
+            }
+
+            return _allTerms;
+        }
+
+        private async Task<IEnumerable<Domain.Student.Entities.AccountingCode>> GetArCodes(bool bypassCache = false)
+        {
+            if (_allArCodes == null)
+            {
+                _allArCodes = await studentReferenceDataRepository.GetAccountingCodesAsync(bypassCache);
+            }
+
+            return _allArCodes;
+        }
+
+        private async Task<IEnumerable<Domain.Student.Entities.AccountReceivableType>> GetArTypes(bool bypassCache = false)
+        {
+            if (_allArTypes == null)
+            {
+                _allArTypes = await studentReferenceDataRepository.GetAccountReceivableTypesAsync(bypassCache);
+            }
+
+            return _allArTypes;
         }
 
         private Dtos.EnumProperties.StudentChargeTypes ConvertChargeTypes(string chargeType)
@@ -801,7 +1302,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
         private void CheckViewStudentChargesPermission()
         {
-            bool hasPermission = HasPermission(StudentPermissionCodes.ViewStudentCharges);
+            bool hasPermission = HasPermission(StudentPermissionCodes.ViewStudentCharges) || HasPermission(StudentPermissionCodes.CreateStudentCharges);
 
             // User is not allowed to create or update Student charges without the appropriate permissions
             if (!hasPermission)

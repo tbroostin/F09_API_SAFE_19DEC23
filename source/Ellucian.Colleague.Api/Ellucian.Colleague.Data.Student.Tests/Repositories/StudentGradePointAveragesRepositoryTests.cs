@@ -1,6 +1,8 @@
 ﻿//Copyright 2018 Ellucian Company L.P. and its affiliates.
 
+using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Student.Repositories;
+using Ellucian.Colleague.Domain.Base.Transactions;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Tests;
 using Ellucian.Data.Colleague;
@@ -23,6 +25,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
     {
         #region SETUP
         Mock<IColleagueTransactionFactory> transFactoryMock;
+        Mock<IColleagueTransactionInvoker> transManagerMock;
         Mock<ICacheProvider> cacheProviderMock;
         Mock<IColleagueDataReader> dataReaderMock;
         Mock<ILogger> loggerMock;
@@ -35,12 +38,12 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
         public TestStudentGradePointAveragesRepository testDataRepository;
 
-        public async Task<IEnumerable<StudentAcademicCredit>> getExpectedStudentGradePointAverages()
+        public async Task<IEnumerable<StudentAcademicCredit>> GetExpectedStudentGradePointAverages()
         {
             return await testDataRepository.GetStudentGradePointAveragesAsync();
         }
 
-        public async Task<IEnumerable<StudentAcademicCredit>> getActualStudentGradePointAverages()
+        public async Task<IEnumerable<StudentAcademicCredit>> GetActualStudentGradePointAverages()
         {
             Tuple<IEnumerable<StudentAcademicCredit>, int> tuple = await studentGradePointAveragesRepo.GetStudentGpasAsync(0, 20, new TestStudentGradePointAveragesRepository().GetStudentGradePointAveragesAsync().Result.FirstOrDefault(), "gradeDate");
 
@@ -82,13 +85,15 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         {
             // transaction factory mock
             transFactoryMock = new Mock<IColleagueTransactionFactory>();
-
+            transManagerMock = new Mock<IColleagueTransactionInvoker>();
             // Cache Provider Mock
             cacheProviderMock = new Mock<ICacheProvider>();
 
             // Set up data accessor for mocking 
             dataReaderMock = new Mock<IColleagueDataReader>();
             apiSettings = new ApiSettings("TEST");
+
+            transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManagerMock.Object);
 
             // Set up dataAccessorMock as the object for the DataAccessor
             transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataReaderMock.Object);
@@ -113,6 +118,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 recordStudentAcadCreds.Add(studentAcadCred);
                 recordPersonSt.Add(personStDataContract);
             }
+            dataReaderMock.Setup(acc => acc.ReadRecordAsync<PersonSt>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(recordPersonSt.FirstOrDefault());
             dataReaderMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.StudentAcadCred>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(recordStudentAcadCreds);
             dataReaderMock.Setup(acc => acc.BulkReadRecordAsync<Data.Base.DataContracts.PersonSt>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(recordPersonSt);
             dataReaderMock.Setup(acc => acc.BulkReadRecordAsync<Data.Base.DataContracts.PersonSt>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(recordPersonSt);
@@ -137,6 +143,35 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 return Task.FromResult(result);
             });
 
+            GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+            {
+                Offset = 0,
+                Limit = 1,
+                CacheName = "AllStudentGPAs:",
+                Entity = "PERSON.ST",
+                Sublist = new List<string>() { "1", "2", "3" },
+                TotalCount = 3,
+                KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    },
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 7625,
+                        KeyCacheMin = 5906,
+                        KeyCachePart = "001",
+                        KeyCacheSize = 1720
+                    }
+                }
+            };
+            transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                .ReturnsAsync(resp);
+
             // Construct repository
             studentGradePointAveragesRepo = new StudentGradePointAveragesRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
@@ -160,15 +195,15 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [TestMethod]
             public async Task ExpectedEqualsActualStudentGradePointAveragesTest()
             {
-                var expected = await getExpectedStudentGradePointAverages();
-                var actual = await getActualStudentGradePointAverages();
+                var expected = await GetExpectedStudentGradePointAverages();
+                var actual = await GetActualStudentGradePointAverages();
                 Assert.AreEqual(expected.Count(), actual.Count());
             }
 
             [TestMethod]
             public async Task StudentGradePointAverageRepository_GetStudentGradePointAveragesAsync_False()
             {
-                var results = await studentGradePointAveragesRepo.GetStudentGpasAsync(0, 20, allStudentAcademicCredits.FirstOrDefault(), "gradeDate");
+                var results = await studentGradePointAveragesRepo.GetStudentGpasAsync(0, 20, allStudentAcademicCredits.FirstOrDefault());
                 Assert.AreEqual(allStudentAcademicCredits.Count(), results.Item2);
 
                 foreach (var studentAcademicCredit in allStudentAcademicCredits)

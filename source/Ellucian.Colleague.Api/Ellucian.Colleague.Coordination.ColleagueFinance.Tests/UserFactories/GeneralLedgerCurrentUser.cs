@@ -26,7 +26,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.UserFactories
                         SecurityToken = "321",
                         SessionTimeout = 30,
                         UserName = "Student",
-                        Roles = new List<string>() { "Budget.Adjustor", "BLANKET.PURCHASE.ORDER.VIEWER", "JOURNAL.ENTRY.VIEWER", "PURCHASE.ORDER.VIEWER", "RECURRING.VOUCHER.VIEWER", "REQUISITION.VIEWER", "VOUCHER.VIEWER" },
+                        Roles = new List<string>() { "Budget.Adjustor", "BLANKET.PURCHASE.ORDER.VIEWER", "JOURNAL.ENTRY.VIEWER", "PURCHASE.ORDER.VIEWER", "RECURRING.VOUCHER.VIEWER", "REQUISITION.VIEWER", "VOUCHER.VIEWER", "UPDATE.BLANKET.PURCHASE.ORDERS" },
                         SessionFixationId = "abc123"
                     });
                 }

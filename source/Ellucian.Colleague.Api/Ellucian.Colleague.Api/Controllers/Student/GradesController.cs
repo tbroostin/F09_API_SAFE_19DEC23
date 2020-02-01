@@ -56,7 +56,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Retrieves information for all Grades.
         /// </summary>
         /// <returns>All <see cref="Grade">Grades</see></returns>
-        /// [CacheControlFilter(Public = true, MaxAgeHours = 1, Revalidate = true)]
+        /// <accessComments>Any authenticated user may retrieve grade code information.</accessComments>
         public async Task<IEnumerable<Grade>> GetAsync()
         {
             var gradeDtoCollection = new List<Grade>();

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -625,7 +625,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
         public async Task<DegreeAuditParameters> GetDegreeAuditParametersAsync()
         {
-
             // Overriding cache timeout to be Level1 Cache time out for data that rarely changes.
             var degreeAuditParameters = await GetOrAddToCacheAsync<DegreeAuditParameters>("DegreeAuditDefaults",
                    async () =>
@@ -657,14 +656,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                }
                            }
                            // UseLowGrade is true unless it is specifically N - so null, empty and Y are all true.
-                           return new DegreeAuditParameters(extraCourses,
+                           return new DegreeAuditParameters(extraCourses, !string.IsNullOrEmpty(daDefaults.DaRelatedCoursesFlag) && daDefaults.DaRelatedCoursesFlag.ToUpper() == "Y" ? true : false,
                                !string.IsNullOrEmpty(daDefaults.DaIncludeFailures) && daDefaults.DaIncludeFailures.ToUpper() == "N" ? false : true,
                                !string.IsNullOrEmpty(daDefaults.DaDefaultSortOverride) && daDefaults.DaDefaultSortOverride.ToUpper() == "Y" ? true : false);
                        }
                        else
                        {
                            // Create parameters using the defaults
-                           return new DegreeAuditParameters(ExtraCourses.Apply, true, false);
+                           return new DegreeAuditParameters(ExtraCourses.Apply, false, true, false);
                        }
                    }, Level1CacheTimeoutValue);
 

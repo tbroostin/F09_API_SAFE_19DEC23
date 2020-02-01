@@ -1,8 +1,5 @@
-﻿/*Copyright 2014 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2014-2019 Ellucian Company L.P. and its affiliates.*/
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Ellucian.Colleague.Domain.FinancialAid.Entities
 {
@@ -26,6 +23,11 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
         /// </summary>
         public string Description { get { return _Description; } }
         private readonly string _Description;
+
+        /// <summary>
+        /// Budget component cost type
+        /// </summary>
+        public BudgetComponentCostType? CostType { get; set; }
 
         /// <summary>
         /// The group assigned to this BudgetComponent to categorize students' costs on the Financial Aid shopping sheet

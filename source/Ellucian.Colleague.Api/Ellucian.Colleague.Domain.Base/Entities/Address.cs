@@ -211,6 +211,23 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         }
 
         /// <summary>
+        /// Constructor used by HEDM
+        /// </summary>
+        public Address(string addressId, bool isPreferredAddress)
+        {
+            if (string.IsNullOrEmpty(addressId))
+            {
+                throw new ArgumentNullException("addressId");
+            }
+
+            AddressLines = new List<string>();
+            AddressLabel = new List<string>();
+            PhoneNumbers = _phoneNumbers.AsReadOnly();
+            _addressId = addressId;
+            IsPreferredAddress = isPreferredAddress;
+        }
+
+        /// <summary>
         /// Constructor used for new addresses
         /// </summary>
         public Address(string personId)

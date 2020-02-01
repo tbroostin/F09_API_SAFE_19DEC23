@@ -33,6 +33,21 @@ namespace Ellucian.Colleague.Dtos.Student
         public int NumberOfMidtermGrades { get; set; }
 
         /// <summary>
+        /// When true, limit midterm grading to the allowed grading terms. 
+        /// </summary>
+        public bool LimitMidtermGradingToAllowedTerms { get; set; }        
+
+        /// <summary>
+        /// When true, provide the faculty member with a way to indicate that midterm grades are complete for a section and midterm grade number (one through six.)
+        /// </summary>
+        public bool ProvideMidtermGradingCompleteFeature { get; set; }
+
+        /// <summary>
+        /// When true, do not allow midterm grading for a given sectino and midterm grade number (one through six) after the faculty member has indicated that midterm grading is complete.
+        /// </summary>
+        public bool LockMidtermGradingWhenComplete { get; set; }
+
+        /// <summary>
         /// Default constructor
         /// </summary>
         public FacultyGradingConfiguration()

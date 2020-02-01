@@ -1,4 +1,4 @@
-﻿//Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -434,6 +434,10 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                     : officeParametersRecord.FopExclAwdPdsFromAwdltr;
                 singleConfiguration.ExcludeAwardCategoriesFromAwardLetterAndShoppingSheet = officeParametersRecord.FopExclAwdCatFromAwdltr == null ? new List<string>()
                     : officeParametersRecord.FopExclAwdCatFromAwdltr;
+
+                singleConfiguration.ShowBudgetDetailsOnAwardLetter = (!string.IsNullOrEmpty(officeParametersRecord.FopShowBudgetDetails) 
+                    && officeParametersRecord.FopShowBudgetDetails.ToUpper() == "Y");
+                singleConfiguration.StudentAwardLetterBudgetDetailsDescription = officeParametersRecord.FopBudgetDtlDesc;
 
                 singleConfiguration.CounselorPhoneType = officeParametersRecord.FopCounselorPhoneType;
 

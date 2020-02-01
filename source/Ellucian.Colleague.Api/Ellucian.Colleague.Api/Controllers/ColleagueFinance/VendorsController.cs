@@ -26,6 +26,7 @@ using Ellucian.Colleague.Dtos.Filters;
 using Ellucian.Web.Http.ModelBinding;
 using System.Web.Http.ModelBinding;
 using Newtonsoft.Json.Linq;
+using Ellucian.Colleague.Dtos.ColleagueFinance;
 
 namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 {
@@ -977,6 +978,53 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         }
 
         #endregion
+
+        /// <summary>
+        /// Get the list of vendors based on keyword search.
+        /// </summary>
+        /// <param name="searchCriteria"> The search criteria containing keyword for vendor search.</param>
+        /// <returns> The vendor search results</returns>      
+        /// <accessComments>
+        /// Requires at least one of the permissions VIEW.VENDOR, CREATE.UPDATE.REQUISITION and CREATE.UPDATE.PURCHASE.ORDER.
+        /// </accessComments>
+        [HttpPost]
+        public async Task<IEnumerable<VendorSearchResult>> QueryVendorsByPostAsync(VendorSearchCriteria searchCriteria)
+        {
+            if (searchCriteria==null)
+            {
+                string message = "Vendor search criteria must be specified.";
+                _logger.Error(message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
+            }
+            if (string.IsNullOrEmpty(searchCriteria.QueryKeyword))
+            {
+                string message = "query keyword is required to query.";
+                _logger.Error(message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
+            }
+
+            try
+            {
+                var vendorSearchResults = await _vendorsService.QueryVendorsByPostAsync(searchCriteria);
+                return vendorSearchResults;
+            }            
+            catch (ArgumentNullException anex)
+            {
+                _logger.Error(anex, anex.Message);
+                throw CreateHttpResponseException("Invalid argument.", HttpStatusCode.BadRequest);
+            }
+            catch (KeyNotFoundException knfex)
+            {
+                _logger.Error(knfex, knfex.Message);
+                throw CreateHttpResponseException("Record not found.", HttpStatusCode.NotFound);
+            }
+            // Application exceptions will be caught below.
+            catch (Exception ex)
+            {
+                _logger.Error(ex, ex.Message);
+                throw CreateHttpResponseException("Unable to search vendors", HttpStatusCode.BadRequest);
+            }
+        }
     }
 
 }

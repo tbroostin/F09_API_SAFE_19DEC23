@@ -1,6 +1,7 @@
 ﻿using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
 using Ellucian.Colleague.Data.ColleagueFinance.Repositories;
+using Ellucian.Colleague.Domain.Base.Transactions;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.DataContracts;
@@ -141,6 +142,38 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 dataReaderMock.Setup(d => d.ReadRecordAsync<GlaFyr>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(glaDataContracts.FirstOrDefault());
                 dataReaderMock.Setup(d => d.BulkReadRecordAsync<GlAccts>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(glAccts);
                 dataReaderMock.Setup(d => d.BulkReadRecordAsync<Projects>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(projects);
+
+                List<string> ids = new List<string>() { "1", "2" };
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 1,
+                    CacheName = "AllLedgerActivities",
+                    Entity = "",
+                    Sublist = ids,
+                    TotalCount = ids.Count,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                    {
+                        new KeyCacheInfo()
+                        {
+                            KeyCacheMax = 5905,
+                            KeyCacheMin = 1,
+                            KeyCachePart = "000",
+                            KeyCacheSize = 5905
+                        },
+                        new KeyCacheInfo()
+                        {
+                            KeyCacheMax = 7625,
+                            KeyCacheMin = 5906,
+                            KeyCachePart = "001",
+                            KeyCacheSize = 1720
+                        }
+                    }
+                };
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManagerMock.Object);
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
+
             }
 
             #endregion

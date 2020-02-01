@@ -288,13 +288,20 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         public class GetEmployeeLeavePlansV2 : EmployeeLeavePlansServiceTests
         {
             public EmployeeLeavePlansService serviceUnderTest;
-
+            public string UserForAdminPermissionCheck
+            {
+                get
+                {
+                    return "0003917";
+                }
+            }
 
             public List<EmployeeLeavePlan> employeeLeavePlans = new List<EmployeeLeavePlan>()
             {
                 new EmployeeLeavePlan("1", "0003914", new DateTime(2017, 1, 1), null, "VACH", "Vacation Hourly", new DateTime(2000, 1, 1), null, LeaveTypeCategory.Vacation, "VAC", "", new DateTime(2000,1,1), 20m, 1, 1,new List<string> { "VAC", "VAC1" }, true),
                 new EmployeeLeavePlan("1", "0003915", new DateTime(2017, 1, 1), null, "VACH", "Vacation Hourly",  new DateTime(2000, 1, 1), null, LeaveTypeCategory.Vacation, "VAC", "", new DateTime(2000,1,1), 20m, 1, 1,new List<string> { "VAC", "VAC1" }, true),
                 new EmployeeLeavePlan("1", "0003916", new DateTime(2017, 1, 1), null, "VACH", "Vacation Hourly",  new DateTime(2000, 1, 1), null, LeaveTypeCategory.Vacation, "VAC", "", new DateTime(2000,1,1), 20m, 1, 1, new List<string> { "VAC", "VAC1" },true),
+                new EmployeeLeavePlan("5", "0003917", new DateTime(2017, 1, 1), null, "SICH", "Sick Hourly",  new DateTime(2000, 1, 1), null, LeaveTypeCategory.Sick, "SIC", "", new DateTime(2000,1,1), 20m, 1, 1, new List<string> { "SIC", "SICK" },true),
             };
 
             public Mock<ISupervisorsRepository> supervisorsRepositoryMock;
@@ -445,6 +452,39 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 var actual = await serviceUnderTest.GetEmployeeLeavePlansV2Async("foobar");
 
                 Assert.AreEqual(employeeLeavePlans.Count, actual.Count());
+
+            }
+
+            [TestMethod]
+            public async Task GetEmployeeLeavePlansV2Async_GetEffectivePersonData_AdminAccess()
+            {
+                
+                roleRepositoryMock.Setup(r => r.Roles)
+                   .Returns(() => (employeeCurrentUserFactory.CurrentUser.Roles).Select(roleTitle =>
+                   {
+                       var role = new Domain.Entities.Role(roleTitle.GetHashCode(), roleTitle);
+
+                       role.AddPermission(new Domain.Entities.Permission(HumanResourcesPermissionCodes.ViewAllTimeHistory));
+
+                       return role;
+                   }));
+
+
+                //logged in user with ID"0003914" should be able to view any of the leave plans specified in employeeLeavePlans
+                var actual = await serviceUnderTest.GetEmployeeLeavePlansV2Async(UserForAdminPermissionCheck);
+
+                Assert.AreEqual(actual.Count(), 1);
+                Assert.AreEqual(actual.ToList()[0].EmployeeId, UserForAdminPermissionCheck);
+
+            }
+
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task GetEmployeeLeavePlansV2Async_GetEffectivePersonData_NoAdminAccess()
+            {
+                //logged in user with ID"0003914" should be able to view any of the leave plans specified in employeeLeavePlans
+                var actual = await serviceUnderTest.GetEmployeeLeavePlansV2Async(UserForAdminPermissionCheck);
 
             }
         }

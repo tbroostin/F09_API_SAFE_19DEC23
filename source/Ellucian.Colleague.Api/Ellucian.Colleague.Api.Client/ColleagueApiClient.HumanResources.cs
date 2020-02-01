@@ -1,4 +1,4 @@
-﻿/*Copyright 2015-2018 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2015-2019 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Colleague.Dtos.HumanResources;
 using Ellucian.Web.Utility;
@@ -8,6 +8,8 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Threading.Tasks;
+using Ellucian.Colleague.Api.Client.Exceptions;
+using System.Net.Http;
 
 namespace Ellucian.Colleague.Api.Client
 {
@@ -36,6 +38,34 @@ namespace Ellucian.Colleague.Api.Client
             throw new InvalidOperationException("UpdateDirectDepositsAsync method is obsolete as of API 1.16. Use UpdatePayrollDepositDirectives instead.");
         }
 
+        /// <summary>
+        /// Get Employee current benefits data based on the permissions of the current user.
+        /// </summary>
+        /// <returns><returns>EmployeeBenefits DTO containing list of employee's current benefits.<see cref="Dtos.HumanResources.EmployeeBenefits"></see></returns></returns>
+        public async Task<EmployeeBenefits> GetEmployeeCurrentBenefitsAsync(string effectivePersonId = null)
+        {
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_employeeCurrentBenefitsPath);
+                string query;
+                if (effectivePersonId != null)
+                {
+                    query = UrlUtility.BuildEncodedQueryString("effectivePersonId", effectivePersonId);
+                    urlPath = UrlUtility.CombineUrlPathAndArguments(urlPath, query);
+                }
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<EmployeeBenefits>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get Employee current benefits data");
+                throw;
+            }
+        }
 
         /// <summary>
         /// Get PersonStatus data based on the permissions of the current user.      
@@ -130,6 +160,38 @@ namespace Ellucian.Colleague.Api.Client
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get PersonPositionWage data");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get PersonStipend data based on the permissions of the current user.
+        /// </summary>
+        /// <example>SelfService getting person-stipend on behalf of an employee will return that employee's PersonStipend objects</example>
+        /// <example>SelfService getting person-stipend on behalf of a supervisor will return that supervisor's PersonStipend objects and all the PersonStipend objects of the supervisees</example>      
+        /// <returns></returns>
+        public async Task<IEnumerable<PersonStipend>> GetPersonStipendAsync(string effectivePersonId = null)
+        {
+            try
+            {
+                string urlPath;
+                if (effectivePersonId == null)
+                {
+                    urlPath = UrlUtility.CombineUrlPath(_personStipendPath);
+                }
+                else
+                {
+                    urlPath = _personStipendPath + "?" + UrlUtility.BuildEncodedQueryString("effectivePersonId", effectivePersonId);
+                }
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<PersonStipend>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get PersonStipend data");
                 throw;
             }
         }
@@ -333,7 +395,7 @@ namespace Ellucian.Colleague.Api.Client
                 return resource;
             }
 
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get HumanResourceDemographics data");
                 throw;
@@ -393,7 +455,7 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
-        
+
         /// <summary>
         /// Get a list of summaries of pay statements available to the current user filtered down to any of the given filter criteria.
         /// </summary>
@@ -573,6 +635,11 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
 
+        /// <summary>
+        /// Gets Employee Leave Plans
+        /// </summary>
+        /// <param name="effectivePersonId"></param>
+        /// <returns></returns>
         public async Task<IEnumerable<EmployeeLeavePlan>> GetEmployeeLeavePlansAsync(string effectivePersonId = null)
         {
             try
@@ -593,9 +660,87 @@ namespace Ellucian.Colleague.Api.Client
 
                 return JsonConvert.DeserializeObject<IEnumerable<EmployeeLeavePlan>>(await response.Content.ReadAsStringAsync());
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 logger.Error(e, "Unable to get employee leave plans");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Returns Employee Compensation Details 
+        /// </summary>
+        /// <param name="effectivePersonId">EmployeeId of a user used for retrieving compensation details </param>
+        /// <param name="salaryAmount">Estimated Annual Salary amount
+        /// If this value is provided,it will be used in computing compensation details in Total Compensation Colleague Transaction.
+        /// When not provided, the salary amount will be computed in Total Compensation Colleague Transaction
+        /// </param>
+        /// <returns>Employee Compensation DTO containing Compensation Details(Benefit-Deductions,Taxes and Stipends).<see cref="Dtos.HumanResources.EmployeeCompensation"></see> </returns>
+        /// <accessComments>
+        /// Any authenticated user can
+        /// 1) view their own compensation information; 
+        /// 2) view other employee's compensation information upon having admin access (i.e. VIEW.ALL.TOTAL.COMPENSATION permission)
+        /// </accessComments>
+        public async Task<EmployeeCompensation> GetEmployeeCompensationAsync(string effectivePersonId = null, decimal? salaryAmount = null)
+        {
+            try
+            {
+                var urlPath = UrlUtility.CombineUrlPath(_employeeCompensationPath);
+                List<string> QueryArray = new List<string>();
+                if (!string.IsNullOrEmpty(effectivePersonId))
+                {
+                    QueryArray.Add("effectivePersonId");
+                    QueryArray.Add(effectivePersonId);
+                }
+
+                if (salaryAmount.HasValue)
+                {
+                    QueryArray.Add("salaryAmount");
+                    QueryArray.Add(salaryAmount.ToString());
+                }
+
+                if (QueryArray.Any())
+                {
+                    urlPath += "?" + UrlUtility.BuildEncodedQueryString(QueryArray.ToArray());
+                }
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                return JsonConvert.DeserializeObject<EmployeeCompensation>(await response.Content.ReadAsStringAsync());
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get employee compensation details");
+                throw;
+            }
+
+        }
+
+        /// <summary>
+        /// Queries employee information summary based on the specified criteria.
+        /// Either a supervisor id or employee ids must be specified (or both)
+        /// </summary>
+        /// <param name="criteria">criteria to use for querying</param>
+        /// <returns>a list of EmployeeSummary DTOs</returns>
+        public async Task<IEnumerable<EmployeeSummary>> QueryEmployeeSummaryAsync(EmployeeSummaryQueryCriteria criteria)
+        {
+            if (criteria == null)
+            {
+                throw new ArgumentNullException("criteria");
+            }
+
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_qapiPath, _employeeSummaryPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<IEnumerable<EmployeeSummary>>(await response.Content.ReadAsStringAsync());
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to retrieve employee summary data for specified criteria");
                 throw;
             }
         }

@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.ColleagueFinance.Utilities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
@@ -29,6 +29,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Utilities
         private TestGlAccountRepository testGlAccountRepository;
         private CostCenterStructure costCenterStructure = new CostCenterStructure();
         private CostCenterStructure shortCostCenterStructure = new CostCenterStructure();
+        private IList<string> majorComponentStartPositionLong = new List<string>() { "1", "4", "7", "10", "13", "19" };
+        private IList<string> majorComponentStartPositionShort = new List<string>() { "1", "2", "3", "4", "10" };
 
         [TestInitialize]
         public void Initialize()
@@ -66,46 +68,68 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Utilities
         #endregion
 
         #region GetGlAccountGlClass
+
         [TestMethod]
         public void GlClassIs_Asset()
         {
             glAccount = "11_01_01_00_00000_10000";
-            Assert.AreEqual(GlAccountUtility.GetGlAccountGlClass(glAccount, glClassConfiguration), GlClass.Asset);
+            Assert.AreEqual(GlAccountUtility.GetGlAccountGlClass(glAccount, glClassConfiguration, majorComponentStartPositionLong), GlClass.Asset);
         }
 
         [TestMethod]
         public void GlClassIs_Liability()
         {
             glAccount = "11_01_01_00_00000_20000";
-            Assert.AreEqual(GlAccountUtility.GetGlAccountGlClass(glAccount, glClassConfiguration), GlClass.Liability);
+            Assert.AreEqual(GlAccountUtility.GetGlAccountGlClass(glAccount, glClassConfiguration, majorComponentStartPositionLong), GlClass.Liability);
         }
 
         [TestMethod]
         public void GlClassIs_FundBalance()
         {
             glAccount = "11_01_01_00_00000_30000";
-            Assert.AreEqual(GlAccountUtility.GetGlAccountGlClass(glAccount, glClassConfiguration), GlClass.FundBalance);
+            Assert.AreEqual(GlAccountUtility.GetGlAccountGlClass(glAccount, glClassConfiguration, majorComponentStartPositionLong), GlClass.FundBalance);
         }
 
         [TestMethod]
         public void GlClassIs_Revenue()
         {
             glAccount = "11_01_01_00_00000_40000";
-            Assert.AreEqual(GlAccountUtility.GetGlAccountGlClass(glAccount, glClassConfiguration), GlClass.Revenue);
+            Assert.AreEqual(GlAccountUtility.GetGlAccountGlClass(glAccount, glClassConfiguration, majorComponentStartPositionLong), GlClass.Revenue);
         }
 
         [TestMethod]
         public void GlClassIs_Expense()
         {
             glAccount = "11_01_01_00_00000_50000";
-            Assert.AreEqual(GlAccountUtility.GetGlAccountGlClass(glAccount, glClassConfiguration), GlClass.Expense);
+            Assert.AreEqual(GlAccountUtility.GetGlAccountGlClass(glAccount, glClassConfiguration, majorComponentStartPositionLong), GlClass.Expense);
+        }
+
+        [TestMethod]
+        public void LongGlAccount_GlClassIs_WithDelimiters()
+        {
+            glAccount = "11-01-01-00-00000-50000";
+            Assert.AreEqual(GlAccountUtility.GetGlAccountGlClass(glAccount, glClassConfiguration, majorComponentStartPositionLong), GlClass.Expense);
+        }
+
+        [TestMethod]
+        public void LongGlAccount_GlClassIs_NoDelimiters()
+        {
+            glAccount = "110101000000050000";
+            Assert.AreEqual(GlAccountUtility.GetGlAccountGlClass(glAccount, glClassConfiguration, majorComponentStartPositionLong), GlClass.Expense);
         }
 
         [TestMethod]
         public void ShortGlAccount_GlClassIs_Expense()
         {
             glAccount = "9-7-0-970000-62006";
-            Assert.AreEqual(GlAccountUtility.GetGlAccountGlClass(glAccount, shortAccountConfiguration), GlClass.Expense);
+            Assert.AreEqual(GlAccountUtility.GetGlAccountGlClass(glAccount, shortAccountConfiguration, majorComponentStartPositionShort), GlClass.Expense);
+        }
+
+        [TestMethod]
+        public void ShortGlAccount_GlClass_NoDelimiters()
+        {
+            glAccount = "97097000062006";
+            Assert.AreEqual(GlAccountUtility.GetGlAccountGlClass(glAccount, shortAccountConfiguration, majorComponentStartPositionShort), GlClass.Expense);
         }
 
         [TestMethod]
@@ -115,7 +139,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Utilities
             var actualParam = "";
             try
             {
-                GlAccountUtility.GetGlAccountGlClass(null, shortAccountConfiguration);
+                GlAccountUtility.GetGlAccountGlClass(null, shortAccountConfiguration, majorComponentStartPositionShort);
             }
             catch (ArgumentNullException anex)
             {
@@ -131,7 +155,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Utilities
             var actualParam = "";
             try
             {
-                GlAccountUtility.GetGlAccountGlClass("", shortAccountConfiguration);
+                GlAccountUtility.GetGlAccountGlClass("", shortAccountConfiguration, majorComponentStartPositionShort);
             }
             catch (ArgumentNullException anex)
             {
@@ -148,7 +172,24 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Utilities
             try
             {
                 glAccount = "9-7-0-970000-62006";
-                GlAccountUtility.GetGlAccountGlClass(glAccount, null);
+                GlAccountUtility.GetGlAccountGlClass(glAccount, null, majorComponentStartPositionShort);
+            }
+            catch (ArgumentNullException anex)
+            {
+                actualParam = anex.ParamName;
+            }
+            Assert.AreEqual(expectedParam, actualParam);
+        }
+
+        [TestMethod]
+        public void GetGlAccountGlClass_NullAccountStructure()
+        {
+            var expectedParam = "majorComponentStartPosition";
+            var actualParam = "";
+            try
+            {
+                glAccount = "9-7-0-970000-62006";
+                GlAccountUtility.GetGlAccountGlClass(glAccount, glClassConfiguration, null);
             }
             catch (ArgumentNullException anex)
             {
@@ -164,7 +205,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Utilities
             glAccount = "11_01_01_00_00000_10000";
             glClassConfiguration.GlClassStartPosition = 0;
             glClassConfiguration.GlClassLength = 0;
-            GlClass glClass = GlAccountUtility.GetGlAccountGlClass(glAccount, glClassConfiguration);
+            GlClass glClass = GlAccountUtility.GetGlAccountGlClass(glAccount, glClassConfiguration, majorComponentStartPositionLong);
         }
 
         [TestMethod]
@@ -175,7 +216,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Utilities
             var actualMessage = "";
             try
             {
-                GlClass glClass = GlAccountUtility.GetGlAccountGlClass(glAccount, glClassConfiguration);
+                GlClass glClass = GlAccountUtility.GetGlAccountGlClass(glAccount, glClassConfiguration, majorComponentStartPositionLong);
             }
             catch (ApplicationException aex)
             {
@@ -186,11 +227,28 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Utilities
         #endregion
 
         #region GetCostCenterId
+
         [TestMethod]
         public void GetCostCenterId_Success()
         {
             // Cost center is composed of location, unit, and object.
-            var costCenterId = GlAccountUtility.GetCostCenterId("10_11_12_13_33333_51001", this.costCenterStructure);
+            var costCenterId = GlAccountUtility.GetCostCenterId("10_11_12_13_33333_51001", this.costCenterStructure, majorComponentStartPositionLong);
+            Assert.AreEqual("123333351001", costCenterId);
+        }
+
+        [TestMethod]
+        public void GetCostCenterId_LongGlAccount_WithDelimiters_Success()
+        {
+            glAccount = "10-11-12-13-33333-51001";
+            var costCenterId = GlAccountUtility.GetCostCenterId(glAccount, this.costCenterStructure, majorComponentStartPositionLong);
+            Assert.AreEqual("123333351001", costCenterId);
+        }
+
+        [TestMethod]
+        public void GetCostCenterId_LongGlAccount_NoDelimiters_Success()
+        {
+            glAccount = "101112133333351001";
+            var costCenterId = GlAccountUtility.GetCostCenterId(glAccount, this.costCenterStructure, majorComponentStartPositionLong);
             Assert.AreEqual("123333351001", costCenterId);
         }
 
@@ -198,28 +256,52 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Utilities
         public void GetCostCenterId_ShortGlAccount_Success()
         {
             glAccount = "9-7-0-970000-62006";
-            Assert.AreEqual("97000062006", GlAccountUtility.GetCostCenterId(glAccount, shortCostCenterStructure));
+            Assert.AreEqual("97000062006", GlAccountUtility.GetCostCenterId(glAccount, shortCostCenterStructure, majorComponentStartPositionShort));
+        }
+
+        [TestMethod]
+        public void GetCostCenterId_ShortGlAccount_NoDelimiters_Success()
+        {
+            glAccount = "97097000062006";
+            Assert.AreEqual("97000062006", GlAccountUtility.GetCostCenterId(glAccount, shortCostCenterStructure, majorComponentStartPositionShort));
         }
 
         [TestMethod]
         public void GetCostCenterId_NullGlNumber()
         {
-            var costCenterId = GlAccountUtility.GetCostCenterId(null, this.costCenterStructure);
+            var costCenterId = GlAccountUtility.GetCostCenterId(null, this.costCenterStructure, majorComponentStartPositionLong);
             Assert.AreEqual("", costCenterId);
         }
 
         [TestMethod]
         public void GetCostCenterId_EmptyGlNumber()
         {
-            var costCenterId = GlAccountUtility.GetCostCenterId("", this.costCenterStructure);
+            var costCenterId = GlAccountUtility.GetCostCenterId("", this.costCenterStructure, majorComponentStartPositionLong);
             Assert.AreEqual("", costCenterId);
         }
 
         [TestMethod]
         public void GetCostCenterId_NullStructure()
         {
-            var costCenterId = GlAccountUtility.GetCostCenterId("10_11_12_13_33333_51001", null);
+            var costCenterId = GlAccountUtility.GetCostCenterId("10_11_12_13_33333_51001", null, majorComponentStartPositionLong);
             Assert.AreEqual("", costCenterId);
+        }
+
+        [TestMethod]
+        public void GetCostCenterId_NullAccountStructure()
+        {
+            var expectedParam = "majorComponentStartPosition";
+            var actualParam = "";
+            try
+            {
+                glAccount = "10_11_12_13_33333_51001";
+                GlAccountUtility.GetGlAccountGlClass(glAccount, glClassConfiguration, null);
+            }
+            catch (ArgumentNullException anex)
+            {
+                actualParam = anex.ParamName;
+            }
+            Assert.AreEqual(expectedParam, actualParam);
         }
         #endregion
 
@@ -242,7 +324,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Utilities
                 },
             };
 
-            var messages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(glAccounts, exclusions);
+            var messages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(glAccounts, exclusions, majorComponentStartPositionShort);
             Assert.AreEqual(1, messages.Count);
             Assert.AreEqual("Object:62007: may not be used in budget adjustments.", messages.First());
         }
@@ -265,7 +347,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Utilities
                 },
             };
 
-            var messages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(glAccounts, exclusions);
+            var messages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(glAccounts, exclusions, majorComponentStartPositionLong);
             Assert.AreEqual(1, messages.Count);
             Assert.AreEqual("Object:51001: may not be used in budget adjustments.", messages.First());
         }
@@ -292,7 +374,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Utilities
             {
                 "Object:51001: may not be used in budget adjustments.",
             };
-            var actualMessages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(glAccounts, exclusions);
+            var actualMessages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(glAccounts, exclusions, majorComponentStartPositionLong);
             Assert.AreEqual(expectedMessages.Count, actualMessages.Count);
             foreach (var expectedMessage in expectedMessages)
             {
@@ -328,7 +410,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Utilities
             {
                 "Object:51001: may not be used in budget adjustments.",
             };
-            var actualMessages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(glAccounts, exclusions);
+            var actualMessages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(glAccounts, exclusions, majorComponentStartPositionLong);
             Assert.AreEqual(expectedMessages.Count, actualMessages.Count);
             foreach (var expectedMessage in expectedMessages)
             {
@@ -381,7 +463,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Utilities
                 "Object:75A47: may not be used in budget adjustments.",
                 "Object:75N02: may not be used in budget adjustments."
             };
-            var actualMessages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(glAccounts, exclusions);
+            var actualMessages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(glAccounts, exclusions, majorComponentStartPositionLong);
             Assert.AreEqual(expectedMessages.Count, actualMessages.Count);
             foreach (var expectedMessage in expectedMessages)
             {
@@ -406,6 +488,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Utilities
                 "11_00_01_01_33333_75N02",
                 "11_00_01_01_33333_75N10"
             };
+            IList<string> majorComponentStartPosition = new List<string>() { "1", "4", "7", "10", "13", "19" };
             var exclusions = new BudgetAdjustmentAccountExclusions();
             exclusions.ExcludedElements = new List<BudgetAdjustmentExcludedElement>()
             {
@@ -431,7 +514,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Utilities
                 }
             };
 
-            var actualMessages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(glAccounts, exclusions);
+            var actualMessages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(glAccounts, exclusions, majorComponentStartPosition);
             Assert.AreEqual(0, actualMessages.Count);
         }
 
@@ -449,7 +532,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Utilities
                 }
             };
 
-            var actualMessages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(glAccounts, exclusions);
+            var actualMessages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(glAccounts, exclusions, majorComponentStartPositionLong);
             Assert.AreEqual(0, actualMessages.Count);
         }
 
@@ -472,7 +555,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Utilities
                 }
             };
 
-            var actualMessages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(glAccounts, exclusions);
+            var actualMessages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(glAccounts, exclusions, majorComponentStartPositionLong);
             Assert.AreEqual(0, actualMessages.Count);
         }
 
@@ -486,7 +569,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Utilities
             };
             BudgetAdjustmentAccountExclusions exclusions = null;
 
-            var actualMessages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(glAccounts, exclusions);
+            var actualMessages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(glAccounts, exclusions, majorComponentStartPositionLong);
             Assert.AreEqual(0, actualMessages.Count);
         }
 
@@ -508,7 +591,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Utilities
                 }
             };
 
-            var actualMessages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(glAccounts, exclusions);
+            var actualMessages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(glAccounts, exclusions, majorComponentStartPositionLong);
             Assert.AreEqual(0, actualMessages.Count);
         }
 
@@ -530,7 +613,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Utilities
                 }
             };
 
-            var actualMessages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(glAccounts, exclusions);
+            var actualMessages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(glAccounts, exclusions, majorComponentStartPositionLong);
             Assert.AreEqual(0, actualMessages.Count);
         }
 
@@ -557,7 +640,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Utilities
                 },
             };
 
-            var actualMessages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(glAccounts, exclusions);
+            var actualMessages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(glAccounts, exclusions, majorComponentStartPositionLong);
             Assert.AreEqual(0, actualMessages.Count);
         }
 
@@ -603,7 +686,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Utilities
                 "Object:51002: may not be used in budget adjustments.",
                 "Object:51003: may not be used in budget adjustments.",
             };
-            var actualMessages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(glAccounts, exclusions);
+            var actualMessages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(glAccounts, exclusions, majorComponentStartPositionLong);
             Assert.AreEqual(expectedMessages.Count, actualMessages.Count);
             foreach (var expectedMessage in expectedMessages)
             {
@@ -631,7 +714,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Utilities
                 }
             };
 
-            var actualMessages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(glAccounts, exclusions);
+            var actualMessages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(glAccounts, exclusions, majorComponentStartPositionLong);
             Assert.AreEqual(0, actualMessages.Count);
         }
 
@@ -652,9 +735,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Utilities
                 }
             };
 
-            var actualMessages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(glAccounts, exclusions);
+            var actualMessages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(glAccounts, exclusions, majorComponentStartPositionLong);
             Assert.AreEqual(1, actualMessages.Count);
-            Assert.AreEqual(glAccounts[0] + ": is not a valid GL account.", actualMessages[0]);
+            Assert.AreEqual(glAccounts[0].Replace("_", "") + ": is not a valid GL account.", actualMessages[0]);
         }
 
         [TestMethod]
@@ -674,10 +757,100 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Utilities
                 }
             };
 
-            var actualMessages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(glAccounts, exclusions);
+            var actualMessages = GlAccountUtility.EvaluateExclusionsForBudgetAdjustment(glAccounts, exclusions, majorComponentStartPositionLong);
             Assert.AreEqual(1, actualMessages.Count);
-            Assert.AreEqual(glAccounts[0] + ": is not a valid GL account.", actualMessages[0]);
+            Assert.AreEqual(glAccounts[0].Replace("_", "") + ": is not a valid GL account.", actualMessages[0]);
         }
+        #endregion
+
+        #region ConvertGlAccountToInternalFormat
+
+        [TestMethod]
+        public void ConvertGlAccountToInternalFormat_NullGlAccount()
+        {
+            var expectedParam = "glAccount";
+            var actualParam = "";
+            try
+            {
+                GlAccountUtility.ConvertGlAccountToInternalFormat(null, majorComponentStartPositionLong);
+            }
+            catch (ArgumentNullException anex)
+            {
+                actualParam = anex.ParamName;
+            }
+            Assert.AreEqual(expectedParam, actualParam);
+        }
+
+        [TestMethod]
+        public void ConvertGlAccountToInternalFormat_NullAccountStructure()
+        {
+            var expectedParam = "majorComponentStartPosition";
+            var actualParam = "";
+            try
+            {
+                glAccount = "10_11_12_13_33333_51001";
+                GlAccountUtility.ConvertGlAccountToInternalFormat(glAccount, null);
+            }
+            catch (ArgumentNullException anex)
+            {
+                actualParam = anex.ParamName;
+            }
+            Assert.AreEqual(expectedParam, actualParam);
+        }
+
+        #endregion
+
+        #region ConvertGlAccountToExternalFormat
+
+        [TestMethod]
+        public void ConvertGlAccountToExternalFormat_NullGlAccount()
+        {
+            var expectedParam = "glAccount";
+            var actualParam = "";
+            try
+            {
+                GlAccountUtility.ConvertGlAccountToExternalFormat(null, majorComponentStartPositionLong);
+            }
+            catch (ArgumentNullException anex)
+            {
+                actualParam = anex.ParamName;
+            }
+            Assert.AreEqual(expectedParam, actualParam);
+        }
+
+        [TestMethod]
+        public void ConvertGlAccountToExternalFormat_NullAccountStructure()
+        {
+            var expectedParam = "majorComponentStartPosition";
+            var actualParam = "";
+            try
+            {
+                glAccount = "10_11_12_13_33333_51001";
+                GlAccountUtility.ConvertGlAccountToExternalFormat(glAccount, null);
+            }
+            catch (ArgumentNullException anex)
+            {
+                actualParam = anex.ParamName;
+            }
+            Assert.AreEqual(expectedParam, actualParam);
+        }
+
+        [TestMethod]
+        public void ConvertGlAccountToExternalFormat_ShortGlAccount()
+        {
+            glAccount = "97097000062006";
+            var formattedGlAccount = "9-7-0-970000-62006";
+            Assert.AreEqual(GlAccountUtility.ConvertGlAccountToExternalFormat(glAccount, majorComponentStartPositionShort), formattedGlAccount);
+        }
+
+        [TestMethod]
+        public void ConvertGlAccountToExternalFormat_LongGlAccount()
+        {
+            glAccount = "11_01_01_00_00000_50000";
+            var formattedGlAccount = "11-01-01-00-00000-50000";
+            Assert.AreEqual(GlAccountUtility.ConvertGlAccountToExternalFormat(glAccount, majorComponentStartPositionLong), formattedGlAccount);
+        }
+
         #endregion
     }
 }

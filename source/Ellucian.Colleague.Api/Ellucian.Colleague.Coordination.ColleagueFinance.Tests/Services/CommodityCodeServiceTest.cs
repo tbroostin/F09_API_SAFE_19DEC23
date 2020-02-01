@@ -37,6 +37,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             private Domain.Entities.Permission permissionViewAnyPerson;
 
             private IEnumerable<Domain.ColleagueFinance.Entities.CommodityCode> allCommodityCodes;
+            private IEnumerable<Domain.ColleagueFinance.Entities.ProcurementCommodityCode> allCFCommodityCodes;
             private CommodityCodesService commodityCodeService;
 
             [TestInitialize]
@@ -61,6 +62,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { personRole });
 
                 allCommodityCodes = new TestColleagueFinanceReferenceDataRepository().GetCommodityCodesAsync(false).Result;
+                allCFCommodityCodes = new TestColleagueFinanceReferenceDataRepository().GetCFCommodityCodesAsync().Result;
                 commodityCodeService = new CommodityCodesService(adapterRegistryMock.Object, configurationRepository, currentUserFactory, roleRepoMock.Object,
                     refRepo, logger);
             }
@@ -71,6 +73,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 configurationRepository = null;
                 refRepo = null;
                 allCommodityCodes = null;
+                allCFCommodityCodes = null;
                 adapterRegistry = null;
                 roleRepo = null;
                 logger = null;
@@ -96,6 +99,17 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 Assert.AreEqual(commodityCode.Code, thisCC.Code);
                 Assert.AreEqual(commodityCode.Description, string.Empty);
                 Assert.AreEqual(commodityCode.Title, thisCC.Description);
+            }
+
+            [TestMethod]
+            public async Task GetCommodityCodeServiceByGuid_CountAllcommodityCodesAsync()
+            {
+                Ellucian.Colleague.Domain.ColleagueFinance.Entities.ProcurementCommodityCode thisCC = allCFCommodityCodes.FirstOrDefault();
+                refRepoMock.Setup(repo => repo.GetAllCommodityCodesAsync()).ReturnsAsync(allCFCommodityCodes);
+
+                var commodityCode = await commodityCodeService.GetAllCommodityCodesAsync();
+                Assert.AreEqual(commodityCode.FirstOrDefault().Code, thisCC.Code);
+                Assert.AreEqual(commodityCode.FirstOrDefault().Description, thisCC.Description);
             }
         }
 

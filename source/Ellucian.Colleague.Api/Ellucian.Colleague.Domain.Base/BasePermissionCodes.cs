@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
 using System;
 
 namespace Ellucian.Colleague.Domain.Base
@@ -6,6 +6,9 @@ namespace Ellucian.Colleague.Domain.Base
     [Serializable]
     public static class BasePermissionCodes
     {
+        // Access to update a langauge
+        public const string UpdateLanguage = "UPDATE.LANGUAGE";
+
         // Access to create person
         public const string CreatePerson = "CREATE.PERSON";
 
@@ -30,26 +33,32 @@ namespace Ellucian.Colleague.Domain.Base
         // Access to view any person's data
         public const string ViewAnyPerson = "VIEW.ANY.PERSON";
 
-        // Access to view any person relationships
-        public const string ViewAnyPersonRelationship = "VIEW.PERSON.RELATIONSHIPS";
+        // Access to view any personal relationships
+        public const string ViewAnyRelationship = "VIEW.RELATIONSHIP";
 
         // Access to view any nonperson relationships
         public const string ViewAnyNonPersonRelationship = "VIEW.NONPERSON.RELATIONSHIPS";
 
         // Access to create/update any person relationships
-        public const string UpdatePersonRelationship = "UPDATE.PERSON.RELATIONSHIPS";
+        public const string UpdatePersonalRelationship = "UPDATE.RELATIONSHIP";
 
         // Access to create/update any nonperson relationships
         public const string UpdateNonPersonRelationship = "UPDATE.NONPERSON.RELATIONSHIPS";
 
         // Access to delete any person relationships
-        public const string DeletePersonRelationship = "DELETE.PERSON.RELATIONSHIPS";
+        public const string DeletePersonalRelationship = "DELETE.RELATIONSHIP";
 
         // Access to delete any nonperson relationships
         public const string DeleteNonPersonRelationship = "DELETE.NONPERSON.RELATIONSHIPS";
 
         // Access to view integration configuration information
         public const string ViewIntegrationConfig = "VIEW.INTEGRATION.CONFIG";
+
+        // Access to view Person Match Request information
+        public const string ViewPersonMatchRequest = "VIEW.PERSON.MATCH.REQUEST";
+
+        // Access to view Person Match Request information
+        public const string CreatePersonMatchRequestProspects = "CREATE.PERSON.MATCH.REQUEST.PROSPECTS";
 
         // Enables a person to update their own email addresses.
         // Used in endpoint UpdatePersonProfile: PUT persons/{personId} application/vnd.ellucian-person-profile.v{}+json
@@ -97,12 +106,15 @@ namespace Ellucian.Colleague.Domain.Base
         // Used in endpoint GetStudentRestrictions: GET students/{studentId}/restrictions
         public const string ViewPersonRestrictions = "VIEW.PERSON.RESTRICTIONS";
 
-        // Enables a person to update the organizational relationships (assign managers/subordinates)
-        // Used in endpoints for modifying organizational relationships
-        // CreateOrganizationalRelationship: POST /organizational-relationships
-        // UpdateOrganizationalRelationship: POST /organizational-relationships/{id}
-        // DeleteOrganizationalRelationship: DELETE /organizational-relationships/{id}
+        /// <summary>
+        /// Enables a person to update the organizational relationships (assign managers/subordinates)
+        /// </summary>
         public const string UpdateOrganizationalRelationships = "UPDATE.ORGANIZATIONAL.RELATIONSHIPS";
+
+        /// <summary>
+        /// Enables a person to view the organizational relationships (manager/subordinate)
+        /// </summary>
+        public const string ViewOrganizationalRelationships = "VIEW.ORGANIZATIONAL.RELATIONSHIPS";
 
         /// <summary>
         /// Enables a person to view employee W2 tax information
@@ -185,11 +197,14 @@ namespace Ellucian.Colleague.Domain.Base
         /// </summary>
         public const string View1099MISC = "VIEW.1099MISC";
 
-        // Access to view any personal relationships
-        public const string ViewAnyRelationship = "VIEW.RELATIONSHIP";
-
-        // Access to view any person contacts
+        // Access to view any person contacts and person-emergency-contacts
         public const string ViewAnyPersonContact = "VIEW.PERSON.CONTACT";
+
+        // Access to view any person contacts and person-emergency-contacts
+        public const string UpdatePersonContact = "UPDATE.PERSON.CONTACT";
+
+        // Access to view any person contacts and person-emergency-contacts
+        public const string DeletePersonContact = "DELETE.PERSON.CONTACT";
 
         // Access to view any person guardians
         public const string ViewAnyPersonGuardian = "VIEW.PERSON.GUARDIAN";
@@ -205,5 +220,37 @@ namespace Ellucian.Colleague.Domain.Base
 
         // Access to Recruiter operations
         public const string PerformRecruiterOperations = "PERFORM.RECRUITER.OPERATIONS";
+
+        // Access to update a country
+        public const string UpdateCountry = "UPDATE.COUNTRY";
+
+        // Access to update a currency
+        public const string UpdateCurrency = "UPDATE.CURRENCY";
+
+        // Enables access to view External Education
+        public const string ViewExternalEducation = "VIEW.EXTERNAL.EDUCATION";
+
+        // Enables access to create External Education
+        public const string CreateExternalEducation = "UPDATE.EXTERNAL.EDUCATION";
+
+        // Access to view person-external-edcuation-credentials
+        public const string ViewPersonExternalEducationCredentials = "VIEW.PER.EXT.EDUC.CREDENTIAL";
+
+        // Access to update/create person-external-education-credentials
+        public const string UpdatePersonExternalEducationCredentials = "UPDATE.PER.EXT.EDUC.CREDENTIAL";
+
+        // Access to update configuration-settings
+        public const string UpdateConfigurationSettings = "UPDATE.CONFIG.SETTING";
+
+        // Permission to query phone numbers
+        public const string QueryPhoneNumbers = "QUERY.PHONE.NUMBERS";
+
+        // Permission to create an Attachment Collection
+        public const string CreateAttachmentCollection = "CREATE.ATTACHMENT.COLLECTION";
+
+        /// <summary>
+        /// Enables an account to reset all passwords. 
+        /// </summary>
+        public const string AdminResetAllPasswords = "ADMIN.RESET.ALL.PASSWORDS";
     }
 }

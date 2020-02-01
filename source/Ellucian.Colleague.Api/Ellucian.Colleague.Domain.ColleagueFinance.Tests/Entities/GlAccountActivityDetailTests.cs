@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -45,9 +45,11 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests.Entities
             var glAssetValues = new List<string>() { "1" };
             var glLiabilityValues = new List<string>() { "2" };
             var glFundBalValues = new List<string>() { "3" };
+            IList<string> majorComponentStartPosition = new List<string>() {"1", "4", "7", "10", "13", "19" };
 
             var activityRepository = await glAccountActivityDetailRepository.QueryGlActivityDetailAsync(glAccount, fiscalYear,
-                new CostCenterStructure(), new GeneralLedgerClassConfiguration(glClassName, glExpenseValues, glRevenueValues, glAssetValues, glLiabilityValues, glFundBalValues));
+                new CostCenterStructure(), new GeneralLedgerClassConfiguration(glClassName, glExpenseValues, glRevenueValues, glAssetValues, glLiabilityValues, glFundBalValues),
+                majorComponentStartPosition);
             var glAccountActivityDetail = new GlAccountActivityDetail(activityRepository.GlAccountNumber);
             Assert.AreEqual(activityRepository.GlAccountNumber, glAccountActivityDetail.GlAccountNumber);
             Assert.IsTrue(glAccountActivityDetail.ActualAmount == 0);

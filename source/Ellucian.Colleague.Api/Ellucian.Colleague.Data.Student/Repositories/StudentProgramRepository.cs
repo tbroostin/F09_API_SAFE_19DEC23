@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -145,7 +145,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     }
                     return programData;
                 });
-            var programs = await BuildStudentProgramsAsync(programsdata, true);
+
+            var programs = await BuildStudentProgramsAsync(programsdata, new List<string>() { studentId }, true);
             return programs;
         }
 
@@ -207,9 +208,140 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     var errorMessage = string.Format("Unable to access STUDENT.PROGRAMS table, record(s) not found for {0}", string.Join(",", stprIds));
                     logger.Info(errorMessage);
                 }
-                programs = await BuildStudentProgramsAsync(programsData, includeInactivePrograms, term, includeHistory);
+                programs = await BuildStudentProgramsAsync(programsData, studentIds.ToList(), includeInactivePrograms, term, includeHistory);
             }
             return programs;
+        }
+
+        /// <summary>
+        /// Add new academic Program for a Student
+        /// </summary>
+        /// <param name="studentAcademicProgram">The Student Academic program information</param>
+        /// <param name="activePrograms">The Student active program</param>
+        /// <param name="endDates">End date of the active program</param>
+        /// <returns>Newly created Program</returns>
+        public async Task<StudentProgram> AddStudentProgram(StudentAcademicProgram studentAcademicProgram, List<string> activePrograms, List<string> endDates)
+        {
+            var addProgramRequest = new TxChangeOfProgramRequest()
+            {
+                APersonId = studentAcademicProgram.StudentId,
+                AAcadProgram = studentAcademicProgram.ProgramCode,
+                ACatalog = studentAcademicProgram.CatalogCode,
+                AStartDate = studentAcademicProgram.StartDate.HasValue ? studentAcademicProgram.StartDate.Value.ToShortDateString() : "",
+                AlEndDates = endDates,
+                ADept = studentAcademicProgram.DepartmentCode,
+                ALocation = studentAcademicProgram.Location,
+                AActivePrograms = activePrograms,
+                AAction = "C", 
+                ACopyEdPlan = "N",
+                ACreateApplFlag = "N"
+            };
+            try
+            {
+                var createResponse = await transactionInvoker.ExecuteAsync<TxChangeOfProgramRequest, TxChangeOfProgramResponse>(addProgramRequest);
+                if (!string.IsNullOrEmpty(createResponse.AErrorMessage))
+                {
+                    logger.Info(createResponse.AErrorMessage);
+                    throw new Exception(string.Format("Unable to create student academic program. Message: '{0}'", createResponse.AErrorMessage));
+                }
+
+                // If add is success, Clear Student Programs Cache....
+                Students students = await DataReader.ReadRecordAsync<Students>("STUDENTS", studentAcademicProgram.StudentId);
+
+                if (students != null)
+                {
+                    var stprIds = new List<string>();
+                    if (students.StuAcadPrograms != null)
+                    {
+                        foreach (var acadProgramId in students.StuAcadPrograms)
+                        {
+                            stprIds.Add(studentAcademicProgram.StudentId + "*" + acadProgramId);
+                        }
+                    }
+                    
+                    string cachekey = string.Join(".", stprIds);
+                    string planningStudentCacheKey = "PlanningStudent" + studentAcademicProgram.StudentId;
+                    ClearCache(new List<string> { "StudentPrograms" + cachekey, planningStudentCacheKey });
+                }
+
+                StudentProgram studentProgram = null;
+                var studentPrograms = await GetStudentProgramsByIdsAsync(new List<string>() { studentAcademicProgram.StudentId }, false);
+                if (studentPrograms != null || studentPrograms.Any())
+                    studentProgram = studentPrograms.FirstOrDefault(x => x.ProgramCode == studentAcademicProgram.ProgramCode);
+
+                return studentProgram;
+            }
+            catch(Exception ex)
+            {
+                var errorMessage = string.Format("Unable to add academic program for student: '{0}' and program: '{1}'. Message: '{2}'", studentAcademicProgram.StudentId, studentAcademicProgram.ProgramCode, ex.Message);
+                logger.Info(errorMessage);
+                throw new Exception(errorMessage);
+            }
+        }
+
+        /// <summary>
+        /// Update academic Program for a Student
+        /// </summary>
+        /// <param name="studentAcademicProgram">The Student Academic program information</param>
+        /// <param name="activePrograms">The Student active program</param>
+        /// <param name="endDates">End date of the active program</param>
+        /// <returns>Update status</returns>
+        public async Task<StudentProgram> UpdateStudentProgram(StudentAcademicProgram studentAcademicProgram, List<string> activePrograms, List<string> endDates)
+        {
+            var addProgramRequest = new TxChangeOfProgramRequest()
+            {
+                APersonId = studentAcademicProgram.StudentId,
+                AAcadProgram = studentAcademicProgram.ProgramCode,
+                ACatalog = studentAcademicProgram.CatalogCode,
+                AStartDate = studentAcademicProgram.StartDate.HasValue ? studentAcademicProgram.StartDate.Value.ToShortDateString() : "",
+                AlEndDates = endDates,
+                ADept = null,
+                ALocation = null,
+                AActivePrograms = activePrograms,
+                AAction = "U",
+                ACopyEdPlan = "N",
+                ACreateApplFlag = "N"
+            };
+            try
+            {
+                var updateResponse = await transactionInvoker.ExecuteAsync<TxChangeOfProgramRequest, TxChangeOfProgramResponse>(addProgramRequest);
+                if (!string.IsNullOrEmpty(updateResponse.AErrorMessage))
+                {
+                    logger.Info(updateResponse.AErrorMessage);
+                    throw new Exception(string.Format("Unable to update student academic program. Message: '{0}'", updateResponse.AErrorMessage));
+                }
+
+                // If update is success, clear Student Programs Cache....
+                Students students = await DataReader.ReadRecordAsync<Students>("STUDENTS", studentAcademicProgram.StudentId);
+
+                if (students != null)
+                {
+                    var stprIds = new List<string>();
+                    if (students.StuAcadPrograms != null)
+                    {
+                        foreach (var acadProgramId in students.StuAcadPrograms)
+                        {
+                            stprIds.Add(studentAcademicProgram.StudentId + "*" + acadProgramId);
+                        }
+                    }
+                    string cachekey = string.Join(".", stprIds);
+                    string planningStudentCacheKey = "PlanningStudent" + studentAcademicProgram.StudentId;
+                    ClearCache(new List<string> { "StudentPrograms" + cachekey, planningStudentCacheKey });
+                }
+
+                StudentProgram studentProgram = null;
+                var studentPrograms = await GetStudentProgramsByIdsAsync(new List<string>() { studentAcademicProgram.StudentId }, false);
+                if (studentPrograms != null || studentPrograms.Any())
+                    studentProgram = studentPrograms.FirstOrDefault(x => x.ProgramCode == studentAcademicProgram.ProgramCode);
+
+                return studentProgram;
+            }
+            catch (Exception ex)
+            {
+                var errorMessage = string.Format("Unable to update academic program for student: '{0}' and program: '{1}'. Message: '{2}'", studentAcademicProgram.StudentId, studentAcademicProgram.ProgramCode, ex.Message);
+                logger.Info(errorMessage);
+                throw new Exception(errorMessage);
+            }
         }
 
         /// <summary>
@@ -242,7 +374,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <param name="includeHistory">flag to include history</param>
         /// <returns>Returns StudentProgram</returns>
 
-        private async Task<IEnumerable<StudentProgram>> BuildStudentProgramsAsync(Collection<StudentPrograms> programData, bool includeInactivePrograms = false, Term term = null, bool includeHistory = false)
+        private async Task<IEnumerable<StudentProgram>> BuildStudentProgramsAsync(Collection<StudentPrograms> programData, List<string> studentIds, bool includeInactivePrograms = false, Term term = null, bool includeHistory = false)
         {
 
             List<StudentProgram> programs = new List<StudentProgram>();
@@ -297,9 +429,26 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             string[] progCodes = programData.Select(p => p.Recordkey).Where(x => !string.IsNullOrEmpty(x) && x.Contains("*")).Select(x => x.Split('*')[1]).Where(y => !string.IsNullOrEmpty(y)).ToArray();
             Collection<AcadPrograms> acadProgramCollection = new Collection<AcadPrograms>();
+            Collection<StudentAcadLevels> studentAcadLevelsCollection = new Collection<StudentAcadLevels>();
             if (progCodes != null && progCodes.Count() > 0)
             {
                 acadProgramCollection = await DataReader.BulkReadRecordAsync<AcadPrograms>(progCodes);
+
+                var students = await DataReader.BulkReadRecordAsync<Students>(studentIds.ToArray());
+                var studentAcadLevelIds = new List<string>();
+
+                if (students != null)
+                {
+                    foreach (var student in students)
+                    {
+                        if (student.StuAcadLevels != null)
+                        {
+                            studentAcadLevelIds.AddRange(student.StuAcadLevels.Select(acadLevelId => student.Recordkey + "*" + acadLevelId));
+                        }
+                    }
+                }
+
+                studentAcadLevelsCollection = await DataReader.BulkReadRecordAsync<StudentAcadLevels>(studentAcadLevelIds.Distinct().ToArray());
             }
             if (acadProgramCollection == null || acadProgramCollection.Count() == 0)
             {
@@ -389,9 +538,22 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     stpr.ProgramStatusProcessingCode = programStatus;
                     stpr.HasGraduated = (programStatus == StudentProgramStatusProcessingType.Graduated) ? true : false;
                     AcadPrograms acadProgramData = null;
-                    if (acadProgramCollection != null)
+                    StudentAcadLevels studentAcadLevelsData = null;
+            
+                    if (acadProgramCollection != null && acadProgramCollection.Any())
                     {
                         acadProgramData = acadProgramCollection.Where(a => a.Recordkey == progcode).FirstOrDefault();
+
+                        if (studentAcadLevelsCollection != null)
+                        {
+                            studentAcadLevelsData = studentAcadLevelsCollection.Where(a => a.Recordkey.Contains(studentid + "*"  + acadProgramData.AcpgAcadLevel)).FirstOrDefault();
+                        }
+                    }
+
+                    if (studentAcadLevelsData != null)
+                    {
+                        stpr.AcadStartDate = studentAcadLevelsData.StaStartDate;
+                        stpr.AcadEndDate = studentAcadLevelsData.StaEndDate;
                     }
 
                     if (acadProgramData != null)

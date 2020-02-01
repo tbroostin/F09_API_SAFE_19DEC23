@@ -248,11 +248,11 @@ namespace Ellucian.Web.Http.Tests.Filters
 
             //Assert
             Assert.IsTrue(valuesV1.ContainsKey("RequestedContentType"));
-            Assert.IsTrue(valuesV1.ContainsValue("customTypeV1"));
+            Assert.IsTrue(valuesV1.ContainsValue("customTypeV3"));
             Assert.IsFalse(valuesV2.ContainsKey("RequestedContentType"));
-            Assert.IsFalse(valuesV2.ContainsValue("customTypeV1"));
+            Assert.IsFalse(valuesV2.ContainsValue("customTypeV3"));
             Assert.IsFalse(valuesV3.ContainsKey("RequestedContentType"));
-            Assert.IsFalse(valuesV3.ContainsValue("customTypeV1"));
+            Assert.IsFalse(valuesV3.ContainsValue("customTypeV3"));
         }
     }
 }

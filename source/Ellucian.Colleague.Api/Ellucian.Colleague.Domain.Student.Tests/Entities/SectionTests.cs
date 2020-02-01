@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Student.Entities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -541,6 +541,27 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
             {
                 Assert.IsNotNull(sec.PrimarySectionMeetings);
                 Assert.AreEqual(0, sec.PrimarySectionMeetings.Count);
+            }
+
+            [TestMethod]
+            public void Section_GradeSchemeCode()
+            {
+                sec.GradeSchemeCode = "UG";
+                Assert.AreEqual("UG", sec.GradeSchemeCode);
+            }
+
+            [TestMethod]
+            public void Section_GradeSubschemeCode()
+            {
+                sec.GradeSubschemeCode = "UGS";
+                Assert.AreEqual("UGS", sec.GradeSubschemeCode);
+            }
+
+            [TestMethod]
+            public void Section_Synonym()
+            {
+                sec.Synonym = "0003444";
+                Assert.AreEqual("0003444", sec.Synonym);
             }
         }
 

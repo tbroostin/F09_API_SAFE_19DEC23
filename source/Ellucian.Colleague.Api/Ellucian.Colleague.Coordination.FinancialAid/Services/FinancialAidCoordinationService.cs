@@ -1,10 +1,5 @@
-﻿//Copyright 2014-2015 Ellucian Company L.P. and its affiliates.
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿//Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base.Services;
-using Ellucian.Colleague.Domain.FinancialAid;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student;
 using Ellucian.Web.Adapters;
@@ -45,10 +40,12 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
         /// <summary>
         /// If the current user does not have permissions to access the given student, returns false;
         /// </summary>
-        /// <param name="student"></param>
-        protected bool UserHasAccessPermission(string studentId)
+        /// <param name="studentId">student id for the student to check data access permissions to</param>
+        /// <param name="proxyPermissions">(Optional) Proxy permissions list with which to check the current 
+        /// user has been granted at least one, if present.</param>
+        protected bool UserHasAccessPermission(string studentId, params Domain.Base.Entities.ProxyWorkflowConstants[] proxyPermissions)
         {
-            if (UserIsSelf(studentId) || HasPermission(StudentPermissionCodes.ViewFinancialAidInformation) || HasProxyAccessForPerson(studentId))
+            if (UserIsSelf(studentId) || HasPermission(StudentPermissionCodes.ViewFinancialAidInformation) || HasProxyAccessForPerson(studentId, proxyPermissions))
             {
                 return true;
             }

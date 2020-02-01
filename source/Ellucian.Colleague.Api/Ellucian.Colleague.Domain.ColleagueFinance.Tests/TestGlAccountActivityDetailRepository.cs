@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -51,7 +51,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             Populate();
         }
 
-        public async Task<GlAccountActivityDetail> QueryGlActivityDetailAsync(string glAccount, string fiscalYear, CostCenterStructure costCenterStructure, GeneralLedgerClassConfiguration glClassConfiguration)
+        public async Task<GlAccountActivityDetail> QueryGlActivityDetailAsync(string glAccount, string fiscalYear, CostCenterStructure costCenterStructure, GeneralLedgerClassConfiguration glClassConfiguration, IList<string> majorComponentStartPosition)
         {
             var glAccountActivityDetailDomain = await Task.Run(() => glAccountActivityDetail);
             return glAccountActivityDetailDomain;

@@ -68,5 +68,12 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             AidYearId = aidYearId;
             AwardHistory = new List<StudentAwardHistoryByPeriod>();
         }
+                
+        public StudentFinancialAidAward(string studentId = "", string awardFundId = "", string aidYearId = "")
+        {
+            StudentId = studentId;
+            AwardFundId = awardFundId;
+            AidYearId = aidYearId;
+        }
     }
 }

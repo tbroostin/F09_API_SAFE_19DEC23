@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Dtos.Base;
@@ -108,5 +108,11 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// </summary>
         /// <returns>Required Document Configuration dto</returns>
         Task<RequiredDocumentConfiguration> GetRequiredDocumentConfigurationAsync();
+
+        /// <summary>
+        /// Returns the session configuration
+        /// </summary>
+        /// <returns>Session configuration</returns>
+        Task<Dtos.Base.SessionConfiguration> GetSessionConfigurationAsync();
     }
 }

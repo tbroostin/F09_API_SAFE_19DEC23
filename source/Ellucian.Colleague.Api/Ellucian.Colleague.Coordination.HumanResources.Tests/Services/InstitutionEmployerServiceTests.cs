@@ -101,7 +101,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         [TestMethod]
         public async Task GetInstitutionEmployers_HEDM_CountInstitutionEmployersAsync()
         {
-            institutionEmployersRepoMock.Setup(repo => repo.GetInstitutionEmployersAsync()).ReturnsAsync(allInstitutionEmployers);
+            institutionEmployersRepoMock.Setup(repo => repo.GetInstitutionEmployersAsync(It.IsAny<bool>())).ReturnsAsync(allInstitutionEmployers);
             IEnumerable<Dtos.InstitutionEmployers> institutionEmployer = await institutionEmployerService.GetInstitutionEmployersAsync();
             Assert.AreEqual(1, institutionEmployer.Count());
         }
@@ -109,7 +109,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         [TestMethod]
         public async Task GetInstitutionEmployers_HEDM_CompareInstitutionEmployersAsync()
         {
-            institutionEmployersRepoMock.Setup(repo => repo.GetInstitutionEmployersAsync()).ReturnsAsync(allInstitutionEmployers);
+            institutionEmployersRepoMock.Setup(repo => repo.GetInstitutionEmployersAsync(It.IsAny<bool>())).ReturnsAsync(allInstitutionEmployers);
 
             IEnumerable<Dtos.InstitutionEmployers> institutionEmployers = await institutionEmployerService.GetInstitutionEmployersAsync();
             Assert.AreEqual(allInstitutionEmployers.ElementAt(0).Guid, institutionEmployers.ElementAt(0).Id);

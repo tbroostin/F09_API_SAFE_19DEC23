@@ -1,10 +1,5 @@
-//Copyright 2017 Ellucian Company L.P. and its affiliates.
-
+//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.Entities;
 
 namespace Ellucian.Colleague.Domain.HumanResources.Entities
@@ -15,7 +10,11 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
     [Serializable]
     public class EmploymentDepartment : GuidCodeItem
     {
-       
+        /// <summary>
+        /// status of the employment department code entry
+        /// </summary>
+        public EmploymentDepartmentStatuses? Status { get; set; }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="EmploymentDepartment"/> class.
         /// </summary>

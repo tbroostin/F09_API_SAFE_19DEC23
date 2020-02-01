@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -73,7 +73,8 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <summary>
         /// Return all genderIdentities
         /// </summary>
-        /// <returns>List of GenderIdentities <see cref="Dtos.GenderIdentities"/> objects representing matching genderIdentities</returns>
+        /// <returns>List of GenderIdentities <see cref="Dtos.GenderIdentities"/> objects representing matching genderIdentities</returns>         
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.GenderIdentities>> GetGenderIdentitiesAsync()
@@ -113,12 +114,12 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
-            catch (RepositoryException e)
+            catch (IntegrationApiException e)
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
-            catch (IntegrationApiException e)
+            catch (RepositoryException e)
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
@@ -135,6 +136,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// </summary>
         /// <param name="guid">GUID to desired genderIdentities</param>
         /// <returns>A genderIdentities object <see cref="Dtos.GenderIdentities"/> in EEDM format</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpGet, EedmResponseFilter]
         public async Task<Dtos.GenderIdentities> GetGenderIdentitiesByGuidAsync(string guid)
         {
@@ -174,12 +176,12 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
-            catch (RepositoryException e)
+            catch (IntegrationApiException e)
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
-            catch (IntegrationApiException e)
+            catch (RepositoryException e)
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));

@@ -480,7 +480,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                     page = new Paging(100, 0);
                 }
                
-                string campus = string.Empty, startOn = string.Empty, endOn = string.Empty, bargainingUnit = string.Empty,
+                string code = string.Empty, campus = string.Empty, startOn = string.Empty, endOn = string.Empty, bargainingUnit = string.Empty,
                     exemptionType = string.Empty, compensationType = string.Empty, status = string.Empty, keyword = string.Empty;
                 List<string> reportsToPositions = null;
 
@@ -490,6 +490,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
 
                 if (criteriaObj != null)
                 {
+                    code = !string.IsNullOrEmpty(criteriaObj.Code) ? criteriaObj.Code : string.Empty;
                     campus = ((criteriaObj.Campus != null)
                        && (!string.IsNullOrEmpty(criteriaObj.Campus.Id)))
                         ? criteriaObj.Campus.Id : string.Empty;
@@ -526,7 +527,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                         ? Convert.ToDateTime(criteriaObj.EndOn).ToShortDateString() : string.Empty;
                 }
              
-                var pageOfItems = await _institutionPositionService.GetInstitutionPositions3Async(page.Offset, page.Limit, campus, status,
+                var pageOfItems = await _institutionPositionService.GetInstitutionPositions3Async(page.Offset, page.Limit, code, campus, status,
                             bargainingUnit, reportsToPositions, exemptionType, compensationType, startOn, endOn, bypassCache);
 
                 AddEthosContextProperties(

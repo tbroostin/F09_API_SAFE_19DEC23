@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 
 namespace Ellucian.Colleague.Dtos.Base
 {
@@ -35,6 +35,11 @@ namespace Ellucian.Colleague.Dtos.Base
         /// <summary>
         /// The tax form statement is not available.
         /// </summary>
-        NotAvailable
+        NotAvailable,
+
+        /// <summary>
+        /// The tax form statement is marked as cancelled.
+        /// </summary>
+        Cancelled
     }
 }

@@ -178,7 +178,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests
 
         public async Task<DegreeAuditParameters> GetDegreeAuditParametersAsync()
         {
-            var newParameters = new DegreeAuditParameters(ExtraCourses.Apply, false, false);
+            var newParameters = new DegreeAuditParameters(ExtraCourses.Apply, false,false, false);
             return await Task.FromResult(newParameters);
         }
     }

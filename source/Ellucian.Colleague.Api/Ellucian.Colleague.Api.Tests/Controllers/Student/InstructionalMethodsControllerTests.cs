@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,286 +17,219 @@ using Ellucian.Web.Adapters;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
+using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Web.Security;
+using Ellucian.Colleague.Domain.Repositories;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 {
     [TestClass]
     public class InstructionalMethodsControllerTests
     {
-        private TestContext testContextInstance;
-
-        /// <summary>
-        ///Gets or sets the test context which provides
-        ///information about and functionality for the current test run.
-        ///</summary>
-        public TestContext TestContext
+        [TestClass]
+        public class InstructionalMethodsController_Get
         {
-            get
+            #region TestContext
+            private TestContext testContextInstance;
+            public TestContext TestContext
+            { get { return testContextInstance; } set { testContextInstance = value; } }
+            #endregion TestContext
+
+            private InstructionalMethodsController instructionalMethodsController;
+            private Mock<ICurriculumService> curriculumServiceMock;
+            private Mock<IStudentReferenceDataRepository> studentReferenceDataRepositoryMock;
+            private Mock<IConfigurationRepository> configurationRepostioryMock;
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private Mock<ICurrentUserFactory> currentUserFactoryMock;
+            private Mock<IRoleRepository> roleRepositoryMock;
+            private ICurriculumService curriculumService;
+            private IAdapterRegistry adapterRegistry;
+            private IConfigurationRepository configurationRepository;
+            private ICurrentUserFactory currentUserFactory;
+            private IRoleRepository roleRepository;
+            private IStudentReferenceDataRepository studentReferenceDataRepository;
+            private ILogger logger = new Mock<ILogger>().Object;
+            private ICurriculumService curSvc;
+            private IEnumerable<InstructionalMethod2> allInstructionalMethods;
+            private string instructionalMethodCode;
+            private InstructionalMethod2 expectedInstructionalMethod;
+            
+            [TestInitialize]
+            public void Initialize()
             {
-                return testContextInstance;
-            }
-            set
-            {
-                testContextInstance = value;
-            }
-        }
 
-        private Mock<IAdapterRegistry> adapterRegistryMock;
-        private Mock<ILogger> loggerMock;
-        private Mock<ICurriculumService> curriculumServiceMock;
-        private Mock<IStudentReferenceDataRepository> studentReferenceDataRepositoryMock;
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
 
-        private string instructionalMethodId;
+                curriculumServiceMock = new Mock<ICurriculumService>();
+                curriculumService = curriculumServiceMock.Object;
+                configurationRepostioryMock = new Mock<IConfigurationRepository>();
+                configurationRepository = configurationRepostioryMock.Object;
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                adapterRegistry = adapterRegistryMock.Object;
+                currentUserFactoryMock = new Mock<ICurrentUserFactory>();
+                currentUserFactory = currentUserFactoryMock.Object;
+                roleRepositoryMock = new Mock<IRoleRepository>();
+                roleRepository = roleRepositoryMock.Object;
+                studentReferenceDataRepositoryMock = new Mock<IStudentReferenceDataRepository>();
+                studentReferenceDataRepository = studentReferenceDataRepositoryMock.Object;
 
-        private InstructionalMethod2 expectedInstructionalMethod;
-        private InstructionalMethod2 testInstructionalMethod;
-        private InstructionalMethod2 actualInstructionalMethod;
+                curSvc = new CurriculumService(new TestStudentReferenceDataRepository(), configurationRepository, adapterRegistry, currentUserFactory, roleRepository, logger);
+                allInstructionalMethods = curSvc.GetInstructionalMethods2Async(false).Result;
+                curriculumServiceMock.Setup<Task<IEnumerable<InstructionalMethod2>>>(s => s.GetInstructionalMethods2Async(It.IsAny<bool>())).ReturnsAsync(allInstructionalMethods);
+                foreach (var instructionalMethod in allInstructionalMethods)
+                {
+                    curriculumServiceMock.Setup<Task<InstructionalMethod2>>(s => s.GetInstructionalMethodById2Async(instructionalMethod.Code)).ReturnsAsync(instructionalMethod);
+                }
+                curriculumServiceMock.Setup(s => s.GetDataPrivacyListByApi(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(new List<string>());
 
-        private InstructionalMethodsController instructionalMethodsController;
+
+                instructionalMethodsController = new InstructionalMethodsController(adapterRegistry, studentReferenceDataRepository, curriculumService, logger);
+                instructionalMethodsController.Request = new HttpRequestMessage(/*HttpMethod.Get, "http://stuff"*/);
+                instructionalMethodsController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
+                instructionalMethodsController.Request.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+
+                instructionalMethodCode = allInstructionalMethods.First().Code;
+                expectedInstructionalMethod = allInstructionalMethods.First();
 
 
-        public async Task<List<InstructionalMethod2>> getActualInstructionalMethods()
-        {
-            IEnumerable<InstructionalMethod2> instructionalMethodList = await instructionalMethodsController.GetInstructionalMethods2Async();
-            return (await instructionalMethodsController.GetInstructionalMethods2Async()).ToList();
-        }
-
-        [TestInitialize]
-        public async void Initialize()
-        {
-            LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
-            EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.DeploymentDirectory, "App_Data"));
-
-            adapterRegistryMock = new Mock<IAdapterRegistry>();
-            loggerMock = new Mock<ILogger>();
-            curriculumServiceMock = new Mock<ICurriculumService>();
-            studentReferenceDataRepositoryMock = new Mock<IStudentReferenceDataRepository>();
-
-            instructionalMethodId = "idc2935b-29e8-675f-907b-15a34da4f433";
-
-            expectedInstructionalMethod = new InstructionalMethod2()
-            {
-                Id = "idc2935b-29e8-675f-907b-15a34da4f433",
-                Code = "AAAA",
-                Title = "Academic Administration",
-                Description = null,
-            };
-
-            testInstructionalMethod = new InstructionalMethod2();
-            foreach (var property in typeof(InstructionalMethod2).GetProperties(BindingFlags.Public | BindingFlags.Instance))
-            {
-                property.SetValue(testInstructionalMethod, property.GetValue(expectedInstructionalMethod, null), null);
-            }
-            curriculumServiceMock.Setup<Task<InstructionalMethod2>>(s => s.GetInstructionalMethodById2Async(instructionalMethodId)).Returns(Task.FromResult(testInstructionalMethod));
-
-            instructionalMethodsController = new InstructionalMethodsController(adapterRegistryMock.Object, studentReferenceDataRepositoryMock.Object, curriculumServiceMock.Object, loggerMock.Object);
-            actualInstructionalMethod = await instructionalMethodsController.GetInstructionalMethodById2Async(instructionalMethodId);
-        }
-
-        [TestCleanup]
-        public void Cleanup()
-        {
-            adapterRegistryMock = null;
-            loggerMock = null;
-            curriculumServiceMock = null;
-            studentReferenceDataRepositoryMock = null;
-            instructionalMethodId = null;
-            expectedInstructionalMethod = null;
-            testInstructionalMethod = null;
-            actualInstructionalMethod = null;
-            instructionalMethodsController = null;
-        }
-
-        //[TestMethod]
-        //public void InstructionalMethodsTypeTest()
-        //{
-        //    Assert.AreEqual(typeof(InstructionalMethod2), actualInstructionalMethod.GetType());
-        //    Assert.AreEqual(expectedInstructionalMethod.GetType(), actualInstructionalMethod.GetType());
-        //}
-
-        [TestMethod]
-        public void NumberOfKnownPropertiesTest()
-        {
-            var instructionalMethodProperties = typeof(InstructionalMethod2).GetProperties(BindingFlags.Public | BindingFlags.Instance);
-            Assert.AreEqual(5, instructionalMethodProperties.Length);
-        }
-    }
-
-    [TestClass]
-    public class InstructionalMethodsController_GetAllTests
-    {
-        private TestContext testContextInstance2;
-
-        /// <summary>
-        ///Gets or sets the test context which provides
-        ///information about and functionality for the current test run.
-        ///</summary>
-        public TestContext TestContext
-        {
-            get
-            {
-                return testContextInstance2;
-            }
-            set
-            {
-                testContextInstance2 = value;
-            }
-        }
-
-        private InstructionalMethodsController InstructionalMethodController;
-        private Mock<ICurriculumService> CurriculumServiceMock;
-        private Mock<IStudentReferenceDataRepository> StudentReferenceDataRepositoryMock;
-        private ICurriculumService CurriculumService;
-        private IAdapterRegistry AdapterRegistry;
-        private List<Ellucian.Colleague.Domain.Student.Entities.InstructionalMethod> allInstructionalMethods;
-        ILogger logger = new Mock<ILogger>().Object;
-
-        [TestInitialize]
-        public void Initialize()
-        {
-            LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
-            EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
-            CurriculumServiceMock = new Mock<ICurriculumService>();
-            CurriculumService = CurriculumServiceMock.Object;
-
-            StudentReferenceDataRepositoryMock = new Mock<IStudentReferenceDataRepository>();
-
-            HashSet<ITypeAdapter> adapters = new HashSet<ITypeAdapter>();
-            AdapterRegistry = new AdapterRegistry(adapters, logger);
-            var testAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.InstructionalMethod, InstructionalMethod2>(AdapterRegistry, logger);
-            AdapterRegistry.AddAdapter(testAdapter);
-
-            allInstructionalMethods = new TestStudentReferenceDataRepository().GetInstructionalMethodsAsync().Result as List<Ellucian.Colleague.Domain.Student.Entities.InstructionalMethod>;
-            var InstructionalMethodsList = new List<InstructionalMethod2>();
-
-            InstructionalMethodController = new InstructionalMethodsController(AdapterRegistry, StudentReferenceDataRepositoryMock.Object, CurriculumService, logger);
-            InstructionalMethodController.Request = new HttpRequestMessage();
-            InstructionalMethodController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
-
-            foreach (var instructionalMethod in allInstructionalMethods)
-            {
-                InstructionalMethod2 target = ConvertOtherMajorsEntitytoInstructionalMethodDto(instructionalMethod);
-                InstructionalMethodsList.Add(target);
             }
 
-            CurriculumServiceMock.Setup<Task<IEnumerable<InstructionalMethod2>>>(s => s.GetInstructionalMethods2Async(It.IsAny<bool>())).ReturnsAsync(InstructionalMethodsList);
+            [TestCleanup]
+            public void Cleanup()
+            {
+                instructionalMethodsController = null;
+                curriculumServiceMock = null;
+                curriculumService = null;
+                configurationRepostioryMock = null;
+                configurationRepository = null;
+                adapterRegistryMock = null;
+                adapterRegistry = null;
+                currentUserFactoryMock = null;
+                currentUserFactory = null;
+                roleRepositoryMock = null;
+                roleRepository = null;
+                studentReferenceDataRepositoryMock = null;
+                studentReferenceDataRepository = null;
+            }
+
+            // GET ALL
+            [TestMethod]
+            public void NumberOfKnownPropertiesTest()
+            {
+                var instructionalMethodProperties = typeof(InstructionalMethod2).GetProperties(BindingFlags.Public | BindingFlags.Instance);
+                Assert.AreEqual(5, instructionalMethodProperties.Length);
+            }
+
+            [TestMethod]
+            public async Task ReturnsAllInstructionalMethods()
+            {
+                List<InstructionalMethod2> actualInstructionalMethods = await instructionalMethodsController.GetInstructionalMethods2Async() as List<InstructionalMethod2>;
+                Assert.AreEqual(actualInstructionalMethods.Count, allInstructionalMethods.Count());
+            }
+
+            [TestMethod]
+            public async Task GetInstructionalMethods_Properties_and_cache()
+            {
+                var actualInstructionalMethods = await instructionalMethodsController.GetInstructionalMethods2Async();
+                foreach (var actual in actualInstructionalMethods)
+                {
+                    InstructionalMethod2 expected = allInstructionalMethods.Where(a => a.Code == actual.Code).FirstOrDefault();
+                    Assert.AreEqual(expected.Code, actual.Code);
+                    Assert.AreEqual(expected.Title, actual.Title);
+                    Assert.AreEqual(expected.Description, actual.Description);
+                    Assert.AreEqual(expected.Id, actual.Id);
+                }
+            }
+
+            [TestMethod]
+            public async Task InstrMethController_GetHedmAsync_CacheControlNull()
+            {
+                instructionalMethodsController.Request.Headers.CacheControl = null;
+                var actualInstructionalMethods = await instructionalMethodsController.GetInstructionalMethods2Async();
+                Assert.IsNotNull(actualInstructionalMethods);
+            }
+
+            [TestMethod]
+            public async Task InstrMethController_GetHedmAsync_Cache()
+            {
+
+                instructionalMethodsController.Request.Headers.CacheControl.NoCache = false;
+                instructionalMethodsController.Request.Headers.CacheControl = null;
+                var actualInstructionalMethods = await instructionalMethodsController.GetInstructionalMethods2Async();
+                Assert.IsNotNull(actualInstructionalMethods);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task InstrMethController_GetThrowsIntAppiExc()
+            {
+                curriculumServiceMock.Setup(gc => gc.GetInstructionalMethods2Async(It.IsAny<bool>())).Throws<Exception>();
+                await instructionalMethodsController.GetInstructionalMethods2Async();
+            }
+
+            //GET
+
+            [TestMethod]
+            public async Task GetInstructionalMethodById2Async_Properties_and_cache()
+            {
+                var actualInstructionalMethod = await instructionalMethodsController.GetInstructionalMethodById2Async(instructionalMethodCode);
+                Assert.AreEqual(expectedInstructionalMethod.Code, actualInstructionalMethod.Code);
+                Assert.AreEqual(expectedInstructionalMethod.Title, actualInstructionalMethod.Title);
+                Assert.AreEqual(expectedInstructionalMethod.Description, actualInstructionalMethod.Description);
+                Assert.AreEqual(expectedInstructionalMethod.Id, actualInstructionalMethod.Id);
+            }
+
+            [TestMethod]
+            public async Task GetInstructionalMethodById2Async_GetHedmAsync_CacheControlNull()
+            {
+                instructionalMethodsController.Request.Headers.CacheControl = null;
+                var actualInstructionalMethods = await instructionalMethodsController.GetInstructionalMethodById2Async(instructionalMethodCode);
+                Assert.IsNotNull(actualInstructionalMethods);
+            }
+
+            [TestMethod]
+            public async Task GetInstructionalMethodById2Async_GetHedmAsync_Cache()
+            {
+
+                instructionalMethodsController.Request.Headers.CacheControl.NoCache = false;
+                instructionalMethodsController.Request.Headers.CacheControl = null;
+                var actualInstructionalMethods = await instructionalMethodsController.GetInstructionalMethodById2Async(instructionalMethodCode);
+                Assert.IsNotNull(actualInstructionalMethods);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetInstructionalMethodById2Async_GetThrowsIntAppiExc()
+            {
+                curriculumServiceMock.Setup(gc => gc.GetInstructionalMethodById2Async(It.IsAny<string>())).Throws<Exception>();
+                await instructionalMethodsController.GetInstructionalMethodById2Async(instructionalMethodCode);
+            }
+
+            //OTHER CRUD
+            
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task InstrMethController_PostThrowsIntAppiExc()
+            {
+                InstructionalMethod2 imDTO = await instructionalMethodsController.PostInstructionalMethodsAsync(new InstructionalMethod2());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task InstrMethController_PutThrowsIntAppiExc()
+            {
+                InstructionalMethod2 imDTO = await instructionalMethodsController.PutInstructionalMethodsAsync(instructionalMethodCode, new InstructionalMethod2());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task InstrMethController_DeleteThrowsIntApiExc()
+            {
+                await instructionalMethodsController.DeleteInstructionalMethodsAsync(instructionalMethodCode);
+            }
+
         }
 
-        [TestCleanup]
-        public void Cleanup()
-        {
-            InstructionalMethodController = null;
-            CurriculumService = null;
-        }
-
-        [TestMethod]
-        public async Task ReturnsAllInstructionalMethods()
-        {
-            List<InstructionalMethod2> InstructionalMethods = await InstructionalMethodController.GetInstructionalMethods2Async() as List<InstructionalMethod2>;
-            Assert.AreEqual(InstructionalMethods.Count, allInstructionalMethods.Count);
-        }
-
-        [TestMethod]
-        public async Task GetInstructionalMethods_Properties()
-        {
-            List<InstructionalMethod2> InstructionalMethods = await InstructionalMethodController.GetInstructionalMethods2Async() as List<InstructionalMethod2>;
-            InstructionalMethod2 al = InstructionalMethods.Where(a => a.Code == "02").FirstOrDefault();
-            Ellucian.Colleague.Domain.Student.Entities.InstructionalMethod alt = allInstructionalMethods.Where(a => a.Code == "02").FirstOrDefault();
-            Assert.AreEqual(alt.Code, al.Code);
-            Assert.AreEqual(alt.Description, al.Title);
-        }
-
-        [TestMethod]
-        public async Task InstrMethController_GetHedmAsync_CacheControlNotNull()
-        {
-            InstructionalMethodController.Request.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue();
-
-            List<InstructionalMethod2> InstructionalMethods = await InstructionalMethodController.GetInstructionalMethods2Async() as List<InstructionalMethod2>;
-            InstructionalMethod2 al = InstructionalMethods.Where(a => a.Code == "02").FirstOrDefault();
-            Ellucian.Colleague.Domain.Student.Entities.InstructionalMethod alt = allInstructionalMethods.Where(a => a.Code == "02").FirstOrDefault();
-            Assert.AreEqual(alt.Code, al.Code);
-            Assert.AreEqual(alt.Description, al.Title);
-        }
-
-        [TestMethod]
-        public async Task InstrMethController_GetHedmAsync_NoCache()
-        {
-            InstructionalMethodController.Request.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue();
-            InstructionalMethodController.Request.Headers.CacheControl.NoCache = true;
-
-            List<InstructionalMethod2> InstructionalMethods = await InstructionalMethodController.GetInstructionalMethods2Async() as List<InstructionalMethod2>;
-            InstructionalMethod2 al = InstructionalMethods.Where(a => a.Code == "02").FirstOrDefault();
-            Ellucian.Colleague.Domain.Student.Entities.InstructionalMethod alt = allInstructionalMethods.Where(a => a.Code == "02").FirstOrDefault();
-            Assert.AreEqual(alt.Code, al.Code);
-            Assert.AreEqual(alt.Description, al.Title);
-        }
-
-        [TestMethod]
-        public async Task InstrMethController_GetHedmAsync_Cache()
-        {
-            InstructionalMethodController.Request.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue();
-            InstructionalMethodController.Request.Headers.CacheControl.NoCache = false;
-
-            List<InstructionalMethod2> InstructionalMethods = await InstructionalMethodController.GetInstructionalMethods2Async() as List<InstructionalMethod2>;
-            InstructionalMethod2 al = InstructionalMethods.Where(a => a.Code == "02").FirstOrDefault();
-            Ellucian.Colleague.Domain.Student.Entities.InstructionalMethod alt = allInstructionalMethods.Where(a => a.Code == "02").FirstOrDefault();
-            Assert.AreEqual(alt.Code, al.Code);
-            Assert.AreEqual(alt.Description, al.Title);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task InstrMethController_GetThrowsIntAppiExc()
-        {
-            CurriculumServiceMock.Setup(gc => gc.GetInstructionalMethods2Async(It.IsAny<bool>())).Throws<Exception>();
-
-            await InstructionalMethodController.GetInstructionalMethods2Async();
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task InstrMethController_GetByIdThrowsIntAppiExc()
-        {
-            CurriculumServiceMock.Setup(gc => gc.GetInstructionalMethodById2Async(It.IsAny<string>())).Throws<Exception>();
-
-            await InstructionalMethodController.GetInstructionalMethodById2Async("sdjfh");
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task InstrMethController_DeleteThrowsIntApiExc()
-        {
-            await InstructionalMethodController.DeleteInstructionalMethodsAsync("SEC100");
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task InstrMethController_PostThrowsIntAppiExc()
-        {
-            InstructionalMethod2 imDTO = await InstructionalMethodController.PostInstructionalMethodsAsync(new InstructionalMethod2());
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task InstrMethController_PutThrowsIntAppiExc()
-        {
-            InstructionalMethod2 imDTO = await InstructionalMethodController.PutInstructionalMethodsAsync("hdgs9093hf", new InstructionalMethod2());
-        }
-
-        /// <remarks>FOR USE WITH ELLUCIAN HeDM</remarks>
-        /// <summary>
-        /// Converts a InstructionalMethod domain entity to its corresponding Instructional Method DTO
-        /// </summary>
-        /// <param name="source">Instructional Method domain entity</param>
-        /// <returns>InstructionalMethod2 DTO</returns>
-        private Dtos.InstructionalMethod2 ConvertOtherMajorsEntitytoInstructionalMethodDto(Domain.Student.Entities.InstructionalMethod source)
-        {
-            var instructionalMethod = new Dtos.InstructionalMethod2();
-            instructionalMethod.Id = source.Guid;
-            instructionalMethod.Code = source.Code;
-            instructionalMethod.Title = source.Description;
-            instructionalMethod.Description = null;
-            return instructionalMethod;
-        }
     }
 }

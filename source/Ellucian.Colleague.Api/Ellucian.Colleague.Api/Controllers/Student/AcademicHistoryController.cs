@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
@@ -47,6 +47,9 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Filter: (Optional) If true, then filter to only active credits.
         /// Term: (Optional) Term filter for academic history</param>
         /// <returns>AcademicHistory DTO Objects</returns>
+        /// <accessComments>
+        /// A person may only query academic history if they have VIEW.STUDENT.INFORMATION permission.
+        /// </accessComments>
         [HttpPost]
         [Obsolete("Obsolete as of API version 1.18, use QueryAcademicHistory2Async instead")]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.Student.AcademicHistoryBatch>> QueryAcademicHistoryAsync([FromBody] AcademicHistoryQueryCriteria criteria)
@@ -76,6 +79,9 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Filter: (Optional) If true, then filter to only active credits.
         /// Term: (Optional) Term filter for academic history</param>
         /// <returns><see cref="AcademicHistoryBatch2"/> DTO Objects</returns>
+        /// <accessComments>
+        /// A person may only query academic history if they have VIEW.STUDENT.INFORMATION permission.
+        /// </accessComments>
         [HttpPost]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.Student.AcademicHistoryBatch2>> QueryAcademicHistory2Async([FromBody] AcademicHistoryQueryCriteria criteria)
         {
@@ -106,6 +112,9 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Filter: (Optional) If true, then filter to only active credits.
         /// Term: (Optional) Term filter for academic history</param>
         /// <returns>AcademicHistoryLevel DTO Objects</returns>
+        /// <accessComments>
+        /// A person may only query academic history levels if they have VIEW.STUDENT.INFORMATION permission.
+        /// </accessComments>
         [Obsolete("Obsolete as of Api version 1.10, use version 2 of this API")]
         [HttpPost]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.Student.AcademicHistoryLevel>> QueryAcademicHistoryLevelAsync([FromBody] AcademicHistoryQueryCriteria criteria)
@@ -137,6 +146,9 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Filter: (Optional) If true, then filter to only active credits.
         /// Term: (Optional) Term filter for academic history</param>
         /// <returns>AcademicHistoryLevel2 DTO Objects</returns>
+        /// <accessComments>
+        /// A person may only query academic history levels if they have VIEW.STUDENT.INFORMATION permission.
+        /// </accessComments>
         [HttpPost]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.Student.AcademicHistoryLevel2>> QueryAcademicHistoryLevel2Async([FromBody] AcademicHistoryQueryCriteria criteria)
         {
@@ -167,6 +179,9 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Filter: (Optional) If true, then filter to only active credits.
         /// Term: (Optional) Term filter for academic history</param>
         /// <returns>AcademicHistoryLevel2 DTO Objects</returns>
+        /// <accessComments>
+        /// A person may only query academic history levels if they have VIEW.STUDENT.INFORMATION permission.
+        /// </accessComments>
         [HttpPost]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.Student.AcademicHistoryLevel3>> QueryAcademicHistoryLevel3Async([FromBody] AcademicHistoryQueryCriteria criteria)
         {
@@ -223,6 +238,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="enrollmentKeys">Student Enrollment key structure and return structure<see cref="StudentEnrollment">StudentEnrollment</see></param>
         /// <returns>List of StudentEnrollment DTOs</returns>
+        /// <accessComments>User with permission of VIEW.STUDENT.INFORMATION can validate existing Student Enrollment.</accessComments>
         [HttpPost]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.Student.StudentEnrollment>> GetInvalidStudentEnrollmentAsync([FromBody] IEnumerable<StudentEnrollment> enrollmentKeys)
         {
@@ -249,6 +265,9 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Section Ids: List of section IDs. Must include at least 1.
         /// CreditStatuses: (Optional) If no statuses are specified all statuses will be included.</param>
         /// <returns>List of <see cref="AcademicCredit2">Academic Credit</see> DTO objects. </returns>
+        /// <accessComments>
+        /// The faculty assigned to a section may query academic credits for their sections. 
+        /// </accessComments>
         [HttpPost]
         [Obsolete("Obsolete as of API version 1.18, use QueryAcademicCredits2Async instead")]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.Student.AcademicCredit2>> QueryAcademicCreditsAsync([FromBody] AcademicCreditQueryCriteria criteria)
@@ -276,12 +295,50 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Section Ids: List of section IDs. Must include at least 1.
         /// CreditStatuses: (Optional) If no statuses are specified all statuses will be included.</param>
         /// <returns>List of <see cref="AcademicCredit3">Academic Credit</see> DTO objects. </returns>
+        /// <accessComments>
+        /// The faculty assigned to a section may query academic credits for their sections. 
+        /// </accessComments>
         [HttpPost]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.Student.AcademicCredit3>> QueryAcademicCredits2Async([FromBody] AcademicCreditQueryCriteria criteria)
         {
             try
             {
                 return await _academicHistoryService.QueryAcademicCredits2Async(criteria);
+            }
+            catch (ArgumentNullException aex)
+            {
+                _logger.Error(aex.Message);
+                throw CreateHttpResponseException(aex.Message, HttpStatusCode.BadRequest);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.Message);
+                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Get Academic Credits with Invalid Keys for the list of sections.
+        /// This returns collection of Academic Credits for the given sections and list of Invalid Academic Credit Ids that were not found in a file.
+        /// </summary>
+        /// <param name="criteria">Contains selection criteria:
+        /// Section Ids: List of section IDs. Must include at least 1.
+        /// CreditStatuses: (Optional) If no statuses are specified all statuses will be included.</param>
+        /// <returns><see cref="AcademicCreditsWithInvalidKeys">Academic Credit with Invalid Keys</see> DTO objects. </returns>
+        /// <accessComments>
+        /// The faculty assigned to a section may query academic credits for their sections. 
+        /// </accessComments>
+        [HttpPost]
+        public async Task<AcademicCreditsWithInvalidKeys> QueryAcademicCreditsWithInvalidKeysAsync([FromBody] AcademicCreditQueryCriteria criteria)
+        {
+            try
+            {
+                AcademicCreditsWithInvalidKeys academicCreditsWithInvalidKeys= await _academicHistoryService.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
+                return academicCreditsWithInvalidKeys;
+            }
+            catch (PermissionsException pex)
+            {
+                throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
             }
             catch (ArgumentNullException aex)
             {

@@ -45,7 +45,9 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 var thisEntity = humanResourcesInstitutionEmployerEntity.FirstOrDefault();
                 if ((thisEntity != null && thisEntity.Guid == guid))
                 {
-                    return await BuildInstitutionEmployerAsync(guid);
+                    var employer =  await BuildInstitutionEmployerAsync(guid);
+                    employer.Code = thisEntity.Code;
+                    return employer;
                 }
                 else
                 {
@@ -66,7 +68,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// GetInstitutionEmployersAsync
         /// </summary>
         /// <returns>InstitutionEmployers list</returns>
-        public async Task<IEnumerable<InstitutionEmployers>> GetInstitutionEmployersAsync()
+        public async Task<IEnumerable<InstitutionEmployers>> GetInstitutionEmployersAsync(bool bypassCache = false)
         {
             var humanResourcesInstitutionEmployerEntity = await GetGuidValcodeAsync<HumanResourcesInstitutionEmployer>("HR", "INTG.INST.EMPLOYER",
     (cl, g) => new HumanResourcesInstitutionEmployer(g, cl.ValInternalCodeAssocMember, cl.ValExternalRepresentationAssocMember), bypassCache: true);
@@ -77,10 +79,27 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 var thisGuid = thisEntity.Guid;
                 if (thisEntity != null && thisEntity.Code == "INST")
                 {
-                    var institutionEmployersEntities = new List<Ellucian.Colleague.Domain.HumanResources.Entities.InstitutionEmployers>();
-                    var institutionEmployer = await BuildInstitutionEmployerAsync(thisGuid);
-                    institutionEmployersEntities.Add(institutionEmployer);
-                    return institutionEmployersEntities;
+                    if (bypassCache)
+                    {
+                        var institutionEmployersEntities = new List<Ellucian.Colleague.Domain.HumanResources.Entities.InstitutionEmployers>();
+                        var institutionEmployer = await BuildInstitutionEmployerAsync(thisGuid);
+                        institutionEmployer.Code = thisEntity.Code;
+                        institutionEmployersEntities.Add(institutionEmployer);
+                        return institutionEmployersEntities;
+                    }
+                    else
+                    {
+                        return await GetOrAddToCacheAsync<IEnumerable<InstitutionEmployers>>("AllInstitutionEmployers",
+                            async () =>
+                            {
+                                var institutionEmployersEntities = new List<Ellucian.Colleague.Domain.HumanResources.Entities.InstitutionEmployers>();
+                                var institutionEmployer = await BuildInstitutionEmployerAsync(thisGuid);
+                                institutionEmployer.Code = thisEntity.Code;
+                                institutionEmployersEntities.Add(institutionEmployer);
+                                return institutionEmployersEntities;
+                            }
+                        );
+                    }
                 }
                 else
                 {

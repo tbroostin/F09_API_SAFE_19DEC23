@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Student.Entities;
@@ -424,6 +424,22 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                 });
         }
 
+        public Task<IEnumerable<GradeSubscheme>> GetGradeSubschemesAsync()
+        {
+            return this.GetGradeSubschemesAsync(false);
+        }
+
+        public Task<IEnumerable<Student.Entities.GradeSubscheme>> GetGradeSubschemesAsync(bool ignoreCache)
+        {
+            return Task.FromResult<IEnumerable<Student.Entities.GradeSubscheme>>(new List<Student.Entities.GradeSubscheme>()
+                {
+                    new Student.Entities.GradeSubscheme("CE", "Continuing Education"),
+                    new Student.Entities.GradeSubscheme("GR", "Graduate"),
+                    new Student.Entities.GradeSubscheme("UG", "Undergraduate"),
+                    new Student.Entities.GradeSubscheme("TR", "Transfer")
+                });
+        }
+
         public Task<IEnumerable<Student.Entities.GradeScheme>> GetGradeSchemesAsync()
         {
             return this.GetGradeSchemesAsync(false);
@@ -551,6 +567,17 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                     new Student.Entities.MealPlan("5aeebc5c-c973-4f83-be4b-f64c95002124", "CODE2", "DESC2"),
                     new Student.Entities.MealPlan("27178aab-a6e8-4d1e-ae27-eca1f7b33363", "CODE3", "DESC3")
                 });
+        }
+
+        public Task<string> GetMealPlanGuidAsync(string code)
+        {
+            var mealPlans = (new List<Student.Entities.MealPlan>()
+                {
+                    new Student.Entities.MealPlan("bb66b971-3ee0-4477-9bb7-539721f93434", "CODE1", "DESC1"),
+                    new Student.Entities.MealPlan("5aeebc5c-c973-4f83-be4b-f64c95002124", "CODE2", "DESC2"),
+                    new Student.Entities.MealPlan("27178aab-a6e8-4d1e-ae27-eca1f7b33363", "CODE3", "DESC3")
+                });
+            return Task.FromResult(mealPlans.FirstOrDefault(c => c.Code == code).Guid);
         }
 
         public Task<IEnumerable<Student.Entities.MealType>> GetMealTypesAsync(bool ignoreCache)
@@ -793,6 +820,10 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                     new Student.Entities.StudentLoad("L", "Less than Half Time")
                 });
         }
+        public Task<string> GetUnidataFormattedDate(string date)
+        {
+            throw new NotImplementedException();
+        }
 
         public Task<IEnumerable<Student.Entities.NonAcademicAttendanceEventType>> GetNonAcademicAttendanceEventTypesAsync(bool ignoreCache)
         {
@@ -879,6 +910,18 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                     new Student.Entities.TestSource("eh54668d-50d9-416c-81e9-2318e88571a1", "SF", "Self Reported"),
                     new Student.Entities.TestSource("3fgd2bea-8948-439b-b5c5-779d84724a38", "LSAT", "LSAT"),
                     new Student.Entities.TestSource("22f74c63-df5b-4e56-8ef0-e871ccc789e8", "ACT", "ACT")
+                });
+        }
+
+        //Domain.Student.Entities.StudentCohort
+        public Task<IEnumerable<Student.Entities.StudentCohort>> GetAllStudentCohortAsync(bool ignoreCache)
+        {
+            return Task.FromResult<IEnumerable<Student.Entities.StudentCohort>>(new List<Student.Entities.StudentCohort>()
+                {
+                    new Student.Entities.StudentCohort("c5bcb3a0-2e8d-4643-bd17-ba93f36e8f09", "HS", "High School Transcript"){ CohortType = "FED" },
+                    new Student.Entities.StudentCohort("eh54668d-50d9-416c-81e9-2318e88571a1", "SF", "Self Reported"),
+                    new Student.Entities.StudentCohort("3fgd2bea-8948-439b-b5c5-779d84724a38", "LSAT", "LSAT"),
+                    new Student.Entities.StudentCohort("22f74c63-df5b-4e56-8ef0-e871ccc789e8", "ACT", "ACT"){ CohortType = "FED" }
                 });
         }
 
@@ -992,13 +1035,6 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         {
             throw new NotImplementedException();
         }
-
-
-        public Task<IEnumerable<StudentCohort>> GetAllStudentCohortAsync(bool bypassCache)
-        {
-            throw new NotImplementedException();
-        }
-
 
         public Task<IEnumerable<StudentClassification>> GetAllStudentClassificationAsync(bool bypassCache)
         {
@@ -1358,6 +1394,56 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         }
 
         public Task<IEnumerable<GradingTerm>> GetGradingTermsAsync(bool bypassCache = false)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<AdmissionDecisionType> GetAdmissionDecisionTypeByGuidAsync(string guid)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> GetStudentCohortGuidAsync(string code)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> GetSectionTitleTypesGuidAsync(string code)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> GetSectionDescriptionTypesGuidAsync(string code)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> GetAccountReceivableTypesGuidAsync(string code)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> GetAccountReceivableTypesCodeFromGuidAsync(string guid)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> GetDistrMethodGuidAsync(string code)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> GetDistrMethodCodeFromGuidAsync(string guid)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<List<string>> GetHeadcountInclusionListAsync(bool ignoreCache = false)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> GetAdvisorTypeGuidAsync(string code)
         {
             throw new NotImplementedException();
         }

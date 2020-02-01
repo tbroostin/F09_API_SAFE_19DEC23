@@ -1184,5 +1184,323 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.Requirements
             Assert.IsTrue(grResult.Explanations.Contains(GroupExplanation.Satisfied));
         }
     }
+
+    [TestClass]
+    public class Evaluate_Related_Courses
+    {
+        [TestMethod]
+        public void Related_Courses_With_ShowRelatedCourses()
+        {
+            Requirement requirement = new Requirement("1", "R1", "Req1", "UG", null);
+            Subrequirement sreq = new Subrequirement("sreq-1", "subReq1");
+            sreq.Requirement = requirement;
+
+            //Take 2 courses from MATH
+            Group gr = new Group("group-1", "group1", sreq);
+            gr.MinCourses = 2;
+            gr.FromSubjects = new List<string>() { "MATH" };
+
+
+
+            //other acad credits
+            AcademicCredit acadcredit1 = new AcademicCredit("acadcred-1");
+            acadcredit1.AcademicLevelCode = "UG";
+            acadcredit1.AddDepartment("MATH");
+            acadcredit1.CompletedCredit = 3m;
+            acadcredit1.CourseName = "MATH-100";
+            acadcredit1.CourseLevelCode = "300";
+            acadcredit1.SubjectCode = "MATH";
+            acadcredit1.SectionId = "sec1";
+
+            AcademicCredit acadcredit2 = new AcademicCredit("acadcred-2");
+            acadcredit2.AcademicLevelCode = "UG";
+            acadcredit2.AddDepartment("MATH");
+            acadcredit2.CompletedCredit = 5m;
+            acadcredit2.CourseName = "MATH-500";
+            acadcredit2.CourseLevelCode = "500";
+            acadcredit2.SubjectCode = "MATH";
+            acadcredit2.SectionId = "sec2";
+
+            AcademicCredit acadcredit3 = new AcademicCredit("acadcred-3");
+            acadcredit3.AcademicLevelCode = "UG";
+            acadcredit3.AddDepartment("MATH");
+            acadcredit3.CompletedCredit = 3m;
+            acadcredit3.CourseName = "MATH-200";
+            acadcredit3.CourseLevelCode = "200";
+            acadcredit3.SubjectCode = "MATH";
+            acadcredit3.SectionId = "sec1";
+
+            AcademicCredit acadcredit4 = new AcademicCredit("acadcred-4");
+            acadcredit4.AcademicLevelCode = "UG";
+            acadcredit4.AddDepartment("MATH");
+            acadcredit4.CompletedCredit = 5m;
+            acadcredit4.CourseName = "MATH-300";
+            acadcredit4.CourseLevelCode = "300";
+            acadcredit4.SubjectCode = "MATH";
+            acadcredit4.SectionId = "sec2";
+
+            AcademicCredit acadcredit5 = new AcademicCredit("acadcred-5");
+            acadcredit5.AcademicLevelCode = "UG";
+            acadcredit5.AddDepartment("ENGL");
+            acadcredit5.CompletedCredit = 5m;
+            acadcredit5.CourseName = "ENGL-300";
+            acadcredit5.CourseLevelCode = "300";
+            acadcredit5.SubjectCode = "ENGL";
+            acadcredit5.SectionId = "sec2";
+
+            //Acad results
+
+            List<AcadResult> acadresults = new List<AcadResult>();
+            acadresults.Add(new CreditResult(acadcredit1));
+            acadresults.Add(new CreditResult(acadcredit2));
+            acadresults.Add(new CreditResult(acadcredit3));
+            acadresults.Add(new CreditResult(acadcredit4));
+            acadresults.Add(new CreditResult(acadcredit5));
+
+            GroupResult grResult = gr.Evaluate(acadresults, null, null, null,true,false);
+
+            Assert.AreEqual(5, grResult.Results.Count());
+            Assert.AreEqual(2, grResult.GetApplied().Count());
+            Assert.AreEqual(2, grResult.GetRelated().Count());
+            Assert.AreEqual("acadcred-1", grResult.GetApplied().ToList()[0].GetAcadCredId());
+            Assert.AreEqual("acadcred-2", grResult.GetApplied().ToList()[1].GetAcadCredId());
+            Assert.IsTrue(grResult.Explanations.Contains(GroupExplanation.Satisfied));
+        }
+
+        [TestMethod]
+        public void Related_Courses_With_ShowRelatedCourses_false()
+        {
+            Requirement requirement = new Requirement("1", "R1", "Req1", "UG", null);
+            Subrequirement sreq = new Subrequirement("sreq-1", "subReq1");
+            sreq.Requirement = requirement;
+
+            //Take 2 courses from MATH
+            Group gr = new Group("group-1", "group1", sreq);
+            gr.MinCourses = 2;
+            gr.FromSubjects = new List<string>() { "MATH" };
+
+
+
+            //other acad credits
+            AcademicCredit acadcredit1 = new AcademicCredit("acadcred-1");
+            acadcredit1.AcademicLevelCode = "UG";
+            acadcredit1.AddDepartment("MATH");
+            acadcredit1.CompletedCredit = 3m;
+            acadcredit1.CourseName = "MATH-100";
+            acadcredit1.CourseLevelCode = "300";
+            acadcredit1.SubjectCode = "MATH";
+            acadcredit1.SectionId = "sec1";
+
+            AcademicCredit acadcredit2 = new AcademicCredit("acadcred-2");
+            acadcredit2.AcademicLevelCode = "UG";
+            acadcredit2.AddDepartment("MATH");
+            acadcredit2.CompletedCredit = 5m;
+            acadcredit2.CourseName = "MATH-500";
+            acadcredit2.CourseLevelCode = "500";
+            acadcredit2.SubjectCode = "MATH";
+            acadcredit2.SectionId = "sec2";
+
+            AcademicCredit acadcredit3 = new AcademicCredit("acadcred-3");
+            acadcredit3.AcademicLevelCode = "UG";
+            acadcredit3.AddDepartment("MATH");
+            acadcredit3.CompletedCredit = 3m;
+            acadcredit3.CourseName = "MATH-200";
+            acadcredit3.CourseLevelCode = "200";
+            acadcredit3.SubjectCode = "MATH";
+            acadcredit3.SectionId = "sec1";
+
+            AcademicCredit acadcredit4 = new AcademicCredit("acadcred-4");
+            acadcredit4.AcademicLevelCode = "UG";
+            acadcredit4.AddDepartment("MATH");
+            acadcredit4.CompletedCredit = 5m;
+            acadcredit4.CourseName = "MATH-300";
+            acadcredit4.CourseLevelCode = "300";
+            acadcredit4.SubjectCode = "MATH";
+            acadcredit4.SectionId = "sec2";
+
+            AcademicCredit acadcredit5 = new AcademicCredit("acadcred-5");
+            acadcredit5.AcademicLevelCode = "UG";
+            acadcredit5.AddDepartment("ENGL");
+            acadcredit5.CompletedCredit = 5m;
+            acadcredit5.CourseName = "ENGL-300";
+            acadcredit5.CourseLevelCode = "300";
+            acadcredit5.SubjectCode = "ENGL";
+            acadcredit5.SectionId = "sec2";
+
+            //Acad results
+
+            List<AcadResult> acadresults = new List<AcadResult>();
+            acadresults.Add(new CreditResult(acadcredit1));
+            acadresults.Add(new CreditResult(acadcredit2));
+            acadresults.Add(new CreditResult(acadcredit3));
+            acadresults.Add(new CreditResult(acadcredit4));
+            acadresults.Add(new CreditResult(acadcredit5));
+
+            GroupResult grResult = gr.Evaluate(acadresults, null, null, null, false, false);
+
+            Assert.AreEqual(5, grResult.Results.Count());
+            Assert.AreEqual(2, grResult.GetApplied().Count());
+            Assert.IsNull(grResult.GetRelated());
+            Assert.AreEqual("acadcred-1", grResult.GetApplied().ToList()[0].GetAcadCredId());
+            Assert.AreEqual("acadcred-2", grResult.GetApplied().ToList()[1].GetAcadCredId());
+            Assert.IsTrue(grResult.Explanations.Contains(GroupExplanation.Satisfied));
+        }
+
+
+    }
+
+    [TestClass]
+    public class Evaluate_Verify_IfOverrideApplied_With_Courses
+    {
+        [TestMethod]
+        public void NonOverrideApplied_Equals_ListOfCourses_Satisfied()
+        {
+            Requirement requirement = new Requirement("1", "R1", "Req1", "UG", null);
+            Subrequirement sreq = new Subrequirement("sreq-1", "subReq1");
+            sreq.Requirement = requirement;
+
+            //Take ENGL-100 ENGL-102
+            Group gr = new Group("group-1", "group1", sreq);
+            gr.Courses.Add("ENGL-101");
+            gr.Courses.Add("ENGL-102");
+            gr.GroupType = GroupType.TakeAll;
+            gr.SubRequirement = sreq;
+
+            //other acad credits
+            AcademicCredit acadcredit1 = new AcademicCredit("acadcred-1",new Course("ENGL-101","SHORT TITLE","LONG TILTE", new List<OfferingDepartment>() { new OfferingDepartment("eng")}, 
+                "ENGL","101","UG",new List<string>() {"100" },2,0, new List<CourseApproval>() ),"sec1");
+            acadcredit1.AcademicLevelCode = "UG";
+            acadcredit1.AddDepartment("ENGL");
+            acadcredit1.CompletedCredit = 3m;
+            acadcredit1.CourseName = "ENGL-101";
+            acadcredit1.CourseLevelCode = "101";
+            acadcredit1.SubjectCode = "ENGL";
+            acadcredit1.SectionId = "sec1";
+
+            AcademicCredit acadcredit2 = new AcademicCredit("acadcred-2", new Course("ENGL-102", "SHORT TITLE", "LONG TILTE", new List<OfferingDepartment>() { new OfferingDepartment("eng") },
+                "ENGL", "102", "UG", new List<string>() { "100" }, 2, 0, new List<CourseApproval>()), "sec2");
+            acadcredit2.AddDepartment("ENGL");
+            acadcredit2.CompletedCredit = 5m;
+            acadcredit2.CourseName = "ENGL-102";
+            acadcredit2.CourseLevelCode = "102";
+            acadcredit2.SubjectCode = "ENGL";
+            acadcredit2.SectionId = "sec2";
+
+            List<AcadResult> acadresults = new List<AcadResult>();
+            acadresults.Add(new CreditResult(acadcredit1));
+            acadresults.Add(new CreditResult(acadcredit2));
+
+            List<Override> overrides = new List<Override>();
+            overrides.Add(new Override("group-1", new List<string>() { "acadcred-2" }, new List<string>()));
+            GroupResult grResult = gr.Evaluate(acadresults, overrides, null);
+
+            Assert.AreEqual(2, grResult.Results.Count());
+            Assert.AreEqual(2, grResult.GetApplied().Count());
+            Assert.AreEqual("acadcred-1", grResult.GetApplied().ToList()[0].GetAcadCredId());
+            Assert.AreEqual("acadcred-2", grResult.GetApplied().ToList()[1].GetAcadCredId());
+            Assert.IsTrue(grResult.Explanations.Contains(GroupExplanation.Satisfied));
+        }
+       [TestMethod]
+        public void NonOverrideApplied_NotEquals_ListOfCourses_NotSatisfied()
+        {
+            Requirement requirement = new Requirement("1", "R1", "Req1", "UG", null);
+            Subrequirement sreq = new Subrequirement("sreq-1", "subReq1");
+            sreq.Requirement = requirement;
+
+            //Take ENGL-101 ENGL-102 MATH-100
+            Group gr = new Group("group-1", "group1", sreq);
+            gr.Courses.Add("ENGL-101");
+            gr.Courses.Add("ENGL-102");
+            gr.Courses.Add("MATH-100");
+            gr.GroupType = GroupType.TakeAll;
+            gr.SubRequirement = sreq;
+
+            //other acad credits
+            AcademicCredit acadcredit1 = new AcademicCredit("acadcred-1", new Course("ENGL-101", "SHORT TITLE", "LONG TILTE", new List<OfferingDepartment>() { new OfferingDepartment("eng") },
+                "ENGL", "101", "UG", new List<string>() { "100" }, 2, 0, new List<CourseApproval>()), "sec1");
+            acadcredit1.AcademicLevelCode = "UG";
+            acadcredit1.AddDepartment("ENGL");
+            acadcredit1.CompletedCredit = 3m;
+            acadcredit1.CourseName = "ENGL-101";
+            acadcredit1.CourseLevelCode = "101";
+            acadcredit1.SubjectCode = "ENGL";
+            acadcredit1.SectionId = "sec1";
+
+            AcademicCredit acadcredit2 = new AcademicCredit("acadcred-2", new Course("ENGL-102", "SHORT TITLE", "LONG TILTE", new List<OfferingDepartment>() { new OfferingDepartment("eng") },
+                "ENGL", "102", "UG", new List<string>() { "100" }, 2, 0, new List<CourseApproval>()), "sec2");
+            acadcredit2.AddDepartment("ENGL");
+            acadcredit2.CompletedCredit = 5m;
+            acadcredit2.CourseName = "ENGL-102";
+            acadcredit2.CourseLevelCode = "102";
+            acadcredit2.SubjectCode = "ENGL";
+            acadcredit2.SectionId = "sec2";
+
+            List<AcadResult> acadresults = new List<AcadResult>();
+            acadresults.Add(new CreditResult(acadcredit1));
+            acadresults.Add(new CreditResult(acadcredit2));
+
+            List<Override> overrides = new List<Override>();
+            overrides.Add(new Override("group-1", new List<string>() { "acadcred-2" }, new List<string>()));
+            GroupResult grResult = gr.Evaluate(acadresults, overrides, null);
+
+            Assert.AreEqual(2, grResult.Results.Count());
+            Assert.AreEqual(2, grResult.GetApplied().Count());
+            Assert.AreEqual(2, grResult.GetNonOverrideApplied().Count());
+            Assert.AreEqual("acadcred-1", grResult.GetApplied().ToList()[0].GetAcadCredId());
+            Assert.AreEqual("acadcred-2", grResult.GetApplied().ToList()[1].GetAcadCredId());
+            Assert.IsTrue(grResult.Explanations.Contains(GroupExplanation.Courses));
+        }
+
+        [TestMethod]
+        public void NonOverrideApplied_NotIn_ListOfCourses_NotSatisfied()
+        {
+            Requirement requirement = new Requirement("1", "R1", "Req1", "UG", null);
+            Subrequirement sreq = new Subrequirement("sreq-1", "subReq1");
+            sreq.Requirement = requirement;
+
+            //Take ENGL-101  MATH-100
+            Group gr = new Group("group-1", "group1", sreq);
+            gr.Courses.Add("ENGL-101");
+            gr.Courses.Add("MATH-100");
+            gr.GroupType = GroupType.TakeAll;
+            gr.SubRequirement = sreq;
+
+            //other acad credits
+            AcademicCredit acadcredit1 = new AcademicCredit("acadcred-1", new Course("ENGL-101", "SHORT TITLE", "LONG TILTE", new List<OfferingDepartment>() { new OfferingDepartment("eng") },
+                "ENGL", "101", "UG", new List<string>() { "100" }, 2, 0, new List<CourseApproval>()), "sec1");
+            acadcredit1.AcademicLevelCode = "UG";
+            acadcredit1.AddDepartment("ENGL");
+            acadcredit1.CompletedCredit = 3m;
+            acadcredit1.CourseName = "ENGL-101";
+            acadcredit1.CourseLevelCode = "101";
+            acadcredit1.SubjectCode = "ENGL";
+            acadcredit1.SectionId = "sec1";
+
+            AcademicCredit acadcredit2 = new AcademicCredit("acadcred-2", new Course("ENGL-102", "SHORT TITLE", "LONG TILTE", new List<OfferingDepartment>() { new OfferingDepartment("eng") },
+                "ENGL", "102", "UG", new List<string>() { "100" }, 2, 0, new List<CourseApproval>()), "sec2");
+            acadcredit2.AddDepartment("ENGL");
+            acadcredit2.CompletedCredit = 5m;
+            acadcredit2.CourseName = "ENGL-102";
+            acadcredit2.CourseLevelCode = "102";
+            acadcredit2.SubjectCode = "ENGL";
+            acadcredit2.SectionId = "sec2";
+
+            List<AcadResult> acadresults = new List<AcadResult>();
+            acadresults.Add(new CreditResult(acadcredit1));
+            acadresults.Add(new CreditResult(acadcredit2));
+
+            List<Override> overrides = new List<Override>();
+            overrides.Add(new Override("group-1", new List<string>() { "acadcred-2" }, new List<string>()));
+            GroupResult grResult = gr.Evaluate(acadresults, overrides, null);
+
+            Assert.AreEqual(2, grResult.Results.Count());
+            Assert.AreEqual(2, grResult.GetApplied().Count());
+            Assert.AreEqual(1, grResult.GetNonOverrideApplied().Count());
+            Assert.AreEqual("acadcred-1", grResult.GetApplied().ToList()[0].GetAcadCredId());
+            Assert.AreEqual("acadcred-2", grResult.GetApplied().ToList()[1].GetAcadCredId());
+            Assert.IsTrue(grResult.Explanations.Contains(GroupExplanation.Courses));
+        }
+
+    }
 }
 

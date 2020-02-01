@@ -16,6 +16,7 @@ using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Dtos.EnumProperties;
 
 namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 {
@@ -249,7 +250,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 studentAcadCredDictionary.Add("secGuid3", "secGuid3");
                 _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetGuidsCollectionAsync(It.IsAny<List<string>>(), It.IsAny<string>())).ReturnsAsync(studentAcadCredDictionary);
 
-                _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetStudentAcadCredGradeSchemeFromIdAsync(It.IsAny<string>())).ReturnsAsync("grd1");
+                var returnTuple = new Tuple<string, string, string>("stu1", "secGuid1", "grd1");
+                _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetStudentAcadCredDataFromIdAsync(It.IsAny<string>())).ReturnsAsync(returnTuple);
             }
 
             [TestCleanup]
@@ -336,6 +338,34 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 {
                     Assert.AreEqual(expected.AwardGradeScheme.Id, actual.AwardGradeScheme.Id);
                 }
+            }
+
+            [TestMethod]
+            public async Task StudentUnverifiedGradesService_GetStudentUnverifiedGradesByGuidAsync_NeverAttended()
+            {
+                Domain.Student.Entities.StudentUnverifiedGrades entity = _studentUnverifiedGradesCollection.First();
+                var expected = _dtoStudentUnverifiedGradesList.FirstOrDefault(x => x.Id == entity.Guid);
+                entity.HasNeverAttended = true;
+                entity.FinalGrade = "";
+                entity.LastAttendDate = null;
+
+                _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetStudentUnverifiedGradeByGuidAsync(It.IsAny<string>())).ReturnsAsync(entity);
+
+                var actual = await _studentUnverifiedGradesService.GetStudentUnverifiedGradesByGuidAsync(entity.Guid);
+
+                Assert.IsNotNull(actual);
+
+                Assert.AreEqual(expected.Id, actual.Id);
+                Assert.AreEqual(expected.Student.Id, actual.Student.Id);
+                if (actual.SectionRegistration != null || expected.SectionRegistration != null)
+                {
+                    Assert.AreEqual(expected.SectionRegistration.Id, actual.SectionRegistration.Id);
+                }
+                if (actual.AwardGradeScheme != null || expected.AwardGradeScheme != null)
+                {
+                    Assert.AreEqual(expected.AwardGradeScheme.Id, actual.AwardGradeScheme.Id);
+                }
+                Assert.AreEqual(StudentUnverifiedGradesStatus.Neverattended, actual.Details.LastAttendance.Status);
             }
 
             [TestMethod]

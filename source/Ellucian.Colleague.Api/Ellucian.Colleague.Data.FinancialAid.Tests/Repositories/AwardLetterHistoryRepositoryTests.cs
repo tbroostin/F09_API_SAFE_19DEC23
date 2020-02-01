@@ -1,4 +1,4 @@
-﻿//Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -490,7 +490,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                 BaseInitialize();
                 recordId = "67";
 
-                expectedAwardLetter = await expectedRepository.GetAwardLetterByIdAsync(studentId, recordId, studentAwardYears, allAwards);
+                expectedAwardLetter = await expectedRepository.GetAwardLetterByIdAsync(recordId, studentAwardYears, allAwards);
             }
 
             [TestCleanup]
@@ -511,50 +511,36 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
-            public async Task StudentIdIsRequiredTest()
-            {
-                await actualRepository.GetAwardLetterByIdAsync(null, recordId, studentAwardYears, allAwards);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task StudentIdIsRequiredTest2()
-            {
-                await actualRepository.GetAwardLetterByIdAsync(string.Empty, recordId, studentAwardYears, allAwards);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
             public async Task RecordIdIsRequiredTest()
             {
-                await actualRepository.GetAwardLetterByIdAsync(studentId, null, studentAwardYears, allAwards);
+                await actualRepository.GetAwardLetterByIdAsync(null, studentAwardYears, allAwards);
             }
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
             public async Task RecordIdIsRequiredTest2()
             {
-                await actualRepository.GetAwardLetterByIdAsync(studentId, string.Empty, studentAwardYears, allAwards);
+                await actualRepository.GetAwardLetterByIdAsync(string.Empty, studentAwardYears, allAwards);
             }
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
             public async Task StudentAwardYearsArgIsRequiredTest()
             {
-                await actualRepository.GetAwardLetterByIdAsync(studentId, recordId, null, allAwards);
+                await actualRepository.GetAwardLetterByIdAsync(recordId, null, allAwards);
             }
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
             public async Task StudentAwardYearsArgIsRequiredTest2()
             {
-                await actualRepository.GetAwardLetterByIdAsync(studentId, recordId, new List<StudentAwardYear>(), allAwards);
+                await actualRepository.GetAwardLetterByIdAsync(recordId, new List<StudentAwardYear>(), allAwards);
             }
 
             [TestMethod]
             public async Task ActualAwardLetter_EqualsExpectedTest()
             {
-                actualAwardLetter = await actualRepository.GetAwardLetterByIdAsync(studentId, recordId, studentAwardYears, allAwards);
+                actualAwardLetter = await actualRepository.GetAwardLetterByIdAsync(recordId, studentAwardYears, allAwards);
                 Assert.AreEqual(expectedAwardLetter, actualAwardLetter);
                 Assert.AreEqual(expectedAwardLetter.AcceptedDate, actualAwardLetter.AcceptedDate);
                 Assert.AreEqual(expectedAwardLetter.Id, actualAwardLetter.Id);
@@ -565,14 +551,14 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
             [TestMethod]
             public async Task NoAwardLetterRecordForId_MessageLoggedTest()
             {
-                await actualRepository.GetAwardLetterByIdAsync(studentId, "foo", studentAwardYears, allAwards);
+                await actualRepository.GetAwardLetterByIdAsync("foo", studentAwardYears, allAwards);
                 loggerMock.Verify(l => l.Error(It.IsAny<Exception>(), It.IsAny<string>()));
             }
 
             [TestMethod]
             public async Task NoAwardLetterRecordForId_ReturnsEmptyAwardLetterObjectTest()
             {
-                actualAwardLetter = await actualRepository.GetAwardLetterByIdAsync(studentId, "foo", studentAwardYears, allAwards);
+                actualAwardLetter = await actualRepository.GetAwardLetterByIdAsync("foo", studentAwardYears, allAwards);
                 Assert.IsNotNull(actualAwardLetter);
                 Assert.IsNull(actualAwardLetter.Id);
                 Assert.IsNull(actualAwardLetter.CreatedDate);
@@ -918,7 +904,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                 BaseInitialize();
                 recordId = "67";
 
-                expectedAwardLetter = await expectedRepository.GetAwardLetterById2Async(studentId, recordId, studentAwardYears, allAwards);
+                expectedAwardLetter = await expectedRepository.GetAwardLetterById2Async(recordId, studentAwardYears, allAwards);
             }
 
             [TestCleanup]
@@ -939,50 +925,36 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
-            public async Task StudentIdIsRequiredTest()
-            {
-                await actualRepository.GetAwardLetterById2Async(null, recordId, studentAwardYears, allAwards);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task StudentIdIsRequiredTest2()
-            {
-                await actualRepository.GetAwardLetterById2Async(string.Empty, recordId, studentAwardYears, allAwards);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
             public async Task RecordIdIsRequiredTest()
             {
-                await actualRepository.GetAwardLetterById2Async(studentId, null, studentAwardYears, allAwards);
+                await actualRepository.GetAwardLetterById2Async(null, studentAwardYears, allAwards);
             }
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
             public async Task RecordIdIsRequiredTest2()
             {
-                await actualRepository.GetAwardLetterById2Async(studentId, string.Empty, studentAwardYears, allAwards);
+                await actualRepository.GetAwardLetterById2Async(string.Empty, studentAwardYears, allAwards);
             }
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
             public async Task StudentAwardYearsArgIsRequiredTest()
             {
-                await actualRepository.GetAwardLetterById2Async(studentId, recordId, null, allAwards);
+                await actualRepository.GetAwardLetterById2Async(recordId, null, allAwards);
             }
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
             public async Task StudentAwardYearsArgIsRequiredTest2()
             {
-                await actualRepository.GetAwardLetterById2Async(studentId, recordId, new List<StudentAwardYear>(), allAwards);
+                await actualRepository.GetAwardLetterById2Async(recordId, new List<StudentAwardYear>(), allAwards);
             }
 
             [TestMethod]
             public async Task ActualAwardLetter_EqualsExpectedTest()
             {
-                actualAwardLetter = await actualRepository.GetAwardLetterById2Async(studentId, recordId, studentAwardYears, allAwards);
+                actualAwardLetter = await actualRepository.GetAwardLetterById2Async(recordId, studentAwardYears, allAwards);
                 Assert.AreEqual(expectedAwardLetter, actualAwardLetter);
                 Assert.AreEqual(expectedAwardLetter.AcceptedDate, actualAwardLetter.AcceptedDate);
                 Assert.AreEqual(expectedAwardLetter.Id, actualAwardLetter.Id);
@@ -993,14 +965,14 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
             [TestMethod]
             public async Task NoAwardLetterRecordForId_MessageLoggedTest()
             {
-                await actualRepository.GetAwardLetterById2Async(studentId, "foo", studentAwardYears, allAwards);
+                await actualRepository.GetAwardLetterById2Async("foo", studentAwardYears, allAwards);
                 loggerMock.Verify(l => l.Error(It.IsAny<Exception>(), It.IsAny<string>()));
             }
 
             [TestMethod]
             public async Task NoAwardLetterRecordForId_ReturnsEmptyAwardLetterObjectTest()
             {
-                actualAwardLetter = await actualRepository.GetAwardLetterById2Async(studentId, "foo", studentAwardYears, allAwards);
+                actualAwardLetter = await actualRepository.GetAwardLetterById2Async("foo", studentAwardYears, allAwards);
                 Assert.IsNotNull(actualAwardLetter);
                 Assert.IsNull(actualAwardLetter.Id);
                 Assert.IsNull(actualAwardLetter.CreatedDate);

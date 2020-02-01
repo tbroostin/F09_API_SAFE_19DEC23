@@ -352,6 +352,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             housingRequestEntity.EndDate = housingRequestDto.EndOn;
             housingRequestEntity.LotteryNo = housingRequestDto.PriorityNumber;
+            if(housingRequestDto.Person == null || string.IsNullOrWhiteSpace(housingRequestDto.Person.Id))
+            {
+                throw new ArgumentNullException("person.id", string.Format("Person is required for housing request. Id: {0}", guid));
+            }
+
             var personId = await _personRepository.GetPersonIdFromGuidAsync(housingRequestDto.Person.Id);
             housingRequestEntity.PersonId = personId;
             //academicPeriods

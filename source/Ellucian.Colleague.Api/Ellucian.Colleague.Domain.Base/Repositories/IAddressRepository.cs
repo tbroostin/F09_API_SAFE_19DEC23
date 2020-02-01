@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -32,6 +32,13 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <param name="guid">Address id</param>
         /// <returns>Address Entity</returns>
         Task<Address> GetAddressAsync(string guid);
+
+        /// <summary>
+        /// Get Addresses by guid with enhanced error collections
+        /// </summary>
+        /// <param name="guid">Address id</param>
+        /// <returns>Address Entity</returns>
+        Task<Address> GetAddress2Async(string guid);
 
         /// <summary>
         /// Get All Places
@@ -73,6 +80,15 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <param name="limit">amount of records to retrieve for paging</param>
         /// <returns></returns>
         Task<Tuple<IEnumerable<Address>, int>> GetAddressesAsync(int offset, int limit);
+
+        /// <summary>
+        /// Get all addresses with paging with enhanced error collections
+        /// </summary>
+        /// <param name="offset">Starting position for paging</param>
+        /// <param name="limit">amount of records to retrieve for paging</param>
+        /// <param name="personFilter">Person Saved List selection or list name from person-filters</param>
+        /// <returns></returns>
+        Task<Tuple<IEnumerable<Address>, int>> GetAddresses2Async(int offset, int limit, string[] filterPersonIds = null);
 
         /// <summary>
         ///  Get an Address Guid from an ID

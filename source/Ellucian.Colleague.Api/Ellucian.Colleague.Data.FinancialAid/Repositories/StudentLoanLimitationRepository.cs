@@ -1,4 +1,4 @@
-﻿//Copyright 2014-2016 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -69,8 +69,19 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
             return studentLoanLimitations;
         }
 
+        /// <summary>
+        /// Gets student loan limitation information
+        /// </summary>
+        /// <param name="studentId">student id for whom to retrieve the information</param>
+        /// <param name="studentAwardYear">student award year fr which to retrieve the information</param>
+        /// <returns></returns>
         private async Task<StudentLoanLimitation> BuildLoanLimitationAsync(string studentId, StudentAwardYear studentAwardYear)
         {
+            //read SA.ACYR to get max loan limit supression flag
+            string saAcyrFile = "SA." + studentAwardYear.Code;
+            var studentAwardData = await DataReader.ReadRecordAsync<SaAcyr>(saAcyrFile, studentId); 
+            bool suppressStudentMaximumAmounts = studentAwardData != null && !string.IsNullOrEmpty(studentAwardData.SaOverLoanMax) && studentAwardData.SaOverLoanMax.ToUpper() == "Y";
+
             Transactions.GetLoanLimitationsRequest request = new Transactions.GetLoanLimitationsRequest();
             request.Year = studentAwardYear.Code;
             request.StudentId = studentId;
@@ -78,11 +89,10 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
 
             Transactions.GetLoanLimitationsResponse response = await transactionInvoker.ExecuteAsync<Transactions.GetLoanLimitationsRequest, Transactions.GetLoanLimitationsResponse>(request);
 
-            var limitation = new StudentLoanLimitation(studentAwardYear.Code, studentId);
+            var limitation = new StudentLoanLimitation(studentAwardYear.Code, studentId, suppressStudentMaximumAmounts);
             limitation.SubsidizedMaximumAmount = (response.SubEligAmount.HasValue) ? response.SubEligAmount.Value : 0;
             limitation.UnsubsidizedMaximumAmount = (response.UnsubEligAmount.HasValue) ? response.UnsubEligAmount.Value : 0;
             limitation.GradPlusMaximumAmount = (response.GplusEligAmount.HasValue) ? response.GplusEligAmount.Value : 0;
-
             return limitation;
         }
     }

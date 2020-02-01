@@ -75,5 +75,10 @@ namespace Ellucian.Colleague.Dtos.Finance.AccountActivity
         /// List of reasons this account holder is not eligible for aid
         /// </summary>
         public List<string> IneligibilityReasons { get; set; }
+
+        /// <summary>
+        /// Indicates whether excess award amounts should be transmitted
+        /// </summary>
+        public bool TransmitAwardExcess { get; set; }
     }
 }

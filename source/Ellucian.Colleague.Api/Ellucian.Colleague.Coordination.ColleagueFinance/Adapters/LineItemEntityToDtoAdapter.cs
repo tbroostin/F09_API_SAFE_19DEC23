@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -30,6 +30,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
         {
             // Copy line item properties.
             var lineItemDto = new LineItem();
+            lineItemDto.Id = Source.Id;
             lineItemDto.Description = Source.Description;
             lineItemDto.Quantity = Source.Quantity;
             lineItemDto.Price = Source.Price;
@@ -43,8 +44,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
             lineItemDto.TaxFormCode = Source.TaxFormCode;
             lineItemDto.TaxFormLocation = Source.TaxFormLocation;
             lineItemDto.Comments = Source.Comments;
+            lineItemDto.CommodityCode = Source.CommodityCode;
+            lineItemDto.FixedAssetsFlag = Source.FixedAssetsFlag;
+            lineItemDto.TradeDiscountAmount = Source.TradeDiscountAmount;
+            lineItemDto.TradeDiscountPercentage = Source.TradeDiscountPercentage;
+            lineItemDto.ReqLineItemTaxCodes = new List<LineItemReqTax>();
             lineItemDto.GlDistributions = new List<LineItemGlDistribution>();
-            lineItemDto.LineItemTaxes = new List<LineItemTax>();
+            lineItemDto.LineItemTaxes = new List<LineItemTax>();     
 
             return lineItemDto;
         }

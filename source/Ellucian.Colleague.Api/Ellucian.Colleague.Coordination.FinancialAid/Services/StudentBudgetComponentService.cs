@@ -1,4 +1,4 @@
-﻿/*Copyright 2015-2017 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2015-2019 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -77,6 +77,50 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             if (studentBudgetComponentEntities == null || !studentBudgetComponentEntities.Any())
             {
                 logger.Info(string.Format("Student {0} has no budget components for any award years", studentId));
+                return new List<StudentBudgetComponent>();
+            }
+
+            var studentBudgetComponentDtoAdapter = _adapterRegistry.GetAdapter<Colleague.Domain.FinancialAid.Entities.StudentBudgetComponent, StudentBudgetComponent>();
+            return studentBudgetComponentEntities.Select(budget => studentBudgetComponentDtoAdapter.MapToType(budget));
+        }
+
+        /// <summary>
+        /// Get all StudentBudgetComponents for the given studentId and award year
+        /// </summary>
+        /// <param name="studentId">The Colleague PERSON id of the student for whom to get budget components</param>
+        /// <param name="awardYear">award year to get data for</param>
+        /// <returns>a list of budget components associated with the student id/year</returns>
+        public async Task<IEnumerable<StudentBudgetComponent>> GetStudentBudgetComponentsForYearAsync(string studentId, string awardYear)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("studentId");
+            }
+
+            if (string.IsNullOrEmpty(awardYear))
+            {
+                throw new ArgumentNullException("awardYear");
+            }
+
+            if (!UserHasAccessPermission(studentId, new Domain.Base.Entities.ProxyWorkflowConstants[] { Domain.Base.Entities.ProxyWorkflowConstants.FinancialAidAwardLetter }))
+            {
+                var message = string.Format("User {0} does not have permission to get StudentBudgetComponents for student {1}", CurrentUser.PersonId, studentId);
+                logger.Error(message);
+                throw new PermissionsException(message);
+            }
+
+            //Create a single year list
+            var singleYearList = new List<Domain.FinancialAid.Entities.StudentAwardYear>()
+            {
+                new Domain.FinancialAid.Entities.StudentAwardYear(studentId, awardYear)
+            };
+
+            var studentBudgetComponentEntities = await studentBudgetComponentRepository
+                .GetStudentBudgetComponentsAsync(studentId, singleYearList.AsEnumerable());
+
+            if (studentBudgetComponentEntities == null || !studentBudgetComponentEntities.Any())
+            {
+                logger.Info(string.Format("Student {0} has no budget components for {1} year", studentId, awardYear));
                 return new List<StudentBudgetComponent>();
             }
 

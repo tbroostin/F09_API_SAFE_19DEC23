@@ -102,7 +102,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
              
             catch (Exception ex)
             {
-                logger.Info(ex, ex.ToString());
+                logger.Error(ex, ex.ToString());
                 throw;
             }
         }
@@ -118,7 +118,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (string.IsNullOrEmpty(requestId))
             {
                 var message = "StudentRequest Id must be provided";
-                logger.Info(message);
+                logger.Error(message);
                 throw new ArgumentNullException(message);
             }
 
@@ -131,13 +131,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             catch (KeyNotFoundException)
             {
-                logger.Info("StudentRequest not found in repository for given request Id " + requestId);
+                logger.Error("StudentRequest not found in repository for given request Id " + requestId);
                 throw;
             }
             catch (Exception ex)
             {
                 var message = "Exception occurred while trying to read request from repository using student request id " + requestId + " Exception message: " + ex.Message;
-                logger.Info(message);
+                logger.Error(message);
                 throw new Exception(message);
             }
 
@@ -174,7 +174,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (string.IsNullOrEmpty(studentId))
             {
                 var message = "Student Id must be provided";
-                logger.Info(message);
+                logger.Error(message);
                 throw new ArgumentNullException(message);
             }
 
@@ -182,7 +182,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (string.IsNullOrEmpty(requestType) || (requestType != "Transcript" && requestType != "Enrollment"))
             {
                 var message = "Request type of 'Transcript' or 'Enrollment' must be provided";
-                logger.Info(message);
+                logger.Error(message);
                 throw new ArgumentNullException(message);
             }
             // Throw exception if request is being submitted by someone other than the student.
@@ -203,7 +203,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             catch (Exception ex)
             {
                 var message = "Exception occurred while trying to read the student requests from repository using student id " + studentId + " Exception message: " + ex.Message;
-                logger.Info(message);
+                logger.Error(message);
                 throw new Exception(message);
             }
             // Filter the retrieved requests by request type
@@ -247,7 +247,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (string.IsNullOrEmpty(studentId) || string.IsNullOrEmpty(requestId))
             {
                 var message = "Student Id and request Id must be provided";
-                logger.Info(message);
+                logger.Error(message);
                 throw new ArgumentNullException(message);
             }
             Domain.Student.Entities.StudentRequestFee studentRequestFeeEntity = null;
@@ -283,7 +283,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             catch (Exception ex)
             {
                 var message = string.Format("Exception occurred while trying to get student request fee from repository using  student Id {0} and request Id {1}  Exception message: ", studentId, requestId, ex.Message);
-                logger.Info(ex, message);
+                logger.Error(ex, message);
                 throw;
             }
             try

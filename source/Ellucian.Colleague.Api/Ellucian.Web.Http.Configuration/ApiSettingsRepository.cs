@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -8,6 +8,7 @@ using Ellucian.Data.Colleague.DataContracts;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Http.Configuration.Transactions;
 using slf4net;
+using System.Web.Configuration;
 
 namespace Ellucian.Web.Http.Configuration
 {
@@ -165,6 +166,30 @@ namespace Ellucian.Web.Http.Configuration
             // Get cache-related valcode entries
             apiSettings.SupportedCacheProviders = GetSupportedCacheProviders();
             apiSettings.DebugTraceLevels = GetDebugTraceLevels();
+
+            int bulkReadSize = 5000;
+            if (int.TryParse(WebConfigurationManager.AppSettings["BulkReadSize"], out bulkReadSize))
+            {
+                apiSettings.BulkReadSize = bulkReadSize;
+            }
+
+            bool includeLinkSelfHeaders = false;
+            if (bool.TryParse(WebConfigurationManager.AppSettings["IncludeLinkSelfHeaders"], out includeLinkSelfHeaders))
+            {
+                apiSettings.IncludeLinkSelfHeaders = includeLinkSelfHeaders;
+            }
+
+            bool enableBackupConfig = false;
+            if (bool.TryParse(WebConfigurationManager.AppSettings["EnableConfigBackup"], out enableBackupConfig))
+            {
+                apiSettings.EnableConfigBackup = enableBackupConfig;
+            }
+
+            long maxAttachRequestSize = 26214400;  // 25 MB
+            if (long.TryParse(WebConfigurationManager.AppSettings["AttachRequestMaxSize"], out maxAttachRequestSize))
+            {
+                apiSettings.AttachRequestMaxSize = maxAttachRequestSize;
+            }
 
             return apiSettings;
         }

@@ -115,6 +115,14 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         [TestClass]
         public class GetPersonPositionsTests : PersonPositionServiceTests
         {
+            public string UserForAdminPermissionCheck
+            {
+                get
+                {
+                    return "0003916";
+                }
+            }
+
             [TestInitialize]
             public void Initialize()
             {
@@ -173,6 +181,34 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             public async Task NoAccessWithRandomIdViaProxyService()
             {
                 await proxyActualService.GetPersonPositionsAsync("0000003");
+
+            }
+
+
+            [TestMethod]
+            public async Task PersonPositions_RepositoryCurrentUserIdWithAdminPermissionTest()
+            {
+                roleRepositoryMock.Setup(r => r.Roles)
+               .Returns(() => (employeeCurrentUserFactory.CurrentUser.Roles).Select(roleTitle =>
+               {
+                   var role = new Domain.Entities.Role(roleTitle.GetHashCode(), roleTitle);
+
+                   role.AddPermission(new Domain.Entities.Permission("VIEW.ALL.TIME.HISTORY"));
+
+                   return role;
+               }));
+
+                await actualService.GetPersonPositionsAsync(UserForAdminPermissionCheck);
+                personPositionRepositoryMock.Verify(r =>
+                    r.GetPersonPositionsAsync(It.Is<IEnumerable<string>>(list =>
+                        list.Count() == 1 && list.ElementAt(0) == UserForAdminPermissionCheck)));
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task PersonPositions_RepositoryCurrentUserIdWithoutAdminPermissionTest()
+            {
+                await actualService.GetPersonPositionsAsync(UserForAdminPermissionCheck);
 
             }
         }

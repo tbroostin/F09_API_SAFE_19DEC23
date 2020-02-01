@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -32,6 +32,7 @@ namespace Ellucian.Colleague.Domain.Base.Entities
             }
             _Code = code;
             NameTypeHierarchy = _NameTypeHierarchy.AsReadOnly();
+            AddressTypeHierarchy = _AddressTypeHierarchy.AsReadOnly();
         }
 
         /// <summary>
@@ -46,6 +47,27 @@ namespace Ellucian.Colleague.Domain.Base.Entities
             if (!_NameTypeHierarchy.Contains(nameType))
             {
                 _NameTypeHierarchy.Add(nameType);
+            }
+        }
+
+        /// <summary>
+        /// List of address types defining the order of precedence 
+        /// </summary>
+        private readonly List<string> _AddressTypeHierarchy = new List<string>();
+        public ReadOnlyCollection<string> AddressTypeHierarchy { get; private set; }
+
+        /// <summary>
+        /// Add a address type code to the existing list.
+        /// </summary>
+        public void AddAddressTypeHierarchy(string addressType)
+        {
+            if (string.IsNullOrEmpty(addressType))
+            {
+                throw new ArgumentNullException("addressType");
+            }
+            if (!_AddressTypeHierarchy.Contains(addressType))
+            {
+                _AddressTypeHierarchy.Add(addressType);
             }
         }
     }

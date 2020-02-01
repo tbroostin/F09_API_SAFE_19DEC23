@@ -503,7 +503,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             this.voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(voucherId, personId, GlAccessLevel.Full_Access, null, versionNumber);
             ConvertDomainEntitiesIntoDataContracts();
             dataReaderMock.Setup(repo => repo.SelectAsync("AP.TYPES", It.IsAny<string>())).ReturnsAsync(new string[] { "AP" });
-
+            voucherDataContract.VouStatus = new List<string> { "O" };
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string>(), true)).ReturnsAsync(voucherDataContract);
             dataReaderMock.Setup(repo => repo.ReadRecordAsync<Base.DataContracts.Person>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(null);
             var accountsPayable = await accountsPayableInvoicesRepo.GetAccountsPayableInvoicesByGuidAsync(guid, false);
         }
@@ -556,7 +557,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
+        [ExpectedException(typeof(KeyNotFoundException))]
         public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesByGuidAsync_VoucherStatus_isNull()
         {
             string voucherId = "1";
@@ -571,7 +572,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
+        [ExpectedException(typeof(KeyNotFoundException))]
         public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesByGuidAsync_VoucherStatus_ContainsInvalidStatus()
         {
             string voucherId = "1";
@@ -586,9 +587,24 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             var accountsPayable = await accountsPayableInvoicesRepo.GetAccountsPayableInvoicesByGuidAsync(guid, false);
         }
 
-      
         [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
+        [ExpectedException(typeof(KeyNotFoundException))]
+        public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesByGuidAsync_VoucherStatus_ContainsInProgressStatus()
+        {
+            string voucherId = "1";
+            this.voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(voucherId, personId, GlAccessLevel.Full_Access, null, versionNumber);
+            ConvertDomainEntitiesIntoDataContracts();
+
+            voucherDataContract.VoucherStatusEntityAssociation = new List<VouchersVoucherStatus>()
+            { new VouchersVoucherStatus() {VouStatusAssocMember = "U", VouStatusDateAssocMember = new DateTime(2017,1,11) } };
+
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string>(), true)).ReturnsAsync(voucherDataContract);
+
+            var accountsPayable = await accountsPayableInvoicesRepo.GetAccountsPayableInvoicesByGuidAsync(guid, false);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(KeyNotFoundException))]
         public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesByGuidAsync_VoucherStatus_Contains_Cancelled()
         {
             string voucherId = "1";
@@ -629,6 +645,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             ConvertDomainEntitiesIntoDataContracts();
 
             voucherDataContract.VouDate = null;
+            voucherDataContract.VouStatus = new List<string> { "O" };
             dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string>(), true)).ReturnsAsync(voucherDataContract);
             dataReaderMock.Setup(repo => repo.SelectAsync("AP.TYPES", It.IsAny<string>())).ReturnsAsync(new string[] { "AP" });
 
@@ -651,7 +668,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
+        [ExpectedException(typeof(KeyNotFoundException))]
         public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesByGuidAsync_MissingAPType()
         {
             string voucherId = "1";
@@ -659,6 +676,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             ConvertDomainEntitiesIntoDataContracts();
 
             voucherDataContract.VouApType = null;
+            voucherDataContract.VouStatus = new List<string> { "O" };
             dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string>(), true)).ReturnsAsync(voucherDataContract);
             dataReaderMock.Setup(repo => repo.SelectAsync("AP.TYPES", It.IsAny<string>())).ReturnsAsync(new string[] { "AP" });
 
@@ -684,6 +702,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             this.voucherDataContract.VouPayFlag = "Y";
             this.voucherDataContract.VouReferenceNo = new List<string>() { "Ref123" };
             this.voucherDataContract.VouStatus = new List<string>() { "O" };
+            this.voucherDataContract.VouIntgSubmittedBy = "1";
 
             this.voucherDataContract.VouStatusDate = new List<DateTime?>() { new DateTime(2013, 1, 18) };
             this.voucherDataContract.VouVendorTerms = "SaTerm";
@@ -1221,7 +1240,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 VouDefaultInvoiceNo = "1",
                 VouDefaultInvoiceDate = DateTime.Today,
                 VouDate = DateTime.Today,
-                VouStatus = new List<string>() { "U" },
+                VouStatus = new List<string>() { "O" },
                 VouRequestor = "1",
                 VoucherStatusEntityAssociation = new List<VouchersVoucherStatus>()
                     {
@@ -1248,7 +1267,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                     { guid, new GuidLookupResult() { Entity = "VOUCHERS", PrimaryKey = "1" } }
                 };
 
-            accountsPayableInvoiceEntity = new Domain.ColleagueFinance.Entities.AccountsPayableInvoices(guid, "1", DateTime.Today, VoucherStatus.InProgress, "name", "1", DateTime.Today)
+            accountsPayableInvoiceEntity = new Domain.ColleagueFinance.Entities.AccountsPayableInvoices(guid, "1", DateTime.Today, VoucherStatus.Outstanding, "name", "1", DateTime.Today)
             {
                 CurrencyCode = "USD",
                 HostCountry = "CAN",
@@ -1389,7 +1408,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
+        [ExpectedException(typeof(KeyNotFoundException))]
         public async Task ActPayInvService_CreateAccountsPayableInvoices_Get_VoucherType_Null_ArgumentException()
         {
             voucher.VouApType = "2";
@@ -1397,7 +1416,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
+        [ExpectedException(typeof(KeyNotFoundException))]
         public async Task ActPayInvService_CreateAccountsPayableInvoices_Get_VoucherStatus_Cancelled_OR_Voided_ArgumentException()
         {
             voucher.VouStatus = new List<string>() { "X", "V" };
@@ -1469,6 +1488,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                     CurrencyCode = "USD",
                     HostCountry = "CAN",
                     VendorId = "1",
+                    SubmittedBy = "1",
                     VoucherAddressId = "1",
                     VoucherUseAltAddress = true,
                     VoucherMiscName = new List<string>() { "name" },

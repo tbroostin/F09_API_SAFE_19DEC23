@@ -1,24 +1,25 @@
-﻿// Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
 
+using Ellucian.Colleague.Data.Base.Transactions;
+using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Base.Services;
+using Ellucian.Colleague.Domain.Entities;
+using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Data.Colleague;
+using Ellucian.Data.Colleague.DataContracts;
+using Ellucian.Data.Colleague.Repositories;
+using Ellucian.Dmi.Runtime;
+using Ellucian.Web.Cache;
+using Ellucian.Web.Dependency;
+using Ellucian.Web.Utility;
+using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
-using Ellucian.Colleague.Data.Base.Transactions;
-using Ellucian.Colleague.Domain.Base.Entities;
-using Ellucian.Colleague.Domain.Base.Repositories;
-using Ellucian.Data.Colleague.DataContracts;
-using Ellucian.Data.Colleague;
-using Ellucian.Data.Colleague.Repositories;
-using Ellucian.Web.Cache;
-using slf4net;
-using Ellucian.Web.Dependency;
-using Ellucian.Web.Utility;
-using Ellucian.Dmi.Runtime;
 using System.Threading.Tasks;
-using Ellucian.Colleague.Domain.Exceptions;
-using Ellucian.Colleague.Domain.Entities;
 
 namespace Ellucian.Colleague.Data.Base.Repositories
 {
@@ -27,12 +28,19 @@ namespace Ellucian.Colleague.Data.Base.Repositories
     {
         public static char _SM = Convert.ToChar(DynamicArray.SM);
         private Data.Base.DataContracts.IntlParams internationalParameters;
+        private RepositoryException exception;
+
+        // setting for AllAddresses Cache
+        const string AllAddressesCache = "AllAddresses";
+        const int AllAddressesCacheTimeout = 20; // Clear from cache every 20 minutes
+
 
         public AddressRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger)
             : base(cacheProvider, transactionFactory, logger)
         {
             // Using level 1 cache time out value for data that rarely changes.
             CacheTimeout = Level1CacheTimeoutValue;
+            exception = new RepositoryException();
         }
 
         #region ValidationTables
@@ -344,7 +352,42 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
             return await GetAddressbyIDAsync(addressId);
         }
-        
+
+        /// <summary>
+        /// Get an Address entity from guid
+        /// </summary>
+        /// <param name="guid"></param>
+        /// <returns>Address entity</returns>
+        public async Task<Address> GetAddress2Async(string guid)
+        {
+            var addressId = string.Empty;
+            Address address = null;
+            try
+            {
+                addressId = await GetAddressFromGuidAsync(guid);
+                if (string.IsNullOrEmpty(addressId))
+                {
+                    var errorMessage = string.Format("Unable to locate address from guid '{0}'.", guid);
+                    logger.Error(errorMessage);
+                    var exception = new RepositoryException();
+                    exception.AddError(new RepositoryError("invalid.guid", errorMessage));
+                    throw exception;
+                }
+
+                address = await GetAddressbyID2Async(addressId);
+            }
+            catch (RepositoryException ex)
+            {
+                throw ex;
+            }
+            catch (KeyNotFoundException ex)
+            {
+                throw ex;
+            }
+
+            return address;
+        }
+
         /// <summary>
         /// Get a single address using an ID
         /// </summary>
@@ -366,6 +409,29 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             // Build the address data
             return  BuildAddress(record);   
+        }
+
+        /// <summary>
+        /// Get a single address using an ID
+        /// </summary>
+        /// <param name="id">The address ID</param>
+        /// <returns>The address</returns>
+        public async Task<Address> GetAddressbyID2Async(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new ArgumentNullException("id", "ID is required to get an address.");
+            }
+
+            // Now we have an ID, so we can read the record
+            var record = await DataReader.ReadRecordAsync<DataContracts.Address>(id);
+            if (record == null)
+            {
+                throw new KeyNotFoundException(string.Concat("Record not found, or address with ID ", id, " invalid."));
+            }
+
+            // Build the address data
+            return BuildAddress2(record);
         }
 
 
@@ -456,12 +522,138 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
         }
 
+
+        /// <summary>
+        /// Get all addresses with Paging options
+        /// </summary>
+        /// <param name="offset">The starting point to look at the list</param>
+        /// <param name="limit">The amount of records to view</param>
+        /// <param name="personFilter">Person Saved List selection or list name from person-filters</param>
+        /// <returns></returns>
+        public async Task<Tuple<IEnumerable<Address>, int>> GetAddresses2Async(int offset, int limit, string[] filterPersonIds)
+        {
+            List<string> limitingKeys = null;
+            int totalCount = 0;
+            string[] subList = null;
+
+            var addressEntities = new List<Address>();
+            try
+            {             
+                string addressesCacheKey = CacheSupport.BuildCacheKey(AllAddressesCache, filterPersonIds);
+                var keyCacheObject = await CacheSupport.GetOrAddKeyCacheToCache(
+                    this,
+                    ContainsKey,
+                    GetOrAddToCacheAsync,
+                    AddOrUpdateCacheAsync,
+                    transactionInvoker,
+                    addressesCacheKey,
+                    "ADDRESS",
+                    offset,
+                    limit,
+                    AllAddressesCacheTimeout,
+                    async () =>
+                    {
+                        
+                        if (filterPersonIds != null && filterPersonIds.ToList().Any())
+                        {
+                            // Set limiting keys to previously retrieved personIds from SAVE.LIST.PARMS
+                            //limitingKeys = filterPersonIds;
+                            var criteria = "WITH PERSON.ADDRESSES NE '' BY.EXP PERSON.ADDRESSES SAVING PERSON.ADDRESSES";
+                            limitingKeys = (await DataReader.SelectAsync("PERSON", filterPersonIds, criteria)).ToList();                           
+                        }
+
+                        CacheSupport.KeyCacheRequirements requirements = new CacheSupport.KeyCacheRequirements()
+                        {
+                            limitingKeys = limitingKeys != null && limitingKeys.Any() ? limitingKeys.Distinct().ToList() : null,
+                            criteria = "WITH ADDRESS.LINES NE ''"
+                        };
+                        return requirements;
+                    }
+                );
+
+                if (keyCacheObject == null || keyCacheObject.Sublist == null || !keyCacheObject.Sublist.Any())
+                {
+                    return new Tuple<IEnumerable<Address>, int>(addressEntities, 0);
+                }
+                subList = keyCacheObject.Sublist.ToArray();
+                totalCount = keyCacheObject.TotalCount.Value;
+
+                var results = await DataReader.BulkReadRecordWithInvalidKeysAndRecordsAsync<DataContracts.Address>("ADDRESS", subList);
+
+                if (results.Equals(default(BulkReadOutput<DataContracts.Address>)))
+                {
+                    return new Tuple<IEnumerable<Address>, int>(addressEntities, totalCount);
+                }
+                if (results.InvalidKeys != null || results.InvalidRecords != null)
+                {
+                    if (results.InvalidKeys.Any() || results.InvalidRecords.Any())
+                    {
+                        if (results.InvalidKeys.Any())
+                        {
+                            exception.AddErrors(results.InvalidKeys
+                                .Select(key => new RepositoryError("invalid.key",
+                                string.Format("Unable to locate the following key '{0}'.", key.ToString()))));
+                        }
+                        if (results.InvalidRecords.Any())
+                        {
+                            exception.AddErrors(results.InvalidRecords
+                               .Select(r => new RepositoryError("invalid.record",
+                               string.Format("Error: '{0}' ", r.Value))
+                               { SourceId = r.Key }));
+                        }
+                        throw exception;
+                    }
+                }
+
+                var addresses = results.BulkRecordsRead;
+
+                foreach (var address in addresses)
+                {
+                    try
+                    {
+                        var addressEntity = BuildAddress2(address);
+                        if (addressEntity != null)
+                        {
+                            addressEntities.Add(addressEntity);
+                        }
+                    }
+                    catch (RepositoryException ex)
+                    {
+                        exception.AddErrors(ex.Errors);
+                    }
+                    catch (Exception ex)
+                    {
+                        exception.AddError(new RepositoryError("data.access", ex.Message)
+                        {
+                            Id = address.RecordGuid,
+                            SourceId = address.Recordkey
+                        });
+                    }
+                }
+
+                if (exception.Errors.Any())
+                {
+                    throw exception;
+                }
+                return new Tuple<IEnumerable<Address>, int>(addressEntities, totalCount);
+            }
+            catch (RepositoryException ex)
+            {
+                throw ex;
+            }
+            catch (Exception e)
+            {
+                exception.AddError(new RepositoryError("Bad.Data", e.Message));
+                throw exception;
+            }
+        }
+
         /// <summary>
         /// Build an Address entity from a Address datacontract
         /// </summary>
         /// <param name="addressData"></param>
         /// <returns>A Address Entity</returns>
-        private Address BuildAddress(Ellucian.Colleague.Data.Base.DataContracts.Address addressData)
+        private Address BuildAddress(DataContracts.Address addressData)
         {
             Address address = new Address();
             if (addressData != null)
@@ -560,7 +752,139 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
             return address;
         }
-       
+
+        /// <summary>
+        /// Build an Address entity from a Address datacontract
+        /// </summary>
+        /// <param name="addressData"></param>
+        /// <returns>An Address Entity</returns>
+        private Address BuildAddress2(DataContracts.Address addressData)
+        {
+            
+            if (addressData == null)
+                return new Address();
+
+            var repositoryException = new RepositoryException();
+
+            if (!addressData.AddressLines.Any())
+            {
+                var errorMessage = string.Format("Invalid Address Record '{0}'.  Missing address Lines.", addressData.RecordGuid);
+                logger.Error("Invalid Address Record '{0}'.  Missing address lines.", addressData.Recordkey);
+                logger.Error(errorMessage);
+
+                repositoryException.AddError(new RepositoryError("invalid.AddressLines", errorMessage)
+                {
+                    SourceId = addressData.Recordkey,
+                    Id = addressData.RecordGuid
+                });
+            }
+
+            if (string.IsNullOrEmpty(addressData.RecordGuid))
+            {
+                var errorMessage = "Address record with ID '" + addressData.Recordkey + "' does not have a GUID.";
+                repositoryException.AddError(new RepositoryError("invalid.AddressGuid", errorMessage)
+                {
+                    SourceId = addressData.Recordkey
+                });
+            }
+
+            Address address = null;
+            try
+            {
+                address = new Address(addressData.Recordkey, false);
+
+                address.Guid = addressData.RecordGuid;
+                
+                if (!string.IsNullOrEmpty(address.Type))
+                {
+                    var codeAddressRelationship = GetAddressRelationships().ValsEntityAssociation.Where(v => v.ValInternalCodeAssocMember == address.Type).FirstOrDefault();
+                    if (codeAddressRelationship != null)
+                    {
+                        address.Type = codeAddressRelationship.ValExternalRepresentationAssocMember;
+                    }
+                }
+
+                // Set Preferred Flags              
+                address.IsPreferredResidence = false;
+
+                // If there is no translation for country, the country description carries the country code.
+                string countryDesc = null;
+                if (!string.IsNullOrEmpty(addressData.Country))
+                {
+                    var codeCountry = GetCountries().Where(v => v.Code == addressData.Country).FirstOrDefault();
+                    if (codeCountry != null)
+                    {
+                        countryDesc = codeCountry.Description;
+                    }
+                    else
+                    {
+                        countryDesc = addressData.Country;
+                    }
+                }
+
+                // Build address label
+                var label = new List<string>();
+                if (!string.IsNullOrEmpty(address.AddressModifier))
+                {
+                    label.Add(address.AddressModifier);
+                }
+                if (addressData.AddressLines.Count > 0)
+                {
+                    label.AddRange(addressData.AddressLines);
+                }
+                var cityStatePostalCode = GetCityStatePostalCode(addressData.City, addressData.State, addressData.Zip);
+                if (!string.IsNullOrEmpty(cityStatePostalCode))
+                {
+                    label.Add(cityStatePostalCode);
+                }
+                if (!string.IsNullOrEmpty(countryDesc))
+                {
+                    // Country name gets included in all caps
+                    label.Add(countryDesc.ToUpper());
+                }
+
+                address.AddressLabel = label;
+                address.AddressLines = addressData.AddressLines;
+                address.City = addressData.City;
+                address.State = addressData.State;
+                address.PostalCode = addressData.Zip;
+                address.County = addressData.County;
+                address.CountryCode = addressData.Country;
+                address.Country = countryDesc;
+                address.RouteCode = addressData.AddressRouteCode;
+                address.CarrierRoute = addressData.CarrierRoute;
+
+                address.IntlLocality = addressData.IntlLocality;
+                address.IntlPostalCode = addressData.IntlPostalCode;
+                address.IntlRegion = addressData.IntlRegion;
+                address.IntlSubRegion = addressData.IntlSubRegion;
+
+                address.CorrectionDigit = addressData.CorrectionDigit;
+                address.DeliveryPoint = addressData.DeliveryPoint;
+                address.Latitude = addressData.Latitude;
+                address.Longitude = addressData.Longitude;
+
+                address.AddressChapter = addressData.AddressChapter;
+
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.Message);
+
+                repositoryException.AddError(new RepositoryError("invalid.Address", ex.Message)
+                {
+                    SourceId = addressData.Recordkey,
+                    Id = addressData.RecordGuid
+                });
+            }
+            if (repositoryException.Errors.Any())
+            {
+                throw repositoryException;
+            }
+            return address;
+        }
+
+
         private Address BuildAddress(Ellucian.Colleague.Data.Base.DataContracts.Address addressData, Ellucian.Colleague.Data.Base.DataContracts.Person person)
         {
             Address address = new Address("NEW", person.Recordkey);
@@ -844,10 +1168,17 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             
             if (updateResponse.AddressErrors.Any())
             {
-                var errorMessage = string.Format("Error(s) occurred updating address '{0}':", addressEntity.Guid);
-                var exception = new RepositoryException(errorMessage);
-                updateResponse.AddressErrors.ForEach(e => exception.AddError(new RepositoryError(e.ErrorCodes, e.ErrorMessages)));
-                logger.Error(errorMessage); 
+                var exception = new RepositoryException();
+                updateResponse.AddressErrors.ForEach(e => 
+                {
+                    // It is worth noting here that AddressException.ErrorCodes is a single string, not a list or array
+                    var errorCodes = string.IsNullOrEmpty(e.ErrorCodes) ? "" : e.ErrorCodes;
+                    exception.AddError(new RepositoryError(errorCodes, e.ErrorMessages));
+                }
+
+                );
+                updateResponse.AddressErrors.ForEach(error => logger.Error(error.ErrorMessages));
+
                 throw exception;
             }
 

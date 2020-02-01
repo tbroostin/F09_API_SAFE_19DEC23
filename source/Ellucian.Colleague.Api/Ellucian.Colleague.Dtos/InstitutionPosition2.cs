@@ -21,6 +21,7 @@ namespace Ellucian.Colleague.Dtos
         /// The code of the Institution Position (only for v11)
         /// </summary>
         [DataMember(Name = "code", EmitDefaultValue = false)]
+        [FilterProperty("criteria")]
         public string Code { get; set; }
 
         /// <summary>

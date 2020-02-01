@@ -463,7 +463,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
                 planYearStartMonth = DateTime.Today.AddMonths(1).Month;
                 planYearStartDay = 1; //first of next month
 
-                var expectedStartDate = new DateTime(DateTime.Today.AddYears(-1).Year, planYearStartMonth, 1);
+                var expectedStartDate = new DateTime(DateTime.Today.Year, planYearStartMonth, 1);
                 var actualStartDate = employeeLeavePlan.CurrentPlanYearStartDate;
 
                 Assert.AreEqual(expectedStartDate, actualStartDate);

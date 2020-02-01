@@ -148,9 +148,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var allGrades = string.Concat(studentUnverifiedGradesEntity.FinalGrade, studentUnverifiedGradesEntity.MidtermGrade1, studentUnverifiedGradesEntity.MidtermGrade2,
                 studentUnverifiedGradesEntity.MidtermGrade3, studentUnverifiedGradesEntity.MidtermGrade4, studentUnverifiedGradesEntity.MidtermGrade5,
                 studentUnverifiedGradesEntity.MidtermGrade6);
-            if (string.IsNullOrEmpty(allGrades) && !studentUnverifiedGradesEntity.LastAttendDate.HasValue)
-            {
-                throw new IntegrationApiException("", new IntegrationApiError("validation.error", "Record has no midterm grades, final grade, last attendance date, or never attended flag"));
+            if ((string.IsNullOrEmpty(allGrades) && !studentUnverifiedGradesEntity.HasNeverAttended && !studentUnverifiedGradesEntity.LastAttendDate.HasValue))
+            {             
+                IntegrationApiExceptionAddError("Record has no midterm grades, final grade, last attendance date, or never attended flag", "Global.Internal.Error",
+                    guid, id: (studentUnverifiedGradesEntity != null) ? "" : studentUnverifiedGradesEntity.StudentCourseSecId);
+                throw IntegrationApiException;
             }
 
             IEnumerable<StudentUnverifiedGrades> studentUnverifiedGrades = null;
@@ -309,21 +311,29 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 return null;
             }
 
+            var studentId = string.Empty;
+            var studentAcadCredId = string.Empty;
+            var studentCourseSecId = string.Empty;
             var sectionGradeScheme = string.Empty;
-            var studentUnverifiedGradesSubmission = new Domain.Student.Entities.StudentUnverifiedGrades(source.Id, studentUnverifiedGradesSubmissionsEntityId);
 
             if ((source.SectionRegistration != null) && (!string.IsNullOrEmpty(source.SectionRegistration.Id)))
             {
-                var studentAcadCredId = await this._studentUnverifiedGradesRepository.GetStudentAcademicCredIdFromGuidAsync(source.SectionRegistration.Id);
+                studentAcadCredId = await _studentUnverifiedGradesRepository.GetStudentAcademicCredIdFromGuidAsync(source.SectionRegistration.Id);
                 if (string.IsNullOrEmpty(studentAcadCredId))
                 {
                     throw new IntegrationApiException(string.Concat("Unable to obtain id for SectionRegistration:  ", source.SectionRegistration.Id));
                 }
-                studentUnverifiedGradesSubmission.StudentAcadaCredId = studentAcadCredId;
-                sectionGradeScheme = await this._studentUnverifiedGradesRepository.GetStudentAcadCredGradeSchemeFromIdAsync(studentAcadCredId);
-
+                var studentAcadCredData = await _studentUnverifiedGradesRepository.GetStudentAcadCredDataFromIdAsync(studentAcadCredId);
+                studentId = studentAcadCredData.Item1;
+                studentCourseSecId = studentAcadCredData.Item2;
+                sectionGradeScheme = studentAcadCredData.Item3;
             }
-
+            var studentUnverifiedGradesSubmission = new Domain.Student.Entities.StudentUnverifiedGrades(source.Id, studentCourseSecId)
+            {
+                StudentAcadaCredId = studentAcadCredId,
+                StudentId = studentId,
+                GradeScheme = sectionGradeScheme
+            };
 
             if (source.LastAttendance != null)
             {

@@ -20,6 +20,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Newtonsoft.Json.Linq;
 using slf4net;
+using Ellucian.Colleague.Dtos.ColleagueFinance;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 {
@@ -35,17 +36,19 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         private Dtos.PurchaseOrders2 _purchaseOrder;
         private List<Dtos.PurchaseOrders2> _purchaseOrders;
         private string Guid = "02dc2629-e8a7-410e-b4df-572d02822f8b";
+        private string personId = "0000100";
         private Paging page;
         private int limit;
         private int offset;
         private Tuple<IEnumerable<PurchaseOrders2>, int> purchaseOrdersTuple;
+        private List<PurchaseOrderSummary> purchaseOrderSummaryCollection;
 
         [TestInitialize]
         public void Initialize()
         {
             LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
             EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
-
+            purchaseOrderSummaryCollection = new List<PurchaseOrderSummary>();
             _loggerMock = new Mock<ILogger>();
             _mockPurchaseOrdersService = new Mock<IPurchaseOrderService>();
 
@@ -106,6 +109,59 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             limit = 100;
             offset = 0;
             page = new Paging(limit, offset);
+        }
+
+        private void BuildRequisitionSummaryData()
+        {
+            purchaseOrderSummaryCollection = new List<PurchaseOrderSummary>()
+            {
+                new PurchaseOrderSummary()
+                {
+                   Id = "1",
+                   Date = DateTime.Today.AddDays(2),
+                   InitiatorName = "Test User",
+                   RequestorName = "Test User",
+                   Status = PurchaseOrderStatus.InProgress,
+                   StatusDate = DateTime.Today.AddDays(2),
+                   VendorId = "0000190",
+                   VendorName = "Basic Office Supply",
+                   Amount = 10.00m,
+                   Number = "0000001",
+                   Requisitions = new List<RequisitionLinkSummary>()
+                   {
+                       new RequisitionLinkSummary()
+                       {
+                           Id = "1",
+                           Number = "0000001"
+                       }
+                   }
+
+                },
+                new PurchaseOrderSummary()
+                {
+                     Id = "2",
+                   Date = DateTime.Today.AddDays(2),
+                   InitiatorName = "Test User",
+                   RequestorName = "Test User",
+                   Status = PurchaseOrderStatus.InProgress,
+                   StatusDate = DateTime.Today.AddDays(2),
+                   VendorId = "0000190",
+                   VendorName = "Basic Office Supply",
+                   Amount = 10.00m,
+                   Number = "0000002",
+                   Requisitions = new List<RequisitionLinkSummary>()
+                   {
+                       new RequisitionLinkSummary()
+                       {
+                           Id = "2",
+                           Number = "0000002"
+                       }
+                   }
+                }
+
+            };
+            _mockPurchaseOrdersService.Setup(r => r.GetPurchaseOrderSummaryByPersonIdAsync(It.IsAny<string>())).ReturnsAsync(purchaseOrderSummaryCollection);
+
         }
 
         [TestCleanup]
@@ -365,6 +421,54 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         }
 
 
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PoController_GetPurchaseOrderSummaryByPersonIdAsync_PersonId_Null()
+        {
+            await _purchaseOrdersController.GetPurchaseOrderSummaryByPersonIdAsync(null);
+        }
+
+        [TestMethod]
+        public async Task PoController_GetPurchaseOrderSummaryByPersonIdAsync()
+        {
+            var expected = purchaseOrderSummaryCollection.AsEnumerable();
+            _mockPurchaseOrdersService.Setup(r => r.GetPurchaseOrderSummaryByPersonIdAsync(It.IsAny<string>())).ReturnsAsync(expected);
+            var requisitions = await _purchaseOrdersController.GetPurchaseOrderSummaryByPersonIdAsync(personId);
+            Assert.AreEqual(requisitions.ToList().Count, expected.Count());
+        }
+
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PoController_GetPurchaseOrderSummaryByPersonIdAsync_ArgumentNullException()
+        {
+            _mockPurchaseOrdersService.Setup(r => r.GetPurchaseOrderSummaryByPersonIdAsync(It.IsAny<string>())).ThrowsAsync(new ArgumentNullException());
+            await _purchaseOrdersController.GetPurchaseOrderSummaryByPersonIdAsync(personId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PoController_GetPurchaseOrderSummaryByPersonIdAsync_Exception()
+        {
+            _mockPurchaseOrdersService.Setup(r => r.GetPurchaseOrderSummaryByPersonIdAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
+            await _purchaseOrdersController.GetPurchaseOrderSummaryByPersonIdAsync(personId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PoController_GetPurchaseOrderSummaryByPersonIdAsync_KeyNotFoundException()
+        {
+            _mockPurchaseOrdersService.Setup(r => r.GetPurchaseOrderSummaryByPersonIdAsync(It.IsAny<string>())).ThrowsAsync(new KeyNotFoundException());
+            await _purchaseOrdersController.GetPurchaseOrderSummaryByPersonIdAsync(personId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PoController_GetPurchaseOrderSummaryByPersonIdAsync_ApplicationException()
+        {
+            _mockPurchaseOrdersService.Setup(r => r.GetPurchaseOrderSummaryByPersonIdAsync(It.IsAny<string>())).ThrowsAsync(new ApplicationException());
+            await _purchaseOrdersController.GetPurchaseOrderSummaryByPersonIdAsync(personId);
+        }
     }
 
     [TestClass]
@@ -389,6 +493,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             private List<PurchaseOrdersLineItemsDtoProperty> lineItems;
             private Dtos.DtoProperties.Amount2DtoProperty amount;
             private List<Dtos.DtoProperties.PurchaseOrdersAccountDetailDtoProperty> accountDetails;
+            private List<PurchaseOrderSummary> purchaseOrderSummaryCollection;
 
             #endregion
 
@@ -977,7 +1082,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             private Dtos.DtoProperties.Amount2DtoProperty amount;
             private List<Dtos.DtoProperties.PurchaseOrdersAccountDetailDtoProperty> accountDetails;
 
-            private string guid = "1adc2629-e8a7-410e-b4df-572d02822f8b";
+            private string guid = "1adc2629-e8a7-410e-b4df-572d02822f8b";         
 
             #endregion
 

@@ -9,7 +9,6 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
     public class Group : BlockBase
     {
         public Subrequirement SubRequirement;
-        //public RequirementType RequirementType;
         public GroupType GroupType;
         public bool SkipGroup;  // When "skipping" a group, evaluate it to see what is related, but don't "apply" any credits.
 
@@ -258,11 +257,10 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
             Exclusions = new List<string>();
         }
 
-        public GroupResult Evaluate(IEnumerable<AcadResult> acadresults, List<Override> overrides, IEnumerable<Course> courses, List<AcademicCredit> creditsExcludedFromTranscriptGrouping = null, bool skipgroup = false)
+        public GroupResult Evaluate(IEnumerable<AcadResult> acadresults, List<Override> overrides, IEnumerable<Course> courses, List<AcademicCredit> creditsExcludedFromTranscriptGrouping = null, bool showRelatedCourses=false,  bool skipgroup = false)
         {
             SkipGroup = skipgroup;
-            GroupResult groupResult = new GroupResult(this);
-
+            GroupResult groupResult = new GroupResult(this, showRelatedCourses);
             // If waived or replaced
             if (this.IsWaived || SubRequirement.IsWaived || SubRequirement.Requirement.IsWaived)
             {
@@ -321,7 +319,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
                 // complies with the basic requirements will be tagged as "Related", and will 
                 // continue on to the more refined checks further below.
 
-                if (acadresult.Result != Result.Applied)
+                if (acadresult.Result != Result.Applied )
                 {
                     // Get the Ids of the equates that are associated with the course in this acad.result
                     var equCourses = new List<Course>();
@@ -893,12 +891,26 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
 
             // All credits processed.  Set group result.
             bool fullyPlanned = true;
-            if (Courses.Count > 0 && groupResult.CountApplied() < Courses.Count)
+            if (Courses.Count > 0 )
             {
-                groupResult.Explanations.Add(GroupExplanation.Courses);
-                if (groupResult.CountApplied() + groupResult.CountPlannedApplied() < Courses.Count)
+                int countOfCoursesApplied = 0;
+                if (groupResult.ForceAppliedAcademicCreditIds.Count > 0)
                 {
-                    fullyPlanned = false;
+                    //find all the applied course that are not override applied. Basically we don't want to count courses that were applied because of override.
+                    countOfCoursesApplied = groupResult.GetNonOverrideApplied().Count();
+                }
+                else
+                {
+                    countOfCoursesApplied = groupResult.CountApplied();
+                }
+
+                if (countOfCoursesApplied < Courses.Count)
+                {
+                    groupResult.Explanations.Add(GroupExplanation.Courses);
+                    if (countOfCoursesApplied + groupResult.CountPlannedApplied() < Courses.Count)
+                    {
+                        fullyPlanned = false;
+                    }
                 }
             }
 

@@ -129,6 +129,22 @@ namespace Ellucian.Colleague.Api.Client.Core
             return base.ExecutePostRequestWithResponseAsync<T>(objectToSend, urlPath, urlArguments, headers, useCache, user);
         }
 
+
+        /// <summary>
+        /// Executes an HTTP POST request asynchronously and returns the resulting response.
+        /// </summary>
+        /// <param name="httpContent">The http content to be sent.</param>
+        /// <param name="urlPath">Relative request path.</param>
+        /// <param name="user">The <see cref="ServiceClientUser"/> user making the request.</param>
+        /// <param name="urlArguments">Optional URL arguments to be added as query parameters.</param>
+        /// <param name="headers">Optional HTTP request headers to add to the request.</param>
+        /// <param name="useCache">Specifies whether or not this request can be serviced via an HTTP cache or must be retrieved from the fresh from the API</param>
+        /// <returns>The result as an <see cref="HttpResponseMessage"/></returns>
+        public Task<HttpResponseMessage> ExecutePostHttpContentRequestWithResponseAsync(HttpContent httpContent, string urlPath, Ellucian.Rest.Client.ServiceClientUser user, string urlArguments = null, NameValueCollection headers = null, bool useCache = true)
+        {
+            return base.ExecutePostHttpContentRequestWithResponseAsync(httpContent, urlPath, urlArguments, headers, useCache, user);
+        }
+
         /// <summary>
         /// Executes an HTTP PUT request and returns the resulting response.
         /// </summary>

@@ -116,6 +116,19 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
             Assert.AreEqual(expectedMessage, actualMessage);
         }
+
+        [TestMethod]
+        public async Task GetGlFiscalYearConfigurationAsync_Success()
+        {
+            var glFiscalYearConfig = await service.GetGlFiscalYearConfigurationAsync();
+            Assert.AreEqual(fiscalYearConfigurationEntity.CurrentFiscalMonth, glFiscalYearConfig.CurrentFiscalMonth);
+            Assert.AreEqual(fiscalYearConfigurationEntity.CurrentFiscalYear, glFiscalYearConfig.CurrentFiscalYear);
+            Assert.AreEqual(fiscalYearConfigurationEntity.StartMonth, glFiscalYearConfig.StartMonth);
+            Assert.AreEqual(fiscalYearConfigurationEntity.StartOfFiscalYear, glFiscalYearConfig.StartOfFiscalYear);
+            Assert.AreEqual(fiscalYearConfigurationEntity.EndOfFiscalYear, glFiscalYearConfig.EndOfFiscalYear);
+
+        }
+
         #endregion
 
         #region GetBudgetAdjustmentEnabledAsync
@@ -136,7 +149,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             Assert.IsFalse(enabledDto.Enabled);
         }
         #endregion
-
+        
         #region Private methods
         private void BuildService(IGeneralLedgerConfigurationRepository testGlConfigurationRepository,
             ICurrentUserFactory userFactory)

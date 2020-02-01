@@ -270,6 +270,14 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         [TestClass]
         public class GetHumanResourceDemographicsAsyncTests : HumanResourcesDemographicsServiceTests
         {
+            public string UserForAdminPermissionCheck
+            {
+                get
+                {
+                    return "0003916";
+                }
+            }
+
             [TestMethod]
             public async Task ReturnsCorrectDataTest()
             {
@@ -299,6 +307,38 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 //User has proxy subject claim, but not to this user id
                 var actuals = await proxyHumanResourceDemographicsService.GetHumanResourceDemographicsAsync("0000002");
             }
+
+            [TestMethod]
+            public async Task HumanResourcesDemographics_RepositoryCurrentUserIdWithAdminPermissionTest()
+            {
+                roleRepositoryMock.Setup(r => r.Roles)
+               .Returns(() => (currentUserFactory.CurrentUser.Roles).Select(roleTitle =>
+               {
+                   var role = new Domain.Entities.Role(roleTitle.GetHashCode(), roleTitle);
+
+                   role.AddPermission(new Domain.Entities.Permission("VIEW.ALL.TIME.HISTORY"));
+
+                   return role;
+               }));
+
+                personBaseRepositoryMock.Setup(repo => repo.GetPersonsBaseAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>()))
+                    .Returns(Task.FromResult(personBaseEntityList.AsEnumerable()));
+                var actual = await humanResourceDemographicsService.GetHumanResourceDemographics2Async(UserForAdminPermissionCheck);
+
+                Assert.IsTrue(actual != null && actual.Count() > 0);
+               
+                Assert.AreEqual(actual.Where(a => a.Id == UserForAdminPermissionCheck).Count(),1);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task HumanResourcesDemographics_RepositoryCurrentUserIdWithoutAdminPermissionTest()
+            {
+                await humanResourceDemographicsService.GetHumanResourceDemographics2Async(UserForAdminPermissionCheck);
+
+            }
+
+
         }
 
 
@@ -316,9 +356,16 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 PreferredName = "Willy"
             });
 
+            personBaseEntityList.Add(new Domain.Base.Entities.PersonBase("0003916", "Bradman")
+            {
+                FirstName = "Don",
+                MiddleName = "",
+                PreferredName = "Don Bradman"
+            });
+
             proxyPersonBaseEntityList.Add(new Domain.Base.Entities.PersonBase("0000001", "Jessica"));
             proxyPersonBaseEntityList.Add(new Domain.Base.Entities.PersonBase("0000002", "Billy"));
-
+            
             humanResourceDemographicsEntityList.Add(new Domain.HumanResources.Entities.HumanResourceDemographics("45", "first name45", "last name45", "my name45"));
             foreach (var entity in personBaseEntityList)
             {

@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -7,6 +7,7 @@ using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
 using System;
+using System.Linq;
 
 namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
 {
@@ -29,6 +30,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
 
             return await Task.Run(() => accountsPayableTaxes);
         }
+
         #endregion
 
         #region AP Types
@@ -56,8 +58,29 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
                 {
                     new Domain.ColleagueFinance.Entities.CommodityCode("884a59d1-20e5-43af-94e3-f1504230bbbc", "C1", "Desc1"),
                     new Domain.ColleagueFinance.Entities.CommodityCode("bb336acf-1926-4b12-8daf-d8720280498f", "C2", "Desc2"),
-                    new Domain.ColleagueFinance.Entities.CommodityCode("d118f007-c914-465e-80dc-49d39209b24f", "C3", "Desc3")        
+                    new Domain.ColleagueFinance.Entities.CommodityCode("d118f007-c914-465e-80dc-49d39209b24f", "C3", "Desc3")
                 });
+        }
+
+        public Task<IEnumerable<ColleagueFinance.Entities.ProcurementCommodityCode>> GetCFCommodityCodesAsync()
+        {
+            return Task.FromResult<IEnumerable<ColleagueFinance.Entities.ProcurementCommodityCode>>(new List<ColleagueFinance.Entities.ProcurementCommodityCode>()
+                {
+                    new Domain.ColleagueFinance.Entities.ProcurementCommodityCode( "C1", "Desc1"),
+                    new Domain.ColleagueFinance.Entities.ProcurementCommodityCode( "C2", "Desc2"),
+                    new Domain.ColleagueFinance.Entities.ProcurementCommodityCode( "C3", "Desc3")
+                });
+        }
+
+        public Task<string> GetCommodityCodeGuidAsync(string code)
+        {
+            var records = (new List<ColleagueFinance.Entities.CommodityCode>()
+                {
+                    new Domain.ColleagueFinance.Entities.CommodityCode("884a59d1-20e5-43af-94e3-f1504230bbbc", "C1", "Desc1"),
+                    new Domain.ColleagueFinance.Entities.CommodityCode("bb336acf-1926-4b12-8daf-d8720280498f", "C2", "Desc2"),
+                    new Domain.ColleagueFinance.Entities.CommodityCode("d118f007-c914-465e-80dc-49d39209b24f", "C3", "Desc3")
+                });
+            return Task.FromResult(records.FirstOrDefault(c => c.Code == code).Guid);
         }
 
         public Task<IEnumerable<VendorTerm>> GetVendorTermsAsync(bool ignoreCache)
@@ -71,6 +94,17 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
                 });
         }
 
+        public Task<string> GetVendorTermGuidAsync(string code)
+        {
+            var records = (new List<ColleagueFinance.Entities.VendorTerm>()
+                {
+                    new ColleagueFinance.Entities.VendorTerm("e338c649-db4b-4094-bb05-30ecd56ba82f", "02", "2-10-30"),
+                    new ColleagueFinance.Entities.VendorTerm("d3a915c4-7914-4048-aa17-56d62911264a", "03", "3-10-30"),
+                    new ColleagueFinance.Entities.VendorTerm("88393aeb-8239-4324-8203-707aa1181122", "30", "Net 30 days"),
+                    new ColleagueFinance.Entities.VendorTerm("6c5dccc2-c56b-4481-9600-824522a8224b", "CA", "Cash Only")
+                });
+            return Task.FromResult(records.FirstOrDefault(c => c.Code == code).Guid);
+        }
 
         public Task<IEnumerable<CurrencyConversion>> GetCurrencyConversionAsync()
         {
@@ -83,8 +117,19 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
                 {
                     new Domain.ColleagueFinance.Entities.CommodityUnitType("884a59d1-20e5-43af-94e3-f1504230bbbc", "C1", "Desc1"),
                     new Domain.ColleagueFinance.Entities.CommodityUnitType("bb336acf-1926-4b12-8daf-d8720280498f", "C2", "Desc2"),
-                    new Domain.ColleagueFinance.Entities.CommodityUnitType("d118f007-c914-465e-80dc-49d39209b24f", "C3", "Desc3")        
+                    new Domain.ColleagueFinance.Entities.CommodityUnitType("d118f007-c914-465e-80dc-49d39209b24f", "C3", "Desc3")
                 });
+        }
+
+        public Task<string> GetCommodityUnitTypeGuidAsync(string code)
+        {
+            var records = (new List<ColleagueFinance.Entities.CommodityUnitType>()
+                {
+                    new Domain.ColleagueFinance.Entities.CommodityUnitType("884a59d1-20e5-43af-94e3-f1504230bbbc", "C1", "Desc1"),
+                    new Domain.ColleagueFinance.Entities.CommodityUnitType("bb336acf-1926-4b12-8daf-d8720280498f", "C2", "Desc2"),
+                    new Domain.ColleagueFinance.Entities.CommodityUnitType("d118f007-c914-465e-80dc-49d39209b24f", "C3", "Desc3")
+                });
+            return Task.FromResult(records.FirstOrDefault(c => c.Code == code).Guid);
         }
 
         public Task<IEnumerable<ColleagueFinance.Entities.AccountingStringSubcomponentValues>> GetAccountingStringSubcomponentValuesAsync(bool ignoreCache)
@@ -104,7 +149,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             return Task.FromResult<IEnumerable<ColleagueFinance.Entities.AccountComponents>>(new List<ColleagueFinance.Entities.AccountComponents>()
                 {
                     new Domain.ColleagueFinance.Entities.AccountComponents("994a59d1-20e5-43af-94e3-f1504230bbbc", "1", "Desc1"),
-                    new Domain.ColleagueFinance.Entities.AccountComponents("cc336acf-1926-4b12-8daf-d8720280498f", "2", "Desc2")       
+                    new Domain.ColleagueFinance.Entities.AccountComponents("cc336acf-1926-4b12-8daf-d8720280498f", "2", "Desc2")
                 });
         }
 
@@ -153,8 +198,21 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
                     new ColleagueFinance.Entities.AccountsPayableSources("03ef76f3-61be-4990-8a99-9a80282fc420", "code1", "title1"),
                     new ColleagueFinance.Entities.AccountsPayableSources("d2f4f0af-6714-48c7-88d5-1c40cb407b6c", "code2", "title2"),
                     new ColleagueFinance.Entities.AccountsPayableSources("c517d7a5-f06a-42c8-85ab-b6320e1c0c2a", "code3", "title3"),
+                    new ColleagueFinance.Entities.AccountsPayableSources("6c591aaa-5d33-4b19-b5e9-f6cf8956ef0a", "code4", "title4"),
+                    new ColleagueFinance.Entities.AccountsPayableSources("6c591aaa-5d33-4b19-b5e9-f6cf8956ef0b", "AP", "AccountsPayable")
+                });
+        }
+
+        public Task<string> GetAccountsPayableSourceGuidAsync(string code)
+        {
+            var records = (new List<ColleagueFinance.Entities.AccountsPayableSources>()
+                {
+                    new ColleagueFinance.Entities.AccountsPayableSources("03ef76f3-61be-4990-8a99-9a80282fc420", "code1", "title1"),
+                    new ColleagueFinance.Entities.AccountsPayableSources("d2f4f0af-6714-48c7-88d5-1c40cb407b6c", "code2", "title2"),
+                    new ColleagueFinance.Entities.AccountsPayableSources("c517d7a5-f06a-42c8-85ab-b6320e1c0c2a", "code3", "title3"),
                     new ColleagueFinance.Entities.AccountsPayableSources("6c591aaa-5d33-4b19-b5e9-f6cf8956ef0a", "code4", "title4")
                 });
+            return Task.FromResult(records.FirstOrDefault(c => c.Code == code).Guid);
         }
 
         #endregion
@@ -192,15 +250,50 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
 
         public Task<IEnumerable<FreeOnBoardType>> GetFreeOnBoardTypesAsync(bool ignoreCache)
         {
-            throw new NotImplementedException();
+            return Task.FromResult<IEnumerable<ColleagueFinance.Entities.FreeOnBoardType>>(new List<ColleagueFinance.Entities.FreeOnBoardType>()
+                {
+                    new ColleagueFinance.Entities.FreeOnBoardType("b4bcb3a0-2e8d-4643-bd17-ba93f36e8f09", "code1", "title1"),
+                    new ColleagueFinance.Entities.FreeOnBoardType("bd54668d-50d9-416c-81e9-2318e88571a1", "code2", "title2"),
+                    new ColleagueFinance.Entities.FreeOnBoardType("5eed2bea-8948-439b-b5c5-779d84724a38", "code3", "title3"),
+                    new ColleagueFinance.Entities.FreeOnBoardType("82f74c63-df5b-4e56-8ef0-e871ccc789e8", "code4", "title4")
+                });
+        }
+
+        public Task<string> GetFreeOnBoardTypeGuidAsync(string code)
+        {
+            var records = new List<ColleagueFinance.Entities.FreeOnBoardType>()
+                {
+                    new ColleagueFinance.Entities.FreeOnBoardType("b4bcb3a0-2e8d-4643-bd17-ba93f36e8f09", "code1", "title1"),
+                    new ColleagueFinance.Entities.FreeOnBoardType("bd54668d-50d9-416c-81e9-2318e88571a1", "code2", "title2"),
+                    new ColleagueFinance.Entities.FreeOnBoardType("5eed2bea-8948-439b-b5c5-779d84724a38", "code3", "title3"),
+                    new ColleagueFinance.Entities.FreeOnBoardType("82f74c63-df5b-4e56-8ef0-e871ccc789e8", "code4", "title4")
+                };
+            return Task.FromResult(records.FirstOrDefault(c => c.Code == code).Guid);
         }
 
 
         public Task<IEnumerable<ShipToDestination>> GetShipToDestinationsAsync(bool ignoreCache)
         {
-            throw new NotImplementedException();
+            return Task.FromResult<IEnumerable<ColleagueFinance.Entities.ShipToDestination>>(new List<ColleagueFinance.Entities.ShipToDestination>()
+                {
+                    new ColleagueFinance.Entities.ShipToDestination("b4bcb3a0-2e8d-4643-bd17-ba93f36e8f09", "code1", "title1"),
+                    new ColleagueFinance.Entities.ShipToDestination("bd54668d-50d9-416c-81e9-2318e88571a1", "code2", "title2"),
+                    new ColleagueFinance.Entities.ShipToDestination("5eed2bea-8948-439b-b5c5-779d84724a38", "code3", "title3"),
+                    new ColleagueFinance.Entities.ShipToDestination("82f74c63-df5b-4e56-8ef0-e871ccc789e8", "code4", "title4")
+                });
         }
 
+        public Task<string> GetShipToDestinationGuidAsync(string code)
+        {
+            var records = (new List<ColleagueFinance.Entities.ShipToDestination>()
+                {
+                    new ColleagueFinance.Entities.ShipToDestination("b4bcb3a0-2e8d-4643-bd17-ba93f36e8f09", "code1", "title1"),
+                    new ColleagueFinance.Entities.ShipToDestination("bd54668d-50d9-416c-81e9-2318e88571a1", "code2", "title2"),
+                    new ColleagueFinance.Entities.ShipToDestination("5eed2bea-8948-439b-b5c5-779d84724a38", "code3", "title3"),
+                    new ColleagueFinance.Entities.ShipToDestination("82f74c63-df5b-4e56-8ef0-e871ccc789e8", "code4", "title4")
+                });
+            return Task.FromResult(records.FirstOrDefault(c => c.Code == code).Guid);
+        }
 
         public Task<IEnumerable<ShippingMethod>> GetShippingMethodsAsync(bool ignoreCache)
         {
@@ -236,7 +329,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             });
         }
 
-        public Task<Tuple<IEnumerable<AccountingStringComponentValues>, int>> GetAccountingStringComponentValues2Async(int Offset, int Limit, string component, string transactionStatus, string typeAccount, string typeFund, bool ignoreCache)
+        public Task<Tuple<IEnumerable<AccountingStringComponentValues>, int>> GetAccountingStringComponentValues2Async(int Offset, int Limit, string component, string transactionStatus, string typeAccount)
         {
             throw new NotImplementedException();
         }
@@ -294,7 +387,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             throw new NotImplementedException();
         }
 
-       public  Task<IEnumerable<Ellucian.Colleague.Domain.ColleagueFinance.Entities.AccountingStringSubcomponentValues>> GetFdDescs(bool bypassCache)
+        public  Task<IEnumerable<Ellucian.Colleague.Domain.ColleagueFinance.Entities.AccountingStringSubcomponentValues>> GetFdDescs(bool bypassCache)
         {
             throw new NotImplementedException();
         }
@@ -339,12 +432,53 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             throw new NotImplementedException();
         }
 
-        public Task<Tuple<IEnumerable<AccountingStringComponentValues>, int>> GetAccountingStringComponentValues3Async(int Offset, int Limit, string component, string typeAccount, string status, IEnumerable<string> grants, DateTime? effectiveOn, bool ignoreCache)
+        public Task<Tuple<IEnumerable<AccountingStringComponentValues>, int>> GetAccountingStringComponentValues3Async(int Offset, int Limit, string component, string typeAccount, string status, IEnumerable<string> grants, DateTime? effectiveOn)
         {
             throw new NotImplementedException();
         }
 
         public Task<AccountingStringComponentValues> GetAccountingStringComponentValue3ByGuid(string Guid)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<ShipToCode>> GetShipToCodesAsync()
+        {
+            return Task.FromResult<IEnumerable<ColleagueFinance.Entities.ShipToCode>>(new List<ColleagueFinance.Entities.ShipToCode>()
+                {
+                    new ColleagueFinance.Entities.ShipToCode("CD","Datatel - Central Dist. Office"),
+                    new ColleagueFinance.Entities.ShipToCode("DT","Datatel - Downtown"),
+                    new ColleagueFinance.Entities.ShipToCode("EC","Datatel - Extension Center"),
+                    new ColleagueFinance.Entities.ShipToCode("MC","Datatel - Main Campus")
+                });
+
+        }
+
+        public Task<IEnumerable<ColleagueFinance.Entities.ProcurementCommodityCode>> GetAllCommodityCodesAsync()
+        {
+            return Task.FromResult<IEnumerable<ColleagueFinance.Entities.ProcurementCommodityCode>>(new List<ColleagueFinance.Entities.ProcurementCommodityCode>()
+                {
+                    new ColleagueFinance.Entities.ProcurementCommodityCode("C1", "Desc1"),
+                    new ColleagueFinance.Entities.ProcurementCommodityCode("C2", "Desc2")
+                    });    
+        }
+
+        Task<IEnumerable<CommodityUnitType>> IColleagueFinanceReferenceDataRepository.GetAllCommodityUnitTypesAsync()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<FixedAssetsFlag>> GetFixedAssetTransferFlagsAsync()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<ProcurementCommodityCode> GetCommodityCodeByCodeAsync(string recordKey)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<TaxForm>> GetTaxFormsAsync()
         {
             throw new NotImplementedException();
         }

@@ -19,6 +19,8 @@ namespace Ellucian.Colleague.Domain.Student.Entities
 
         /// <summary>
         /// The Application that is attached to this communication
+        /// On GET, this contains a GUID.  On POST/PUT, this contains
+        /// the Applications record key.
         /// </summary>
         public string ApplicationId { get; private set; }
 

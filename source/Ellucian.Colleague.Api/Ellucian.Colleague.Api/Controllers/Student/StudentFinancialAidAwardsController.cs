@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
@@ -33,7 +33,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
     public class StudentFinancialAidAwardsController : BaseCompressedApiController
     {
         private readonly IStudentFinancialAidAwardService studentFinancialAidAwardService;
-        private readonly ILogger logger;
+        private readonly ILogger _logger;
 
         /// <summary>
         /// This constructor initializes the StudentFinancialAidAwardController object
@@ -43,7 +43,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         public StudentFinancialAidAwardsController(IStudentFinancialAidAwardService studentFinancialAidAwardService, ILogger logger)
         {
             this.studentFinancialAidAwardService = studentFinancialAidAwardService;
-            this.logger = logger;
+            _logger = logger;
         }
 
         /// <summary>
@@ -81,27 +81,27 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             catch (KeyNotFoundException e)
             {
-                logger.Error(e.ToString());
+                _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
             }
             catch (PermissionsException e)
             {
-                logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
-                logger.Error(e.ToString());
+                _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (RepositoryException e)
             {
-                logger.Error(e.ToString());
+                _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (Exception e)
             {
-                logger.Error(e, "Unknown error getting student financial aid award");
+                _logger.Error(e, "Unknown error getting student financial aid award");
                 throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
             }
         }
@@ -140,27 +140,27 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             catch (KeyNotFoundException e)
             {
-                logger.Error(e.ToString());
+                _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
             }
             catch (PermissionsException e)
             {
-                logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
-                logger.Error(e.ToString());
+                _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (RepositoryException e)
             {
-                logger.Error(e.ToString());
+                _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (Exception e)
             {
-                logger.Error(e, "Unknown error getting student financial aid award");
+                _logger.Error(e, "Unknown error getting student financial aid award");
                 throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
             }
         }              
@@ -202,22 +202,22 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             catch (PermissionsException e)
             {
-                logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
-                logger.Error(e.ToString());
+                _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (RepositoryException e)
             {
-                logger.Error(e.ToString());
+                _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (Exception e)
             {
-                logger.Error(e, "Unknown error getting student financial aid award");
+                _logger.Error(e, "Unknown error getting student financial aid award");
                 throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
             }
         }
@@ -230,8 +230,9 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <returns>A Collection of StudentFinancialAidAwards</returns>
         [HttpGet]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 200), EedmResponseFilter]
+        [QueryStringFilterFilter("criteria", typeof(Dtos.StudentFinancialAidAward2))]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
-        public async Task<IHttpActionResult> Get2Async(Paging page)
+        public async Task<IHttpActionResult> Get2Async(Paging page, QueryStringFilter criteria)
         {
             try
             {
@@ -248,7 +249,13 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                     page = new Paging(200, 0);
                 }
 
-                var pageOfItems = await studentFinancialAidAwardService.Get2Async(page.Offset, page.Limit, bypassCache, false);
+                //Criteria
+                var criteriaObj = GetFilterObject<Dtos.StudentFinancialAidAward2>(_logger, "criteria");
+
+                if (CheckForEmptyFilterParameters())
+                    return new PagedHttpActionResult<IEnumerable<Dtos.StudentFinancialAidAward2>>(new List<Dtos.StudentFinancialAidAward2>(), page, 0, this.Request);
+
+                var pageOfItems = await studentFinancialAidAwardService.Get2Async(page.Offset, page.Limit, criteriaObj, bypassCache, false);
 
                 AddEthosContextProperties(
                     await studentFinancialAidAwardService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
@@ -259,22 +266,22 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             catch (PermissionsException e)
             {
-                logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
-                logger.Error(e.ToString());
+                _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (RepositoryException e)
             {
-                logger.Error(e.ToString());
+                _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (Exception e)
             {
-                logger.Error(e, "Unknown error getting student financial aid award");
+                _logger.Error(e, "Unknown error getting student financial aid award");
                 throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
             }
         }        
@@ -313,27 +320,27 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             catch (KeyNotFoundException e)
             {
-                logger.Error(e.ToString());
+                _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
             }
             catch (PermissionsException e)
             {
-                logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
-                logger.Error(e.ToString());
+                _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (RepositoryException e)
             {
-                logger.Error(e.ToString());
+                _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (Exception e)
             {
-                logger.Error(e, "Unknown error getting student financial aid award");
+                _logger.Error(e, "Unknown error getting student financial aid award");
                 throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
             }
         }
@@ -372,27 +379,27 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             catch (KeyNotFoundException e)
             {
-                logger.Error(e.ToString());
+                _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
             }
             catch (PermissionsException e)
             {
-                logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
-                logger.Error(e.ToString());
+                _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (RepositoryException e)
             {
-                logger.Error(e.ToString());
+                _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (Exception e)
             {
-                logger.Error(e, "Unknown error getting student financial aid award");
+                _logger.Error(e, "Unknown error getting student financial aid award");
                 throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
             }
         }        
@@ -433,22 +440,22 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             catch (PermissionsException e)
             {
-                logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
-                logger.Error(e.ToString());
+                _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (RepositoryException e)
             {
-                logger.Error(e.ToString());
+                _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (Exception e)
             {
-                logger.Error(e, "Unknown error getting student financial aid award");
+                _logger.Error(e, "Unknown error getting student financial aid award");
                 throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
             }
         }
@@ -461,8 +468,9 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <returns>A Collection of StudentFinancialAidAwards</returns>
         [HttpGet]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 200), EedmResponseFilter]
+        [QueryStringFilterFilter("criteria", typeof(Dtos.StudentFinancialAidAward2))]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
-        public async Task<IHttpActionResult> GetRestricted2Async(Paging page)
+        public async Task<IHttpActionResult> GetRestricted2Async(Paging page, QueryStringFilter criteria)
         {
             try
             {
@@ -478,7 +486,14 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 {
                     page = new Paging(200, 0);
                 }
-                var pageOfItems = await studentFinancialAidAwardService.Get2Async(page.Offset, page.Limit, bypassCache, true);
+
+                //Criteria
+                var criteriaObj = GetFilterObject<Dtos.StudentFinancialAidAward2>(_logger, "criteria");
+
+                if (CheckForEmptyFilterParameters())
+                    return new PagedHttpActionResult<IEnumerable<Dtos.StudentFinancialAidAward2>>(new List<Dtos.StudentFinancialAidAward2>(), page, 0, this.Request);
+
+                var pageOfItems = await studentFinancialAidAwardService.Get2Async(page.Offset, page.Limit, criteriaObj, bypassCache, true);
 
                 AddEthosContextProperties(
                     await studentFinancialAidAwardService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
@@ -489,22 +504,22 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             catch (PermissionsException e)
             {
-                logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
-                logger.Error(e.ToString());
+                _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (RepositoryException e)
             {
-                logger.Error(e.ToString());
+                _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (Exception e)
             {
-                logger.Error(e, "Unknown error getting student financial aid award");
+                _logger.Error(e, "Unknown error getting student financial aid award");
                 throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
             }
         }

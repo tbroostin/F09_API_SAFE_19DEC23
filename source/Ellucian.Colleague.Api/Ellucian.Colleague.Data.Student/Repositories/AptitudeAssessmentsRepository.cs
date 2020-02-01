@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Domain.Exceptions;
@@ -137,6 +137,39 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 throw new KeyNotFoundException("No aptitude assessment was found for GUID " + guid);
             }
         }
+
+
+        /// <summary>
+        /// Get aptitude assessment id by guid
+        /// </summary>
+        /// <param name="guid"></param>
+        /// <returns>id</returns>
+        public async Task<string> GetAptitudeAssessmentsIdFromGuidAsync(string guid)
+        {
+            var assessmentId = await GetRecordKeyFromGuidAsync(guid);
+            if (string.IsNullOrEmpty(assessmentId))
+            {
+                throw new KeyNotFoundException("No aptitude assessment was found for GUID " + guid);
+            }
+
+            var aptitudeAssessmentDataContract = await DataReader.ReadRecordAsync<NonCourses>("NON.COURSES", assessmentId);
+            if (aptitudeAssessmentDataContract == null)
+            {
+                throw new KeyNotFoundException("aptitude-assessments data contract not found for Id " + assessmentId);
+            }
+
+            var category = aptitudeAssessmentDataContract.NcrsCategoryIdx;
+            if (category == "A" || category == "P" || category == "T")
+            {
+
+                return aptitudeAssessmentDataContract.Recordkey;
+            }
+            else
+            {
+                throw new KeyNotFoundException("No aptitude assessment was found for GUID " + guid);
+            }
+        }
+
 
         /// <summary>
         /// Gets all the guids for the aptitude assessment keys

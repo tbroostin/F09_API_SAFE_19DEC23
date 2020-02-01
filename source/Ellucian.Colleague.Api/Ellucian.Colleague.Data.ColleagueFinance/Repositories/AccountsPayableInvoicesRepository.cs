@@ -59,7 +59,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             //Exclude any voucher with a status of 'X' 
             voucherIds = await DataReader.SelectAsync("VOUCHERS", voucherIds,
-                "WITH EVERY VOU.STATUS NE 'X' "); // AND EVERY VOU.STATUS NE 'V'");
+                "WITH VOU.CURRENT.STATUS NE 'X''U' "); // AND EVERY VOU.STATUS NE 'V'");
 
             var totalCount = voucherIds.Count();
             Array.Sort(voucherIds);
@@ -94,7 +94,50 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 {
                     throw new KeyNotFoundException(string.Concat("Id not found for voucher guid:", guid));
                 }
-                return await GetAccountsPayableInvoicesAsync(id, allowVoid);
+                AccountsPayableInvoices accountsPayableInvoice = null;
+
+                // Now we have an ID, so we can read the record
+                var voucher = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.ColleagueFinance.DataContracts.Vouchers>(id);
+                if (voucher == null)
+                {
+                    throw new KeyNotFoundException("No accounts-payable-invoices was found for guid " + guid);
+                }
+
+                if (voucher.VouStatus.Contains("X"))
+                {
+                    throw new KeyNotFoundException("The guid specified " + guid + " for record key " + voucher.Recordkey + " from file VOUCHERS is not valid for accounts-payable-invoices.");
+                }
+
+                // exclude those Vouchers that are inprogress
+                if (voucher != null && voucher.VouStatus != null && voucher.VouStatus.Any() && voucher.VouStatus.FirstOrDefault().Equals("U", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new KeyNotFoundException("The guid specified " + guid + " for record key " + voucher.Recordkey + " from file VOUCHERS is not valid for accounts-payable-invoices.");
+                }
+
+                Ellucian.Colleague.Data.Base.DataContracts.Person person = null;
+                if (!string.IsNullOrEmpty(voucher.VouVendor))
+                {
+                    person = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>("PERSON", voucher.VouVendor);
+                    if (person == null)
+                    {
+                        throw new ArgumentOutOfRangeException("Person Id " + voucher.VouVendor + " is not returning any data. Person may be corrupted.");
+                    }
+                }
+
+                var apTypesToInclude = await DataReader.SelectAsync("AP.TYPES", "WITH APT.SOURCE EQ 'R'");
+
+                if ((apTypesToInclude != null) && (!(apTypesToInclude.ToList().Contains(voucher.VouApType))))
+                {
+                    throw new KeyNotFoundException("The guid specified " + guid + " for record key " + voucher.Recordkey + " from file VOUCHERS is not valid for accounts-payable-invoices.");
+                }
+               
+                accountsPayableInvoice = await BuildAccountsPayableInvoice(voucher, person); //, vendor);
+
+                return accountsPayableInvoice;
+            }
+            catch (KeyNotFoundException e)
+            {
+                throw new KeyNotFoundException(e.Message);
             }
             catch (ArgumentException e)
             {
@@ -106,7 +149,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
             catch (Exception e)
             {
-                throw new KeyNotFoundException("Voucher GUID " + guid + " lookup failed.");
+                throw new KeyNotFoundException("No accounts-payable-invoices was found for guid " + guid);
             }
         }
 
@@ -142,13 +185,12 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
                 if (updateResponse.UpdateVouchersIntegrationErrors.Any())
                 {
-                    var errorMessage = string.Format("Error(s) occurred updating accountsPayableInvoices '{0}':", accountsPayableInvoicesEntity.Guid);
-                    var exception = new RepositoryException(errorMessage);
+                    //var errorMessage = string.Format("Error(s) occurred updating accountsPayableInvoices '{0}':", accountsPayableInvoicesEntity.Guid);
+                    var exception = new RepositoryException();
                     foreach (var err in updateResponse.UpdateVouchersIntegrationErrors)
                     {
-                        exception.AddError(new RepositoryError(err.ErrorCodes, err.ErrorMessages));
+                        exception.AddError(new RepositoryError(string.IsNullOrEmpty(err.ErrorCodes) ? "" : err.ErrorCodes, err.ErrorMessages));
                     }
-                    logger.Error(errorMessage);
                     throw exception;
                 }
 
@@ -185,13 +227,12 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             if (createResponse.UpdateVouchersIntegrationErrors.Any())
             {
-                var errorMessage = string.Format("Error(s) occurred creating accountsPayableInvoices '{0}':", accountsPayableInvoicesEntity.Guid);
-                var exception = new RepositoryException(errorMessage);
+                //var errorMessage = string.Format("Error(s) occurred creating accountsPayableInvoices '{0}':", accountsPayableInvoicesEntity.Guid);
+                var exception = new RepositoryException();
                 foreach (var err in createResponse.UpdateVouchersIntegrationErrors)
                 {
-                    exception.AddError(new RepositoryError(err.ErrorCodes, err.ErrorMessages));           
+                    exception.AddError(new RepositoryError(string.IsNullOrEmpty(err.ErrorCodes) ? "" : err.ErrorCodes, err.ErrorMessages));           
                 }
-                logger.Error(errorMessage);
                 throw exception;
             }
 
@@ -410,9 +451,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     {
                         LineItemDescription = apLineItem.Description
                     };
-
-
-
                     if (!string.IsNullOrEmpty(apLineItem.CommodityCode))
                     {
                         lineItem.LineItemsCommodityCode = apLineItem.CommodityCode;
@@ -454,10 +492,14 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     //lineItem.LineItemRcvsId = accountsPayableInvoicesEntity.RecurringVoucherId;
 
                     lineItem.LineItemPoId = apLineItem.PurchaseOrderId;
+                    lineItem.LineItemBpoId = apLineItem.BlanketPurchaseOrderId;
 
                     lineItem.LineItemFinalPaymentFlag = apLineItem.FinalPaymentFlag;
 
                     lineItem.LineItemDocId = apLineItem.DocLineItemId;
+                    //for BPO, there is no document id so we are passing in item id as doc id to the CTX as CTX is looking for it since PO has it. 
+                    if (!string.IsNullOrEmpty(lineItem.LineItemBpoId) && lineItem.LineItemDocId == new Guid().ToString())
+                        lineItem.LineItemDocId = "NEW";
                     lineItem.LineItemItemId = apLineItem.Id;
 
                     lineItems.Add(lineItem);
@@ -716,7 +758,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             voucherDomainEntity.VoucherMiscCountry = voucher.VouMiscCountry;
 
             voucherDomainEntity.Comments = voucher.VouComments;
-            
+
+            //get submitted by
+            if (!string.IsNullOrEmpty(voucher.VouIntgSubmittedBy))
+                voucherDomainEntity.SubmittedBy = voucher.VouIntgSubmittedBy;
+
             var lineItemIds = voucher.VouItemsId;
             if (lineItemIds != null && lineItemIds.Count() > 0)
             {

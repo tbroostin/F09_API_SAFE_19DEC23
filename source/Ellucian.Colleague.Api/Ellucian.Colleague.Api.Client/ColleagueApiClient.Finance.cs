@@ -171,6 +171,43 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
 
+        /// <summary>
+        /// Returns information about potentially untransmitted D7 financial aid, based on
+        /// current charges, credits, and awarded aid.
+        /// </summary>
+        /// <accessComments>
+        /// Users may request their own data. Additionally, users who have VIEW.STUDENT.ACCOUNT.ACTIVITY
+        /// permission or proxy permissions can request other users' data
+        /// </accessComments>
+        /// <param name="criteria">The <see cref="PotentialD7FinancialAidCriteria"/> criteria of
+        /// potential financial aid for which to search.</param>
+        /// <returns>Enumeration of <see cref="Dtos.Finance.AccountActivity.PotentialD7FinancialAid"/>  
+        /// awards and potential award amounts.</returns>
+        /// 
+        public async Task<IEnumerable<PotentialD7FinancialAid>> QueryStudentPotentialD7FinancialAidAsync(PotentialD7FinancialAidCriteria criteria)
+        {
+            if (criteria == null)
+            {
+                throw new ArgumentNullException("criteria cannot be null");
+            }
+
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_qapiPath, "potential-d7-financial-aid");
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<PotentialD7FinancialAid>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, ex.Message);
+                throw;
+            }
+        }
+
         #endregion
 
         #region AccountDue

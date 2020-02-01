@@ -8,13 +8,16 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
     [Serializable]
     public class GroupResult : BaseResult
     {
-        public Group Group { get; set; }  
+        public Group Group { get; set; }
         public List<AcadResult> Results { get; set; }
         public HashSet<GroupExplanation> Explanations { get; set; }
         public List<string> EvalDebug { get; set; }
         public List<string> ForceAppliedAcademicCreditIds;
         public List<string> ForceDeniedAcademicCreditIds;
         public GroupResultMinGroupStatus MinGroupStatus { get; set; }
+        //Do we want to evalauate related courses for this group result. 
+        //This is controlled by settings on AEDF.
+        public bool ShowRelatedCourses { get; private set; }
 
 
         public GroupResult(Group group)
@@ -26,6 +29,10 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
             ForceAppliedAcademicCreditIds = new List<string>();
             ForceDeniedAcademicCreditIds = new List<string>();
             MinGroupStatus = GroupResultMinGroupStatus.None;
+        }
+        public GroupResult(Group group, bool showRelatedCourses):this(group)
+        {
+            this.ShowRelatedCourses = showRelatedCourses;
         }
 
         /// <summary>
@@ -65,7 +72,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
         /// <returns></returns>
         public int CountNonExtraApplied()
         {
-            return GetApplied().Where(a=>a.Explanation!=AcadResultExplanation.Extra).Count();
+            return GetApplied().Where(a => a.Explanation != AcadResultExplanation.Extra).Count();
         }
         /// <summary>
         /// Returns an the number of planned courses applied to this group.
@@ -86,6 +93,48 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
             return Results == null ? new List<AcadResult>() : Results.Where(cr => cr.Result == Result.Applied);
         }
         /// <summary>
+        /// Related Academic Credits.
+        /// Related Academic Credits can only be retrieved when AEDF related policy is Together and a flag to honor related policy is Yes. 
+        /// Related Academic Credits will be Null if above conditions are not met.
+        /// </summary>
+        /// <returns></returns>
+        public IEnumerable<AcadResult> GetRelated()
+        {
+            if (this.ShowRelatedCourses)
+            {
+                return Results == null ? new List<AcadResult>() : Results.Where(cr =>cr!=null && cr.Result != Result.Applied &&
+                (
+                cr.Result == Result.InCoursesListButAlreadyApplied ||
+                cr.Result == Result.Replaced ||
+                cr.Result == Result.ReplaceInProgress ||
+                cr.Result == Result.Related ||
+                cr.Result == Result.ExcludedByOverride ||
+                cr.Result == Result.MaxDepartments ||
+                cr.Result == Result.MaxCourses ||
+                cr.Result == Result.MaxSubjects ||
+                cr.Result == Result.MaxCoursesPerSubject ||
+                cr.Result == Result.MaxCoursesPerDepartment ||
+                cr.Result == Result.MaxCoursesAtLevel ||
+                cr.Result == Result.MaxCoursesPerRule ||
+                cr.Result == Result.MaxCredits ||
+                cr.Result == Result.MaxCreditsPerCourse ||
+                cr.Result == Result.MaxCreditsPerSubject ||
+                cr.Result == Result.MaxCreditsPerDepartment ||
+                cr.Result == Result.MaxCreditsAtLevel ||
+                cr.Result == Result.MaxCreditsPerRule ||
+                cr.Result == Result.MinCreditsPerCourse ||
+                cr.Result == Result.MinGrade ||
+                cr.Result == Result.MinInstitutionalCredit ||
+                cr.Result == Result.MinGPA
+                )
+                );
+            }
+            else
+            {
+                return null;
+            }
+        }
+        /// <summary>
         /// Returns IEnumerable of AcadResults for the planned courses applied to this group
         /// </summary>
         public IEnumerable<AcadResult> GetPlannedApplied()
@@ -99,7 +148,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
         /// <returns></returns>
         public IEnumerable<AcadResult> GetNonExtraApplied()
         {
-            return Results == null ? new List<AcadResult>() : Results.Where(cr => cr.Result == Result.Applied && cr.Explanation!=AcadResultExplanation.Extra);
+            return Results == null ? new List<AcadResult>() : Results.Where(cr => cr.Result == Result.Applied && cr.Explanation != AcadResultExplanation.Extra);
         }
         /// <summary>
         /// Returns IEnumerable of AcadResults for the planned courses applied to this group
@@ -111,11 +160,71 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
             return Results == null ? new List<AcadResult>() : Results.Where(cr => cr.Result == Result.PlannedApplied && cr.Explanation != AcadResultExplanation.Extra);
         }
         /// <summary>
+        /// Retrieves all the academic credits that are not override applied
+        /// This will skip all the courses that are override applied 
+        /// override applied courses will only be included if that overidden course is in the the list of Courses to take (either through exception in EXOV or in take statement)
+        /// </summary>
+        /// <returns></returns>
+        public IEnumerable<AcadResult> GetNonOverrideApplied()
+        {
+          //do it only if there are override courses applied. If not then return all the applied courses. 
+            if (ForceAppliedAcademicCreditIds!=null && ForceAppliedAcademicCreditIds.Count > 0)
+            {
+                List<AcadResult> nonOverrideAppliedCourses = new List<AcadResult>();
+                
+                //pick all the courses that are applied but are not applied due to override
+                nonOverrideAppliedCourses.AddRange(GetApplied().Where(a => a.GetAcadCredId() != null && !ForceAppliedAcademicCreditIds.Contains(a.GetAcadCredId())).ToList<AcadResult>());
+                //convert forced applied academic credit ids course wise
+                //for example- HIST-200-01 2017/SP and HIST-200-02 2019/SP are both in override applied course list. We will group them with courseId 
+                ILookup<string, AcadResult> coursewiseForcedAppliedAcadCred = GetApplied().Where(a => a.GetAcadCredId() != null && (a.Result != Result.ReplaceInProgress || a.Result != Result.Replaced || a.Result != Result.ReplacedWithGPAValues) && a.GetCourse()!=null && ForceAppliedAcademicCreditIds.Contains(a.GetAcadCredId()) ).ToLookup(c => c.GetCourse().Id, c => c);
+                //loop through all the oveeride applied courses that are grouped to count how many should be counted for completion
+                //check how many times these forced courses exist in Courses list in group (for example Take HIST-100 HIST-200)
+                // if 1 in applied and 1 in Courses list - consider only one override as applied
+                //if 2 in applied and 1 in Course list -- consider only one overrirde as applied
+                //if 1 in applied and 2 in Course list -- consider only one override as applied
+                //if 2 in applied and 2 in Course list -- consider 2 overrides applied
+                foreach (IGrouping<string, AcadResult> overrideCourse in coursewiseForcedAppliedAcadCred)
+                {
+                    int countOfOverrideCredits = overrideCourse.Count();
+                    int countOfCourses = Group.Courses.Where(c => c == overrideCourse.Key).Count();
+                    //if the override applied course is in the Courses list then we should check for how many are in list and how many times the same course is override applied. 
+                    int limit = 0;
+                    if (countOfCourses > 0)
+                    {
+                        if (countOfCourses == countOfOverrideCredits || countOfOverrideCredits > countOfCourses)
+                        {
+                            limit = countOfCourses;
+                        }
+                        else
+                        {
+                            limit = countOfOverrideCredits;
+                        }
+
+                        List<AcadResult> academicResults = overrideCourse.ToList();
+                        for (int c = 0; c < limit; c++)
+                        {
+                            try
+                            {
+                                nonOverrideAppliedCourses.Add(academicResults[c]);
+                            }
+                            catch { }
+                        }
+                    }
+                }
+
+                return nonOverrideAppliedCourses;
+            }
+            else
+            {
+                return this.GetApplied();
+            }
+        }
+        /// <summary>
         /// Returns IEnumerable of AcadResults for both planned courses applied to this group
         /// </summary>
         public IEnumerable<AcadResult> GetAppliedAndPlannedApplied()
         {
-            return Results == null ? new List<AcadResult>() : Results.Where(cr => cr.Result == Result.Applied || cr.Result == Result.PlannedApplied );
+            return Results == null ? new List<AcadResult>() : Results.Where(cr => cr.Result == Result.Applied || cr.Result == Result.PlannedApplied);
         }
         /// <summary>
         /// Returns IEnumerable of Subjects from credits applied to this group
@@ -175,7 +284,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
         {
             var nonExtraApplied = GetApplied().Where(a => a.Explanation != AcadResultExplanation.Extra).ToList();
             decimal total = 0m;
-            foreach(var cred in nonExtraApplied)
+            foreach (var cred in nonExtraApplied)
             {
                 var acadCred = cred.GetAcadCred();
                 if (acadCred.IsCompletedCredit)
@@ -196,7 +305,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
         /// </summary>
         public decimal GetNonExtraPlannedAppliedCredits()
         {
-            return GetPlannedApplied().Where(p=>p.Explanation!=AcadResultExplanation.Extra).Sum(cr => cr.GetCredits());
+            return GetPlannedApplied().Where(p => p.Explanation != AcadResultExplanation.Extra).Sum(cr => cr.GetCredits());
         }
 
         /// <summary>
@@ -220,8 +329,8 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
         /// <returns>List of <see cref="AcadResult">Academic Results</see></returns>
         public override IEnumerable<AcadResult> GetCreditsToIncludeInGpa()
         {
-            return Results == null ? new List<AcadResult>() : Results.Where(cr => cr.Result == Result.Applied || 
-            cr.Result == Result.ReplacedWithGPAValues || 
+            return Results == null ? new List<AcadResult>() : Results.Where(cr => cr.Result == Result.Applied ||
+            cr.Result == Result.ReplacedWithGPAValues ||
                 (Group.IncludeLowGradesInGpa && cr.Result == Result.MinGrade && cr.GetGpaCredit() > 0));
         }
 

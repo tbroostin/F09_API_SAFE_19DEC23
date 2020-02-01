@@ -37,6 +37,56 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
         public bool IsNeedBlockActive { get; set; }
 
         /// <summary>
+        /// placeholder
+        /// </summary>
+        public bool IsEfcActive { get; set; }
+
+        /// <summary>
+        /// placeholder
+        /// </summary>
+        public bool IsBudgetActive { get; set; }
+
+        /// <summary>
+        /// placeholder
+        /// </summary>
+        public bool IsDirectCostActive { get; set; }
+
+        /// <summary>
+        /// placeholder
+        /// </summary>
+        public bool IsIndirectCostActive { get; set; }
+
+        /// <summary>
+        /// placeholder
+        /// </summary>
+        public bool IsPreAwardTextActive { get; set; }
+
+        /// <summary>
+        /// placeholder
+        /// </summary>
+        public bool IsPostAwardTextActive { get; set; }
+
+        /// <summary>
+        /// placeholder
+        /// </summary>
+        public bool IsPostClosingTextActive { get; set; }
+
+        /// <summary>
+        /// placeholder
+        /// </summary>
+        public bool IsEnrollmentActive { get; set; }
+
+        /// <summary>
+        /// placeholder
+        /// </summary>
+        public bool IsRenewalActive { get; set; }
+
+        /// <summary>
+        /// placeholder
+        /// </summary>
+        public bool IsPellEntitlementActive { get; set; }
+
+        /// <summary>
         /// Paragraph spacing for the opening and closing paragraphs of an award letter:
         /// single or double; single by default
         /// </summary>
@@ -82,7 +132,16 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
             IsContactBlockActive = false;
             IsHousingBlockActive = false;
             IsNeedBlockActive = false;
-            
+            IsEfcActive = false;
+            IsBudgetActive = false;
+            IsDirectCostActive = false;
+            IsIndirectCostActive = false;
+            IsPellEntitlementActive = false;
+            IsPostAwardTextActive = false;
+            IsPreAwardTextActive = false;
+            IsPostClosingTextActive = false;
+            IsRenewalActive = false;
+
             _awardCategoriesGroups = new List<AwardLetterGroup2>();
             this.AwardCategoriesGroups = _awardCategoriesGroups.AsReadOnly();
 

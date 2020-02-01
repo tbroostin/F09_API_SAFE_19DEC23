@@ -15,7 +15,7 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
     {
         Task<StudentCharge> GetByIdAsync(string id);
 
-        Task<Tuple<IEnumerable<StudentCharge>, int>> GetAsync(int offset, int limit, bool bypassCache, string personId = "", string term = "", string arCode = "", string arType = "", string chargeType = "");
+        Task<Tuple<IEnumerable<StudentCharge>, int>> GetAsync(int offset, int limit, bool bypassCache, string personId = "", string term = "", string arCode = "", string arType = "", string chargeType = "", string usage = "");
 
         Task<StudentCharge> UpdateAsync(string id, StudentCharge studentCharge);
 

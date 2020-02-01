@@ -1,4 +1,4 @@
-﻿/*Copyright 2016-2017 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2016-2019 Ellucian Company L.P. and its affiliates.*/
 
 using System;
 using System.Collections.Generic;
@@ -20,6 +20,8 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
         Task<string> GetVendorGuidFromIdAsync(string id);
         Task<string> GetVendorIdFromGuidAsync(string id);
         Task<Vendors> GetVendorsAsync(string id);
+        Task<IEnumerable<VendorSearchResult>> SearchByKeywordAsync(string searchCriteria);
+        Task<VendorDefaultTaxFormInfo> GetVendorDefaultTaxInfo(string vendorId, string apType);
 
     }
 }

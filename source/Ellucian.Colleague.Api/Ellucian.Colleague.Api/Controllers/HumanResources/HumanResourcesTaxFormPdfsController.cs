@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -80,12 +80,30 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             try
             {
                 var pdfData = await taxFormPdfService.GetW2TaxFormDataAsync(personId, recordId);
-
+                var guamFlag = await taxFormPdfService.GetW2GuamFlag();
+                
                 // Determine which PDF template to use.
                 switch (pdfData.TaxYear)
                 {
+                    case "2019":
+                        if (guamFlag)
+                        {
+                            pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/HumanResources/2019-W2-Guam.rdlc");
+                        }
+                        else
+                        {
+                            pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/HumanResources/2019-W2-W2ST.rdlc");
+                        }
+                        break;
                     case "2018":
-                        pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/HumanResources/2018-W2-W2ST.rdlc");
+                        if (guamFlag)
+                        {
+                            pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/HumanResources/2018-W2-Guam.rdlc");
+                        }
+                        else
+                        {
+                            pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/HumanResources/2018-W2-W2ST.rdlc");
+                        }
                         break;
                     case "2017":
                         pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/HumanResources/2017-W2-W2ST.rdlc");
@@ -116,18 +134,8 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                         logger.Error(message);
                         throw new ApplicationException(message);
                 }
-                var pdfBytes = new byte[0];
-
-                bool useRdlc = pdfTemplatePath.EndsWith(".rdlc", StringComparison.CurrentCultureIgnoreCase);
-
-                if (useRdlc)
-                {
-                    pdfBytes = taxFormPdfService.PopulateW2PdfReport(pdfData, pdfTemplatePath);
-                }
-                else
-                {
-                    pdfBytes = taxFormPdfService.PopulateW2Pdf(pdfData, pdfTemplatePath);
-                }
+                
+                var pdfBytes = taxFormPdfService.PopulateW2PdfReport(pdfData, pdfTemplatePath);
 
                 // Create and return the HTTP response object
                 var response = new HttpResponseMessage();
@@ -186,18 +194,8 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
 
                 // Determine which PDF template to use.
                 pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/HumanResources/2014-W2c-8.rdlc");
-                var pdfBytes = new byte[0];
 
-                bool useRdlc = pdfTemplatePath.EndsWith(".rdlc", StringComparison.CurrentCultureIgnoreCase);
-
-                if (useRdlc)
-                {
-                    pdfBytes = taxFormPdfService.PopulateW2cPdfReport(pdfData, pdfTemplatePath);
-                }
-                else
-                {
-                    pdfBytes = taxFormPdfService.PopulateW2cPdf(pdfData, pdfTemplatePath);
-                }
+                var pdfBytes = taxFormPdfService.PopulateW2cPdfReport(pdfData, pdfTemplatePath);
 
                 // Create and return the HTTP response object
                 var response = new HttpResponseMessage();
@@ -262,6 +260,9 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
 
                 switch (pdfData.TaxYear)
                 {
+                    case "2019":
+                        pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/HumanResources/2019-1095C.rdlc");
+                        break;
                     case "2018":
                         pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/HumanResources/2018-1095C.rdlc");
                         break;
@@ -346,6 +347,9 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
 
                 switch (pdfData.TaxYear)
                 {
+                    case "2019":
+                        pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/HumanResources/2019-T4.rdlc");
+                        break;
                     case "2018":
                         pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/HumanResources/2018-T4.rdlc");
                         break;

@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -159,6 +159,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <accessComments>
         /// Requires permission VIEW.BUD.ADJ.PENDING.APPR.
         /// The current user must be one of the users listed as a "next approver" on the budget adjustment.
+        /// Adjustment Line data will only be returned for GL accounts that the user has access to based on their GL user access.
         /// </accessComments>
         [HttpGet]
         public async Task<BudgetAdjustment> GetBudgetAdjustmentPendingApprovalDetailAsync(string id)

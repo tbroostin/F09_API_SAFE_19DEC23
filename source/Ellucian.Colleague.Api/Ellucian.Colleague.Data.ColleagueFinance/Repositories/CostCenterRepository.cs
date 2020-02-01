@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -120,6 +120,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             // Get the list of expense and revenue GL accounts the user has access to and combine them.
             string[] expenseRevenueGlAccounts = generalLedgerUser.ExpenseAccounts.Union(generalLedgerUser.RevenueAccounts).ToArray();
+            string[] allExpenseRevenueAccounts = expenseRevenueGlAccounts;
 
             // If we are only processing the one selected cost center passed in, then loop
             // through each GL account the user has access to, determine its cost center ID,
@@ -413,7 +414,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     string[] glpPooleeAccounts = null;
                     List<string> selectedGlpPooleeAccounts = new List<string>();
 
-                    selectedGlpPooleeAccounts = await GetPooleesOutsideCostCenter(generalLedgerUser, selectedCostCenterId, fiscalYear, costCenterStructure);
+                    selectedGlpPooleeAccounts = await GetPooleesOutsideCostCenter(generalLedgerUser, selectedCostCenterId, fiscalYear, costCenterStructure, costCenterCriteria);
                     if (selectedGlpPooleeAccounts.Any())
                     {
                         // Bulk read the GL.ACCTS records for the poolee accounts from 
@@ -545,6 +546,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
                                                 // Create pool for umbrella.
                                                 var newBudgetPool = new GlBudgetPool(newUmbrellaGlAccount);
+                                                if (allExpenseRevenueAccounts.Contains(poolee.Recordkey))
+                                                {
+                                                    // If the user has access to the umbrella, make it visible.
+                                                    newBudgetPool.IsUmbrellaVisible = true;
+                                                }
 
                                                 // Add poolee to new pool.
                                                 newBudgetPool.AddPoolee(pooleeGlAccount);
@@ -767,7 +773,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     // to the list of poolees for the cost center.
                     string[] glpPooleeAccounts = null;
 
-                    selectedGlpPooleeAccounts = await GetPooleesOutsideCostCenter(generalLedgerUser, selectedCostCenterId, fiscalYear, costCenterStructure);
+                    selectedGlpPooleeAccounts = await GetPooleesOutsideCostCenter(generalLedgerUser, selectedCostCenterId, fiscalYear, costCenterStructure, costCenterCriteria);
 
                     if (selectedGlpPooleeAccounts.Any())
                     {
@@ -885,6 +891,13 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
                                         // Create a new budget pool and add the poolee to it.
                                         var newBudgetPool = new GlBudgetPool(newUmbrellaGlAccount);
+                                        if (allExpenseRevenueAccounts.Contains(poolee.Recordkey))
+                                        {
+                                            // If the user has access to the umbrella, make it visible.
+                                            newBudgetPool.IsUmbrellaVisible = true;
+                                        }
+
+                                        // Add poolee to new pool.
                                         newBudgetPool.AddPoolee(pooleeGlAccount);
 
                                         // Add new budget pool to the list of new budget pools
@@ -1067,41 +1080,56 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                                     }
                                 }
 
-                                // Only process this poolee if the umbrella has not been excluded.
-                                if (!excludedUmbrellaGlAccounts.Contains(pooleeUmbrella))
+                                // If we are processing a poolee, only process it if the umbrella has not been excluded. Otherwise, create a domain entity
+                                // for the requisition GL account.
+                                if (!string.IsNullOrEmpty(pooleeUmbrella))
                                 {
-                                    // If we are processing a single cost center and we have a poolee, determine the cost center
-                                    // of the umbrella associated with the poolee.
-                                    if (!string.IsNullOrEmpty(selectedCostCenterId))
+                                    if (!excludedUmbrellaGlAccounts.Contains(pooleeUmbrella))
                                     {
-                                        if (!string.IsNullOrEmpty(pooleeUmbrella))
+                                        // If we are processing a single cost center and we have a poolee, determine the cost center
+                                        // of the umbrella associated with the poolee.
+                                        if (!string.IsNullOrEmpty(selectedCostCenterId))
                                         {
-                                            foreach (var component in costCenterStructure.CostCenterComponents)
+                                            if (!string.IsNullOrEmpty(pooleeUmbrella))
                                             {
-                                                if (component != null)
+                                                foreach (var component in costCenterStructure.CostCenterComponents)
                                                 {
-                                                    var componentId = pooleeUmbrella.Substring(component.StartPosition, component.ComponentLength);
-                                                    pooleeUmbrellaCostCenterId += componentId;
+                                                    if (component != null)
+                                                    {
+                                                        var componentId = pooleeUmbrella.Substring(component.StartPosition, component.ComponentLength);
+                                                        pooleeUmbrellaCostCenterId += componentId;
+                                                    }
                                                 }
                                             }
                                         }
+
+                                        // Create the domain entity for the requisition GL account.
+
+                                        // If we are processing one cost center and the umbrella GL account cost center ID matches the selected one,
+                                        // or if we are processing all cost centers, process the poolee. If we are processing one cost center and the
+                                        // umbrella GL account cost center ID does not match the selected on, ignore it.
+                                        if (string.IsNullOrEmpty(selectedCostCenterId) || pooleeUmbrellaCostCenterId == selectedCostCenterId)
+                                        {
+                                            var requisitionGlAccountDomain = new CostCenterGlAccount(reqGlAccount.Recordkey, poolType);
+
+                                            // Obtain the total requisition amount for this GL account.
+                                            foreach (var amount in reqGlAccount.EncReqAmt)
+                                                requisitionGlAccountDomain.EncumbranceAmount += amount.HasValue ? amount.Value : 0m;
+
+                                            requisitionGlAccountsList.Add(requisitionGlAccountDomain);
+                                        }
                                     }
+                                }
+                                else
+                                {
+                                    // Create the domain entity for the non-pooled requisition GL account.
+                                    var requisitionGlAccountDomain = new CostCenterGlAccount(reqGlAccount.Recordkey, poolType);
 
-                                    // Create the domain entity for the requisition GL account.
+                                    // Obtain the total requisition amount for this GL account.
+                                    foreach (var amount in reqGlAccount.EncReqAmt)
+                                        requisitionGlAccountDomain.EncumbranceAmount += amount.HasValue ? amount.Value : 0m;
 
-                                    // If we are processing one cost center and the umbrella GL account cost center ID matches the selected one,
-                                    // or if we are processing all cost centers, process the poolee. If we are processing one cost center and the
-                                    // umbrella GL account cost center ID does not match the selected on, ignore it.
-                                    if (string.IsNullOrEmpty(selectedCostCenterId) || pooleeUmbrellaCostCenterId == selectedCostCenterId)
-                                    {
-                                        var requisitionGlAccountDomain = new CostCenterGlAccount(reqGlAccount.Recordkey, poolType);
-
-                                        // Obtain the total requisition amount for this GL account.
-                                        foreach (var amount in reqGlAccount.EncReqAmt)
-                                            requisitionGlAccountDomain.EncumbranceAmount += amount.HasValue ? amount.Value : 0m;
-
-                                        requisitionGlAccountsList.Add(requisitionGlAccountDomain);
-                                    }
+                                    requisitionGlAccountsList.Add(requisitionGlAccountDomain);
                                 }
                             }
                         }
@@ -1184,6 +1212,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                                             if (selectedPoolee != null)
                                             {
                                                 selectedPoolee.EncumbranceAmount += reqGlAcct.EncumbranceAmount;
+                                                // Also add the poolee requisition amount to the umbrella requisition amount.
+                                                pool.Umbrella.EncumbranceAmount += reqGlAcct.EncumbranceAmount;
                                                 glAccountFound = true;
                                             }
                                         }
@@ -1193,6 +1223,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
                             // If the GL account is not included in any cost center, find the cost center subtotal and cost center for it, 
                             // whether they already exist, or we have to create new ones.
+                            // This can be a case where a poolee only has an ENC record and no posted activity in any GLS record,
+                            // for instance, the poolee only has requisition amounts.
                             if (!glAccountFound)
                             {
                                 if (reqGlAcct.PoolType == GlBudgetPoolType.None)
@@ -1204,18 +1236,31 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                                     if (reqGlAcct.PoolType == GlBudgetPoolType.Umbrella)
                                     {
                                         var budgetPool = new GlBudgetPool(reqGlAcct);
+                                        if (expenseRevenueGlAccounts.Contains(reqGlAcct.GlAccountNumber))
+                                        {
+                                            // If the user has access to the umbrella, make it visible.
+                                            budgetPool.IsUmbrellaVisible = true;
+                                        }
                                         AddBudgetPoolToCostCentersList(budgetPool, costCenterStructure, glClassConfiguration);
                                     }
                                     else
                                     {
-                                        // Find the umbrella from GLP.FYR
-                                        var selectedPool = glpFyrDataContracts.FirstOrDefault(x => x.GlpPooleeAcctsList.Contains(reqGlAcct.GlAccountNumber));
-                                        if (selectedPool != null)
+                                        // Find the umbrella for this poolee from GLP.FYR
+                                        var umbrellaForThisPooleeGlpFyrRecord = glpFyrDataContracts.FirstOrDefault(x => x.GlpPooleeAcctsList.Contains(reqGlAcct.GlAccountNumber));
+                                        if (umbrellaForThisPooleeGlpFyrRecord != null)
                                         {
-                                            var umbrellaAccount = selectedPool.Recordkey;
-                                            var budgetPool = new GlBudgetPool(new CostCenterGlAccount(selectedPool.Recordkey, GlBudgetPoolType.Umbrella));
+                                            var umbrellaAccount = umbrellaForThisPooleeGlpFyrRecord.Recordkey;
+                                            var budgetPool = new GlBudgetPool(new CostCenterGlAccount(umbrellaForThisPooleeGlpFyrRecord.Recordkey, GlBudgetPoolType.Umbrella));
                                             budgetPool.AddPoolee(reqGlAcct);
+                                            // Also add the poolee requisition amount to the umbrella requisition amount.
+                                            budgetPool.Umbrella.EncumbranceAmount += reqGlAcct.EncumbranceAmount;
                                             AddBudgetPoolToCostCentersList(budgetPool, costCenterStructure, glClassConfiguration);
+                                        }
+                                        else
+                                        {
+                                            // There is data problem. This is a poolee but it was not found in GLP.FYR
+                                            // Log it and ignore this record.
+                                            LogDataError("This GL account " + reqGlAcct.GlAccountNumber + " is a poolee but was not found in any GLP." + fiscalYear + " pools.", "", reqGlAcct);
                                         }
                                     }
                                 }
@@ -1422,7 +1467,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 (a => a.ActualAmount == 0 && a.BudgetAmount == 0 && a.EncumbranceAmount == 0))).ToList();
 
             // Add the list of poolee accounts to the list of non pooled accounts.
-            if (possibleCostCenterGlAccountPooleesToRemove != null)
+            if (possibleCostCenterGlAccountPooleesToRemove != null && possibleCostCenterGlAccountPooleesToRemove.Any())
             {
                 possibleCostCenterGlAccountsToRemove.AddRange(possibleCostCenterGlAccountPooleesToRemove);
             }
@@ -1431,7 +1476,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             // any of these GL accounts by selecting GLS and ENC records. Also, find out if any of these GL accounts
             // are active by selecting GL.ACCTS that are not currently inactive. Remove these GL account record IDs
             // from the list of possible record IDs to remove.
-            if (possibleCostCenterGlAccountsToRemove != null)
+            if (possibleCostCenterGlAccountsToRemove != null && possibleCostCenterGlAccountsToRemove.Any())
             {
                 var glAccountsWithZeroBalanceArray = possibleCostCenterGlAccountsToRemove.Select(x => x.GlAccountNumber).ToArray();
                 var inactiveGlAccountsWithNoActivity = glAccountsWithZeroBalanceArray.ToList();
@@ -1697,7 +1742,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
         }
 
-        private async Task<List<string>> GetPooleesOutsideCostCenter(GeneralLedgerUser generalLedgerUser, string selectedCostCenterId, string fiscalYear, CostCenterStructure costCenterStructure)
+        private async Task<List<string>> GetPooleesOutsideCostCenter(GeneralLedgerUser generalLedgerUser, string selectedCostCenterId, string fiscalYear, CostCenterStructure costCenterStructure, CostCenterQueryCriteria costCenterCriteria)
         {
             // Determine whether there are any poolees for which the user has access that
             // are part of a budget pool for a specified cost center.
@@ -1790,6 +1835,86 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                                 {
                                     outsidePooleeAccounts.Add(poolee);
                                 }
+                            }
+                        }
+                    }
+
+                    // filter the poolees that are outside the selected cost center by the selection criteria.
+                    if (outsidePooleeAccounts.Any())
+                    {
+                        if (costCenterCriteria != null)
+                        {
+                            if (costCenterCriteria.ComponentCriteria.Any())
+                            {
+                                string componentFilterCriteria = null;
+                                string valueFilterCriteria = null;
+                                string rangeFilterCriteria = null;
+                                string[] filteredPooleeAccounts = outsidePooleeAccounts.ToArray();
+                                string[] tempFilteredAccounts;
+                                foreach (var filterComp in costCenterCriteria.ComponentCriteria)
+                                {
+                                    // Set a running limiting list of expense/revenue accounts that are
+                                    // filtered using the filtering criteria for each component.
+                                    // And, reset the filter criteria strings to null.
+                                    if (filteredPooleeAccounts.Any())
+                                    {
+                                        tempFilteredAccounts = filteredPooleeAccounts;
+                                        valueFilterCriteria = null;
+                                        rangeFilterCriteria = null;
+                                        componentFilterCriteria = null;
+
+                                        // Set the value filter criteria string from the individual component values.
+                                        if (filterComp.IndividualComponentValues.Any())
+                                        {
+                                            foreach (var value in filterComp.IndividualComponentValues)
+                                            {
+                                                valueFilterCriteria = valueFilterCriteria + "'" + value + "' ";
+                                            }
+                                        }
+
+                                        // Set the range filter criteria string from the component range values.
+                                        if (filterComp.RangeComponentValues.Any())
+                                        {
+                                            foreach (var range in filterComp.RangeComponentValues)
+                                            {
+                                                if (string.IsNullOrEmpty(rangeFilterCriteria))
+                                                {
+                                                    rangeFilterCriteria = rangeFilterCriteria + "(" + filterComp.ComponentName + " GE '"
+                                                        + range.StartValue + "' AND " + filterComp.ComponentName + " LE '" + range.EndValue + "') ";
+                                                }
+                                                else
+                                                {
+                                                    rangeFilterCriteria = rangeFilterCriteria + "OR (" + filterComp.ComponentName + " GE '"
+                                                        + range.StartValue + "' AND " + filterComp.ComponentName + " LE '" + range.EndValue + "') ";
+                                                }
+                                            }
+                                        }
+
+                                        // Update the value filter criteria string to contain the component name
+                                        if (!string.IsNullOrEmpty(valueFilterCriteria))
+                                        {
+                                            valueFilterCriteria = filterComp.ComponentName + " EQ " + valueFilterCriteria;
+                                        }
+
+                                        // Set the full component filter criteria string based on the value filter string
+                                        // and the range value filter string.
+                                        componentFilterCriteria = valueFilterCriteria;
+                                        if (!string.IsNullOrEmpty(rangeFilterCriteria))
+                                        {
+                                            if (string.IsNullOrEmpty(componentFilterCriteria))
+                                            {
+                                                componentFilterCriteria = rangeFilterCriteria;
+                                            }
+                                            else
+                                            {
+                                                componentFilterCriteria = componentFilterCriteria + "OR " + rangeFilterCriteria;
+                                            }
+                                        }
+
+                                        filteredPooleeAccounts = await DataReader.SelectAsync("GL.ACCTS", tempFilteredAccounts, componentFilterCriteria);
+                                    }
+                                }
+                                outsidePooleeAccounts = filteredPooleeAccounts.ToList();
                             }
                         }
                     }

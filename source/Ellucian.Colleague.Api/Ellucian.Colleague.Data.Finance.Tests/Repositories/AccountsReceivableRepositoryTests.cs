@@ -16,6 +16,7 @@ using System.Threading.Tasks;
 using System.Threading;
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
+using Ellucian.Colleague.Domain.Finance.Tests;
 
 namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
 {
@@ -23,6 +24,7 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
     public class AccountsReceivableRepositoryTests : BasePersonSetup
     {
         private AccountsReceivableRepository repository;
+        private TestAccountsReceivableRepository expectedRepository;
         private readonly Collection<ArDeposits> arDeposits = TestArDepositsRepository.ArDeposits;
         private readonly Collection<ArDepositsDue> arDepositsDue = TestArDepositsDueRepository.ArDepositsDue;
         private readonly Collection<ArInvoices> arInvoices = TestArInvoicesRepository.ArInvoices;
@@ -2432,37 +2434,34 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
         public class AccountsReceivableRepository_SearchAccountHoldersByKeywordAsync_Tests : AccountsReceivableRepositoryTests
         {
             GetPersonLookupStringRequest lookupStringRequest = new GetPersonLookupStringRequest();
+            private string lastName;
+
             [TestInitialize]
             public void AccountActivityRepository_SearchAccountHoldersAsync_Tests_Initialize()
             {
                 base.Initialize();
-                // This statement mocks the lookup when searching by padded or unpadded id
-                dataReaderMock.Setup(dr => dr.ReadRecordAsync<Person>("PERSON", "0000001", It.IsAny<bool>())).ReturnsAsync(new Person()
-                {
-                    Recordkey = "0000001",
-                    LastName = "Smith",
-                    FirstName = "Joe",
-                    MiddleName = "",
-                });
+                expectedRepository = new TestAccountsReceivableRepository();
 
-                // These statements mock the lookup when searching by name
-                lookupStringRequest.SearchString = "Smith" + "," + "J" + " " + "";
+                
+                
                 // This statement mocks the search string that would be returned by the transaction manager, based on the input
                 transManagerMock.Setup(
                     trans => trans.ExecuteAsync<GetPersonLookupStringRequest, GetPersonLookupStringResponse>(It.IsAny<GetPersonLookupStringRequest>()))
-                    .ReturnsAsync(new GetPersonLookupStringResponse()
-                    {
-                        IndexString = "; PARTIAL.NAME.INDEX SMITH_J"
-                    });
+                    .Returns<GetPersonLookupStringRequest>(
+                        (request) =>
+                        {
+                            lastName = request.SearchString.Split(',')[0];
+                            return Task.FromResult(new GetPersonLookupStringResponse() { IndexString = ";PARTIAL.NAME.INDEX " + lastName.ToUpper() + "_", ErrorMessage = "" });
+                        });
                 // This mocks the select that would use the string that was returned by the call to the transaction manager, above.
                 // It contains an extra id that will be filtered out by next mock, which simulates a call to PERSON.AR
                 dataReaderMock.Setup(dr => dr.SelectAsync("PERSON", It.IsAny<string>()))
-                    .ReturnsAsync(new string[]
-                    {
-                        "0000001",
-                        "0000002",
-                        "0000003",
-                    });
+                    .Returns<string, string>(
+                        (fileName, searchString) => {
+                        int ndx = searchString.IndexOf("EQ \"");
+                        lastName = searchString.Substring(ndx + 4).Replace("_", "").Replace("\"", "");
+                        return Task.FromResult(expectedRepository.personData.Where(p => p.lastName.ToLower().Contains(lastName.ToLower())).Select(p => p.id).ToArray());
+                });
                 // This mocks the select that would return the ids from above that exist in PERSON.AR.  It 'strips out' the third id.
                 dataReaderMock.Setup(dr => dr.SelectAsync("PERSON.AR", It.IsAny<string[]>(), It.IsAny<string>()))
                     .ReturnsAsync(new string[]
@@ -2470,22 +2469,22 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
                         "0000001",
                         "0000002"
                     });
-                // This mocks the retrieval of the person with id "0000002", returned by the mocked Select above.
-                dataReaderMock.Setup(dr => dr.ReadRecordAsync<Person>("PERSON", "0000002", It.IsAny<bool>())).ReturnsAsync(new Person()
-                {
-                    Recordkey = "0000002",
-                    LastName = "Smith",
-                    FirstName = "John",
-                    MiddleName = "Jacob Jingleheimer",
-                });
-                // This mocks the retrieval of the person with id "0000002", returned by the mocked Select above.
-                dataReaderMock.Setup(dr => dr.ReadRecordAsync<Person>("PERSON", "0000003", It.IsAny<bool>())).ReturnsAsync(new Person()
-                {
-                    Recordkey = "0000003",
-                    LastName = "Smithson",
-                    FirstName = "Jane",
-                    MiddleName = "Lisa",
-                });
+
+                dataReaderMock.Setup(dr => dr.ReadRecordAsync<Person>("PERSON", It.IsAny<string>(), It.IsAny<bool>()))
+                    .Returns<string, string, bool>((file, id, b) =>
+                    {
+                        var contract = expectedRepository.personData.Where(p => id == p.id).First();
+                        return Task.FromResult(new Data.Base.DataContracts.Person()
+                        {
+                            Recordkey = contract.id,
+                            LastName = contract.lastName,
+                            FirstName = contract.firstName,
+                            PrivacyFlag = contract.privacyCode
+                        });
+
+                    });
+                
+                
                 // This mocks the filtering by corporations, defaulting to no IDs being removed
                 dataReaderMock.Setup(dr => dr.SelectAsync("PERSON", It.IsAny<string[]>(), "WITH PERSON.CORP.INDICATOR NE 'Y'"))
                     .Returns((string file, string[] ids, string criteria) => Task.FromResult(ids));
@@ -2496,6 +2495,20 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
                         Recordkey = "PREFERRED",
                         NahNameHierarchy = new List<string>() { "PF" }
                     });
+
+                dataReaderMock.Setup<Task<Base.DataContracts.Dflts>>(dr => dr.ReadRecordAsync<Base.DataContracts.Dflts>("CORE.PARMS", "DEFAULTS", true))
+               .Returns<string, string, bool>((file, key, b) =>
+               {
+                   return Task.FromResult(new Base.DataContracts.Dflts() { DfltsFixedLenPerson = "7" });
+               });
+
+                // Needed to for GetOrAddToCacheAsync 
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
+                    x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                    .Returns(Task.FromResult(new Tuple<object, SemaphoreSlim>(
+                    null,
+                    new SemaphoreSlim(1, 1)
+                )));
             }
 
             [TestMethod]
@@ -2570,6 +2583,51 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
                 Assert.AreEqual("Joe", result[0].FirstName);
                 Assert.AreEqual("Smith", result[1].LastName);
                 Assert.AreEqual("John", result[1].FirstName);
+            }
+
+            [TestMethod]
+            public async Task LastNameWithSpecialCharacter_SearchFinancialAidPersonsByKeywordAsync_ReturnsExpectedResultTest()
+            {
+                var result = await repository.SearchAccountHoldersByKeywordAsync("O'Hruska, N");
+                Assert.IsTrue(result.Any());
+                Assert.AreEqual("0002345", result.First().Id);
+            }
+
+            [TestMethod]
+            public async Task IdLengthLongerThanDefault_SearchFinancialAidPersonsByKeywordAsync_ReturnsExpectedResultTest()
+            {
+                var actualPersons = await repository.SearchAccountHoldersByKeywordAsync("123456789");
+                Assert.IsTrue(actualPersons.Any());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task AlphaNumericId_SearchFinancialAidPersonsByKeywordAsync_ThrowsExceptionTest()
+            {
+                await repository.SearchAccountHoldersByKeywordAsync("AB12345");
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task IdWithSpecialCharacters_SearchFinancialAidPersonsByKeywordAsync_ThrowsExceptionTest()
+            {
+                await repository.SearchAccountHoldersByKeywordAsync("00_12345");
+            }
+
+            [TestMethod]
+            public async Task NoDefaultIdLength_SearchFinancialAidPersonsByKeywordAsync_ReturnsExpectedResultTest()
+            {
+                dataReaderMock.Setup<Task<Base.DataContracts.Dflts>>(dr => dr.ReadRecordAsync<Base.DataContracts.Dflts>("CORE.PARMS", "DEFAULTS", true))
+                   .Returns<string, string, bool>((file, key, b) =>
+                   {
+                       return Task.FromResult(new Base.DataContracts.Dflts() { DfltsFixedLenPerson = "" });
+                   });
+                var actualPersons = await repository.SearchAccountHoldersByKeywordAsync("123456789");
+                var expectedPerson = expectedRepository.personData.Where(p => p.id == "123456789").First();
+                Assert.IsTrue(actualPersons.Any());
+                Assert.AreEqual(expectedPerson.id, actualPersons.First().Id);
+                Assert.AreEqual(expectedPerson.lastName, actualPersons.First().LastName);
+                Assert.AreEqual(expectedPerson.firstName, actualPersons.First().FirstName);
             }
         }
 

@@ -12,5 +12,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
     {
         Task<IEnumerable<Ellucian.Colleague.Dtos.CommodityUnitType>> GetCommodityUnitTypesAsync(bool bypassCache);
         Task<Ellucian.Colleague.Dtos.CommodityUnitType> GetCommodityUnitTypeByIdAsync(string id);
+
+        Task<IEnumerable<Ellucian.Colleague.Dtos.CommodityUnitType>> GetAllCommodityUnitTypesAsync();
     }
 }

@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -47,56 +47,117 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             _studentReferenceDataRepository = studentReferenceDataRepository;
         }
 
+        #region Get all reference data
+
+        public IEnumerable<Domain.Student.Entities.FinancialAidYear> _financialAidYears;
+        private async Task<IEnumerable<Domain.Student.Entities.FinancialAidYear>> GetFinancialAidYearsAsync(bool bypassCache)
+        {
+            if (_financialAidYears == null)
+            {
+                _financialAidYears = await _studentReferenceDataRepository.GetFinancialAidYearsAsync(bypassCache);
+            }
+            return _financialAidYears;
+        }
+
+        #endregion
+
         /// <remarks>FOR USE WITH ELLUCIAN EEDM VERSION 9</remarks>
         /// <summary>
         /// Gets all financial-aid-applications
         /// </summary>
         /// <returns>Collection of FinancialAidApplications DTO objects</returns>
-        public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplicationOutcome>, int>> GetAsync(int offset, int limit, bool bypassCache = false)
+        public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplicationOutcome>, int>> GetAsync(int offset, int limit, FinancialAidApplicationOutcome filterDto, bool bypassCache = false)
         {
-            CheckViewFinancialAidApplicationOutcomesPermission();
-
-            // Get all financial aid years
-            var aidYearEntity = (await _studentReferenceDataRepository.GetFinancialAidYearsAsync(bypassCache));
-            List<string> faSuiteYears = aidYearEntity.Select(k => k.Code).ToList();
-
             try
             {
-                var financialAidApplicationOutcomeDtos = new List<Dtos.FinancialAidApplicationOutcome>();
-                var fafsaDomainTuple = await _financialAidApplicationOutcomeRepository.GetAsync(offset, limit, bypassCache, faSuiteYears);
-                var financialAidApplicationOutcomeDomainEntities = fafsaDomainTuple.Item1;
-                var totalRecords = fafsaDomainTuple.Item2;
+                CheckViewFinancialAidApplicationOutcomesPermission();
 
-                if (financialAidApplicationOutcomeDomainEntities == null)
+                // Get all financial aid years
+                var aidYearEntity = (await _studentReferenceDataRepository.GetFinancialAidYearsAsync(bypassCache));
+                List<string> faSuiteYears = aidYearEntity.Select(k => k.Code).ToList();
+
+                //process filters 
+                string applicantId = string.Empty;
+                string aidYear = string.Empty;
+                if (filterDto != null)
                 {
-                    throw new ArgumentNullException("FinancialAidApplicationOutcomeDomainEntity", "FinancialAidApplicationOutcomeDomainEntity cannot be null. ");
-                }
-
-
-                // Convert the student financial aid awards and all its child objects into DTOs.
-                foreach (var entity in financialAidApplicationOutcomeDomainEntities)
-                {
-                    if (entity != null)
+                    //get aid year
+                    if (filterDto.AidYear != null && !string.IsNullOrEmpty(filterDto.AidYear.Id))
                     {
-                        var financialAidApplicationOutcomeDto = await BuildFinancialAidApplicationOutcomeDtoAsync(entity, bypassCache);
-                        financialAidApplicationOutcomeDtos.Add(financialAidApplicationOutcomeDto);
+                        aidYear = ConvertGuidToCode(aidYearEntity, filterDto.AidYear.Id);
+                        if (string.IsNullOrEmpty(aidYear))
+                            return new Tuple<IEnumerable<Dtos.FinancialAidApplicationOutcome>, int>(new List<Dtos.FinancialAidApplicationOutcome>(), 0);
+                    }
+                    //get applicant Id
+                    if (filterDto.Applicant != null && filterDto.Applicant.Person != null && !string.IsNullOrEmpty(filterDto.Applicant.Person.Id))
+                    {
+                        try
+                        {
+                            applicantId = await _personRepository.GetPersonIdFromGuidAsync(filterDto.Applicant.Person.Id);
+                            if (string.IsNullOrEmpty(applicantId))
+                                return new Tuple<IEnumerable<Dtos.FinancialAidApplicationOutcome>, int>(new List<Dtos.FinancialAidApplicationOutcome>(), 0);
+                        }
+                        catch // if bad guid, return empty set
+                        {
+                            return new Tuple<IEnumerable<Dtos.FinancialAidApplicationOutcome>, int>(new List<Dtos.FinancialAidApplicationOutcome>(), 0);
+                        }
                     }
                 }
-                return new Tuple<IEnumerable<Dtos.FinancialAidApplicationOutcome>, int>(financialAidApplicationOutcomeDtos, totalRecords);
+
+                var financialAidApplicationOutcomeDtos = new List<Dtos.FinancialAidApplicationOutcome>();
+                var fafsaDomainTuple = await _financialAidApplicationOutcomeRepository.GetAsync(offset, limit, bypassCache, applicantId, aidYear, faSuiteYears);
+
+
+                if (fafsaDomainTuple != null && fafsaDomainTuple.Item1 != null && fafsaDomainTuple.Item1.Any())
+                {
+                    foreach (var entity in fafsaDomainTuple.Item1)
+                    {
+                        if (entity != null)
+                        {
+                            var financialAidApplicationOutcomeDto = await BuildFinancialAidApplicationOutcomeDtoAsync(entity, bypassCache);
+                            financialAidApplicationOutcomeDtos.Add(financialAidApplicationOutcomeDto);                           
+                        }
+                    }
+                    return new Tuple<IEnumerable<Dtos.FinancialAidApplicationOutcome>, int>(financialAidApplicationOutcomeDtos, fafsaDomainTuple.Item2);
+                }
+                else
+                {
+                    return new Tuple<IEnumerable<Dtos.FinancialAidApplicationOutcome>, int>(new List<Dtos.FinancialAidApplicationOutcome>(), 0);
+                }                
             }
-            catch (Exception e)
+            catch (ArgumentNullException ex)
             {
-                throw new ArgumentException(e.Message);
+                logger.Error(ex.Message);
+                throw new ArgumentNullException(ex.Message, ex);
             }
-
+            catch (KeyNotFoundException ex)
+            {
+                logger.Error(ex.Message);
+                throw new KeyNotFoundException(ex.Message, ex);
+            }
+            catch (PermissionsException ex)
+            {
+                logger.Error(ex.Message);
+                throw new PermissionsException(ex.Message, ex);
+            }
+            catch (InvalidOperationException ex)
+            {
+                logger.Error(ex.Message);
+                throw new InvalidOperationException(ex.Message, ex);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.Message);
+                throw new Exception(ex.Message, ex);
+            }
         }
-
+        
         /// <remarks>FOR USE WITH ELLUCIAN EEDM VERSION 9</remarks>
         /// <summary>
         /// Get a FinancialAidApplicationOutcomes from its GUID
         /// </summary>
         /// <returns>FinancialAidApplications DTO object</returns>
-        public async Task<Ellucian.Colleague.Dtos.FinancialAidApplicationOutcome> GetByIdAsync(string id)
+        public async Task<Ellucian.Colleague.Dtos.FinancialAidApplicationOutcome> GetByIdAsync(string id, bool bypassCache = true)
         {
             CheckViewFinancialAidApplicationOutcomesPermission();
 
@@ -110,7 +171,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     throw new ArgumentNullException("FinancialAidApplicationDomainEntity", "FinancialAidApplicationDomainEntity cannot be null. ");
                 }
                 // Convert the financial aid application object into DTO.
-                return await BuildFinancialAidApplicationOutcomeDtoAsync(fafsaDomainEntity);
+                return await BuildFinancialAidApplicationOutcomeDtoAsync(fafsaDomainEntity, bypassCache);
             }
             catch (ArgumentNullException e)
             {

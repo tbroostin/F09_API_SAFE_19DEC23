@@ -338,7 +338,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <returns>Collection of InstitutionJobs DTO objects</returns>
         public async Task<Tuple<IEnumerable<Dtos.InstitutionJobs3>, int>> GetInstitutionJobs3Async(int offset, int limit,
             string person = "", string employer = "", string position = "", string department = "", string startOn = "",
-            string endOn = "", string status = "", string classification = "", string preference = "", bool bypassCache = false)
+            string endOn = "", string status = "", string classification = "", string preference = "", bool bypassCache = false, Dictionary<string, string> filterQualifiers = null)
         {
             try
             {
@@ -462,7 +462,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
                 var institutionJobsEntitiesTuple = await _institutionJobsRepository.GetInstitutionJobsAsync(offset, limit, personCode,
                     employerCode, positionCode, departmentCode, convertedStartOn, convertedEndOn, status, classificationCode,
-                    preference, bypassCache);
+                    preference, bypassCache, filterQualifiers);
                 if (institutionJobsEntitiesTuple != null)
                 {
                     var ids = new List<string>();
@@ -771,12 +771,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 {
                     throw new ArgumentNullException("Employer ID is required for Institution Jobs. Id:" + institutionJobsId);
                 }
-                var employer = await _personRepository.GetPersonIdFromGuidAsync(institutionJobs.Employer.Id);
-                if (string.IsNullOrEmpty(employer))
-                {
-                    throw new ArgumentNullException("Employer not found for Id:" + institutionJobs.Employer.Id);
-                }
-
+                var employer = await _institutionJobsRepository.GetInstitutionEmployerGuidAsync();
                 response.Employer = employer;
 
                 if (institutionJobs.Department != null && string.IsNullOrWhiteSpace(institutionJobs.Department.Id))
@@ -1713,30 +1708,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                     throw new KeyNotFoundException(string.Concat("Person guid not found, PersonId: '", source.PersonId, "', Record ID: '", source.Id, "'"));
                 }
                 institutionJobs.Person = new GuidObject2(personGuid);
-
-                /*
-                 var employerGuid = string.Empty;
-                 if (!_employerGuidDictionary.TryGetValue(source.Employer, out employerGuid))
-                 {
-                     employerGuid = await _personRepository.GetPersonGuidFromIdAsync(source.Employer);
-                     if (!(string.IsNullOrEmpty(employerGuid)))
-                         _employerGuidDictionary.Add(source.Employer, employerGuid);
-                 }
-                 if (!(string.IsNullOrEmpty(employerGuid)))
-                     institutionJobs.Employer = new GuidObject2(employerGuid);
-                */
-                if (!string.IsNullOrEmpty(source.Employer))
-                {
-                    var employerGuid = string.Empty;
-
-                    personGuidCollection.TryGetValue(source.Employer, out employerGuid);
-                    if (string.IsNullOrEmpty(employerGuid))
-                    {
-                        throw new KeyNotFoundException(string.Concat("Guid not found, Employer: '", source.Employer, "', Record ID: '", source.Id, "'"));
-                    }
-
-                    institutionJobs.Employer = new GuidObject2(employerGuid);
-                }
+                institutionJobs.Employer = new GuidObject2(await _institutionJobsRepository.GetInstitutionEmployerGuidAsync()); 
 
                 if (string.IsNullOrEmpty(source.PositionId))
                 {
@@ -1747,7 +1719,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                     institutionJobs.Position = new GuidObject2(positionGuid);
 
 
-                if (!(string.IsNullOrWhiteSpace(source.Department)))
+                if (!(string.IsNullOrWhiteSpace(source.Department))) 
                 {
                     var employDepartments = await this.GetAllEmploymentDepartmentAsync(bypassCache);
                     if (employDepartments != null)
@@ -1758,6 +1730,13 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                             institutionJobs.Department = new GuidObject2(employDepartment.Guid);
                         }
                     }
+                    // making sure change sticks
+                    if (institutionJobs.Department == null) { throw new ArgumentNullException("Unable to locate department for code "+ source.Department + ", Position " + source.PositionId + " is required to have a department."); }
+
+                }
+                else
+                {
+                    throw new ArgumentNullException("Position " + source.PositionId + " is required to have a department.");
                 }
                
                 institutionJobs.StartOn = source.StartDate;

@@ -1,10 +1,11 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Controllers.Student;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Adapters;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -14,6 +15,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
@@ -41,6 +43,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             StudentFinancialAidAwardsController studentFinancialAidAwardsController;
             List<Dtos.StudentFinancialAidAward> studentFinancialAidAwardDtos;
             List<Dtos.StudentFinancialAidAward2> studentFinancialAidAward2Dtos;
+            Dtos.StudentFinancialAidAward2 criteria = new Dtos.StudentFinancialAidAward2();
+
             int offset = 0;
             int limit = 200;
 
@@ -619,8 +623,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     Public = true
                 };
                 var tuple = new Tuple<IEnumerable<Dtos.StudentFinancialAidAward2>, int>(studentFinancialAidAward2Dtos, 4);
-                studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, true, false)).ReturnsAsync(tuple);
-                var studentFinancialAidAwards = await studentFinancialAidAwardsController.Get2Async(new Paging(limit, offset));
+                studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, It.IsAny< Dtos.StudentFinancialAidAward2>(), true, false)).ReturnsAsync(tuple);
+                var studentFinancialAidAwards = await studentFinancialAidAwardsController.Get2Async(new Paging(limit, offset), It.IsAny<QueryStringFilter>());
 
                 var cancelToken = new System.Threading.CancellationToken(false);
 
@@ -653,8 +657,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     Public = true
                 };
                 var tuple = new Tuple<IEnumerable<Dtos.StudentFinancialAidAward2>, int>(studentFinancialAidAward2Dtos, 4);
-                studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, false, false)).ReturnsAsync(tuple);
-                var studentFinancialAidAwards = await studentFinancialAidAwardsController.Get2Async(new Paging(limit, offset));
+                studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, It.IsAny< Dtos.StudentFinancialAidAward2>(), false, false)).ReturnsAsync(tuple);
+                var studentFinancialAidAwards = await studentFinancialAidAwardsController.Get2Async(new Paging(limit, offset), It.IsAny<QueryStringFilter>());
 
                 var cancelToken = new System.Threading.CancellationToken(false);
 
@@ -687,8 +691,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     Public = true
                 };
                 var tuple = new Tuple<IEnumerable<Dtos.StudentFinancialAidAward2>, int>(studentFinancialAidAward2Dtos, 4);
-                studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, true, false)).ReturnsAsync(tuple);
-                var studentFinancialAidAwards = await studentFinancialAidAwardsController.Get2Async(null);
+                studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, It.IsAny< Dtos.StudentFinancialAidAward2>(), true, false)).ReturnsAsync(tuple);
+                var studentFinancialAidAwards = await studentFinancialAidAwardsController.Get2Async(null, It.IsAny<QueryStringFilter>());
 
                 var cancelToken = new System.Threading.CancellationToken(false);
 
@@ -732,20 +736,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentFinancialAidAwardsController_GetAll2_PermissionException()
-            {
-                studentFinancialAidAwardsController.Request.Headers.CacheControl = new CacheControlHeaderValue
-                {
-                    NoCache = false,
-                    Public = true
-                };
-                var tuple = new Tuple<IEnumerable<Dtos.StudentFinancialAidAward2>, int>(studentFinancialAidAward2Dtos, 4);
-                studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, false, false)).ThrowsAsync(new PermissionsException());
-                var studentFinancialAidAwards = await studentFinancialAidAwardsController.Get2Async(new Paging(limit, offset));
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
             public async Task StudentFinancialAidAwardsController_GetAll2_ArgumentException()
             {
                 studentFinancialAidAwardsController.Request.Headers.CacheControl = new CacheControlHeaderValue
@@ -754,8 +744,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     Public = true
                 };
                 var tuple = new Tuple<IEnumerable<Dtos.StudentFinancialAidAward2>, int>(studentFinancialAidAward2Dtos, 4);
-                studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, false, false)).ThrowsAsync(new ArgumentException());
-                var studentFinancialAidAwards = await studentFinancialAidAwardsController.Get2Async(new Paging(limit, offset));
+                studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, It.IsAny<Dtos.StudentFinancialAidAward2>(), false, false)).ThrowsAsync(new ArgumentException());
+                var studentFinancialAidAwards = await studentFinancialAidAwardsController.Get2Async(new Paging(limit, offset), It.IsAny<QueryStringFilter>());
             }
 
             [TestMethod]
@@ -768,8 +758,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     Public = true
                 };
                 var tuple = new Tuple<IEnumerable<Dtos.StudentFinancialAidAward2>, int>(studentFinancialAidAward2Dtos, 4);
-                studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, false, false)).ThrowsAsync(new RepositoryException());
-                var studentFinancialAidAwards = await studentFinancialAidAwardsController.Get2Async(new Paging(limit, offset));
+                studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, It.IsAny<Dtos.StudentFinancialAidAward2>(), false, false)).ThrowsAsync(new RepositoryException());
+                var studentFinancialAidAwards = await studentFinancialAidAwardsController.Get2Async(new Paging(limit, offset), It.IsAny<QueryStringFilter>());
             }
 
             [TestMethod]
@@ -782,8 +772,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     Public = true
                 };
                 var tuple = new Tuple<IEnumerable<Dtos.StudentFinancialAidAward2>, int>(studentFinancialAidAward2Dtos, 4);
-                studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, false, false)).ThrowsAsync(new Exception());
-                var studentFinancialAidAwards = await studentFinancialAidAwardsController.Get2Async(new Paging(limit, offset));
+                studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, It.IsAny<Dtos.StudentFinancialAidAward2>(), false, false)).ThrowsAsync(new Exception());
+                var studentFinancialAidAwards = await studentFinancialAidAwardsController.Get2Async(new Paging(limit, offset), It.IsAny<QueryStringFilter>());
             }
 
             [TestMethod]
@@ -863,8 +853,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     Public = true
                 };
                 var tuple = new Tuple<IEnumerable<Dtos.StudentFinancialAidAward2>, int>(studentFinancialAidAward2Dtos, 4);
-                studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, true, true)).ReturnsAsync(tuple);
-                var studentFinancialAidAwards = await studentFinancialAidAwardsController.GetRestricted2Async(new Paging(limit, offset));
+                studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, It.IsAny< Dtos.StudentFinancialAidAward2>(), true, true)).ReturnsAsync(tuple);
+                var studentFinancialAidAwards = await studentFinancialAidAwardsController.GetRestricted2Async(new Paging(limit, offset), It.IsAny<QueryStringFilter>());
 
                 var cancelToken = new System.Threading.CancellationToken(false);
 
@@ -897,8 +887,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     Public = true
                 };
                 var tuple = new Tuple<IEnumerable<Dtos.StudentFinancialAidAward2>, int>(studentFinancialAidAward2Dtos, 4);
-                studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, false, true)).ReturnsAsync(tuple);
-                var studentFinancialAidAwards = await studentFinancialAidAwardsController.GetRestricted2Async(new Paging(limit, offset));
+                studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, It.IsAny< Dtos.StudentFinancialAidAward2>(), false, true)).ReturnsAsync(tuple);
+                var studentFinancialAidAwards = await studentFinancialAidAwardsController.GetRestricted2Async(new Paging(limit, offset), It.IsAny<QueryStringFilter>());
 
                 var cancelToken = new System.Threading.CancellationToken(false);
 
@@ -931,8 +921,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     Public = true
                 };
                 var tuple = new Tuple<IEnumerable<Dtos.StudentFinancialAidAward2>, int>(studentFinancialAidAward2Dtos, 4);
-                studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, true, true)).ReturnsAsync(tuple);
-                var studentFinancialAidAwards = await studentFinancialAidAwardsController.GetRestricted2Async(null);
+                studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, It.IsAny< Dtos.StudentFinancialAidAward2>(), true, true)).ReturnsAsync(tuple);
+                var studentFinancialAidAwards = await studentFinancialAidAwardsController.GetRestricted2Async(null, It.IsAny<QueryStringFilter>());
 
                 var cancelToken = new System.Threading.CancellationToken(false);
 
@@ -954,6 +944,66 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     Assert.AreEqual(expected.AwardFund, actual.AwardFund);
                     Assert.AreEqual(expected.Student, actual.Student);
                 }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentFinancialAidAwardsController_GetRestricted2Async_PermissionException()
+            {
+                studentFinancialAidAwardsController.Request.Headers.CacheControl = new CacheControlHeaderValue
+                {
+                    NoCache = false,
+                    Public = true
+                };
+                var tuple = new Tuple<IEnumerable<Dtos.StudentFinancialAidAward2>, int>(studentFinancialAidAward2Dtos, 4);
+                studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, It.IsAny< Dtos.StudentFinancialAidAward2>(), false, true))
+                    .ThrowsAsync(new PermissionsException());
+                var studentFinancialAidAwards = await studentFinancialAidAwardsController.GetRestricted2Async(new Paging(limit, offset), It.IsAny<QueryStringFilter>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentFinancialAidAwardsController_GetRestricted2Async_ArgumentException()
+            {
+                studentFinancialAidAwardsController.Request.Headers.CacheControl = new CacheControlHeaderValue
+                {
+                    NoCache = false,
+                    Public = true
+                };
+                var tuple = new Tuple<IEnumerable<Dtos.StudentFinancialAidAward2>, int>(studentFinancialAidAward2Dtos, 4);
+                studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, It.IsAny<Dtos.StudentFinancialAidAward2>(), false, true))
+                    .ThrowsAsync(new ArgumentException());
+                var studentFinancialAidAwards = await studentFinancialAidAwardsController.GetRestricted2Async(new Paging(limit, offset), It.IsAny<QueryStringFilter>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentFinancialAidAwardsController_GetRestricted2Async_RepositoryException()
+            {
+                studentFinancialAidAwardsController.Request.Headers.CacheControl = new CacheControlHeaderValue
+                {
+                    NoCache = false,
+                    Public = true
+                };
+                var tuple = new Tuple<IEnumerable<Dtos.StudentFinancialAidAward2>, int>(studentFinancialAidAward2Dtos, 4);
+                studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, It.IsAny<Dtos.StudentFinancialAidAward2>(), false, true))
+                    .ThrowsAsync(new RepositoryException());
+                var studentFinancialAidAwards = await studentFinancialAidAwardsController.GetRestricted2Async(new Paging(limit, offset), It.IsAny<QueryStringFilter>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentFinancialAidAwardsController_GetRestricted2Async_Exception()
+            {
+                studentFinancialAidAwardsController.Request.Headers.CacheControl = new CacheControlHeaderValue
+                {
+                    NoCache = false,
+                    Public = true
+                };
+                var tuple = new Tuple<IEnumerable<Dtos.StudentFinancialAidAward2>, int>(studentFinancialAidAward2Dtos, 4);
+                studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, It.IsAny<Dtos.StudentFinancialAidAward2>(), false, true))
+                    .ThrowsAsync(new Exception());
+                var studentFinancialAidAwards = await studentFinancialAidAwardsController.GetRestricted2Async(new Paging(limit, offset), It.IsAny<QueryStringFilter>());
             }
 
             [TestMethod]
@@ -984,7 +1034,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     Public = true
                 };
                 var tuple = new Tuple<IEnumerable<Dtos.StudentFinancialAidAward2>, int>(studentFinancialAidAward2Dtos, 4);
-                studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, false, true)).ThrowsAsync(new PermissionsException());
+                studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, criteria, false, true)).ThrowsAsync(new PermissionsException());
                 var studentFinancialAidAwards = await studentFinancialAidAwardsController.GetRestrictedAsync(new Paging(limit, offset));
             }
 
@@ -998,7 +1048,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     Public = true
                 };
                 var tuple = new Tuple<IEnumerable<Dtos.StudentFinancialAidAward2>, int>(studentFinancialAidAward2Dtos, 4);
-                studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, false, true)).ThrowsAsync(new ArgumentException());
+                studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, It.IsAny<Dtos.StudentFinancialAidAward2>(), false, true)).ThrowsAsync(new ArgumentException());
                 var studentFinancialAidAwards = await studentFinancialAidAwardsController.GetRestrictedAsync(new Paging(limit, offset));
             }
 
@@ -1012,7 +1062,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     Public = true
                 };
                 var tuple = new Tuple<IEnumerable<Dtos.StudentFinancialAidAward2>, int>(studentFinancialAidAward2Dtos, 4);
-                studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, false, true)).ThrowsAsync(new RepositoryException());
+                studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, It.IsAny<Dtos.StudentFinancialAidAward2>(), false, true)).ThrowsAsync(new RepositoryException());
                 var studentFinancialAidAwards = await studentFinancialAidAwardsController.GetRestrictedAsync(new Paging(limit, offset));
             }
 
@@ -1026,7 +1076,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     Public = true
                 };
                 var tuple = new Tuple<IEnumerable<Dtos.StudentFinancialAidAward2>, int>(studentFinancialAidAward2Dtos, 4);
-                studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, false, true)).ThrowsAsync(new Exception());
+                studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, It.IsAny<Dtos.StudentFinancialAidAward2>(), false, true)).ThrowsAsync(new Exception());
                 var studentFinancialAidAwards = await studentFinancialAidAwardsController.GetRestrictedAsync(new Paging(limit, offset));
             }
 

@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Student.Adapters;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -1973,6 +1973,254 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 var academicCreditDtos = await academicHistoryService.QueryAcademicCredits2Async(criteria);
                 Assert.AreEqual(0, academicCreditDtos.Count());
 
+            }
+
+            private IEnumerable<Section> BuildSectionEntities()
+            {
+                List<Section> sections = new List<Section>();
+                var section1 = new Section("section1", "course1", "01", DateTime.Now.AddDays(-30), 3.0m, null, "Section Title 1", "G", new List<OfferingDepartment>() { new OfferingDepartment("MATH") }, new List<string>() { "100" }, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Now) }, true, true, false, true, false, false);
+                section1.AddFaculty("0000894");
+
+                // This section has wrong faculty so it should NOT be in the list of sections when going to repo for academic credits.
+                var section2 = new Section("section2", "course2", "02", DateTime.Now.AddDays(-30), 3.0m, null, "Section Title 2", "G", new List<OfferingDepartment>() { new OfferingDepartment("MATH") }, new List<string>() { "100" }, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Now) }, true, true, false, true, false, false);
+                section1.AddFaculty("0000222");
+
+                // Thes sections are cross listed to section 1.
+                var section3 = new Section("section3", "course3", "03", DateTime.Now.AddDays(-30), 3.0m, null, "Section Title 3", "G", new List<OfferingDepartment>() { new OfferingDepartment("MATH") }, new List<string>() { "100" }, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Now) }, true, true, false, true, false, false);
+                var section4 = new Section("section4", "course4", "04", DateTime.Now.AddDays(-30), 3.0m, null, "Section Title 4", "G", new List<OfferingDepartment>() { new OfferingDepartment("MATH") }, new List<string>() { "100" }, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Now) }, true, true, false, true, false, false);
+                section1.AddCrossListedSection(section3);
+                section1.AddCrossListedSection(section4);
+
+                // sections returned by the repo will be section 1 and 2 and of those only 1 is for this faculty.
+                sections.Add(section1);
+                sections.Add(section2);
+                return sections;
+            }
+        }
+
+        [TestClass]
+        public class QueryAcademicCreditsWithInvalidKeysAsync : CurrentUserSetup
+        {
+            private AcademicHistoryService academicHistoryService;
+            private Mock<IAcademicCreditRepository> academicCreditRepoMock;
+            private IAcademicCreditRepository academicCreditRepo;
+            private Mock<ISectionRepository> sectionRepoMock;
+            private ISectionRepository sectionRepo;
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private IAdapterRegistry adapterRegistry;
+            private ILogger logger;
+            private Domain.Student.Entities.Section section1;
+            private Domain.Student.Entities.Section section2;
+            private Mock<IRoleRepository> roleRepoMock;
+            private IRoleRepository roleRepo;
+            private ICurrentUserFactory currentUserFactory;
+            private ITermRepository termRepo;
+            private IStudentRepository studentRepo;
+            private IEnumerable<Domain.Student.Entities.AcademicCredit> academicCreditsIncludingCrossListed;
+            private IEnumerable<Domain.Student.Entities.AcademicCredit> academicCreditsExcludingCrossListed;
+            private IEnumerable<string> sectionIds;
+            private IEnumerable<string> sectionIdsNotCrossListed;
+            private IEnumerable<string> sectionIdsWithCrossListed;
+            private IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sections;
+            private IConfigurationRepository baseConfigurationRepository;
+            private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                academicCreditRepoMock = new Mock<IAcademicCreditRepository>();
+                academicCreditRepo = academicCreditRepoMock.Object;
+                sectionRepoMock = new Mock<ISectionRepository>();
+                sectionRepo = sectionRepoMock.Object;
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                adapterRegistry = adapterRegistryMock.Object;
+                roleRepoMock = new Mock<IRoleRepository>();
+                roleRepo = roleRepoMock.Object;
+                logger = new Mock<ILogger>().Object;
+                baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
+                baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
+
+                var academicCreditIds = new List<string>() { "1", "3", "18", "19", "28", "29", "44", "45", "102" };
+                sectionIds = new List<string>() { "section1", "section2" };
+                sectionIdsWithCrossListed = new List<string>() { "section1", "section3", "section4" };
+                academicCreditsIncludingCrossListed = new TestAcademicCreditRepository().GetAsync(academicCreditIds, false, false, false).Result;
+                var academicCreditsIncludingCrossListedWithDrops = new TestAcademicCreditRepository().GetAsync(academicCreditIds, false, true, true).Result;
+                academicCreditRepoMock.Setup(repo => repo.GetAcademicCreditsBySectionIdsWithInvalidKeysAsync(sectionIdsWithCrossListed)).Returns(Task.FromResult(new AcademicCreditsWithInvalidKeys(academicCreditsIncludingCrossListed,new List<string>() )));
+                // Return a different number of academic credits when include crosslisted is false.
+                sectionIdsNotCrossListed = new List<string>() { "section1" };
+                academicCreditsExcludingCrossListed = academicCreditsIncludingCrossListed.Where(ac => ac.Id == "1");
+                academicCreditRepoMock.Setup(repo => repo.GetAcademicCreditsBySectionIdsWithInvalidKeysAsync(sectionIdsNotCrossListed)).Returns(Task.FromResult(new AcademicCreditsWithInvalidKeys(academicCreditsExcludingCrossListed, new List<string>())));
+
+                sections = BuildSectionEntities();
+                sectionRepoMock.Setup(repo => repo.GetCachedSectionsAsync(sectionIds, false)).Returns(Task.FromResult(sections));
+
+                // Mock Adapters
+                var academicHistoryDtoAdapter = new AcademicHistoryEntityToAcademicHistory4DtoAdapter(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.AcademicHistory, Ellucian.Colleague.Dtos.Student.AcademicHistory4>()).Returns(academicHistoryDtoAdapter);
+
+                var academicTermDtoAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.AcademicTerm, Ellucian.Colleague.Dtos.Student.AcademicTerm3>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.AcademicTerm, Ellucian.Colleague.Dtos.Student.AcademicTerm3>()).Returns(academicTermDtoAdapter);
+
+                var academicCreditDtoAdapter = new AcademicCreditEntityToAcademicCredit3DtoAdapter(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.AcademicCredit, Ellucian.Colleague.Dtos.Student.AcademicCredit3>()).Returns(academicCreditDtoAdapter);
+
+                var midTermGradeDtoAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.MidTermGrade, Ellucian.Colleague.Dtos.Student.MidTermGrade2>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.MidTermGrade, Ellucian.Colleague.Dtos.Student.MidTermGrade2>()).Returns(midTermGradeDtoAdapter);
+
+                var gradeDtoAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.Grade, Ellucian.Colleague.Dtos.Student.Grade>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Grade, Ellucian.Colleague.Dtos.Student.Grade>()).Returns(gradeDtoAdapter);
+
+                // Set up current user
+                currentUserFactory = new CurrentUserSetup.StudentUserFactory();
+                termRepo = null;
+                studentRepo = null;
+                academicHistoryService = new AcademicHistoryService(adapterRegistry, studentRepo, academicCreditRepo, termRepo, sectionRepo, currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                studentRepo = null;
+                adapterRegistry = null;
+                currentUserFactory = null;
+                roleRepo = null;
+                logger = null;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task ThrowsErrorIfNoCriteriaProvided()
+            {
+                await academicHistoryService.QueryAcademicCreditsWithInvalidKeysAsync(null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task ThrowsErrorIfNoSectionIdsInCriteria()
+            {
+                var criteria = new Ellucian.Colleague.Dtos.Student.AcademicCreditQueryCriteria();
+                await academicHistoryService.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
+            }
+
+            [TestMethod]
+            public async Task ReturnsEmptyAcademicCreditsWithInvalidKeysWhenNoSectionsReturned()
+            {
+                var criteria = new Ellucian.Colleague.Dtos.Student.AcademicCreditQueryCriteria() { SectionIds = sectionIdsNotCrossListed.ToList() };
+                IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> emptySections = new List<Ellucian.Colleague.Domain.Student.Entities.Section>();
+                sectionRepoMock.Setup(repo => repo.GetCachedSectionsAsync(sectionIdsNotCrossListed, false)).Returns(Task.FromResult(emptySections));
+                Dtos.Student.AcademicCreditsWithInvalidKeys academicCredits = await academicHistoryService.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
+                Assert.AreEqual(0,academicCredits.AcademicCredits.Count());
+                Assert.AreEqual(0,academicCredits.InvalidAcademicCreditIds.Count());
+            }
+          
+
+            [TestMethod]
+            public async Task ReturnsCredits_ExcludingCrossListedSections()
+            {
+                var criteria = new Ellucian.Colleague.Dtos.Student.AcademicCreditQueryCriteria() { SectionIds = sectionIds.ToList() };
+                var academicCreditWithInvalidKeys = await academicHistoryService.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
+                Assert.AreEqual(1, academicCreditWithInvalidKeys.AcademicCredits.Count());
+                Assert.AreEqual(0, academicCreditWithInvalidKeys.InvalidAcademicCreditIds.Count());
+
+            }
+
+            [TestMethod]
+            public async Task ReturnsCredits_IncludingCrossListedSections_Unfiltered()
+            {
+                var criteria = new Ellucian.Colleague.Dtos.Student.AcademicCreditQueryCriteria() { SectionIds = sectionIds.ToList(), IncludeCrossListedCredits = true };
+                criteria.IncludeCrossListedCredits = true;
+                var academicCreditWithInvalidKeys = await academicHistoryService.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
+                Assert.AreEqual(9, academicCreditWithInvalidKeys.AcademicCredits.Count());
+
+            }
+
+            [TestMethod]
+            public async Task ReturnsCredits_IncludingCrossListedSections_WithSelectedStatuses()
+            {
+                var criteria = new Ellucian.Colleague.Dtos.Student.AcademicCreditQueryCriteria() { SectionIds = sectionIds.ToList() };
+                criteria.IncludeCrossListedCredits = true;
+                // Excluding dropped and withdrawn. Should reduct the returned number to 5.
+                criteria.CreditStatuses = new List<Ellucian.Colleague.Dtos.Student.CreditStatus>() { Ellucian.Colleague.Dtos.Student.CreditStatus.Add, Ellucian.Colleague.Dtos.Student.CreditStatus.New, Ellucian.Colleague.Dtos.Student.CreditStatus.Preliminary, Ellucian.Colleague.Dtos.Student.CreditStatus.TransferOrNonCourse };
+
+                var academicCreditWithInvalidKeys = await academicHistoryService.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
+                Assert.AreEqual(5, academicCreditWithInvalidKeys.AcademicCredits.Count());
+
+            }
+
+            [TestMethod]
+            public async Task ReturnsNoCredits_WhenSectionsAreNotForRequestor()
+            {
+                IEnumerable<string> singleSectionId = new List<string>() { "section2" };
+                IEnumerable<Section> singleSection = sections.Where(s => s.Id == "section2");
+                sectionRepoMock.Setup(repo => repo.GetCachedSectionsAsync(singleSectionId, false)).Returns(Task.FromResult(singleSection));
+                var criteria = new Ellucian.Colleague.Dtos.Student.AcademicCreditQueryCriteria() { SectionIds = singleSectionId.ToList() };
+
+                var academicCreditWithInvalidKeys = await academicHistoryService.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
+                Assert.AreEqual(0, academicCreditWithInvalidKeys.AcademicCredits.Count());
+
+            }
+
+            [TestMethod]
+            public async Task ReturnEmptyAcademicCreditsWithInvalidKeys_Dto_WithNullValues_FromRepository()
+            {
+                academicCreditRepoMock.Setup(repo => repo.GetAcademicCreditsBySectionIdsWithInvalidKeysAsync(sectionIdsWithCrossListed)).Returns(Task.FromResult<AcademicCreditsWithInvalidKeys>(null));
+                var criteria = new Ellucian.Colleague.Dtos.Student.AcademicCreditQueryCriteria() { SectionIds = sectionIds.ToList(), IncludeCrossListedCredits = true };
+                criteria.IncludeCrossListedCredits = true;
+                var academicCreditWithInvalidKeys = await academicHistoryService.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
+                Assert.AreEqual(0, academicCreditWithInvalidKeys.AcademicCredits.Count());
+                Assert.AreEqual(0, academicCreditWithInvalidKeys.InvalidAcademicCreditIds.Count());
+            }
+
+            [TestMethod]
+            public async Task ReturnEmptyAcademicCreditsWithInvalidKeys_Dto_WithNullInvalidKeys_FromRepository()
+            {
+                academicCreditRepoMock.Setup(repo => repo.GetAcademicCreditsBySectionIdsWithInvalidKeysAsync(sectionIdsWithCrossListed)).Returns(Task.FromResult(new AcademicCreditsWithInvalidKeys(new List<Domain.Student.Entities.AcademicCredit>(), null)));
+                var criteria = new Ellucian.Colleague.Dtos.Student.AcademicCreditQueryCriteria() { SectionIds = sectionIds.ToList(), IncludeCrossListedCredits = true };
+                criteria.IncludeCrossListedCredits = true;
+                var academicCreditWithInvalidKeys = await academicHistoryService.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
+                Assert.AreEqual(0, academicCreditWithInvalidKeys.AcademicCredits.Count());
+                Assert.AreEqual(0, academicCreditWithInvalidKeys.InvalidAcademicCreditIds.Count());
+            }
+           
+            [TestMethod]
+            public async Task ReturnEmptyAcademicCreditsWithInvalidKeys_Dto_WithEmptyValues_FromRepository()
+            {
+                academicCreditRepoMock.Setup(repo => repo.GetAcademicCreditsBySectionIdsWithInvalidKeysAsync(sectionIdsWithCrossListed)).Returns(Task.FromResult(new AcademicCreditsWithInvalidKeys(new List<Domain.Student.Entities.AcademicCredit>(), new List<string>())));
+                var criteria = new Ellucian.Colleague.Dtos.Student.AcademicCreditQueryCriteria() { SectionIds = sectionIds.ToList(), IncludeCrossListedCredits = true };
+                criteria.IncludeCrossListedCredits = true;
+                var academicCreditWithInvalidKeys = await academicHistoryService.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
+                Assert.AreEqual(0, academicCreditWithInvalidKeys.AcademicCredits.Count());
+                Assert.AreEqual(0, academicCreditWithInvalidKeys.InvalidAcademicCreditIds.Count());
+            }
+            [TestMethod]
+            public async Task ReturnEmptyAcademicCreditsWithInvalidKeys_Dto_WithOnlyInvalidKeysValues_FromRepository()
+            {
+                academicCreditRepoMock.Setup(repo => repo.GetAcademicCreditsBySectionIdsWithInvalidKeysAsync(sectionIdsWithCrossListed)).Returns(Task.FromResult(new AcademicCreditsWithInvalidKeys(new List<Domain.Student.Entities.AcademicCredit>(), new List<string>() {"999" })));
+                var criteria = new Ellucian.Colleague.Dtos.Student.AcademicCreditQueryCriteria() { SectionIds = sectionIds.ToList(), IncludeCrossListedCredits = true };
+                criteria.IncludeCrossListedCredits = true;
+                var academicCreditWithInvalidKeys = await academicHistoryService.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
+                Assert.AreEqual(0, academicCreditWithInvalidKeys.AcademicCredits.Count());
+                Assert.AreEqual(1, academicCreditWithInvalidKeys.InvalidAcademicCreditIds.Count());
+            }
+            [TestMethod]
+            public async Task ReturnEmptyAcademicCreditsWithInvalidKeys_Dto_WithAcademicCreditsAndInvalidKeysValues_FromRepository()
+            {
+                academicCreditRepoMock.Setup(repo => repo.GetAcademicCreditsBySectionIdsWithInvalidKeysAsync(sectionIdsWithCrossListed)).Returns(Task.FromResult(new AcademicCreditsWithInvalidKeys(academicCreditsIncludingCrossListed, new List<string>() { "999","9998"})));
+                var criteria = new Ellucian.Colleague.Dtos.Student.AcademicCreditQueryCriteria() { SectionIds = sectionIds.ToList(), IncludeCrossListedCredits = true };
+                criteria.IncludeCrossListedCredits = true;
+                var academicCreditWithInvalidKeys = await academicHistoryService.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
+                Assert.AreEqual(9, academicCreditWithInvalidKeys.AcademicCredits.Count());
+                Assert.AreEqual(2, academicCreditWithInvalidKeys.InvalidAcademicCreditIds.Count());
+            }
+            [TestMethod]
+            public async Task ReturnEmptyAcademicCreditsWithInvalidKeys_Dto_WithNull_FromRepository()
+            {
+                academicCreditRepoMock.Setup(repo => repo.GetAcademicCreditsBySectionIdsWithInvalidKeysAsync(sectionIdsWithCrossListed)).Returns(Task.FromResult<AcademicCreditsWithInvalidKeys>(null));
+                var criteria = new Ellucian.Colleague.Dtos.Student.AcademicCreditQueryCriteria() { SectionIds = sectionIds.ToList(), IncludeCrossListedCredits = true };
+                criteria.IncludeCrossListedCredits = true;
+                var academicCreditWithInvalidKeys = await academicHistoryService.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
+                Assert.AreEqual(0, academicCreditWithInvalidKeys.AcademicCredits.Count());
+                Assert.AreEqual(0, academicCreditWithInvalidKeys.InvalidAcademicCreditIds.Count());
             }
 
             private IEnumerable<Section> BuildSectionEntities()

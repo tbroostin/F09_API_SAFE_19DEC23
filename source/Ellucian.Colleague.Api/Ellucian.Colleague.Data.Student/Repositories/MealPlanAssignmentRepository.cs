@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates
+﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates
 
 using System;
 using System.Collections.Generic;
@@ -75,12 +75,46 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns>A list of MealPlanAssignment domain entities</returns>
         /// <exception cref="ArgumentNullException">Thrown if the id argument is null or empty</exception>
         /// <exception cref="KeyNotFoundException">Thrown if no database records exist for the given id argument</exception>
-        public async Task<Tuple<IEnumerable<Domain.Student.Entities.MealPlanAssignment>,int>> GetAsync(int offset, int limit)
+        public async Task<Tuple<IEnumerable<Domain.Student.Entities.MealPlanAssignment>,int>> GetAsync(int offset, int limit, string person = "", string term = "", string mealplan="", string status="", string startDate="", string endDate="")
         {
             var mealPlanAssignmentEntities = new List<Domain.Student.Entities.MealPlanAssignment>();
             var criteria = new StringBuilder();
-            
-            string select = criteria.ToString();
+            String select = string.Empty;
+            if (!string.IsNullOrEmpty(person))
+                criteria.AppendFormat("WITH MPAS.PERSON.ID EQ '{0}'", person);
+            if (!string.IsNullOrEmpty(term))
+            {
+                if (criteria.Length > 0)
+                    criteria.Append(" AND ");
+                criteria.AppendFormat("WITH MPAS.TERM EQ '{0}'", term);
+            }
+            if (!string.IsNullOrEmpty(mealplan))
+            {
+                if (criteria.Length > 0)
+                    criteria.Append(" AND ");
+                criteria.AppendFormat("WITH MPAS.MEAL.PLAN EQ '{0}'", mealplan);
+            }
+            if (!string.IsNullOrEmpty(status))
+            {
+                if (criteria.Length > 0)
+                    criteria.Append(" AND ");
+                criteria.AppendFormat("WITH MPAS.CURRENT.STATUS EQ '{0}'", status);
+            }
+            if (!string.IsNullOrEmpty(startDate))
+            {
+                if (criteria.Length > 0)
+                    criteria.Append(" AND ");
+                criteria.AppendFormat("WITH MPAS.START.DATE GE '{0}'", startDate);
+            }
+            if (!string.IsNullOrEmpty(endDate))
+            {
+                if (criteria.Length > 0)
+                    criteria.Append(" AND ");
+                criteria.AppendFormat("WITH MPAS.END.DATE NE '' AND MPAS.END.DATE LE '{0}'", endDate);
+            }
+
+            if (criteria.Length > 0)
+                select = criteria.ToString();
             string[] mealPlanAssignmentIds = await DataReader.SelectAsync("MEAL.PLAN.ASSIGNMENT", select);
             var totalCount = mealPlanAssignmentIds.Count();
 
@@ -105,22 +139,17 @@ namespace Ellucian.Colleague.Data.Student.Repositories
       
         private Domain.Student.Entities.MealPlanAssignment BuildMealPlanAssignment(DataContracts.MealPlanAssignment source)
         {
-            
-
-           var statusAssociation = source.MpasStatusesEntityAssociation;
+            var statusAssociation = source.MpasStatusesEntityAssociation;
             string crntStatus = string.Empty;
-            DateTime? crntStatusDate =  new DateTime();
+            DateTime? crntStatusDate =  new DateTime();           
             if ((statusAssociation != null) && (statusAssociation.Any()))
             {
-                //get the most current status only
-                var currentStatus = statusAssociation
-                     .Where(i => i.MpasStatusDateAssocMember != null)
-                        .OrderByDescending(dt => dt.MpasStatusDateAssocMember)
-                        .FirstOrDefault();
+                //get the first row for status
+                var currentStatus = statusAssociation.FirstOrDefault();
                 if (currentStatus != null)
                 {
-                   crntStatus = currentStatus.MpasStatusAssocMember;
-                   crntStatusDate = currentStatus.MpasStatusDateAssocMember;
+                    crntStatus = currentStatus.MpasStatusAssocMember;
+                    crntStatusDate = currentStatus.MpasStatusDateAssocMember;
                 }
             }
 

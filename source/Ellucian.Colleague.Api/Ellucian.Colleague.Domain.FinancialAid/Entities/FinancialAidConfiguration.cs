@@ -1,4 +1,4 @@
-﻿/*Copyright 2014-2018 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2014-2019 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Linq;
 using System.Collections.Generic;
@@ -348,6 +348,17 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
         /// List of Award Categories to ignore on checklist
         /// </summary>
         public List<string> IgnoreAwardCategoriesOnChecklist { get; set; }
+
+        /// <summary>
+        /// Flag to indicate whether to display budget breakdown on student award letter
+        /// </summary>
+        public bool ShowBudgetDetailsOnAwardLetter { get; set; }
+
+        /// <summary>
+        /// Budget details description string to display in the budget breakdown view on 
+        /// award letter
+        /// </summary>
+        public string StudentAwardLetterBudgetDetailsDescription { get; set; }
 
         /// <summary>
         /// Configuration constructor

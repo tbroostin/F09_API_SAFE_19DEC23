@@ -1,6 +1,5 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
-using System;
-using System.Collections.Generic;
+﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
+
 using System.Runtime.Serialization;
 
 namespace Ellucian.Colleague.Dtos
@@ -9,8 +8,8 @@ namespace Ellucian.Colleague.Dtos
     /// Information about a person filter
     /// </summary>
     [DataContract]
-    public class PersonFilter : CodeItem2
+    public class PersonFilter : FilterCodeItem
     {
-        
+       
     }
 }

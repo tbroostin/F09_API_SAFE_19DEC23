@@ -462,7 +462,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             {
                 throw new ArgumentNullException("departments");
             }
-            if (subjectCode == null)
+            if (string.IsNullOrEmpty(subjectCode))
             {
                 throw new ArgumentNullException("subjectCode");
             }

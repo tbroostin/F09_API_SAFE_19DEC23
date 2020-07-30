@@ -43,6 +43,7 @@
   <ItemGroup>
     <Compile Include="F09AdminTrackingSheetDto.cs" />
     <Compile Include="F09AdminTrackingSheetResponseDto.cs" />
+    <Compile Include="F09EvalSelectDto.cs" />
     <Compile Include="F09KaGradingDto.cs" />
     <Compile Include="F09KaSelectRequestDto.cs" />
     <Compile Include="F09KaSelectResponseDto.cs" />

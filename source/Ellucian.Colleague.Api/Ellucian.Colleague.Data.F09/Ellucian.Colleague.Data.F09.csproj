@@ -175,6 +175,8 @@
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Repositories\F09AdminTrackingSheetRepository.cs" />
+    <Compile Include="Repositories\F09EvalFormRepository.cs" />
+    <Compile Include="Repositories\F09EvalSelectRepository.cs" />
     <Compile Include="Repositories\F09KaGradingRepository.cs" />
     <Compile Include="Repositories\F09KaSelectRespository.cs" />
     <Compile Include="Repositories\F09ReportRepository.cs" />
@@ -187,6 +189,8 @@
     <Compile Include="Repositories\UpdateStudentRestrictionRepository.cs" />
     <Compile Include="Transactions\ctxF09AdminTrackingSheet.cs" />
     <Compile Include="Transactions\ctxF09Directories.cs" />
+    <Compile Include="Transactions\ctxF09EvalForm.cs" />
+    <Compile Include="Transactions\ctxF09EvalSelect.cs" />
     <Compile Include="Transactions\ctxF09PayPlanSignup.cs" />
     <Compile Include="Transactions\ctxF09PdfTrackingSheet.cs" />
     <Compile Include="Transactions\ctxF09KaGrading.cs" />

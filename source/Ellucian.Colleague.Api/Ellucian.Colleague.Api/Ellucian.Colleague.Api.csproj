@@ -391,6 +391,8 @@
     <Compile Include="Controllers\ColleagueFinance\PurchasingArrangementsController.cs" />
     <Compile Include="Controllers\F09\ActiveRestrictionsController.cs" />
     <Compile Include="Controllers\F09\F09AdminTrackingSheetController.cs" />
+    <Compile Include="Controllers\F09\F09EvalFormController.cs" />
+    <Compile Include="Controllers\F09\F09EvalSelectController.cs" />
     <Compile Include="Controllers\F09\F09KaGradingController.cs" />
     <Compile Include="Controllers\F09\F09KaSelectController.cs" />
     <Compile Include="Controllers\F09\F09ReportController.cs" />
@@ -851,6 +853,7 @@
     <Compile Include="Licensing\ModuleConstants.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="App_Data\F09Readme.txt" />
     <Content Include="Content\icons\ellucian-icon-sprite.svg" />
     <Content Include="Content\Images\719x94.jpg" />
     <Content Include="Content\Images\custom-header-logo.png" />
@@ -969,6 +972,8 @@
     <Content Include="Views\Shared\_Layout.cshtml" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="Views\F09EvalForm\" />
+    <Folder Include="Views\F09EvalSelect\" />
     <Folder Include="Views\F09KaSelect\" />
     <Folder Include="Views\F09Report\" />
   </ItemGroup>
@@ -1072,6 +1077,7 @@
     <Content Include="dsPrograms.xss">
       <DependentUpon>dsPrograms.xsd</DependentUpon>
     </Content>
+    <None Include="Properties\PublishProfiles\F09Api.pubxml" />
     <None Include="Properties\PublishProfiles\F09ColleagueApi.pubxml" />
     <None Include="Properties\PublishProfiles\FGU-WebApi.pubxml" />
   </ItemGroup>
@@ -1551,7 +1557,7 @@
           <AutoAssignPort>True</AutoAssignPort>
           <DevelopmentServerPort>57276</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
-          <IISUrl>http://localhost/Ellucian.Colleague.Api.F09RPT</IISUrl>
+          <IISUrl>http://localhost/Ellucian.Colleague.Api.F09</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>
           <UseCustomServer>False</UseCustomServer>
           <CustomServerUrl>

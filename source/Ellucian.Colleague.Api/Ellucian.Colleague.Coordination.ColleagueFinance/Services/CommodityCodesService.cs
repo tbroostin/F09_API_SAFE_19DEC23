@@ -96,18 +96,18 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <summary>
         /// Returns a commodity code
         /// </summary>
-        /// <param name="code">commoditycode</param>
+        /// <param name="commodityCode">commoditycode</param>
         /// <returns>Procurement commodity code</returns>
-        public async Task<Ellucian.Colleague.Dtos.ColleagueFinance.ProcurementCommodityCode> GetCommodityCodeByCodeAsync(string code)
+        public async Task<Ellucian.Colleague.Dtos.ColleagueFinance.ProcurementCommodityCode> GetCommodityCodeByCodeAsync(string commodityCode)
         {
             Ellucian.Colleague.Dtos.ColleagueFinance.ProcurementCommodityCode commodityCodeDto = new Dtos.ColleagueFinance.ProcurementCommodityCode();
-            if (string.IsNullOrEmpty(code))
+            if (string.IsNullOrEmpty(commodityCode))
                 throw new ArgumentNullException("code", "code must be specified to get commodity code");
 
-            var commodityCodeEntity = (await _cfReferenceDataRepository.GetCommodityCodeByCodeAsync(code));
+            var commodityCodeEntity = (await _cfReferenceDataRepository.GetCommodityCodeByCodeAsync(commodityCode));
             if (commodityCodeEntity == null)
             {
-                throw new KeyNotFoundException("Commodity Code is not found.");
+                throw new KeyNotFoundException("Commodity Code not found.");
             }
 
             var adapter = _adapterRegistry.GetAdapter<Domain.ColleagueFinance.Entities.ProcurementCommodityCode, Dtos.ColleagueFinance.ProcurementCommodityCode>();

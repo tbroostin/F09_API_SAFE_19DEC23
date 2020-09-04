@@ -1,10 +1,9 @@
-﻿// Copyright 2014-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Linq;
 using System.ComponentModel;
 using System.Net;
-using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Ellucian.Colleague.Api.Licensing;
@@ -22,8 +21,6 @@ using System.Collections.Generic;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Ellucian.Web.Http.ModelBinding;
 using System.Web.Http.ModelBinding;
 
@@ -708,7 +705,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="academicPeriod">Named Query for academicPeriod</param>
         /// <param name="instructionalEventInstances">Named Query for instructionalEventInstances</param>
         /// <returns>List of InstructionalEvent4 <see cref="Dtos.InstructionalEvent4"/> objects representing matching InstructionalEvents</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("criteria", typeof(Dtos.Filters.InstructionalEventFilter3))]
         [QueryStringFilterFilter("instructionalEventInstances", typeof(Dtos.Filters.InstructionalEventInstancesFilter))]
@@ -736,7 +733,7 @@ namespace Ellucian.Colleague.Api.Controllers
             var instructionalEventInstancesFilter = GetFilterObject<Dtos.Filters.InstructionalEventInstancesFilter>(_logger, "instructionalEventInstances");
 
             if (CheckForEmptyFilterParameters())
-                return new PagedHttpActionResult<IEnumerable<Dtos.InstructionalEvent4>>(new List<Dtos.InstructionalEvent4>(), page, this.Request);
+                return new PagedHttpActionResult<IEnumerable<Dtos.InstructionalEvent4>>(new List<Dtos.InstructionalEvent4>(), page, 0, this.Request);
 
             if (academicPeriodFilter != null)
             {
@@ -747,7 +744,7 @@ namespace Ellucian.Colleague.Api.Controllers
             if (instructionalEventInstancesFilter != null)
             {
                 if (instructionalEventInstancesFilter.InstructionalEventInstances != null && !string.IsNullOrEmpty(instructionalEventInstancesFilter.InstructionalEventInstances.Id))
-                    return new PagedHttpActionResult<IEnumerable<Dtos.InstructionalEvent4>>(new List<Dtos.InstructionalEvent4>(), page, this.Request);
+                    return new PagedHttpActionResult<IEnumerable<Dtos.InstructionalEvent4>>(new List<Dtos.InstructionalEvent4>(), page, 0, this.Request);
             }
 
             if (criteriaValues != null)
@@ -776,7 +773,7 @@ namespace Ellucian.Colleague.Api.Controllers
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -801,11 +798,11 @@ namespace Ellucian.Colleague.Api.Controllers
         }
 
         /// <summary>
-        /// Read (GET) a section
+        /// Read (GET) an instructional-event
         /// </summary>
-        /// <param name="id">GUID to desired section</param>
-        /// <returns>A DTO in the format of the sections LDM</returns>
-        [HttpGet, EedmResponseFilter]
+        /// <param name="id">GUID to desired instructional-event</param>
+        /// <returns>A DTO in the format of the instructional-event</returns>
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
         public async Task<Dtos.InstructionalEvent4> GetInstructionalEvent4Async(string id)
         {
             var bypassCache = false;
@@ -819,7 +816,6 @@ namespace Ellucian.Colleague.Api.Controllers
 
             try
             {
-
                 AddEthosContextProperties(
                    await _sectionCoordinationService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                    await _sectionCoordinationService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -829,7 +825,7 @@ namespace Ellucian.Colleague.Api.Controllers
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -859,25 +855,13 @@ namespace Ellucian.Colleague.Api.Controllers
         }
 
         /// <summary>
-        /// Create (POST) a new section V11
+        /// Create (POST) a new instructional-event
         /// </summary>
-        /// <param name="meeting">DTO of the new section</param>
-        /// <returns>A DTO in the format of the updated section's LDM</returns>
-        [HttpPost, EedmResponseFilter]
+        /// <param name="meeting">DTO of the new instructional-event</param>
+        /// <returns>A DTO in the format of the updated instructional-event</returns>
+        [HttpPost, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
         public async Task<Dtos.InstructionalEvent4> PostInstructionalEvent4Async([ModelBinder(typeof(EedmModelBinder))] Dtos.InstructionalEvent4 meeting)
-        {
-            if (meeting == null)
-            {
-                throw CreateHttpResponseException(new IntegrationApiException("Null instructionalEvent argument",
-                    IntegrationApiUtility.GetDefaultApiError("The request body is required.")));
-            }
-
-            if (string.IsNullOrEmpty(meeting.Id))
-            {
-                throw CreateHttpResponseException(new IntegrationApiException("Null instructionalEvent id",
-                    IntegrationApiUtility.GetDefaultApiError("Id is a required property.")));
-            }
-
+        {          
             try
             {
                 //call import extend method that needs the extracted extension data and the config
@@ -895,7 +879,7 @@ namespace Ellucian.Colleague.Api.Controllers
             catch (PermissionsException e)
             {
                 _logger.Error(e, "Permissions exception");
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -920,43 +904,14 @@ namespace Ellucian.Colleague.Api.Controllers
         }
 
         /// <summary>
-        /// Update (PUT) an existing section V11
+        /// Update (PUT) an existing instructional-event V11
         /// </summary>
         /// <param name="id">GUID of the instructional event</param>
         /// <param name="meeting">DTO of the updated instructional event</param>
-        /// <returns>A DTO in the format of the CDM sections</returns>
-        [HttpPut, EedmResponseFilter]
+        /// <returns>A DTO in the format of InstructionalEvent4</returns>
+        [HttpPut, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
         public async Task<Dtos.InstructionalEvent4> PutInstructionalEvent4Async([FromUri]string id, [ModelBinder(typeof(EedmModelBinder))] Dtos.InstructionalEvent4 meeting)
         {
-            if (meeting == null)
-            {
-                throw new ArgumentNullException("Null instructionalEvent argument", "The request body is required.");
-            }
-
-            if (id.Equals(Guid.Empty.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidOperationException("Nil GUID cannot be used in PUT operation.");
-            }
-
-            if (!string.IsNullOrEmpty(id))
-            {
-                if (string.IsNullOrEmpty(meeting.Id))
-                {
-                    meeting.Id = id;
-                }
-                else if (id != meeting.Id)
-                {
-                    throw CreateHttpResponseException(new IntegrationApiException("ID mismatch",
-                        IntegrationApiUtility.GetDefaultApiError("ID not the same as in request body.")));
-                }
-            }
-
-            if (string.IsNullOrEmpty(id))
-            {
-                throw CreateHttpResponseException(new IntegrationApiException("Null id argument",
-                    IntegrationApiUtility.GetDefaultApiError("The ID must be specified in the request URL.")));
-            } 
-
             try
             {
                 //get Data Privacy List
@@ -983,7 +938,7 @@ namespace Ellucian.Colleague.Api.Controllers
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {

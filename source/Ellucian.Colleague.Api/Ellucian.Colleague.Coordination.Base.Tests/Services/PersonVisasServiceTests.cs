@@ -5,7 +5,6 @@ using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Web.Adapters;
@@ -14,10 +13,9 @@ using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Domain.Base.Tests;
 using Ellucian.Colleague.Domain.Base.Entities;
-using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Data.Colleague;
-using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Coordination.Base.Tests.UserFactories;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 {
@@ -38,7 +36,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
             private Mock<IAdapterRegistry> adapterRegistryMock;
             private IAdapterRegistry adapterRegistry;
-            
+            private Dictionary<string, string> personGuids = new Dictionary<string, string>();
+
             private ICurrentUserFactory currentUserFactory;
 
             protected Ellucian.Colleague.Domain.Entities.Role viewPersonVisa = new Ellucian.Colleague.Domain.Entities.Role(1, "VIEW.PERSON.VISA");
@@ -80,7 +79,15 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 updatePersonVisa.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Base.BasePermissionCodes.UpdateAnyPersonVisa));
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewPersonVisa, updatePersonVisa });
 
-                personVisasService = new PersonVisasService(adapterRegistry, personVisasRepositoryMock.Object, personRepoMock.Object, referenceDataRepositoryMock.Object, baseConfigurationRepository, currentUserFactory, roleRepoMock.Object, loggerMock.Object);
+                foreach (var entity in personVisaEntities)
+                {
+                    personGuids.Add(entity.PersonId, Guid.NewGuid().ToString());
+                }
+                personGuids.Add("0012297", personId);
+
+                personRepoMock.Setup(i => i.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(personGuids);
+
+                personVisasService = new PersonVisasService(adapterRegistry, personVisasRepositoryMock.Object, personRepoMock.Object,  referenceDataRepositoryMock.Object, baseConfigurationRepository, currentUserFactory, roleRepoMock.Object, loggerMock.Object);
            }
 
             private void BuildObjects()
@@ -129,7 +136,17 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             #region All methods
 
-            #region GET
+            #region GET V6
+
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task PersonVisas_GetPersonVisaAllAsync_PermissionsException()
+            {
+                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
+
+                await personVisasService.GetAllAsync(0, 4, It.IsAny<string>(), It.IsAny<bool>());
+            }
 
             [TestMethod]
             public async Task PersonVisas_GetPersonVisaAllAsync()
@@ -152,6 +169,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     Assert.AreEqual(expected.EntryDate, actual.Entries.First().EnteredOn);
                 }
             }
+
             [TestMethod]
             public async Task PersonVisas_GetPersonVisaAllAsync_DoesNotThrowIfPagedPastEndOfList()
             {
@@ -180,10 +198,98 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Assert.AreEqual(personVisaEntity.PersonGuid, result.Person.Id);
                 Assert.AreEqual(personVisaEntity.RequestDate, result.RequestedOn);
                 Assert.AreEqual(personVisaEntity.VisaNumber, result.VisaId);
-            }            
+            }
             #endregion
 
-            #region PUT
+            #region GET 11
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task PersonVisas_GetPersonVisaAll2Async_PermissionsException()
+            {
+                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
+
+                await personVisasService.GetAll2Async(0, 4, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
+            }
+
+            [TestMethod]
+            public async Task PersonVisas_GetPersonVisas2AllAsync()
+            {
+                personVisasRepositoryMock.Setup(i => i.GetAllPersonVisas2Async(0, 4, It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(entitiesTuple);
+                referenceDataRepositoryMock.Setup(i => i.GetVisaTypesAsync(It.IsAny<bool>())).ReturnsAsync(visaTypesGuidItems);
+
+                var actuals = await personVisasService.GetAll2Async(0, 4, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
+
+                Assert.IsNotNull(actuals);
+                foreach (var actual in actuals.Item1)
+                {
+                    var expected = personVisaEntities.FirstOrDefault(i => i.Guid.Equals(actual.Id, StringComparison.OrdinalIgnoreCase));
+                    Assert.IsNotNull(expected);
+
+                    Assert.AreEqual(expected.Guid, actual.Id);
+                    Assert.AreEqual(expected.VisaNumber, actual.VisaId);
+                    Assert.AreEqual(expected.IssueDate, actual.IssuedOn);
+                    Assert.AreEqual(expected.ExpireDate, actual.ExpiresOn);
+                    Assert.AreEqual(expected.EntryDate, actual.Entries.First().EnteredOn);
+                }
+            }
+        
+            [TestMethod]
+            public async Task PersonVisas_GetPersonVisaById2Async()
+            {
+                personVisasRepositoryMock.Setup(i => i.GetPersonVisaByIdAsync(id)).ReturnsAsync(personVisaEntity);
+                referenceDataRepositoryMock.Setup(i => i.GetVisaTypesAsync(It.IsAny<bool>())).ReturnsAsync(visaTypesGuidItems);
+
+                var result = await personVisasService.GetPersonVisaById2Async(id);
+                Assert.AreEqual(personVisaEntity.EntryDate, result.Entries.FirstOrDefault().EnteredOn);
+                Assert.AreEqual(personVisaEntity.ExpireDate, result.ExpiresOn);
+                Assert.AreEqual(personVisaEntity.Guid, result.Id);
+                Assert.AreEqual(personVisaEntity.IssueDate, result.IssuedOn);
+                Assert.AreEqual(personVisaEntity.PersonGuid, result.Person.Id);
+                Assert.AreEqual(personVisaEntity.RequestDate, result.RequestedOn);
+                Assert.AreEqual(personVisaEntity.VisaNumber, result.VisaId);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task PersonVisas_GetPersonVisaById2Async_EmptyGuidCollection()
+            {
+                personVisasRepositoryMock.Setup(i => i.GetPersonVisaByIdAsync(id)).ReturnsAsync(personVisaEntity);
+                referenceDataRepositoryMock.Setup(i => i.GetVisaTypesAsync(It.IsAny<bool>())).ReturnsAsync(visaTypesGuidItems);
+                personRepoMock.Setup(i => i.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(null);
+
+                var result = await personVisasService.GetPersonVisaById2Async(id);
+            }
+
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task PersonVisas_GetPersonVisaById2Async_InvalidGuidCollection()
+            {
+                var personGuidsInvalid = new Dictionary<string, string>();
+                personGuidsInvalid.Add("invalid", "invalid");
+
+                personVisasRepositoryMock.Setup(i => i.GetPersonVisaByIdAsync(id)).ReturnsAsync(personVisaEntity);
+                referenceDataRepositoryMock.Setup(i => i.GetVisaTypesAsync(It.IsAny<bool>())).ReturnsAsync(visaTypesGuidItems);
+                personRepoMock.Setup(i => i.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(null);
+
+                var result = await personVisasService.GetPersonVisaById2Async(id);
+            }
+
+            #endregion
+
+            #region PUT_v6
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task PersonVisas_PutPersonVisaAsync_PermissionsException()
+            {
+                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
+
+                await personVisasService.PutPersonVisaAsync(id, personVisaDto);
+            }
+
+
             [TestMethod]
             public async Task PersonVisas_PutPersonVisaAsync()
             {
@@ -191,7 +297,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 personVisasRepositoryMock.Setup(i => i.GetRecordInfoFromGuidAsync(personId)).ReturnsAsync(guidLookUpResult);
                 personVisasRepositoryMock.Setup(i => i.GetPersonVisaByIdAsync(id)).ReturnsAsync(personVisaEntity);
                 referenceDataRepositoryMock.Setup(i => i.GetVisaTypesAsync(It.IsAny<bool>())).ReturnsAsync(visaTypesGuidItems);
-                personVisasRepositoryMock.Setup(i => i.UpdatePersonVisaAsync(It.IsAny<PersonVisaRequest>())).ReturnsAsync(new PersonVisaResponse() { PersonId = personId, StrGuid = id });
+                personVisasRepositoryMock.Setup(i => i.UpdatePersonVisaAsync(It.IsAny<PersonVisaRequest>())).ReturnsAsync(personVisaEntity);
 
                 var result = await personVisasService.PutPersonVisaAsync(id, personVisaDto);
 
@@ -217,7 +323,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 personVisasRepositoryMock.Setup(i => i.GetRecordInfoFromGuidAsync(personId)).ReturnsAsync(guidLookUpResult);
                 personVisasRepositoryMock.Setup(i => i.GetPersonVisaByIdAsync(id)).ReturnsAsync(personVisaEntity);
                 referenceDataRepositoryMock.Setup(i => i.GetVisaTypesAsync(It.IsAny<bool>())).ReturnsAsync(visaTypesGuidItems);
-                personVisasRepositoryMock.Setup(i => i.UpdatePersonVisaAsync(It.IsAny<PersonVisaRequest>())).ReturnsAsync(new PersonVisaResponse() { PersonId = personId, StrGuid = id });
+                personVisasRepositoryMock.Setup(i => i.UpdatePersonVisaAsync(It.IsAny<PersonVisaRequest>())).ReturnsAsync(personVisaEntity);
 
                 var result = await personVisasService.PutPersonVisaAsync(id, personVisaDto);
 
@@ -241,7 +347,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 personVisasRepositoryMock.Setup(i => i.GetRecordInfoFromGuidAsync(personId)).ReturnsAsync(guidLookUpResult);
                 personVisasRepositoryMock.Setup(i => i.GetPersonVisaByIdAsync(id)).ReturnsAsync(personVisaEntity);
                 referenceDataRepositoryMock.Setup(i => i.GetVisaTypesAsync(It.IsAny<bool>())).ReturnsAsync(visaTypesGuidItems);
-                personVisasRepositoryMock.Setup(i => i.UpdatePersonVisaAsync(It.IsAny<PersonVisaRequest>())).ReturnsAsync(new PersonVisaResponse() { PersonId = personId, StrGuid = id });
+                personVisasRepositoryMock.Setup(i => i.UpdatePersonVisaAsync(It.IsAny<PersonVisaRequest>())).ReturnsAsync(personVisaEntity);
 
                 var result = await personVisasService.PutPersonVisaAsync(id, personVisaDto);
 
@@ -255,8 +361,102 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Assert.AreEqual(personVisaDto.VisaStatus, result.VisaStatus);
             }
             #endregion
-            
-            #region POST
+
+            #region PUT_v11
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task PersonVisas_PutPersonVisa2Async_PermissionsException()
+            {
+                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
+
+                await personVisasService.PutPersonVisa2Async(id, personVisaDto);
+            }
+
+            [TestMethod]
+            public async Task PersonVisas_PutPersonVisa2Async()
+            {
+                personVisasRepositoryMock.Setup(i => i.GetRecordInfoFromGuidAsync(id)).ReturnsAsync(guidLookUpResult);
+                personVisasRepositoryMock.Setup(i => i.GetRecordInfoFromGuidAsync(personId)).ReturnsAsync(guidLookUpResult);
+                personVisasRepositoryMock.Setup(i => i.GetPersonVisaByIdAsync(id)).ReturnsAsync(personVisaEntity);
+                referenceDataRepositoryMock.Setup(i => i.GetVisaTypesAsync(It.IsAny<bool>())).ReturnsAsync(visaTypesGuidItems);
+                personVisasRepositoryMock.Setup(i => i.UpdatePersonVisaAsync(It.IsAny<PersonVisaRequest>())).ReturnsAsync(personVisaEntity);
+
+                var result = await personVisasService.PutPersonVisa2Async(id, personVisaDto);
+
+                Assert.AreEqual(personVisaDto.Entries.FirstOrDefault().EnteredOn, result.Entries.FirstOrDefault().EnteredOn);
+                Assert.AreEqual(personVisaDto.ExpiresOn, result.ExpiresOn);
+                Assert.AreEqual(personVisaDto.Id, result.Id);
+                Assert.AreEqual(personVisaDto.IssuedOn, result.IssuedOn);
+                Assert.AreEqual(personVisaDto.Person.Id, result.Person.Id);
+                Assert.AreEqual(personVisaDto.RequestedOn, result.RequestedOn);
+                Assert.AreEqual(personVisaDto.VisaId, result.VisaId);
+                Assert.AreEqual(personVisaDto.VisaStatus, result.VisaStatus);
+                Assert.AreEqual(personVisaDto.VisaType.Detail.Id, result.VisaType.Detail.Id);
+                Assert.AreEqual(personVisaDto.VisaType.VisaTypeCategory, result.VisaType.VisaTypeCategory);
+            }
+
+            [TestMethod]
+            public async Task PersonVisas_PutPersonVisa2Async_VisaTypeDetailNull_Immigrant()
+            {
+                personVisaDto.VisaType.Detail = null;
+                personVisaDto.VisaType.VisaTypeCategory = Dtos.VisaTypeCategory.Immigrant;
+
+                personVisasRepositoryMock.Setup(i => i.GetRecordInfoFromGuidAsync(id)).ReturnsAsync(guidLookUpResult);
+                personVisasRepositoryMock.Setup(i => i.GetRecordInfoFromGuidAsync(personId)).ReturnsAsync(guidLookUpResult);
+                personVisasRepositoryMock.Setup(i => i.GetPersonVisaByIdAsync(id)).ReturnsAsync(personVisaEntity);
+                referenceDataRepositoryMock.Setup(i => i.GetVisaTypesAsync(It.IsAny<bool>())).ReturnsAsync(visaTypesGuidItems);
+                personVisasRepositoryMock.Setup(i => i.UpdatePersonVisaAsync(It.IsAny<PersonVisaRequest>())).ReturnsAsync(personVisaEntity);
+
+                var result = await personVisasService.PutPersonVisa2Async(id, personVisaDto);
+
+                Assert.AreEqual(personVisaDto.Entries.FirstOrDefault().EnteredOn, result.Entries.FirstOrDefault().EnteredOn);
+                Assert.AreEqual(personVisaDto.ExpiresOn, result.ExpiresOn);
+                Assert.AreEqual(personVisaDto.Id, result.Id);
+                Assert.AreEqual(personVisaDto.IssuedOn, result.IssuedOn);
+                Assert.AreEqual(personVisaDto.Person.Id, result.Person.Id);
+                Assert.AreEqual(personVisaDto.RequestedOn, result.RequestedOn);
+                Assert.AreEqual(personVisaDto.VisaId, result.VisaId);
+                Assert.AreEqual(personVisaDto.VisaStatus, result.VisaStatus);
+            }
+
+            [TestMethod]
+            public async Task PersonVisas_PutPersonVisaAsync_VisaTypeDetail2Null_NonImmigrant()
+            {
+                personVisaDto.VisaType.Detail = null;
+                personVisaDto.VisaType.VisaTypeCategory = Dtos.VisaTypeCategory.NonImmigrant;
+
+                personVisasRepositoryMock.Setup(i => i.GetRecordInfoFromGuidAsync(id)).ReturnsAsync(guidLookUpResult);
+                personVisasRepositoryMock.Setup(i => i.GetRecordInfoFromGuidAsync(personId)).ReturnsAsync(guidLookUpResult);
+                personVisasRepositoryMock.Setup(i => i.GetPersonVisaByIdAsync(id)).ReturnsAsync(personVisaEntity);
+                referenceDataRepositoryMock.Setup(i => i.GetVisaTypesAsync(It.IsAny<bool>())).ReturnsAsync(visaTypesGuidItems);
+                personVisasRepositoryMock.Setup(i => i.UpdatePersonVisaAsync(It.IsAny<PersonVisaRequest>())).ReturnsAsync(personVisaEntity);
+
+                var result = await personVisasService.PutPersonVisaAsync(id, personVisaDto);
+
+                Assert.AreEqual(personVisaDto.Entries.FirstOrDefault().EnteredOn, result.Entries.FirstOrDefault().EnteredOn);
+                Assert.AreEqual(personVisaDto.ExpiresOn, result.ExpiresOn);
+                Assert.AreEqual(personVisaDto.Id, result.Id);
+                Assert.AreEqual(personVisaDto.IssuedOn, result.IssuedOn);
+                Assert.AreEqual(personVisaDto.Person.Id, result.Person.Id);
+                Assert.AreEqual(personVisaDto.RequestedOn, result.RequestedOn);
+                Assert.AreEqual(personVisaDto.VisaId, result.VisaId);
+                Assert.AreEqual(personVisaDto.VisaStatus, result.VisaStatus);
+            }
+            #endregion
+
+            #region POST_v6
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task PersonVisas_PostPersonVisaAsync_PermissionsException()
+            {
+                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
+
+                await personVisasService.PostPersonVisaAsync(personVisaDto);
+            }
+
+
             [TestMethod]
             public async Task PersonVisas_PostPersonVisaAsync()
             {
@@ -264,9 +464,45 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 personVisasRepositoryMock.Setup(i => i.GetRecordInfoFromGuidAsync(personId)).ReturnsAsync(guidLookUpResult);
                 personVisasRepositoryMock.Setup(i => i.GetPersonVisaByIdAsync(id)).ReturnsAsync(personVisaEntity);
                 referenceDataRepositoryMock.Setup(i => i.GetVisaTypesAsync(It.IsAny<bool>())).ReturnsAsync(visaTypesGuidItems);
-                personVisasRepositoryMock.Setup(i => i.UpdatePersonVisaAsync(It.IsAny<PersonVisaRequest>())).ReturnsAsync(new PersonVisaResponse() { PersonId = personId, StrGuid = id });
+                personVisasRepositoryMock.Setup(i => i.UpdatePersonVisaAsync(It.IsAny<PersonVisaRequest>())).ReturnsAsync(personVisaEntity);
 
                 var result = await personVisasService.PostPersonVisaAsync(personVisaDto);
+
+                Assert.AreEqual(personVisaDto.Entries.FirstOrDefault().EnteredOn, result.Entries.FirstOrDefault().EnteredOn);
+                Assert.AreEqual(personVisaDto.ExpiresOn, result.ExpiresOn);
+                Assert.AreEqual(personVisaDto.Id, result.Id);
+                Assert.AreEqual(personVisaDto.IssuedOn, result.IssuedOn);
+                Assert.AreEqual(personVisaDto.Person.Id, result.Person.Id);
+                Assert.AreEqual(personVisaDto.RequestedOn, result.RequestedOn);
+                Assert.AreEqual(personVisaDto.VisaId, result.VisaId);
+                Assert.AreEqual(personVisaDto.VisaStatus, result.VisaStatus);
+                Assert.AreEqual(personVisaDto.VisaType.Detail.Id, result.VisaType.Detail.Id);
+                Assert.AreEqual(personVisaDto.VisaType.VisaTypeCategory, result.VisaType.VisaTypeCategory);
+            }
+            #endregion
+
+            #region POST_v11
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task PersonVisas_PostPersonVisa2Async_PermissionsException()
+            {
+                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
+
+                await personVisasService.PostPersonVisa2Async(personVisaDto);
+            }
+
+
+            [TestMethod]
+            public async Task PersonVisas_PostPersonVisa2Async()
+            {
+                personVisasRepositoryMock.Setup(i => i.GetRecordInfoFromGuidAsync(id)).ReturnsAsync(guidLookUpResult);
+                personVisasRepositoryMock.Setup(i => i.GetRecordInfoFromGuidAsync(personId)).ReturnsAsync(guidLookUpResult);
+                personVisasRepositoryMock.Setup(i => i.GetPersonVisaByIdAsync(id)).ReturnsAsync(personVisaEntity);
+                referenceDataRepositoryMock.Setup(i => i.GetVisaTypesAsync(It.IsAny<bool>())).ReturnsAsync(visaTypesGuidItems);
+                personVisasRepositoryMock.Setup(i => i.UpdatePersonVisaAsync(It.IsAny<PersonVisaRequest>())).ReturnsAsync(personVisaEntity);
+
+                var result = await personVisasService.PostPersonVisa2Async(personVisaDto);
 
                 Assert.AreEqual(personVisaDto.Entries.FirstOrDefault().EnteredOn, result.Entries.FirstOrDefault().EnteredOn);
                 Assert.AreEqual(personVisaDto.ExpiresOn, result.ExpiresOn);
@@ -295,6 +531,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             #region All Exceptions
 
 
+
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
             public async Task PersonVisas_GetPersonVisaByIdAsync_ArgumentNullException()
@@ -311,15 +548,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var result = await personVisasService.GetPersonVisaByIdAsync("123");
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task PersonVisas_GetPersonVisaByIdAsync_VisaType_Empty_KeyNotFoundException()
-            {
-                personVisaEntity = new Domain.Base.Entities.PersonVisa("0012297", "");
-                personVisasRepositoryMock.Setup(i => i.GetPersonVisaByIdAsync(id)).ReturnsAsync(personVisaEntity);
-
-                var result = await personVisasService.GetPersonVisaByIdAsync(id);
-            }
+            
 
             [TestMethod]
             [ExpectedException(typeof(KeyNotFoundException))]
@@ -396,18 +625,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 var result = await personVisasService.PutPersonVisaAsync(id, personVisaDto);
             }
-
-            [TestMethod]
-            [ExpectedException(typeof(InvalidOperationException))]
-            public async Task PersonVisas_Update_ExpiredOnToday_VisaStatusExpired_InvalidOperationException()
-            {
-                personVisaDto.ExpiresOn = DateTime.Today;
-                personVisaDto.VisaStatus = Dtos.EnumProperties.VisaStatus.Expired;
-                personVisasRepositoryMock.Setup(i => i.GetRecordInfoFromGuidAsync(id)).ReturnsAsync(guidLookUpResult);
-                personVisasRepositoryMock.Setup(i => i.GetRecordInfoFromGuidAsync(personId)).ReturnsAsync(guidLookUpResult);
-
-                var result = await personVisasService.PutPersonVisaAsync(id, personVisaDto);
-            }
+         
 
             [TestMethod]
             [ExpectedException(typeof(InvalidOperationException))]
@@ -433,6 +651,101 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             public async Task PersonVisas_DeletePersonVisaAsync_KeyNotFoundException()
             {
                 await personVisasService.DeletePersonVisaAsync("1234");
+            }
+
+          
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task PersonVisas_PutPersonVisaAsync_VisaTypeNull()
+            {
+                personVisaDto.VisaType = null;
+                await personVisasService.PutPersonVisaAsync(id, personVisaDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task PersonVisas_PutPersonVisaAsync_VisaTypeCategoryNull()
+            {
+                personVisaDto.VisaType.VisaTypeCategory = null;
+                await personVisasService.PutPersonVisaAsync(id, personVisaDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task PersonVisas_PutPersonVisaAsync_DetailIdNull()
+            { 
+                personVisaDto.VisaType.Detail = new GuidObject2();
+
+                await personVisasService.PutPersonVisaAsync(id, personVisaDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(InvalidOperationException))]
+            public async Task PersonVisas_PutPersonVisaAsync_MultipleEntries()
+            {
+                personVisaDto.Entries = new List<PersonVisaEntry>() {
+                    new PersonVisaEntry() { EnteredOn = new DateTime(2016, 02, 05) } ,
+                    new PersonVisaEntry() { EnteredOn = new DateTime(2020, 02, 05) }
+                };
+                await personVisasService.PutPersonVisaAsync(id, personVisaDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(InvalidOperationException))]
+            public async Task PersonVisas_PutPersonVisaAsync_RequestedOnGreaterThanIssuesOn()
+            {
+                personVisaDto.RequestedOn = new DateTime(2016, 02, 05) ;
+                personVisaDto.IssuedOn = new DateTime(2015, 02, 05);
+
+                await personVisasService.PutPersonVisaAsync(id, personVisaDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(InvalidOperationException))]
+            public async Task PersonVisas_PutPersonVisaAsync_RequestedOnGreaterThanExpiredOn()
+            {
+                personVisaDto.RequestedOn = new DateTime(2016, 02, 05);
+                personVisaDto.ExpiresOn = new DateTime(2015, 02, 05);
+
+                await personVisasService.PutPersonVisaAsync(id, personVisaDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(InvalidOperationException))]
+            public async Task PersonVisas_PutPersonVisaAsync_IssuedOnGreaterThanExpiredOn()
+            {
+                personVisaDto.IssuedOn = new DateTime(2016, 02, 05);
+                personVisaDto.ExpiresOn = new DateTime(2015, 02, 05);
+
+                await personVisasService.PutPersonVisaAsync(id, personVisaDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(InvalidOperationException))]
+            public async Task PersonVisas_PutPersonVisaAsync_EnteredOnLessThanIssueddOn()
+            {
+                personVisaDto.Entries = new List<PersonVisaEntry>() {
+                    new PersonVisaEntry() { EnteredOn = new DateTime(2016, 02, 05) }                     
+                };
+                personVisaDto.IssuedOn = new DateTime(2020, 02, 05);
+                //personVisaDto.ExpiresOn = new DateTime(2020, 02, 05);
+
+                await personVisasService.PutPersonVisaAsync(id, personVisaDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(InvalidOperationException))]
+            public async Task PersonVisas_PutPersonVisaAsync_EnteredOnGreaterThanExpiredOn()
+            {
+                personVisaDto.RequestedOn = new DateTime(2014, 02, 05);
+                personVisaDto.Entries = new List<PersonVisaEntry>() {
+                    new PersonVisaEntry() { EnteredOn = new DateTime(2016, 02, 05) }
+                };
+                //personVisaDto.IssuedOn = new DateTime(2016, 02, 05);
+                personVisaDto.ExpiresOn = new DateTime(2015, 02, 05);
+
+                await personVisasService.PutPersonVisaAsync(id, personVisaDto);
             }
             #endregion
         }      

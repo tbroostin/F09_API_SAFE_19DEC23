@@ -1,4 +1,4 @@
-//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
@@ -61,8 +61,15 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             try
             {
-                AddDataPrivacyContextProperty((await _positionClassificationsService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
-                return await _positionClassificationsService.GetPositionClassificationsAsync(bypassCache);
+                var positionClassifications = await _positionClassificationsService.GetPositionClassificationsAsync(bypassCache);
+
+                if (positionClassifications != null && positionClassifications.Any())
+                {
+                    AddEthosContextProperties(await _positionClassificationsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                              await _positionClassificationsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              positionClassifications.Select(a => a.Id).ToList()));
+                }
+                return positionClassifications;
             }
             catch (KeyNotFoundException e)
             {
@@ -119,7 +126,10 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             try
             {
-                AddDataPrivacyContextProperty((await _positionClassificationsService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
+                AddEthosContextProperties(
+                    await _positionClassificationsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(),bypassCache),
+                    await _positionClassificationsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                        new List<string>() { guid }));
                 return await _positionClassificationsService.GetPositionClassificationsByGuidAsync(guid, bypassCache);
             }
             catch (KeyNotFoundException e)

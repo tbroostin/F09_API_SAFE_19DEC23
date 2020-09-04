@@ -55,7 +55,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         {
             try
             {
-                throw new Exception(string.Format("No grade mode was found for guid {0}.", id));
+                throw new Exception(string.Format("No grade-modes were found for guid {0}.", id));
             }
             catch (Exception e)
             {

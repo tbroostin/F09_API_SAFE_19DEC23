@@ -29,6 +29,7 @@ using Ellucian.Colleague.Dtos.EnumProperties;
 using PdfSharp.Pdf.IO;
 using PdfSharp.Pdf;
 using Ellucian.Colleague.Coordination.Base.Reports;
+using System.Xml;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
@@ -464,15 +465,41 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             string DeviceInfo;
             try
             {
-                using (StreamReader deviceInfoTxt = new StreamReader(deviceInfoPath))
+                Stopwatch sw = new Stopwatch();
+                sw.Start();
+                //read the device info path in xml document
+                XmlDocument deviceInfoDoc = new XmlDocument();
+                deviceInfoDoc.Load(deviceInfoPath);
+                XmlNode deviceInfoRootNode = deviceInfoDoc.FirstChild;//this is to reach to DeviceInfo tag
+                // read the default settings in xml document
+                XmlDocument defaultDoc = new XmlDocument();
+                defaultDoc.LoadXml(PdfReportConstants.DeviceInfo);
+                XmlNode defaultDeviceInfoRootNode = defaultDoc.FirstChild; // this is to reach to DeviceInfo tag
+                if (defaultDeviceInfoRootNode.HasChildNodes)
                 {
-                    DeviceInfo = deviceInfoTxt.ReadToEnd();
+                    //loop through all the default settings and if it is not in device info file (UnofficialTranscriptDeviceInfo.txt) then append it to the XMlDocumcent
+                    //otherwise if it is already there then don't worry because default settings or tags could have been overridden by configurable device info file.
+                    foreach (XmlNode childNode in defaultDeviceInfoRootNode.ChildNodes)
+                    {
+                        var n = childNode.Name;
+                        XmlNodeList elemList = deviceInfoDoc.GetElementsByTagName(n);
+                        if (elemList == null || elemList.Count == 0)
+                        {
+                            deviceInfoRootNode.AppendChild(deviceInfoDoc.ImportNode(childNode, true));
+                        }
+                    }
+                }
+                DeviceInfo = deviceInfoDoc.InnerXml;
+                sw.Stop();
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info(string.Format("Elapsed time to read device info and match with defaults by reading XML tags= {0}", sw.ElapsedMilliseconds));
                 }
             }
             catch (Exception e)
             {
                 logger.Error("Unable to read txt file UnofficialTranscriptDeviceInfo.txt. Using defaults instead.");
-                logger.Error(e.Message);
+                logger.Error(e, e.Message);
                 DeviceInfo = "<DeviceInfo>" +
                 " <OutputFormat>PDF</OutputFormat>" +
                 " <PageWidth>8.5in</PageWidth>" +
@@ -481,6 +508,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 " <MarginLeft>0.5in</MarginLeft>" +
                 " <MarginRight>0.5in</MarginRight>" +
                 " <MarginBottom>0.5in</MarginBottom>" +
+                " <HumanReadablePDF>True</HumanReadablePDF>" +
                 "</DeviceInfo>";
             }
 
@@ -1059,7 +1087,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             var residentTypeCollection = new List<Dtos.ResidentType>();
 
-            var residentTypeEntities = await _studentRepository.GetResidencyStatusesAsync(bypassCache);
+            var residentTypeEntities = await _studentReferenceDataRepository.GetAdmissionResidencyTypesAsync(bypassCache);
             if (residentTypeEntities != null && residentTypeEntities.Count() > 0)
             {
                 foreach (var residentType in residentTypeEntities)
@@ -1079,7 +1107,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             try
             {
-                return ConvertResidentTypeEntityToDto((await _studentRepository.GetResidencyStatusesAsync(true)).Where(st => st.Guid == id).First());
+                return ConvertResidentTypeEntityToDto((await _studentReferenceDataRepository.GetAdmissionResidencyTypesAsync(true)).Where(st => st.Guid == id).First());
             }
             catch (InvalidOperationException ex)
             {
@@ -1093,7 +1121,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <param name="source">ResidentType domain entity</param>
         /// <returns>ResidentType DTO</returns>
-        private Dtos.ResidentType ConvertResidentTypeEntityToDto(Domain.Student.Entities.ResidencyStatus source)
+        private Dtos.ResidentType ConvertResidentTypeEntityToDto(Domain.Student.Entities.AdmissionResidencyType source)
         {
             var residentType = new Dtos.ResidentType();
 

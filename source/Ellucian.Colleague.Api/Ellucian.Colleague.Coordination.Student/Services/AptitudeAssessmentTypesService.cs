@@ -8,11 +8,16 @@ using Ellucian.Web.Dependency;
 using slf4net;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Student.Entities;
+using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Web.Adapters;
+using Ellucian.Web.Security;
+using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Colleague.Domain.Base.Repositories;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
     [RegisterType]
-    public class AptitudeAssessmentTypesService : IAptitudeAssessmentTypesService
+    public class AptitudeAssessmentTypesService : BaseCoordinationService, IAptitudeAssessmentTypesService
     {
 
         private readonly IStudentReferenceDataRepository _referenceDataRepository;
@@ -20,8 +25,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         
         public AptitudeAssessmentTypesService(
 
-            IStudentReferenceDataRepository referenceDataRepository,
+            IStudentReferenceDataRepository referenceDataRepository, IAdapterRegistry adapterRegistry,
+            ICurrentUserFactory currentUserFactory,
+            IRoleRepository roleRepository,
+            IConfigurationRepository configurationRepository,
             ILogger logger)
+            : base(adapterRegistry, currentUserFactory, roleRepository, logger, configurationRepository: configurationRepository)
         {
 
             _referenceDataRepository = referenceDataRepository;

@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -59,6 +59,8 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Retrieves all SectionRegistrationStatuses.
         /// </summary>
         /// <returns>All <see cref="Ellucian.Colleague.Dtos.SectionRegistrationStatusItem2">SectionRegistrationStatus.</see></returns>
+        /// 
+        [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.SectionRegistrationStatusItem2>> GetSectionRegistrationStatuses2Async()
         {
@@ -72,7 +74,16 @@ namespace Ellucian.Colleague.Api.Controllers
                         bypassCache = true;
                     }
                 }
-                return await _curriculumService.GetSectionRegistrationStatuses2Async(bypassCache);
+                var sectionRegistrationStatuses = await _curriculumService.GetSectionRegistrationStatuses2Async(bypassCache);
+
+                if (sectionRegistrationStatuses != null && sectionRegistrationStatuses.Any())
+                {
+                    AddEthosContextProperties(await _curriculumService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _curriculumService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              sectionRegistrationStatuses.Select(a => a.Id).ToList()));
+                }
+
+                return sectionRegistrationStatuses;                
             }
             catch (RepositoryException e)
             {
@@ -92,10 +103,16 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="id">ID to desired SectionRegistrationStatus</param>
         /// <returns>A <see cref="Ellucian.Colleague.Dtos.SectionRegistrationStatusItem2">SectionRegistrationStatus.</see></returns>
+        /// 
+        [HttpGet, EedmResponseFilter]
         public async Task<Ellucian.Colleague.Dtos.SectionRegistrationStatusItem2> GetSectionRegistrationStatusById2Async(string id)
         {
             try
             {
+                AddEthosContextProperties(
+                    await _curriculumService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                    await _curriculumService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                        new List<string>() { id }));
                 return await _curriculumService.GetSectionRegistrationStatusById2Async(id);
             }
             catch (KeyNotFoundException e)
@@ -120,6 +137,8 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Retrieves all SectionRegistrationStatuses.
         /// </summary>
         /// <returns>All <see cref="Ellucian.Colleague.Dtos.SectionRegistrationStatusItem3">SectionRegistrationStatus.</see></returns>
+        /// 
+        [HttpGet, EedmResponseFilter]
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.SectionRegistrationStatusItem3>> GetSectionRegistrationStatuses3Async()
@@ -134,7 +153,16 @@ namespace Ellucian.Colleague.Api.Controllers
                         bypassCache = true;
                     }
                 }
-                return await _curriculumService.GetSectionRegistrationStatuses3Async(bypassCache);
+                var sectionRegistrationStatuses2 = await _curriculumService.GetSectionRegistrationStatuses3Async(bypassCache);
+
+                if (sectionRegistrationStatuses2 != null && sectionRegistrationStatuses2.Any())
+                {
+                    AddEthosContextProperties(await _curriculumService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _curriculumService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              sectionRegistrationStatuses2.Select(a => a.Id).ToList()));
+                }
+
+                return sectionRegistrationStatuses2;                
             }
             catch (IntegrationApiException e)
             {
@@ -154,11 +182,17 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="id">ID to desired SectionRegistrationStatus</param>
         /// <returns>A <see cref="Ellucian.Colleague.Dtos.SectionRegistrationStatusItem3">SectionRegistrationStatus.</see></returns>
+        /// 
+        [HttpGet, EedmResponseFilter]
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Ellucian.Colleague.Dtos.SectionRegistrationStatusItem3> GetSectionRegistrationStatusById3Async(string id)
         {
             try
             {
+                AddEthosContextProperties(
+                    await _curriculumService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                    await _curriculumService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                        new List<string>() { id }));
                 return await _curriculumService.GetSectionRegistrationStatusById3Async(id);
             }
             catch (IntegrationApiException e)

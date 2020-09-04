@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -25,9 +25,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             IReferenceDataRepository referenceDataRepository,
             IAdapterRegistry adapterRegistry,
             ICurrentUserFactory currentUserFactory,
+            IConfigurationRepository configurationRepository,
             IRoleRepository roleRepository,
             ILogger logger)
-            : base(adapterRegistry, currentUserFactory, roleRepository, logger)
+            : base(adapterRegistry, currentUserFactory, roleRepository, logger, null, configurationRepository)
         {
 
             _referenceDataRepository = referenceDataRepository;

@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Controllers.Student;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -1356,6 +1356,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             AdmissionApplicationsController admissionApplicationsController;
             Dtos.AdmissionApplication3 admissionApplicationDto;
             Dtos.AdmissionApplicationSubmission admissionApplicationSubmissionDto;
+            Dtos.AdmissionApplicationSubmission admissionApplicationSubmission2Dto;
             public TestContext TestContext { get; set; }
 
             [TestInitialize]
@@ -1560,6 +1561,16 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 var actual = await admissionApplicationsController.PutAdmissionApplicationsSubmissionsAsync("1234", admissionApplicationSubmissionDto);
             }
 
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PutAdmissionApplicationsSubmissionsAsync_UnsetEducGoalException()
+            {
+                admissionApplicationServiceMock.Setup(s => s.GetAdmissionApplicationsSubmissionsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>()))
+                    .ReturnsAsync(admissionApplicationSubmission2Dto);
+                var actual = await admissionApplicationsController.PutAdmissionApplicationsSubmissionsAsync("1234", admissionApplicationSubmissionDto);
+            }
+
+
             #endregion
 
             #region PUT/POST 
@@ -1612,6 +1623,27 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                             }
                         }
                     }
+                };
+
+                admissionApplicationSubmission2Dto = new AdmissionApplicationSubmission()
+                {
+                    Id = "bbd216fb-0fc5-4f44-ae45-42d3cdd1e89a",
+                    Applicant = new Dtos.GuidObject2("d190d4b5-03b5-41aa-99b8-b8286717c956"),
+                    ApplicationAcademicPrograms = new List<ApplicationAcademicProgram>()
+                    {
+                        new ApplicationAcademicProgram()
+                        {
+                            ProgramOwner = new Dtos.GuidObject2("e0c0c94c-53a7-46b7-96c4-76b12512c323"),
+                            Disciplines  = new List<AdmissionApplicationSubmissionDiscipline>()
+                            {
+                                new AdmissionApplicationSubmissionDiscipline()
+                                {
+                                    Discipline = new GuidObject2("447a6b81-109f-43ec-9055-de27cdfba323")
+                                }
+                            }
+                        }
+                    },
+                    EducationalGoal = new Dtos.GuidObject2("u430d4b5-03b5-41aa-99b8-b8286717c956")
                 };
 
                 admissionApplicationServiceMock.Setup(s => s.CreateAdmissionApplicationsSubmissionAsync(It.IsAny<AdmissionApplicationSubmission>(), It.IsAny<bool>()))

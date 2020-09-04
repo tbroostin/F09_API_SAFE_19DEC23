@@ -18,6 +18,7 @@ using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Domain.Student.Tests;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Dtos.DtoProperties;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 {
@@ -456,7 +457,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof( Exception ) )]
             public async Task StudentMealPlansService_GetStudentMealPlansAsync_AccountingCodesNull_Exception()
             {
                 viewMealPlan.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewMealPlanAssignment));
@@ -469,7 +470,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof( Exception ) )]
             public async Task StudentMealPlansService_GetStudentMealPlansAsync_InvalidOverrideArCode_Exception()
             {
                 viewMealPlan.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewMealPlanAssignment));
@@ -482,7 +483,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof( Exception ) )]
             public async Task StudentMealPlansService_GetStudentMealPlansAsync_BillingOverrideReasons_Null_Exception()
             {
                 viewMealPlan.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewMealPlanAssignment));
@@ -495,7 +496,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof( Exception ) )]
             public async Task StudentMealPlansService_GetStudentMealPlansAsync_InvalidRateOverrideReason_Exception()
             {
                 viewMealPlan.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewMealPlanAssignment));
@@ -508,7 +509,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof( Exception ) )]
             public async Task StudentMealPlansService_GetStudentMealPlansAsync_MealPlanNull_Exception()
             {
                 viewMealPlan.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewMealPlanAssignment));
@@ -521,7 +522,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof( Exception ) )]
             public async Task StudentMealPlansService_GetStudentMealPlansAsync_InvalidMealPlan_Exception()
             {
                 viewMealPlan.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewMealPlanAssignment));
@@ -768,7 +769,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof( IntegrationApiException ) )]
             public async Task StudentMealPlansService_GetStudentMealPlans2Async_AcademicPeriodsNull_Exception()
             {
                 viewMealPlan.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewMealPlanAssignment));
@@ -785,7 +786,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof( IntegrationApiException ) )]
             public async Task StudentMealPlansService_GetStudentMealPlans2Async_TermNull_Exception()
             {
                 viewMealPlan.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewMealPlanAssignment));
@@ -799,7 +800,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof( IntegrationApiException ) )]
             public async Task StudentMealPlansService_GetStudentMealPlans2Async_AccountingCodesNull_Exception()
             {
                 viewMealPlan.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewMealPlanAssignment));
@@ -812,7 +813,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof( IntegrationApiException ) )]
             public async Task StudentMealPlansService_GetStudentMealPlans2Async_InvalidOverrideArCode_Exception()
             {
                 viewMealPlan.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewMealPlanAssignment));
@@ -825,7 +826,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof( IntegrationApiException ) )]
             public async Task StudentMealPlansService_GetStudentMealPlans2Async_BillingOverrideReasons_Null_Exception()
             {
                 viewMealPlan.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewMealPlanAssignment));
@@ -838,7 +839,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof( IntegrationApiException ) )]
             public async Task StudentMealPlansService_GetStudentMealPlans2Async_InvalidRateOverrideReason_Exception()
             {
                 viewMealPlan.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewMealPlanAssignment));
@@ -851,7 +852,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof( IntegrationApiException ) )]
             public async Task StudentMealPlansService_GetStudentMealPlans2Async_MealPlanNull_Exception()
             {
                 viewMealPlan.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewMealPlanAssignment));
@@ -864,7 +865,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof( IntegrationApiException ) )]
             public async Task StudentMealPlansService_GetStudentMealPlans2Async_InvalidMealPlan_Exception()
             {
                 viewMealPlan.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewMealPlanAssignment));
@@ -885,7 +886,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof( IntegrationApiException ) )]
             public async Task StudentMealPlansService_GetStudentMealPlans2Async_MealPlanRateNull_Exception()
             {
                 viewMealPlan.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewMealPlanAssignment));
@@ -898,7 +899,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof( IntegrationApiException ) )]
             public async Task StudentMealPlansService_GetStudentMealPlans2Async_BadPersonId_Exception()
             {
                 viewMealPlan.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewMealPlanAssignment));
@@ -1566,14 +1567,14 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof( IntegrationApiException ) )]
             public async Task StudentMealPlansService_PutStudentMealPlans2Async_NullMealPlan_ArgumentNullException()
             {
                 var actual = await _studentMealPlansService.PutStudentMealPlans2Async(studentMealPlansGuid, null);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof( IntegrationApiException ) )]
             public async Task StudentMealPlansService_PutStudentMealPlans2Async_NullMealPlanId_ArgumentNullException()
             {
                 expected.Id = "";
@@ -1581,7 +1582,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof( IntegrationApiException ) )]
             public async Task StudentMealPlansService_PutStudentMealPlans2Async_NoPermission_ArgumentNullException()
             {
                 _roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { null });
@@ -1589,7 +1590,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof( IntegrationApiException ) )]
             public async Task StudentMealPlansService_PutStudentMealPlans2Async_NullPerson_ArgumentNullException()
             {
                 expected.Person = null;
@@ -1597,7 +1598,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof( IntegrationApiException ) )]
             public async Task StudentMealPlansService_PutStudentMealPlans2Async_NullPersonId_ArgumentNullException()
             {
                 _personRepositoryMock.Setup(repo => repo.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
@@ -1605,7 +1606,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof( IntegrationApiException ) )]
             public async Task StudentMealPlansService_PutStudentMealPlans2Async_NullMealPlanDto_ArgumentNullException()
             {
                 expected.MealPlan = null;
@@ -1613,7 +1614,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof( IntegrationApiException ) )]
             public async Task StudentMealPlansService_PutStudentMealPlans2Async_MealPlanDto_BadId_ArgumentNullException()
             {
                 expected.MealPlan.Id = "BadId";
@@ -1621,7 +1622,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof( IntegrationApiException ) )]
             public async Task StudentMealPlansService_PutStudentMealPlans2Async_NullMealPlanValCodes_ArgumentNullException()
             {
                 _studentReferenceRepositoryMock.Setup(repo => repo.GetMealPlansAsync(It.IsAny<bool>())).ReturnsAsync(null);
@@ -1629,7 +1630,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof( IntegrationApiException ) )]
             public async Task StudentMealPlansService_PutStudentMealPlans2Async_NotSet_Status_ArgumentNullException()
             {
                 expected.Status = Dtos.EnumProperties.StudentMealPlansStatus.NotSet;
@@ -1637,7 +1638,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof( IntegrationApiException ) )]
             public async Task StudentMealPlansService_PutStudentMealPlans2Async_StartOn_Null_MinValue_ArgumentNullException()
             {
                 expected.StartOn = DateTime.MinValue;
@@ -1645,7 +1646,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof( IntegrationApiException ) )]
             public async Task StudentMealPlansService_PutStudentMealPlans2Async_StatusDate_Null_MinValue_ArgumentNullException()
             {
                 expected.StatusDate = DateTime.MinValue;
@@ -1653,7 +1654,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof( IntegrationApiException ) )]
             public async Task StudentMealPlansService_PutStudentMealPlans2Async_Null_AcademicPeriods_Codes_ArgumentNullException()
             {
                 List<Domain.Student.Entities.AcademicPeriod> ac = null;
@@ -1662,7 +1663,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof( IntegrationApiException ) )]
             public async Task StudentMealPlansService_PutStudentMealPlans2Async_Null_MealPlan_ArgumentNullException()
             {
                 _studentReferenceRepositoryMock.Setup(repo => repo.GetMealPlansAsync(It.IsAny<bool>())).ReturnsAsync(null);
@@ -1688,7 +1689,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             //}
 
             [TestMethod]
-            [ExpectedException(typeof(RepositoryException))]
+            [ExpectedException(typeof( IntegrationApiException ) )]
             public async Task StudentMealPlansService_PutStudentMealPlans2Async_Null_MealPlanRates_ArgumentNullException()
             {
                 _personRepositoryMock.Setup(repo => repo.GetPersonIdFromGuidAsync(It.IsAny<string>())).ThrowsAsync(new RepositoryException());
@@ -1696,14 +1697,14 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof( IntegrationApiException ) )]
             public async Task StudentMealPlansService_PostStudentMealPlans2Async_Null_Argument_ArgumentNullException()
             {
                 var actual = await _studentMealPlansService.PostStudentMealPlans2Async(null);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof( IntegrationApiException ) )]
             public async Task StudentMealPlansService_PostStudentMealPlans2Async_Null_Id_ArgumentNullException()
             {
                 expected.Id = string.Empty;
@@ -1711,7 +1712,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(RepositoryException))]
+            [ExpectedException(typeof( IntegrationApiException ) )]
             public async Task StudentMealPlansService_PostStudentMealPlans2Async_Null_Id_RepositoryException()
             {
                 expected.Id = Guid.Empty.ToString();

@@ -51,6 +51,9 @@ namespace Ellucian.Colleague.Domain.Base
         // Access to delete any nonperson relationships
         public const string DeleteNonPersonRelationship = "DELETE.NONPERSON.RELATIONSHIPS";
 
+        // Access to create/update any person relationships
+        public const string ProcessRelationshipRequest = "PROCESS.RELATIONSHIP.REQUEST";
+
         // Access to view integration configuration information
         public const string ViewIntegrationConfig = "VIEW.INTEGRATION.CONFIG";
 
@@ -241,6 +244,18 @@ namespace Ellucian.Colleague.Domain.Base
 
         // Access to update configuration-settings
         public const string UpdateConfigurationSettings = "UPDATE.CONFIG.SETTING";
+
+        // Access to update collection-configuration-settings
+        public const string UpdateCollectionConfigurationSettings = "UPDATE.COLLECTION.CONFIGURATION.SETTING";
+
+        // Access to update default-settings
+        public const string UpdateDefaultSettings = "UPDATE.DEFAULT.SETTING";
+
+        // Access to update CompoundConfigurationSettings
+        public const string UpdateCompoundConfigurationSettings = "UPDATE.CMPD.SETTING";
+
+        // Access to update mapping-settings
+        public const string UpdateMappingSettings = "UPDATE.MAPPING.SETTING";
 
         // Permission to query phone numbers
         public const string QueryPhoneNumbers = "QUERY.PHONE.NUMBERS";

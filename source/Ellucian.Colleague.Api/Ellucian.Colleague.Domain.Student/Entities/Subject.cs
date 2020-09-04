@@ -14,6 +14,8 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         private readonly bool _ShowInCourseSearch;
         public bool ShowInCourseSearch { get { return _ShowInCourseSearch; } }
 
+        public string IntgDepartment { get; set; }
+
         public Subject(string guid, string code, string description, bool showInCourseSearch) 
             : base(guid, code, description)
         {

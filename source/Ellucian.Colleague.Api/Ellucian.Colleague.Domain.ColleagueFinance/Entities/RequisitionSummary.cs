@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -55,12 +55,10 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         public string BlanketPurchaseOrderNumber { get; set; }
 
         /// <summary>
-        /// List of cost center GL components.
+        /// List of purchase orders associated to the requisition.
         /// </summary>
         public ReadOnlyCollection<PurchaseOrderSummary> PurchaseOrders { get; private set; }
         private readonly List<PurchaseOrderSummary> purchaseOrders = new List<PurchaseOrderSummary>();
-
-
 
         /// <summary>
         /// This constructor initializes the requisition domain entity

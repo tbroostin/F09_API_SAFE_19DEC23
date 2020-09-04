@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System.Runtime.Serialization;
 using Ellucian.Colleague.Dtos.EnumProperties;
@@ -29,11 +29,16 @@ namespace Ellucian.Colleague.Dtos.DtoProperties
         public string AccountingString { get; set; }
 
         /// <summary>
+        /// The tax form component associated with the line item.
+        /// </summary>
+        [DataMember(Name = "taxFormComponent", EmitDefaultValue = false)]
+        public GuidObject2 TaxFormComponent { get; set; }
+
+        /// <summary>
         /// The allocation of line item values to the accounting string.
         /// </summary>
         [DataMember(Name = "allocation", EmitDefaultValue = false)]
         public PurchaseOrdersAllocationDtoProperty Allocation { get; set; }
-
      
         /// <summary>
         /// An indication if budget checking should be enforced or overridden.
@@ -59,6 +64,6 @@ namespace Ellucian.Colleague.Dtos.DtoProperties
         /// The status of the line item.
         /// </summary>
         [DataMember(Name = "status", EmitDefaultValue = false)]
-        public PurchaseOrdersStatus? Status { get; set; }
+        public LineItemStatus? Status { get; set; }
     }
 }

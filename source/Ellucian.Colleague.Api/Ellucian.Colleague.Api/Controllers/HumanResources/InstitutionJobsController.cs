@@ -80,7 +80,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             var criteriaValues = GetFilterObject<Dtos.InstitutionJobs>(_logger, "criteria");
 
             if (CheckForEmptyFilterParameters())
-                return new PagedHttpActionResult<IEnumerable<Dtos.InstitutionJobs>>(new List<Dtos.InstitutionJobs>(), page, this.Request);
+                return new PagedHttpActionResult<IEnumerable<Dtos.InstitutionJobs>>(new List<Dtos.InstitutionJobs>(), page, 0, this.Request);
 
             if (criteriaValues != null)
             {
@@ -184,7 +184,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             var criteriaValues = GetFilterObject<Dtos.InstitutionJobs2>(_logger, "criteria");
 
             if (CheckForEmptyFilterParameters())
-                return new PagedHttpActionResult<IEnumerable<Dtos.InstitutionJobs2>>(new List<Dtos.InstitutionJobs2>(), page, this.Request);
+                return new PagedHttpActionResult<IEnumerable<Dtos.InstitutionJobs2>>(new List<Dtos.InstitutionJobs2>(), page, 0, this.Request);
 
             if (criteriaValues != null)
             {
@@ -288,7 +288,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             var criteriaValues = GetFilterObject<Dtos.InstitutionJobs3>(_logger, "criteria");
 
             if (CheckForEmptyFilterParameters())
-                return new PagedHttpActionResult<IEnumerable<Dtos.InstitutionJobs3>>(new List<Dtos.InstitutionJobs3>(), page, this.Request);
+                return new PagedHttpActionResult<IEnumerable<Dtos.InstitutionJobs3>>(new List<Dtos.InstitutionJobs3>(), page, 0, this.Request);
 
             var filterQualifiers = GetFilterQualifiers(_logger);
 

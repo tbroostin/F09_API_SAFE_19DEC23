@@ -1,4 +1,4 @@
-//Copyright 2017 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 
 using System;
@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
+using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Colleague.Dtos;
@@ -25,9 +26,15 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         private Mock<ILogger> _loggerMock;
         private Mock<IHumanResourcesReferenceDataRepository> _referenceRepositoryMock;
 
+        private IConfigurationRepository _configurationRepository;
+        private Mock<IConfigurationRepository> _configurationRepositoryMock;
+
         [TestInitialize]
         public async void Initialize()
         {
+            _configurationRepositoryMock = new Mock<IConfigurationRepository>();
+            _configurationRepository = _configurationRepositoryMock.Object;
+
             MockInitialize();
             _referenceRepositoryMock = new Mock<IHumanResourcesReferenceDataRepository>();
             _loggerMock = new Mock<ILogger>();
@@ -44,7 +51,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 .ReturnsAsync(_employmentPerformanceReviewTypesCollection);
 
             _employmentPerformanceReviewTypesService = new EmploymentPerformanceReviewTypesService(_referenceRepositoryMock.Object, adapterRegistryMock.Object,
-                employeeCurrentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
+                employeeCurrentUserFactory, _configurationRepository, roleRepositoryMock.Object, loggerMock.Object);
         }
 
         [TestCleanup]

@@ -86,7 +86,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.UserFactories
                         SecurityToken = "321",
                         SessionTimeout = 30,
                         UserName = "ILP",
-                        Roles = new List<string>() { "VIEW.RELATIONSHIP", "VIEW.NONPERSON.RELATIONSHIPS", "UPDATE.RELATIONSHIP", "DELETE.RELATIONSHIP" },
+                        Roles = new List<string>() { "VIEW.RELATIONSHIP", "VIEW.NONPERSON.RELATIONSHIPS", "UPDATE.RELATIONSHIP", "DELETE.RELATIONSHIP", "PROCESS.RELATIONSHIP.REQUEST" },
                         SessionFixationId = "abc123"
                     });
                 }

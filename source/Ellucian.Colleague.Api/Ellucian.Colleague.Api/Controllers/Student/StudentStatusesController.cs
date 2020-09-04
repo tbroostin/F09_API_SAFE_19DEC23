@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -20,6 +20,7 @@ using System;
 using Ellucian.Colleague.Dtos;
 using System.Net;
 using Ellucian.Web.Http.Filters;
+using System.Linq;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -56,6 +57,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Retrieves all student statuses.
         /// </summary>
         /// <returns>All <see cref="StudentStatus">StudentStatuses.</see></returns>
+        [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.StudentStatus>> GetStudentStatusesAsync()
         {
@@ -69,7 +71,16 @@ namespace Ellucian.Colleague.Api.Controllers
                         bypassCache = true;
                     }
                 }
-                return await _curriculumService.GetStudentStatusesAsync(bypassCache);
+                var studentStatuses = await _curriculumService.GetStudentStatusesAsync(bypassCache);
+
+                if (studentStatuses != null && studentStatuses.Any())
+                {
+                    AddEthosContextProperties(await _curriculumService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _curriculumService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              studentStatuses.Select(a => a.Id).ToList()));
+                }
+
+                return studentStatuses;                
             }
             catch (Exception ex)
             {
@@ -83,10 +94,15 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Retrieves an student status by ID.
         /// </summary>
         /// <returns>A <see cref="StudentStatus">StudentStatus.</see></returns>
+        [HttpGet, EedmResponseFilter]
         public async Task<Ellucian.Colleague.Dtos.StudentStatus> GetStudentStatusByIdAsync(string id)
         {
             try
             {
+                AddEthosContextProperties(
+                    await _curriculumService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                    await _curriculumService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                        new List<string>() { id }));
                 return await _curriculumService.GetStudentStatusByIdAsync(id);
             }
             catch (KeyNotFoundException e)

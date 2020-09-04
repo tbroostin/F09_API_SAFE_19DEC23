@@ -21,6 +21,7 @@ using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Dtos.DtoProperties;
 using Ellucian.Colleague.Coordination.Student.Tests.UserFactories;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 {
@@ -330,7 +331,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GetHousingAssignments2Async_PermissionsException()
             {
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
@@ -346,7 +347,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GetHousingAssignments2Async_KeyNotFoundException_When_Student_NotFound()
             {
                 housingAssignments.Add(new Domain.Student.Entities.HousingAssignment("1a59eed8-5fe7-4120-b1cf-f23266b9e874", "1", "2", "1", DateTime.Today, DateTime.Today.AddDays(10)));
@@ -354,7 +355,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GetHousingAssignments2Async_KeyNotFoundException_When_Room_NotFound()
             {
                 housingAssignments.Add(new Domain.Student.Entities.HousingAssignment("1a59eed8-5fe7-4120-b1cf-f23266b9e874", "1", "1", "2", DateTime.Today, DateTime.Today.AddDays(10)));
@@ -363,7 +364,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GetHousingAssignments2Async_KeyNotFoundException_When_AcademicPeriod_NotFound()
             {
                 domainHousingAssignmentsTuple.Item1.FirstOrDefault().Term = "2";
@@ -371,7 +372,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(InvalidOperationException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GetHousingAssignments2Async_InvalidOperationException_When_Statuses_NullOrEmpty()
             {
                 domainHousingAssignmentsTuple.Item1.FirstOrDefault().Statuses = null;
@@ -379,7 +380,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GetHousingAssignmentsAsync_KeyNotFoundException_When_RoomRate_NullOrEmpty()
             {
                 domainHousingAssignmentsTuple.Item1.FirstOrDefault().RoomRateTable = "2";
@@ -387,7 +388,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GetHousingAssignments2Async_KeyNotFoundException_When_RateOverrideReason_NullOrEmpty()
             {
                 domainHousingAssignmentsTuple.Item1.FirstOrDefault().RateOverrideReason = "2";
@@ -395,7 +396,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GetHousingAssignments2Async_KeyNotFoundException_When_AdditionalAmount_AccountCode_NotFound()
             {
                 domainHousingAssignmentsTuple.Item1.FirstOrDefault().ArAdditionalAmounts.FirstOrDefault().AraaArCode = "2";
@@ -403,7 +404,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GetHousingAssignments2Async_KeyNotFoundException_When_ResidentType_NotFound()
             {
                 domainHousingAssignmentsTuple.Item1.FirstOrDefault().ResidentStaffIndicator = "2";
@@ -648,7 +649,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GetHousingAssignmentByGuid2Async_PermissionsException()
             {
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
@@ -656,7 +657,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GetHousingAssignmentByGuid2Async_KeyNotFoundException_When_Student_NotFound()
             {
                 var record = new Domain.Student.Entities.HousingAssignment("1a49eed8-5fe7-4120-b1cf-f23266b9e874", "1", "2", "1", DateTime.Today, DateTime.Today.AddDays(100)) { };
@@ -666,7 +667,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GetHousingAssignmentByGuid2Async_KeyNotFoundException_When_Room_NotFound()
             {
                 var record = new Domain.Student.Entities.HousingAssignment("1a49eed8-5fe7-4120-b1cf-f23266b9e874", "1", "1", "2", DateTime.Today, DateTime.Today.AddDays(100)) { };
@@ -676,7 +677,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GetHousingAssignmentByGuid2Async_KeyNotFoundException_When_AcademicPeriod_NotFound()
             {
                 housingAssignments.FirstOrDefault().Term = "2";
@@ -685,7 +686,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(InvalidOperationException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GetHousingAssignmentByGuidAsync_InvalidOperationException_When_Statuses_NullOrEmpty()
             {
                 housingAssignments.FirstOrDefault().Statuses = null;
@@ -694,7 +695,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GetHousingAssignmentByGuid2Async_KeyNotFoundException_When_RoomRate_NullOrEmpty()
             {
                 housingAssignments.FirstOrDefault().RoomRateTable = "2";
@@ -703,7 +704,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GetHousingAssignmentByGuidAsync_KeyNotFoundException_When_RateOverrideReason_NullOrEmpty()
             {
                 housingAssignments.FirstOrDefault().RateOverrideReason = "2";
@@ -712,7 +713,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GetHousingAssignmentByGuidAsync_KeyNotFoundException_When_AdditionalAmount_AccountCode_NotFound()
             {
                 housingAssignments.FirstOrDefault().ArAdditionalAmounts.FirstOrDefault().AraaArCode = "2";
@@ -721,7 +722,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GetHousingAssignmentByGuidAsync_KeyNotFoundException_When_ResidentType_NotFound()
             {
                 housingAssignments.FirstOrDefault().ResidentStaffIndicator = "2";
@@ -1296,7 +1297,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreateHousingAssignment2Async_PermissionsException()
             {
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
@@ -1305,16 +1306,16 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task CreateHousingAssignment2Async_DtoToEntity_KeyNotFoundException_PersonKey_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task CreateHousingAssignment2Async_DtoToEntity_IntegrationApiException_PersonKey_Null()
             {
                 personRepositoryMock.Setup(r => r.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
                 await housingAssignmentService.CreateHousingAssignment2Async(dtoHousingAssingment2);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task CreateHousingAssignment2Async_DtoToEntity_KeyNotFoundException_RoomEntity_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task CreateHousingAssignment2Async_DtoToEntity_IntegrationApiException_RoomEntity_Null()
             {
                 dtoHousingAssingment2.Room.Id = "2a59eed8-5fe7-4120-b1cf-f23266b9e874";
 
@@ -1322,24 +1323,24 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task CreateHousingAssignment2Async_DtoToEntity_InvalidOperationException_AcademicPeriodId_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task CreateHousingAssignment2Async_DtoToEntity_IntegrationApiException_AcademicPeriodId_Null()
             {
                 dtoHousingAssingment2.AcademicPeriod.Id = null;
                 await housingAssignmentService.CreateHousingAssignment2Async(dtoHousingAssingment2);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task CreateHousingAssignment2Async_DtoToEntity_KeyNotFoundException_AcademicPeriod_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task CreateHousingAssignment2Async_DtoToEntity_IntegrationApiException_AcademicPeriod_Null()
             {
                 dtoHousingAssingment2.AcademicPeriod.Id = "2a59eed8-5fe7-4120-b1cf-f23266b9e874";
                 await housingAssignmentService.CreateHousingAssignment2Async(dtoHousingAssingment2);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task CreateHousingAssignment2Async_DtoToEntity_InvalidOperationException_StatusDate_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task CreateHousingAssignment2Async_DtoToEntity_IntegrationApiException_StatusDate_Null()
             {
                 dtoHousingAssingment2.StatusDate = null;
 
@@ -1347,8 +1348,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task CreateHousingAssignment2Async_DtoToEntity_InvalidOperationException_RoomRateId_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task CreateHousingAssignment2Async_DtoToEntity_IntegrationApiException_RoomRateId_Null()
             {
                 dtoHousingAssingment2.RoomRates.FirstOrDefault().Id = null;
                 dtoHousingAssingment2.Status = Dtos.EnumProperties.HousingAssignmentsStatus.Canceled;
@@ -1357,8 +1358,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task CreateHousingAssignment2Async_DtoToEntity_KeyNotFoundException_RoomRate_NotFound()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task CreateHousingAssignment2Async_DtoToEntity_IntegrationApiException_RoomRate_NotFound()
             {
                 dtoHousingAssingment2.RoomRates.FirstOrDefault().Id = "2a59eed8-5fe7-4120-b1cf-f23266b9e874";
                 dtoHousingAssingment2.Status = Dtos.EnumProperties.HousingAssignmentsStatus.Pending;
@@ -1367,8 +1368,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task CreateHousingAssignment2Async_DtoToEntity_InvalidOperationException_RoomRate_EndDate_GreaterThan_HousingAssignmentEndOn()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task CreateHousingAssignment2Async_DtoToEntity_IntegrationApiException_RoomRate_EndDate_GreaterThan_HousingAssignmentEndOn()
             {
                 dtoHousingAssingment2.EndOn = DateTime.Today.AddDays(15);
                 dtoHousingAssingment2.Status = Dtos.EnumProperties.HousingAssignmentsStatus.Prorated;
@@ -1379,8 +1380,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task CreateHousingAssignment2Async_DtoToEntity_InvalidOperationException_RateOverride_RateValue_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task CreateHousingAssignment2Async_DtoToEntity_IntegrationApiException_RateOverride_RateValue_Null()
             {
                 rateOverride.HousingAssignmentRate.RateValue = null;
                 dtoHousingAssingment2.Status = Dtos.EnumProperties.HousingAssignmentsStatus.Terminated;
@@ -1389,8 +1390,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task CreateHousingAssignment2Async_DtoToEntity_InvalidOperationException_RateOverride_RateOverrideReasonId_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task CreateHousingAssignment2Async_DtoToEntity_IntegrationApiException_RateOverride_RateOverrideReasonId_Null()
             {
                 rateOverride.RateOverrideReason.Id = null;
                 dtoHousingAssingment2.RatePeriod = Dtos.EnumProperties.RatePeriod.Day;
@@ -1399,8 +1400,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task CreateHousingAssignment2Async_DtoToEntity_KeyNotFoundException_RateOverride_RateOverrideReason_NotFound()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task CreateHousingAssignment2Async_DtoToEntity_IntegrationApiException_RateOverride_RateOverrideReason_NotFound()
             {
                 rateOverride.RateOverrideReason.Id = "2a59eed8-5fe7-4120-b1cf-f23266b9e874";
                 dtoHousingAssingment2.RatePeriod = Dtos.EnumProperties.RatePeriod.Month;
@@ -1409,8 +1410,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task CreateHousingAssignment2Async_DtoToEntity_InvalidOperationException_AdditionalCharges_AccoutingCode_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task CreateHousingAssignment2Async_DtoToEntity_IntegrationApiException_AdditionalCharges_AccoutingCode_Null()
             {
                 additionalCharges.FirstOrDefault().AccountingCode = null;
                 dtoHousingAssingment2.RatePeriod = Dtos.EnumProperties.RatePeriod.Week;
@@ -1419,8 +1420,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task CreateHousingAssignment2Async_DtoToEntity_InvalidOperationException_AdditionalCharges_AccoutingCodeId_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task CreateHousingAssignment2Async_DtoToEntity_IntegrationApiException_AdditionalCharges_AccoutingCodeId_Null()
             {
                 additionalCharges.FirstOrDefault().AccountingCode.Id = null;
                 dtoHousingAssingment2.RatePeriod = Dtos.EnumProperties.RatePeriod.Year;
@@ -1429,8 +1430,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task CreateHousingAssignment2Async_DtoToEntity_InvalidOperationException_AdditionalCharges_HousingAssignmentRate_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task CreateHousingAssignment2Async_DtoToEntity_IntegrationApiException_AdditionalCharges_HousingAssignmentRate_Null()
             {
                 additionalCharges.FirstOrDefault().HousingAssignmentRate = null;
 
@@ -1438,8 +1439,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
-            public async Task CreateHousingAssignment2Async_DtoToEntity_InvalidOperationException_AdditionalCharges_HousingAssignmentRate_InValid_RateCurrency()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task CreateHousingAssignment2Async_DtoToEntity_IntegrationApiException_AdditionalCharges_HousingAssignmentRate_InValid_RateCurrency()
             {
                 additionalCharges.FirstOrDefault().HousingAssignmentRate.RateCurrency = Dtos.EnumProperties.CurrencyIsoCode.NotSet;
 
@@ -1447,8 +1448,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task CreateHousingAssignment2Async_DtoToEntity_InvalidOperationException_AdditionalCharges_HousingAssignmentRate_RateValue_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task CreateHousingAssignment2Async_DtoToEntity_IntegrationApiException_AdditionalCharges_HousingAssignmentRate_RateValue_Null()
             {
                 additionalCharges.FirstOrDefault().HousingAssignmentRate.RateValue = null;
 
@@ -1456,8 +1457,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task CreateHousingAssignment2Async_DtoToEntity_KeyNotFoundException_AdditionalCharges_AccoutingCode_NotFound()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task CreateHousingAssignment2Async_DtoToEntity_IntegrationApiException_AdditionalCharges_AccoutingCode_NotFound()
             {
                 additionalCharges.FirstOrDefault().AccountingCode.Id = "2a59eed8-5fe7-4120-b1cf-f23266b9e874";
 
@@ -1465,8 +1466,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task CreateHousingAssignment2Async_DtoToEntity_InvalidOperationException_ResidentTypeId_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task CreateHousingAssignment2Async_DtoToEntity_IntegrationApiException_ResidentTypeId_Null()
             {
                 additionalCharges.FirstOrDefault().HousingAssignmentRate.RateValue = 0;
                 dtoHousingAssingment2.ResidentType.Id = null;
@@ -1475,8 +1476,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task CreateHousingAssignment2Async_DtoToEntity_KeyNotFoundException_ResidentType_NotFound()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task CreateHousingAssignment2Async_DtoToEntity_IntegrationApiException_ResidentType_NotFound()
             {
                 dtoHousingAssingment2.ResidentType.Id = "2a59eed8-5fe7-4120-b1cf-f23266b9e874";
 
@@ -1484,8 +1485,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task CreateHousingAssignment2Async_DtoToEntity_InvalidOperationException_ContractNumber_Invalid_Length()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task CreateHousingAssignment2Async_DtoToEntity_IntegrationApiException_ContractNumber_Invalid_Length()
             {
                 dtoHousingAssingment2.ContractNumber = "123-456-789-123-456";
 
@@ -1493,7 +1494,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreateHousingAssignment2Async_EntityToDto_KeyNotFoundException_Person_NotFound()
             {
                 domainHousingAssignment = new Domain.Student.Entities.HousingAssignment("1a59eed8-5fe7-4120-b1cf-f23266b9e874", "1", "2", "1", DateTime.Today, DateTime.Today.AddDays(10));
@@ -1503,7 +1504,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreateHousingAssignment2Async_EntityToDto_KeyNotFoundException_Room_NotFound()
             {
                 domainHousingAssignment.Building = "2";
@@ -1512,7 +1513,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreateHousingAssignment2Async_EntityToDto_KeyNotFoundException_Term_NotFound()
             {
                 domainHousingAssignment.Term = "2";
@@ -1521,7 +1522,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(InvalidOperationException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreateHousingAssignment2Async_EntityToDto_InvalidOperationException_Statuses_Empty()
             {
                 domainHousingAssignment.Statuses = null;
@@ -1530,7 +1531,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreateHousingAssignment2Async_EntityToDto_KeyNotFoundException_RoomRate_NotFound()
             {
                 domainHousingAssignment.RoomRateTable = "2";
@@ -1540,7 +1541,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreateHousingAssignment2Async_EntityToDto_KeyNotFoundException_RateOverrideReason_NotFound()
             {
                 domainHousingAssignment.RateOverrideReason = "2";
@@ -1551,7 +1552,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreateHousingAssignment2Async_EntityToDto_KeyNotFoundException_AdditionalAmounts_AraaArCode_NotFound()
             {
                 domainHousingAssignment.ArAdditionalAmounts.FirstOrDefault().AraaArCode = "2";
@@ -1561,7 +1562,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreateHousingAssignment2Async_EntityToDto_KeyNotFoundException_ResidentStaffIndicator_NotFound()
             {
                 domainHousingAssignment.ResidentStaffIndicator = "2";
@@ -2127,7 +2128,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdateHousingAssignment2Async_PermissionsException()
             {
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
@@ -2136,16 +2137,16 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task UpdateHousingAssignment2Async_DtoToEntity_KeyNotFoundException_PersonKey_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task UpdateHousingAssignment2Async_DtoToEntity_IntegrationApiException_PersonKey_Null()
             {
                 personRepositoryMock.Setup(r => r.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
                 await housingAssignmentService.UpdateHousingAssignment2Async(guid, dtoHousingAssingment2);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task UpdateHousingAssignment2Async_DtoToEntity_KeyNotFoundException_RoomEntity_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task UpdateHousingAssignment2Async_DtoToEntity_IntegrationApiException_RoomEntity_Null()
             {
                 dtoHousingAssingment2.Room.Id = "2a59eed8-5fe7-4120-b1cf-f23266b9e874";
 
@@ -2153,24 +2154,24 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task UpdateHousingAssignment2Async_DtoToEntity_InvalidOperationException_AcademicPeriodId_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task UpdateHousingAssignment2Async_DtoToEntity_IntegrationApiException_AcademicPeriodId_Null()
             {
                 dtoHousingAssingment2.AcademicPeriod.Id = null;
                 await housingAssignmentService.UpdateHousingAssignment2Async(guid, dtoHousingAssingment2);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task UpdateHousingAssignment2Async_DtoToEntity_KeyNotFoundException_AcademicPeriod_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task UpdateHousingAssignment2Async_DtoToEntity_IntegrationApiException_AcademicPeriod_Null()
             {
                 dtoHousingAssingment2.AcademicPeriod.Id = "2a59eed8-5fe7-4120-b1cf-f23266b9e874";
                 await housingAssignmentService.UpdateHousingAssignment2Async(guid, dtoHousingAssingment2);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task UpdateHousingAssignment2Async_DtoToEntity_InvalidOperationException_StatusDate_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task UpdateHousingAssignment2Async_DtoToEntity_IntegrationApiException_StatusDate_Null()
             {
                 dtoHousingAssingment2.StatusDate = null;
 
@@ -2178,8 +2179,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task UpdateHousingAssignment2Async_DtoToEntity_InvalidOperationException_RoomRateId_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task UpdateHousingAssignment2Async_DtoToEntity_IntegrationApiException_RoomRateId_Null()
             {
                 dtoHousingAssingment2.RoomRates.FirstOrDefault().Id = null;
                 dtoHousingAssingment2.Status = Dtos.EnumProperties.HousingAssignmentsStatus.Canceled;
@@ -2188,8 +2189,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task UpdateHousingAssignment2Async_DtoToEntity_KeyNotFoundException_RoomRate_NotFound()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task UpdateHousingAssignment2Async_DtoToEntity_IntegrationApiException_RoomRate_NotFound()
             {
                 dtoHousingAssingment2.RoomRates.FirstOrDefault().Id = "2a59eed8-5fe7-4120-b1cf-f23266b9e874";
                 dtoHousingAssingment2.Status = Dtos.EnumProperties.HousingAssignmentsStatus.Pending;
@@ -2198,8 +2199,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task UpdateHousingAssignment2Async_DtoToEntity_InvalidOperationException_RoomRate_EndDate_GreaterThan_HousingAssignmentEndOn()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task UpdateHousingAssignment2Async_DtoToEntity_IntegrationApiException_RoomRate_EndDate_GreaterThan_HousingAssignmentEndOn()
             {
                 dtoHousingAssingment2.EndOn = DateTime.Today.AddDays(15);
                 dtoHousingAssingment2.Status = Dtos.EnumProperties.HousingAssignmentsStatus.Prorated;
@@ -2210,8 +2211,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task UpdateHousingAssignment2Async_DtoToEntity_InvalidOperationException_RateOverride_RateValue_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task UpdateHousingAssignment2Async_DtoToEntity_IntegrationApiException_RateOverride_RateValue_Null()
             {
                 rateOverride.HousingAssignmentRate.RateValue = null;
                 dtoHousingAssingment2.Status = Dtos.EnumProperties.HousingAssignmentsStatus.Terminated;
@@ -2220,8 +2221,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task UpdateHousingAssignment2Async_DtoToEntity_InvalidOperationException_RateOverride_RateOverrideReasonId_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task UpdateHousingAssignment2Async_DtoToEntity_IntegrationApiException_RateOverride_RateOverrideReasonId_Null()
             {
                 rateOverride.RateOverrideReason.Id = null;
                 dtoHousingAssingment2.RatePeriod = Dtos.EnumProperties.RatePeriod.Day;
@@ -2230,8 +2231,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task UpdateHousingAssignment2Async_DtoToEntity_KeyNotFoundException_RateOverride_RateOverrideReason_NotFound()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task UpdateHousingAssignment2Async_DtoToEntity_IntegrationApiException_RateOverride_RateOverrideReason_NotFound()
             {
                 rateOverride.RateOverrideReason.Id = "2a59eed8-5fe7-4120-b1cf-f23266b9e874";
                 dtoHousingAssingment2.RatePeriod = Dtos.EnumProperties.RatePeriod.Month;
@@ -2240,8 +2241,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task UpdateHousingAssignment2Async_DtoToEntity_InvalidOperationException_AdditionalCharges_AccoutingCode_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task UpdateHousingAssignment2Async_DtoToEntity_IntegrationApiException_AdditionalCharges_AccoutingCode_Null()
             {
                 additionalCharges.FirstOrDefault().AccountingCode = null;
                 dtoHousingAssingment2.RatePeriod = Dtos.EnumProperties.RatePeriod.Week;
@@ -2250,8 +2251,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task UpdateHousingAssignment2Async_DtoToEntity_InvalidOperationException_AdditionalCharges_AccoutingCodeId_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task UpdateHousingAssignment2Async_DtoToEntity_IntegrationApiException_AdditionalCharges_AccoutingCodeId_Null()
             {
                 additionalCharges.FirstOrDefault().AccountingCode.Id = null;
                 dtoHousingAssingment2.RatePeriod = Dtos.EnumProperties.RatePeriod.Year;
@@ -2260,8 +2261,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task UpdateHousingAssignment2Async_DtoToEntity_InvalidOperationException_AdditionalCharges_HousingAssignmentRate_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task UpdateHousingAssignment2Async_DtoToEntity_IntegrationApiException_AdditionalCharges_HousingAssignmentRate_Null()
             {
                 additionalCharges.FirstOrDefault().HousingAssignmentRate = null;
 
@@ -2269,8 +2270,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
-            public async Task UpdateHousingAssignment2Async_DtoToEntity_InvalidOperationException_AdditionalCharges_HousingAssignmentRate_InValid_RateCurrency()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task UpdateHousingAssignment2Async_DtoToEntity_IntegrationApiException_AdditionalCharges_HousingAssignmentRate_InValid_RateCurrency()
             {
                 additionalCharges.FirstOrDefault().HousingAssignmentRate.RateCurrency = Dtos.EnumProperties.CurrencyIsoCode.NotSet;
 
@@ -2278,8 +2279,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task UpdateHousingAssignment2Async_DtoToEntity_InvalidOperationException_AdditionalCharges_HousingAssignmentRate_RateValue_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task UpdateHousingAssignment2Async_DtoToEntity_IntegrationApiException_AdditionalCharges_HousingAssignmentRate_RateValue_Null()
             {
                 additionalCharges.FirstOrDefault().HousingAssignmentRate.RateValue = null;
 
@@ -2287,8 +2288,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task UpdateHousingAssignment2Async_DtoToEntity_KeyNotFoundException_AdditionalCharges_AccoutingCode_NotFound()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task UpdateHousingAssignment2Async_DtoToEntity_IntegrationApiException_AdditionalCharges_AccoutingCode_NotFound()
             {
                 additionalCharges.FirstOrDefault().AccountingCode.Id = "2a59eed8-5fe7-4120-b1cf-f23266b9e874";
 
@@ -2296,8 +2297,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task UpdateHousingAssignment2Async_DtoToEntity_InvalidOperationException_ResidentTypeId_Null()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task UpdateHousingAssignment2Async_DtoToEntity_IntegrationApiException_ResidentTypeId_Null()
             {
                 dtoHousingAssingment2.ResidentType.Id = null;
 
@@ -2305,8 +2306,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task UpdateHousingAssignment2Async_DtoToEntity_KeyNotFoundException_ResidentType_NotFound()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task UpdateHousingAssignment2Async_DtoToEntity_IntegrationApiException_ResidentType_NotFound()
             {
                 dtoHousingAssingment2.ResidentType.Id = "2a59eed8-5fe7-4120-b1cf-f23266b9e874";
 
@@ -2314,8 +2315,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task UpdateHousingAssignment2Async_DtoToEntity_InvalidOperationException_ContractNumber_Invalid_Length()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task UpdateHousingAssignment2Async_DtoToEntity_IntegrationApiException_ContractNumber_Invalid_Length()
             {
                 dtoHousingAssingment2.ContractNumber = "123-456-789-123-456";
 
@@ -2323,7 +2324,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdateHousingAssignment2Async_EntityToDto_KeyNotFoundException_Person_NotFound()
             {
                 domainHousingAssignment = new Domain.Student.Entities.HousingAssignment("1a59eed8-5fe7-4120-b1cf-f23266b9e874", "1", "2", "1", DateTime.Today, DateTime.Today.AddDays(10));
@@ -2333,7 +2334,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdateHousingAssignment2Async_EntityToDto_KeyNotFoundException_Room_NotFound()
             {
                 domainHousingAssignment.Building = "2";
@@ -2342,7 +2343,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdateHousingAssignment2Async_EntityToDto_KeyNotFoundException_Term_NotFound()
             {
                 domainHousingAssignment.Term = "2";
@@ -2351,7 +2352,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(InvalidOperationException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdateHousingAssignment2Async_EntityToDto_InvalidOperationException_Statuses_Empty()
             {
                 domainHousingAssignment.Statuses = null;
@@ -2360,7 +2361,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdateHousingAssignment2Async_EntityToDto_KeyNotFoundException_RoomRate_NotFound()
             {
                 domainHousingAssignment.RoomRateTable = "2";
@@ -2370,7 +2371,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdateHousingAssignment2Async_EntityToDto_KeyNotFoundException_RateOverrideReason_NotFound()
             {
                 domainHousingAssignment.RateOverrideReason = "2";
@@ -2381,7 +2382,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdateHousingAssignment2Async_EntityToDto_KeyNotFoundException_AdditionalAmounts_AraaArCode_NotFound()
             {
                 domainHousingAssignment.ArAdditionalAmounts.FirstOrDefault().AraaArCode = "2";
@@ -2392,7 +2393,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdateHousingAssignment2Async_EntityToDto_KeyNotFoundException_ResidentStaffIndicator_NotFound()
             {
                 domainHousingAssignment.ResidentStaffIndicator = "2";

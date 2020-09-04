@@ -1,4 +1,4 @@
-﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
@@ -18,12 +18,12 @@ using System.Threading.Tasks;
 namespace Ellucian.Colleague.Data.HumanResources.Repositories
 {
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
-    public class SupervisorsRepository : BaseColleagueRepository, ISupervisorsRepository
+    public class SupervisorsRepository : PersonEmploymentStatusRepository, ISupervisorsRepository
     {
         private readonly int bulkReadSize;
 
         public SupervisorsRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings settings)
-            : base(cacheProvider, transactionFactory, logger)
+            : base(cacheProvider, transactionFactory, logger, null)
         {
             bulkReadSize = settings != null && settings.BulkReadSize > 0 ? settings.BulkReadSize : 5000;
         }
@@ -201,6 +201,31 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             if (!superviseePerposKeys.Any())
             {
                 logger.Info(string.Format("No PERPOS keys exist for employee {0}", superviseeId));
+            }
+            return superviseePerposKeys;
+        }
+
+        /// <summary>
+        /// Gets all PERPOS records for a list of employees
+        /// </summary>
+        /// <param name="superviseeId"></param>
+        /// <returns>List of PERPOS records</returns>
+        private async Task<IEnumerable<string>> getSuperviseePerposIds(IEnumerable<string> superviseeIds)
+        {
+            // select PERPOS records for this superviseeId
+            var superviseePerposCriteria = "WITH PERPOS.HRP.ID EQ ?";
+            var superviseePerposKeys = await DataReader.SelectAsync("PERPOS", superviseePerposCriteria, superviseeIds.Select(id => string.Format("\"{0}\"", id)).ToArray());
+
+            if (superviseePerposKeys == null)
+            {
+                var message = "Unexpected null returned from PERPOS SelectAsyc";
+                logger.Error(message);
+                superviseePerposKeys = new string[0];
+            }
+
+            if (!superviseePerposKeys.Any())
+            {
+                logger.Info("No PERPOS keys exist for given list of supervisees");
             }
             return superviseePerposKeys;
         }
@@ -449,6 +474,284 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 }
             }
             return positionIdDictionary;
+        }
+
+        /// <summary>
+        /// Gets the list of supervisors for the given position of a supervisee.</summary>
+        /// <param name="positionId">Position Id.</param>
+        /// <param name="superviseeId">Id of the supervise.</param>
+        /// <returns>A list of all the supervisorIds for the given position of a supervisee.</returns>
+        public async Task<IEnumerable<string>> GetSupervisorsByPositionIdAsync(string positionId, string superviseeId)
+        {
+            if (string.IsNullOrEmpty(positionId))
+            {
+                throw new ArgumentNullException("positionId");
+            }
+            if (string.IsNullOrEmpty(superviseeId))
+            {
+                throw new ArgumentNullException("superviseeId");
+            }
+            try
+            {
+                var allSupervisorIds = new List<string>();
+                var positionsIdsWithoutDirectSupervisor = new List<string>();
+                // Get all the PERPOS ids for this supervisee
+                var allSuperviseeIdPerposIds = await getSuperviseePerposIds(superviseeId);
+                if (allSuperviseeIdPerposIds != null && allSuperviseeIdPerposIds.Any())
+                {
+                    // Get all the PERPOS records for this supervisee
+                    var superviseePerposRecords = await getPerposRecords(allSuperviseeIdPerposIds);
+                    if (superviseePerposRecords == null || !superviseePerposRecords.Any())
+                    {
+                        var message = string.Format("No PERPOS records were found for the supervisee {0}", superviseeId);
+                        logger.Error(message);
+                        throw new Exception(message);
+                    }
+                    var requiredPerPosRecord = superviseePerposRecords.Where(ppr => ppr.PerposPositionId == positionId && (ppr.PerposStartDate <= DateTime.Today && (ppr.PerposEndDate == null || ppr.PerposEndDate >= DateTime.Today))).First();
+                    if (requiredPerPosRecord == null)
+                    {
+                        var message = string.Format("No PERPOS records were found for position {0} of the supervisee {1}", positionId, superviseeId);
+                        logger.Error(message);
+                        throw new Exception(message);
+                    }
+                    if (!string.IsNullOrWhiteSpace(requiredPerPosRecord.PerposSupervisorHrpId))
+                    {
+                        // This PERPOS has a direct supervisor, so add them to the list of directs
+                        allSupervisorIds.Add(requiredPerPosRecord.PerposSupervisorHrpId);
+                    }
+                    else
+                    {
+                        if (!string.IsNullOrWhiteSpace(requiredPerPosRecord.PerposPositionId))
+                        {
+                            // This PERPOS does not have a direct supervisor, so add this position id to a list for use later
+                            positionsIdsWithoutDirectSupervisor.Add(requiredPerPosRecord.PerposPositionId);
+                        }
+                        else
+                        {
+                            LogDataError("PERPOS", requiredPerPosRecord.Recordkey, requiredPerPosRecord, null, "PERPOS does not have position ID specified.");
+                        }
+                    }
+                }
+                if (positionsIdsWithoutDirectSupervisor.Any())
+                {
+                    // Get all the position ids that supervise these position ids
+                    var supervisorPositionIds = await getSupervisorPositionIdsForPositions(positionsIdsWithoutDirectSupervisor);
+
+                    if (supervisorPositionIds != null && supervisorPositionIds.Any())
+                    {
+                        // Get all person ids in these supervisor level positions
+                        var positionLevelSupervisorDict = await GetSupervisorIdsForPositionsAsync(supervisorPositionIds);
+                        allSupervisorIds.AddRange(positionLevelSupervisorDict.SelectMany(i => i.Value));
+                    }
+
+                }
+
+                allSupervisorIds = allSupervisorIds.Distinct().ToList();
+
+                return allSupervisorIds;
+            }
+            catch (Exception e)
+            {
+                var message = "Unexpected error occurred while getting the position supervisors information";
+                logger.Error(message);
+                throw e;
+            }
+        }
+
+
+        /// <summary>
+        /// Retrieves list of Supervisees for a Leave Approver/Supervisor.
+        /// </summary>
+        /// <param name="supervisorId">effective person id of supervisor</param>
+        /// <returns>List of person ids of supervisees who are either directly supervised by logged in user (or) managed by their primary position by one of the positions of logged in user</returns>
+        public async Task<IEnumerable<string>> GetSuperviseesByPrimaryPositionForSupervisorAsync(string supervisorId)
+        {
+            if (string.IsNullOrWhiteSpace(supervisorId))
+            {
+                throw new ArgumentNullException("supervisorId");
+            }
+            var superviseeIds = new List<string>();
+
+            var currentDate = DateTime.Now;
+
+            #region Direct Supervisees
+
+            //select PERPOS records that specify this supervisor Id as the supervisor
+            var directSuperviseePerposKeys = await getDirectlySupervisedPerposIds(supervisorId);
+
+            var directSuperviseePerposRecords = await getPerposRecords(directSuperviseePerposKeys);
+
+            //Extract PersonIds to fetch primary position from person employment status
+            IEnumerable<string> directSuperviseesPersonIds = null;
+            if (directSuperviseePerposRecords != null && directSuperviseePerposRecords.Any())
+            {
+                //Extract distinct PersonIds from active perpos records
+                directSuperviseesPersonIds = directSuperviseePerposRecords.Where(ds => ds.PerposStartDate <= currentDate && (ds.PerposEndDate >= currentDate || ds.PerposEndDate == null))
+                    .Select(ds => ds.PerposHrpId).Distinct();
+
+                if (directSuperviseesPersonIds != null && directSuperviseesPersonIds.Any())
+                {
+                    //Get Person Employment Statuses
+                    var directSuperviseePerstatRecords = await GetPersonEmploymentStatusesAsync(directSuperviseesPersonIds);
+
+                    if (directSuperviseePerstatRecords != null && directSuperviseePerstatRecords.Any())
+                    {
+                        directSuperviseePerstatRecords = directSuperviseePerstatRecords.Where(p => (p.StartDate <= currentDate && (p.EndDate >= currentDate || p.EndDate == null)));
+                        ExtractLeaveApprovalSupervisees(directSuperviseePerposRecords, directSuperviseePerstatRecords, supervisorId, ref superviseeIds);
+                    }
+                }
+            }
+
+
+            #endregion
+
+            #region POSD level Supervisees
+            //next, get the supervisor's list of positions
+            var supervisorPositionIds = await getPositionIdsOfSupervisor(supervisorId);
+
+            if (supervisorPositionIds != null && supervisorPositionIds.Any())
+            {
+                // 2. now get positions where the supervisor's position is specified as the supervisorPosition; 
+                var superviseePositionIds = await getPositionIdsSupervisedByPositionIds(supervisorPositionIds);
+
+                if (superviseePositionIds != null && superviseePositionIds.Any())
+                {
+                    //Get PERSTAT info based on supervisee positions
+                    var posdSuperviseePerstatRecords = await GetPersonEmploymentStatusesFromPositionIds(superviseePositionIds);
+
+                    //Get primary position as of current date.
+                    if (posdSuperviseePerstatRecords != null && posdSuperviseePerstatRecords.Any())
+                    {
+                        posdSuperviseePerstatRecords = posdSuperviseePerstatRecords.Where(p => (p.StartDate <= currentDate && (p.EndDate >= currentDate || p.EndDate == null)));
+
+                        //Extract Person Records
+                        IEnumerable<string> posdSuperviseePersonIds = posdSuperviseePerstatRecords.Select(ps => ps.PersonId).Distinct();
+
+                        if (posdSuperviseePersonIds != null && posdSuperviseePersonIds.Any())
+                        {
+                            //get Perpos recordkeys
+                            var posdSuperviseePerposKeys = await getSuperviseePerposIds(posdSuperviseePersonIds);
+
+                            if (posdSuperviseePerposKeys != null && posdSuperviseePerposKeys.Any())
+                            {
+                                //get all perpos records (all the positions of superviees incl. primary position)
+                                var posdSuperviseePerposRecords = await getPerposRecords(posdSuperviseePerposKeys);
+
+                                ExtractLeaveApprovalSupervisees(posdSuperviseePerposRecords, posdSuperviseePerstatRecords, supervisorId, ref superviseeIds);
+                            }
+                        }
+
+                    }
+                }
+            }
+
+            #endregion
+
+            // return the complete list of supervisees
+            return superviseeIds.Distinct().ToList();
+        }
+        /// <summary>
+        /// Fetch list of PersonEmployment Statuses based on positionIds
+        /// </summary>
+        /// <param name="superviseePositionIds">List of position Ids</param>
+        /// <returns>List of PersonEmployment Status DTOs</returns>
+        private async Task<IEnumerable<PersonEmploymentStatus>> GetPersonEmploymentStatusesFromPositionIds(IEnumerable<string> superviseePositionIds)
+        {
+            if (superviseePositionIds == null) { throw new ArgumentNullException("superviseePositionIds"); }
+            if (!superviseePositionIds.Any()) { throw new ArgumentException("Cannot pass in an empty list of positionIds to get PersonEmploymentStatuses"); }
+
+            var criteria = "WITH PERSTAT.PRIMARY.POS.ID EQ ?";
+            var perstatKeys = await DataReader.SelectAsync("PERSTAT", criteria, superviseePositionIds.Select(id => string.Format("\"{0}\"", id)).ToArray()); // wrap each Id in quotes for successful read
+
+            if (perstatKeys == null)
+            {
+                var message = "Unexpected null returned from PERSTAT SelectAsyc";
+                logger.Error(message);
+                throw new ApplicationException(message);
+            }
+
+            if (!perstatKeys.Any())
+            {
+                logger.Info("No PERSTAT keys exist for the given person Ids: " + string.Join(",", superviseePositionIds));
+            }
+
+            var perstatRecords = new List<Perstat>();
+            for (int i = 0; i < perstatKeys.Count(); i += bulkReadSize)
+            {
+                var subList = perstatKeys.Skip(i).Take(bulkReadSize);
+                var records = await DataReader.BulkReadRecordAsync<Perstat>(subList.ToArray());
+                if (records == null)
+                {
+                    logger.Error("Unexpected null from bulk read of Perstat records");
+                }
+                else
+                {
+                    perstatRecords.AddRange(records);
+                }
+            }
+
+            var domainPersonEmploymentStatuses = new List<PersonEmploymentStatus>();
+            foreach (var record in perstatRecords)
+            {
+                PersonEmploymentStatus entityToAdd = null;
+                try
+                {
+                    entityToAdd = new PersonEmploymentStatus(
+                        record.Recordkey,
+                        record.PerstatHrpId,
+                        record.PerstatPrimaryPosId,
+                        record.PerstatPrimaryPerposId,
+                        record.PerstatStartDate,
+                        record.PerstatEndDate
+                    );
+                }
+                catch (Exception e)
+                {
+                    // we don't want to use this record if there is an error creating it
+                    LogDataError("Perstat", record.Recordkey, record, e, e.Message);
+                    entityToAdd = null;
+                }
+                if (entityToAdd != null)
+                    domainPersonEmploymentStatuses.Add(entityToAdd);
+            }
+            return domainPersonEmploymentStatuses;
+        }
+
+
+        /// <summary>
+        /// Extracts supervisee Ids based on their person position and person employment status information
+        /// PERPOS records contain all position history of a person
+        /// PERSTAT records contain only primary position history of a person
+        /// </summary>
+        /// <param name="perposrecords">List of perpos records</param>
+        /// <param name="perstatrecords">List of person employment status records</param>
+        /// <param name="supervisorid">person id of the logged in supervisor</param>
+        /// <param name="superviseeIds">Output - List of supervisees for the logged in supervisor Id</param>
+        private void ExtractLeaveApprovalSupervisees(IEnumerable<Perpos> perposrecords, IEnumerable<PersonEmploymentStatus> perstatrecords, string supervisorid, ref List<string> superviseeIds)
+        {
+            var currentDate = DateTime.Now;
+            if (perposrecords != null && perposrecords.Any())
+            {
+                //Extract Currently Active Perpos records
+                perposrecords = perposrecords.Where(ds => ds.PerposStartDate <= currentDate && (ds.PerposEndDate >= currentDate || ds.PerposEndDate == null));
+
+                //Extract only POSD supervisees based on their primary position without any direct supervisor (or) currently logged in user as their supervisor
+                foreach (var perposrecord in perposrecords)
+                {
+                    if (string.IsNullOrWhiteSpace(perposrecord.PerposHrpId))
+                    {
+                        LogDataError("PosdSuperviseePerposHrpId", perposrecord.Recordkey, perposrecord);
+                    }
+                    else
+                    {
+                        //get the primary position for the supervisee from perstat and filter the same from perpos
+                        string primaryPositionId = perstatrecords.Where(ps => ps.PersonId == perposrecord.PerposHrpId).Select(ps => ps.PrimaryPositionId).FirstOrDefault(fd => fd != null);
+                        if ((perposrecord.PerposPositionId == primaryPositionId) && (string.IsNullOrWhiteSpace(perposrecord.PerposSupervisorHrpId) || perposrecord.PerposSupervisorHrpId == supervisorid))
+                            superviseeIds.Add(perposrecord.PerposHrpId);
+                    }
+                }
+            }
+
         }
     }
 }

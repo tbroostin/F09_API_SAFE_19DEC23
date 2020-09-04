@@ -44,6 +44,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             allIds.Add("10_00_01_01_33333_51001");
             GeneralLedgerUsers[0].AddExpenseAccounts(expenseIds);
             GeneralLedgerUsers[0].AddAllAccounts(allIds);
+            GeneralLedgerUsers[0].SetGlAccessLevel(GlAccessLevel.Full_Access);
 
             // This user has no general ledger expense accounts
             GeneralLedgerUsers.Add(new GeneralLedgerUser("0000002", "LastName"));

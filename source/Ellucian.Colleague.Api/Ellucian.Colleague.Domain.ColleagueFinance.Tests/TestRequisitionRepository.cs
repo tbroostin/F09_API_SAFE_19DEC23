@@ -604,5 +604,10 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
         {
             throw new NotImplementedException();
         }
+
+        public Task<RequisitionDeleteResponse> DeleteRequisitionsAsync(RequisitionDeleteRequest deleteRequest)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -51,6 +51,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// Retrieves all rehire types.
         /// </summary>
         /// <returns>All RehireType objects.</returns>
+        [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.RehireType>> GetRehireTypesAsync()
         {
@@ -64,7 +65,16 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                         bypassCache = true;
                     }
                 }
-                return await _rehireTypeService.GetRehireTypesAsync(bypassCache);
+                var allRehireTypes = await _rehireTypeService.GetRehireTypesAsync(bypassCache);
+
+                if (allRehireTypes != null && allRehireTypes.Any())
+                {
+                    AddEthosContextProperties(await _rehireTypeService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _rehireTypeService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              allRehireTypes.Select(a => a.Id).ToList()));
+                }
+
+                return allRehireTypes;                
             }
             catch (Exception ex)
             {
@@ -78,10 +88,15 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// Retrieves a rehire type by ID.
         /// </summary>
         /// <returns>A <see cref="Ellucian.Colleague.Dtos.RehireType">RehireType.</see></returns>
+        [HttpGet, EedmResponseFilter]
         public async Task<Ellucian.Colleague.Dtos.RehireType> GetRehireTypeByIdAsync(string id)
         {
             try
             {
+                AddEthosContextProperties(
+                    await _rehireTypeService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                    await _rehireTypeService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                        new List<string>() { id }));
                 return await _rehireTypeService.GetRehireTypeByGuidAsync(id);
             }
             catch (Exception ex)

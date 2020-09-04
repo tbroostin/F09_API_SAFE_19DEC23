@@ -16,11 +16,12 @@ using System.Threading.Tasks;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Colleague.Domain.Base.Repositories;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
     [RegisterType]
-    public class FloorCharacteristicsService : IFloorCharacteristicsService
+    public class FloorCharacteristicsService : BaseCoordinationService, IFloorCharacteristicsService
     {
 
         private readonly IStudentReferenceDataRepository _referenceDataRepository;
@@ -28,8 +29,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
         public FloorCharacteristicsService(
 
-            IStudentReferenceDataRepository referenceDataRepository,
+            IStudentReferenceDataRepository referenceDataRepository, IAdapterRegistry adapterRegistry,
+            ICurrentUserFactory currentUserFactory,
+            IRoleRepository roleRepository,
+            IConfigurationRepository configurationRepository,
             ILogger logger)
+            : base(adapterRegistry, currentUserFactory, roleRepository, logger, configurationRepository: configurationRepository)
         {
 
             _referenceDataRepository = referenceDataRepository;

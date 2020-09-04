@@ -1,10 +1,7 @@
-﻿// Copyright 2012-2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Coordination.Base.Services;
@@ -78,6 +75,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// If the request header "Cache-Control" attribute is set to "no-cache" the data returned will be pulled fresh from the database, otherwise cached data is returned.
         /// </summary>
         /// <returns>All <see cref="Dtos.VisaType">Visa Types.</see></returns>
+        [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Dtos.VisaType>> GetVisaTypesAsync()
         {
@@ -91,7 +89,15 @@ namespace Ellucian.Colleague.Api.Controllers
             }
             try
             {
-                return await _demographicService.GetVisaTypesAsync(bypassCache);
+                var visaType = await _demographicService.GetVisaTypesAsync(bypassCache);
+
+                if (visaType != null && visaType.Any())
+                {
+                    AddEthosContextProperties(await _demographicService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _demographicService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              visaType.Select(a => a.Id).ToList()));
+                }
+                return visaType;
             }
             catch (Exception ex)
             {
@@ -105,10 +111,15 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Retrieves an Visa Type by ID.
         /// </summary>
         /// <returns>A <see cref="Dtos.VisaType">Visa Type.</see></returns>
+        [HttpGet, EedmResponseFilter]
         public async Task<Dtos.VisaType> GetVisaTypeByIdAsync(string id)
         {
             try
             {
+                AddEthosContextProperties(
+                    await _demographicService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                    await _demographicService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                        new List<string>() { id }));
                 return await _demographicService.GetVisaTypeByIdAsync(id);
             }
             catch (Exception ex)

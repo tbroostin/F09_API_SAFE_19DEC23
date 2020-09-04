@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -14,6 +14,7 @@ using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Http.Filters;
+using System.Linq;
 
 namespace Ellucian.Colleague.Api.Controllers.HumanResources
 {
@@ -39,11 +40,12 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             _logger = logger;
         }
 
-        /// <remarks>FOR USE WITH ELLUCIAN EEDM VERSION 7</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN HEDM VERSION 7</remarks>
         /// <summary>
         /// Retrieves all employment classifications.
         /// </summary>
         /// <returns>All EmploymentClassification objects.</returns>
+        [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.EmploymentClassification>> GetEmploymentClassificationsAsync()
         {
@@ -57,7 +59,16 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                         bypassCache = true;
                     }
                 }
-                return await _employmentClassificationService.GetEmploymentClassificationsAsync(bypassCache);
+                var employmentClassification = await _employmentClassificationService.GetEmploymentClassificationsAsync(bypassCache);
+
+                if (employmentClassification != null && employmentClassification.Any())
+                {
+                    AddEthosContextProperties(await _employmentClassificationService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                              await _employmentClassificationService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              employmentClassification.Select(a => a.Id).ToList()));
+                }
+
+                return employmentClassification;
             }
             catch (Exception ex)
             {
@@ -66,15 +77,20 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
         }
 
-        /// <remarks>FOR USE WITH ELLUCIAN EEDM VERSION 7</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN HEDM VERSION 7</remarks>
         /// <summary>
         /// Retrieves a employment classification by ID.
         /// </summary>
         /// <returns>A <see cref="Ellucian.Colleague.Dtos.EmploymentClassification">EmploymentClassification.</see></returns>
+        [HttpGet, EedmResponseFilter]
         public async Task<Ellucian.Colleague.Dtos.EmploymentClassification> GetEmploymentClassificationByIdAsync(string id)
         {
             try
             {
+                AddEthosContextProperties(
+                   await _employmentClassificationService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                   await _employmentClassificationService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                       new List<string>() { id }));
                 return await _employmentClassificationService.GetEmploymentClassificationByGuidAsync(id);
             }
             catch (Exception ex)

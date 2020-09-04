@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -17,6 +17,7 @@ using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Web.Http.Filters;
+using System.Linq;
 
 namespace Ellucian.Colleague.Api.Controllers.Base
 {
@@ -46,7 +47,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Return all veteranStatuses
         /// </summary>
         /// <returns>List of VeteranStatuses <see cref="Dtos.VeteranStatuses"/> objects representing matching veteranStatuses</returns>
-        [HttpGet]
+        [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.VeteranStatuses>> GetVeteranStatusesAsync()
         {
@@ -60,7 +61,16 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             try
             {
-                return await _veteranStatusesService.GetVeteranStatusesAsync(bypassCache);
+                var veteranStatuses = await _veteranStatusesService.GetVeteranStatusesAsync(bypassCache);
+
+                if (veteranStatuses != null && veteranStatuses.Any())
+                {
+                    AddEthosContextProperties(await _veteranStatusesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _veteranStatusesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              veteranStatuses.Select(a => a.Id).ToList()));
+                }
+
+                return veteranStatuses;                
             }
             catch (KeyNotFoundException e)
             {
@@ -99,7 +109,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// </summary>
         /// <param name="guid">GUID to desired veteranStatuses</param>
         /// <returns>A veteranStatuses object <see cref="Dtos.VeteranStatuses"/> in EEDM format</returns>
-        [HttpGet]
+        [HttpGet, EedmResponseFilter]
         public async Task<Dtos.VeteranStatuses> GetVeteranStatusesByGuidAsync(string guid)
         {
             if (string.IsNullOrEmpty(guid))
@@ -109,6 +119,10 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             try
             {
+                AddEthosContextProperties(
+                    await _veteranStatusesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                    await _veteranStatusesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                        new List<string>() { guid }));
                 return await _veteranStatusesService.GetVeteranStatusesByGuidAsync(guid);
             }
             catch (KeyNotFoundException e)

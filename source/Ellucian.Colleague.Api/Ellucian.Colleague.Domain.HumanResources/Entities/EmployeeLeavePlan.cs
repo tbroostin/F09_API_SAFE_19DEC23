@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2018 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -91,6 +91,21 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         /// The day (1-the number of days in the month) that begin the plan year
         /// </summary>
         public int PlanYearStartDay { get; private set; }
+
+        /// <summary>
+        /// Accrual Rate
+        /// </summary>
+        public Decimal? AccrualRate { get; private set; }
+
+        /// <summary>
+        /// Accrual Limit
+        /// </summary>
+        public Decimal? AccrualLimit { get; private set; }
+
+        /// <summary>
+        /// Accrual Maximum Carry Over
+        /// </summary>
+        public Decimal? AccrualMaxCarryOver { get; private set; }
 
         /// <summary>
         /// List of all Earning Type IDs associated with a Employee Leave Plan
@@ -331,7 +346,11 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             int planYearStartMonth,
             int planYearStartDay,
             IEnumerable<string> earningTypeIDList,
-            bool allowNegativeBalance = false)
+            decimal? accrualRate,
+            decimal? accrualLimit,
+            decimal? accrualMaxCarryOver,
+            bool allowNegativeBalance = false
+            )
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -409,8 +428,9 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             PlanYearStartDay = planYearStartDay;
             EarningTypeIDList = earningTypeIDList;
             leaveTransactions = new List<EmployeeLeaveTransaction>();
-
-
+            AccrualRate = accrualRate;
+            AccrualLimit = accrualLimit;
+            AccrualMaxCarryOver = accrualMaxCarryOver;
         }
 
         /// <summary>

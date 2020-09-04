@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
 {
@@ -81,7 +82,6 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// </summary>
         public List<DateTime?> StatusDate { get; set; }
 
-
         /// <summary>
         ///  PersonCorpIndicator = "Y"
         /// </summary>
@@ -99,13 +99,31 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         public string Vendor { get; set; }
 
         public VoucherStatus? VoucherStatus { get; set; }
-        public Dictionary<string, AmountAndCurrency> VoucherAmountAndCurrency { get; set; }
-        public DateTime? VoidDate { get; set; }
+        
+        /// <summary>
+        /// This is the private list of vouchers associated with payment transactions (checks)
+        /// </summary>
+        public readonly List<PaymentTransactionVoucher> Vouchers = new List<PaymentTransactionVoucher>();
 
+        public DateTime? VoidDate { get; set; }
+        
         public PaymentTransaction(string id, string guid, DateTime paymentDate)
             : base(id, guid, paymentDate)
         {
           
+        } 
+
+        /// <summary>
+        /// This method adds a voucher to the payment transactions
+        /// </summary>
+        /// <param name="voucher">voucher object.</param>
+        public void AddVoucher(PaymentTransactionVoucher voucher)
+        {
+            if (voucher == null)
+            {
+                throw new ArgumentNullException("voucher", "Voucher cannot be null");
+            }
+            this.Vouchers.Add(voucher);           
         }
     }
 }

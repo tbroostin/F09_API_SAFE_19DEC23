@@ -1122,7 +1122,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     catch (Exception ex)
                     {
                         LogDataError("Course", crs.Recordkey, crs, ex);
-                        LogRepoError(ex.Message, crs.RecordGuid, crs.Recordkey);
                     }
                 }
             }

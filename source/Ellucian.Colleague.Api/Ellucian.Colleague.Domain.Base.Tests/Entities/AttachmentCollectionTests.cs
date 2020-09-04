@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Base.Entities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
@@ -798,15 +798,6 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
             }
 
             [TestMethod]
-            public void AttachmentCollectionVerifyViewCollectionUserNoPermission()
-            {
-                collection.Users = new List<AttachmentCollectionIdentity>() {
-                    new AttachmentCollectionIdentity("99999", AttachmentCollectionIdentityType.User, new List<AttachmentAction>() { AttachmentAction.Update })};
-                bool actual = collection.VerifyViewAttachmentCollection("99999", null);
-                Assert.AreEqual(false, actual);
-            }
-
-            [TestMethod]
             public void AttachmentCollectionVerifyViewCollectionUserNoUserPermission()
             {
                 collection.Users = new List<AttachmentCollectionIdentity>() {
@@ -819,18 +810,9 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
             public void AttachmentCollectionVerifyViewCollectionRoleSuccess()
             {
                 collection.Roles = new List<AttachmentCollectionIdentity>() {
-                    new AttachmentCollectionIdentity("40", AttachmentCollectionIdentityType.Role, new List<AttachmentAction>() { AttachmentAction.View })};
-                bool actual = collection.VerifyViewAttachmentCollection("99999", new List<string>() { "40" });
-                Assert.AreEqual(true, actual);
-            }
-
-            [TestMethod]
-            public void AttachmentCollectionVerifyViewCollectionRoleNoPermission()
-            {
-                collection.Roles = new List<AttachmentCollectionIdentity>() {
                     new AttachmentCollectionIdentity("40", AttachmentCollectionIdentityType.Role, new List<AttachmentAction>() { AttachmentAction.Update })};
                 bool actual = collection.VerifyViewAttachmentCollection("99999", new List<string>() { "40" });
-                Assert.AreEqual(false, actual);
+                Assert.AreEqual(true, actual);
             }
 
             [TestMethod]

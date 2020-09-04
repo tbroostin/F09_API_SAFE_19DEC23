@@ -33,6 +33,7 @@ namespace Ellucian.Web.Http.Controllers
 
         public const string IntegrationErrors1 = "application/vnd.hedtech.integration.errors.v1+json";
         public const string IntegrationErrors2 = "application/vnd.hedtech.integration.errors.v2+json";
+        public const string IntegrationCustomMediaType = "application/vnd.hedtech.integration.{0}.v{1}+json";
 
 
         public BaseCompressedApiController()
@@ -388,6 +389,15 @@ namespace Ellucian.Web.Http.Controllers
         /// <returns>EthosResourceRouteInfo</returns>
         public virtual EthosResourceRouteInfo GetEthosResourceRouteInfo()
         {
+            var bypassCache = false;
+            if (Request != null && Request.Headers != null && Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
+
             var ethosRouteInfo = new EthosResourceRouteInfo();
 
             var actionRequestContext = ActionContext.Request;
@@ -439,6 +449,9 @@ namespace Ellucian.Web.Http.Controllers
             {
                 ethosRouteInfo.ResourceVersionNumber = ((HeaderVersionConstraint)headerVersionObj).RouteVersion.ToString();
             }
+
+            // Update global bypassCache flag for configuration cache
+            ethosRouteInfo.BypassCache = bypassCache;
 
             return ethosRouteInfo;
         }

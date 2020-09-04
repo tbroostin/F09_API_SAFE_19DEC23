@@ -1388,10 +1388,32 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 sectionRepoMock.Setup(repo => repo.GetCachedSectionsAsync(sec4List, false)).Returns(Task.FromResult<IEnumerable<Domain.Student.Entities.Section>>(new List<Domain.Student.Entities.Section>()));
 
                 sectionRepoMock.Setup(repo => repo.GetSectionMeetingByGuidAsync(meeting1.Guid)).ReturnsAsync(meeting1);
+                sectionRepoMock.Setup(repo => repo.GetSectionGuidFromIdAsync(meeting1.SectionId)).ReturnsAsync(meeting1.Guid); 
+                
                 stuRefDataRepoMock.Setup(repo => repo.GetInstructionalMethodsAsync(It.IsAny<bool>())).ReturnsAsync(instructionalMethods);
                 roomRepoMock.Setup(repo => repo.RoomsAsync()).ReturnsAsync(rooms);
                 referenceDataRepoMock.Setup(repo => repo.ScheduleRepeats).Returns(scheduleRepeats);
 
+                foreach(var i in instructionalMethods)
+                {
+                    stuRefDataRepoMock.Setup(repo => repo.GetInstructionalMethodGuidAsync(i.Code)).ReturnsAsync(i.Guid);
+
+                }
+                foreach (var r in rooms)
+                {
+                    roomRepoMock.Setup(repo => repo.GetRoomsGuidAsync(r.Id)).ReturnsAsync(r.Guid);
+                }
+
+                Dictionary<string, string> sectDict = new Dictionary<string, string>();
+                sectDict.Add(meeting1.SectionId, Guid.NewGuid().ToString());
+                sectionRepoMock.Setup(sr => sr.GetSectionGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(sectDict);
+                sectionRepoMock.Setup(sr => sr.GetSectionGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(sectDict);
+
+
+                //foreach (var acadPeriodsEntity in acadPeriodsEntities)
+                //{
+                //    termRepoMock.Setup(repo => repo.GetAcademicPeriodsCodeFromGuidAsync(acadPeriodsEntity.Guid)).ReturnsAsync(acadPeriodsEntity.Code);
+                //}
                 // Mock the section service
                 sectionCoordinationService = new SectionCoordinationService(adapterRegistry, sectionRepo, courseRepo, studentRepo, studentReferenceDataRepo,
                     referenceDataRepo, termRepo, studentConfigRepo, configRepo, personRepo, roomRepo, eventRepo, bookRepo, currentUserFactory, roleRepo, logger);
@@ -1422,15 +1444,15 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task SectionService_GetInstructionalEvent4Async_ArgumentNullException()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task SectionService_GetInstructionalEvent4Async_EmptyArgument()
             {
                 var r = await sectionCoordinationService.GetInstructionalEvent4Async(string.Empty);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task SectionService_GetInstructionalEvent4Async_KeyNotFoundException()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task SectionService_GetInstructionalEvent4Async_InvalidGuid()
             {
                 sectionRepoMock.Setup(repo => repo.GetSectionMeetingByGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
                 var r = await sectionCoordinationService.GetInstructionalEvent4Async("9999999");
@@ -2213,11 +2235,34 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 stuRefDataRepoMock.Setup(repo => repo.GetInstructionalMethodsAsync(It.IsAny<bool>())).ReturnsAsync(instructionalMethods);
                 roomRepoMock.Setup(repo => repo.RoomsAsync()).ReturnsAsync(rooms);
                 referenceDataRepoMock.Setup(repo => repo.ScheduleRepeats).Returns(scheduleRepeats);
+                sectionRepoMock.Setup(repo => repo.GetSectionGuidFromIdAsync(meeting1.SectionId)).ReturnsAsync(meeting1.Guid);
+                sectionRepoMock.Setup(repo => repo.GetSectionGuidFromIdAsync(meeting2.SectionId)).ReturnsAsync(meeting2.Guid);
+                sectionRepoMock.Setup(repo => repo.GetSectionGuidFromIdAsync(meeting3.SectionId)).ReturnsAsync(meeting3.Guid);
+                sectionRepoMock.Setup(repo => repo.GetSectionGuidFromIdAsync(meeting4.SectionId)).ReturnsAsync(meeting4.Guid);
+
 
                 // Configuration defaults and campus calendar information.
                 configRepoMock.Setup(repo => repo.GetDefaultsConfiguration()).Returns(new DefaultsConfiguration() { CampusCalendarId = "MAIN" });
                 studentConfigRepoMock.Setup(repo => repo.GetCurriculumConfigurationAsync()).ReturnsAsync(new CurriculumConfiguration() { SectionActiveStatusCode = "A", SectionInactiveStatusCode = "I", DefaultInstructionalMethodCode = "INT" });
                 eventRepoMock.Setup(repo => repo.GetCalendar("MAIN")).Returns(new CampusCalendar("MAIN", "Default Calendar", new TimeSpan(), new TimeSpan()));
+                foreach (var i in instructionalMethods)
+                {
+                    stuRefDataRepoMock.Setup(repo => repo.GetInstructionalMethodGuidAsync(i.Code)).ReturnsAsync(i.Guid);
+
+                }
+                foreach (var r in rooms)
+                {
+                    roomRepoMock.Setup(repo => repo.GetRoomsGuidAsync(r.Id)).ReturnsAsync(r.Guid);
+                }
+                //foreach (var acadPeriodsEntity in acadPeriodsEntities)
+                //{
+                //    termRepoMock.Setup(repo => repo.GetAcademicPeriodsCodeFromGuidAsync(acadPeriodsEntity.Guid)).ReturnsAsync(acadPeriodsEntity.Code);
+                //}
+                Dictionary<string, string> sectDict = new Dictionary<string, string>();
+                sectDict.Add(meeting1.SectionId, Guid.NewGuid().ToString());
+                sectionRepoMock.Setup(sr => sr.GetSectionGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(sectDict);
+                sectionRepoMock.Setup(sr => sr.GetSectionGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(sectDict);
+
 
                 // Mock the section service
                 sectionCoordinationService = new SectionCoordinationService(adapterRegistry, sectionRepo, courseRepo, studentRepo, studentReferenceDataRepo,
@@ -2269,8 +2314,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task SectionService_CreateInstructionalEvent4Async_ArgumentNullException()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task SectionService_CreateInstructionalEvent4Async_EmptyArgument()
             {
                 var r = await sectionCoordinationService.CreateInstructionalEvent4Async(null);
             }
@@ -2304,8 +2349,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task SectionService_UpdateInstructionalEvent4Async_ArgumentNullException()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task SectionService_UpdateInstructionalEvent4Async_EmptyArgumentException()
             {
                 var r = await sectionCoordinationService.UpdateInstructionalEvent4Async(null);
             }
@@ -2352,7 +2397,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_SectionKeyNotFound_V11()
             {
                 sectionRepoMock.Setup(repo => repo.GetSectionByGuidAsync(section1.Guid)).Throws(new KeyNotFoundException());
@@ -3057,8 +3102,21 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 sectionRepoMock.Setup(repo => repo.GetSectionIdFromGuidAsync(sectionGuid)).ReturnsAsync("SEC1");
                 sectionRepoMock.Setup(repo => repo.GetSectionGuidFromIdAsync("SEC1")).ReturnsAsync(sectionGuid);
                 stuRefDataRepoMock.Setup(repo => repo.GetInstructionalMethodsAsync(It.IsAny<bool>())).ReturnsAsync(instructionalMethods);
+
+                foreach (var i in instructionalMethods)
+                {
+                    stuRefDataRepoMock.Setup(repo => repo.GetInstructionalMethodGuidAsync(i.Code)).ReturnsAsync(i.Guid);
+
+                }
+
                 roomRepoMock.Setup(repo => repo.RoomsAsync()).ReturnsAsync(rooms);
                 roomRepoMock.Setup(repo => repo.GetRoomsAsync(false)).ReturnsAsync(rooms);
+
+                foreach (var r in rooms) 
+                {
+                    roomRepoMock.Setup(repo => repo.GetRoomsGuidAsync(r.Id)).ReturnsAsync(r.Guid);
+                }
+
                 referenceDataRepoMock.Setup(repo => repo.ScheduleRepeats).Returns(scheduleRepeats);
                 personRepoMock.Setup(repo => repo.GetPersonGuidFromIdAsync("0000678")).ReturnsAsync(instructorGuid);
                 sectionRepoMock.Setup(repo => repo.GetSectionMeetingAsync(It.IsAny<string>())).ReturnsAsync(meeting1);
@@ -3071,6 +3129,12 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                         "edcfd1ee-4adf-46bc-8b87-8853ae49dbeb", null)
                 };
                 termRepoMock.Setup(repo => repo.GetAcademicPeriods(It.IsAny<IEnumerable<Term>>())).Returns(acadPeriodsEntities);
+
+                foreach (var acadPeriodsEntity in acadPeriodsEntities)
+                {
+                    termRepoMock.Setup(repo => repo.GetAcademicPeriodsCodeFromGuidAsync(acadPeriodsEntity.Guid)).ReturnsAsync(acadPeriodsEntity.Code);
+
+                }
 
                 // Mock the section service
                 sectionCoordinationService = new SectionCoordinationService(adapterRegistry, sectionRepo, courseRepo, studentRepo, studentReferenceDataRepo,
@@ -3293,7 +3357,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionService_Null_Arguments_V11()
             {
                 sectionRepoMock.Setup(repo => repo.GetSectionMeeting2Async(It.IsAny<int>(), It.IsAny<int>(), "", "", "", "", "", new List<string>(), new List<string>(), new List<string>(), "")).Throws(new ArgumentException());
@@ -3305,6 +3369,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 var sectionMeetings = new List<Domain.Student.Entities.SectionMeeting>();
                 sectionMeetings.Add(meeting1);
+                Dictionary<string, string> sectDict = new Dictionary<string, string>();
+                sectDict.Add(meeting1.SectionId, sectionGuid);
+                sectionRepoMock.Setup(sr => sr.GetSectionGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(sectDict);
+                
                 var tuple = new Tuple<IEnumerable<Domain.Student.Entities.SectionMeeting>, int>(sectionMeetings, 1);
                 sectionRepoMock.Setup(repo => repo.GetSectionMeeting2Async(0, 1, "SEC1", "", "", "", "", new List<string>(), new List<string>(), new List<string>(), "")).ReturnsAsync(tuple);
                 var r = await sectionCoordinationService.GetInstructionalEvent4Async(0, 1, sectionGuid, "", "", "");
@@ -3318,6 +3386,11 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 var sectionMeetings = new List<Domain.Student.Entities.SectionMeeting>();
                 sectionMeetings.Add(meeting1);
                 var tuple = new Tuple<IEnumerable<Domain.Student.Entities.SectionMeeting>, int>(sectionMeetings, 1);
+                Dictionary<string, string> sectDict = new Dictionary<string, string>();
+                sectDict.Add(meeting1.SectionId, sectionGuid);
+                sectionRepoMock.Setup(sr => sr.GetSectionGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(sectDict);
+                
+                
                 sectionRepoMock.Setup(repo => repo.GetSectionMeeting2Async(0, 1, "", new DateTime(2012, 01, 01, 0, 0, 0, DateTimeKind.Local).ToShortDateString(), "", "", "", new List<string>(), new List<string>(), new List<string>(), "")).ReturnsAsync(tuple);
                 sectionRepoMock.Setup(repo => repo.GetUnidataFormattedDate(new DateTime(2012, 01, 01, 0, 0, 0, DateTimeKind.Local).ToShortDateString())).ReturnsAsync(new DateTime(2012, 01, 01).ToShortDateString());
                 var r = await sectionCoordinationService.GetInstructionalEvent4Async(0, 1, "", new DateTime(2012, 01, 01, 0, 0, 0, DateTimeKind.Local).ToShortDateString(), "", "");
@@ -3330,6 +3403,12 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 var sectionMeetings = new List<Domain.Student.Entities.SectionMeeting>();
                 sectionMeetings.Add(meeting1);
+
+                Dictionary<string, string> sectDict = new Dictionary<string, string>();
+                sectDict.Add(meeting1.SectionId, Guid.NewGuid().ToString());
+                sectionRepoMock.Setup(sr => sr.GetSectionGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(sectDict);
+                
+                
                 var tuple = new Tuple<IEnumerable<Domain.Student.Entities.SectionMeeting>, int>(sectionMeetings, 1);
                 sectionRepoMock.Setup(repo => repo.GetSectionMeeting2Async(0, 1, "", "", new DateTime(2012, 12, 21, 0, 0, 0, DateTimeKind.Local).ToShortDateString(), "", "", new List<string>(), new List<string>(), new List<string>(), "")).ReturnsAsync(tuple);
                 sectionRepoMock.Setup(repo => repo.GetUnidataFormattedDate(new DateTime(2012, 12, 21, 0, 0, 0, DateTimeKind.Local).ToShortDateString())).ReturnsAsync(new DateTime(2012, 12, 21, 0, 0, 0, DateTimeKind.Local).ToShortDateString());
@@ -3343,6 +3422,11 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 var sectionMeetings = new List<Domain.Student.Entities.SectionMeeting>();
                 sectionMeetings.Add(meeting1);
+                Dictionary<string, string> sectDict = new Dictionary<string, string>();
+                sectDict.Add(meeting1.SectionId, Guid.NewGuid().ToString());
+                sectionRepoMock.Setup(sr => sr.GetSectionGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(sectDict);
+                
+                
                 var tuple = new Tuple<IEnumerable<Domain.Student.Entities.SectionMeeting>, int>(sectionMeetings, 1);
                 sectionRepoMock.Setup(repo => repo.GetSectionMeeting2Async(0, 1, "", new DateTime(2012, 01, 01, 0, 0, 0, DateTimeKind.Local).ToShortDateString(), "", new DateTime(2012, 01, 01, 08, 30, 0, DateTimeKind.Local).ToLocalTime().TimeOfDay.ToString(), "", new List<string>(), new List<string>(), new List<string>(), "")).ReturnsAsync(tuple);
                 sectionRepoMock.Setup(repo => repo.GetUnidataFormattedDate(new DateTime(2012, 01, 01, 08, 30, 0, DateTimeKind.Local).ToString("yyyy-MM-ddThh:mm:ss"))).ReturnsAsync(new DateTime(2012, 01, 01, 08, 30, 0, DateTimeKind.Local).ToShortDateString());
@@ -3356,6 +3440,11 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 var sectionMeetings = new List<Domain.Student.Entities.SectionMeeting>();
                 sectionMeetings.Add(meeting1);
+                Dictionary<string, string> sectDict = new Dictionary<string, string>();
+                sectDict.Add(meeting1.SectionId, Guid.NewGuid().ToString());
+                sectionRepoMock.Setup(sr => sr.GetSectionGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(sectDict);
+                
+                
                 var tuple = new Tuple<IEnumerable<Domain.Student.Entities.SectionMeeting>, int>(sectionMeetings, 1);
                 sectionRepoMock.Setup(repo => repo.GetSectionMeeting2Async(0, 1, "", "", new DateTime(2012, 12, 21, 0, 0, 0, DateTimeKind.Local).ToShortDateString(), "", new DateTime(2012, 12, 21, 09, 30, 0, DateTimeKind.Local).ToLocalTime().TimeOfDay.ToString(), new List<string>(), new List<string>(), new List<string>(), "")).ReturnsAsync(tuple);
                 sectionRepoMock.Setup(repo => repo.GetUnidataFormattedDate(new DateTime(2012, 12, 21, 09, 30, 0, DateTimeKind.Local).ToString("yyyy-MM-ddThh:mm:ss"))).ReturnsAsync(new DateTime(2012, 12, 21, 0, 0, 0, DateTimeKind.Local).ToShortDateString());
@@ -3369,6 +3458,12 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 var sectionMeetings = new List<Domain.Student.Entities.SectionMeeting>();
                 sectionMeetings.Add(meeting1);
+
+                Dictionary<string, string> sectDict = new Dictionary<string, string>();
+                sectDict.Add(meeting1.SectionId, Guid.NewGuid().ToString());
+                sectionRepoMock.Setup(sr => sr.GetSectionGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(sectDict);
+
+
                 var tuple = new Tuple<IEnumerable<Domain.Student.Entities.SectionMeeting>, int>(sectionMeetings, 1);
                 sectionRepoMock.Setup(repo => repo.GetSectionMeeting2Async(0, 1, "", "", "", "", "", new List<string>(), new List<string>(), new List<string>(), "2012/FA")).ReturnsAsync(tuple);
                 var r = await sectionCoordinationService.GetInstructionalEvent4Async(0, 1, "", "", "", acadPeriodsEntities.FirstOrDefault().Guid);

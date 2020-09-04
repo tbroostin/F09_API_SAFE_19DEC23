@@ -87,6 +87,21 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// </summary>
         public List<string> Categories { get; set; }
 
+        /// <summary>
+		/// Tax Id
+		/// </summary>
+		public string TaxId { get; set; }
+
+        /// <summary>
+        /// Tax Form
+        /// </summary>
+        public string TaxForm { get; set; }
+
+        /// <summary>
+        /// List of address Id and Type
+        /// </summary>
+        public List<Dictionary<string, string>> AddressInfo { get; set; }
+
         public string Id
         {
             get { return _id; }

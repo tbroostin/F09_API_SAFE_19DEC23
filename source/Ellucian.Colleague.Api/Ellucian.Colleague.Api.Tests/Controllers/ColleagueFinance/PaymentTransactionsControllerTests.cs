@@ -40,7 +40,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                 private Mock<ILogger> loggerMock;
                 private IEnumerable<Dtos.PaymentTransactions> paymentTransactionsCollection;
                 private Tuple<IEnumerable<Dtos.PaymentTransactions>, int> paymentTransactionsTuple;
-                private Ellucian.Web.Http.Models.QueryStringFilter criteriaFilter = new Web.Http.Models.QueryStringFilter("document", "");
+                private Ellucian.Web.Http.Models.QueryStringFilter nameQueryFilter = new Web.Http.Models.QueryStringFilter("document", "");
+                private Ellucian.Web.Http.Models.QueryStringFilter criteriaFilter = new QueryStringFilter("referenceDoc", "");
                 private string document = string.Empty;
 
                 #endregion
@@ -94,9 +95,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                 {
                     paymentTransactionsController.Request.Headers.CacheControl = new CacheControlHeaderValue { NoCache = false, Public = true };
 
-                    paymentTransactionsServiceMock.Setup(x => x.GetPaymentTransactionsAsync(0, 10,string.Empty, Dtos.EnumProperties.InvoiceTypes.NotSet,false)).ReturnsAsync(paymentTransactionsTuple);
+                    paymentTransactionsServiceMock.Setup(x => x.GetPaymentTransactionsAsync(0, 10,string.Empty, Dtos.EnumProperties.InvoiceTypes.NotSet,It.IsAny<Dtos.PaymentTransactions>(), false)).ReturnsAsync(paymentTransactionsTuple);
 
-                    var results = await paymentTransactionsController.GetPaymentTransactionsAsync(new Paging(10, 0), criteriaFilter);
+                    var results = await paymentTransactionsController.GetPaymentTransactionsAsync(new Paging(10, 0), nameQueryFilter, criteriaFilter);
 
                     Assert.IsNotNull(results);
 
@@ -123,9 +124,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                 {
                     paymentTransactionsController.Request.Headers.CacheControl = new CacheControlHeaderValue { NoCache = true, Public = true };
 
-                    paymentTransactionsServiceMock.Setup(x => x.GetPaymentTransactionsAsync(0, 10, string.Empty, Dtos.EnumProperties.InvoiceTypes.NotSet, true)).ReturnsAsync(paymentTransactionsTuple);
+                    paymentTransactionsServiceMock.Setup(x => x.GetPaymentTransactionsAsync(0, 10, string.Empty, Dtos.EnumProperties.InvoiceTypes.NotSet, It.IsAny<Dtos.PaymentTransactions>(), true)).ReturnsAsync(paymentTransactionsTuple);
 
-                    var results = await paymentTransactionsController.GetPaymentTransactionsAsync(new Paging(10, 0), criteriaFilter);
+                    var results = await paymentTransactionsController.GetPaymentTransactionsAsync(new Paging(10, 0), nameQueryFilter, criteriaFilter);
 
                     Assert.IsNotNull(results);
 
@@ -155,48 +156,48 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                 [ExpectedException(typeof(HttpResponseException))]
                 public async Task PaymentTransactionsController_GetPaymentTransactionsAsync_KeyNotFoundException()
                 {
-                    paymentTransactionsServiceMock.Setup(e => e.GetPaymentTransactionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),It.IsAny<Dtos.EnumProperties.InvoiceTypes>(), It.IsAny<bool>())).ThrowsAsync(new KeyNotFoundException());
-                    await paymentTransactionsController.GetPaymentTransactionsAsync(null, criteriaFilter);
+                    paymentTransactionsServiceMock.Setup(e => e.GetPaymentTransactionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),It.IsAny<Dtos.EnumProperties.InvoiceTypes>(), It.IsAny<Dtos.PaymentTransactions>(), It.IsAny<bool>())).ThrowsAsync(new KeyNotFoundException());
+                    await paymentTransactionsController.GetPaymentTransactionsAsync(null, nameQueryFilter, criteriaFilter);
                 }
 
                 [TestMethod]
                 [ExpectedException(typeof(HttpResponseException))]
                 public async Task PaymentTransactionsController_GetPaymentTransactionsAsync_PermissionsException()
                 {
-                    paymentTransactionsServiceMock.Setup(e => e.GetPaymentTransactionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<Dtos.EnumProperties.InvoiceTypes>(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
-                    await paymentTransactionsController.GetPaymentTransactionsAsync(null, criteriaFilter);
+                    paymentTransactionsServiceMock.Setup(e => e.GetPaymentTransactionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<Dtos.EnumProperties.InvoiceTypes>(), It.IsAny<Dtos.PaymentTransactions>(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
+                    await paymentTransactionsController.GetPaymentTransactionsAsync(null, nameQueryFilter, criteriaFilter);
                 }
 
                 [TestMethod]
                 [ExpectedException(typeof(HttpResponseException))]
                 public async Task PaymentTransactionsController_GetPaymentTransactionsAsync_ArgumentException()
                 {
-                    paymentTransactionsServiceMock.Setup(e => e.GetPaymentTransactionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<Dtos.EnumProperties.InvoiceTypes>(), It.IsAny<bool>())).ThrowsAsync(new ArgumentException());
-                    await paymentTransactionsController.GetPaymentTransactionsAsync(null, criteriaFilter);
+                    paymentTransactionsServiceMock.Setup(e => e.GetPaymentTransactionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<Dtos.EnumProperties.InvoiceTypes>(), It.IsAny<Dtos.PaymentTransactions>(), It.IsAny<bool>())).ThrowsAsync(new ArgumentException());
+                    await paymentTransactionsController.GetPaymentTransactionsAsync(null, nameQueryFilter, criteriaFilter);
                 }
 
                 [TestMethod]
                 [ExpectedException(typeof(HttpResponseException))]
                 public async Task PaymentTransactionsController_GetPaymentTransactionsAsync_RepositoryException()
                 {
-                    paymentTransactionsServiceMock.Setup(e => e.GetPaymentTransactionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<Dtos.EnumProperties.InvoiceTypes>(), It.IsAny<bool>())).ThrowsAsync(new RepositoryException());
-                    await paymentTransactionsController.GetPaymentTransactionsAsync(null, criteriaFilter);
+                    paymentTransactionsServiceMock.Setup(e => e.GetPaymentTransactionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<Dtos.EnumProperties.InvoiceTypes>(), It.IsAny<Dtos.PaymentTransactions>(), It.IsAny<bool>())).ThrowsAsync(new RepositoryException());
+                    await paymentTransactionsController.GetPaymentTransactionsAsync(null, nameQueryFilter, criteriaFilter);
                 }
 
                 [TestMethod]
                 [ExpectedException(typeof(HttpResponseException))]
                 public async Task PaymentTransactionsController_GetPaymentTransactionsAsync_IntegrationApiException()
                 {
-                    paymentTransactionsServiceMock.Setup(e => e.GetPaymentTransactionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<Dtos.EnumProperties.InvoiceTypes>(), It.IsAny<bool>())).ThrowsAsync(new IntegrationApiException());
-                    await paymentTransactionsController.GetPaymentTransactionsAsync(null, criteriaFilter);
+                    paymentTransactionsServiceMock.Setup(e => e.GetPaymentTransactionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<Dtos.EnumProperties.InvoiceTypes>(), It.IsAny<Dtos.PaymentTransactions>(), It.IsAny<bool>())).ThrowsAsync(new IntegrationApiException());
+                    await paymentTransactionsController.GetPaymentTransactionsAsync(null, nameQueryFilter, criteriaFilter);
                 }
 
                 [TestMethod]
                 [ExpectedException(typeof(HttpResponseException))]
                 public async Task PaymentTransactionsController_GetPaymentTransactionsAsync_Exception()
                 {
-                    paymentTransactionsServiceMock.Setup(e => e.GetPaymentTransactionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<Dtos.EnumProperties.InvoiceTypes>(), It.IsAny<bool>())).ThrowsAsync(new Exception());
-                    await paymentTransactionsController.GetPaymentTransactionsAsync(null, criteriaFilter);
+                    paymentTransactionsServiceMock.Setup(e => e.GetPaymentTransactionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<Dtos.EnumProperties.InvoiceTypes>(), It.IsAny<Dtos.PaymentTransactions>(), It.IsAny<bool>())).ThrowsAsync(new Exception());
+                    await paymentTransactionsController.GetPaymentTransactionsAsync(null, nameQueryFilter, criteriaFilter);
                 }
 
                 [TestMethod]
@@ -214,8 +215,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                           {  Id = "2a082180-b897-46f3-8435-df25caaca924" }
                           });
 
-                    paymentTransactionsServiceMock.Setup(x => x.GetPaymentTransactionsAsync(0, 10, string.Empty, Dtos.EnumProperties.InvoiceTypes.NotSet, false)).ReturnsAsync(paymentTransactionsTuple);
-                    await paymentTransactionsController.GetPaymentTransactionsAsync(new Paging(10, 0), criteriaFilter);
+                    paymentTransactionsServiceMock.Setup(x => x.GetPaymentTransactionsAsync(0, 10, string.Empty, Dtos.EnumProperties.InvoiceTypes.NotSet, It.IsAny<Dtos.PaymentTransactions>(), false)).ReturnsAsync(paymentTransactionsTuple);
+                    await paymentTransactionsController.GetPaymentTransactionsAsync(new Paging(10, 0), nameQueryFilter, criteriaFilter);
 
                 }
 
@@ -234,9 +235,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                           });
 
 
-                    paymentTransactionsServiceMock.Setup(x => x.GetPaymentTransactionsAsync(0, 10, "2a082180-b897-46f3-8435-df25caaca924", Dtos.EnumProperties.InvoiceTypes.Invoice, false)).ReturnsAsync(paymentTransactionsTuple);
+                    paymentTransactionsServiceMock.Setup(x => x.GetPaymentTransactionsAsync(0, 10, "2a082180-b897-46f3-8435-df25caaca924", Dtos.EnumProperties.InvoiceTypes.Invoice, It.IsAny<Dtos.PaymentTransactions>(), false)).ReturnsAsync(paymentTransactionsTuple);
 
-                    var result = await paymentTransactionsController.GetPaymentTransactionsAsync(new Paging(10, 0), criteriaFilter);
+                    var result = await paymentTransactionsController.GetPaymentTransactionsAsync(new Paging(10, 0), nameQueryFilter, criteriaFilter);
 
                     var cancelToken = new CancellationToken(false);
 
@@ -260,9 +261,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                           new Dtos.Filters.DocumentFilter() { Document =
                           new Dtos.Filters.DocumentCredentialsDtoProperty() { Type = Dtos.EnumProperties.InvoiceTypes.Refund, Id = "2a082180-b897-46f3-8435-df25caaca924" } });
 
-                    paymentTransactionsServiceMock.Setup(x => x.GetPaymentTransactionsAsync(0, 10, "2a082180-b897-46f3-8435-df25caaca924", Dtos.EnumProperties.InvoiceTypes.Refund, false)).ReturnsAsync(paymentTransactionsTuple);
+                    paymentTransactionsServiceMock.Setup(x => x.GetPaymentTransactionsAsync(0, 10, "2a082180-b897-46f3-8435-df25caaca924", Dtos.EnumProperties.InvoiceTypes.Refund, It.IsAny<Dtos.PaymentTransactions>(), false)).ReturnsAsync(paymentTransactionsTuple);
 
-                    var result = await paymentTransactionsController.GetPaymentTransactionsAsync(new Paging(10, 0), criteriaFilter);
+                    var result = await paymentTransactionsController.GetPaymentTransactionsAsync(new Paging(10, 0), nameQueryFilter, criteriaFilter);
 
                     var cancelToken = new CancellationToken(false);
 

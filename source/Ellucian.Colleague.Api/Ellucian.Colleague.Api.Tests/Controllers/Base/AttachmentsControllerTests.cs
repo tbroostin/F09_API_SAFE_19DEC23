@@ -1,9 +1,8 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Controllers.Base;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Dtos.Base;
-using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Configuration;
 using Ellucian.Web.Http.Results;
 using Ellucian.Web.Security;
@@ -13,14 +12,11 @@ using Newtonsoft.Json;
 using slf4net;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Text;
 using System.Threading.Tasks;
-using System.Web;
 using System.Web.Http;
 using System.Web.Http.Hosting;
 
@@ -34,7 +30,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         private const string encrTypeHeader = "X-Encr-Type";
         private const string encrKeyIdHeader = "X-Encr-Key-Id";
 
-        private Mock<IAdapterRegistry> adapterRegistry;
         private Mock<ILogger> loggerMock;
         private Mock<IAttachmentService> attachmentService;
 
@@ -56,28 +51,29 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         {
             LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
             EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.DeploymentDirectory, "App_Data"));
-            adapterRegistry = new Mock<IAdapterRegistry>();
             attachmentService = new Mock<IAttachmentService>();
-            attachments = new List<Attachment>();
-            attachments.Add(new Attachment()
+            attachments = new List<Attachment>
             {
-                Id = "32c2d2ec-d91d-4c86-be0d-6e38b5b0f1b7",
-                CollectionId = "24671c69-4a1d-47b9-8c28-06ade7f995c5",
-                ContentType = "application/pdf",
-                Owner = "0003896",
-                Name = "mypdf.pdf"
-            });
-            attachments.Add(new Attachment()
-            {
-                Id = "16a9e995-cfb9-444f-b34a-f4b25b98a188",
-                CollectionId = "97b91db7-c0a6-4e48-83ce-8f0032959b59",
-                ContentType = "application/pdf",
-                Owner = "0009999",
-                Name = "mypdf2.pdf"
-            });
+                new Attachment()
+                {
+                    Id = "32c2d2ec-d91d-4c86-be0d-6e38b5b0f1b7",
+                    CollectionId = "24671c69-4a1d-47b9-8c28-06ade7f995c5",
+                    ContentType = "application/pdf",
+                    Owner = "0003896",
+                    Name = "mypdf.pdf"
+                },
+                new Attachment()
+                {
+                    Id = "16a9e995-cfb9-444f-b34a-f4b25b98a188",
+                    CollectionId = "97b91db7-c0a6-4e48-83ce-8f0032959b59",
+                    ContentType = "application/pdf",
+                    Owner = "0009999",
+                    Name = "mypdf2.pdf"
+                }
+            };
             loggerMock = new Mock<ILogger>();
             apiSettings = new ApiSettings("TEST");
-            attachmentsController = new AttachmentsController(adapterRegistry.Object, attachmentService.Object, loggerMock.Object, apiSettings)
+            attachmentsController = new AttachmentsController(attachmentService.Object, loggerMock.Object, apiSettings)
             {
                 Request = new HttpRequestMessage()
             };
@@ -89,7 +85,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             attachmentService = null;
             attachmentsController = null;
             attachments = null;
-            adapterRegistry = null;
         }
 
         #endregion
@@ -100,7 +95,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             [TestInitialize]
             public void Initialize()
             {
-                base.AttachmentsControllerTestsInitialize();
+                AttachmentsControllerTestsInitialize();
             }
 
             // GetAttachmentsAsync success
@@ -153,7 +148,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             [TestInitialize]
             public void Initialize()
             {
-                base.AttachmentsControllerTestsInitialize();
+                AttachmentsControllerTestsInitialize();
             }
 
             // GetAttachmentContentAsync success
@@ -265,7 +260,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             [TestInitialize]
             public void Initialize()
             {
-                base.AttachmentsControllerTestsInitialize();
+                AttachmentsControllerTestsInitialize();
             }
 
             // PostAsync success
@@ -348,7 +343,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             [TestInitialize]
             public void Initialize()
             {
-                base.AttachmentsControllerTestsInitialize();
+                AttachmentsControllerTestsInitialize();
             }
 
             [TestMethod]
@@ -422,7 +417,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             [TestInitialize]
             public void Initialize()
             {
-                base.AttachmentsControllerTestsInitialize();
+                AttachmentsControllerTestsInitialize();
             }
 
             // DeleteAsync success

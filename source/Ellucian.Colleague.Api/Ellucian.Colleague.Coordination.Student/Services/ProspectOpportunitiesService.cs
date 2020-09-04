@@ -1,4 +1,4 @@
-// Copyright 2019 Ellucian Company L.P. and its affiliates.
+// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -296,7 +296,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <param name="ProspectOpportunitiesSubmissions">The <see cref="ProspectOpportunitiesSubmissions">prospectOpportunitiesSubmissions</see> entity to update in the database.</param>
         /// <returns>The newly updated <see cref="ProspectOpportunities">ProspectOpportunities</see></returns>
-        public async Task<Dtos.ProspectOpportunities> UpdateProspectOpportunitiesSubmissionsAsync(ProspectOpportunitiesSubmissions prospectOpportunitiesSubmissions)
+        public async Task<Dtos.ProspectOpportunities> UpdateProspectOpportunitiesSubmissionsAsync(ProspectOpportunitiesSubmissions prospectOpportunitiesSubmissions, bool bypassCache)
         {
             ValidateProspectOpportunitiesSubmissions(prospectOpportunitiesSubmissions);
 
@@ -326,7 +326,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     // map the DTO to entities
                     Domain.Student.Entities.AdmissionApplication admissionApplicationEntity
-                    = await ConvertProspectOpportunitiesSubmissionsDtoToEntityAsync(prospectOpportunitiesSubmissions.Id, prospectOpportunitiesSubmissions);
+                    = await ConvertProspectOpportunitiesSubmissionsDtoToEntityAsync(prospectOpportunitiesSubmissions.Id, prospectOpportunitiesSubmissions, bypassCache);
 
                     // update the entity in the database
                     var updatedProspectOpportunitiesSubmissions =
@@ -369,7 +369,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
             }
             // perform a create instead
-            return await CreateProspectOpportunitiesSubmissionsAsync(prospectOpportunitiesSubmissions);
+            return await CreateProspectOpportunitiesSubmissionsAsync(prospectOpportunitiesSubmissions, bypassCache);
         }
 
         /// <summary>
@@ -377,7 +377,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <param name="prospectOpportunitiesSubmissions">The <see cref="ProspectOpportunitiesSubmissions">prospectOpportunitiesSubmissions</see> entity to create in the database.</param>
         /// <returns>The newly created <see cref="ProspectOpportunities">ProspectOpportunities</see></returns>
-        public async Task<Dtos.ProspectOpportunities> CreateProspectOpportunitiesSubmissionsAsync(Dtos.ProspectOpportunitiesSubmissions prospectOpportunitiesSubmissions)
+        public async Task<Dtos.ProspectOpportunities> CreateProspectOpportunitiesSubmissionsAsync(Dtos.ProspectOpportunitiesSubmissions prospectOpportunitiesSubmissions, bool bypassCache)
         {
             //Validate the request 
             ValidateProspectOpportunitiesSubmissions(prospectOpportunitiesSubmissions);
@@ -395,7 +395,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
 
                 var admissionApplicationEntity
-                         = await ConvertProspectOpportunitiesSubmissionsDtoToEntityAsync(prospectOpportunitiesSubmissions.Id, prospectOpportunitiesSubmissions);
+                         = await ConvertProspectOpportunitiesSubmissionsDtoToEntityAsync(prospectOpportunitiesSubmissions.Id, prospectOpportunitiesSubmissions, bypassCache);
 
                 // create a ProspectOpportunities entity in the database
                 var createdProspectOpportunitiesSubmissions =
@@ -551,6 +551,32 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             return _academicDepartments;
         }
 
+        /// <summary>
+        /// Educational goal
+        /// </summary>
+        private IEnumerable<Domain.Student.Entities.EducationGoals> _educationalGoals;
+        private async Task<IEnumerable<Domain.Student.Entities.EducationGoals>> EducationalGoalsAsync(bool bypassCache)
+        {
+            if (_educationalGoals == null)
+            {
+                _educationalGoals = await _studentReferenceDataRepository.GetEducationGoalsAsync(bypassCache);
+            }
+            return _educationalGoals;
+        }
+
+        /// <summary>
+        /// Career goal
+        /// </summary>
+        private IEnumerable<Domain.Student.Entities.CareerGoal> _careerGoals;
+        private async Task<IEnumerable<Domain.Student.Entities.CareerGoal>> CareerGoalsAsync(bool bypassCache)
+        {
+            if (_careerGoals == null)
+            {
+                _careerGoals = await _studentReferenceDataRepository.GetCareerGoalsAsync(bypassCache);
+            }
+            return _careerGoals;
+        }
+
         #endregion
 
         #region Helper Methods
@@ -595,7 +621,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             //entryAcademicPeriod.id optional field
             if (!string.IsNullOrEmpty(source.EntryAcademicPeriod))
             {
-                var termGuid = await _termRepository.GetAcademicPeriodsGuidAsync(source.EntryAcademicPeriod);
+                var termGuid = string.Empty;
+                try
+                {
+                    termGuid = await _termRepository.GetAcademicPeriodsGuidAsync(source.EntryAcademicPeriod);
+                }
+                catch
+                {
+                    IntegrationApiExceptionAddError(string.Format("Unable to locate guid for entry academic period ID '{0}'", source.EntryAcademicPeriod), "Bad.Data", source.Guid,
+                                    source.RecordKey);
+                }
                 if (string.IsNullOrEmpty(termGuid))
                 {
                     IntegrationApiExceptionAddError(string.Format("Unable to locate guid for entry academic period ID '{0}'", source.EntryAcademicPeriod), "Bad.Data", source.Guid,
@@ -607,7 +642,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             //admissionPopulation.id optional field
             if (!string.IsNullOrEmpty(source.AdmissionPopulation))
             {
-                var admissionPopulationGuid = await _studentReferenceDataRepository.GetAdmissionPopulationsGuidAsync(source.AdmissionPopulation);
+                var admissionPopulationGuid = string.Empty;
+                try
+                {
+                    admissionPopulationGuid = await _studentReferenceDataRepository.GetAdmissionPopulationsGuidAsync(source.AdmissionPopulation);
+                }
+                catch
+                {
+                    IntegrationApiExceptionAddError(string.Format("Unable to locate guid for admission population ID '{0}'", source.AdmissionPopulation), "Bad.Data", source.Guid,
+                                    source.RecordKey);
+                }
                 if (string.IsNullOrEmpty(admissionPopulationGuid))
                 {
                     IntegrationApiExceptionAddError(string.Format("Unable to locate guid for admission population ID '{0}'", source.AdmissionPopulation), "Bad.Data", source.Guid,
@@ -619,13 +663,72 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             //site.id optional field
             if (!string.IsNullOrEmpty(source.Site))
             {
-                var siteId = await _referenceDataRepository.GetLocationsGuidAsync(source.Site);
+                var siteId = string.Empty;
+                try
+                {
+                    siteId = await _referenceDataRepository.GetLocationsGuidAsync(source.Site);
+                }
+                catch
+                {
+                    IntegrationApiExceptionAddError(string.Format("Unable to locate guid for site ID '{0}'", source.Site), "Bad.Data", source.Guid,
+                                    source.RecordKey);
+                }
                 if (string.IsNullOrEmpty(siteId))
                 {
                     IntegrationApiExceptionAddError(string.Format("Unable to locate guid for site ID '{0}'", source.Site), "Bad.Data", source.Guid,
                                     source.RecordKey);
                 }
                 dto.Site = new GuidObject2(siteId);
+            }
+
+            //educationalGoal.id optional field
+            if (!string.IsNullOrEmpty(source.EducationalGoal))
+            {
+                var educationalGoalId = string.Empty;
+                try
+                {
+                    educationalGoalId = await _studentReferenceDataRepository.GetEducationGoalGuidAsync(source.EducationalGoal);
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(string.Format("Unable to locate guid for educational goal ID '{0}'", source.EducationalGoal), "Bad.Data", source.Guid,
+                                    source.RecordKey);
+                }
+                if (string.IsNullOrEmpty(educationalGoalId))
+                {
+                    IntegrationApiExceptionAddError(string.Format("Unable to locate guid for educational goal ID '{0}'", source.EducationalGoal), "Bad.Data", source.Guid,
+                                    source.RecordKey);
+                }
+                dto.EducationalGoal = new GuidObject2(educationalGoalId);
+            }
+
+            //careerGoals.id optional field
+            if (source.CareerGoals != null && source.CareerGoals.Any())
+            {
+                var careerGoalsObj = new List<GuidObject2>();
+                foreach (var careerGoal in source.CareerGoals)
+                {
+                    if (!string.IsNullOrEmpty(careerGoal))
+                    {
+                        var careerGoalId = string.Empty;
+                        try
+                        {
+                            careerGoalId = await _studentReferenceDataRepository.GetCareerGoalGuidAsync(careerGoal);
+                        }
+                        catch
+                        {
+                            IntegrationApiExceptionAddError(string.Format("Unable to locate guid for career goal ID '{0}'", careerGoal), "Bad.Data", source.Guid,
+                                            source.RecordKey);
+                        }
+                        if (string.IsNullOrEmpty(careerGoalId))
+                        {
+                            IntegrationApiExceptionAddError(string.Format("Unable to locate guid for career goal ID '{0}'", careerGoal), "Bad.Data", source.Guid,
+                                            source.RecordKey);
+                        }
+                        careerGoalsObj.Add(new GuidObject2(careerGoalId));
+                    }
+                }
+                dto.CareerGoals = careerGoalsObj;
             }
 
             return dto;
@@ -827,7 +930,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// Converts submissions dto to entity.
         /// </summary>
         /// <returns></returns>
-        private async Task<Domain.Student.Entities.AdmissionApplication> ConvertProspectOpportunitiesSubmissionsDtoToEntityAsync(string guid, ProspectOpportunitiesSubmissions dto)
+        private async Task<Domain.Student.Entities.AdmissionApplication> ConvertProspectOpportunitiesSubmissionsDtoToEntityAsync(string guid, ProspectOpportunitiesSubmissions dto, bool bypassCache)
         {
             //id
             if (string.IsNullOrEmpty(dto.Id))
@@ -874,7 +977,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             //academicPeriod.id
             if (dto.EntryAcademicPeriod != null && !string.IsNullOrEmpty(dto.EntryAcademicPeriod.Id))
             {
-                var termsEntity = (await Terms(false)).FirstOrDefault(i => i.RecordGuid.Equals(dto.EntryAcademicPeriod.Id, StringComparison.OrdinalIgnoreCase));
+                var termsEntity = (await Terms(bypassCache)).FirstOrDefault(i => i.RecordGuid.Equals(dto.EntryAcademicPeriod.Id, StringComparison.OrdinalIgnoreCase));
                 if (termsEntity == null || string.IsNullOrEmpty(termsEntity.Code))
                 {
                     var error = string.Format("Academic period not found for guid  {0}. ", dto.EntryAcademicPeriod.Id);
@@ -903,7 +1006,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     //program.id
                     if (program.Program != null && !string.IsNullOrEmpty(program.Program.Id))
                     {
-                        programEntity = (await AcademicProgramsAsync(false)).FirstOrDefault(i => i.Guid.Equals(program.Program.Id, StringComparison.OrdinalIgnoreCase));
+                        programEntity = (await AcademicProgramsAsync(bypassCache)).FirstOrDefault(i => i.Guid.Equals(program.Program.Id, StringComparison.OrdinalIgnoreCase));
                         if (programEntity == null)
                         {
                             IntegrationApiExceptionAddError(string.Format("Academic program not found for guid {0}. ", program.Program.Id),
@@ -922,7 +1025,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         {
                             if (credential != null && !string.IsNullOrEmpty(credential.Id))
                             {
-                                var credentialEntity = (await AcademicCredentialsAsync(false)).FirstOrDefault(i => i.Guid.Equals(credential.Id, StringComparison.OrdinalIgnoreCase));
+                                var credentialEntity = (await AcademicCredentialsAsync(bypassCache)).FirstOrDefault(i => i.Guid.Equals(credential.Id, StringComparison.OrdinalIgnoreCase));
                                 if (credentialEntity == null || string.IsNullOrEmpty(credentialEntity.Code))
                                 {
                                     IntegrationApiExceptionAddError(string.Format("Academic Credentials not found for guid {0}. ", credential.Id),
@@ -964,7 +1067,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     //program.programOwner
                     if (program.ProgramOwner != null && !string.IsNullOrEmpty(program.ProgramOwner.Id))
                     {
-                        var ownerEntity = (await AcademicDepartmentsAsync(false)).FirstOrDefault(i => i.Guid.Equals(program.ProgramOwner.Id, StringComparison.OrdinalIgnoreCase));
+                        var ownerEntity = (await AcademicDepartmentsAsync(bypassCache)).FirstOrDefault(i => i.Guid.Equals(program.ProgramOwner.Id, StringComparison.OrdinalIgnoreCase));
                         if (ownerEntity == null || string.IsNullOrEmpty(ownerEntity.Code))
                         {
                             IntegrationApiExceptionAddError(string.Format("Application program owner not found for guid {0}. ", program.ProgramOwner.Id),
@@ -980,7 +1083,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     if (program.AcademicLevel != null && !string.IsNullOrEmpty(program.AcademicLevel.Id))
                     {
                         //This property really is not used for PUT/POST since it is derived from Acad program in GET
-                        var acadLevelEntity = (await AcademicLevelsAsync(false)).FirstOrDefault(i => i.Guid.Equals(program.AcademicLevel.Id, StringComparison.OrdinalIgnoreCase));
+                        var acadLevelEntity = (await AcademicLevelsAsync(bypassCache)).FirstOrDefault(i => i.Guid.Equals(program.AcademicLevel.Id, StringComparison.OrdinalIgnoreCase));
                         if (acadLevelEntity == null || string.IsNullOrEmpty(acadLevelEntity.Code))
                         {
                             IntegrationApiExceptionAddError(string.Format("Academic level not found for guid {0}. ", program.AcademicLevel.Id),
@@ -999,7 +1102,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         {
                             if (discipline.Discipline != null && !string.IsNullOrEmpty(discipline.Discipline.Id))
                             {
-                                var disciplineEntity = (await AcademicDisciplinesAsync(false)).FirstOrDefault(i => i.Guid.Equals(discipline.Discipline.Id, StringComparison.OrdinalIgnoreCase));
+                                var disciplineEntity = (await AcademicDisciplinesAsync(bypassCache)).FirstOrDefault(i => i.Guid.Equals(discipline.Discipline.Id, StringComparison.OrdinalIgnoreCase));
                                 if (disciplineEntity == null || string.IsNullOrEmpty(disciplineEntity.Code))
                                 {
                                     IntegrationApiExceptionAddError(string.Format("Academic Discipline not found for guid {0}. ", discipline.Discipline.Id),
@@ -1010,7 +1113,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                                     string deptCode = "";
                                     if (discipline.AdministeringInstitutionUnit != null && !string.IsNullOrEmpty(discipline.AdministeringInstitutionUnit.Id))
                                     {
-                                        var acadDeptEntity = (await AcademicDepartmentsAsync(false)).FirstOrDefault(i => i.Guid.Equals(discipline.AdministeringInstitutionUnit.Id, StringComparison.OrdinalIgnoreCase));
+                                        var acadDeptEntity = (await AcademicDepartmentsAsync(bypassCache)).FirstOrDefault(i => i.Guid.Equals(discipline.AdministeringInstitutionUnit.Id, StringComparison.OrdinalIgnoreCase));
                                         if (acadDeptEntity == null || string.IsNullOrEmpty(acadDeptEntity.Code))
                                         {
                                             IntegrationApiExceptionAddError(string.Format("Administering Institution Unit not found for guid {0}. ", discipline.AdministeringInstitutionUnit.Id),
@@ -1047,7 +1150,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             //admissionPopulation.id
             if (dto.AdmissionPopulation != null && !string.IsNullOrEmpty(dto.AdmissionPopulation.Id))
             {
-                var admPopulation = (await AdmissionPopulationsAsync(false)).FirstOrDefault(i => i.Guid.Equals(dto.AdmissionPopulation.Id, StringComparison.OrdinalIgnoreCase));
+                var admPopulation = (await AdmissionPopulationsAsync(bypassCache)).FirstOrDefault(i => i.Guid.Equals(dto.AdmissionPopulation.Id, StringComparison.OrdinalIgnoreCase));
                 if (admPopulation == null)
                 {
                     IntegrationApiExceptionAddError(string.Format("Application admit status not found for guid {0}. ", dto.AdmissionPopulation.Id),
@@ -1062,7 +1165,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             //site.id
             if (dto.Site != null && !string.IsNullOrEmpty(dto.Site.Id))
             {
-                var site = (await SitesAsync(true)).FirstOrDefault(i => i.Guid.Equals(dto.Site.Id, StringComparison.OrdinalIgnoreCase));
+                var site = (await SitesAsync(bypassCache)).FirstOrDefault(i => i.Guid.Equals(dto.Site.Id, StringComparison.OrdinalIgnoreCase));
                 if (site == null)
                 {
                     IntegrationApiExceptionAddError(string.Format("Site not found for guid {0}.", dto.Site.Id),
@@ -1084,7 +1187,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             // personSource.id
             if (dto.PersonSource != null && !string.IsNullOrEmpty(dto.PersonSource.Id))
             {
-                var source = (await PersonOriginCodesAsync(true)).FirstOrDefault(i => i.Guid.Equals(dto.PersonSource.Id, StringComparison.OrdinalIgnoreCase));
+                var source = (await PersonOriginCodesAsync(bypassCache)).FirstOrDefault(i => i.Guid.Equals(dto.PersonSource.Id, StringComparison.OrdinalIgnoreCase));
                 if (source == null)
                 {
                     IntegrationApiExceptionAddError(string.Format("Person Source not found for guid {0}", dto.PersonSource.Id),
@@ -1094,7 +1197,57 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     entity.PersonSource = source.Code;
                 }
-            } 
+            }
+
+            //educational goal
+            if (dto.EducationalGoal != null && !string.IsNullOrEmpty(dto.EducationalGoal.Id))
+            {
+                try
+                {
+                    var educationalGoal = (await EducationalGoalsAsync(bypassCache)).FirstOrDefault(i => i.Guid.Equals(dto.EducationalGoal.Id, StringComparison.OrdinalIgnoreCase));
+                    if (educationalGoal == null)
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Educational goal not found for guid '{0}'.", dto.EducationalGoal.Id), "Bad.Data", guid, applicantKey);
+                    }
+                    else
+                    {
+                        entity.EducationalGoal = educationalGoal.Code;
+                    }
+                }
+                catch
+                {
+                    IntegrationApiExceptionAddError(string.Format("Educational goal not found for guid '{0}'.", dto.EducationalGoal.Id), "Bad.Data", guid, applicantKey);
+                }
+            }
+
+            //career goals
+            if (dto.CareerGoals != null && dto.CareerGoals.Any())
+            {
+                var careerGoals = new List<string>();
+                foreach (var careerGoal in dto.CareerGoals)
+                {
+                    if (careerGoal != null && !string.IsNullOrEmpty(careerGoal.Id))
+                    {
+                        try
+                        {
+                            var careerGoalObject = (await CareerGoalsAsync(bypassCache)).FirstOrDefault(i => i.Guid.Equals(careerGoal.Id, StringComparison.OrdinalIgnoreCase));
+                            if (careerGoalObject == null)
+                            {
+                                IntegrationApiExceptionAddError(string.Format("Career goal not found for guid '{0}'.", careerGoal.Id), "Bad.Data", guid, applicantKey);
+                            }
+                            else
+                            {
+                                careerGoals.Add(careerGoalObject.Code);
+                            }
+                        }
+                        catch
+                        {
+                            IntegrationApiExceptionAddError(string.Format("Career goal not found for guid '{0}'.", careerGoal.Id), "Bad.Data", guid, applicantKey);
+                        }
+                    }
+                }
+                entity.CareerGoals = careerGoals;
+            }
 
             if (IntegrationApiException != null)
             {

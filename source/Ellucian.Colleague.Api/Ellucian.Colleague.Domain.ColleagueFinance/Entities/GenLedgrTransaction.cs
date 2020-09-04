@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -38,6 +38,11 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// A supplementary date assigned to the transaction based on the transaction type.
         /// </summary>
         public DateTimeOffset? TransactionTypeReferenceDate { get; set; }
+
+        /// <summary>
+        /// An external reference number that identifies the transaction as being included in a specified batch.
+        /// </summary>
+        public string ExternalBatchReference { get; set; }
 
         /// <summary>
         /// A string that identifies a person associated with the transaction.

@@ -126,6 +126,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>
         /// /// <param name="criteria">mealplan  search criteria in JSON format</param>
         /// <returns>List of StudentMealPlans <see cref="Dtos.StudentMealPlans2"/> objects representing matching studentMealPlans</returns>
+        [CustomMediaTypeAttributeFilter( ErrorContentType = IntegrationErrors2 )]
         [HttpGet, EedmResponseFilter]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
         [QueryStringFilterFilter("criteria", typeof(Dtos.StudentMealPlans2))]
@@ -197,6 +198,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="guid">GUID to desired studentMealPlans</param>
         /// <returns>A studentMealPlans object <see cref="Dtos.StudentMealPlans2"/> in EEDM format</returns>
+        [CustomMediaTypeAttributeFilter( ErrorContentType = IntegrationErrors2 )]
         [HttpGet, EedmResponseFilter]
         public async Task<Dtos.StudentMealPlans2> GetStudentMealPlansByGuid2Async(string guid)
         {
@@ -265,6 +267,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="guid">GUID of the studentMealPlans to update</param>
         /// <param name="studentMealPlans2">DTO of the updated studentMealPlans</param>
         /// <returns>A studentMealPlans object <see cref="Dtos.StudentMealPlans2"/> in EEDM format</returns>
+        [CustomMediaTypeAttributeFilter( ErrorContentType = IntegrationErrors2 )]
         [HttpPut, EedmResponseFilter]
         public async Task<Dtos.StudentMealPlans2> PutStudentMealPlans2Async([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.StudentMealPlans2 studentMealPlans2)
         {
@@ -361,6 +364,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="studentMealPlans2">DTO of the new studentMealPlans</param>
         /// <returns>A studentMealPlans object <see cref="Dtos.StudentMealPlans2"/> in EEDM format</returns>
+        [CustomMediaTypeAttributeFilter( ErrorContentType = IntegrationErrors2 )]
         [HttpPost, EedmResponseFilter]
         public async Task<Dtos.StudentMealPlans2> PostStudentMealPlans2Async([ModelBinder(typeof(EedmModelBinder))] Dtos.StudentMealPlans2 studentMealPlans2)
         {

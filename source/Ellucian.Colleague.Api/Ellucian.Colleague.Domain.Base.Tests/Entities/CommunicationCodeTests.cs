@@ -19,6 +19,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
         private string awardYear;
         private string officeCodeId;
         private bool isViewable;
+        private bool allowsAttachments;
 
         private string guid;
         private string code;
@@ -41,6 +42,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
             awardYear = "2014";
             officeCodeId = "office2";
             isViewable = true;
+            allowsAttachments = true;
             ccCode = new CommunicationCode(guid, code, description);
 
             ccCode.AwardYear = awardYear;
@@ -48,6 +50,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
             ccCode.IsStudentViewable = isViewable;
             ccCode.OfficeCodeId = officeCodeId;
             ccCode.Hyperlinks = hyperlinks;
+            ccCode.AllowsAttachments = allowsAttachments;
         }
 
         /// <summary>
@@ -74,6 +77,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
             Assert.AreEqual(awardYear, ccCode.AwardYear);
             Assert.AreEqual(officeCodeId, ccCode.OfficeCodeId);
             Assert.AreEqual(isViewable, ccCode.IsStudentViewable);
+            Assert.AreEqual(allowsAttachments, ccCode.AllowsAttachments);
         }
 
         /// <summary>
@@ -105,6 +109,12 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
             Assert.IsNotNull(ccCode.Hyperlinks);
             Assert.AreEqual(0, ccCode.Hyperlinks.Count());
         }
-        
+        [TestMethod]
+        public void AllowsAttachment_FalseByDefault()
+        {
+            var ccCode1 = new CommunicationCode(guid, code, description);
+            Assert.IsFalse(ccCode1.AllowsAttachments);
+        }
+
     }
 }

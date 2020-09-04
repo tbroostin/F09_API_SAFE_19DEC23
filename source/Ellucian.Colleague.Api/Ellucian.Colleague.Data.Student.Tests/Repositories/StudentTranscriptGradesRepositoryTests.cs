@@ -28,6 +28,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         private Collection<DataContracts.StudentAcadCred> records;
 
         StudentTranscriptGradesRepository _StudentTranscriptGradesRepository;
+        StudentTranscriptGradesRepository _StudentTranscriptGradesRepositoryWithBadHistory;
         Mock<IColleagueDataReader> dataAccessorMock;
         Mock<IColleagueTransactionInvoker> transactionInvokerMock;
 
@@ -46,6 +47,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
             BuildData();
             _StudentTranscriptGradesRepository = BuildStudentTranscriptGradesRepository();
+            _StudentTranscriptGradesRepositoryWithBadHistory = BuildStudentTranscriptGradesRepository(true);
         }
 
         private void BuildData()
@@ -127,6 +129,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             _studentTranscriptGradesCollection = null;
             records = null;
             _StudentTranscriptGradesRepository = null;
+            _StudentTranscriptGradesRepositoryWithBadHistory = null;
             dataAccessorMock = null;
         }
         
@@ -398,6 +401,39 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.AreEqual(result.Value, recordKeyLookupResult.Guid);
             }
         }
+        [TestMethod]
+        public async Task StudentTranscriptGradesRepository_GET_withBadHistory()
+        {
+            dataAccessorMock.Setup(repo => repo.SelectAsync("STUDENT.ACAD.CRED", It.IsAny<string>())).ReturnsAsync(new[] { "1", "2" });
+            var scsCourseSection = "0000001";
+            var studentAcadCredRecord = records.FirstOrDefault(x => x.RecordGuid == guid);
+
+            var ldmGuid = new LdmGuid() { LdmGuidEntity = "STUDENT.ACAD.CRED", LdmGuidSecondaryFld = "STC.INTG.KEY.IDX", LdmGuidPrimaryKey = "1" };
+            dataAccessorMock.Setup(acc => acc.ReadRecordAsync<LdmGuid>("LDM.GUID", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(ldmGuid);
+
+            dataAccessorMock.Setup(acc => acc.ReadRecordAsync<DataContracts.StudentAcadCred>(It.IsAny<string>(), It.IsAny<bool>()))
+                .ReturnsAsync(studentAcadCredRecord);
+
+            var recordLookupDict = new Dictionary<string, RecordKeyLookupResult>();
+
+            recordLookupDict.Add("STUDENT.ACAD.CRED+" + studentAcadCredRecord.Recordkey + "+" + studentAcadCredRecord.StcIntgKeyIdx,
+                new RecordKeyLookupResult() { Guid = guid });
+
+            dataAccessorMock.Setup(dr => dr.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(recordLookupDict);
+
+            dataAccessorMock.Setup(dr => dr.SelectAsync("STUDENT.COURSE.SEC", It.IsAny<string[]>(), ""))
+                .ReturnsAsync(new string[] { studentAcadCredRecord.StcStudentCourseSec });
+            dataAccessorMock.Setup(dr => dr.BulkReadRecordAsync<StudentCourseSec>(It.IsAny<string[]>(), It.IsAny<bool>()))
+                .ReturnsAsync(new Collection<StudentCourseSec>() {
+                    new StudentCourseSec() { Recordkey = studentAcadCredRecord.StcStudentCourseSec, ScsCourseSection = scsCourseSection } });
+
+            dataAccessorMock.Setup(repo => repo.BulkReadRecordAsync<StudentAcadCred>("STUDENT.ACAD.CRED", It.IsAny<string[]>(), It.IsAny<bool>()))
+                .ReturnsAsync(records);
+
+
+            var results = await _StudentTranscriptGradesRepositoryWithBadHistory.GetStudentTranscriptGradesAsync(It.IsAny<int>(), It.IsAny<int>());
+            Assert.IsNotNull(results);
+        }
 
         #region student-transcript-grades-adjustments
 
@@ -483,8 +519,11 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
         #endregion
 
-        private StudentTranscriptGradesRepository BuildStudentTranscriptGradesRepository()
+        private StudentTranscriptGradesRepository BuildStudentTranscriptGradesRepository(bool badHistory = false)
         {
+            // New optional param badHistory to mock DataReader behavior when
+            // The history table is malformed
+
             // transaction factory mock
             transFactoryMock = new Mock<IColleagueTransactionFactory>();
             transactionInvokerMock = new Mock<IColleagueTransactionInvoker>();
@@ -566,9 +605,14 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 histLog.StchlHist = new List<string>() { key, "*1" };
                 histLogs.Add(histLog);
             }
-
-            dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.StcHistLog>("STUDENT.ACAD.CRED.HIST.LOG", It.IsAny<string>(), true)).ReturnsAsync(histLogs);
-
+            if (badHistory)
+            {
+                dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.StcHistLog>("STUDENT.ACAD.CRED.HIST.LOG", It.IsAny<string>(), true)).ThrowsAsync(new NullReferenceException());
+            }
+            else
+            {
+                dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.StcHistLog>("STUDENT.ACAD.CRED.HIST.LOG", It.IsAny<string>(), true)).ReturnsAsync(histLogs);
+            }
             // var histIdCollection = studentAcadCredHistLogRecords.SelectMany(hl => hl.StchlHist).ToArray();
             //var histCriteria = "WITH HIST.ID EQ '" + (string.Join(" ", histIdCollection.ToArray())).Replace(" ", "' '") + "' AND WITH HIST.FIELD.NAME EQ 'STC.VERIFIED.GRADE'";
             //studentAcadCredHistRecords = await DataReader.BulkReadRecordAsync<Hist>("STUDENT.ACAD.CRED.HIST", histCriteria);

@@ -6600,4 +6600,1145 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
         #endregion
     }
+
+    [TestClass]
+    public class StudentAcademicProgramReplacementsTests : StudentUserSetup
+    {
+        #region DECLARATION
+
+        protected Domain.Entities.Role getStudentAcademicPrograms = new Domain.Entities.Role(1, "VIEW.STUDENT.ACADEMIC.PROGRAM");
+        protected Domain.Entities.Role createStudentAcademicPrograms = new Domain.Entities.Role(2, "CREATE.UPDATE.STUDENT.ACADEMIC.PROGRAM");
+
+        private Mock<IAdapterRegistry> adapterRegistryMock;
+        private Mock<IStudentRepository> studentRepositoryMock;
+        private Mock<IStudentAcademicProgramRepository> studentAcademicProgramRepositoryMock;
+        private Mock<ITermRepository> termRepositoryMock;
+        private Mock<IStudentReferenceDataRepository> studentReferenceDataRepositoryMock;
+        private Mock<ICatalogRepository> catalogRepositoryMock;
+        private Mock<IPersonRepository> personRepositoryMock;
+        private Mock<IReferenceDataRepository> referenceDataRepositoryMock;
+        private Mock<IRoleRepository> roleRepositoryMock;
+        private Mock<ILogger> loggerMock;
+        private Mock<IConfigurationRepository> configurationRepositoryMock;
+        private ICurrentUserFactory currentUserFactory;
+
+        private StudentAcademicProgramService studentAcademicProgramService;
+
+        private DefaultsConfiguration defaultConfiguration;
+        private StudentAcademicProgram studentAcademicProgramEntity;
+        private List<Domain.Student.Entities.AcademicProgram> academicPrograms;
+        private List<Domain.Student.Entities.Requirements.Catalog> catalogs;
+        private List<Domain.Base.Entities.Location> locations;
+        private List<Department> departments;
+        private List<Term> terms;
+        private List<Domain.Student.Entities.AcademicPeriod> academicPeriods;
+        private List<Domain.Student.Entities.AcademicLevel> academicLevels;
+        private List<Domain.Student.Entities.AdmissionPopulation> admissionPopulations;
+        private List<Domain.Base.Entities.OtherDegree> otherDegrees;
+        private List<Domain.Base.Entities.OtherMajor> otherMajors;
+        private List<Domain.Base.Entities.OtherHonor> otherHonors;
+        private List<Domain.Student.Entities.EnrollmentStatus> enrollmentStatuses;
+        private List<Domain.Base.Entities.AcadCredential> academicCredentials;
+        private List<Domain.Base.Entities.AcademicDiscipline> disciplines;
+
+        private StudentAcademicProgramReplacements studentAcademicProgramReplacements;
+
+        private Tuple<IEnumerable<StudentAcademicProgram>, int> studentAcademicPrograms;
+
+        private string guid = "1a59eed8-5fe7-4120-b1cf-f23266b9e874";
+        private Dictionary<string, string> personGuidCollection;
+
+        #endregion
+
+        #region TEST SETUP
+
+        [TestInitialize]
+        public void Initialize()
+        {
+            adapterRegistryMock = new Mock<IAdapterRegistry>();
+            studentRepositoryMock = new Mock<IStudentRepository>();
+            studentAcademicProgramRepositoryMock = new Mock<IStudentAcademicProgramRepository>();
+            termRepositoryMock = new Mock<ITermRepository>();
+            studentReferenceDataRepositoryMock = new Mock<IStudentReferenceDataRepository>();
+            catalogRepositoryMock = new Mock<ICatalogRepository>();
+            personRepositoryMock = new Mock<IPersonRepository>();
+            referenceDataRepositoryMock = new Mock<IReferenceDataRepository>();
+            roleRepositoryMock = new Mock<IRoleRepository>();
+            loggerMock = new Mock<ILogger>();
+            configurationRepositoryMock = new Mock<IConfigurationRepository>();
+            currentUserFactory = new ThirdPartyUserFactory();
+
+            InitializeTestData();
+
+            InitializeMock();
+
+            studentAcademicProgramService = new StudentAcademicProgramService(adapterRegistryMock.Object, studentRepositoryMock.Object, studentAcademicProgramRepositoryMock.Object,
+                termRepositoryMock.Object, studentReferenceDataRepositoryMock.Object, catalogRepositoryMock.Object, personRepositoryMock.Object, referenceDataRepositoryMock.Object,
+                currentUserFactory, roleRepositoryMock.Object, configurationRepositoryMock.Object, loggerMock.Object);
+        }
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            adapterRegistryMock = null;
+            studentRepositoryMock = null;
+            studentAcademicProgramRepositoryMock = null;
+            termRepositoryMock = null;
+            studentReferenceDataRepositoryMock = null;
+            catalogRepositoryMock = null;
+            personRepositoryMock = null;
+            referenceDataRepositoryMock = null;
+            roleRepositoryMock = null;
+            loggerMock = null;
+            currentUserFactory = null;
+            configurationRepositoryMock = null;
+        }
+
+        private void InitializeTestData()
+        {
+            defaultConfiguration = new DefaultsConfiguration() { HostInstitutionCodeId = "1" };
+            personGuidCollection = new Dictionary<string, string>();
+            personGuidCollection.Add("1", guid);
+
+            academicPrograms = new List<Domain.Student.Entities.AcademicProgram>() { new Domain.Student.Entities.AcademicProgram(guid, "1", "desc"), new Domain.Student.Entities.AcademicProgram(guid, "2", "2desc") };
+
+            catalogs = new List<Domain.Student.Entities.Requirements.Catalog>() { new Domain.Student.Entities.Requirements.Catalog(guid, "1", "desc", DateTime.Today) };
+
+            locations = new List<Domain.Base.Entities.Location>() { new Domain.Base.Entities.Location(guid, "1", "desc") };
+
+            departments = new List<Department>()
+                {
+                    new Department(guid, "1", "desc", true),
+                    new Department("1a59eed8-5fe7-4120-b1cf-f23266b9e876", "2", "desc", true)
+                };
+
+            terms = new List<Term>() { new Term(guid, "1", "desc", DateTime.Today, DateTime.Today.AddDays(100), 2017, 1, true, true, "1", true) };
+
+            academicPeriods = new List<Domain.Student.Entities.AcademicPeriod>() { new Domain.Student.Entities.AcademicPeriod(guid, "1", "desc", DateTime.Today, DateTime.Today.AddDays(100), 2017,
+                    1, "1", "1", "1", new List<RegistrationDate>() { })};
+
+            academicLevels = new List<Domain.Student.Entities.AcademicLevel>() { new Domain.Student.Entities.AcademicLevel(guid, "1", "desc") };
+
+            admissionPopulations = new List<Domain.Student.Entities.AdmissionPopulation>() { new Domain.Student.Entities.AdmissionPopulation(guid, "1", "desc") };
+            otherDegrees = new List<Domain.Base.Entities.OtherDegree>() { new Domain.Base.Entities.OtherDegree(guid, "1", "desc") };
+
+            otherMajors = new List<Domain.Base.Entities.OtherMajor>() { new Domain.Base.Entities.OtherMajor(guid, "1", "desc") };
+
+            otherHonors = new List<Domain.Base.Entities.OtherHonor>() { new Domain.Base.Entities.OtherHonor(guid, "1", "desc") };
+
+            disciplines = new List<Domain.Base.Entities.AcademicDiscipline>()
+                {
+                    new Domain.Base.Entities.AcademicDiscipline(guid, "1", "desc", Domain.Base.Entities.AcademicDisciplineType.Concentration),
+                    new Domain.Base.Entities.AcademicDiscipline("1a59eed8-5fe7-4120-b1cf-f23266b9e876", "2", "desc", Domain.Base.Entities.AcademicDisciplineType.Major),
+                    new Domain.Base.Entities.AcademicDiscipline("1a59eed8-5fe7-4120-b1cf-f23266b9e877", "3", "desc", Domain.Base.Entities.AcademicDisciplineType.Minor)
+                };
+
+            academicCredentials = new List<Domain.Base.Entities.AcadCredential>()
+                {
+                    new Domain.Base.Entities.AcadCredential(guid, "1", "desc", Domain.Base.Entities.AcademicCredentialType.Degree),
+                    new Domain.Base.Entities.AcadCredential("1a59eed8-5fe7-4120-b1cf-f23266b9e875", "2", "desc", Domain.Base.Entities.AcademicCredentialType.Certificate),
+                    new Domain.Base.Entities.AcadCredential("1a59eed8-5fe7-4120-b1cf-f23266b9e876", "3", "desc", Domain.Base.Entities.AcademicCredentialType.Honorary),
+                    new Domain.Base.Entities.AcadCredential("1a59eed8-5fe7-4120-b1cf-f23266b9e877", "4", "desc", Domain.Base.Entities.AcademicCredentialType.Diploma)
+                };
+
+            enrollmentStatuses = new List<Domain.Student.Entities.EnrollmentStatus>()
+                {
+                    new Domain.Student.Entities.EnrollmentStatus(guid, "1", "desc", Domain.Student.Entities.EnrollmentStatusType.active),
+                    new Domain.Student.Entities.EnrollmentStatus("1a59eed8-5fe7-4120-b1cf-f23266b9e875", "2", "desc", Domain.Student.Entities.EnrollmentStatusType.complete)
+                };
+
+            studentAcademicProgramEntity = new StudentAcademicProgram("1", "2", "1", guid, DateTime.Today, "1")
+            {
+                GraduationDate = DateTime.Today,
+                IsPrimary = true,
+                Location = "1",
+                DepartmentCode = "1",
+                StartTerm = "1",
+                AnticipatedCompletionTerm = "1",
+                GradTerm = "1",
+                AcademicLevelCode = "1",
+                DegreeCode = "1",
+                CreditsEarned = 0,
+                AdmitStatus = "1"
+            };
+
+            studentAcademicProgramEntity.AddMajors("1");
+            studentAcademicProgramEntity.AddHonors("1");
+
+            studentAcademicPrograms = new Tuple<IEnumerable<StudentAcademicProgram>, int>(new List<StudentAcademicProgram>() { studentAcademicProgramEntity }, 1);
+
+            studentAcademicProgramReplacements = new StudentAcademicProgramReplacements()
+            {
+                Id = guid,
+                Student = new GuidObject2(guid),
+                ProgramToReplace  = new GuidObject2(Guid.NewGuid().ToString()),
+                NewProgram = new StudentAcademicProgramsReplacementsNewProgram()
+                {
+                    CurriculumObjective = Dtos.EnumProperties.StudentAcademicProgramsCurriculumObjective2.Matriculated,
+                    Detail = new GuidObject2(guid),
+                    AcademicCatalog = new GuidObject2(guid),
+                    EnrollmentStatus = new EnrollmentStatusDetail() { EnrollStatus = Dtos.EnrollmentStatusType.Active },
+                    ProgramOwner = new GuidObject2(guid),
+                    Site = new GuidObject2(guid),
+                    AcademicLevel = new GuidObject2(guid),
+                    ExpectedGraduationDate = DateTime.Today.AddDays(100),
+                    StartOn = DateTime.Today,
+                    AcademicPeriods = new StudentAcademicProgramsAcademicPeriods2()
+                    {
+                        Starting = new GuidObject2(guid),
+                        ExpectedGraduation = new GuidObject2(guid)
+                    },
+                    Credentials = new List<GuidObject2>() { new GuidObject2(guid), new GuidObject2("1a59eed8-5fe7-4120-b1cf-f23266b9e875") },
+                    Disciplines = new List<StudentAcademicProgramDisciplines2>()
+                    {
+                        new StudentAcademicProgramDisciplines2()
+                        {
+                            Discipline = new GuidObject2(guid),
+                            AdministeringInstitutionUnit = new GuidObject2(guid),
+                            StartOn = DateTime.Today,
+                        }
+                    },
+                    AdmissionClassification = new Dtos.DtoProperties.AdmissionClassificationDtoProperty()
+                    {
+                        AdmissionCategory = new GuidObject2(guid)
+                    }
+                }
+            };
+        }
+
+        private void InitializeMock(bool bypassCache = true)
+        {
+            createStudentAcademicPrograms.AddPermission(new Domain.Entities.Permission(StudentPermissionCodes.ReplaceStudentAcademicProgram));
+
+            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { getStudentAcademicPrograms, createStudentAcademicPrograms });
+            configurationRepositoryMock.Setup(c => c.GetDefaultsConfiguration()).Returns(defaultConfiguration);
+            studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicProgramByGuid2Async(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(studentAcademicProgramEntity);
+            studentReferenceDataRepositoryMock.Setup(s => s.GetAcademicProgramsAsync(It.IsAny<bool>())).ReturnsAsync(academicPrograms);
+            catalogRepositoryMock.Setup(c => c.GetAsync(It.IsAny<bool>())).ReturnsAsync(catalogs);
+            personRepositoryMock.Setup(p => p.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(guid);
+            personRepositoryMock.Setup(p => p.GetPersonGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(personGuidCollection);
+            personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
+
+            personRepositoryMock.Setup(pr => pr.IsCorpAsync(It.IsAny<string>())).ReturnsAsync(false);
+
+            referenceDataRepositoryMock.Setup(r => r.GetLocationsAsync(It.IsAny<bool>())).ReturnsAsync(locations);
+            referenceDataRepositoryMock.Setup(r => r.GetDepartments2Async(It.IsAny<bool>())).ReturnsAsync(departments);
+            referenceDataRepositoryMock.Setup(r => r.GetAcadCredentialsAsync(It.IsAny<bool>())).ReturnsAsync(academicCredentials);
+            termRepositoryMock.Setup(t => t.GetAsync(It.IsAny<bool>())).ReturnsAsync(terms);
+            termRepositoryMock.Setup(t => t.GetAcademicPeriods(It.IsAny<List<Term>>())).Returns(academicPeriods);
+            studentReferenceDataRepositoryMock.Setup(s => s.GetAcademicLevelsAsync(It.IsAny<bool>())).ReturnsAsync(academicLevels);
+            studentReferenceDataRepositoryMock.Setup(s => s.GetAdmissionPopulationsAsync(It.IsAny<bool>())).ReturnsAsync(admissionPopulations);
+            referenceDataRepositoryMock.Setup(r => r.GetOtherDegreesAsync(It.IsAny<bool>())).ReturnsAsync(otherDegrees);
+            referenceDataRepositoryMock.Setup(r => r.GetOtherMajorsAsync(It.IsAny<bool>())).ReturnsAsync(otherMajors);
+            referenceDataRepositoryMock.Setup(r => r.GetOtherHonorsAsync(It.IsAny<bool>())).ReturnsAsync(otherHonors);
+            referenceDataRepositoryMock.Setup(r => r.GetOtherHonorsAsync(false)).ReturnsAsync(otherHonors);
+            studentReferenceDataRepositoryMock.Setup(s => s.GetEnrollmentStatusesAsync(It.IsAny<bool>())).ReturnsAsync(enrollmentStatuses);
+            studentReferenceDataRepositoryMock.Setup(s => s.GetEnrollmentStatusesAsync(It.IsAny<bool>())).ReturnsAsync(enrollmentStatuses);
+            studentAcademicProgramRepositoryMock.Setup(s => s.GetUnidataFormattedDate(It.IsAny<string>())).ReturnsAsync(DateTime.Today.ToString());
+            referenceDataRepositoryMock.Setup(r => r.GetAcademicDisciplinesAsync(It.IsAny<bool>())).ReturnsAsync(disciplines);
+
+            studentAcademicProgramRepositoryMock.Setup(s => s.CreateStudentAcademicProgram2Async(It.IsAny<StudentAcademicProgram>(), It.IsAny<string>())).ReturnsAsync(studentAcademicProgramEntity);
+            foreach (var acadProg in academicPrograms)
+            {
+                studentReferenceDataRepositoryMock.Setup(srdr => srdr.GetAcademicProgramsGuidAsync(acadProg.Code)).ReturnsAsync(acadProg.Guid);
+            }
+            foreach (var catalog in catalogs)
+            {
+                catalogRepositoryMock.Setup(cat => cat.GetCatalogGuidAsync(catalog.Code)).ReturnsAsync(catalog.Guid);
+            }
+            foreach (var location in locations)
+            {
+                referenceDataRepositoryMock.Setup(loc => loc.GetLocationsGuidAsync(location.Code)).ReturnsAsync(location.Guid);
+            }
+            foreach (var dept in departments)
+            {
+                referenceDataRepositoryMock.Setup(d => d.GetDepartments2GuidAsync(dept.Code)).ReturnsAsync(dept.Guid);
+            }
+            foreach (var academicPeriod in academicPeriods)
+            {
+                termRepositoryMock.Setup(repo => repo.GetAcademicPeriodsGuidAsync(academicPeriod.Code)).ReturnsAsync(academicPeriod.Guid);
+            }
+            foreach (var acadLevel in academicLevels)
+            {
+                studentReferenceDataRepositoryMock.Setup(srdr => srdr.GetAcademicLevelsGuidAsync(acadLevel.Code)).ReturnsAsync(acadLevel.Guid);
+            }
+            foreach (var admissionPopulation in admissionPopulations)
+            {
+                studentReferenceDataRepositoryMock.Setup(srdr => srdr.GetAdmissionPopulationsGuidAsync(admissionPopulation.Code)).ReturnsAsync(admissionPopulation.Guid);
+            }
+            foreach (var honor in otherHonors)
+            {
+                referenceDataRepositoryMock.Setup(repo => repo.GetOtherHonorsGuidAsync(honor.Code)).ReturnsAsync(honor.Guid);
+            }
+            foreach (var degree in otherDegrees)
+            {
+                referenceDataRepositoryMock.Setup(repo => repo.GetOtherDegreeGuidAsync(degree.Code)).ReturnsAsync(degree.Guid);
+            }
+            foreach (var major in otherMajors)
+            {
+                referenceDataRepositoryMock.Setup(repo => repo.GetOtherMajorsGuidAsync(major.Code)).ReturnsAsync(major.Guid);
+            }
+            studentReferenceDataRepositoryMock.Setup(srdr => srdr.GetAcademicProgramsGuidAsync(It.IsAny<string>())).ReturnsAsync(academicPrograms.FirstOrDefault().Guid);
+            catalogRepositoryMock.Setup(cat => cat.GetCatalogGuidAsync(It.IsAny<string>())).ReturnsAsync(catalogs.FirstOrDefault().Guid);
+            referenceDataRepositoryMock.Setup(loc => loc.GetLocationsGuidAsync(It.IsAny<string>())).ReturnsAsync(locations.FirstOrDefault().Guid);
+            referenceDataRepositoryMock.Setup(dept => dept.GetDepartments2GuidAsync(It.IsAny<string>())).ReturnsAsync(departments.FirstOrDefault().Guid);
+            termRepositoryMock.Setup(repo => repo.GetAcademicPeriodsGuidAsync(It.IsAny<string>())).ReturnsAsync(academicPeriods.FirstOrDefault().Guid);
+            studentReferenceDataRepositoryMock.Setup(srdr => srdr.GetAcademicLevelsGuidAsync(It.IsAny<string>())).ReturnsAsync(academicLevels.FirstOrDefault().Guid);
+            studentReferenceDataRepositoryMock.Setup(srdr => srdr.GetAdmissionPopulationsGuidAsync(It.IsAny<string>())).ReturnsAsync(admissionPopulations.FirstOrDefault().Guid);
+            referenceDataRepositoryMock.Setup(repo => repo.GetOtherHonorsGuidAsync(It.IsAny<string>())).ReturnsAsync(otherHonors.FirstOrDefault().Guid);
+            referenceDataRepositoryMock.Setup(repo => repo.GetOtherDegreeGuidAsync(It.IsAny<string>())).ReturnsAsync(otherDegrees.FirstOrDefault().Guid);
+            referenceDataRepositoryMock.Setup(repo => repo.GetOtherMajorsGuidAsync(It.IsAny<string>())).ReturnsAsync(otherMajors.FirstOrDefault().Guid);
+        }
+
+        #endregion
+       
+        #region PUT/POST
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_PermissionException()
+        {
+            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
+            await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+        }
+
+
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_null_Dto()
+        {
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(null, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "Must provide a StudentAcademicProgramsReplacements object for update");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_null_ProgramToReplace()
+        {
+            studentAcademicProgramReplacements.ProgramToReplace = null;
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "ProgramToReplace.id is a required property");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_student_Empty()
+        {
+            studentAcademicProgramReplacements.Student.Id = string.Empty;
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "Student.id is a required property");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_NewProgram_Null()
+        {
+            studentAcademicProgramReplacements.NewProgram = null;
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "NewProgram.id is a required property");
+                throw ex;
+            }
+        }
+
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_CurriculumObjective_Not_Matriculated()
+        {
+            studentAcademicProgramReplacements.NewProgram.CurriculumObjective = Dtos.EnumProperties.StudentAcademicProgramsCurriculumObjective2.Outcome;
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "CurriculumObjective must be set to 'matriculated' for any new or updated student programs.");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_StartOn_Null()
+        {
+            studentAcademicProgramReplacements.NewProgram.StartOn = null;
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "StartOn is required to create or update a matriculated student program.");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsyncAsync_EnrollmentStatus()
+        {
+            studentAcademicProgramReplacements.NewProgram.EnrollmentStatus = null;
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "EnrollmentStatus is a required property");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_StartOn_Before_EndOn()
+        {
+            studentAcademicProgramReplacements.NewProgram.StartOn = DateTime.Parse("01/06/2018");
+            studentAcademicProgramReplacements.NewProgram.EndOn = DateTime.Parse("01/04/2018");
+            studentAcademicProgramReplacements.NewProgram.EnrollmentStatus.EnrollStatus = Dtos.EnrollmentStatusType.Inactive;
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "EndOn cannot be before startOn.");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_StartOn_Before_ExpectedGraduationDate()
+        {
+            studentAcademicProgramReplacements.NewProgram.StartOn = DateTime.Parse("01/06/2018");
+            studentAcademicProgramReplacements.NewProgram.ExpectedGraduationDate = DateTime.Parse("01/04/2018");
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "ExpectedGraduationDate cannot be before startOn.");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_EnrollmentStatus_InActive_No_EndOn()
+        {
+            studentAcademicProgramReplacements.NewProgram.EnrollmentStatus.EnrollStatus = Dtos.EnrollmentStatusType.Inactive;
+            studentAcademicProgramReplacements.NewProgram.EndOn = null;
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "EndOn is required for the enrollment status of inactive.");
+                throw ex;
+            }
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_EnrollmentStatus_Complete()
+        {
+            studentAcademicProgramReplacements.NewProgram.EnrollmentStatus.EnrollStatus = Dtos.EnrollmentStatusType.Complete;
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "Enrollment status of complete is not supported. Graduation processing can only be invoked directly in Colleague.");
+                throw ex;
+            }
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_EnrollmentStatus_Active_EndOn()
+        {
+            studentAcademicProgramReplacements.NewProgram.EnrollmentStatus.EnrollStatus = Dtos.EnrollmentStatusType.Active;
+            studentAcademicProgramReplacements.NewProgram.EndOn = DateTime.Parse("01/04/2018");
+            studentAcademicProgramReplacements.NewProgram.StartOn = DateTime.Parse("01/01/2018");
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "EndOn is not valid for the enrollment status of active.");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_Credentials_Id_Null()
+        {
+            studentAcademicProgramReplacements.NewProgram.Credentials[0].Id = string.Empty;
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "Credential id is a required field when credentials are in the message body.");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_Disciplines_Discipline_Null()
+        {
+            studentAcademicProgramReplacements.NewProgram.Disciplines[0].Discipline = null;
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "Discipline is a required property when disciplines are in the message body.");
+                throw ex;
+            }
+        }
+
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_DisciplineId_As_Null()
+        {
+            studentAcademicProgramReplacements.NewProgram.Disciplines.FirstOrDefault().Discipline.Id = null;
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "Discipline id is a required property when discipline is in the message body.");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_Invalid_StudentId()
+        {
+            personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "Student.id is not a valid GUID for persons.");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_Invalid_StudentId_Exception()
+        {
+            personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "Student.id is not a valid GUID for persons.");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_Invalid_StudentId_IsCorp()
+        {
+            personRepositoryMock.Setup(pr => pr.IsCorpAsync(It.IsAny<string>())).ReturnsAsync(true);
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "Student.id is not a valid GUID for persons.");
+                throw ex;
+            }
+        }
+
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_Invalid_AcademicProgramId()
+        {
+            studentAcademicProgramReplacements.NewProgram.Detail.Id = Guid.NewGuid().ToString();
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "Program.Id is not a valid GUID for academic-programs.");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync__AcademicProgramId_Exception()
+        {
+            studentReferenceDataRepositoryMock.Setup(srdr => srdr.GetAcademicProgramsAsync(It.IsAny<bool>())).ThrowsAsync(new Exception());
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }            
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "Program.Id is not a valid GUID for academic-programs.");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgram_AcademicCatalogId_As_Null()
+        {
+            studentAcademicProgramReplacements.NewProgram.AcademicCatalog.Id = null;
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "Catalog.id is a required property when catalog is in the message body.");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_Invalid_AcademicCatalogId()
+        {
+            catalogRepositoryMock.Setup(c => c.GetAsync(It.IsAny<bool>())).ThrowsAsync(new Exception());
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "Catalog.Id is not a valid GUID for academic-catalogs.");
+                throw ex;
+            }
+        }
+
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_EnrollmentStatusId_Null()
+        {
+            studentAcademicProgramReplacements.NewProgram.EnrollmentStatus.Detail = new GuidObject2(null);
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "EnrollmentStatus.Detail.Id is a required field when detail is in the message body");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_EnrollmentStatus_And_Detail_NotMatch()
+        {
+            studentAcademicProgramReplacements.NewProgram.EnrollmentStatus.Detail = new GuidObject2("1a59eed8-5fe7-4120-b1cf-f23266b9e875");
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == " The enrollment Status of 'complete' referred by the detail ID '1a59eed8-5fe7-4120-b1cf-f23266b9e875' is different from that in the payload.");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_Invalid_EnrollmentStatusDetailId()
+        {
+            studentAcademicProgramReplacements.NewProgram.EnrollmentStatus.Detail = new GuidObject2(Guid.NewGuid().ToString());
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "EnrollmentStatus.Detail.Id not a valid GUID for enrollment-statuses.");
+                throw ex;
+            }
+        }
+
+
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_EnrollmentStatusDetailId_Exception()
+        {
+            studentReferenceDataRepositoryMock.Setup(s => s.GetEnrollmentStatusesAsync(It.IsAny<bool>())).ThrowsAsync(new Exception());
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "ProgramToReplace.Id does not match the program ID for the programToReplace.");
+                throw ex;
+            }
+        }
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_Null_ProgramOwnerId()
+        {
+            studentAcademicProgramReplacements.NewProgram.ProgramOwner.Id = null;
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "ProgramOwner.id is a required property when programOwner is in the message body.");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_Invalid_ProgramOwnerId()
+        {
+            studentAcademicProgramReplacements.NewProgram.ProgramOwner.Id = Guid.NewGuid().ToString();
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "ProgramOwner.id is not a valid GUID for educational-institution-units.");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_SiteId_Null()
+        {
+            studentAcademicProgramReplacements.NewProgram.Site.Id = null;
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "Site.id is a required property when site is in the message body.");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_Invalid_SiteId()
+        {
+            studentAcademicProgramReplacements.NewProgram.Site.Id = Guid.NewGuid().ToString();
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "Site.id is not a valid GUID for sites.");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_AcademicLevelId_Null()
+        {
+            studentAcademicProgramReplacements.NewProgram.AcademicLevel.Id = null;
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "AcademicLevel.id is a required property when site is in the message body.");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_Invalid_AcademicLevelId()
+        {
+            studentAcademicProgramReplacements.NewProgram.AcademicLevel.Id = Guid.NewGuid().ToString();
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "AcademicLevel.id is not a valid GUID for academic-levels.");
+                throw ex;
+            }
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_AcademicPeriodsStartingId_Null()
+        {
+            studentAcademicProgramReplacements.NewProgram.AcademicPeriods.Starting.Id = null;
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "AcademicPeriods.starting.id is a required property when academicPeriods.starting is in the message body.");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_Invalid_AcademicPeriodsStartingId()
+        {
+            studentAcademicProgramReplacements.NewProgram.AcademicPeriods.Starting.Id = Guid.NewGuid().ToString();
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "AcademicPeriods.starting.id is not a valid GUID for academic-periods.");
+                throw ex;
+            }
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_AcademicPeriodsExpectedGraduationId_Null()
+        {
+            studentAcademicProgramReplacements.NewProgram.AcademicPeriods.ExpectedGraduation.Id = null;
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "AcademicPeriods.expectedGraduation.id is a required property when academicPeriods.expectedGraduation is in the message body.");
+                throw ex;
+            }
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_Invalid_AcademicPeriodsExpectedGraduationId()
+        {
+            studentAcademicProgramReplacements.NewProgram.AcademicPeriods.ExpectedGraduation.Id = Guid.NewGuid().ToString();
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "AcademicPeriods.expectedGraduation.id is not a valid GUID for academic-periods.");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_Invalid_CredentialId()
+        {
+            studentAcademicProgramReplacements.NewProgram.Credentials.FirstOrDefault().Id = Guid.NewGuid().ToString();
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "Credentials.id is not a valid GUID for academic-credentials.");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_Credentials_As_Honorary()
+        {
+            studentAcademicProgramReplacements.NewProgram.Credentials.FirstOrDefault().Id = "1a59eed8-5fe7-4120-b1cf-f23266b9e876";
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "Credentials.id of type honor is not supported.");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_Credentials_As_Diploma()
+        {
+            studentAcademicProgramReplacements.NewProgram.Credentials.FirstOrDefault().Id = "1a59eed8-5fe7-4120-b1cf-f23266b9e877";
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "Credentials.id of type diploma is not supported.");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_CredentialsDegree_MoreThanOne()
+        {
+            studentAcademicProgramReplacements.NewProgram.Credentials.Add(new GuidObject2(guid));
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "Credentials array cannot have more than one degree.");
+                throw ex;
+            }
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_Invalid_DisciplineId()
+        {
+            studentAcademicProgramReplacements.NewProgram.Disciplines.FirstOrDefault().Discipline.Id = Guid.NewGuid().ToString();
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "Disciplines.discipline.id is not a valid GUID for academic-disciplines.");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_Discipline_StartOn_Endon()
+        {
+            studentAcademicProgramReplacements.NewProgram.Disciplines.FirstOrDefault().StartOn = DateTime.Parse("01/04/2018");
+            studentAcademicProgramReplacements.NewProgram.Disciplines.FirstOrDefault().EndOn = DateTime.Parse("01/01/2018");
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "The requested discipline 1a59eed8-5fe7-4120-b1cf-f23266b9e874 endOn must be on or after the discipline startOn.");
+                throw ex;
+            }
+        }
+
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_Null_AdmissionClassification_AdmissionCategory()
+        {
+            studentAcademicProgramReplacements.NewProgram.AdmissionClassification.AdmissionCategory = null; ;
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "AdmissionClassification.admissionCategory is a required property when admissionClassification is in the message body.");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_Null_AdmissionClassification_AdmissionCategory_Id()
+        {
+            studentAcademicProgramReplacements.NewProgram.AdmissionClassification.AdmissionCategory.Id = string.Empty;
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "AdmissionClassification.admissionCategory.id is a required property when admissionClassification.admissionCategory is in the message body.");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_Null_AdmissionClassification_AdmissionCategory_Invalid_Id()
+        {
+            studentAcademicProgramReplacements.NewProgram.AdmissionClassification.AdmissionCategory.Id = Guid.NewGuid().ToString();
+            try
+            {
+                await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsNotNull(ex);
+                Assert.IsTrue(ex.Errors.Count == 1);
+                Assert.IsTrue(ex.Errors[0].Message == "AdmissionClassification.admissionCategory.id is not a valid GUID for admission-populations.");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        public async Task StuAcadPrgm_CreateStudentAcademicProgramSubmissionAsync()
+        {
+            var result = await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, true);
+
+            Assert.IsNotNull(result);
+        }
+
+        #endregion
+    }
 }

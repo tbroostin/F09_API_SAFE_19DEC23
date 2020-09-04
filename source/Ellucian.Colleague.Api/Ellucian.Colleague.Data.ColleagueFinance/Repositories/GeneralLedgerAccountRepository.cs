@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -96,6 +96,25 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
 
             return glAccountsForUser;
+        }
+
+        /// <summary>
+        /// Restricts a list of GL accounts to those that are active.
+        /// </summary>
+        /// <param name="glAccounts">List of general ledger account strings.</param>
+        /// <returns>A list of active general ledger account strings.</returns>
+        public async Task<List<string>> GetActiveGeneralLedgerAccounts(List<string> glAccounts)
+        {
+            List<string> activeGlAccounts = new List<string>();
+            string[] activeAccounts;
+            if (glAccounts != null)
+            {
+                string [] accountsArray = glAccounts.ToArray();
+                var criteria = "WITH GL.INACTIVE EQ 'A'";
+                activeAccounts = await DataReader.SelectAsync("GL.ACCTS", accountsArray, criteria);
+                activeGlAccounts = activeAccounts.ToList();
+            }
+            return activeGlAccounts;
         }
 
         /// <summary>

@@ -50,6 +50,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         private Mock<IGeneralLedgerAccountRepository> generalLedgerAccountRepositoryMock;
 
         private Domain.Entities.Permission permissionViewRequisition;
+        private Domain.Entities.Permission permissionDeleteRequisition;
         protected Domain.Entities.Role glUserRoleViewPermissions = new Domain.Entities.Role(228, "REQUISITION.VIEWER");
 
         private GeneralLedgerCurrentUser.UserFactory currentUserFactory = new GeneralLedgerCurrentUser.UserFactory();
@@ -71,9 +72,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             // Create permission domain entities for viewing the requisition.
             permissionViewRequisition = new Domain.Entities.Permission(ColleagueFinancePermissionCodes.ViewRequisition);
+            permissionDeleteRequisition = new Domain.Entities.Permission(ColleagueFinancePermissionCodes.DeleteRequisition);
             // Assign view permission to the role that has view permissions.
             glUserRoleViewPermissions.AddPermission(permissionViewRequisition);
-
+            glUserRoleViewPermissions.AddPermission(permissionDeleteRequisition);
             staffRepositoryMock.Setup(repo => repo.GetAsync(It.IsAny<string>())).Returns(Task.FromResult(new Domain.Base.Entities.Staff("1", "Test LastName")));
 
             Dictionary<string, string> descDictionary = new Dictionary<string, string>();
@@ -483,6 +485,128 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
         #endregion
 
+        #region Tests for Requisition Delete
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task RequisitionService_DeleteRequisitionsAsync_ArgumentNullException()
+        {
+            await service2.DeleteRequisitionsAsync(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task RequisitionService_DeleteRequisitionsAsync_EmptyPersonId_ArgumentNullException()
+        {
+            Ellucian.Colleague.Dtos.ColleagueFinance.RequisitionDeleteRequest abc = new Ellucian.Colleague.Dtos.ColleagueFinance.RequisitionDeleteRequest();
+            abc.PersonId = "";
+            await service2.DeleteRequisitionsAsync(abc);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task RequisitionService_DeleteRequisitionsAsync_EmptyRequisitionId_ArgumentNullException()
+        {
+            Ellucian.Colleague.Dtos.ColleagueFinance.RequisitionDeleteRequest abc = new Ellucian.Colleague.Dtos.ColleagueFinance.RequisitionDeleteRequest();
+            abc.PersonId = "0000004";
+            await service2.DeleteRequisitionsAsync(abc);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task RequisitionService_DeleteRequisitionsAsync_EmptyEmail_ArgumentNullException()
+        {
+            Ellucian.Colleague.Dtos.ColleagueFinance.RequisitionDeleteRequest abc = new Ellucian.Colleague.Dtos.ColleagueFinance.RequisitionDeleteRequest();
+            abc.PersonId = "000123";
+            abc.RequisitionId = "000123";
+            abc.ConfirmationEmailAddresses = "";
+            await service2.DeleteRequisitionsAsync(abc);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task RequisitionService_DeleteRequisitionsAsync_NotLoggedInuser()
+        {
+            Ellucian.Colleague.Dtos.ColleagueFinance.RequisitionDeleteRequest abc = new Ellucian.Colleague.Dtos.ColleagueFinance.RequisitionDeleteRequest();
+            abc.PersonId = "000123";
+            abc.RequisitionId = "000123";
+            abc.ConfirmationEmailAddresses = "abc@gmail.com";
+            await service2.DeleteRequisitionsAsync(abc);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task RequisitionService_DeleteRequisitionsAsync_StaffRecordMissingException()
+        {
+            Ellucian.Colleague.Dtos.ColleagueFinance.RequisitionDeleteRequest abc = new Ellucian.Colleague.Dtos.ColleagueFinance.RequisitionDeleteRequest();
+            abc.PersonId = "000123";
+            abc.RequisitionId = "000123";
+            abc.ConfirmationEmailAddresses = "abc@gmail.com";
+            Domain.Base.Entities.Staff nullStaff = null;
+            staffRepositoryMock.Setup(repo => repo.GetAsync(It.IsAny<string>())).Returns(Task.FromResult(nullStaff));
+
+            await service2.DeleteRequisitionsAsync(abc);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task RequisitionService_DeleteRequisitionsAsync_PermissionsException()
+        {
+            List<Domain.Entities.Role> roles = new List<Domain.Entities.Role>()
+                    {
+                        new Domain.Entities.Role(1,"DELETE.REQ")
+                    };
+
+            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(roles);
+
+            Ellucian.Colleague.Dtos.ColleagueFinance.RequisitionDeleteRequest abc = new Ellucian.Colleague.Dtos.ColleagueFinance.RequisitionDeleteRequest();
+            abc.PersonId = "000123";
+            abc.RequisitionId = "000123";
+            abc.ConfirmationEmailAddresses = "abc@gmail.com";
+            await service2.DeleteRequisitionsAsync(abc);
+        }
+
+        [TestMethod]
+        public async Task RequisitionService_DeleteRequisitionsAsync()
+        {
+            
+            Ellucian.Colleague.Dtos.ColleagueFinance.RequisitionDeleteRequest abc = new Ellucian.Colleague.Dtos.ColleagueFinance.RequisitionDeleteRequest();
+            abc.PersonId = "0000001";
+            abc.RequisitionId = "000123";
+            abc.ConfirmationEmailAddresses = "abc@gmail.com";
+
+            //roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(roles);
+            var deleteReqDtos = await service2.DeleteRequisitionsAsync(abc);
+            Assert.IsNotNull(deleteReqDtos);
+        }
+
+        [TestMethod]
+        public async Task RequisitionService_DeleteRequisitionsAsyncWithValues()
+        {
+
+            Ellucian.Colleague.Dtos.ColleagueFinance.RequisitionDeleteRequest abc = new Ellucian.Colleague.Dtos.ColleagueFinance.RequisitionDeleteRequest();
+            abc.PersonId = "0000001";
+            abc.RequisitionId = "000123";
+            abc.ConfirmationEmailAddresses = "abc@gmail.com";
+
+            RequisitionDeleteResponse res = new RequisitionDeleteResponse();
+            res.RequisitionId = "000111";
+            res.RequisitionNumber = "REQ0001";
+            res.ErrorOccured = false;
+            res.ErrorMessages = null;
+            res.WarningOccured = true;
+            res.WarningMessages = new List<string>() { "Please refresh Page" };
+
+            //var loggerObject = new Mock<ILogger>().Object;
+
+            mockRequisitionRepository.Setup(r => r.DeleteRequisitionsAsync(It.IsAny<RequisitionDeleteRequest>())).ReturnsAsync(res);
+            
+            var deleteReqDtos = await service2.DeleteRequisitionsAsync(abc);
+            Assert.IsNotNull(deleteReqDtos);
+        }
+
+        #endregion
+
         #region Build service method
 
         /// <summary>
@@ -514,7 +638,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             // Set up and mock the adapter, and setup the GetAdapter method.
             var adapterRegistry = new Mock<IAdapterRegistry>();
             var requisitionDtoAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.Requisition, Dtos.ColleagueFinance.Requisition>(adapterRegistry.Object, loggerObject);
+            var requisitionDtoAdapter_Delete = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.RequisitionDeleteResponse, Dtos.ColleagueFinance.RequisitionDeleteResponse>(adapterRegistry.Object, loggerObject);
             adapterRegistry.Setup(x => x.GetAdapter<Domain.ColleagueFinance.Entities.Requisition, Dtos.ColleagueFinance.Requisition>()).Returns(requisitionDtoAdapter);
+
+            adapterRegistry.Setup(x => x.GetAdapter<Domain.ColleagueFinance.Entities.RequisitionDeleteResponse, Dtos.ColleagueFinance.RequisitionDeleteResponse>()).Returns(requisitionDtoAdapter_Delete);
 
             // Set up the service objects
             service = new RequisitionService(testRequisitionRepository, testGeneralLedgerConfigurationRepository, testGeneralLedgerUserRepository,
@@ -694,7 +821,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     DesiredDate = DateTime.Now,
                     ExpectedDeliveryDate = DateTime.Now.AddDays(10),
                     InvoiceNumber = "1",
-                    Status = PurchaseOrderStatus.InProgress,
+                    LineItemStatus = LineItemStatus.Outstanding,
                     StatusDate = DateTime.Now,
                     TaxForm = "1",
                     TaxFormCode = "1",
@@ -1346,7 +1473,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     DesiredDate = DateTime.Now,
                     ExpectedDeliveryDate = DateTime.Now.AddDays(10),
                     InvoiceNumber = "1",
-                    Status = PurchaseOrderStatus.Accepted,
+                    LineItemStatus = LineItemStatus.Accepted,
                     StatusDate = DateTime.Now,
                     TaxForm = "1",
                     TaxFormCode = "1",

@@ -1,4 +1,4 @@
-﻿/*Copyright 2015-2016 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2015-2020 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Colleague.Dtos.HumanResources;
 using Ellucian.Web.Http.TestUtil;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -23,10 +23,13 @@ namespace Ellucian.Colleague.Api.Client.Tests
         public const string payeeId = "0003914";
 
         private Mock<ILogger> loggerMock;
+        private ColleagueApiClient client;
+        private MockHandler mockHandler;
 
         [TestInitialize]
         public void Initialize()
         {
+            mockHandler = new MockHandler();
             loggerMock = new Mock<ILogger>();
         }
 
@@ -456,6 +459,165 @@ namespace Ellucian.Colleague.Api.Client.Tests
 
             
         }
+        #endregion
+
+        #region GetEmployeeBenefitsEnrollmentPackageAsync
+        private string employeeId = "1234567";
+        public EmployeeBenefitsEnrollmentPackage expectedEnrollmentPackage = new EmployeeBenefitsEnrollmentPackage()
+        {
+            BenefitsEnrollmentPeriodId = "19Fall",
+            EmployeeId = "1234567",
+            PackageDescription = "Benefits package",
+            PackageId ="BEN",
+            EmployeeEligibleBenefitTypes = new List<EmployeeBenefitType>()
+            {
+                new EmployeeBenefitType()
+                {
+                    BenefitType = "MED",
+                    BenefitTypeDescription = "Medical"
+                },
+                new EmployeeBenefitType()
+                {
+                    BenefitType = "DEN",
+                    BenefitTypeDescription = "Dental"
+                }
+            }
+        };
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetEmployeeBenefitsEnrollmentPackageAsync_NullEmployeeId_ArgumentNullExceptionThrownTest()
+        {
+            var serializedResponse = JsonConvert.SerializeObject(expectedEnrollmentPackage);
+            setResponse(serializedResponse, HttpStatusCode.OK);
+
+            await client.GetEmployeeBenefitsEnrollmentPackageAsync(null);
+        }
+
+        [TestMethod]
+        public async Task GetEmployeeBenefitsEnrollmentPackageAsync_RethrowsExceptionTest()
+        {
+            bool exceptionThrown = false;
+            var serializedResponse = JsonConvert.SerializeObject(expectedEnrollmentPackage);
+            setResponse(serializedResponse, HttpStatusCode.BadRequest);
+            try
+            {
+                await client.GetEmployeeBenefitsEnrollmentPackageAsync(employeeId);
+            }
+            catch { exceptionThrown = true; }
+            Assert.IsTrue(exceptionThrown);
+            
+        }
+
+        [TestMethod]
+        public async Task GetEmployeeBenefitsEnrollmentPackageAsync_ReturnExpectedResultTest()
+        {
+            var serializedResponse = JsonConvert.SerializeObject(expectedEnrollmentPackage);
+            setResponse(serializedResponse, HttpStatusCode.OK);
+            var actualEnrollmentPackage = await client.GetEmployeeBenefitsEnrollmentPackageAsync(employeeId);
+
+            Assert.AreEqual(expectedEnrollmentPackage.BenefitsEnrollmentPeriodId, actualEnrollmentPackage.BenefitsEnrollmentPeriodId);
+            Assert.AreEqual(expectedEnrollmentPackage.EmployeeId, actualEnrollmentPackage.EmployeeId);
+            Assert.AreEqual(expectedEnrollmentPackage.PackageDescription, actualEnrollmentPackage.PackageDescription);
+            Assert.AreEqual(expectedEnrollmentPackage.PackageId, actualEnrollmentPackage.PackageId);
+            Assert.AreEqual(expectedEnrollmentPackage.EmployeeEligibleBenefitTypes.Count(), actualEnrollmentPackage.EmployeeEligibleBenefitTypes.Count());
+        }
+
+        #endregion
+
+        #region QueryEnrollmentPeriodBenefitsAsync
+        private IEnumerable<EnrollmentPeriodBenefit> expectedBenefits = new List<EnrollmentPeriodBenefit>()
+        {
+            new EnrollmentPeriodBenefit()
+                    {
+                        BenefitId = "MED",
+                        BenefitDescription = "medical",
+                        BenefitTypeId = "MED",
+                        EnrollmentPeriodBenefitId = "MED2020"
+                    },
+                    new EnrollmentPeriodBenefit()
+                    {
+                        BenefitId = "DEN",
+                        BenefitDescription = "dental",
+                        BenefitTypeId = "DEN",
+                        EnrollmentPeriodBenefitId = "DEN2020"
+                    }
+        };
+
+        private BenefitEnrollmentBenefitsQueryCriteria enrollmentPeriodBenefitsCriteria = new BenefitEnrollmentBenefitsQueryCriteria()
+        {
+            BenefitTypeId = "MED"
+        };
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task QueryEnrollmentPeriodBenefitsAsync_NullCriteria_ArgumentNullExceptionThrownTest()
+        {
+            var serializedResponse = JsonConvert.SerializeObject(expectedBenefits);
+            setResponse(serializedResponse, HttpStatusCode.OK);
+
+            await client.QueryEnrollmentPeriodBenefitsAsync(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentException))]
+        public async Task QueryEnrollmentPeriodBenefitsAsync_NullBenefitTypeId_ArgumentExceptionThrownTest()
+        {
+            var serializedResponse = JsonConvert.SerializeObject(expectedBenefits);
+            setResponse(serializedResponse, HttpStatusCode.OK);
+
+            await client.QueryEnrollmentPeriodBenefitsAsync(new BenefitEnrollmentBenefitsQueryCriteria());
+        }
+
+        [TestMethod]
+        public async Task QueryEnrollmentPeriodBenefitsAsync_RethrowsExceptionTest()
+        {
+            bool exceptionThrown = false;
+            var serializedResponse = JsonConvert.SerializeObject(expectedBenefits);
+            setResponse(serializedResponse, HttpStatusCode.BadRequest);
+            try
+            {
+                await client.QueryEnrollmentPeriodBenefitsAsync(enrollmentPeriodBenefitsCriteria);
+            }
+            catch { exceptionThrown = true; }
+            Assert.IsTrue(exceptionThrown);
+
+        }
+
+        [TestMethod]
+        public async Task QueryEnrollmentPeriodBenefitsAsync_ReturnExpectedResultTest()
+        {
+            var serializedResponse = JsonConvert.SerializeObject(expectedBenefits);
+            setResponse(serializedResponse, HttpStatusCode.OK);
+
+            var actualBenefits = await client.QueryEnrollmentPeriodBenefitsAsync(enrollmentPeriodBenefitsCriteria);
+            foreach(var expected in expectedBenefits)
+            {
+                var actual = actualBenefits.FirstOrDefault(b => b.BenefitId == expected.BenefitId);
+                Assert.IsNotNull(actual);
+                Assert.AreEqual(expected.BenefitDescription, actual.BenefitDescription);
+                Assert.AreEqual(expected.BenefitTypeId, actual.BenefitTypeId);
+                Assert.AreEqual(expected.EnrollmentPeriodBenefitId, actual.EnrollmentPeriodBenefitId);
+            }
+        }
+
+        #endregion
+
+            #region Helpers
+
+        private void setResponse(string serializedResponse, HttpStatusCode responseStatusCode)
+        {
+            var response = new HttpResponseMessage(responseStatusCode);
+            response.Content = new StringContent(serializedResponse, Encoding.UTF8, contentType);
+            mockHandler.Responses.Enqueue(response);
+
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(serviceUrl);
+
+            client = new ColleagueApiClient(testHttpClient, loggerMock.Object);
+            client.Credentials = "otorres";
+        }
+
         #endregion
     }
 }

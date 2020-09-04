@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2018 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Data.Colleague;
@@ -175,7 +175,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             var distinctEmployeeIds = employeeIds.Distinct().ToArray();
 
             var perLeaveCriteria = "WITH PERLV.HRP.ID.INDEX EQ '?'";
-            var perLeaveKeys = await DataReader.SelectAsync("PERLEAVE", perLeaveCriteria, distinctEmployeeIds);
+            var perLeaveKeys = await DataReader.SelectAsync("PERLEAVE", perLeaveCriteria, distinctEmployeeIds);            
 
 
             if (perLeaveKeys == null || !perLeaveKeys.Any())
@@ -195,6 +195,19 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
 
             var perLeaveDetailDataContracts = await DataReader.BulkReadRecordAsync<DataContracts.Perlvdtl>(perLeaveDetailKeys);
+            
+            // Accrual Details for leave plan id
+            var perLeaveAccrualDetailCriteria = "WITH PLA.HRP.ID EQ '?'";
+            var perLeaveAccrualDetailKeys = await DataReader.SelectAsync("PERLVACC", perLeaveAccrualDetailCriteria, distinctEmployeeIds);
+
+
+            if (perLeaveAccrualDetailKeys == null)
+            {
+                perLeaveAccrualDetailKeys = new string[0];
+            }
+
+            // Per Leave accrual details data contract
+            var perlvaccDetailDataContracts = await DataReader.BulkReadRecordAsync<DataContracts.Perlvacc>(perLeaveAccrualDetailKeys);
 
             //create a dictionary of leave plans
             var leavePlanDictionary = leavePlans.ToDictionary(lp => lp.Id);
@@ -213,7 +226,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     }
                     else
                     {
-                        var leavePlan = leavePlanDictionary[perLeaveDataContract.PerlvLpnId];
+                        var leavePlan = leavePlanDictionary[perLeaveDataContract.PerlvLpnId];                        
                         var leaveType = leaveTypes.FirstOrDefault(lt => lt.Code == leavePlan.Type);
                         var leaveCategory = LeaveTypeCategory.None;
                         if (leaveType != null)
@@ -256,6 +269,21 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
                             //Used for comp time display in Time Entry
                             var earningTypeList = leavePlan.EarningsTypes;
+
+                            DataContracts.Perlvacc leaveAccrualDetails = null;
+                            if (perlvaccDetailDataContracts != null)
+                            {
+                                // Getting the active Accrual Details for leave plan id
+                                leaveAccrualDetails = perlvaccDetailDataContracts.FirstOrDefault(placc => (placc.PlaHrpId == perLeaveDataContract.PerlvHrpId
+                                                                                                && placc.PlaLpnId == perLeaveDataContract.PerlvLpnId
+                                                                                                && (placc.PlaEndDate == null || ((DateTime?)DateTime.Now.Date <= placc.PlaEndDate))
+                                                                                                ));
+                            }
+                            if (leaveAccrualDetails == null)
+                            {
+                                leaveAccrualDetails = new DataContracts.Perlvacc();
+                            }
+
                             var employeeLeavePlan = new EmployeeLeavePlan(perLeaveDataContract.Recordkey, 
                                 perLeaveDataContract.PerlvHrpId, 
                                 perLeaveDataContract.PerlvStartDate.Value,
@@ -272,6 +300,9 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                                 yearlyStartMonth,
                                 yearlyStartDay,
                                 leavePlan.EarningsTypes,
+                                leaveAccrualDetails.PlaAccrualHours,
+                                leaveAccrualDetails.PlaAccrualLimit,
+                                leaveAccrualDetails.PlaCarryoverHours,
                                 allowNegative);
 
                             employeeLeavePlans.Add(employeeLeavePlan);

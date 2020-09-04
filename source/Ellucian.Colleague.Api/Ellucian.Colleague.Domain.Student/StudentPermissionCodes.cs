@@ -51,6 +51,9 @@ namespace Ellucian.Colleague.Domain.Student
         //Permission to create/update student academic program
         public const string CreateStudentAcademicProgramConsent = "CREATE.UPDATE.STUDENT.ACADEMIC.PROGRAM";
 
+        //Permission to replace student academic program
+        public const string ReplaceStudentAcademicProgram = "REPLACE.STUDENT.ACADEMIC.PROGRAM";
+
         //Permission to create/update an academic program enrollment
         public const string ViewStudentAcademicProgramConsent = "VIEW.STUDENT.ACADEMIC.PROGRAM";
 

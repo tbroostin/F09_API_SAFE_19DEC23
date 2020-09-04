@@ -33,6 +33,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
         Task<IEnumerable<RequisitionSummary>> GetRequisitionsSummaryByPersonIdAsync(string personId);
         Task<RequisitionCreateUpdateResponse> CreateRequisitionsAsync(RequisitionCreateUpdateRequest createUpdateRequest);
         Task<RequisitionCreateUpdateResponse> UpdateRequisitionsAsync(RequisitionCreateUpdateRequest createUpdateRequest, Requisition originalRequisition);
+        Task<RequisitionDeleteResponse> DeleteRequisitionsAsync(RequisitionDeleteRequest deleteRequest);
 
     }
 }

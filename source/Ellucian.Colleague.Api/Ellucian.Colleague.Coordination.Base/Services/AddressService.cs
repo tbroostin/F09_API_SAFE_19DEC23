@@ -467,7 +467,13 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             if ((!string.IsNullOrEmpty(address.PostalCode)) && (zipCodeGuidCollection != null) && (zipCodeGuidCollection.Any()))
             {
                 var zipCodeGuid = string.Empty;
-                zipCodeGuidCollection.TryGetValue(address.PostalCode, out zipCodeGuid);
+                var postalCode = address.PostalCode.Split('-')[0].ToString().Replace(" ", "");
+                zipCodeGuidCollection.TryGetValue(postalCode, out zipCodeGuid);
+                if (string.IsNullOrEmpty(zipCodeGuid) && postalCode.Length >= 3)
+                {
+                    postalCode = postalCode.Substring(0, 3);
+                    zipCodeGuidCollection.TryGetValue(postalCode, out zipCodeGuid);
+                }
                 // Do not throw an error if the zip code guid is not found since all domestic and international postal codes may not be assigned guids
                 if (!string.IsNullOrEmpty(zipCodeGuid))
                 {
@@ -683,7 +689,13 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             if ((!string.IsNullOrEmpty(address.PostalCode)) && (zipCodeGuidCollection != null) && (zipCodeGuidCollection.Any()))
             {
                 var zipCodeGuid = string.Empty;
-                zipCodeGuidCollection.TryGetValue(address.PostalCode, out zipCodeGuid);
+                var postalCode = address.PostalCode.Split('-')[0].ToString().Replace(" ", "");
+                zipCodeGuidCollection.TryGetValue(postalCode, out zipCodeGuid);
+                if (string.IsNullOrEmpty(zipCodeGuid) && postalCode.Length >= 3)
+                {
+                    postalCode = postalCode.Substring(0, 3);
+                    zipCodeGuidCollection.TryGetValue(postalCode, out zipCodeGuid);
+                }
                 // Do not throw an error if the zip code guid is not found since all domestic and international postal codes may not be assigned guids
                 if (!string.IsNullOrEmpty(zipCodeGuid))
                 {

@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2020 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
 
 namespace Ellucian.Colleague.Dtos.Base
@@ -32,5 +32,10 @@ namespace Ellucian.Colleague.Dtos.Base
         /// Display text for blank due date
         /// </summary>
         public string TextForBlankDueDate { get; set; }
+
+        /// <summary>
+        /// Office Code to Attachment Collection Mapping used for Required Documents
+        /// </summary>
+        public RequiredDocumentCollectionMapping RequiredDocumentCollectionMapping { get; set; }
     }
 }

@@ -196,15 +196,15 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         {
             if (string.IsNullOrEmpty(guid))
             {
-                throw new ArgumentNullException("guid", "Guid is required when creating a Fafsa. ");
+                throw new ArgumentNullException("guid", string.Format("Application GUID is empty or missing for ISIR.FAFSA {0}.", id));
             }
             if (string.IsNullOrEmpty(studentId))
             {
-                throw new ArgumentNullException("studentId", "Stuent Id is required when creating a Fafsa. ");
+                throw new ArgumentNullException("studentId", string.Format("Student Id is empty or missing for ISIR.FAFSA {0}.", id));
             }
             if (string.IsNullOrEmpty(awardYear))
             {
-                throw new ArgumentNullException("awardYear", "Award Year is required when creating a Fafsa. ");
+                throw new ArgumentNullException("awardYear", string.Format("Award Year is empty or missing for ISIR.FAFSA {0}.", id));
             }
             Guid = guid;
             IsPellEligible = false;

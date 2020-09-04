@@ -1,10 +1,11 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
@@ -26,6 +27,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
     {
         private readonly IReferenceDataRepository _referenceDataRepository;
         private readonly IPersonRepository _personRepository;
+        private readonly IPersonMatchingRequestsRepository _personMatchingRequestsRepository;
         private readonly IRelationshipRepository _relationshipRepository;
         private readonly IConfigurationRepository _configurationRepository;
 
@@ -34,17 +36,82 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         private List<string> defaultGuardianRelationships;
 
         public PersonalRelationshipsService(IAdapterRegistry adapterRegistry, IReferenceDataRepository referenceDataRepository, IRelationshipRepository relationshipRepository,
-                                            IPersonRepository personRepository, IConfigurationRepository configurationRepository,
+                                            IPersonRepository personRepository, IPersonMatchingRequestsRepository personMatchingRequestsRepository, IConfigurationRepository configurationRepository,
                                             ICurrentUserFactory currentUserFactory,
                                             IRoleRepository roleRepository,
                                             ILogger logger)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger, configurationRepository: configurationRepository)
+            //: base(adapterRegistry, configurationRepository, currentUserFactory, roleRepository, logger)
         {
             _referenceDataRepository = referenceDataRepository;
             _personRepository = personRepository;
+            _personMatchingRequestsRepository = personMatchingRequestsRepository;
             _relationshipRepository = relationshipRepository;
             _configurationRepository = configurationRepository;
         }
+        #region Get all Reference Data
+
+        public IEnumerable<Domain.Base.Entities.AddressType2> _addressTypes { get; set; }
+        private async Task<IEnumerable<Domain.Base.Entities.AddressType2>> GetAddressTypes2Async(bool bypassCache)
+        {
+            if (_addressTypes == null)
+            {
+                _addressTypes = await _referenceDataRepository.GetAddressTypes2Async(bypassCache);
+            }
+            return _addressTypes;
+        }
+
+        public IEnumerable<Domain.Base.Entities.Country> _countries { get; set; }
+        private async Task<IEnumerable<Domain.Base.Entities.Country>> GetCountryCodesAsync(bool bypassCache)
+        {
+            if (_countries == null)
+            {
+                _countries = await _referenceDataRepository.GetCountryCodesAsync(bypassCache);
+            }
+            return _countries;
+        }
+
+        public IEnumerable<Domain.Base.Entities.County> _counties { get; set; }
+        private async Task<IEnumerable<Domain.Base.Entities.County>> GetCountiesAsync(bool bypassCache)
+        {
+            if (_counties == null)
+            {
+                _counties = await _referenceDataRepository.GetCountiesAsync(bypassCache);
+            }
+            return _counties;
+        }
+
+        public IEnumerable<Domain.Base.Entities.State> _states { get; set; }
+        private async Task<IEnumerable<Domain.Base.Entities.State>> GetStateCodesAsync(bool bypassCache)
+        {
+            if (_states == null)
+            {
+                _states = await _referenceDataRepository.GetStateCodesAsync(bypassCache);
+            }
+            return _states;
+        }
+
+        public IEnumerable<Domain.Base.Entities.EmailType> _emailTypes { get; set; }
+        private async Task<IEnumerable<Domain.Base.Entities.EmailType>> GetEmailTypesAsync(bool bypassCache)
+        {
+            if (_emailTypes == null)
+            {
+                _emailTypes = await _referenceDataRepository.GetEmailTypesAsync(bypassCache);
+            }
+            return _emailTypes;
+        }
+
+        public IEnumerable<Domain.Base.Entities.PhoneType> _phoneTypes { get; set; }
+        private async Task<IEnumerable<Domain.Base.Entities.PhoneType>> GetPhoneTypesAsync(bool bypassCache)
+        {
+            if (_phoneTypes == null)
+            {
+                _phoneTypes = await _referenceDataRepository.GetPhoneTypesAsync(bypassCache);
+            }
+            return _phoneTypes;
+        }
+
+        #endregion
 
         #region GET
         /// <summary>
@@ -152,30 +219,6 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         
         #endregion
 
-        #region PUT
-        /// <summary>
-        /// Updates personal relationship
-        /// </summary>
-        /// <param name="id"></param>
-        /// <param name="personalRelationship"></param>
-        /// <returns></returns>
-        public Task<Dtos.PersonalRelationship> UpdatePersonalRelationshipAsync(string id, Dtos.PersonalRelationship personalRelationship)
-        {
-            throw new NotImplementedException();
-        }
-        #endregion
-
-        #region POST
-        /// <summary>
-        /// Creates new personal relationship
-        /// </summary>
-        /// <param name="personalRelationship"></param>
-        /// <returns></returns>
-        public Task<Dtos.PersonalRelationship> CreatePersonalRelationshipAsync(Dtos.PersonalRelationship personalRelationship)
-        {
-            throw new NotImplementedException();
-        }
-        #endregion
 
         #region Helper methods
         /// <summary>
@@ -730,7 +773,13 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 {
                     IntegrationApiExceptionAddError("Unable to locate GUID for relationship-types of " + personRelationshipEntity.RelationshipType, "GUID.Not.Found", personRelationshipEntity.Guid, personRelationshipEntity.Id);
                 }
-            }           
+            }
+
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+
             return personRelationshipDto;
         }
 
@@ -1151,6 +1200,21 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         }
 
         /// <summary>
+        /// Helper method to determine if the user has permission to create/update PersonalRelationships.
+        /// </summary>
+        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
+        private void CheckCreatePersonalRelationshipInitiationProcessPermission()
+        {
+            bool hasPermission = HasPermission(BasePermissionCodes.ProcessRelationshipRequest);
+
+            // User is not allowed to create or update PersonalRelationships without the appropriate permissions
+            if (!hasPermission)
+            {
+                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to create personal-relationship-initiation-process.");
+            }
+        }
+
+        /// <summary>
         /// Helper method to determine if the user has permission to delete PersonalRelationships.
         /// </summary>
         /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
@@ -1196,6 +1260,535 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 throw new Exception(ex.Message, ex.InnerException);
             }
+        }
+
+        /// <summary>
+        /// Create a PersonalRelationshipInitiationProcess.
+        /// </summary>
+        /// <param name="personalRelationships">The <see cref="PersonalRelationshipInitiationProcess">personRelationships</see> entity to create in the database.</param>
+        /// <returns>The newly created <see cref="PersonalRelationshipInitiationProcess">personRelationships</see></returns>
+        public async Task<object> CreatePersonalRelationshipInitiationProcessAsync(Dtos.PersonalRelationshipInitiationProcess personalRelationships)
+        {
+            try
+            {
+                // verify the user has the permission to create a personalRelationships
+                CheckCreatePersonalRelationshipInitiationProcessPermission();
+
+                if (personalRelationships == null)
+                {
+                    IntegrationApiExceptionAddError("Must provide a personal-relationship-initiation-process object for create.", "Missing.Request.Body");
+                    throw IntegrationApiException;
+                }
+                _relationshipRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
+                var personRelationshipsEntity
+                         = await ConvertPersonalRelationshipInitiationProcessDtoToEntityAsync(personalRelationships);
+
+                // create a personRelationships entity in the database
+                var createdPersonalRelationship =
+                    await _relationshipRepository.CreatePersonalRelationshipInitiationProcessAsync(personRelationshipsEntity);
+
+                if (createdPersonalRelationship == null)
+                {
+                    IntegrationApiExceptionAddError("An unexpected error has occurred. Unable to build response.", "Global.Internal.Error");
+                    throw IntegrationApiException;
+                }
+
+                if (createdPersonalRelationship.Item1 != null && (createdPersonalRelationship.Item1.GetType()) == typeof(Relationship))
+                {
+                    // return the newly created personRelationships
+                    return await ConvertPersonalRelationships2EntityToDto((Relationship)createdPersonalRelationship.Item1);
+                }
+                else if (!string.IsNullOrEmpty(createdPersonalRelationship.Item2))
+                {
+                    // return the newly created PersonMatchingRequests
+                    var personMatchingRequest = await _personMatchingRequestsRepository.GetPersonMatchRequestsByIdAsync(createdPersonalRelationship.Item2);
+                    if (personMatchingRequest == null)
+                    {
+                        IntegrationApiExceptionAddError("Unable to locate person-match-request for id '" + createdPersonalRelationship.Item2  + "'.", "Bad.Data");
+                        throw IntegrationApiException;
+                    }
+
+                    Dictionary<string, string> personDict = await _personRepository.GetPersonGuidsCollectionAsync(new List<string>() { personMatchingRequest.PersonId });
+                    return ConvertPersonMatchRequestEntityToDtoAsync(personMatchingRequest, personDict);
+                }
+                else
+                {
+                    IntegrationApiExceptionAddError("An unexpected error has occurred. Unable to build response.", "Global.Internal.Error");
+                    throw IntegrationApiException;
+                }
+            }
+            catch (RepositoryException ex)
+            {
+                throw ex;
+            }
+            catch (IntegrationApiException ex)
+            {
+                throw ex;
+            }
+            catch (PermissionsException e)
+            {
+                throw new PermissionsException(e.Message);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(ex.Message, ex.InnerException);
+            }
+        }
+
+        private async Task<PersonalRelationshipInitiation> ConvertPersonalRelationshipInitiationProcessDtoToEntityAsync(Dtos.PersonalRelationshipInitiationProcess personRelationshipsDto, bool bypassCache = false)
+        {
+            if (personRelationshipsDto == null)
+            {
+                IntegrationApiExceptionAddError("Personal relationships body is required.", "Validation.Exception");
+                throw IntegrationApiException;
+            }
+            else
+            {
+                var personId1 = string.Empty;
+                var personId2 = string.Empty;
+                var directRelationType = string.Empty;
+                var reciRelationType = string.Empty;
+                var inverseRelType = string.Empty;
+                //get person id1
+                if (personRelationshipsDto.SubjectPerson == null || string.IsNullOrEmpty(personRelationshipsDto.SubjectPerson.Id))
+                {
+                    IntegrationApiExceptionAddError("SubjectPerson.id is a required property.", "Missing.Required.Property");
+                }
+                else
+                {
+                    try
+                    {
+                        personId1 = await _personRepository.GetPersonIdFromGuidAsync(personRelationshipsDto.SubjectPerson.Id);
+                    }
+                    catch (Exception)
+                    {
+                        IntegrationApiExceptionAddError("SubjectPerson.id is not a valid GUID for persons.", "GUID.Not.Found");
+                    }
+                    if (String.IsNullOrEmpty(personId1))
+                    {
+                        IntegrationApiExceptionAddError("SubjectPerson.id is not a valid GUID for persons.", "GUID.Not.Found");
+                    }
+                }
+
+                //get person id2
+                if (personRelationshipsDto.Related != null && personRelationshipsDto.Related.Person != null && !string.IsNullOrEmpty(personRelationshipsDto.Related.Person.Id))
+                {
+                    try
+                    {
+                        personId2 = await _personRepository.GetPersonIdFromGuidAsync(personRelationshipsDto.Related.Person.Id);
+                    }
+                    catch (Exception)
+                    {
+                        IntegrationApiExceptionAddError("related.person.id is not a valid GUID for persons.", "GUID.Not.Found");
+                    }
+                    if (String.IsNullOrEmpty(personId2))
+                    {
+                        IntegrationApiExceptionAddError("related.person.id is not a valid GUID for persons.", "GUID.Not.Found");
+                    }
+                    else
+                    {
+                        if (personId1.Equals(personId2, StringComparison.OrdinalIgnoreCase))
+                        {
+                            IntegrationApiExceptionAddError("Subject person id cannot be the same as related person id. ", "Validation.Exception");
+                        }
+                    }
+                }
+
+                //convert and validate relationship types
+                if (personRelationshipsDto.RelationshipType == null || string.IsNullOrEmpty(personRelationshipsDto.RelationshipType.Id))
+                {
+                    IntegrationApiExceptionAddError("relationshipType.id is a required property.", "Missing.Required.Property");
+                }
+                else
+                {
+                    List<Domain.Base.Entities.RelationType> relaTypes = null;
+                    try
+                    {
+                        relaTypes = (await GetRelationTypes2Async(bypassCache)).ToList();
+                    }
+                    catch
+                    { }
+                    if (relaTypes == null || !relaTypes.Any())
+                    {
+                        IntegrationApiExceptionAddError("Relationship types not found.", "Validation.Exception");
+                    }
+                    else
+                    {
+                        var subjectRelation_type = relaTypes.FirstOrDefault(x => x.Guid.Equals(personRelationshipsDto.RelationshipType.Id, StringComparison.OrdinalIgnoreCase));
+                        if (subjectRelation_type == null)
+                        {
+                            IntegrationApiExceptionAddError(string.Format("Relationship types not found for guid {0}.", personRelationshipsDto.RelationshipType.Id), "Validation.Exception");
+                        }
+                        else
+                        {
+                            //check to make sure the directRelationshipType does not have the organization only indicator set to Yes
+                            if (subjectRelation_type.OrgIndicator.Equals("Y", StringComparison.OrdinalIgnoreCase))
+                            {
+                                IntegrationApiExceptionAddError(string.Concat("The relationship type '", subjectRelation_type.Code, "' is for relationships involving nonpersons only. "), "Validation.Exception");
+                            }
+                            else
+                            {
+                                directRelationType = subjectRelation_type.Code;
+                                reciRelationType = subjectRelation_type.InverseRelType;
+                            }
+
+                            //validate startOn and endOn
+                            if (personRelationshipsDto.StartOn != null && personRelationshipsDto.StartOn.HasValue)
+                            {
+                                if ((subjectRelation_type.Category.Equals("S", StringComparison.OrdinalIgnoreCase)) || (subjectRelation_type.Category.Equals("P", StringComparison.OrdinalIgnoreCase)) || (subjectRelation_type.Category.Equals("C", StringComparison.OrdinalIgnoreCase)))
+                                {
+                                    if (personRelationshipsDto.StartOn > DateTime.Today)
+                                    {
+                                        IntegrationApiExceptionAddError(string.Concat("Start on date cannot be in the future for this type of relationship."), "Validation.Exception");
+                                    }
+                                }
+                            }
+                            if (personRelationshipsDto.EndOn != null && personRelationshipsDto.EndOn.HasValue)
+                            {
+                                if ((subjectRelation_type.Category.Equals("S", StringComparison.OrdinalIgnoreCase)) || (subjectRelation_type.Category.Equals("P", StringComparison.OrdinalIgnoreCase)) || (subjectRelation_type.Category.Equals("C", StringComparison.OrdinalIgnoreCase)))
+                                {
+                                    if (personRelationshipsDto.EndOn > DateTime.Today)
+                                    {
+                                        IntegrationApiExceptionAddError(string.Concat("End on date cannot be in the future for this type of relationship."), "Validation.Exception");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if (!string.IsNullOrEmpty(reciRelationType))
+                {
+                    inverseRelType = reciRelationType;
+                }
+
+                if (personRelationshipsDto.StartOn != null && personRelationshipsDto.EndOn != null && personRelationshipsDto.StartOn.HasValue && personRelationshipsDto.EndOn.HasValue && personRelationshipsDto.StartOn > personRelationshipsDto.EndOn)
+                {
+                    IntegrationApiExceptionAddError("Start on date cannot be greater than the end on date.");
+                }
+
+                //since all the validation is done. create the entity.
+                PersonalRelationshipInitiation personalRelaEntity = new PersonalRelationshipInitiation();
+                personalRelaEntity.PersonId = personId1;
+                personalRelaEntity.RelatedPersonId = personId2;
+                if (personRelationshipsDto.SubjectPerson != null && !string.IsNullOrEmpty(personRelationshipsDto.SubjectPerson.Id))
+                    personalRelaEntity.SubjectPersonGuid = personRelationshipsDto.SubjectPerson.Id;
+                if (personRelationshipsDto.Related != null && personRelationshipsDto.Related.Person != null)
+                    personalRelaEntity.RelatedPersonGuid = personRelationshipsDto.Related.Person.Id;
+                personalRelaEntity.RelationshipType = directRelationType;
+                personalRelaEntity.InverseRelationshipType = inverseRelType;
+                personalRelaEntity.StartDate = personRelationshipsDto.StartOn;
+                personalRelaEntity.EndDate = personRelationshipsDto.EndOn;
+                personalRelaEntity.Comment = personRelationshipsDto.Comment;
+
+                //validate status
+                if (personRelationshipsDto.Status != null)
+                {
+                    if (string.IsNullOrEmpty(personRelationshipsDto.Status.Id))
+                    {
+                        IntegrationApiExceptionAddError("The status.id is required when status is provided", "Missing.Required.Property");
+                    }
+                    else
+                    {
+                        var statuses = await GetRelationshipStatusesAsync(bypassCache);
+                        if (statuses == null || !statuses.Any())
+                        {
+                            IntegrationApiExceptionAddError("Relationship statuses not found.", "Validation.Exception");
+                        }
+                        else
+                        {
+                            var statusEntity = statuses.FirstOrDefault(x => x.Guid.Equals(personRelationshipsDto.Status.Id, StringComparison.OrdinalIgnoreCase));
+                            if (statusEntity == null)
+                            {
+                                IntegrationApiExceptionAddError(string.Format("Relationship statuses not found for guid {0}.", personRelationshipsDto.Status.Id), "Validation.Exception");
+                            }
+                            else
+                            {
+                                personalRelaEntity.Status = statusEntity.Code;
+                            }
+                        }
+                    }
+                }
+
+                // Person Match Request Data
+                personalRelaEntity.RequestType = "RELATION";
+                
+                if (personRelationshipsDto.Related != null && (personRelationshipsDto.Related.Person == null || string.IsNullOrEmpty(personRelationshipsDto.Related.Person.Id)))
+                {
+                    if (string.IsNullOrEmpty(personRelationshipsDto.Related.LastName) || string.IsNullOrEmpty(personRelationshipsDto.Related.FirstName))
+                    {
+                        IntegrationApiExceptionAddError("The properties related.firstName and related.lastName are required.", "Missing.Required.Property", personRelationshipsDto.Id);
+                    }
+                    personalRelaEntity.LastName = personRelationshipsDto.Related.LastName;
+                    personalRelaEntity.FirstName = personRelationshipsDto.Related.FirstName;
+                    personalRelaEntity.MiddleName = personRelationshipsDto.Related.MiddleName;
+                }
+
+                if (personRelationshipsDto.Related == null)
+                {
+                    IntegrationApiExceptionAddError("The properties related.person.id or related.firstName and related.lastName are required.", "Missing.Required.Property", personRelationshipsDto.Id);
+                }
+                else
+                {
+                    // Matching Criteria
+                    var related = personRelationshipsDto.Related;
+
+                    // Date of Birth
+                    if (related.DateOfBirth != null)
+                    {
+                        personalRelaEntity.BirthDate = related.DateOfBirth;
+                    }
+
+                    // Address Data
+                    if (related.Address != null)
+                    {
+                        if (related.Address.Type != null && !string.IsNullOrEmpty(related.Address.Type.Id))
+                        {
+                            var addressTypeEntity = (await GetAddressTypes2Async(false)).FirstOrDefault(at => at.Guid.Equals(related.Address.Type.Id, StringComparison.InvariantCultureIgnoreCase));
+                            if (addressTypeEntity != null)
+                            {
+                                personalRelaEntity.AddressType = addressTypeEntity.Code;
+                            }
+                            else
+                            {
+                                IntegrationApiExceptionAddError("Could not determine Address Type for Address.", "Validation.Exception", personRelationshipsDto.Id);
+                            }
+                        }
+                        else
+                        {
+                            IntegrationApiExceptionAddError("The property address.type.id is required when an address is specified.", "Missing.Required.Property", personRelationshipsDto.Id);
+                        }
+
+                        if (related.Address.AddressLines == null || !related.Address.AddressLines.Any())
+                        {
+                            IntegrationApiExceptionAddError("The property address.addressLines is required when an address is specified.", "Missing.Required.Property", personRelationshipsDto.Id);
+                        }
+                        personalRelaEntity.AddressLines = related.Address.AddressLines;
+
+                        if (related.Address.Place != null)
+                        {
+                            var addressDtoAddress = related.Address;
+                            var addressCountry = new Dtos.AddressCountry();
+                            if (addressDtoAddress.Place != null && addressDtoAddress.Place.Country != null && !string.IsNullOrEmpty(addressDtoAddress.Place.Country.Code.ToString()))
+                            {
+                                addressCountry = addressDtoAddress.Place.Country;
+                            }
+                            else
+                            {
+                                IntegrationApiExceptionAddError("A country code is required for an address with a place defined.", "Validation.Exception", personRelationshipsDto.Id);
+                            }
+                            //if there is more than one country that matches the ISO code, we need to pick the country that does not have "Not in use" set to Yes
+                            Domain.Base.Entities.Country country = null;
+                            var countryEntities = (await GetCountryCodesAsync(false)).Where(cc => cc.IsoAlpha3Code == addressCountry.Code.ToString());
+                            if (countryEntities != null && countryEntities.Any())
+                            {
+                                if (countryEntities.Count() > 1)
+                                {
+                                    country = countryEntities.FirstOrDefault(con => con.IsNotInUse == false);
+                                }
+                                if (country == null)
+                                {
+                                    country = countryEntities.FirstOrDefault();
+                                }
+                            }
+                            if (country == null)
+                            {
+                                IntegrationApiExceptionAddError(string.Concat("Unable to locate country code '", addressCountry.Code, "'"), "Validation.Exception", personRelationshipsDto.Id);
+                            }
+                            else
+                            {
+                                personalRelaEntity.Country = country.Code;
+                                switch (addressCountry.Code)
+                                {
+                                    case Dtos.EnumProperties.IsoCode.USA:
+                                        personalRelaEntity.CorrectionDigit = string.IsNullOrEmpty(addressCountry.CorrectionDigit) ? null : addressCountry.CorrectionDigit;
+                                        personalRelaEntity.CarrierRoute = string.IsNullOrEmpty(addressCountry.CarrierRoute) ? null : addressCountry.CarrierRoute;
+                                        personalRelaEntity.DeliveryPoint = string.IsNullOrEmpty(addressCountry.DeliveryPoint) ? null : addressCountry.DeliveryPoint;
+                                        break;
+                                    default:
+                                        if (!string.IsNullOrEmpty(addressCountry.CorrectionDigit) || !string.IsNullOrEmpty(addressCountry.CarrierRoute) || !string.IsNullOrEmpty(addressCountry.DeliveryPoint))
+                                        {
+                                            IntegrationApiExceptionAddError("correctionDigit, carrierRoute and deliveryPoint can only be specified when code is 'USA'.", "Validation.Exception", personRelationshipsDto.Id);
+                                        }
+                                        break;
+                                }
+                            }
+
+                            if (addressCountry.Region != null && !string.IsNullOrEmpty(addressCountry.Region.Code))
+                            {
+                                if (addressCountry.Code == IsoCode.USA || addressCountry.Code == IsoCode.CAN)
+                                {
+                                    string state = "";
+                                    if (addressCountry.Region.Code.Contains("-"))
+                                        state = addressCountry.Region.Code.Substring(3);
+                                    var states =
+                                        (await GetStateCodesAsync(false)).FirstOrDefault(
+                                            x => x.Code == state);
+
+                                    if (states != null)
+                                    {
+                                        personalRelaEntity.State = states.Code;
+                                    }
+                                    else
+                                    {
+                                        //throw an execption if the state is not valid for US or Canada. 
+                                        IntegrationApiExceptionAddError(string.Format("'{0}' is not defined as a state or province. ", state), "Validation.Exception", personRelationshipsDto.Id);
+                                    }
+                                }
+                                else
+                                {
+                                    personalRelaEntity.Region = addressCountry.Region == null
+                                        ? null
+                                        : addressCountry.Region.Code;
+                                }
+                            }
+
+                            if (addressCountry.SubRegion != null && !string.IsNullOrEmpty(addressCountry.SubRegion.Code))
+                            {
+                                var county = (await GetCountiesAsync(false)).FirstOrDefault(c => c.Code == addressCountry.SubRegion.Code);
+                                if (county != null)
+                                    personalRelaEntity.County = county.Code;
+                                else
+                                    personalRelaEntity.SubRegion = addressCountry.SubRegion == null ? null : addressCountry.SubRegion.Code;
+                            }
+
+                            personalRelaEntity.City = string.IsNullOrEmpty(addressCountry.Locality) ? null : addressCountry.Locality;
+                            personalRelaEntity.Zip = string.IsNullOrEmpty(addressCountry.PostalCode) ? null : addressCountry.PostalCode;
+                            personalRelaEntity.PostalCode = string.IsNullOrEmpty(addressCountry.PostalCode) ? null : addressCountry.PostalCode;
+                            personalRelaEntity.Locality = addressCountry.Locality;
+                            personalRelaEntity.Region = addressCountry.Region == null ? null : addressCountry.Region.Code;
+                            personalRelaEntity.SubRegion = addressCountry.SubRegion == null ? null : addressCountry.SubRegion.Code;
+                        }
+                    }
+
+                    // Phone Number
+                    if (related.Phone != null)
+                    {
+                        if (!string.IsNullOrEmpty(related.Phone.Number))
+                        {
+                            personalRelaEntity.Phone = related.Phone.Number;
+
+                            if (related.Phone.Type != null && !string.IsNullOrEmpty(related.Phone.Type.Id))
+                            {
+                                var phoneTypeEntity = (await GetPhoneTypesAsync(false)).FirstOrDefault(cte => cte.Guid.Equals(related.Phone.Type.Id, StringComparison.InvariantCultureIgnoreCase));
+                                if (phoneTypeEntity != null && !string.IsNullOrEmpty(phoneTypeEntity.Code))
+                                {
+                                    personalRelaEntity.PhoneType = phoneTypeEntity.Code;
+                                }
+                                else
+                                {
+                                    IntegrationApiExceptionAddError("Could not determine Phone Type for phone number.", "Validation.Exception", personRelationshipsDto.Id);
+                                }
+                            }
+                            else
+                            {
+                                IntegrationApiExceptionAddError("The property phone.type.id is required when a phone number is specified.", "Missing.Required.Property", personRelationshipsDto.Id);
+                            }
+                        }
+                    }
+
+                    // email addresses
+                    if (related.Email != null)
+                    {
+                        personalRelaEntity.Email = related.Email.Address;
+                        if (!string.IsNullOrEmpty(related.Email.Address))
+                        {
+                            if (related.Email.Type != null && !string.IsNullOrEmpty(related.Email.Type.Id))
+                            {
+                                var emailTypeEntity = (await GetEmailTypesAsync(false)).FirstOrDefault(et => et.Guid.Equals(related.Email.Type.Id, StringComparison.InvariantCultureIgnoreCase));
+                                if (emailTypeEntity != null)
+                                {
+                                    personalRelaEntity.EmailType = emailTypeEntity.Code;
+                                }
+                                else
+                                {
+                                    IntegrationApiExceptionAddError("Could not determine Email Type for Email Address.", "Validation.Exception", personRelationshipsDto.Id);
+                                }
+                            }
+                            else
+                            {
+                                IntegrationApiExceptionAddError("The property email.type.id is required when an email address is specified.", "Missing.Required.Property", personRelationshipsDto.Id);
+                            }
+                        }
+                    }
+                }
+
+                if (IntegrationApiException != null)
+                {
+                    throw IntegrationApiException;
+                }
+
+                return personalRelaEntity;
+            }
+        }
+        /// <summary>
+        /// Converts entity to dto.
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="personDict"></param>
+        /// <returns></returns>
+        private Dtos.PersonMatchingRequests ConvertPersonMatchRequestEntityToDtoAsync(PersonMatchRequest source, Dictionary<string, string> personDict)
+        {
+            Dtos.PersonMatchingRequests dto = new Dtos.PersonMatchingRequests();
+
+            //id
+            if (string.IsNullOrEmpty(source.Guid))
+            {
+                IntegrationApiExceptionAddError("Could not find a GUID for person-matching-requests entity.", "Bad.Data", id: source.RecordKey);
+            }
+            dto.Id = source.Guid;
+            if (!string.IsNullOrEmpty(source.Originator))
+            {
+                dto.Originator = source.Originator;
+            }
+
+            //prospect.id
+            string personGuid;
+            if (!string.IsNullOrEmpty(source.PersonId))
+            {
+                if (personDict == null)
+                {
+                    IntegrationApiExceptionAddError(string.Format("Unable to locate guid for person ID '{0}'", source.RecordKey), "Bad.Data", source.Guid, source.RecordKey);
+                }
+                else if (!personDict.TryGetValue(source.PersonId, out personGuid))
+                {
+                    IntegrationApiExceptionAddError(string.Format("Unable to locate guid for person ID '{0}'", source.RecordKey), "Bad.Data", source.Guid, source.RecordKey);
+                    dto.Person = new Dtos.GuidObject2(personGuid);
+                }
+            }
+
+            // outcomes
+            if (source.Outcomes != null && source.Outcomes.Any())
+            {
+                foreach (var outcome in source.Outcomes)
+                {
+                    if (outcome != null)
+                    {
+                        try
+                        {
+                            if (dto.Outcomes == null)
+                            {
+                                dto.Outcomes = new List<Dtos.PersonMatchingRequestsOutcomesDtoProperty>();
+                            }
+                            dto.Outcomes.Add(new Dtos.PersonMatchingRequestsOutcomesDtoProperty()
+                            {
+                                Type = (Dtos.EnumProperties.PersonMatchingRequestsType)Enum.Parse(typeof(Dtos.EnumProperties.PersonMatchingRequestsType), outcome.Type.ToString()),
+                                Status = (Dtos.EnumProperties.PersonMatchingRequestsStatus)Enum.Parse(typeof(Dtos.EnumProperties.PersonMatchingRequestsStatus), outcome.Status.ToString()),
+                                Date = outcome.Date.DateTime
+                            });
+                        }
+                        catch
+                        {
+                            IntegrationApiExceptionAddError(string.Format("Unable to translate outcome type of '{0}' or status of '{1}'.", outcome.Type.ToString(), outcome.Status.ToString()), "Bad.Data", source.Guid, source.RecordKey);
+                        }
+                    }
+                }
+            }
+
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+            return dto;
         }
     }
 

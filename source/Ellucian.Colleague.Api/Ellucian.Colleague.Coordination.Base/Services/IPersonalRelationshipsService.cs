@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -11,9 +11,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         Task<Dtos.PersonalRelationship> GetPersonalRelationshipByIdAsync(string id);
         Task<Tuple<IEnumerable<Dtos.PersonalRelationship>, int>> GetPersonalRelationshipsByFilterAsync(int offset, int limit, string subjectPerson = "", 
             string relatedPerson = "", string directRelationshipType = "", string directRelationshipDetailId = "");
-        Task<Dtos.PersonalRelationship> UpdatePersonalRelationshipAsync(string id, Dtos.PersonalRelationship personalRelationship);
-        Task<Dtos.PersonalRelationship> CreatePersonalRelationshipAsync(Dtos.PersonalRelationship personalRelationship);
-
+       
         /// <summary>
         /// Gets all personal-relationships
         /// </summary>
@@ -43,6 +41,13 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <param name="personRelationships">The <see cref="PersonalRelationships2">personalRelationships</see> entity to create in the database.</param>
         /// <returns>The newly created <see cref="PersonalRelationships2">personRelationships</see></returns>
         Task<Ellucian.Colleague.Dtos.PersonalRelationships2> CreatePersonalRelationships2Async(Ellucian.Colleague.Dtos.PersonalRelationships2 personRelationships);
+
+        /// <summary>
+        /// Create a personalRelationships.
+        /// </summary>
+        /// <param name="personRelationships">The <see cref="PersonalRelationships2">personalRelationships</see> entity to create in the database.</param>
+        /// <returns>The newly created <see cref="PersonalRelationships2">personRelationships</see></returns>
+        Task<object> CreatePersonalRelationshipInitiationProcessAsync(Dtos.PersonalRelationshipInitiationProcess personRelationships);
 
         /// <summary>
         /// Delete a personalRelationships by guid.

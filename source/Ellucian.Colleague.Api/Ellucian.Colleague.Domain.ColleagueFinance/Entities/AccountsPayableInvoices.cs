@@ -94,7 +94,12 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// voucher otherwise eligible for payment to be paid.
         /// </summary>
         public string VoucherPayFlag { get; set; }
-                
+
+        /// <summary>
+        /// The type of accounts payable invoice, i.e. Procurement, eProcurement, or Travel.
+        /// </summary>
+        public string Type { get; set; }
+
         /// <summary>
         /// Line Item Tazes
         /// </summary>

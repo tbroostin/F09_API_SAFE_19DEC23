@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -22,7 +22,6 @@ using Room = Ellucian.Colleague.Dtos.Base.Room;
 using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Http;
-using Newtonsoft.Json.Linq;
 using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Exceptions;
 
@@ -305,6 +304,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Retrieves all Building Wings
         /// </summary>
         /// <returns>All <see cref="Dtos.BuildingWing">BuildingWings.</see></returns>
+        [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Dtos.BuildingWing>> GetBuildingWingsAsync()
         {
@@ -318,6 +318,15 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             try
             {
+                var buildingWings = await _institutionService.GetBuildingWingsAsync(bypassCache);
+
+                if (buildingWings != null && buildingWings.Any())
+                {
+                    AddEthosContextProperties(await _institutionService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _institutionService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              buildingWings.Select(a => a.Id).ToList()));
+                }
+
                 return await _institutionService.GetBuildingWingsAsync(bypassCache);
             }
             catch (Exception ex)
@@ -332,10 +341,15 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Retrieves an Building Wing by guid.
         /// </summary>
         /// <returns>A <see cref="Dtos.BuildingWing">BuildingWings.</see></returns>
+        [HttpGet, EedmResponseFilter]
         public async Task<Dtos.BuildingWing> GetBuildingWingsByGuidAsync(string guid)
         {
             try
             {
+                AddEthosContextProperties(
+                   await _institutionService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                   await _institutionService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                       new List<string>() { guid }));
                 return await _institutionService.GetBuildingWingsByGuidAsync(guid);
             }
             catch (Exception ex)

@@ -75,7 +75,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
             budgetPhaseLineItemsCollectionTuple = new Tuple<IEnumerable<Dtos.BudgetPhaseLineItems>, int>(budgetPhaseLineItemsCollection, budgetPhaseLineItemsCollection.Count);
             budgetPhaseLineItemsServiceMock.Setup(s => s.GetDataPrivacyListByApi(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(new List<string>());
-            budgetPhaseLineItemsServiceMock.Setup(s => s.GetExtendedEthosDataByResource(It.IsAny<EthosResourceRouteInfo>(), It.IsAny<IEnumerable<string>>())).ReturnsAsync(new List<EthosExtensibleData>());
+            budgetPhaseLineItemsServiceMock.Setup(s => s.GetExtendedEthosDataByResource(It.IsAny<EthosResourceRouteInfo>(), It.IsAny<IEnumerable<string>>(), It.IsAny<bool>())).ReturnsAsync(new List<EthosExtensibleData>());
             budgetPhaseLineItemsServiceMock.Setup(s => s.GetBudgetPhaseLineItemsByGuidAsync(It.IsAny<string>(), true)).ReturnsAsync(budgetPhaseLineItemsCollection.FirstOrDefault());
         }
 

@@ -1,4 +1,4 @@
-﻿//Copyright 2016-2017 Ellucian Company L.P. and its affiliates
+﻿//Copyright 2016-2020 Ellucian Company L.P. and its affiliates
 
 using System;
 using System.Collections.Generic;
@@ -20,6 +20,7 @@ using Ellucian.Colleague.Domain.Exceptions;
 using VendorType = Ellucian.Colleague.Dtos.EnumProperties.VendorType;
 using Ellucian.Colleague.Dtos.Filters;
 using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 {
@@ -29,6 +30,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         private readonly IColleagueFinanceReferenceDataRepository _colleagueFinanceReferenceDataRepository;
         private readonly IVendorsRepository _vendorsRepository;
         private readonly IPersonRepository _personRepository;
+        private readonly IAddressRepository _addressRepository;
+        private readonly IReferenceDataRepository _referenceDataRepository;
         private readonly IInstitutionRepository _institutionRepository;
         private readonly IConfigurationRepository _configurationRepository;
 
@@ -36,6 +39,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             IColleagueFinanceReferenceDataRepository colleagueFinanceReferenceDataRepository,
             IVendorsRepository vendorsRepository,
             IPersonRepository personRepository,
+            IAddressRepository addressRepository,
+            IReferenceDataRepository referenceDataRepository,
             IInstitutionRepository institutionRepository,
             IConfigurationRepository configurationRepository,
             IAdapterRegistry adapterRegistry,
@@ -49,6 +54,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             _vendorsRepository = vendorsRepository;
             _personRepository = personRepository;
             _institutionRepository = institutionRepository;
+            _referenceDataRepository = referenceDataRepository;
+            _addressRepository = addressRepository;
         }
 
 
@@ -100,6 +107,19 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 _currencyConv = await _colleagueFinanceReferenceDataRepository.GetCurrencyConversionAsync();
             }
             return _currencyConv;
+        }
+
+        private IEnumerable<BoxCodes> _boxCodes;
+        private async Task<IEnumerable<BoxCodes>> GetAllBoxCodesAsync(bool bypassCache)
+        {
+            return _boxCodes ?? (_boxCodes = await _referenceDataRepository.GetAllBoxCodesAsync(bypassCache));
+        }
+
+
+        private IEnumerable<TaxForms2> _taxforms;
+        private async Task<IEnumerable<TaxForms2>> GetAllTaxForms2Async(bool bypassCache)
+        {
+            return _taxforms ?? (_taxforms = await _referenceDataRepository.GetTaxFormsBaseAsync(bypassCache));
         }
 
         #region EEDM vendor v8
@@ -249,7 +269,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <param name="vendorDto">Vendors DTO</param>
         /// <returns>Vendors domain entity</returns>
         public async Task<Vendors> PutVendorAsync(string guid, Vendors vendorDto)
-        {
+        {            
             if (vendorDto == null)
                 throw new ArgumentNullException("vendor", "Must provide a vendor for update");
             if (string.IsNullOrEmpty(vendorDto.Id))
@@ -813,7 +833,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// </summary>
         /// <returns>Collection of Vendors DTO objects</returns>
         public async Task<Tuple<IEnumerable<Vendors2>, int>> GetVendorsAsync2(int offset, int limit, string vendorDetails, List<string> classifications,
-            List<string> statuses, List<string> relatedReferences, List<string> types = null, bool bypassCache = false)
+            List<string> statuses, List<string> relatedReferences, List<string> types = null, string taxId = null, bool bypassCache = false)
         {
             CheckViewVendorPermission();
 
@@ -885,12 +905,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 }
             }
 
-            string[] venTypes = new[] { "eprocurement", "travel" };
-            if (types != null && !types.Any())
-            {
-                return new Tuple<IEnumerable<Vendors2>, int>(new List<Vendors2>(), 0);
-            }
-
+            string[] venTypes = new[] { "eprocurement", "travel", "procurement" };
             if (types != null && types.Any())
             {
                 foreach (var vendorType in types)
@@ -901,22 +916,44 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     }
                 }
             }
-
-
-            var vendorsEntities = await _vendorsRepository.GetVendorsAsync(offset, limit, vendorIdCriteria, classificationCriteria, statuses, relatedReferences, types);
+                        
+            Tuple<IEnumerable<Domain.ColleagueFinance.Entities.Vendors>, int> vendorsEntities = null;
+            try
+            {
+                vendorsEntities = await _vendorsRepository.GetVendors2Async(offset, limit, vendorIdCriteria, classificationCriteria, statuses, relatedReferences, types, taxId);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }
             var totalRecords = vendorsEntities.Item2;
-
             if ((vendorsEntities != null) && (vendorsEntities.Item1.Any()))
             {
                 var institutions = await _institutionRepository.GetInstitutionsFromListAsync(vendorsEntities.Item1.Select(x => x.Id).ToArray());
-
+                var personGuidCollection = await _personRepository.GetPersonGuidsCollectionAsync(vendorsEntities.Item1.Select(x => x.Id).ToArray());
+                var personPOAddressCollection = await _personRepository.GetHierarchyAddressIdsAsync(vendorsEntities.Item1.Select(x => x.Id).ToList(),"PO", DateTime.Today);
+                var personAPAddressCollection = await _personRepository.GetHierarchyAddressIdsAsync(vendorsEntities.Item1.Select(x => x.Id).ToList(), "AP.CHECK", DateTime.Today);
+                var addressIds = new List<string>();
+                var poAddressIds = new List<string>();
+                var apAddressIds = new List<string>();
+                if (personPOAddressCollection != null && personPOAddressCollection.Any())
+                    poAddressIds = personPOAddressCollection.Select(x => x.Value).ToList();
+                if (personAPAddressCollection != null && personAPAddressCollection.Any())                
+                    apAddressIds = personAPAddressCollection.Select(x => x.Value).ToList();
+                addressIds = poAddressIds.Union(apAddressIds).ToList();
+                var addressGuidCollection = await _personRepository.GetAddressGuidsCollectionAsync(addressIds);
                 foreach (var vendorsEntity in vendorsEntities.Item1)
                 {
                     if (vendorsEntity.Guid != null)
                     {
-                        var vendorDto = await ConvertVendorsEntityToDtoAsync2(vendorsEntity, institutions, bypassCache);
+                        var vendorDto = await ConvertVendorsEntityToDtoAsync2(vendorsEntity, institutions, personGuidCollection, personPOAddressCollection, personAPAddressCollection, addressGuidCollection, bypassCache);
                         vendorsCollection.Add(vendorDto);
                     }
+                }
+                if (IntegrationApiException != null)
+                {
+                    throw IntegrationApiException;
                 }
             }
             return new Tuple<IEnumerable<Vendors2>, int>(vendorsCollection, totalRecords);
@@ -937,26 +974,52 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             try
             {
-                var vendors = await _vendorsRepository.GetVendorsByGuidAsync(guid);
+                var vendors = await _vendorsRepository.GetVendorsByGuid2Async(guid);
                 List<Institution> institutions = null;
+                Dictionary<string, string> personGuidCollection = null;
+                Dictionary<string, string> personAPAddressCollection = null;
+                Dictionary<string, string> personPOAddressCollection = null;
+                Dictionary<string, string> addressGuidCollection = null;
                 if (vendors != null)
                 {
                     institutions = (await _institutionRepository.GetInstitutionsFromListAsync(new string[] { vendors.Id })).ToList();
+                    personGuidCollection = await _personRepository.GetPersonGuidsCollectionAsync(new string[] { vendors.Id });                    
+                    personPOAddressCollection = await _personRepository.GetHierarchyAddressIdsAsync(new List<string> { vendors.Id }, "PO", DateTime.Today);
+                    personAPAddressCollection = await _personRepository.GetHierarchyAddressIdsAsync(new List<string> { vendors.Id }, "AP.CHECK", DateTime.Today);
+                    var addressIds = new List<string>();
+                    var poAddressIds = new List<string>();
+                    var apAddressIds = new List<string>();
+                    if (personPOAddressCollection != null && personPOAddressCollection.Any())
+                        poAddressIds = personPOAddressCollection.Select(x => x.Value).ToList();
+                    if (personAPAddressCollection != null && personAPAddressCollection.Any())
+                        apAddressIds = personAPAddressCollection.Select(x => x.Value).ToList();
+                    addressIds = poAddressIds.Union(apAddressIds).ToList();
+                    addressGuidCollection = await _personRepository.GetAddressGuidsCollectionAsync(addressIds);
+                }
+                var dto =  await ConvertVendorsEntityToDtoAsync2(vendors, institutions, personGuidCollection, personPOAddressCollection, personAPAddressCollection, addressGuidCollection);
+                if (IntegrationApiException != null)
+                {
+                    throw IntegrationApiException;
                 }
 
-                return await ConvertVendorsEntityToDtoAsync2(vendors, institutions);
+                return dto;
+
+            }
+            catch (IntegrationApiException ex)
+            {
+                throw ex;
             }
             catch (KeyNotFoundException ex)
             {
-                throw new KeyNotFoundException("No vendor was found for guid  " + guid, ex);
+                throw new KeyNotFoundException("No vendors was found for guid  " + guid, ex);
             }
             catch (InvalidOperationException ex)
             {
-                throw new InvalidOperationException("No vendor was found for guid  " + guid, ex);
+                throw new InvalidOperationException("No vendors was found for guid  " + guid, ex);
             }
             catch (RepositoryException ex)
             {
-                throw new RepositoryException("No vendor was found for guid  " + guid, ex);
+                throw ex;
             }
             catch (Exception ex)
             {
@@ -973,86 +1036,94 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <returns>Vendors domain entity</returns>
         public async Task<Vendors2> PutVendorAsync2(string guid, Vendors2 vendorDto)
         {
+            // verify the user has the permission to update a vendor
+            CheckUpdateVendorPermission();
             if (vendorDto == null)
-                throw new ArgumentNullException("vendor", "Must provide a vendor for update");
+            {
+                IntegrationApiExceptionAddError("Must provide a vendor for update.", "Validation.Exception");
+                throw IntegrationApiException;
+            }
             if (string.IsNullOrEmpty(vendorDto.Id))
-                throw new ArgumentNullException("vendor", "Must provide a guid for vendor update");
+                IntegrationApiExceptionAddError("Must provide a guid for vendor update.", "Validation.Exception");
 
-            string vendorId;
+            _vendorsRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
+            // map the DTO to entities
+            Domain.ColleagueFinance.Entities.Vendors vendorEntity = null;
             try
             {
-                // get the  ID associated with the incoming guid
-                vendorId = await _vendorsRepository.GetVendorIdFromGuidAsync(vendorDto.Id);
+                ValidateVendor2(vendorDto);
+                vendorEntity
+                   = await ConvertVendorsDtoToEntityAsync2(guid, vendorDto);
             }
-            catch (KeyNotFoundException e)
+            catch (IntegrationApiException ex)
             {
-                vendorId = null;
+                throw ex;
             }
-            catch (ArgumentException e)
+            catch (Exception ex)
             {
-                throw new ArgumentException(e.Message);
+                IntegrationApiExceptionAddError("Record not updated. Error extracting request. " + ex.Message, "Global.Internal.Error",
+                   vendorEntity != null && !string.IsNullOrEmpty(vendorEntity.Guid) ? vendorEntity.Guid : null,
+                   vendorEntity != null && !string.IsNullOrEmpty(vendorEntity.Id) ? vendorEntity.Id : null);
             }
-
-
-            // verify the GUID exists to perform an update.  If not, perform a create instead
-            if (!string.IsNullOrEmpty(vendorId))
+            if (IntegrationApiException != null)
             {
-                try
-                {
-
-                    // verify the user has the permission to update a vendor
-                    CheckUpdateVendorPermission();
-
-                    _vendorsRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
-
-                    var vendor = await _vendorsRepository.GetVendorsByGuidAsync(guid);
-                    if (vendor != null)
-                    {
-                        if (vendorDto.StartOn != null && vendor.AddDate != null)
-                        {
-                            if (DateTime.Compare(Convert.ToDateTime(vendorDto.StartOn), Convert.ToDateTime(vendor.AddDate)) != 0)
-                            {
-                                throw new ArgumentException("startOn date can not be updated.");
-                            }
-                        }
-
-                        //PUT - Updating to "holdPayment" (VEN.STOP.PAYMENT.FLAG = N) but a vendorHoldReason is not received.       
-                        if (vendor.StopPaymentFlag == "Y")
-                        {
-                            if ((vendorDto.Statuses != null) && (!vendorDto.Statuses.Contains(VendorsStatuses.Holdpayment)))
-                            {
-                                throw new ArgumentNullException("Vendor.VendorHoldReasons", "The removal of the 'holdPayment' status for a vendor is not permitted.");
-                            }
-                        }
-                    }
-                    // map the DTO to entities
-                    var vendorEntity
-                        = await ConvertVendorsDtoToEntityAsync2(guid, vendorDto);
-
-                    // update the entity in the database
-                    var updatedVendorEntity =
-                        await _vendorsRepository.UpdateVendorsAsync(vendorEntity);
-
-                    List<Institution> institutions = null;
-                    if (updatedVendorEntity != null)
-                    {
-                        institutions = (await _institutionRepository.GetInstitutionsFromListAsync(new string[] { updatedVendorEntity.Id })).ToList();
-                    }
-                    // return the newly updated DTO
-                    return await ConvertVendorsEntityToDtoAsync2(updatedVendorEntity, institutions, false);
-
-                }
-                catch (RepositoryException ex)
-                {
-                    throw ex;
-                }
-                catch (Exception ex)
-                {
-                    throw new Exception(ex.Message, ex.InnerException);
-                }
+                throw IntegrationApiException;
             }
-            // perform a create instead
-            return await PostVendorAsync2(vendorDto);
+
+            Domain.ColleagueFinance.Entities.Vendors updatedVendorEntity = null;
+
+            // update the entity in the database
+            try
+            {
+                updatedVendorEntity = await _vendorsRepository.UpdateVendors2Async(vendorEntity);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }
+            catch (Exception ex)  //catch InvalidOperationException thrown when record already exists.
+            {
+                IntegrationApiExceptionAddError(ex.Message, "Global.Internal.Error",
+                     updatedVendorEntity != null && !string.IsNullOrEmpty(updatedVendorEntity.Guid) ? updatedVendorEntity.Guid : null,
+                     updatedVendorEntity != null && !string.IsNullOrEmpty(updatedVendorEntity.Id) ? updatedVendorEntity.Id : null);
+                throw IntegrationApiException;
+            }
+
+            // build DTO
+            Vendors2 newDto = null;
+            List<Institution> institutions = null;
+            Dictionary<string, string> personGuidCollection = null;
+            Dictionary<string, string> personAPAddressCollection = null;
+            Dictionary<string, string> personPOAddressCollection = null;
+            Dictionary<string, string> addressGuidCollection = null;
+            try
+            {
+                if (updatedVendorEntity != null)
+                {
+                    institutions = (await _institutionRepository.GetInstitutionsFromListAsync(new string[] { updatedVendorEntity.Id })).ToList();
+                    personGuidCollection = await _personRepository.GetPersonGuidsCollectionAsync(new string[] { updatedVendorEntity.Id });
+                    personPOAddressCollection = await _personRepository.GetHierarchyAddressIdsAsync(new List<string> { updatedVendorEntity.Id }, "PO", DateTime.Today);
+                    personAPAddressCollection = await _personRepository.GetHierarchyAddressIdsAsync(new List<string> { updatedVendorEntity.Id }, "AP.CHECK", DateTime.Today);
+                    var addressIds = new List<string>();
+                    var poAddressIds = new List<string>();
+                    var apAddressIds = new List<string>();
+                    if (personPOAddressCollection != null && personPOAddressCollection.Any())
+                        poAddressIds = personPOAddressCollection.Select(x => x.Value).ToList();
+                    if (personAPAddressCollection != null && personAPAddressCollection.Any())
+                        apAddressIds = personAPAddressCollection.Select(x => x.Value).ToList();
+                    addressIds = poAddressIds.Union(apAddressIds).ToList();
+                    addressGuidCollection = await _personRepository.GetAddressGuidsCollectionAsync(addressIds);
+                }
+                // return the newly updated DTO
+                newDto = await ConvertVendorsEntityToDtoAsync2(updatedVendorEntity, institutions, personGuidCollection, personPOAddressCollection, personAPAddressCollection, addressGuidCollection, false);
+            }
+            catch (IntegrationApiException ex)
+            {
+                throw ex;
+            }
+
+            return newDto;
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
@@ -1063,43 +1134,202 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <returns>Vendors domain entity</returns>
         public async Task<Vendors2> PostVendorAsync2(Vendors2 vendorDto)
         {
-            if (vendorDto == null)
-                throw new ArgumentNullException("vendor", "Must provide a vendor for update");
-            if (string.IsNullOrEmpty(vendorDto.Id))
-                throw new ArgumentNullException("vendor", "Must provide a guid for vendor update");
-
-
-            Domain.ColleagueFinance.Entities.Vendors createdVendor = null;
-
             // verify the user has the permission to create a Vendor
             CheckUpdateVendorPermission();
 
+            if (vendorDto == null)
+            {
+                IntegrationApiExceptionAddError("Must provide a vendor for create.", "Validation.Exception");
+                throw IntegrationApiException;
+            }
+            if (string.IsNullOrEmpty(vendorDto.Id))
+            {
+                IntegrationApiExceptionAddError("Must provide a guid for vendor create.", "Validation.Exception");
+            }
+            Domain.ColleagueFinance.Entities.Vendors createdVendor = null;
             _vendorsRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
-
+            Domain.ColleagueFinance.Entities.Vendors vendorEntity = null;
             try
             {
-                var vendorEntity
-                         = await ConvertVendorsDtoToEntityAsync2(vendorDto.Id, vendorDto);
-
-                // create a Vendor entity in the database
-                createdVendor = await _vendorsRepository.CreateVendorsAsync(vendorEntity);
+                ValidateVendor2(vendorDto);
+                vendorEntity = await ConvertVendorsDtoToEntityAsync2(vendorDto.Id, vendorDto);
             }
-            catch (RepositoryException ex)
+            catch (IntegrationApiException ex)
             {
                 throw ex;
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message, ex.InnerException);
+                IntegrationApiExceptionAddError("Record not created. Error extracting request. " + ex.Message, "Global.Internal.Error",
+                   vendorEntity != null && !string.IsNullOrEmpty(vendorEntity.Guid) ? vendorEntity.Guid : null,
+                   vendorEntity != null && !string.IsNullOrEmpty(vendorEntity.Id) ? vendorEntity.Id : null);
             }
-            List<Institution> institutions = null;
-            if (createdVendor != null)
+            if (IntegrationApiException != null)
             {
-                institutions = (await _institutionRepository.GetInstitutionsFromListAsync(new string[] { createdVendor.Id })).ToList();
+                throw IntegrationApiException;
             }
 
-            // return the newly created Vendor
-            return await ConvertVendorsEntityToDtoAsync2(createdVendor, institutions, true);
+            try 
+            {
+                // create a Vendor entity in the database
+                createdVendor = await _vendorsRepository.CreateVendors2Async(vendorEntity);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }
+            catch (Exception ex)  //catch InvalidOperationException thrown when record already exists.
+            {
+                IntegrationApiExceptionAddError(ex.Message, "Global.Internal.Error",
+                     createdVendor != null && !string.IsNullOrEmpty(createdVendor.Guid) ? createdVendor.Guid : null,
+                     createdVendor != null && !string.IsNullOrEmpty(createdVendor.Id) ? createdVendor.Id : null);
+                throw IntegrationApiException;
+            }
+            List<Institution> institutions = null;
+            Dictionary<string, string> personGuidCollection = null;
+            Dictionary<string, string> personAPAddressCollection = null;
+            Dictionary<string, string> personPOAddressCollection = null;
+            Dictionary<string, string> addressGuidCollection = null;
+            Vendors2 newDto = null;
+            try
+            {
+                if (createdVendor != null)
+                {
+                    institutions = (await _institutionRepository.GetInstitutionsFromListAsync(new string[] { createdVendor.Id })).ToList();
+                    personGuidCollection = await _personRepository.GetPersonGuidsCollectionAsync(new string[] { createdVendor.Id });
+                    personPOAddressCollection = await _personRepository.GetHierarchyAddressIdsAsync(new List<string> { createdVendor.Id }, "PO", DateTime.Today);
+                    personAPAddressCollection = await _personRepository.GetHierarchyAddressIdsAsync(new List<string> { createdVendor.Id }, "AP.CHECK", DateTime.Today);
+                    var addressIds = new List<string>();
+                    var poAddressIds = new List<string>();
+                    var apAddressIds = new List<string>();
+                    if (personPOAddressCollection != null && personPOAddressCollection.Any())
+                        poAddressIds = personPOAddressCollection.Select(x => x.Value).ToList();
+                    if (personAPAddressCollection != null && personAPAddressCollection.Any())
+                        apAddressIds = personAPAddressCollection.Select(x => x.Value).ToList();
+                    addressIds = poAddressIds.Union(apAddressIds).ToList();
+                    addressGuidCollection = await _personRepository.GetAddressGuidsCollectionAsync(addressIds);
+                }
+
+                // return the newly created Vendor
+                newDto = await ConvertVendorsEntityToDtoAsync2(createdVendor, institutions, personGuidCollection, personPOAddressCollection, personAPAddressCollection, addressGuidCollection, true);
+            }
+            catch (IntegrationApiException ex)
+            {
+                throw ex;
+            }
+            return newDto;
+        }
+                
+        /// <summary>
+        /// Helper method to validate vendors PUT/POST.
+        /// </summary>
+        /// <param name="vendor">Vendors DTO object of type <see cref="Dtos.Vendors"/></param>
+
+        private void ValidateVendor2(Vendors2 vendor)
+        {
+            if (vendor.EndOn != null)
+            {
+                IntegrationApiExceptionAddError("The endOn date can not be updated when submitting a vendor.", "Validation.Exception", vendor.Id);
+            }
+
+            if (vendor.VendorDetail == null)
+            {
+                IntegrationApiExceptionAddError("The vendorDetail is required when submitting a vendor.", "Validation.Exception", vendor.Id);
+            }
+            else
+            {
+                var vendorDetail = vendor.VendorDetail;
+                if ((vendorDetail.Institution == null) && (vendorDetail.Organization == null) && (vendorDetail.Person == null))
+                {
+                    IntegrationApiExceptionAddError("Either a Institution, Organizatation, or Person is required when submitting a vendorDetail.", "Validation.Exception", vendor.Id);
+                }
+                if ((vendorDetail.Organization != null) && ((vendorDetail.Person != null) || (vendorDetail.Institution != null)))
+                {
+                    IntegrationApiExceptionAddError("Only one of either an organization, person or institution can be specified as a vendor.", "Validation.Exception", vendor.Id);
+                }
+                if ((vendorDetail.Person != null) && ((vendorDetail.Organization != null) || (vendorDetail.Institution != null)))
+                {
+                    IntegrationApiExceptionAddError("Only one of either an organization, person or institution can be specified as a vendor.", "Validation.Exception", vendor.Id);                   
+                }
+                if ((vendorDetail.Institution != null) && ((vendorDetail.Person != null) || (vendorDetail.Organization != null)))
+                {
+                    IntegrationApiExceptionAddError("Only one of either an organization, person or institution can be specified as a vendor.", "Validation.Exception", vendor.Id);
+                }
+                if ((vendorDetail.Institution != null) && ((string.IsNullOrEmpty(vendorDetail.Institution.Id))
+                     || (string.Equals(vendorDetail.Institution.Id, Guid.Empty.ToString()))))
+                {
+                    IntegrationApiExceptionAddError("The institution id is required when submitting a vendorDetail institution.", "Validation.Exception", vendor.Id);                  
+                }
+                if ((vendorDetail.Organization != null) && ((string.IsNullOrEmpty(vendorDetail.Organization.Id))
+                     || (string.Equals(vendorDetail.Organization.Id, Guid.Empty.ToString()))))
+                {
+                    IntegrationApiExceptionAddError("The organization id is required when submitting a vendorDetail organization.", "Validation.Exception", vendor.Id);
+                }
+                if ((vendorDetail.Person != null) && ((string.IsNullOrEmpty(vendorDetail.Person.Id))
+                    || (string.Equals(vendorDetail.Person.Id, Guid.Empty.ToString()))))
+                {
+                    IntegrationApiExceptionAddError("The person id is required when submitting a vendorDetail person.", "Validation.Exception", vendor.Id);
+                }
+            }
+
+
+            if (vendor.Classifications != null)
+            {
+                foreach (var classification in vendor.Classifications)
+                {
+                    if (string.IsNullOrEmpty(classification.Id))
+                    IntegrationApiExceptionAddError("The classification id is required when submitting classifications.", "Validation.Exception", vendor.Id);
+                }
+            }
+
+            if (vendor.PaymentTerms != null)
+            {
+                foreach (var paymentTerm in vendor.PaymentTerms)
+                {
+                    if (string.IsNullOrEmpty(paymentTerm.Id))
+                    IntegrationApiExceptionAddError("The paymentTerms id is required when submitting paymentTerms.", "Validation.Exception", vendor.Id);
+                }
+            }
+
+            if (vendor.PaymentSources != null)
+            {
+                foreach (var paymentSource in vendor.PaymentSources)
+                {
+                    if (string.IsNullOrEmpty(paymentSource.Id))
+                        IntegrationApiExceptionAddError("The paymentSources id is required when submitting paymentSources.", "Validation.Exception", vendor.Id);
+                }
+            }
+
+            if (vendor.VendorHoldReasons != null)
+            {
+                foreach (var vendorHoldReason in vendor.VendorHoldReasons)
+                {
+                    if (string.IsNullOrEmpty(vendorHoldReason.Id))
+                    {
+                        IntegrationApiExceptionAddError("The vendorHoldReason id is required when submitting vendorHoldReasons.", "Validation.Exception", vendor.Id);
+                    }
+                }
+            }
+            if (vendor.DefaultTaxFormComponent != null)
+            {
+
+                if (string.IsNullOrEmpty(vendor.DefaultTaxFormComponent.Id))
+                {
+                    IntegrationApiExceptionAddError("The defaultTaxFormComponent id is required when submitting defaultTaxFormComponent.", "Validation.Exception", vendor.Id);
+                }
+
+            }
+            if (!string.IsNullOrEmpty(vendor.TaxId) && vendor.VendorDetail != null && vendor.VendorDetail.Person != null )
+            {
+                IntegrationApiExceptionAddError("Corporate tax ID is not permissible for a person acting as a vendor.", "Validation.Exception", vendor.Id);
+            }
+
+            
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
 
         }
 
@@ -1113,9 +1343,20 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         private async Task<Domain.ColleagueFinance.Entities.Vendors> ConvertVendorsDtoToEntityAsync2(string vendorId,
             Vendors2 vendorDto, bool bypassCache = true)
         {
+            string vendorGuidId = string.Empty;
             if (vendorDto == null || string.IsNullOrEmpty(vendorDto.Id))
-                throw new ArgumentNullException("vendor", "Must provide guid for vendor");
-
+            {
+                IntegrationApiExceptionAddError("Must provide guid for vendor.", "Validation.Exception", vendorDto.Id);
+                throw IntegrationApiException;
+            }
+            else
+            {
+                try
+                {
+                    vendorGuidId = await _vendorsRepository.GetVendorIdFromGuidAsync(vendorDto.Id);
+                }
+                catch {}
+            }
             var vendorEntity = new Domain.ColleagueFinance.Entities.Vendors(vendorDto.Id);
 
             if (vendorDto.StartOn.HasValue)
@@ -1129,76 +1370,112 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 var currencyCodes = (await GetAllCurrencyConversionAsync());
                 if (currencyCodes == null)
                 {
-                    throw new KeyNotFoundException("Unable to extract currency codes from CURRENCY.CONV");
+                    IntegrationApiExceptionAddError("Unable to extract currency codes from CURRENCY.CONV.", "Validation.Exception", vendorDto.Id, vendorGuidId);
                 }
-                var curCode = currencyCodes.FirstOrDefault(x => x.CurrencyCode == currencyCode);
-                if (curCode == null)
+                else
                 {
-                    throw new KeyNotFoundException(string.Concat("Unable to locate currency code: ", currencyCode));
+                    var curCode = currencyCodes.FirstOrDefault(x => x.CurrencyCode == currencyCode);
+                    if (curCode == null)
+                    {
+                        IntegrationApiExceptionAddError(string.Concat("Unable to locate currency code: ", currencyCode), "Validation.Exception", vendorDto.Id, vendorGuidId);
+                    }
+                    else
+                    {
+                        vendorEntity.CurrencyCode = curCode.Code;
+                    }
                 }
-                vendorEntity.CurrencyCode = curCode.Code;
             }
 
             if (vendorDto.VendorDetail != null)
             {
                 var vendorDetail = vendorDto.VendorDetail;
+                Person person = null;
                 if (vendorDetail.Institution != null && !(string.IsNullOrEmpty(vendorDetail.Institution.Id)))
-                {
-                    var person = await _personRepository.GetPersonByGuidNonCachedAsync(vendorDetail.Institution.Id);
+                {                   
+                    try
+                    {
+                        person = await _personRepository.GetPersonByGuidNonCachedAsync(vendorDetail.Institution.Id);
+                    }
+                    catch (Exception)
+                    { }
                     if (person == null)
                     {
-                        throw new KeyNotFoundException(string.Concat("Unable to locate person record for guid: ", vendorDetail.Institution.Id));
+                        IntegrationApiExceptionAddError(string.Concat("Unable to locate person record for institution for guid: ", vendorDetail.Institution.Id), "Validation.Exception", vendorDto.Id, vendorGuidId);
                     }
-                    if ((string.IsNullOrEmpty(person.PersonCorpIndicator) || (person.PersonCorpIndicator == "N")))
+                    else
                     {
-                        throw new ArgumentException(string.Concat("The institution guid specified is a person: ", vendorDetail.Institution.Id));
+                        if ((string.IsNullOrEmpty(person.PersonCorpIndicator) || (person.PersonCorpIndicator == "N")))
+                        {
+                            IntegrationApiExceptionAddError(string.Concat("The institution guid specified is a person: ", vendorDetail.Institution.Id), "Validation.Exception", vendorDto.Id, vendorGuidId);
+                        }
+                        else
+                        {
+                            var institution = await _institutionRepository.GetInstitutionsFromListAsync(new string[] { person.Id });
+                            if (institution == null || !institution.Any())
+                            {
+                                IntegrationApiExceptionAddError(string.Concat("The institution specified is an organization: ", vendorDetail.Institution.Id), "Validation.Exception", vendorDto.Id, vendorGuidId);
+                            }
+                        }
+                        vendorEntity.Id = person.Id;
                     }
-                    var institution = await _institutionRepository.GetInstitutionsFromListAsync(new string[] { person.Id });
-                    if (institution == null)
-                    {
-                        throw new ArgumentException(string.Concat("The institution specified is an organization.: ", vendorDetail.Institution.Id));
-                    }
-                    vendorEntity.Id = person.Id;
                 }
                 else if (vendorDetail.Organization != null && !(string.IsNullOrEmpty(vendorDetail.Organization.Id)))
                 {
-
-                    var person = await _personRepository.GetPersonByGuidNonCachedAsync(vendorDetail.Organization.Id);
+                    try
+                    {
+                        person = await _personRepository.GetPersonByGuidNonCachedAsync(vendorDetail.Organization.Id);
+                    }
+                    catch { }
                     if (person == null)
                     {
-                        throw new KeyNotFoundException(string.Concat("Unable to locate person record for guid: ", vendorDetail.Organization.Id));
+                        IntegrationApiExceptionAddError(string.Concat("Unable to locate organization record for guid: ", vendorDetail.Organization.Id), "Validation.Exception", vendorDto.Id, vendorGuidId);
                     }
-                    var institution = await _institutionRepository.GetInstitutionsFromListAsync(new string[] { person.Id });
-                    if (institution != null && institution.Any())
+                    else
                     {
-                        throw new ArgumentException(string.Concat("The organization guid specified is an institution: ", vendorDetail.Organization.Id));
+                        var institution = await _institutionRepository.GetInstitutionsFromListAsync(new string[] { person.Id });
+                        if (institution != null && institution.Any())
+                        {
+                            IntegrationApiExceptionAddError(string.Concat("The organization guid specified is an institution: ", vendorDetail.Organization.Id), "Validation.Exception", vendorDto.Id, vendorGuidId);
+                        }
+                        else
+                        {
+                            if (person.PersonCorpIndicator != "Y")
+                            {
+                                IntegrationApiExceptionAddError(string.Concat("The organization guid specified is a person: ", vendorDetail.Organization.Id), "Validation.Exception", vendorDto.Id, vendorGuidId);
+                            }
+                        }
+                        vendorEntity.Id = person.Id;
+                        vendorEntity.IsOrganization = true;
                     }
-                    if (person.PersonCorpIndicator != "Y")
-                    {
-                        throw new ArgumentException(string.Concat("The organization guid specified is a person: ", vendorDetail.Organization.Id));
-                    }
-                    vendorEntity.Id = person.Id;
-
-                    vendorEntity.IsOrganization = true;
                 }
                 else if (vendorDetail.Person != null && !(string.IsNullOrEmpty(vendorDetail.Person.Id)))
                 {
-                    var person = await _personRepository.GetPersonByGuidNonCachedAsync(vendorDetail.Person.Id);
+                    try
+                    {
+                        person = await _personRepository.GetPersonByGuidNonCachedAsync(vendorDetail.Person.Id);
+                    }
+                    catch
+                    { }
                     if (person == null)
                     {
-                        throw new KeyNotFoundException(string.Concat("Unable to locate person record for guid: ", vendorDetail.Person.Id));
+                        IntegrationApiExceptionAddError(string.Concat("Unable to locate person record for guid: ", vendorDetail.Person.Id), "Validation.Exception", vendorDto.Id, vendorGuidId);
                     }
-                    var institution = await _institutionRepository.GetInstitutionsFromListAsync(new string[] { person.Id });
-                    if (institution != null && institution.Any())
+                    else
                     {
-                        throw new ArgumentException(string.Concat("The person guid specified is an institution: ", vendorDetail.Person.Id));
+                        var institution = await _institutionRepository.GetInstitutionsFromListAsync(new string[] { person.Id });
+                        if (institution != null && institution.Any())
+                        {
+                            IntegrationApiExceptionAddError(string.Concat("The person guid specified is an institution: ", vendorDetail.Person.Id), "Validation.Exception", vendorDto.Id, vendorGuidId);
+                        }
+                        else
+                        {
+                            if (person.PersonCorpIndicator == "Y")
+                            {
+                                IntegrationApiExceptionAddError(string.Concat("The person specified is an organization.: ", vendorDetail.Person.Id), "Validation.Exception", vendorDto.Id, vendorGuidId);
+                            }
+                        }
+                        vendorEntity.Id = person.Id;
                     }
-
-                    if (person.PersonCorpIndicator == "Y")
-                    {
-                        throw new ArgumentException(string.Concat("The person specified is an organization.: ", vendorDetail.Person.Id));
-                    }
-                    vendorEntity.Id = person.Id;
                 }
             }
 
@@ -1225,30 +1502,39 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             {
                 if (vendorDto.PaymentSources.Count() == 1 && vendorDto.PaymentSources[0].Id == null)
                 {
-                    throw new ArgumentException(" The paymentSources id is required when submitting paymentSources");
+                    IntegrationApiExceptionAddError("The paymentSources id is required when submitting paymentSources", "Validation.Exception", vendorDto.Id, vendorGuidId);
                 }
-                var sources = new List<string>();
-                var accountsPayableSources = (await GetAllAccountsPayableSourcesAsync(bypassCache));
-                if (accountsPayableSources == null)
+                else
                 {
-                    throw new KeyNotFoundException("Unable to extract accounts payable sources from AP.TYPES");
-                }
-
-                foreach (var source in vendorDto.PaymentSources)
-                {
-                    var accountsPayableSource = accountsPayableSources.FirstOrDefault(x => x.Guid == source.Id);
-                    if (accountsPayableSource == null)
+                    var sources = new List<string>();
+                    var accountsPayableSources = (await GetAllAccountsPayableSourcesAsync(bypassCache));
+                    if (accountsPayableSources == null)
                     {
-                        throw new KeyNotFoundException(string.Concat("Unable to locate accounts payable source for guid: ", source.Id));
+                        IntegrationApiExceptionAddError("Unable to extract accounts payable sources from AP.TYPES", "Validation.Exception", vendorDto.Id, vendorGuidId);
                     }
-                    sources.Add(accountsPayableSource.Code);
-                }
+                    else
+                    {
+                        foreach (var source in vendorDto.PaymentSources)
+                        {
+                            var accountsPayableSource = accountsPayableSources.FirstOrDefault(x => x.Guid == source.Id);
+                            if (accountsPayableSource == null)
+                            {
+                                IntegrationApiExceptionAddError(string.Concat("Unable to locate accounts payable source for guid: ", source.Id), "Validation.Exception", vendorDto.Id, vendorGuidId);
+                            }
+                            else
+                            {
+                                sources.Add(accountsPayableSource.Code);
+                            }
+                        }
 
-                if (sources.Any())
-                {
-                    vendorEntity.ApTypes = sources;
+                        if (sources != null && sources.Any())
+                        {
+                            vendorEntity.ApTypes = sources;
+                        }
+                    }
                 }
             }
+            
 
             if (vendorDto.PaymentTerms != null && vendorDto.PaymentTerms.Any())
             {
@@ -1256,21 +1542,27 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 var vendorTerms = (await GetAllVendorTermsAsync(bypassCache));
                 if (vendorTerms == null)
                 {
-                    throw new KeyNotFoundException("Unable to extract vendor terms from VENDOR.TERMS");
+                    IntegrationApiExceptionAddError("Unable to extract vendor terms from VENDOR.TERMS", "Validation.Exception", vendorDto.Id, vendorGuidId);
                 }
-                foreach (var term in vendorDto.PaymentTerms)
+                else
                 {
-                    var paymentTerm = vendorTerms.FirstOrDefault((x => x.Guid == term.Id));
-                    if (paymentTerm == null)
+                    foreach (var term in vendorDto.PaymentTerms)
                     {
-                        throw new KeyNotFoundException(string.Concat("Unable to locate payment term for guid: ", term.Id));
+                        var paymentTerm = vendorTerms.FirstOrDefault((x => x.Guid == term.Id));
+                        if (paymentTerm == null)
+                        {
+                            IntegrationApiExceptionAddError(string.Concat("Unable to locate payment term for guid: ", term.Id), "Validation.Exception", vendorDto.Id, vendorGuidId);
+                        }
+                        else
+                        {
+                            terms.Add(paymentTerm.Code);
+                        }
                     }
-                    terms.Add(paymentTerm.Code);
-                }
 
-                if (terms.Any())
-                {
-                    vendorEntity.Terms = terms;
+                    if (terms != null && terms.Any())
+                    {
+                        vendorEntity.Terms = terms;
+                    }
                 }
             }
 
@@ -1280,21 +1572,27 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 var vendorTypes = (await GetAllVendorTypesAsync(bypassCache));
                 if (vendorTypes == null)
                 {
-                    throw new KeyNotFoundException("Unable to extract vendor types from VENDOR.TYPES");
+                    IntegrationApiExceptionAddError("Unable to extract vendor types from VENDOR.TYPES", "Validation.Exception", vendorDto.Id);
                 }
-                foreach (var classification in vendorDto.Classifications)
+                else
                 {
-                    var vendorType = vendorTypes.FirstOrDefault((x => x.Guid == classification.Id));
-                    if (vendorType == null)
+                    foreach (var classification in vendorDto.Classifications)
                     {
-                        throw new KeyNotFoundException(string.Concat("Unable to locate vendor type for guid: ", classification.Id));
+                        var vendorType = vendorTypes.FirstOrDefault((x => x.Guid == classification.Id));
+                        if (vendorType == null)
+                        {
+                            IntegrationApiExceptionAddError(string.Concat("Unable to locate vendor type for guid: ", classification.Id), "Validation.Exception", vendorDto.Id, vendorGuidId);
+                        }
+                        else
+                        {
+                            types.Add(vendorType.Code);
+                        }
                     }
-                    types.Add(vendorType.Code);
-                }
 
-                if (types.Any())
-                {
-                    vendorEntity.Types = types;
+                    if (types != null && types.Any())
+                    {
+                        vendorEntity.Types = types;
+                    }
                 }
             }
 
@@ -1304,20 +1602,26 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 var allVendorHoldReasons = await GetAllVendorHoldReasonsAsync(bypassCache);
                 if (allVendorHoldReasons == null)
                 {
-                    throw new KeyNotFoundException("Unable to extract vendor hold reasons from INTG.VENDOR.HOLD.REASONS");
+                    IntegrationApiExceptionAddError("Unable to extract vendor hold reasons from INTG.VENDOR.HOLD.REASONS", "Validation.Exception", vendorDto.Id, vendorGuidId);
                 }
-                foreach (var holdReason in vendorDto.VendorHoldReasons)
+                else
                 {
-                    var vendorHoldReason = allVendorHoldReasons.FirstOrDefault(v => v.Guid == holdReason.Id);
-                    if (vendorHoldReason == null)
+                    foreach (var holdReason in vendorDto.VendorHoldReasons)
                     {
-                        throw new KeyNotFoundException(string.Concat("Unable to locate vendor hold reason for guid: ", holdReason.Id));
+                        var vendorHoldReason = allVendorHoldReasons.FirstOrDefault(v => v.Guid == holdReason.Id);
+                        if (vendorHoldReason == null)
+                        {
+                            IntegrationApiExceptionAddError(string.Concat("Unable to locate vendor hold reason for guid: ", holdReason.Id), "Validation.Exception", vendorDto.Id, vendorGuidId);
+                        }
+                        else
+                        {
+                            vendorHoldReasons.Add(vendorHoldReason.Code);
+                        }
                     }
-                    vendorHoldReasons.Add(vendorHoldReason.Code);
-                }
-                if (vendorHoldReasons.Any())
-                {
-                    vendorEntity.IntgHoldReasons = vendorHoldReasons;
+                    if (vendorHoldReasons != null && vendorHoldReasons.Any())
+                    {
+                        vendorEntity.IntgHoldReasons = vendorHoldReasons;
+                    }
                 }
             }
             if (!string.IsNullOrWhiteSpace(vendorDto.Comment))
@@ -1339,8 +1643,61 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         case VendorTypes.Travel:
                             vendorEntity.Categories.Add("travel");
                             break;
+                        case VendorTypes.Procurement:
+                            vendorEntity.Categories.Add("procurement");
+                            break;
                     }
                 }
+            }
+            //get tax Id
+            vendorEntity.TaxId = vendorDto.TaxId;
+            // get tax form
+            if (vendorDto.DefaultTaxFormComponent != null && !string.IsNullOrEmpty(vendorDto.DefaultTaxFormComponent.Id))
+            {
+                var taxBoxes = await GetAllBoxCodesAsync(bypassCache);
+                var taxForms = await GetAllTaxForms2Async(bypassCache);
+                string taxBoxCode = string.Empty;
+                string taxFormCode = string.Empty;
+                if (taxBoxes != null && taxBoxes.Any()) 
+                {
+                    var taxBox = taxBoxes.FirstOrDefault(aps => aps.Guid == vendorDto.DefaultTaxFormComponent.Id);
+                    if (taxBox != null && !string.IsNullOrEmpty(taxBox.Code))
+                    {
+                        taxBoxCode = taxBox.Code;
+                    }
+                    else
+                    {
+                        IntegrationApiExceptionAddError(string.Concat("Unable to locate tax form components for guid: ", vendorDto.DefaultTaxFormComponent.Id), "Validation.Exception", vendorDto.Id, vendorGuidId);
+                    }
+                }
+                else
+                {
+                    IntegrationApiExceptionAddError("Unable to extract tax form components.", "Validation.Exception", vendorDto.Id, vendorGuidId);
+                }
+                if (taxForms != null && taxForms.Any())
+                {
+                    if (!string.IsNullOrEmpty(taxBoxCode))
+                        {
+                        var taxForm = taxForms.FirstOrDefault(aps => aps.defaultTaxBox == taxBoxCode);
+                        if (taxForm != null && !string.IsNullOrEmpty(taxForm.Code))
+                        {
+                            vendorEntity.TaxForm = taxForm.Code;
+                        }
+                        else
+                        {
+                            IntegrationApiExceptionAddError(string.Format("The requested default tax form component '{0}' is not recorded as a default box code.", taxBoxCode), "Validation.Exception", vendorDto.Id, vendorGuidId);
+                        }
+                    }
+                }
+                else
+                {
+                    IntegrationApiExceptionAddError("Unable to extract tax forms.", "Validation.Exception", vendorDto.Id, vendorGuidId);
+                }
+            }
+
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
             }
 
             return vendorEntity;
@@ -1353,7 +1710,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <param name="source">Vendors domain entity</param>
         /// <returns>Vendors DTO</returns>
         private async Task<Vendors2> ConvertVendorsEntityToDtoAsync2(Domain.ColleagueFinance.Entities.Vendors source,
-             IEnumerable<Domain.Base.Entities.Institution> institutions, bool bypassCache = false)
+             IEnumerable<Domain.Base.Entities.Institution> institutions, Dictionary<string, string> personGuidCollection, Dictionary<string, string> personPOAddressCollection, Dictionary<string, string> personAPAddressCollection, Dictionary<string, string> addressGuidCollection, bool bypassCache = false)
         {
             var vendors = new Vendors2();
 
@@ -1371,67 +1728,89 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     }
                 }
             }
-
-            var personGuid = await _personRepository.GetPersonGuidFromIdAsync(source.Id);
-            if (string.IsNullOrEmpty(personGuid))
+            // Make sure whe have a valid GUID for the record we are dealing with
+            if (string.IsNullOrEmpty(source.Guid))
             {
-                throw new KeyNotFoundException(string.Concat("Unable to locate guid for PERSON id: ", source.Id));
-            }
-
-            var vendorDetail = new VendorDetailsDtoProperty();
-
-            //var institution = (await GetInstitutions()).FirstOrDefault(i => i.Id.Equals(source.Id));
-            Domain.Base.Entities.Institution institution = null;
-            if (institutions != null && institutions.Any())
-                institution = institutions.FirstOrDefault(i => i.Id.Equals(source.Id));
-
-            if (source.IsOrganization && institution == null)
-            {
-                vendorDetail.Organization = new GuidObject2(personGuid);
-            }
-            else if (institution != null)
-            {
-                vendorDetail.Institution = new GuidObject2(personGuid);
+                IntegrationApiExceptionAddError("Could not find a GUID for vendors entity.", "GUID.Not.Found", id: source.Id);
             }
             else
             {
-                vendorDetail.Person = new GuidObject2(personGuid);
+                vendors.Id = source.Guid;
             }
-            vendors.VendorDetail = vendorDetail;
-
-            if (((source.IsOrganization) || (institution != null))
-                && (source.CorpParent != null) && (source.CorpParent.Any()))
+            if (!string.IsNullOrEmpty(source.Id))
             {
-                var relatedVendors = new List<RelatedVendorDtoProperty>();
-
-                foreach (var corpParent in source.CorpParent)
+                var personGuid = string.Empty;
+                if (personGuidCollection == null)
                 {
-                    //we only want parents that are also vendors
-                    try
+                    IntegrationApiExceptionAddError(string.Concat("Person guid not found for Person Id: '", source.Id, "'"), "GUID.Not.Found"
+                        , source.Id, source.Guid);
+                }
+                else
+                { 
+                personGuidCollection.TryGetValue(source.Id, out personGuid);
+                    if (string.IsNullOrEmpty(personGuid))
                     {
-                        var corpParentGuid = await _vendorsRepository.GetVendorGuidFromIdAsync(corpParent);
-                        if (!string.IsNullOrEmpty(corpParentGuid))
+                        IntegrationApiExceptionAddError(string.Concat("Person guid not found for Person Id: '", source.Id, "'"), "GUID.Not.Found"
+                            , source.Id, source.Guid);
+                    }
+                    else
+                    {
+
+                        var vendorDetail = new VendorDetailsDtoProperty();
+                        //var institution = (await GetInstitutions()).FirstOrDefault(i => i.Id.Equals(source.Id));
+                        Domain.Base.Entities.Institution institution = null;
+                        if (institutions != null && institutions.Any())
+                            institution = institutions.FirstOrDefault(i => i.Id.Equals(source.Id));
+
+                        if (source.IsOrganization && institution == null)
                         {
-                            var relatedVendor = new RelatedVendorDtoProperty()
+                            vendorDetail.Organization = new GuidObject2(personGuid);
+                        }
+                        else if (institution != null)
+                        {
+                            vendorDetail.Institution = new GuidObject2(personGuid);
+                        }
+                        else
+                        {
+                            vendorDetail.Person = new GuidObject2(personGuid);
+                        }
+                        vendors.VendorDetail = vendorDetail;
+
+                        if (((source.IsOrganization) || (institution != null))
+                            && (source.CorpParent != null) && (source.CorpParent.Any()))
+                        {
+                            var relatedVendors = new List<RelatedVendorDtoProperty>();
+
+                            foreach (var corpParent in source.CorpParent)
                             {
-                                Type = VendorType.ParentVendor,
-                                Vendor = new GuidObject2(corpParentGuid)
-                            };
-                            relatedVendors.Add(relatedVendor);
+                                //we only want parents that are also vendors
+                                try
+                                {
+                                    var corpParentGuid = await _vendorsRepository.GetVendorGuidFromIdAsync(corpParent);
+                                    if (!string.IsNullOrEmpty(corpParentGuid))
+                                    {
+                                        var relatedVendor = new RelatedVendorDtoProperty()
+                                        {
+                                            Type = VendorType.ParentVendor,
+                                            Vendor = new GuidObject2(corpParentGuid)
+                                        };
+                                        relatedVendors.Add(relatedVendor);
+                                    }
+                                }
+                                catch (Exception)
+                                {
+                                    // do not throw error 
+                                }
+
+                            }
+                            if (relatedVendors.Any())
+                            {
+                                vendors.RelatedVendor = relatedVendors;
+                            }
                         }
                     }
-                    catch (Exception)
-                    {
-                        // do not throw error 
-                    }
-
-                }
-                if (relatedVendors.Any())
-                {
-                    vendors.RelatedVendor = relatedVendors;
                 }
             }
-
             var vendorsStatuses = new List<VendorsStatuses?>();
 
             if (source.ActiveFlag == "Y")
@@ -1449,39 +1828,52 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             if (source.IntgHoldReasons != null && source.IntgHoldReasons.Any())
             {
                 var vendorHoldReasons = new List<GuidObject2>();
-                var allVendorHoldReasons = await GetAllVendorHoldReasonsAsync(bypassCache);
-                if (allVendorHoldReasons == null)
-                    throw new KeyNotFoundException("Unable to extract vendor hold reasons from INTG.VENDOR.HOLD.REASONS");
-
                 foreach (var holdReason in source.IntgHoldReasons)
                 {
-                    var vendorHoldReason = allVendorHoldReasons.FirstOrDefault(v => v.Code == holdReason);
-                    if (vendorHoldReason == null)
-                        throw new KeyNotFoundException("Unable to locate vendor hold reason for code: OB");
-                    vendorHoldReasons.Add(new GuidObject2(vendorHoldReason.Guid));
+                    if (!string.IsNullOrEmpty(holdReason))
+                    {
+                        try
+                        {
+                            var reason = await _colleagueFinanceReferenceDataRepository.GetVendorHoldReasonsGuidAsync(holdReason);
+                            if (reason != null)
+                            {
+                                vendorHoldReasons.Add(new Dtos.GuidObject2(reason));
+                            }
+                        }
+                        catch (RepositoryException ex)
+                        {
+                            IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
+                                source.Id, source.Guid);
+                        }
+                    }
                 }
 
                 if (vendorHoldReasons.Any())
                     vendors.VendorHoldReasons = vendorHoldReasons;
             }
-
-            vendors.Id = source.Guid;
+                    
             vendors.StartOn = source.AddDate;
-
-
+            
             if ((source.ApTypes != null) && (source.ApTypes.Any()))
             {
-                var paymentSources = new List<GuidObject2>();
-
-                var accountsPayableSources = (await GetAllAccountsPayableSourcesAsync(bypassCache)).ToList();
-                if (!accountsPayableSources.Any())
-                    throw new KeyNotFoundException("Unable to locate AccountsPayableSources");
+                var paymentSources = new List<GuidObject2>();       
                 foreach (var apType in source.ApTypes)
                 {
-                    var accountsPayableSource = accountsPayableSources.FirstOrDefault((x => x.Code == apType));
-                    if (accountsPayableSource != null)
+                    if (!string.IsNullOrEmpty(apType))
                     {
-                        paymentSources.Add(new GuidObject2(accountsPayableSource.Guid));
+                        try
+                        {
+                            var apTypeGuid = await _colleagueFinanceReferenceDataRepository.GetAccountsPayableSourceGuidAsync(apType);
+                            if (apTypeGuid != null)
+                            {
+                                paymentSources.Add(new Dtos.GuidObject2(apTypeGuid));
+                            }
+                        }
+                        catch (RepositoryException ex)
+                        {
+                            IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
+                                source.Id, source.Guid);
+                        }
                     }
                 }
                 if (paymentSources.Any())
@@ -1493,18 +1885,24 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             if ((source.Terms != null) && (source.Terms.Any()))
             {
                 var paymentTerms = new List<GuidObject2>();
-
-                var vendorTerms = (await GetAllVendorTermsAsync(bypassCache)).ToList();
-                if (!vendorTerms.Any())
-                    throw new KeyNotFoundException("Unable to locate VendorTerms");
-
                 foreach (var term in source.Terms)
                 {
-                    var vendorTerm = vendorTerms.FirstOrDefault((x => x.Code == term));
-                    if (vendorTerm != null)
+                    if (!string.IsNullOrEmpty(term))
                     {
-                        paymentTerms.Add(new GuidObject2(vendorTerm.Guid));
-                    }
+                        try
+                        {
+                            var termGuid = await _colleagueFinanceReferenceDataRepository.GetVendorTermGuidAsync(term);
+                            if (termGuid != null)
+                            {
+                                paymentTerms.Add(new Dtos.GuidObject2(termGuid));
+                            }
+                        }
+                        catch (RepositoryException ex)
+                        {
+                            IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
+                                source.Id, source.Guid);
+                        }
+                    }                    
                 }
                 if (paymentTerms.Any())
                 {
@@ -1515,18 +1913,24 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             if ((source.Types != null) && (source.Types.Any()))
             {
                 var classifications = new List<GuidObject2>();
-
-                var vendorTypes = (await GetAllVendorTypesAsync(bypassCache)).ToList();
-                if (!vendorTypes.Any())
-                    throw new KeyNotFoundException("Unable to locate VendorTypes");
-
                 foreach (var sourceType in source.Types)
                 {
-                    var vendorType = vendorTypes.FirstOrDefault((x => x.Code == sourceType));
-                    if (vendorType != null)
+                    if (!string.IsNullOrEmpty(sourceType))
                     {
-                        classifications.Add(new GuidObject2(vendorType.Guid));
-                    }
+                        try
+                        {
+                            var sourceTypeGuid = await _colleagueFinanceReferenceDataRepository.GetVendorTypesGuidAsync(sourceType);
+                            if (sourceTypeGuid != null)
+                            {
+                                classifications.Add(new Dtos.GuidObject2(sourceTypeGuid));
+                            }
+                        }
+                        catch (RepositoryException ex)
+                        {
+                            IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
+                                source.Id, source.Guid);
+                        }
+                    }                    
                 }
                 if (classifications.Any())
                 {
@@ -1536,26 +1940,153 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             if (!string.IsNullOrWhiteSpace(source.Comments))
                 vendors.Comment = source.Comments;
+            if (!string.IsNullOrEmpty(source.TaxId))
+            {
+                vendors.TaxId = source.TaxId;
+            }
+
+            //get tax from components. If the VEN.TAX.FORM does not have a default box code in the 1st special processing of the TAX.FORMS valcode table, 
+            //then omit the taxFormComponent object from the response.
+            if (!string.IsNullOrEmpty(source.TaxForm))
+            {
+                var taxBoxes = await GetAllBoxCodesAsync(bypassCache);
+                var taxForms = await GetAllTaxForms2Async(bypassCache);
+                if (taxForms != null && taxForms.Any())
+                {
+                    var taxForm = taxForms.FirstOrDefault(box => box.Code == source.TaxForm);
+                    if (taxForm != null )
+                    {                        
+                        var taxBox = taxBoxes.FirstOrDefault(aps => aps.Code == taxForm.defaultTaxBox);
+                        if (taxBox != null) 
+                        {
+                            if (!string.IsNullOrEmpty(taxBox.Guid))
+                                vendors.DefaultTaxFormComponent = new GuidObject2(taxBox.Guid);
+                            else
+                                IntegrationApiExceptionAddError(string.Concat("No Guid found, Entity:'BOX.CODES', Record ID:'", taxBox, "'"), "GUID.Not.Found",
+                                source.Id, source.Guid);
+
+                        }
+                    }
+                    else
+                    {
+                        IntegrationApiExceptionAddError(string.Concat("No Guid found, Entity:'CORE-VALCODES, TAX.FORMS', Record ID:'", source.TaxForm, "'"), "GUID.Not.Found",
+                                source.Id, source.Guid);
+                    }
+                }                
+            }
 
             if (source.Categories != null)
             {
                 if (source.Categories.Any() && source.Categories.Count > 0)
                 {
-                    vendors.Types = new List<VendorTypes>();
+                    var types = new List<VendorTypes>();
                     foreach (var category in source.Categories)
                     {
                         switch (category)
                         {
                             case "EP":
-                                vendors.Types.Add(VendorTypes.EProcurement);
+                                types.Add(VendorTypes.EProcurement);
                                 break;
                             case "TR":
-                                vendors.Types.Add(VendorTypes.Travel);
+                                types.Add(VendorTypes.Travel);
+                                break;
+                            case "PR":
+                                types.Add(VendorTypes.Procurement);
                                 break;
                         }
                     }
+                    if (types!= null && types.Any())
+                    {
+                        vendors.Types = types;
+                    }
                 }
             }
+            //populate the default address Id and usage
+            //get PO address
+            var POAddr = string.Empty;
+            if (personPOAddressCollection != null && personPOAddressCollection.Any())
+            {
+                personPOAddressCollection.TryGetValue(source.Id, out POAddr);
+            }
+            var addresses = new List<VendorsAddressesDtoProperty>();
+            if (!string.IsNullOrEmpty(POAddr))
+            {
+                // get vendor-address-usages for PO
+                var address = new VendorsAddressesDtoProperty();
+                try
+                {
+                    var addressType = "PO";
+                    var addressTypeGuid = await _colleagueFinanceReferenceDataRepository.GetIntgVendorAddressUsagesGuidAsync(addressType);
+                    if (addressTypeGuid != null)
+                    {
+                        address.Usage = new GuidObject2(addressTypeGuid);
+                    }
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
+                        source.Id, source.Guid);
+                }
+                //get address guid
+                var addressGuid = string.Empty;
+                if (addressGuidCollection != null && addressGuidCollection.Any())
+                    addressGuidCollection.TryGetValue(POAddr, out addressGuid);
+                if (!string.IsNullOrEmpty(addressGuid))
+                {
+                    address.Address = new GuidObject2(addressGuid);
+                    addresses.Add(address);
+                }
+                else
+                {
+                    IntegrationApiExceptionAddError("Address guid not found for addresss Id:", "GUID.Not.Found",
+                        source.Id, source.Guid);
+                }
+                
+            }
+            //get APCHECK address
+            var APCheckAddr = string.Empty;
+            if (personAPAddressCollection != null && personAPAddressCollection.Any())
+            {
+                personAPAddressCollection.TryGetValue(source.Id, out APCheckAddr);
+            }
+            if (!string.IsNullOrEmpty(APCheckAddr))
+            {
+                // get vendor-address-usages for PO
+                var address = new VendorsAddressesDtoProperty();
+                try
+                {
+                    var addressType = "CHECK";
+                    var addressTypeGuid = await _colleagueFinanceReferenceDataRepository.GetIntgVendorAddressUsagesGuidAsync(addressType);
+                    if (addressTypeGuid != null)
+                    {
+                        address.Usage = new GuidObject2(addressTypeGuid);
+                    }
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
+                        source.Id, source.Guid);
+                }
+                //get address guid
+                var addressGuid = string.Empty;
+                if (addressGuidCollection != null && addressGuidCollection.Any())
+                    addressGuidCollection.TryGetValue(APCheckAddr, out addressGuid);
+                if (!string.IsNullOrEmpty(addressGuid))
+                {
+                    address.Address = new GuidObject2(addressGuid);
+                    addresses.Add(address);
+                }
+                else
+                {
+                    IntegrationApiExceptionAddError("Address guid not found for addresss Id:", "GUID.Not.Found",
+                        source.Id, source.Guid);
+                }
+            }
+            if (addresses != null && addresses.Any())
+            {
+                vendors.DefaultAddresses = addresses;
+            }
+
             return vendors;
         }
 
@@ -1584,7 +2115,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             CheckViewVendorPermissions();
 
             // Get the list of vendor search result domain entity from the repository
-            var vendorDomainEntities = await _vendorsRepository.SearchByKeywordAsync(searchCriteria.QueryKeyword);
+            var vendorDomainEntities = await _vendorsRepository.SearchByKeywordAsync(searchCriteria.QueryKeyword, searchCriteria.ApType);
 
             if (vendorDomainEntities == null || !vendorDomainEntities.Any())
             {
@@ -1602,6 +2133,92 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             return vendorDtos;
         }
+
+        /// <summary>
+        /// Get the list of vendors based on keyword search for Vouchers.
+        /// </summary>
+        /// <param name="searchCriteria"> The search criteria containing keyword for vendor search for Vouchers.</param>
+        /// <returns> The vendor search results for Vouchers.</returns> 
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.ColleagueFinance.VendorsVoucherSearchResult>> QueryVendorForVoucherAsync(Ellucian.Colleague.Dtos.ColleagueFinance.VendorSearchCriteria searchCriteria)
+        {
+            List<Ellucian.Colleague.Dtos.ColleagueFinance.VendorsVoucherSearchResult> vendorDtos = new List<Ellucian.Colleague.Dtos.ColleagueFinance.VendorsVoucherSearchResult>();
+            if (searchCriteria == null)
+            {
+                string message = "Vendor search criteria must be specified.";
+                throw new ArgumentNullException(message);
+            }
+            if (string.IsNullOrEmpty(searchCriteria.QueryKeyword))
+            {
+                string message = "query keyword is required to query.";
+                throw new ArgumentNullException(message);
+            }
+
+            // Check the permission code to view vendor information.
+            CheckViewVendorForVoucherPermissions();
+
+            // Get the list of vendor search result domain entity from the repository
+            var vendorDomainEntities = await _vendorsRepository.VendorSearchForVoucherAsync(searchCriteria.QueryKeyword);
+
+            if (vendorDomainEntities == null || !vendorDomainEntities.Any())
+            {
+                return vendorDtos;
+            }
+            //sorting
+            vendorDomainEntities = vendorDomainEntities.OrderBy(item => item.VendorId);
+
+            // Convert the vendor search result into DTOs
+            var dtoAdapter = _adapterRegistry.GetAdapter<Domain.ColleagueFinance.Entities.VendorsVoucherSearchResult, Dtos.ColleagueFinance.VendorsVoucherSearchResult>();
+            foreach (var vendorDomainEntity in vendorDomainEntities)
+            {
+                vendorDtos.Add(dtoAdapter.MapToType(vendorDomainEntity));
+            }
+
+            return vendorDtos;
+        }
+
+       /// <summary>
+       /// gets vendor default tax for info
+       /// </summary>
+       /// <param name="vendorId">vendor id</param>
+       /// <param name="apType">ap type</param>
+       /// <returns>Vendor default tax form info</returns>
+        public async Task<Ellucian.Colleague.Dtos.ColleagueFinance.VendorDefaultTaxFormInfo> GetVendorDefaultTaxFormInfoAsync(string vendorId, string apType)
+        {            
+            if(string.IsNullOrEmpty(vendorId))
+            {
+                string message = "vendor id must be specified.";
+                throw new ArgumentNullException(message);
+            }
+
+            // Check the permission code to view vendor information.
+            var hasPermission = HasPermission(ColleagueFinancePermissionCodes.ViewVendor)
+                || HasPermission(ColleagueFinancePermissionCodes.CreateUpdateRequisition)
+                || HasPermission(ColleagueFinancePermissionCodes.CreateUpdatePurchaseOrder)
+                || HasPermission(ColleagueFinancePermissionCodes.CreateUpdateVoucher);
+
+            if (!hasPermission)
+            {
+                var message = string.Format("{0} does not have permission to view vendor information.", CurrentUser.PersonId);
+                logger.Error(message);
+                throw new PermissionsException(message);
+            }
+
+            // Get the vendor default tax form info entity from repository
+            var vendorDefaultTaxInfoEntity = await _vendorsRepository.GetVendorDefaultTaxFormInfoAsync(vendorId, apType);
+
+            
+            Dtos.ColleagueFinance.VendorDefaultTaxFormInfo vendorDefaultTaxFormInfoDto = new Dtos.ColleagueFinance.VendorDefaultTaxFormInfo();
+            
+            // Convert the vendor commodity entity to DTO
+            var dtoAdapter = _adapterRegistry.GetAdapter<Domain.ColleagueFinance.Entities.VendorDefaultTaxFormInfo, Dtos.ColleagueFinance.VendorDefaultTaxFormInfo>();
+            
+            if (vendorDefaultTaxInfoEntity != null)
+            {
+                vendorDefaultTaxFormInfoDto = dtoAdapter.MapToType(vendorDefaultTaxInfoEntity);
+            }
+            return vendorDefaultTaxFormInfoDto;            
+        }        
+
         /// <summary>
         /// Helper method to determine if the user has permission to view data.
         /// </summary>
@@ -1612,7 +2229,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             if (!hasPermission)
             {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view Vendors.");
+                IntegrationApiExceptionAddError("User '" + CurrentUser.UserId + "' is not authorized to view vendors.", "Access.Denied", httpStatusCode: System.Net.HttpStatusCode.Forbidden);
+                throw IntegrationApiException;
             }
         }
 
@@ -1626,7 +2244,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             if (!hasPermission)
             {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to create/update Vendors.");
+                IntegrationApiExceptionAddError("User '" + CurrentUser.UserId + "' is not authorized to create/update vendors.", "Access.Denied", httpStatusCode: System.Net.HttpStatusCode.Forbidden);
+                throw IntegrationApiException;
             }
         }
 
@@ -2303,6 +2922,23 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             var hasPermission = HasPermission(ColleagueFinancePermissionCodes.ViewVendor)
                 || HasPermission(ColleagueFinancePermissionCodes.CreateUpdateRequisition)
                 || HasPermission(ColleagueFinancePermissionCodes.CreateUpdatePurchaseOrder);
+
+            if (!hasPermission)
+            {
+                var message = string.Format("{0} does not have permission to view vendor information.", CurrentUser.PersonId);
+                logger.Error(message);
+                throw new PermissionsException(message);
+            }
+        }
+
+        /// <summary>
+        /// Helper method to determine if the user has permission to view vendor information for a voucher.
+        /// </summary>
+        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
+        private void CheckViewVendorForVoucherPermissions()
+        {
+            var hasPermission = HasPermission(ColleagueFinancePermissionCodes.ViewVendor)
+                || HasPermission(ColleagueFinancePermissionCodes.CreateUpdateVoucher);
 
             if (!hasPermission)
             {

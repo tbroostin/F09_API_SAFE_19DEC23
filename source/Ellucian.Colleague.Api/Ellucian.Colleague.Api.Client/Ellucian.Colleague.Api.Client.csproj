@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Ellucian.Colleague.Api.Client</RootNamespace>
     <AssemblyName>Ellucian.Colleague.Api.Client</AssemblyName>
-    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <EnableCodeInspectionOnBuild>true</EnableCodeInspectionOnBuild>
     <TargetFrameworkProfile />
   </PropertyGroup>

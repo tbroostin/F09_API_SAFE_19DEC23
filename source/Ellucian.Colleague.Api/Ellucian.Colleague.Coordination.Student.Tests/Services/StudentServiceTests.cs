@@ -151,7 +151,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
             private IEnumerable<StudentCohort> cohorts;
             private IEnumerable<StudentType> studentTypes;
-            private IEnumerable<ResidencyStatus> residencyTypes;
+            private IEnumerable<AdmissionResidencyType> residencyTypes;
             private IEnumerable<AcademicLevel> academicLevels;
             private IEnumerable<StudentClassification> studentClassifications;
             private Permission permissionViewAnyStudent;
@@ -244,12 +244,12 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 studentReferenceDataRepositoryMock.Setup(repo => repo.GetStudentTypesAsync(It.IsAny<bool>())).ReturnsAsync(studentTypes);
 
                 // Mock the repo call for residency types
-                residencyTypes = new List<ResidencyStatus>()
+                residencyTypes = new List<AdmissionResidencyType>()
                 {
-                    new ResidencyStatus(residency1Guid, residency1Code, "Test Data1"),
-                    new ResidencyStatus(residency2Guid, residency2Guid, "Test Data2")
+                    new AdmissionResidencyType(residency1Guid, residency1Code, "Test Data1"),
+                    new AdmissionResidencyType(residency2Guid, residency2Guid, "Test Data2")
                 };
-                studentRepoMock.Setup(repo => repo.GetResidencyStatusesAsync(It.IsAny<bool>())).ReturnsAsync(residencyTypes);
+                studentReferenceDataRepositoryMock.Setup(repo => repo.GetAdmissionResidencyTypesAsync(It.IsAny<bool>())).ReturnsAsync(residencyTypes);
 
                 // Mock the repo call for academic levels
                 academicLevels = new List<AcademicLevel>()
@@ -446,7 +446,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
             private IEnumerable<StudentCohort> cohorts;
             private IEnumerable<StudentType> studentTypes;
-            private IEnumerable<ResidencyStatus> residencyTypes;
+            private IEnumerable<AdmissionResidencyType> residencyTypes;
             private Permission permissionViewAnyStudent;
 
             private string student1Guid = "6b227dcc-db1c-41a2-b809-8e400e5d0682";
@@ -517,12 +517,12 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 studentReferenceDataRepositoryMock.Setup(repo => repo.GetStudentTypesAsync(It.IsAny<bool>())).ReturnsAsync(studentTypes);
 
                 // Mock the repo call for residency types
-                residencyTypes = new List<ResidencyStatus>()
+                residencyTypes = new List<AdmissionResidencyType>()
                 {
-                    new ResidencyStatus(residency1Guid, residency1Code, "Test Data1"),
-                    new ResidencyStatus(residency2Guid, residency2Guid, "Test Data2")
+                    new AdmissionResidencyType(residency1Guid, residency1Code, "Test Data1"),
+                    new AdmissionResidencyType(residency2Guid, residency2Guid, "Test Data2")
                 };
-                studentRepoMock.Setup(repo => repo.GetResidencyStatusesAsync(It.IsAny<bool>())).ReturnsAsync(residencyTypes);
+                studentReferenceDataRepositoryMock.Setup(repo => repo.GetAdmissionResidencyTypesAsync(It.IsAny<bool>())).ReturnsAsync(residencyTypes);
 
                 //mock the call to get the personid
                 personRepoMock.Setup(repo => repo.GetPersonIdFromGuidAsync(student1Guid)).ReturnsAsync(student1Id);
@@ -3766,7 +3766,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private IStaffRepository staffRepo;
 
 
-            IEnumerable<Domain.Student.Entities.ResidencyStatus> residencyStatuses;
+            IEnumerable<Domain.Student.Entities.AdmissionResidencyType> residencyStatuses;
 
             [TestInitialize]
             public void Initialize()
@@ -3779,6 +3779,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 personRepo = personRepoMock.Object;
                 acadCreditRepoMock = new Mock<IAcademicCreditRepository>();
                 acadCreditRepo = acadCreditRepoMock.Object;
+                studentReferenceDataRepoMock = new Mock<IStudentReferenceDataRepository>();
+                studentReferenceDataRepository = studentReferenceDataRepoMock.Object;
                 academicHistoryServiceMock = new Mock<IAcademicHistoryService>();
                 academicHistoryService = academicHistoryServiceMock.Object;
                 termRepoMock = new Mock<ITermRepository>();
@@ -3822,7 +3824,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task StudentService__GetAllAsync()
             {
-                studentRepoMock.Setup(i => i.GetResidencyStatusesAsync(It.IsAny<bool>())).ReturnsAsync(residencyStatuses);
+                studentReferenceDataRepoMock.Setup(i => i.GetAdmissionResidencyTypesAsync(It.IsAny<bool>())).ReturnsAsync(residencyStatuses);
 
                 var results = await studentService.GetResidentTypesAsync(It.IsAny<bool>());
                 Assert.AreEqual(residencyStatuses.ToList().Count, (results.Count()));
@@ -3840,7 +3842,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task StudentService__GetByIdAsync()
             {
-                studentRepoMock.Setup(i => i.GetResidencyStatusesAsync(It.IsAny<bool>())).ReturnsAsync(residencyStatuses);
+                studentReferenceDataRepoMock.Setup(i => i.GetAdmissionResidencyTypesAsync(It.IsAny<bool>())).ReturnsAsync(residencyStatuses);
 
                 string id = "b4bcb3a0-2e8d-4643-bd17-ba93f36e8f09";
                 var residentType = residencyStatuses.FirstOrDefault(i => i.Guid == id);
@@ -3856,7 +3858,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task StudentService__GetByIdAsync_KeyNotFoundException()
             {
-                studentRepoMock.Setup(i => i.GetResidencyStatusesAsync(true)).ReturnsAsync(residencyStatuses);
+                studentReferenceDataRepoMock.Setup(i => i.GetAdmissionResidencyTypesAsync(It.IsAny<bool>())).ReturnsAsync(residencyStatuses);
                 var result = await studentService.GetResidentTypeByIdAsync("123");
             }
         }

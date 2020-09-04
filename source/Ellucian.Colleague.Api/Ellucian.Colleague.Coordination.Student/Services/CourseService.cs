@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -912,7 +912,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             return filter;
         }
 
-        private IEnumerable<Ellucian.Colleague.Dtos.Base.Filter> BuildAcademicLevelFilter(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Course> courseCollection, CourseSearchCriteria criteria)
+        private IEnumerable<Ellucian.Colleague.Dtos.Base.Filter> BuildAcademicLevelFilter(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Course> courseCollection, CourseSearchCriteria criteria) 
         {
             var filter = new List<Ellucian.Colleague.Dtos.Base.Filter>();
             // Get the unique list from the course collection
@@ -921,6 +921,26 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             foreach (var academicLevelCode in academicLevelCodes)
             {
                 var filterValueCount = courseCollection.Where(x => x.AcademicLevelCode == academicLevelCode).Count();
+                var filterDetail = new Ellucian.Colleague.Dtos.Base.Filter()
+                {
+                    Count = filterValueCount,
+                    Value = academicLevelCode,
+                    Selected = criteria.AcademicLevels != null ? criteria.AcademicLevels.Contains(academicLevelCode) : false
+                };
+                filter.Add(filterDetail);
+            }
+            return filter;
+        }
+
+        private IEnumerable<Ellucian.Colleague.Dtos.Base.Filter> BuildSectionAcademicLevelFilter(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sectionCollection, SectionSearchCriteria criteria)
+        {
+            var filter = new List<Ellucian.Colleague.Dtos.Base.Filter>();
+            // Get the unique list from the section collection
+            var academicLevelCodes = sectionCollection.Select(x => x.AcademicLevelCode).Distinct();
+            // For each item in the list, count the number of items and build a filter detail
+            foreach (var academicLevelCode in academicLevelCodes)
+            {
+                var filterValueCount = sectionCollection.Where(x => x.AcademicLevelCode == academicLevelCode).Count();
                 var filterDetail = new Ellucian.Colleague.Dtos.Base.Filter()
                 {
                     Count = filterValueCount,
@@ -952,6 +972,26 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             return filter;
         }
 
+        private IEnumerable<Ellucian.Colleague.Dtos.Base.Filter> BuildSectionCourseLevelFilter(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sectionCollection, SectionSearchCriteria criteria)
+        {
+            var filter = new List<Ellucian.Colleague.Dtos.Base.Filter>();
+            // Get the unique list from the section collection
+            List<string> sectionLevelCodes = sectionCollection.SelectMany(sec => sec.CourseLevelCodes).Distinct().ToList();
+            // For each item in the list, count the number of items and build a filter detail
+            foreach (string sectionLevelCode in sectionLevelCodes)
+            {
+                var filterValueCount = sectionCollection.SelectMany(x => x.CourseLevelCodes).Where(clc => clc == sectionLevelCode).Count();
+                var filterDetail = new Ellucian.Colleague.Dtos.Base.Filter()
+                {
+                    Count = filterValueCount,
+                    Value = sectionLevelCode,
+                    Selected = criteria.CourseLevels != null ? criteria.CourseLevels.Contains(sectionLevelCode) : false
+                };
+                filter.Add(filterDetail);
+            }
+            return filter;
+        }
+
         private async Task<IEnumerable<Ellucian.Colleague.Dtos.Base.Filter>> BuildLocationFilterAsync(CourseSectionResult result, CourseSearchCriteria criteria)
         {
             var filter = new List<Ellucian.Colleague.Dtos.Base.Filter>();
@@ -961,13 +1001,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             locationCodes.AddRange(result.Sections.Select(s => s.Location).Distinct().ToList());
             locationCodes = locationCodes.Distinct().ToList();
 
-            // Get location entities that are filterable - only these should end up as filters returned.
-            var allLocations = (await _referenceDataRepository.GetLocationsAsync(false)).ToList();
-            var searchableLocationCodes = allLocations.Where(loc => !loc.HideInSelfServiceCourseSearch).Select(loc => loc.Code).ToList();
-            // Reduce the locations list to only those that should be shown in course search
-            locationCodes = locationCodes.Intersect(searchableLocationCodes).ToList();
+            locationCodes = await LimitToViewableLocations(locationCodes);
 
-            // For each location, count the courses with this location, or that have sections with this location
+            // For each location, count the courses with each location, or that have sections with this location
             foreach (string locationCode in locationCodes)
             {
                 var filterCourseIds = new List<string>();
@@ -995,11 +1031,56 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             return filter;
         }
 
+        private async Task<List<string>> LimitToViewableLocations(List<string> locationResults)
+        {
+            // Get location entities that are filterable - only these should end up as filters returned.
+            var allLocations = (await _referenceDataRepository.GetLocationsAsync(false)).ToList();
+            var searchableLocationCodes = allLocations.Where(loc => !loc.HideInSelfServiceCourseSearch).Select(loc => loc.Code).ToList();
+            // Reduce the locations list to only those that should be shown in course search
+            return locationResults.Intersect(searchableLocationCodes).ToList();
+        }
 
-        private IEnumerable<Ellucian.Colleague.Dtos.Base.Filter> BuildFacultyFilter(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sections, CourseSearchCriteria criteria)
+        private async Task<IEnumerable<Ellucian.Colleague.Dtos.Base.Filter>> BuildSectionLocationFilterAsync(CourseSectionResult result, SectionSearchCriteria criteria)
         {
             var filter = new List<Ellucian.Colleague.Dtos.Base.Filter>();
+            // Get the unique list of locations from all courses and sections
+            var locationCodes = new List<string>();
+            locationCodes.AddRange(result.Sections.Select(s => s.Location).Distinct().ToList());
+            locationCodes = await LimitToViewableLocations(locationCodes);
 
+            // For each viewable location, count the sections and add the filter to the list returned
+            foreach (string locationCode in locationCodes)
+            {
+                int filterValueCount = 0;
+
+                // Get section Ids for all sections with this location
+                var filterSectionIds = new List<string>();
+                if ((result.Sections != null) && (result.Sections.Any()))
+                {
+                    filterSectionIds.AddRange(result.Sections.Where(s => s.Location == locationCode).Select(s => s.Id).Distinct().ToList());
+                }
+                // Count distinct sections
+                filterValueCount = filterSectionIds.Distinct().Count();
+
+                // Add filter detail line for this location
+                var filterDetail = new Ellucian.Colleague.Dtos.Base.Filter()
+                {
+                    Count = filterValueCount,
+                    Value = locationCode,
+                    Selected = criteria.Locations != null ? criteria.Locations.Contains(locationCode) : false
+                };
+                filter.Add(filterDetail);
+            }
+            return filter;
+        }
+        private IEnumerable<Ellucian.Colleague.Dtos.Base.Filter> BuildFacultyFilter(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sections, CourseSearchCriteria criteria, bool returnCourseCounts = true)
+        {
+            var filter = new List<Ellucian.Colleague.Dtos.Base.Filter>();
+            if (sections == null)
+            {
+                logger.Info("There were no sections passed to build faculty filter");
+                return filter;
+            }
             // Get the unique list of faculty from all courses and sections
             var facultyIds = sections.SelectMany(s => s.FacultyIds).Distinct().ToList();
             // Count the courses with this faculty
@@ -1009,7 +1090,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 // Get course Ids for all sections with this faculty
                 if ((sections != null) && (sections.Any()))
                 {
-                    filterSectionIds.AddRange(sections.Where(s => s.FacultyIds.Contains(facId)).Select(s => s.CourseId).ToList());
+                    if (returnCourseCounts)
+                    {
+                        filterSectionIds.AddRange(sections.Where(s => s.FacultyIds.Contains(facId)).Select(s => s.CourseId).ToList());
+                    }
+                    else
+                    {
+                        filterSectionIds.AddRange(sections.Where(s => s.FacultyIds.Contains(facId)).Select(s => s.Id).ToList());
+                    }
                 }
                 // Count distinct courses
                 var filterValueCount = filterSectionIds.Distinct().Count();
@@ -1083,7 +1171,64 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             return filter;
         }
 
-        private async Task<IEnumerable<Ellucian.Colleague.Dtos.Base.Filter>> BuildCourseTypeFilterAsync(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sections, CourseSearchCriteria criteria)
+        private IEnumerable<Ellucian.Colleague.Dtos.Base.Filter> BuildSectionDayOfWeekFilter(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sections, SectionSearchCriteria criteria)
+        {
+            var sw = new Stopwatch();
+            var filter = new List<Ellucian.Colleague.Dtos.Base.Filter>();
+            ILookup<DayOfWeek, string> groupedDays = null;
+            if (sections == null)
+            {
+                logger.Info("There were no sections passed to build day of week filter");
+                return filter;
+            }
+
+            try
+            {
+                // Build collection of section/day
+                var dayCollection = (from sec in sections
+                                     from mtg in sec.Meetings
+                                     from dayOfWk in mtg.Days
+                                     select new { dayOfWk = dayOfWk, Id = sec.Id })
+                                     .Union
+                                     (from sec in sections
+                                      from mtg in sec.PrimarySectionMeetings
+                                      from dayOfWk in mtg.Days
+                                      select new { dayOfWk = dayOfWk, Id = sec.Id });
+
+                //convert dayCollection to lookup
+                groupedDays = dayCollection.ToLookup(s => s.dayOfWk, s => s.Id);
+                // Count the sections with this Day of week
+                foreach (var day in groupedDays)
+                {
+                    try
+                    {
+                        int filterValueCount = 0;
+                        filterValueCount = groupedDays[day.Key].Count();
+                        // Add filter detail line for this day of week
+                        var filterDetail = new Ellucian.Colleague.Dtos.Base.Filter()
+                        {
+                            Count = filterValueCount,
+                            Value = ((int)day.Key).ToString(),
+                            Selected = criteria.DaysOfWeek != null ? criteria.DaysOfWeek.Contains(((int)day.Key).ToString()) : false
+                        };
+                        filter.Add(filterDetail);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.Error(ex, "Exception occured while enumerating through grouped days of week while building days of week filter for section search");
+                    }
+                }
+
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Exception occured while building day of week filter for course search");
+            }
+
+            return filter;
+        }
+
+        private async Task<IEnumerable<Ellucian.Colleague.Dtos.Base.Filter>> BuildCourseTypeFilterAsync(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sections, CourseSearchCriteria criteria, bool returnCourseCounts = true)
         {
             var filter = new List<Ellucian.Colleague.Dtos.Base.Filter>();
 
@@ -1101,7 +1246,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 // Get course Ids for all sections with this course type code
                 if ((sections != null) && (sections.Any()))
                 {
-                    filterSectionIds.AddRange(sections.Where(s => s.CourseTypeCodes.Contains(courseTypeCode)).Select(s => s.CourseId).ToList());
+                    if (returnCourseCounts)
+                    {
+                        filterSectionIds.AddRange(sections.Where(s => s.CourseTypeCodes.Contains(courseTypeCode)).Select(s => s.CourseId).ToList());
+                    }
+                    else
+                    {
+                        filterSectionIds.AddRange(sections.Where(s => s.CourseTypeCodes.Contains(courseTypeCode)).Select(s => s.Id).ToList());
+                    }                  
                 }
                 // Count distinct courses
                 var filterValueCount = filterSectionIds.Distinct().Count();
@@ -1156,8 +1308,39 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             return filter;
         }
+        private IEnumerable<Ellucian.Colleague.Dtos.Base.Filter> BuildSectionTopicCodeFilter(CourseSectionResult result, SectionSearchCriteria criteria)
+        {
+            var filter = new List<Ellucian.Colleague.Dtos.Base.Filter>();
 
-        private IEnumerable<Ellucian.Colleague.Dtos.Base.Filter> BuildTermFilter(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sections, CourseSearchCriteria criteria)
+            // Get the unique list of topic codes from all sections so all possible are in the list of filterable topics.
+            var topicCodes = new List<string>();
+            topicCodes.AddRange(result.Sections.Select(s => s.TopicCode).Distinct().ToList());
+            topicCodes = topicCodes.Distinct().ToList();
+
+            foreach (string topicCode in topicCodes)
+            {
+
+                var filterSectionIds = new List<string>();
+                // Get all sections with this topic code
+                if ((result.Sections != null) && (result.Sections.Any()))
+                {
+                    filterSectionIds.AddRange(result.Sections.Where(s => s.TopicCode == topicCode).Select(s => s.Id).Distinct().ToList());
+                }
+                // Count 
+                var filterValueCount = filterSectionIds.Distinct().Count();
+                // Add filter detail line for this topic code
+                var filterDetail = new Ellucian.Colleague.Dtos.Base.Filter()
+                {
+                    Count = filterValueCount,
+                    Value = topicCode,
+                    Selected = criteria.TopicCodes != null ? criteria.TopicCodes.Contains(topicCode) : false
+                };
+                filter.Add(filterDetail);
+            }
+            return filter;
+        }
+
+        private IEnumerable<Ellucian.Colleague.Dtos.Base.Filter> BuildTermFilter(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sections, CourseSearchCriteria criteria, bool returnsCourseCounts = true)
         {
             var filter = new List<Ellucian.Colleague.Dtos.Base.Filter>();
 
@@ -1170,11 +1353,19 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 // Get course Ids for all sections with this course type code
                 if ((sections != null) && (sections.Any()))
                 {
-                    filterSectionIds.AddRange(sections.Where(sec => sec.TermId == termCode).Select(sec => sec.CourseId).ToList());
+                    if (returnsCourseCounts)
+                    {
+                        filterSectionIds.AddRange(sections.Where(sec => sec.TermId == termCode).Select(sec => sec.CourseId).ToList());
+                    }
+                    else
+                    {
+                        filterSectionIds.AddRange(sections.Where(sec => sec.TermId == termCode).Select(sec => sec.Id).ToList());
+
+                    }
                 }
-                // Count distinct courses
+                // Count distinct courses or sections
                 var filterValueCount = filterSectionIds.Distinct().Count();
-                // Add filter detail line for this course type
+                // Add filter detail line for this Term
                 var filterDetail = new Ellucian.Colleague.Dtos.Base.Filter()
                 {
                     Count = filterValueCount,
@@ -1186,7 +1377,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             return filter;
         }
 
-        private IEnumerable<Ellucian.Colleague.Dtos.Base.Filter> BuildOnlineCategoryFilter(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sections, CourseSearchCriteria criteria)
+
+        private IEnumerable<Ellucian.Colleague.Dtos.Base.Filter> BuildOnlineCategoryFilter(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sections, CourseSearchCriteria criteria, bool returnsCourseCounts = true)
         {
             var filter = new List<Ellucian.Colleague.Dtos.Base.Filter>();
 
@@ -1214,7 +1406,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             foreach (var onlineCategory in sectionOnlineCategories)
             {
                 // count the sections with this online category
-                var sectionCount = sections.Where(sec => sec.OnlineCategory == onlineCategory).Select(s => s.CourseId).Distinct().Count();
+                int sectionCount;
+                if (returnsCourseCounts)
+                {
+                    sectionCount = sections.Where(sec => sec.OnlineCategory == onlineCategory).Select(s => s.CourseId).Distinct().Count();
+                }
+                else
+                {
+                    sectionCount = sections.Where(sec => sec.OnlineCategory == onlineCategory).Select(s => s.Id).Distinct().Count();
+                }
+                
                 // Add filter detail. Set as selected if this filter is in the criteria.
                 filter.Add(new Ellucian.Colleague.Dtos.Base.Filter()
                 {
@@ -1423,13 +1624,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 // Create parser for this field
                 var queryParser = new QueryParser(LuceneVersion, fieldBoost.Key, Analyzer);
                 // Allow leading wildcard (if entered)
-                queryParser.SetAllowLeadingWildcard(true);
+                queryParser.AllowLeadingWildcard = true;
                 // Create query for this keyword against this field
                 Query qu = queryParser.Parse(keyword);
                 // Boost the results for this field
-                qu.SetBoost(fieldBoost.Value);
+                qu.Boost = fieldBoost.Value;
                 // Add to the overall query as an OR
-                query.Add(qu, BooleanClause.Occur.SHOULD);
+                query.Add(qu, Occur.SHOULD);
                 queryString = query.ToString();
             }
 
@@ -1454,11 +1655,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var sortedByScoreList = from doc in docs
                                     select new
                                     {
-                                        CourseId = searcher.Doc(doc.doc).GetField("courseId").StringValue(),
-                                        SectionId = searcher.Doc(doc.doc).GetField("sectionId").StringValue(),
-                                        SortName = searcher.Doc(doc.doc).GetField("sortName").StringValue(),
-                                        Name = searcher.Doc(doc.doc).GetField("name").StringValue(),
-                                        Score = doc.score
+                                        CourseId = searcher.Doc(doc.Doc).GetField("courseId").StringValue,
+                                        SectionId = searcher.Doc(doc.Doc).GetField("sectionId").StringValue,
+                                        SortName = searcher.Doc(doc.Doc).GetField("sortName").StringValue,
+                                        Name = searcher.Doc(doc.Doc).GetField("name").StringValue,
+                                        Score = doc.Score
                                     };
 
             // Get the courses with the matching name first, then append all the others in name sequence.
@@ -3159,6 +3360,94 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
         }
 
+        /// <summary>
+        /// Returns a page of sections for section search.
+        /// </summary>
+        /// <param name="criteria">Section search criteria</param>
+        /// <param name="pageSize">Number of items per page</param>
+        /// <param name="pageIndex">Page number to return</param>
+        /// <returns>A SectionPage DTO which is essentially a data page of Section DTOs along with associated filters</returns>
+        /// 
+
+        public async Task<SectionPage> SectionSearchAsync(SectionSearchCriteria criteria, int pageSize, int pageIndex)
+        {
+            SectionPage emptySectionPage = new SectionPage(new List<Dtos.Student.Section3>(), pageSize, pageIndex);
+            if (criteria == null)
+            {
+                return emptySectionPage;
+            }
+            
+            //Convert Section search criteria to a CourseSearchCriteria so we can use the normal course search engine.
+            CourseSearchCriteria courseSearchCriteria = ConvertSectionSearchCriteriaToCourseSearchCriteria(criteria);
+
+            // Courses and Sections Returned by filter
+            var filterResult = await BuildFilterResultAsync(courseSearchCriteria, pageSize, pageIndex);
+            if (filterResult != null)
+            {
+                List<Dtos.Student.Section3> sectionsDto = ConvertSectionsToDto(filterResult.Sections);
+                SectionPage sectionPage = new SectionPage(sectionsDto, pageSize, pageIndex);
+                // Build outgoing filters. Built against the results from the overall search and all current filters.
+                sectionPage.Locations = await BuildSectionLocationFilterAsync(filterResult, criteria);
+                sectionPage.Faculty = BuildFacultyFilter(filterResult.Sections, courseSearchCriteria, false);
+                sectionPage.DaysOfWeek = BuildSectionDayOfWeekFilter(filterResult.Sections, criteria);
+                sectionPage.CourseTypes = await BuildCourseTypeFilterAsync(filterResult.Sections, courseSearchCriteria, false);
+                sectionPage.AcademicLevels = BuildSectionAcademicLevelFilter(filterResult.Sections, criteria);
+                sectionPage.CourseLevels = BuildSectionCourseLevelFilter(filterResult.Sections, criteria);
+                sectionPage.TopicCodes = BuildSectionTopicCodeFilter(filterResult, criteria);
+                sectionPage.Terms = BuildTermFilter(filterResult.Sections, courseSearchCriteria, false);
+                sectionPage.EarliestTime = criteria.EarliestTime;
+                sectionPage.LatestTime = criteria.LatestTime;
+                sectionPage.OnlineCategories = BuildOnlineCategoryFilter(filterResult.Sections, courseSearchCriteria);
+                sectionPage.OpenSections = BuildOpenSectionsFilter(filterResult.Sections, courseSearchCriteria);
+                sectionPage.OpenAndWaitlistSections = BuildOpenAndWaitlistSectionsFilter(filterResult.Sections, courseSearchCriteria);
+                return sectionPage;
+            }
+            else
+            {
+                return emptySectionPage;
+            }
+        }
+
+        private CourseSearchCriteria ConvertSectionSearchCriteriaToCourseSearchCriteria(SectionSearchCriteria sectionCriteria)
+        {
+            CourseSearchCriteria courseSearchCriteria = new CourseSearchCriteria();
+            if (sectionCriteria != null)
+            {
+                courseSearchCriteria.Keyword = sectionCriteria.Keyword;
+                courseSearchCriteria.CourseIds = sectionCriteria.CourseIds;
+                courseSearchCriteria.SectionIds = sectionCriteria.SectionIds;
+                courseSearchCriteria.CourseTypes = sectionCriteria.CourseTypes;
+                courseSearchCriteria.Locations = sectionCriteria.Locations;
+                courseSearchCriteria.OnlineCategories = sectionCriteria.OnlineCategories;
+                courseSearchCriteria.OpenAndWaitlistSections = sectionCriteria.OpenAndWaitlistSections;
+                courseSearchCriteria.OpenSections = sectionCriteria.OpenSections;
+                courseSearchCriteria.SectionEndDate = sectionCriteria.SectionEndDate;
+                courseSearchCriteria.SectionIds = sectionCriteria.SectionIds;
+                courseSearchCriteria.SectionStartDate = sectionCriteria.SectionStartDate;
+                courseSearchCriteria.SectionEndDate = sectionCriteria.SectionEndDate;
+                courseSearchCriteria.LatestTime = sectionCriteria.LatestTime;
+                courseSearchCriteria.EarliestTime = sectionCriteria.EarliestTime;
+                courseSearchCriteria.DaysOfWeek = sectionCriteria.DaysOfWeek;
+                courseSearchCriteria.Terms = sectionCriteria.Terms;
+                courseSearchCriteria.TopicCodes = sectionCriteria.TopicCodes;
+                courseSearchCriteria.Faculty = sectionCriteria.Faculty;
+                courseSearchCriteria.AcademicLevels = sectionCriteria.AcademicLevels;
+                courseSearchCriteria.CourseLevels = sectionCriteria.CourseLevels;
+            }
+            return courseSearchCriteria;
+        }
+        private List<Dtos.Student.Section3> ConvertSectionsToDto(List<Domain.Student.Entities.Section> sections)
+        {
+            List<Dtos.Student.Section3> sectionsConverted = new List<Dtos.Student.Section3>();
+            var sectionDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Section, Dtos.Student.Section3>();
+            foreach (var section in sections)
+            {
+                var courseSearchDto = sectionDtoAdapter.MapToType(section);
+                sectionsConverted.Add(courseSearchDto);
+            }
+            return sectionsConverted;
+        }
+
         #region V6 Changes
 
         /// <summary>
@@ -3863,18 +4152,21 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
             }
 
-            // If we don't have owning organizations then try using the subject-department mapping 
-            // to determine department based on subject
+            // If we don't have owning organizations then try use the department specified on the subject
+            // for Ethos integration if it exists
             if (offeringDepartments.Count() == 0 && courseConfig.SubjectDepartmentMapping.Items != null && courseConfig.SubjectDepartmentMapping.Items.Count > 0)
             {
-                var deptMapping = courseConfig.SubjectDepartmentMapping.Items.Where(i => i.OriginalCode == subjectCode).FirstOrDefault();
-                var deptCode = deptMapping != null ? deptMapping.NewCode : null;
-                var department = deptCode != null ? _departments.Where(d => d.Code == deptCode).FirstOrDefault() : null;
-                var academicDepartment = department != null ? _academicDepartments.Where(ad => ad.Code == department.Code).FirstOrDefault() : null;
-
-                if (academicDepartment != null)
+                if (!string.IsNullOrEmpty(subjectCode))
                 {
-                    offeringDepartments.Add(new OfferingDepartment(academicDepartment.Code, 100m));
+                    string subjectIntgDepartment = string.Empty;
+                    var subject = (await GetSubjectAsync(bypassCache)).FirstOrDefault(c => c.Code == subjectCode);
+                    if (subject != null)
+                    {
+                        if (!string.IsNullOrEmpty(subject.IntgDepartment))
+                        {
+                            offeringDepartments.Add(new OfferingDepartment(subject.IntgDepartment, 100m));
+                        }
+                    }
                 }
             }
 
@@ -4666,18 +4958,21 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
             }
 
-            // If we don't have owning organizations then try using the subject-department mapping 
-            // to determine department based on subject
+            // If we don't have owning organizations then try use the department specified on the subject
+            // for Ethos integration if it exists
             if (offeringDepartments.Count() == 0 && courseConfig.SubjectDepartmentMapping.Items != null && courseConfig.SubjectDepartmentMapping.Items.Count > 0)
             {
-                var deptMapping = courseConfig.SubjectDepartmentMapping.Items.Where(i => i.OriginalCode == subjectCode).FirstOrDefault();
-                var deptCode = deptMapping != null ? deptMapping.NewCode : null;
-                var department = deptCode != null ? _departments.Where(d => d.Code == deptCode).FirstOrDefault() : null;
-                var academicDepartment = department != null ? _academicDepartments.Where(ad => ad.Code == department.Code).FirstOrDefault() : null;
-
-                if (academicDepartment != null)
+                if (!string.IsNullOrEmpty(subjectCode))
                 {
-                    offeringDepartments.Add(new OfferingDepartment(academicDepartment.Code, 100m));
+                    string subjectIntgDepartment = string.Empty;
+                    var subject = (await GetSubjectAsync(bypassCache)).FirstOrDefault(c => c.Code == subjectCode);
+                    if (subject != null)
+                    {
+                        if (!string.IsNullOrEmpty(subject.IntgDepartment))
+                        {
+                            offeringDepartments.Add(new OfferingDepartment(subject.IntgDepartment, 100m));
+                        }
+                    }
                 }
             }
 
@@ -5769,7 +6064,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             VerifyCurriculumConfiguration(courseConfig);
 
             // Set the subject based on the supplied GUID
-            string subjectCode = string.Empty;
+            string subjectCode = string.Empty;            
             if (course.Subject != null && !string.IsNullOrEmpty(course.Subject.Id))
             {
                 subjectCode = ConvertGuidToCode(_subjects, course.Subject.Id);
@@ -5813,20 +6108,23 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         }
                     }
                 }
-            }
+            }                      
 
-            // If we don't have owning organizations then try using the subject-department mapping 
-            // to determine department based on subject
+            // If we don't have owning organizations then try use the department specified on the subject
+            // for Ethos integration if it exists
             if (offeringDepartments.Count() == 0 && courseConfig.SubjectDepartmentMapping.Items != null && courseConfig.SubjectDepartmentMapping.Items.Count > 0)
             {
-                var deptMapping = courseConfig.SubjectDepartmentMapping.Items.Where(i => i.OriginalCode == subjectCode).FirstOrDefault();
-                var deptCode = deptMapping != null ? deptMapping.NewCode : null;
-                var department = deptCode != null ? _departments.Where(d => d.Code == deptCode).FirstOrDefault() : null;
-                var academicDepartment = department != null ? _academicDepartments.Where(ad => ad.Code == department.Code).FirstOrDefault() : null;
-
-                if (academicDepartment != null)
+                if (!string.IsNullOrEmpty(subjectCode))
                 {
-                    offeringDepartments.Add(new OfferingDepartment(academicDepartment.Code, 100m));
+                    string subjectIntgDepartment = string.Empty;
+                    var subject = (await GetSubjectAsync(bypassCache)).FirstOrDefault(c => c.Code == subjectCode);
+                    if (subject != null)
+                    {
+                        if (!string.IsNullOrEmpty(subject.IntgDepartment))
+                        {
+                            offeringDepartments.Add(new OfferingDepartment(subject.IntgDepartment, 100m));
+                        }
+                    }
                 }
             }
 

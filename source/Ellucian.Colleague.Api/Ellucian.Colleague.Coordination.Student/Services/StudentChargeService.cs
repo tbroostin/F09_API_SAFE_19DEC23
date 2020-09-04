@@ -1006,6 +1006,15 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                 };
             }
+            if (studentChargeEntity.BillingStartDate != null && studentChargeEntity.BillingStartDate.HasValue && studentChargeEntity.BillingEndDate != null && studentChargeEntity.BillingEndDate.HasValue)
+            {
+                studentChargeDto.ReportingDetail.ActivityDates = new Dtos.DtoProperties.DatePeriodDtoProperty()
+                {
+                    StartDate = studentChargeEntity.BillingStartDate,
+                    EndDate = studentChargeEntity.BillingEndDate
+                };
+            }
+
             return studentChargeDto;
         }
 
@@ -1098,6 +1107,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 UnitCurrency = (studentChargeDto.ChargedAmount != null && studentChargeDto.ChargedAmount.UnitCost != null && studentChargeDto.ChargedAmount.UnitCost.Cost != null) ? studentChargeDto.ChargedAmount.UnitCost.Cost.Currency.ToString() : string.Empty,
                 Usage = (studentChargeDto.ReportingDetail != null && studentChargeDto.ReportingDetail.Usage != null && studentChargeDto.ReportingDetail.Usage != Dtos.EnumProperties.StudentChargeUsageTypes.notset) ? studentChargeDto.ReportingDetail.Usage.ToString() : string.Empty,
                 OriginatedOn = (studentChargeDto.ReportingDetail != null && studentChargeDto.ReportingDetail.OriginatedOn != null && studentChargeDto.ReportingDetail.OriginatedOn.HasValue) ? studentChargeDto.ReportingDetail.OriginatedOn.Value : new DateTime?(),
+                BillingStartDate = (studentChargeDto.ReportingDetail != null && studentChargeDto.ReportingDetail.ActivityDates != null && studentChargeDto.ReportingDetail.ActivityDates.StartDate != null && studentChargeDto.ReportingDetail.ActivityDates.StartDate.HasValue) ? studentChargeDto.ReportingDetail.ActivityDates.StartDate.Value : new DateTime?(),
+                BillingEndDate = (studentChargeDto.ReportingDetail != null && studentChargeDto.ReportingDetail.ActivityDates != null && studentChargeDto.ReportingDetail.ActivityDates.EndDate != null && studentChargeDto.ReportingDetail.ActivityDates.EndDate.HasValue) ? studentChargeDto.ReportingDetail.ActivityDates.EndDate.Value : new DateTime?(),
                 OverrideDescription = studentChargeDto.OverrideDescription
             };
 
@@ -1192,6 +1203,29 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                             if (studentCharge.ReportingDetail.OriginatedOn.Value.Date > DateTime.Now.Date)
                             {
                                 IntegrationApiExceptionAddError("The originatedOn date may only be set to a date on or before the current date.", "Validation.Exception", guid, sourceId);
+                            }
+                        }
+                    }
+                }
+                // Check for Activity Dates
+                if (studentCharge.ReportingDetail.ActivityDates != null)
+                {
+                    var activityDates = studentCharge.ReportingDetail.ActivityDates;
+                    if (activityDates.StartDate != null && activityDates.StartDate.HasValue && activityDates.EndDate != null && activityDates.EndDate.HasValue && activityDates.StartDate.Value.Date > activityDates.EndDate.Value.Date)
+                    {
+                        IntegrationApiExceptionAddError("The activity startOn date must be on or before the activity endOn date.", "Validation.Exception", guid, sourceId);
+                    }
+                    else
+                    {
+                        if (activityDates.StartDate != null && (activityDates.EndDate == null || !activityDates.EndDate.HasValue))
+                        {
+                            IntegrationApiExceptionAddError("Both startOn and endOn are required when activityDates is included.", "Validation.Exception", guid, sourceId);
+                        }
+                        else
+                        {
+                            if ((activityDates.StartDate == null || !activityDates.StartDate.HasValue) && activityDates.EndDate != null && activityDates.EndDate.HasValue)
+                            {
+                                IntegrationApiExceptionAddError("Both startOn and endOn are required when activityDates is included.", "Validation.Exception", guid, sourceId);
                             }
                         }
                     }

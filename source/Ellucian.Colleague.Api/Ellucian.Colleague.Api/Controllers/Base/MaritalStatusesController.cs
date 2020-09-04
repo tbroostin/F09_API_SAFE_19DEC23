@@ -1,10 +1,8 @@
-﻿// Copyright 2012-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
-using System.Net.Http.Headers;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Dtos.Base;
@@ -99,7 +97,7 @@ namespace Ellucian.Colleague.Api.Controllers
             }
         }
 
-        /// <remarks>FOR USE WITH ELLUCIAN HeDM</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
         /// Retrieves a marital status by GUID.
         /// </summary>
@@ -118,11 +116,12 @@ namespace Ellucian.Colleague.Api.Controllers
             }
         }
 
-        /// <remarks>FOR USE WITH ELLUCIAN HEDM Version 4</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN EEEDM Version 4</remarks>
         /// <summary>
         /// Retrieves all marital statuses. If the request header "Cache-Control" attribute is set to "no-cache" the data returned will be pulled fresh from the database, otherwise cached data is returned.
         /// </summary>
-        /// <returns>All <see cref="MaritalStatus2">MaritalStatuses.</see></returns>
+        /// <returns>All MaritalStatuses.</returns>
+        [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.MaritalStatus2>> GetMaritalStatuses2Async()
         {
@@ -136,7 +135,15 @@ namespace Ellucian.Colleague.Api.Controllers
             }
             try
             {
-                return await _demographicService.GetMaritalStatuses2Async(bypassCache);
+                var maritalStatuses = await _demographicService.GetMaritalStatuses2Async(bypassCache);
+
+                if (maritalStatuses != null && maritalStatuses.Any())
+                {
+                    AddEthosContextProperties(await _demographicService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _demographicService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              maritalStatuses.Select(a => a.Id).ToList()));
+                }
+                return maritalStatuses;
             }
             catch (Exception ex)
             {
@@ -145,15 +152,20 @@ namespace Ellucian.Colleague.Api.Controllers
             }
         }
 
-        /// <remarks>FOR USE WITH ELLUCIAN HEDM Version 4</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN EEDM Version 4</remarks>
         /// <summary>
         /// Retrieves a marital status by ID.
         /// </summary>
-        /// <returns>A <see cref="MaritalStatus2">MaritalStatus.</see></returns>
+        /// <returns>A MaritalStatus.</returns>
+        [HttpGet, EedmResponseFilter]
         public async Task<Ellucian.Colleague.Dtos.MaritalStatus2> GetMaritalStatusById2Async(string id)
         {
             try
             {
+                AddEthosContextProperties(
+                   await _demographicService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                   await _demographicService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                       new List<string>() { id }));
                 return await _demographicService.GetMaritalStatusById2Async(id);
             }
             catch (KeyNotFoundException e)

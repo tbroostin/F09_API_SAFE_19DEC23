@@ -16,6 +16,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
     {
         private List<PurchaseOrder> purchaseOrders = new List<PurchaseOrder>();
         private List<PurchaseOrderSummary> purchaseOrdersSummaryList = new List<PurchaseOrderSummary>();
+        private PurchaseOrderCreateUpdateResponse purchaseOrderCreateUpdateResponse = new PurchaseOrderCreateUpdateResponse();
 
         #region Define all data for a purchase order
 
@@ -65,37 +66,37 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
         };
 
         private string[,] lineItemsArray = {
-            //   0      1        2                3       4          5               6               7               8                   9             10         11        12
-            //   ID     PO ID    Description        Qty     Price      Unit of Issue   Vendor Part     Extended Price  Expctd Dlvry Date   Tax Form      Tax Code   Tax Loc   Comments
-            { "1111",   "1",     "Training",        "6",   "180.00",   "Days",         "VP",         "1,080.00",       "1/20/2015",        "1099-MISC",  "NEC",     "VA",     "Comments line item 1111" },
-            { "1112",   "1",     "Consulting",      "5",   "210.00",   "Hours",        "",           "1,050.00",       "null",             "",           "",          "",     "Comments line item 1112" },   
+            //   0      1        2                3       4          5               6               7               8                   9             10         11          12                            13
+            //   ID     PO ID    Description        Qty     Price      Unit of Issue   Vendor Part     Extended Price  Expctd Dlvry Date   Tax Form      Tax Code   Tax Loc   Comments                   LineItemStatus  
+            { "1111",   "1",     "Training",        "6",   "180.00",   "Days",         "VP",         "1,080.00",       "1/20/2015",        "1099-MISC",  "NEC",     "VA",     "Comments line item 1111",    "A" },
+            { "1112",   "1",     "Consulting",      "5",   "210.00",   "Hours",        "",           "1,050.00",       "null",             "",           "",          "",     "Comments line item 1112",    "I" },   
 
-            { "2222",   "2",     "Mentoring",       "2",   "111.11",   "",             "",             "222.22",       "null",             "",           "",          "",     "Comments line item 2222" },
+            { "2222",   "2",     "Mentoring",       "2",   "111.11",   "",             "",             "222.22",       "null",             "",           "",          "",     "Comments line item 2222",    "" },
 
-            { "2222",   "3",     "Mentoring",       "2",   "111.11",   "",             "",             "222.22",       "null",             "",           "",          "",     "Comments line item 2222" },
+            { "2222",   "3",     "Mentoring",       "2",   "111.11",   "",             "",             "222.22",       "null",             "",           "",          "",     "Comments line item 2222",    "" },
 
-            { "2222",   "4",     "Mentoring",       "2",   "111.11",   "",             "",             "222.22",       "null",             "",           "",          "",     "Comments line item 2222" },
+            { "2222",   "4",     "Mentoring",       "2",   "111.11",   "",             "",             "222.22",       "null",             "",           "",          "",     "Comments line item 2222",    "" },
 
-            { "2222",   "6",     "Mentoring",       "2",   "111.11",   "",             "",             "222.22",       "null",             "",           "",          "",     "Comments line item 2222" },
+            { "2222",   "6",     "Mentoring",       "2",   "111.11",   "",             "",             "222.22",       "null",             "",           "",          "",     "Comments line item 2222",    "" },
 
-            { "2222",   "7",     "Mentoring",       "2",   "111.11",   "",             "",             "222.22",       "null",             "",           "",          "",     "Comments line item 2222" },
+            { "2222",   "7",     "Mentoring",       "2",   "111.11",   "",             "",             "222.22",       "null",             "",           "",          "",     "Comments line item 2222",    "" },
 
-            { "2222",   "9",     "Mentoring",       "2",   "111.11",   "",             "",             "222.22",       "null",             "",           "",          "",     "Comments line item 2222" },
+            { "2222",   "9",     "Mentoring",       "2",   "111.11",   "",             "",             "222.22",       "null",             "",           "",          "",     "Comments line item 2222",    "" },
 
-            { "2222",   "10",     "Mentoring",       "2",   "111.11",   "",             "",             "222.22",       "null",             "",           "",          "",     "Comments line item 2222" },
+            { "2222",   "10",     "Mentoring",       "2",   "111.11",   "",             "",             "222.22",       "null",             "",           "",          "",     "Comments line item 2222",   "" },
 
-            { "2222",   "11",     "Mentoring",       "2",   "111.11",   "",             "",             "222.22",       "null",             "",           "",          "",     "Comments line item 2222" },
+            { "2222",   "11",     "Mentoring",       "2",   "111.11",   "",             "",             "222.22",       "null",             "",           "",          "",     "Comments line item 2222",   "" },
 
-            { "2222",   "12",     "Mentoring",       "2",   "111.11",   "",             "",             "222.22",       "null",             "",           "",          "",     "Comments line item 2222" },
+            { "2222",   "12",     "Mentoring",       "2",   "111.11",   "",             "",             "222.22",       "null",             "",           "",          "",     "Comments line item 2222",   "" },
 
-            { "3131",  "31",     "First line 31",  "14",   "101.55",   "box",          "VP",           "543.21",       "1/3/2015",         "1099-MISC",  "NEC",     "VA",     "Comments line item 3131"},
-            { "3132",  "31",     "Second line 31", "14",   "208.09",   "box",          "VP",           "543.21",       "1/3/2015",         "1099-MISC",  "NEC",     "VA",     "Comments line item 3132"},
+            { "3131",  "31",     "First line 31",  "14",   "101.55",   "box",          "VP",           "543.21",       "1/3/2015",         "1099-MISC",  "NEC",     "VA",     "Comments line item 3131",    "" },
+            { "3132",  "31",     "Second line 31", "14",   "208.09",   "box",          "VP",           "543.21",       "1/3/2015",         "1099-MISC",  "NEC",     "VA",     "Comments line item 3132",    "" },
 
-            { "3231",  "32",     "First line 32",  "14",   "101.55",   "box",          "VP",           "543.21",       "1/3/2015",         "1099-MISC",  "NEC",     "VA",     "Comments line item 3231"},
-            { "3232",  "32",     "Second line 32", "14",   "208.09",   "box",          "VP",           "543.21",       "1/3/2015",         "1099-MISC",  "NEC",     "VA",     "Comments line item 3232"},
+            { "3231",  "32",     "First line 32",  "14",   "101.55",   "box",          "VP",           "543.21",       "1/3/2015",         "1099-MISC",  "NEC",     "VA",     "Comments line item 3231",    ""},
+            { "3232",  "32",     "Second line 32", "14",   "208.09",   "box",          "VP",           "543.21",       "1/3/2015",         "1099-MISC",  "NEC",     "VA",     "Comments line item 3232",    ""},
 
-            { "3331",  "33",     "First line 33",  "14",   "101.55",   "box",          "VP",           "543.21",       "1/3/2015",         "1099-MISC",  "NEC",     "VA",     "Comments line item 3331"},
-            { "3332",  "33",     "Second line 33", "14",   "208.09",   "box",          "VP",           "543.21",       "1/3/2015",         "1099-MISC",  "NEC",     "VA",     "Comments line item 3332"},
+            { "3331",  "33",     "First line 33",  "14",   "101.55",   "box",          "VP",           "543.21",       "1/3/2015",         "1099-MISC",  "NEC",     "VA",     "Comments line item 3331",    ""},
+            { "3332",  "33",     "Second line 33", "14",   "208.09",   "box",          "VP",           "543.21",       "1/3/2015",         "1099-MISC",  "NEC",     "VA",     "Comments line item 3332",    ""},
         };
 
         private string[,] glDistributionArray = {
@@ -523,7 +524,8 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
                 taxForm,
                 taxFormCode,
                 taxFormLocation,
-                lineItemComments;
+                lineItemComments,
+                lineItemStatus;
 
             DateTime? expectedDeliveryDate;
 
@@ -556,6 +558,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
                 taxFormCode = lineItemsArray[i, 10];
                 taxFormLocation = lineItemsArray[i, 11];
                 lineItemComments = lineItemsArray[i, 12];
+                lineItemStatus = lineItemsArray[i, 13];
 
                 var lineItem = new LineItem(lineItemId, description, quantity, price, extendedPrice);
 
@@ -566,6 +569,38 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
                 lineItem.TaxFormCode = taxFormCode;
                 lineItem.TaxFormLocation = taxFormLocation;
                 lineItem.Comments = lineItemComments;
+                switch (lineItemStatus.ToUpper())
+                {
+                    case "A":
+                        lineItem.LineItemStatus = LineItemStatus.Accepted;
+                        break;
+                    case "B":
+                        lineItem.LineItemStatus = LineItemStatus.Backordered;
+                        break;
+                    case "C":
+                        lineItem.LineItemStatus = LineItemStatus.Closed;
+                        break;
+                    case "I":
+                        lineItem.LineItemStatus = LineItemStatus.Invoiced;
+                        break;
+                    case "O":
+                        lineItem.LineItemStatus = LineItemStatus.Outstanding;
+                        break;
+                    case "P":
+                        lineItem.LineItemStatus = LineItemStatus.Paid;
+                        break;
+                    case "R":
+                        lineItem.LineItemStatus = LineItemStatus.Reconciled;
+                        break;
+                    case "V":
+                        lineItem.LineItemStatus = LineItemStatus.Voided;
+                        break;
+                    case "H":
+                        lineItem.LineItemStatus = LineItemStatus.Hold;
+                        break;
+                    default:
+                        break;
+                }
 
                 foreach (var purchaseOrder in purchaseOrders)
                 {
@@ -836,7 +871,8 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
                 taxForm,
                 taxFormCode,
                 taxFormLocation,
-                lineItemComments;
+                lineItemComments,
+                lineItemStatus;
 
             DateTime? expectedDeliveryDate;
 
@@ -869,6 +905,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
                 taxFormCode = lineItemsArray[i, 10];
                 taxFormLocation = lineItemsArray[i, 11];
                 lineItemComments = lineItemsArray[i, 12];
+                lineItemStatus = lineItemsArray[i, 13];
 
                 var lineItem = new LineItem(lineItemId, description, quantity, price, extendedPrice);
 
@@ -879,6 +916,38 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
                 lineItem.TaxFormCode = taxFormCode;
                 lineItem.TaxFormLocation = taxFormLocation;
                 lineItem.Comments = lineItemComments;
+                switch (lineItemStatus.ToUpper())
+                {
+                    case "A":
+                        lineItem.LineItemStatus = LineItemStatus.Accepted;
+                        break;
+                    case "B":
+                        lineItem.LineItemStatus = LineItemStatus.Backordered;
+                        break;
+                    case "C":
+                        lineItem.LineItemStatus = LineItemStatus.Closed;
+                        break;
+                    case "I":
+                        lineItem.LineItemStatus = LineItemStatus.Invoiced;
+                        break;
+                    case "O":
+                        lineItem.LineItemStatus = LineItemStatus.Outstanding;
+                        break;
+                    case "P":
+                        lineItem.LineItemStatus = LineItemStatus.Paid;
+                        break;
+                    case "R":
+                        lineItem.LineItemStatus = LineItemStatus.Reconciled;
+                        break;
+                    case "V":
+                        lineItem.LineItemStatus = LineItemStatus.Voided;
+                        break;
+                    case "H":
+                        lineItem.LineItemStatus = LineItemStatus.Hold;
+                        break;
+                    default:
+                        break;
+                }
 
                 foreach (var purchaseOrder in purchaseOrders)
                 {
@@ -959,7 +1028,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             }
             #endregion
         }
-        public Task<Tuple<IEnumerable<PurchaseOrder>, int>> GetPurchaseOrdersAsync(int offset, int limit)
+        public Task<Tuple<IEnumerable<PurchaseOrder>, int>> GetPurchaseOrdersAsync(int offset, int limit, string orderNumber)
         {
             throw new NotImplementedException();
         }
@@ -1014,6 +1083,21 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
         public async Task<IEnumerable<PurchaseOrderSummary>> GetPurchaseOrderSummaryByPersonIdAsync(string personId)
         {
             return await Task.Run(() => purchaseOrdersSummaryList);
+        }
+
+        public Task<PurchaseOrderCreateUpdateResponse> CreatePurchaseOrderAsync(PurchaseOrderCreateUpdateRequest createUpdateRequest)
+        {
+            return  Task.Run(() => purchaseOrderCreateUpdateResponse);
+        }
+
+        public Task<PurchaseOrderCreateUpdateResponse> UpdatePurchaseOrderAsync(PurchaseOrderCreateUpdateRequest createUpdateRequest, PurchaseOrder originalRequisition)
+        {
+            return Task.Run(() => purchaseOrderCreateUpdateResponse);
+        }
+
+        public Task<PurchaseOrderVoidResponse> VoidPurchaseOrderAsync(PurchaseOrderVoidRequest voidRequest)
+        {
+            throw new NotImplementedException();
         }
     }
 }

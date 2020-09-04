@@ -3350,6 +3350,12 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             //marital status
             request.MaritalStatus = person.MaritalStatus.HasValue ? person.MaritalStatus.Value.ToString() : string.Empty;
+            
+            // person.MaritalStatusCode will only have a value saved off because
+            // we need to pass an unknown marital status code that Ethos treats as
+            // "single", but really has no valid special processing for Ethos
+            // of 1-5.
+            request.UnknownMaritalStateCode = person.MaritalStatusCode;
 
             //citizenshipStatus
             request.CitizenshipStatus = person.AlienStatus;
@@ -3572,6 +3578,77 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
 
             return GetAddressLabel(response);
+        }
+
+        /// <summary>
+        /// returns address Id matching the hierarchy provided. 
+        /// </summary>
+        /// <param name="ids">collection of person ids</param>
+        /// <param name="hierarchy">the addreess hierarchy</param>
+        /// <param name="date">the date for the address calculation</param>
+        /// <returns>Dictionary consisting of a person Id (key) and addressId (value)</returns>
+        public async Task<Dictionary<string,string>> GetHierarchyAddressIdsAsync(List<string> ids, string hierarchy, DateTime? date)
+        {
+            var addressIds = new Dictionary<string, string>();
+            var addrs = new List<GetPersonHierarchyAddressesOutput>();
+            foreach( var id in ids)
+            {
+                var addr = new GetPersonHierarchyAddressesOutput();
+                addr.PersonIds = id;
+                addrs.Add(addr);
+            }
+            GetPersonHierarchyAddressesResponse response = await transactionInvoker.ExecuteAsync<GetPersonHierarchyAddressesRequest, GetPersonHierarchyAddressesResponse>(
+                new GetPersonHierarchyAddressesRequest()
+                {
+                    GetPersonHierarchyAddressesOutput = addrs,
+                    InHierarchy = hierarchy,
+                    InDate = date.GetValueOrDefault(DateTime.Today)
+                });
+
+            if (response != null && response.GetPersonHierarchyAddressesOutput != null && response.GetPersonHierarchyAddressesOutput.Any())
+            {
+                foreach(var ad in response.GetPersonHierarchyAddressesOutput)
+                {
+                    addressIds.Add(ad.PersonIds, ad.OutAddressId);
+                }
+            }
+            return addressIds;
+        }
+
+        /// <summary>
+        /// Using a collection of address ids, get a dictionary collection of associated guids
+        /// </summary>
+        /// <param name="addressIds">collection of address ids</param>
+        /// <returns>Dictionary consisting of a addressId (key) and guid (value)</returns>
+        public async Task<Dictionary<string, string>> GetAddressGuidsCollectionAsync(IEnumerable<string> addreessIds)
+        {
+            if ((addreessIds == null) || (addreessIds != null && !addreessIds.Any()))
+            {
+                return new Dictionary<string, string>();
+            }
+            var addressGuidCollection = new Dictionary<string, string>();
+
+            var addresssGuidLookup = addreessIds
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Distinct().ToList()
+                .ConvertAll(p => new RecordKeyLookup("ADDRESS", p, false)).ToArray();
+            var recordKeyLookupResults = await DataReader.SelectAsync(addresssGuidLookup);
+            foreach (var recordKeyLookupResult in recordKeyLookupResults)
+            {
+                try
+                {
+                    var splitKeys = recordKeyLookupResult.Key.Split(new[] { "+" }, StringSplitOptions.RemoveEmptyEntries);
+                    if (!addressGuidCollection.ContainsKey(splitKeys[1]))
+                    {
+                        addressGuidCollection.Add(splitKeys[1], recordKeyLookupResult.Value.Guid);
+                    }
+                }
+                catch (Exception) // Do not throw error.
+                {
+                }
+            }
+
+            return addressGuidCollection;
         }
 
         /// <summary>

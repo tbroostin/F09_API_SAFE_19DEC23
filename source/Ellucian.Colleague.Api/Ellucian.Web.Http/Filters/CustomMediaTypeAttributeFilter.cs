@@ -18,6 +18,13 @@ namespace Ellucian.Web.Http.Filters
         /// </summary>
         public string ErrorContentType { get; set; }
 
+        public static string CustomMediaTypeString { get; set; }
+
+        public static void SetCustomMediaType(string customMediaTypeString)
+        {
+            CustomMediaTypeString = customMediaTypeString;
+        }
+
         /// <summary>
         /// Add the custom Content type to the response headers
         /// </summary>
@@ -30,7 +37,16 @@ namespace Ellucian.Web.Http.Filters
                 if (actionExecutedContext.Response.IsSuccessStatusCode)
                 {
                     var RequestedContentTypeval = actionExecutedContext.ActionContext.RequestContext.RouteData.Values["RequestedContentType"];
-                 
+                    if (!string.IsNullOrEmpty(CustomMediaTypeString))
+                    {
+                        RequestedContentTypeval = CustomMediaTypeString;
+                        // Override the RequestedContentType in case one of the other filters overwrites X-Media-Type with Content-Type
+                        actionExecutedContext.ActionContext.RequestContext.RouteData.Values["RequestedContentType"] = CustomMediaTypeString;
+                        actionExecutedContext.Response.Content.Headers.Remove(CustomMediaType);
+                        // Reset CustomMediaTypeString property so that it isn't reused by subsequent API calls.
+                        SetCustomMediaType("");
+                    }
+
                     IEnumerable<string> customMediaTypeValue = null;
                     if ((RequestedContentTypeval != null) && (!actionExecutedContext.Response.Content.Headers.TryGetValues(CustomMediaType, out customMediaTypeValue)))
                         actionExecutedContext.Response.Content.Headers.Add(CustomMediaType, RequestedContentTypeval.ToString());

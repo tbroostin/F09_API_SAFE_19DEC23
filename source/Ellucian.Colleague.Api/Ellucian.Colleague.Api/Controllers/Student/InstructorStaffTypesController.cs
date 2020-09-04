@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
@@ -16,6 +16,7 @@ using slf4net;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using System.Web.Http;
@@ -48,7 +49,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// Return all instructorStaffTypes
         /// </summary>
         /// <returns>List of InstructorStaffTypes <see cref="Dtos.InstructorStaffTypes"/> objects representing matching instructorStaffTypes</returns>
-        [HttpGet]
+        [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.InstructorStaffTypes>> GetInstructorStaffTypesAsync()
         {
@@ -62,7 +63,16 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
-                return await _instructorStaffTypesService.GetInstructorStaffTypesAsync(bypassCache);
+                var instructorStaffTypes = await _instructorStaffTypesService.GetInstructorStaffTypesAsync(bypassCache);
+
+                if (instructorStaffTypes != null && instructorStaffTypes.Any())
+                {
+                    AddEthosContextProperties(await _instructorStaffTypesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _instructorStaffTypesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              instructorStaffTypes.Select(a => a.Id).ToList()));
+                }
+
+                return instructorStaffTypes;                
             }
             catch (KeyNotFoundException e)
             {
@@ -101,7 +111,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="guid">GUID to desired instructorStaffTypes</param>
         /// <returns>A instructorStaffTypes object <see cref="Dtos.InstructorStaffTypes"/> in EEDM format</returns>
-        [HttpGet]
+        [HttpGet, EedmResponseFilter]
         public async Task<Dtos.InstructorStaffTypes> GetInstructorStaffTypesByGuidAsync(string guid)
         {
             if (string.IsNullOrEmpty(guid))
@@ -111,6 +121,10 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                AddEthosContextProperties(
+                    await _instructorStaffTypesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                    await _instructorStaffTypesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                        new List<string>() { guid }));
                 return await _instructorStaffTypesService.GetInstructorStaffTypesByGuidAsync(guid);
             }
             catch (KeyNotFoundException e)

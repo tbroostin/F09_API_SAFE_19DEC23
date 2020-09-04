@@ -90,6 +90,10 @@ namespace Ellucian.Colleague.Api
             json.SupportedMediaTypes.Add(new MediaTypeHeaderValue(string.Format(HedtechIntegrationStudentUnverifiedGradesSubmissionsFormat, "1.0.0")));
             json.SupportedMediaTypes.Add(new MediaTypeHeaderValue(string.Format(HedtechIntegrationStudentTranscriptGradesAdjustmentsFormat, "1.0.0")));
 
+            json.SupportedMediaTypes.Add(new MediaTypeHeaderValue("application/vnd.hedtech.integration.bulk-requests.v1.0.0+json"));
+            json.SupportedMediaTypes.Add(new MediaTypeHeaderValue("application/vnd.hedtech.integration.bulk-requests.v1+json"));
+
+
         }
 
         private static IUnityContainer BuildUnityContainer()

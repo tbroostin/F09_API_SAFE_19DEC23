@@ -5,6 +5,7 @@ using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Colleague.Dtos.Filters;
 using Ellucian.Web.Http;
@@ -52,12 +53,14 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// </summary>
         /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>
         /// <param name="document">Named query</param>
+        ///  <param name="criteria">criteria filter</param>
         /// <returns>List of PaymentTransactions <see cref="Dtos.PaymentTransactions"/> objects representing matching paymentTransactions</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
         [ValidateQueryStringFilter()]
         [QueryStringFilterFilter("document", typeof(DocumentFilter)), FilteringFilter(IgnoreFiltering = true)]
+        [QueryStringFilterFilter("criteria", typeof(PaymentTransactions))]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
-        public async Task<IHttpActionResult> GetPaymentTransactionsAsync(Paging page, QueryStringFilter document) 
+        public async Task<IHttpActionResult> GetPaymentTransactionsAsync(Paging page, QueryStringFilter document, QueryStringFilter criteria) 
         {
             var bypassCache = false;
             if (Request.Headers.CacheControl != null)
@@ -73,7 +76,8 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 {
                     page = new Paging(100, 0);
                 }
-               
+
+                var criteriaFilter = GetFilterObject<Dtos.PaymentTransactions>(_logger, "criteria");
                 string documentGuid = string.Empty;
                 var documentTypeValue = InvoiceTypes.NotSet;
 
@@ -95,7 +99,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                     }
                 }
              
-                var pageOfItems = await _paymentTransactionsService.GetPaymentTransactionsAsync(page.Offset, page.Limit, documentGuid, documentTypeValue, bypassCache);
+                var pageOfItems = await _paymentTransactionsService.GetPaymentTransactionsAsync(page.Offset, page.Limit, documentGuid, documentTypeValue, criteriaFilter, bypassCache);
 
                 AddEthosContextProperties(
                     await _paymentTransactionsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
@@ -112,7 +116,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -141,7 +145,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// </summary>
         /// <param name="guid">GUID to desired paymentTransactions</param>
         /// <returns>A paymentTransactions object <see cref="Dtos.PaymentTransactions"/> in EEDM format</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
         public async Task<Dtos.PaymentTransactions> GetPaymentTransactionsByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -174,7 +178,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -204,6 +208,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <param name="paymentTransactions">DTO of the new paymentTransactions</param>
         /// <returns>A paymentTransactions object <see cref="Dtos.PaymentTransactions"/> in EEDM format</returns>
         [HttpPost]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.PaymentTransactions> PostPaymentTransactionsAsync([FromBody] Dtos.PaymentTransactions paymentTransactions)
         {
             //Update is not supported for Colleague but HeDM requires full crud support.
@@ -218,6 +223,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <param name="paymentTransactions">DTO of the updated paymentTransactions</param>
         /// <returns>A paymentTransactions object <see cref="Dtos.PaymentTransactions"/> in EEDM format</returns>
         [HttpPut]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.PaymentTransactions> PutPaymentTransactionsAsync([FromUri] string guid, [FromBody] Dtos.PaymentTransactions paymentTransactions)
         {
             //Update is not supported for Colleague but HeDM requires full crud support.
@@ -230,6 +236,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// </summary>
         /// <param name="guid">GUID to desired paymentTransactions</param>
         [HttpDelete]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task DeletePaymentTransactionsAsync(string guid)
         {
             //Update is not supported for Colleague but HeDM requires full crud support.

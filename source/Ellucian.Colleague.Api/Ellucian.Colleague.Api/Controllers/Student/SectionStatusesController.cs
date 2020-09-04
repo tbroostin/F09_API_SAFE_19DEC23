@@ -1,4 +1,4 @@
-//Copyright 2017 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -63,8 +63,15 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
-                AddDataPrivacyContextProperty((await _sectionStatusesService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
-                return await _sectionStatusesService.GetSectionStatusesAsync(bypassCache);
+                var sectionStatuses = await _sectionStatusesService.GetSectionStatusesAsync(bypassCache);
+
+                if (sectionStatuses != null && sectionStatuses.Any())
+                {
+                    AddEthosContextProperties(await _sectionStatusesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                              await _sectionStatusesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              sectionStatuses.Select(a => a.Id).ToList()));
+                }
+                return sectionStatuses;
             }
             catch (KeyNotFoundException e)
             {
@@ -121,8 +128,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
-               AddDataPrivacyContextProperty((await _sectionStatusesService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
-               return await _sectionStatusesService.GetSectionStatusesByGuidAsync(guid);
+                AddEthosContextProperties(
+                     await _sectionStatusesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                     await _sectionStatusesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                         new List<string>() { guid }));
+                return await _sectionStatusesService.GetSectionStatusesByGuidAsync(guid);
             }
             catch (KeyNotFoundException e)
             {

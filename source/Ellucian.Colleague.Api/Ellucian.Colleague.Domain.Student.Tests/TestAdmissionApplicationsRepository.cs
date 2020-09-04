@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,12 +13,12 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         public List<AdmissionApplication> applicationEntities = new List<AdmissionApplication>();
 
         private string[,] applicationData = {
-            //                                                                             ADMIT  INST                          APPL    START
-            //GUID                                   ID   APPLICANT  PROGRAM    REP        STATUS ATTEND    COMMENT  LOCATIONS  NO      TERM      LOAD  STATUS   ADMIT SOURCE WITHDRAW RESIDENCY
-            {"1c5bbcbc-80e3-8151-4042-db9893ac337a", "1", "0003748", "BA-MATH", "0003849", "FR", "0004899", "",      "DT",      "3430", "2017/SP", "F", "MS,AD", "AD", "EDX", "",   "IN"},
-            {"138951cc-459e-7912-a065-0471a7a2c644", "2", "0006374", "AA-NURS", "0003849", "GD", "",        "",      "MC,DT",   "2293", "2017/FA", "P", "RE",    "",    "SV",  "AC", "IN"},
-            {"fbdfac70-88a0-69a1-4362-62ea5cdafd69", "3", "0037487", "MA-LAW",  "",        "ND", "",        "",      "",        "3345", "2017/SP", "F", "AC,AP", "AD",  "WI",  "",   "CC"},
-            {"d328fd10-9c90-b1a3-4a2f-543bc099be37", "4", "2003894", "MS-SCI",  "",        "TR", "",        "",      "",        "4490", "2017/FA", "F", "AC,AD", "",    "EDX", "FP", "RE"}
+            //                                                                             ADMIT  INST                          APPL    START                                                    EDUCTIONAL CAREER
+            //GUID                                   ID   APPLICANT  PROGRAM    REP        STATUS ATTEND    COMMENT  LOCATIONS  NO      TERM      LOAD  STATUS   ADMIT SOURCE WITHDRAW RESIDENCY GOAL       GOAL    INFLUENCE
+            {"1c5bbcbc-80e3-8151-4042-db9893ac337a", "1", "0003748", "BA-MATH", "0003849", "FR", "0004899", "",      "DT",      "3430", "2017/SP", "F", "MS,AD", "AD", "EDX", "",      "IN",     "PHD",     "NURS", "CT"},
+            {"138951cc-459e-7912-a065-0471a7a2c644", "2", "0006374", "AA-NURS", "0003849", "GD", "",        "",      "MC,DT",   "2293", "2017/FA", "P", "RE",    "",    "SV", "AC",    "IN",     "PHD",     "PARA", "BR"},
+            {"fbdfac70-88a0-69a1-4362-62ea5cdafd69", "3", "0037487", "MA-LAW",  "",        "ND", "",        "",      "",        "3345", "2017/SP", "F", "AC,AP", "AD",  "WI", "",      "CC",     "PHD",     "NURS", "CT"},
+            {"d328fd10-9c90-b1a3-4a2f-543bc099be37", "4", "2003894", "MS-SCI",  "",        "TR", "",        "",      "",        "4490", "2017/FA", "F", "AC,AD", "",    "EDX","FP",    "RE",     "PHD",     "PARA", "BR"}
         };
 
         public Dictionary<string, string> EthosExtendedDataDictionary
@@ -37,7 +37,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         public void Populate()
         {
             // There are 17 fields for each application in the array
-            var items = applicationData.Length / 17;
+            var items = applicationData.Length / 20;
 
             for (int x = 0; x < items; x++)
             {
@@ -75,6 +75,21 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                 application.ApplicationSource = applicationData[x, 14];
                 application.ApplicationWithdrawReason = applicationData[x, 15];
                 application.ApplicationResidencyStatus = applicationData[x, 16];
+                application.EducationalGoal = applicationData[x, 17];
+                var aCareerGoals = new List<string>();
+                List<string> careerGoals = applicationData[x, 18].Split(',').ToList();
+                foreach (var d in careerGoals)
+                {
+                    aCareerGoals.Add(d);
+                }
+                application.CareerGoals = aCareerGoals;
+                var aInfluences = new List<string>();
+                List<string> influences = applicationData[x, 19].Split(',').ToList();
+                foreach (var d in influences)
+                {
+                    aInfluences.Add(d);
+                }
+                application.Influences = aInfluences;
 
                 applicationEntities.Add(application);
             }

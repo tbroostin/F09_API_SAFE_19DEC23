@@ -47,6 +47,13 @@ namespace Ellucian.Colleague.Dtos
         public DateTime TransactionDate { get; set; }
 
         /// <summary>
+        /// The expiration date associated with the blanket purchase order.
+        /// </summary>
+        [JsonConverter(typeof(DateOnlyConverter))]
+        [JsonProperty("expirationDate", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public DateTime? ExpireDate { get; set; }
+
+        /// <summary>
         /// The status of the blanket purchase order.
         /// </summary>
 

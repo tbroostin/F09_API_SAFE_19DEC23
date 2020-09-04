@@ -1,4 +1,6 @@
-﻿using Ellucian.Colleague.Domain.HumanResources.Repositories;
+﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
+
+using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -159,6 +161,9 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
             new EarningType2("guid3", "PER", "Personal Leave")
         };
 
+        public Decimal? accrualRate = 80;
+        public Decimal? accrualLimit = 50;
+        public Decimal? accrualMaxCarryOver = 20;
 
         /// <summary>
         /// This one is owned by the HR team for Self Service
@@ -201,8 +206,12 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                                 employeeLeavePlanRecord.allowedDate ?? employeeLeavePlanRecord.startDate.Value,
                                 employeeLeavePlanRecord.balance.Value,
                                 leavePlan.YearlyStartDate.HasValue ? leavePlan.YearlyStartDate.Value.Month : 1,
-                                leavePlan.YearlyStartDate.HasValue ? leavePlan.YearlyStartDate.Value.Day : 1,
-                                leavePlan.EarningsTypes);
+                                leavePlan.YearlyStartDate.HasValue ? leavePlan.YearlyStartDate.Value.Day : 1,                                
+                                leavePlan.EarningsTypes,
+                                accrualRate,
+                                accrualLimit,
+                                accrualMaxCarryOver
+                                );
 
                             employeeLeavePlans.Add(employeeLeavePlan);
 

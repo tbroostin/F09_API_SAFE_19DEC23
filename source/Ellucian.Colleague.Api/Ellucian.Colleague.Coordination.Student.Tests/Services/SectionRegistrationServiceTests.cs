@@ -1017,7 +1017,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewRegistrationRole });
 
                 sectionRegistrationRepositoryMock.Setup(repo => repo.GetSectionRegistrationIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("0012297");
-                sectionRegistrationRepositoryMock.Setup(repo => repo.GetSectionRegistrationByIdAsync(It.IsAny<string>())).ReturnsAsync(response);
+                sectionRegistrationRepositoryMock.Setup(repo => repo.GetSectionRegistrationById2Async(It.IsAny<string>())).ReturnsAsync(response);
 
                 ////Act
                 var results = await sectionRegistrationService.GetSectionRegistrationByGuid3Async("ab66b971-3ee0-4477-9bb7-539721f93435", It.IsAny<bool>());

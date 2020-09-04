@@ -17,6 +17,7 @@ using System.Threading.Tasks;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Colleague.Dtos;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
@@ -162,8 +163,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         }
 
         //get academic disciplines
-        private IEnumerable<AcademicDiscipline> _acadDisciplines;
-        private async Task<IEnumerable<AcademicDiscipline>> GetAcademicDisciplinesAsync(bool bypassCache)
+        private IEnumerable<Domain.Base.Entities.AcademicDiscipline> _acadDisciplines;
+        private async Task<IEnumerable<Domain.Base.Entities.AcademicDiscipline>> GetAcademicDisciplinesAsync(bool bypassCache)
         {
             if (_acadDisciplines == null)
             {
@@ -252,7 +253,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 if (string.IsNullOrEmpty(guid))
                 {
                     //throw new ArgumentNullException("guid", "GUID is required to get an Student Academic Program.");
-                    IntegrationApiExceptionAddError("GUID is required to get an Student Academic Program.", "guid");
+                    IntegrationApiExceptionAddError("GUID is required to get an Student Academic Program.", "Missing.Required.Property");
                     throw IntegrationApiException;
                 }
                 CheckGetStudentAcademicProgramPermission();
@@ -264,7 +265,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 catch (Exception ex)
                 {
-                    IntegrationApiExceptionAddError(ex.Message, "institutionId");
+                    IntegrationApiExceptionAddError(ex.Message, "Bad.Data");
                     throw IntegrationApiException;
                 }
                 try
@@ -302,7 +303,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 if (string.IsNullOrEmpty(guid))
                 {
                     //throw new ArgumentNullException("guid", "GUID is required to get an Student Academic Program.");
-                    IntegrationApiExceptionAddError("GUID is required to get an Student Academic Program.", "guid");
+                    IntegrationApiExceptionAddError("GUID is required to get an Student Academic Program.", "Missing.Required.Property");
                     throw IntegrationApiException;
                 }
                 CheckGetStudentAcademicProgramPermission();
@@ -314,7 +315,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 catch (Exception ex)
                 {
-                    IntegrationApiExceptionAddError(ex.Message, "institutionId");
+                    IntegrationApiExceptionAddError(ex.Message, "Bad.Data");
                     throw IntegrationApiException;
                 }
                 try
@@ -351,7 +352,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 if (string.IsNullOrEmpty(guid))
                 {
-                    IntegrationApiExceptionAddError("GUID is required to get an Student Academic Program.", "guid");
+                    IntegrationApiExceptionAddError("GUID is required to get an Student Academic Program.", "Missing.Required.Property");
                     throw IntegrationApiException;
                 }
                 CheckGetStudentAcademicProgramPermission();
@@ -363,7 +364,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 catch (Exception ex)
                 {
-                    IntegrationApiExceptionAddError(ex.Message, "institutionId");
+                    IntegrationApiExceptionAddError(ex.Message, "Bad.Data");
                     throw IntegrationApiException;
                 }
                 try
@@ -495,13 +496,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                             enroll.Detail = new Dtos.GuidObject2() { Id = enrollStatus.Guid };
                             switch (enrollStatus.EnrollmentStatusType)
                             {
-                                case EnrollmentStatusType.active:
+                                case Domain.Student.Entities.EnrollmentStatusType.active:
                                     enroll.EnrollStatus = Dtos.EnrollmentStatusType.Active;
                                     break;
-                                case EnrollmentStatusType.complete:
+                                case Domain.Student.Entities.EnrollmentStatusType.complete:
                                     enroll.EnrollStatus = Dtos.EnrollmentStatusType.Complete;
                                     break;
-                                case EnrollmentStatusType.inactive:
+                                case Domain.Student.Entities.EnrollmentStatusType.inactive:
                                     enroll.EnrollStatus = Dtos.EnrollmentStatusType.Inactive;
                                     //if the status is inactive and end date is missing then display today's date
                                     break;
@@ -691,13 +692,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                             enroll.Detail = new Dtos.GuidObject2() { Id = enrollStatus.Guid };
                             switch (enrollStatus.EnrollmentStatusType)
                             {
-                                case EnrollmentStatusType.active:
+                                case Domain.Student.Entities.EnrollmentStatusType.active:
                                     enroll.EnrollStatus = Dtos.EnrollmentStatusType.Active;
                                     break;
-                                case EnrollmentStatusType.complete:
+                                case Domain.Student.Entities.EnrollmentStatusType.complete:
                                     enroll.EnrollStatus = Dtos.EnrollmentStatusType.Complete;
                                     break;
-                                case EnrollmentStatusType.inactive:
+                                case Domain.Student.Entities.EnrollmentStatusType.inactive:
                                     enroll.EnrollStatus = Dtos.EnrollmentStatusType.Inactive;
                                     //if the status is inactive and end date is missing then display today's date
                                     break;
@@ -758,7 +759,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 // Make sure whe have a valid GUID for the record we are dealing with
                 if (string.IsNullOrEmpty(stuProgram.Guid))
                 {
-                    IntegrationApiExceptionAddError("Could not find a GUID for student-academic-programs entity.", "student-academic-programs.id", id: id);
+                    IntegrationApiExceptionAddError("Could not find a GUID for student-academic-programs entity.", "GUID.Not.Found", id: id);
                 }
 
                 studentProgramDto.Id = stuProgram.Guid;
@@ -774,7 +775,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                     catch (RepositoryException ex)
                     {
-                        IntegrationApiExceptionAddError(ex, "student-academic-programs.program",
+                        IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
                             id: id, guid: stuProgram.Guid);
                     }
                 }
@@ -790,7 +791,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                     catch (RepositoryException ex)
                     {
-                        IntegrationApiExceptionAddError(ex, "student-academic-programs.catalog",
+                        IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
                             id: id, guid: stuProgram.Guid);
                     }
                 }
@@ -800,7 +801,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     personGuidCollection.TryGetValue(stuProgram.StudentId, out studentGuid);
                     if (string.IsNullOrEmpty(studentGuid))
                     {
-                        IntegrationApiExceptionAddError(string.Concat("Person guid not found for Person Id: '", stuProgram.StudentId, "'"), "student-academic-programs.student"
+                        IntegrationApiExceptionAddError(string.Concat("Person guid not found for Person Id: '", stuProgram.StudentId, "'"), "GUID.Not.Found"
                             , stuProgram.Guid, id);
                     }
                     else
@@ -826,7 +827,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                     catch (RepositoryException ex)
                     {
-                        IntegrationApiExceptionAddError(ex, "student-academic-programs.site",
+                        IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
                            stuProgram.Guid, id);
                     }
                 }
@@ -845,7 +846,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                     catch (RepositoryException ex)
                     {
-                        IntegrationApiExceptionAddError(ex, "student-academic-programs.programOwner",
+                        IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
                             stuProgram.Guid, id);
                     }
                 }
@@ -866,7 +867,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         }
                         catch (RepositoryException ex)
                         {
-                            IntegrationApiExceptionAddError(ex, "student-academic-programs.starting",
+                            IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
                                 stuProgram.Guid, id);
                         }
                     }
@@ -883,7 +884,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         }
                         catch (RepositoryException ex)
                         {
-                            IntegrationApiExceptionAddError(ex, "student-academic-programs.expectedGraduation",
+                            IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
                                 stuProgram.Guid, id);
                         }
                     }
@@ -900,7 +901,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         }
                         catch (RepositoryException ex)
                         {
-                            IntegrationApiExceptionAddError(ex, "student-academic-programs.actualGraduation",
+                            IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
                                 stuProgram.Guid, id);
                         }
                     }
@@ -919,7 +920,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                     catch (RepositoryException ex)
                     {
-                        IntegrationApiExceptionAddError(ex, "student-academic-programs.academicLevel",
+                        IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
                             stuProgram.Guid, id);
                     }
                 }
@@ -963,13 +964,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                             enrollmentStatusDetail.Detail = new Dtos.GuidObject2() { Id = enrollStatus.Guid };
                             switch (enrollStatus.EnrollmentStatusType)
                             {
-                                case EnrollmentStatusType.active:
+                                case Domain.Student.Entities.EnrollmentStatusType.active:
                                     enrollmentStatusDetail.EnrollStatus = Dtos.EnrollmentStatusType.Active;
                                     break;
-                                case EnrollmentStatusType.complete:
+                                case Domain.Student.Entities.EnrollmentStatusType.complete:
                                     enrollmentStatusDetail.EnrollStatus = Dtos.EnrollmentStatusType.Complete;
                                     break;
-                                case EnrollmentStatusType.inactive:
+                                case Domain.Student.Entities.EnrollmentStatusType.inactive:
                                     enrollmentStatusDetail.EnrollStatus = Dtos.EnrollmentStatusType.Inactive;
                                     //if the status is inactive and end date is missing then display today's date
                                     break;
@@ -1034,7 +1035,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 // Make sure whe have a valid GUID for the record we are dealing with
                 if (string.IsNullOrEmpty(stuProgram.Guid))
                 {
-                    IntegrationApiExceptionAddError("Could not find a GUID for student-academic-programs entity.", "student-academic-programs.id", id: id);
+                    IntegrationApiExceptionAddError("Could not find a GUID for student-academic-programs entity.", "GUID.Not.Found", id: id);
                 }
 
                 studentProgramDto.Id = stuProgram.Guid;
@@ -1050,7 +1051,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                     catch (RepositoryException ex)
                     {
-                        IntegrationApiExceptionAddError(ex, "student-academic-programs.program",
+                        IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
                             id: id, guid: stuProgram.Guid);
                     }
                 }
@@ -1066,7 +1067,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                     catch (RepositoryException ex)
                     {
-                        IntegrationApiExceptionAddError(ex, "student-academic-programs.catalog",
+                        IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
                             id: id, guid: stuProgram.Guid);
                     }
                 }
@@ -1076,7 +1077,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     personGuidCollection.TryGetValue(stuProgram.StudentId, out studentGuid);
                     if (string.IsNullOrEmpty(studentGuid))
                     {
-                        IntegrationApiExceptionAddError(string.Concat("Person guid not found for Person Id: '", stuProgram.StudentId, "'"), "student-academic-programs.student"
+                        IntegrationApiExceptionAddError(string.Concat("Person guid not found for Person Id: '", stuProgram.StudentId, "'"), "GUID.Not.Found"
                             , stuProgram.Guid, id);
                     }
                     else
@@ -1102,7 +1103,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                     catch (RepositoryException ex)
                     {
-                        IntegrationApiExceptionAddError(ex, "student-academic-programs.site",
+                        IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
                            stuProgram.Guid, id);
                     }
                 }
@@ -1121,7 +1122,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                     catch (RepositoryException ex)
                     {
-                        IntegrationApiExceptionAddError(ex, "student-academic-programs.programOwner",
+                        IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
                             stuProgram.Guid, id);
                     }
                 }
@@ -1142,7 +1143,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         }
                         catch (RepositoryException ex)
                         {
-                            IntegrationApiExceptionAddError(ex, "student-academic-programs.starting",
+                            IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
                                 stuProgram.Guid, id);
                         }
                     }
@@ -1159,7 +1160,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         }
                         catch (RepositoryException ex)
                         {
-                            IntegrationApiExceptionAddError(ex, "student-academic-programs.expectedGraduation",
+                            IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
                                 stuProgram.Guid, id);
                         }
                     }
@@ -1195,7 +1196,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                     catch (RepositoryException ex)
                     {
-                        IntegrationApiExceptionAddError(ex, "student-academic-programs.academicLevel",
+                        IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
                             stuProgram.Guid, id);
                     }
                 }
@@ -1239,13 +1240,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                             enrollmentStatusDetail.Detail = new Dtos.GuidObject2() { Id = enrollStatus.Guid };
                             switch (enrollStatus.EnrollmentStatusType)
                             {
-                                case EnrollmentStatusType.active:
+                                case Domain.Student.Entities.EnrollmentStatusType.active:
                                     enrollmentStatusDetail.EnrollStatus = Dtos.EnrollmentStatusType.Active;
                                     break;
-                                case EnrollmentStatusType.complete:
+                                case Domain.Student.Entities.EnrollmentStatusType.complete:
                                     enrollmentStatusDetail.EnrollStatus = Dtos.EnrollmentStatusType.Complete;
                                     break;
-                                case EnrollmentStatusType.inactive:
+                                case Domain.Student.Entities.EnrollmentStatusType.inactive:
                                     enrollmentStatusDetail.EnrollStatus = Dtos.EnrollmentStatusType.Inactive;
                                     //if the status is inactive and end date is missing then display today's date
                                     break;
@@ -1310,7 +1311,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 // Make sure whe have a valid GUID for the record we are dealing with
                 if (string.IsNullOrEmpty(stuProgram.Guid))
                 {
-                    IntegrationApiExceptionAddError("Could not find a GUID for student-academic-programs entity.", "student-academic-programs.id", id: id);
+                    IntegrationApiExceptionAddError("Could not find a GUID for student-academic-programs entity.", "GUID.Not.Found", id: id);
                 }
 
                 studentProgramDto.Id = stuProgram.Guid;
@@ -1326,7 +1327,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                     catch (RepositoryException ex)
                     {
-                        IntegrationApiExceptionAddError(ex, "student-academic-programs.program",
+                        IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
                             id: id, guid: stuProgram.Guid);
                     }
                 }
@@ -1342,7 +1343,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                     catch (RepositoryException ex)
                     {
-                        IntegrationApiExceptionAddError(ex, "student-academic-programs.catalog",
+                        IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
                             id: id, guid: stuProgram.Guid);
                     }
                 }
@@ -1352,7 +1353,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     personGuidCollection.TryGetValue(stuProgram.StudentId, out studentGuid);
                     if (string.IsNullOrEmpty(studentGuid))
                     {
-                        IntegrationApiExceptionAddError(string.Concat("Person guid not found for Person Id: '", stuProgram.StudentId, "'"), "student-academic-programs.student"
+                        IntegrationApiExceptionAddError(string.Concat("Person guid not found for Person Id: '", stuProgram.StudentId, "'"), "GUID.Not.Found"
                             , stuProgram.Guid, id);
                     }
                     else
@@ -1378,7 +1379,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                     catch (RepositoryException ex)
                     {
-                        IntegrationApiExceptionAddError(ex, "student-academic-programs.site",
+                        IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
                            stuProgram.Guid, id);
                     }
                 }
@@ -1397,7 +1398,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                     catch (RepositoryException ex)
                     {
-                        IntegrationApiExceptionAddError(ex, "student-academic-programs.programOwner",
+                        IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
                             stuProgram.Guid, id);
                     }
                 }
@@ -1418,7 +1419,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         }
                         catch (RepositoryException ex)
                         {
-                            IntegrationApiExceptionAddError(ex, "student-academic-programs.starting",
+                            IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
                                 stuProgram.Guid, id);
                         }
                     }
@@ -1435,7 +1436,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         }
                         catch (RepositoryException ex)
                         {
-                            IntegrationApiExceptionAddError(ex, "student-academic-programs.expectedGraduation",
+                            IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
                                 stuProgram.Guid, id);
                         }
                     }
@@ -1454,7 +1455,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                     catch (RepositoryException ex)
                     {
-                        IntegrationApiExceptionAddError(ex, "student-academic-programs.academicLevel",
+                        IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
                             stuProgram.Guid, id);
                     }
                 }
@@ -1498,13 +1499,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                             enrollmentStatusDetail.Detail = new Dtos.GuidObject2() { Id = enrollStatus.Guid };
                             switch (enrollStatus.EnrollmentStatusType)
                             {
-                                case EnrollmentStatusType.active:
+                                case Domain.Student.Entities.EnrollmentStatusType.active:
                                     enrollmentStatusDetail.EnrollStatus = Dtos.EnrollmentStatusType.Active;
                                     break;
-                                case EnrollmentStatusType.complete:
+                                case Domain.Student.Entities.EnrollmentStatusType.complete:
                                     enrollmentStatusDetail.EnrollStatus = Dtos.EnrollmentStatusType.Complete;
                                     break;
-                                case EnrollmentStatusType.inactive:
+                                case Domain.Student.Entities.EnrollmentStatusType.inactive:
                                     enrollmentStatusDetail.EnrollStatus = Dtos.EnrollmentStatusType.Inactive;
                                     //if the status is inactive and end date is missing then display today's date
                                     break;
@@ -1581,7 +1582,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 catch (RepositoryException ex)
                 {
-                    IntegrationApiExceptionAddError(ex, "GUID.Not.Found",guid, sourceId);
+                    IntegrationApiExceptionAddError(ex, "GUID.Not.Found", guid, sourceId);
                 }
             }
             return guidObject;
@@ -1644,7 +1645,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         }
                         catch (RepositoryException ex)
                         {
-                            IntegrationApiExceptionAddError(ex, "student-academic-programs.recognitions",
+                            IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
                                 guid, id);
                         }
                     }
@@ -1723,7 +1724,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                     catch (RepositoryException ex)
                     {
-                        IntegrationApiExceptionAddError(ex.Message, "student-academic-programs.credentials",
+                        IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found",
                             id: id, guid: guid);
                     }
                 }
@@ -1744,7 +1745,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                     catch (RepositoryException ex)
                     {
-                        IntegrationApiExceptionAddError(ex.Message, "student-academic-programs.credentials",
+                        IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found",
                             id: id, guid: guid);
                     }
                 }
@@ -1857,7 +1858,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         }
                         catch (RepositoryException ex)
                         {
-                            IntegrationApiExceptionAddError(ex.Message, "student-academic-programs.discipline",
+                            IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found",
                                 id: id, guid: guid);
                         }
                     }
@@ -1887,7 +1888,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         }
                         catch (RepositoryException ex)
                         {
-                            IntegrationApiExceptionAddError(ex.Message, "student-academic-programs.discipline",
+                            IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found",
                                 id: id, guid: guid);
                         }
                     }
@@ -1916,7 +1917,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         }
                         catch (RepositoryException ex)
                         {
-                            IntegrationApiExceptionAddError(ex.Message, "student-academic-programs.discipline",
+                            IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found",
                                 id: id, guid: guid);
                         }
                     }
@@ -1946,7 +1947,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         }
                         catch (RepositoryException ex)
                         {
-                            IntegrationApiExceptionAddError(ex.Message, "student-academic-programs.discipline",
+                            IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found",
                                 id: id, guid: guid);
                         }
                     }
@@ -1974,7 +1975,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         }
                         catch (RepositoryException ex)
                         {
-                            IntegrationApiExceptionAddError(ex.Message, "student-academic-programs.discipline",
+                            IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found",
                                 id: id, guid: guid);
                         }
                     }
@@ -2005,7 +2006,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         }
                         catch (RepositoryException ex)
                         {
-                            IntegrationApiExceptionAddError(ex.Message, "student-academic-programs.discipline",
+                            IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found",
                                 id: id, guid: guid);
                         }
                     }
@@ -2080,6 +2081,668 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var inst = GetDefaultInstitutionId();
             createdStudentAcadProgEntity.Add(await _studentAcademicProgramRepository.CreateStudentAcademicProgram2Async(studentAcadProgramEntity, inst));
             return (await ConvertStudentAcademicProgramEntityToDto4Async(createdStudentAcadProgEntity, bypassCache)).FirstOrDefault();
+        }
+
+        /// <summary>
+        /// Replaces student academic program.
+        /// </summary>
+        /// <param name="studentAcadProgramDto"></param>
+        /// <param name="bypassCache"></param>
+        /// <returns></returns>
+        public async Task<StudentAcademicPrograms4> CreateStudentAcademicProgramReplacementsAsync(StudentAcademicProgramReplacements studentAcadProgramDto, bool bypassCache)
+        {
+            // Confirm that user has permissions to create Student Academic Program
+            CheckCreateStudentAcademicProgramReplacementPermission();
+
+            ValidateStudentAcademicProgramReplacements(string.Empty, string.Empty, studentAcadProgramDto);
+
+            //Extensibility
+            _studentAcademicProgramRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
+
+            //Convert the DTO to an entity, create the Student Academic Program, convert the resulting entity back to a DTO, and return it
+            var inst = GetDefaultInstitutionId();
+            Domain.Student.Entities.StudentAcademicProgram studentAcadProgramEntity = await ConvertStudentAcademicProgramReplacementsDtoToEntityAsync(studentAcadProgramDto, string.Empty, inst, bypassCache);
+            // Throw errors
+            var createdStudentAcadProgEntity = new List<StudentAcademicProgram>();
+            createdStudentAcadProgEntity.Add(await _studentAcademicProgramRepository.CreateStudentAcademicProgram2Async(studentAcadProgramEntity, inst));
+            return (await ConvertStudentAcademicProgramEntityToDto4Async(createdStudentAcadProgEntity, bypassCache)).FirstOrDefault();
+        }
+
+        /// <summary>
+        /// Validates the data in the StudentAcademicPrograms object
+        /// </summary>
+        /// <param name="stuAcadProg">StudentAcademicPrograms from the request</param>
+        private void ValidateStudentAcademicProgramReplacements(string guid, string stprKey, Dtos.StudentAcademicProgramReplacements stuAcadProg)
+        {
+            if (stuAcadProg == null)
+            {
+
+                IntegrationApiExceptionAddError("Must provide a StudentAcademicProgramsReplacements object for update", "Missing.Required.Property", guid, stprKey);
+                throw IntegrationApiException;
+            }
+
+            if (stuAcadProg.Student == null || string.IsNullOrEmpty(stuAcadProg.Student.Id))
+            {
+                IntegrationApiExceptionAddError("Student.id is a required property", "Missing.Required.Property", guid, stprKey);
+            }
+
+            if (stuAcadProg.ProgramToReplace == null || string.IsNullOrEmpty(stuAcadProg.ProgramToReplace.Id))
+            {
+                IntegrationApiExceptionAddError("ProgramToReplace.id is a required property", "Missing.Required.Property", guid, stprKey);
+            }
+
+            if (stuAcadProg.NewProgram == null || string.IsNullOrEmpty(stuAcadProg.NewProgram.Detail.Id))
+            {
+                IntegrationApiExceptionAddError("NewProgram.id is a required property", "Missing.Required.Property", guid, stprKey);
+            }
+
+            if(stuAcadProg.ProgramToReplace != null && stuAcadProg.NewProgram != null && !string.IsNullOrEmpty(stuAcadProg.ProgramToReplace.Id) && 
+                !string.IsNullOrEmpty(stuAcadProg.NewProgram.Detail.Id) && stuAcadProg.ProgramToReplace.Id.Equals(stuAcadProg.NewProgram.Detail.Id, StringComparison.OrdinalIgnoreCase))
+            {
+                IntegrationApiExceptionAddError(string.Format("The program to replace: {0} can not be the same as the new program: {1}.", stuAcadProg.ProgramToReplace.Id, stuAcadProg.NewProgram.Detail.Id), 
+                    "Missing.Required.Property", guid, stprKey);
+            }
+
+            //validate curriculumObjective
+            if (stuAcadProg.NewProgram != null && stuAcadProg.NewProgram.CurriculumObjective == null || stuAcadProg.NewProgram != null && stuAcadProg.NewProgram.CurriculumObjective == Dtos.EnumProperties.StudentAcademicProgramsCurriculumObjective2.NotSet)
+            {
+                IntegrationApiExceptionAddError("The curriculumObjective must be set to 'matriculated' for any new student programs.", "Missing.Required.Property", guid, stprKey);
+            }
+            else
+            {
+                if (stuAcadProg.NewProgram != null && stuAcadProg.NewProgram.CurriculumObjective != Dtos.EnumProperties.StudentAcademicProgramsCurriculumObjective2.Matriculated)
+                {
+                    IntegrationApiExceptionAddError("CurriculumObjective must be set to 'matriculated' for any new or updated student programs.", "Validation.Exception", guid, stprKey);
+                }
+            }
+
+            if (stuAcadProg.NewProgram != null && stuAcadProg.NewProgram.StartOn == null)
+            {
+                IntegrationApiExceptionAddError("StartOn is required to create or update a matriculated student program.", "Missing.Required.Property", guid, stprKey);
+
+            }
+            if (stuAcadProg.NewProgram != null && stuAcadProg.NewProgram.EnrollmentStatus == null || stuAcadProg.NewProgram != null && (stuAcadProg.NewProgram.EnrollmentStatus != null && 
+                string.IsNullOrEmpty(stuAcadProg.NewProgram.EnrollmentStatus.EnrollStatus.ToString())))
+            {
+                IntegrationApiExceptionAddError("EnrollmentStatus is a required property", "Missing.Required.Property", guid, stprKey);
+            }
+            //check end date is not before start date
+            if (stuAcadProg.NewProgram != null && stuAcadProg.NewProgram.EndOn != null && stuAcadProg.NewProgram.EndOn < stuAcadProg.NewProgram.StartOn)
+            {
+                IntegrationApiExceptionAddError("EndOn cannot be before startOn.", "Validation.Exception", guid, stprKey);
+
+            }
+
+            //check end date is not before start date
+            if (stuAcadProg.NewProgram != null && stuAcadProg.NewProgram.EndOn != null && stuAcadProg.NewProgram.EndOn < stuAcadProg.NewProgram.StartOn)
+            {
+                IntegrationApiExceptionAddError("EndOn cannot be before startOn.", "Validation.Exception", guid, stprKey);
+
+            }
+            //check exptected graduation date is not before start date
+            if (stuAcadProg.NewProgram != null && stuAcadProg.NewProgram.ExpectedGraduationDate != null && stuAcadProg.NewProgram.ExpectedGraduationDate < stuAcadProg.NewProgram.StartOn)
+            {
+                IntegrationApiExceptionAddError("ExpectedGraduationDate cannot be before startOn.", "Validation.Exception", guid, stprKey);
+            }
+            
+            //if the enrollment status is inactive, then the end date is required.
+            if (stuAcadProg.NewProgram != null && stuAcadProg.NewProgram.EndOn == null && stuAcadProg.NewProgram.EnrollmentStatus != null && stuAcadProg.NewProgram.EnrollmentStatus.EnrollStatus == Dtos.EnrollmentStatusType.Inactive)
+            {
+                IntegrationApiExceptionAddError("EndOn is required for the enrollment status of inactive.", "Validation.Exception", guid, stprKey);
+            }
+            // the status of complete is not valid for PUT/POST
+            if (stuAcadProg.NewProgram != null && stuAcadProg.NewProgram.EnrollmentStatus != null && stuAcadProg.NewProgram.EnrollmentStatus.EnrollStatus == Dtos.EnrollmentStatusType.Complete)
+            {
+                IntegrationApiExceptionAddError("Enrollment status of complete is not supported. Graduation processing can only be invoked directly in Colleague.", "Validation.Exception", guid, stprKey);
+            }
+
+            //the status of active cannot have end date
+            if (stuAcadProg.NewProgram != null && stuAcadProg.NewProgram.EndOn != null && stuAcadProg.NewProgram.EnrollmentStatus != null && stuAcadProg.NewProgram.EnrollmentStatus.EnrollStatus == Dtos.EnrollmentStatusType.Active)
+            {
+                IntegrationApiExceptionAddError("EndOn is not valid for the enrollment status of active.", "Validation.Exception", guid, stprKey);
+            }
+            //check the credentials body is good.
+            if (stuAcadProg.NewProgram != null && stuAcadProg.NewProgram.Credentials != null && stuAcadProg.NewProgram.Credentials.Count > 0)
+            {
+                foreach (var cred in stuAcadProg.NewProgram.Credentials)
+                {
+                    if (cred == null || string.IsNullOrEmpty(cred.Id))
+                    {
+                        IntegrationApiExceptionAddError("Credential id is a required field when credentials are in the message body.", "Missing.Required.Property", guid, stprKey);
+                    }
+                }
+            }
+
+            //check displines body is good.
+            if (stuAcadProg.NewProgram != null && stuAcadProg.NewProgram.Disciplines != null && stuAcadProg.NewProgram.Disciplines.Count > 0)
+            {
+                foreach (var dis in stuAcadProg.NewProgram.Disciplines)
+                {
+                    if (dis.Discipline == null)
+                    {
+                        IntegrationApiExceptionAddError("Discipline is a required property when disciplines are in the message body.", "Missing.Required.Property", guid, stprKey);
+
+                    }
+                    else if (string.IsNullOrEmpty(dis.Discipline.Id))
+                    {
+                        IntegrationApiExceptionAddError("Discipline id is a required property when discipline is in the message body.", "Missing.Required.Property", guid, stprKey);
+
+                    }
+
+                }
+            }
+            // Throw errors
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+        }
+
+        /// <summary>
+        /// Convert DTO to Entity.
+        /// </summary>
+        /// <param name="stuAcadProgramsDto"></param>
+        /// <param name="empty"></param>
+        /// <param name="bypassCache"></param>
+        /// <returns></returns>
+        private async Task<StudentAcademicProgram> ConvertStudentAcademicProgramReplacementsDtoToEntityAsync(StudentAcademicProgramReplacements stuAcadProgramsDto, string stprKey, string inst, bool bypassCache)
+        {
+            // handle empty guid
+            var guid = string.Empty;
+            var depts = await this.GetDepartmentsAsync(bypassCache);
+            if (!string.Equals(stuAcadProgramsDto.Id, Guid.Empty.ToString()))
+            {
+                guid = stuAcadProgramsDto.Id;
+            }
+
+            var startDate = new DateTime();
+            if (stuAcadProgramsDto.NewProgram != null && stuAcadProgramsDto.NewProgram.StartOn != null)
+            {
+                startDate = Convert.ToDateTime(stuAcadProgramsDto.NewProgram.StartOn.Value.ToString("yyyy-MM-dd"));
+            }
+
+            var studentId = string.Empty;
+            try
+            {
+                studentId = await _personRepository.GetPersonIdFromGuidAsync(stuAcadProgramsDto.Student.Id);
+                if (string.IsNullOrEmpty(studentId))
+                {
+                    IntegrationApiExceptionAddError("Student.id is not a valid GUID for persons.", "GUID.Not.Found", stuAcadProgramsDto.Id, stprKey);
+                }
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError("Student.id is not a valid GUID for persons.", "GUID.Not.Found", stuAcadProgramsDto.Id, stprKey);
+            }
+
+            if ((!string.IsNullOrEmpty(studentId)) && (await _personRepository.IsCorpAsync(studentId)))
+            {
+                IntegrationApiExceptionAddError("Student.id is not a valid GUID for persons.", "GUID.Not.Found", stuAcadProgramsDto.Id, stprKey);
+            }
+
+            #region program to replace
+            string programToRepl = string.Empty;
+            try
+            {
+                var progToRepl = await _studentAcademicProgramRepository.GetStudentAcademicProgramByGuid2Async(stuAcadProgramsDto.ProgramToReplace.Id, inst);
+                if(progToRepl == null)
+                {
+                    IntegrationApiExceptionAddError("ProgramToReplace.Id does not match the program ID for the program to replace.", "GUID.Not.Found", stuAcadProgramsDto.Id, stprKey);
+                    throw IntegrationApiException;
+                }
+                programToRepl = progToRepl.ProgramCode;
+
+                if (!string.IsNullOrEmpty(progToRepl.Status))
+                {
+                    var enrollStatuses = await this.GetEnrollmentStatusesAsync(bypassCache);
+
+                    if(enrollStatuses != null)
+                    {
+                        var status = enrollStatuses.FirstOrDefault(st => st.Code.Equals(progToRepl.Status, StringComparison.OrdinalIgnoreCase) && 
+                                     st.EnrollmentStatusType == Domain.Student.Entities.EnrollmentStatusType.active);
+                        if(status == null && !progToRepl.StartDate.HasValue)
+                        {
+                            IntegrationApiExceptionAddError(string.Format("The student's program {0} is not in an active state and may not be replaced.", stuAcadProgramsDto.ProgramToReplace.Id), 
+                                "GUID.Not.Found", stuAcadProgramsDto.Id, stprKey);
+                        }
+                    }
+                }
+
+
+            }
+            catch (Exception)
+            {
+                IntegrationApiExceptionAddError("ProgramToReplace.Id does not match the program ID for the programToReplace.", "GUID.Not.Found", stuAcadProgramsDto.Id, stprKey);
+                throw IntegrationApiException;
+            }
+            #endregion program to replace
+
+            //get program code
+            var programCode = "";
+            try
+            {
+                programCode = ConvertGuidToCode((await this.GetAcademicProgramsAsync(bypassCache)), stuAcadProgramsDto.NewProgram.Detail.Id);
+                //make sure the programToReplace and new program is not the same.
+                if (!string.IsNullOrEmpty(programCode) && !string.IsNullOrEmpty(programToRepl) && programCode == programToRepl)
+                {
+                    IntegrationApiExceptionAddError(string.Format("The programToReplace and newProgram refer to the same academic program - {0}. Replacement not permitted.", programCode),  "Validation.Exception", stuAcadProgramsDto.Id, stprKey);
+                }
+            }
+            catch (Exception)
+            {
+                IntegrationApiExceptionAddError("Program.Id is not a valid GUID for academic-programs.", "GUID.Not.Found", stuAcadProgramsDto.Id, stprKey);
+            }
+            if (string.IsNullOrEmpty(programCode))
+            {
+                IntegrationApiExceptionAddError("Program.Id is not a valid GUID for academic-programs.", "GUID.Not.Found", stuAcadProgramsDto.Id, stprKey);
+            }
+
+            //get catalog code
+            var catalogCode = string.Empty;
+            if (stuAcadProgramsDto.NewProgram != null && stuAcadProgramsDto.NewProgram.AcademicCatalog != null)
+            {
+                if (string.IsNullOrEmpty(stuAcadProgramsDto.NewProgram.AcademicCatalog.Id))
+                {
+                    IntegrationApiExceptionAddError("Catalog.id is a required property when catalog is in the message body.", "Missing.Required.Property", guid, stprKey);
+
+                }
+                try
+                {
+                    catalogCode = await ConvertCatalogGuidToCode(stuAcadProgramsDto.NewProgram.AcademicCatalog.Id, bypassCache);
+                }
+                catch (Exception e)
+                {
+                    IntegrationApiExceptionAddError("Catalog.Id is not a valid GUID for academic-catalogs.", "GUID.Not.Found", stuAcadProgramsDto.Id, stprKey);
+                }
+
+            }
+
+            ////check the status
+            if (stuAcadProgramsDto.NewProgram != null && stuAcadProgramsDto.NewProgram.EnrollmentStatus != null && stuAcadProgramsDto.NewProgram.EnrollmentStatus.Detail != null)
+            {
+                if (string.IsNullOrEmpty(stuAcadProgramsDto.NewProgram.EnrollmentStatus.Detail.Id))
+                {
+                    IntegrationApiExceptionAddError("EnrollmentStatus.Detail.Id is a required field when detail is in the message body", "Missing.Required.Property", guid, stprKey);
+                }
+            }
+
+            //get enrollment status
+            string enrollStat = string.Empty;
+            try
+            {
+                var enrollStatuses = await this.GetEnrollmentStatusesAsync(bypassCache);
+
+                if (enrollStatuses != null)
+                {
+                    //if there is detail. id is required.
+                    if (stuAcadProgramsDto.NewProgram != null && stuAcadProgramsDto.NewProgram.EnrollmentStatus != null)
+                    {
+
+                        if (stuAcadProgramsDto.NewProgram.EnrollmentStatus.Detail != null && !(string.IsNullOrEmpty(stuAcadProgramsDto.NewProgram.EnrollmentStatus.Detail.Id)))
+                        {
+                            Domain.Student.Entities.EnrollmentStatus enrollStatus = enrollStatuses.FirstOrDefault(ct => ct.Guid == stuAcadProgramsDto.NewProgram.EnrollmentStatus.Detail.Id);
+
+                            if (enrollStatus != null)
+                            {
+                                //check if the detail id and the enumerable match
+                                if (!enrollStatus.EnrollmentStatusType.ToString().ToUpperInvariant().Equals(stuAcadProgramsDto.NewProgram.EnrollmentStatus.EnrollStatus.ToString().ToUpperInvariant()))
+                                {
+                                    IntegrationApiExceptionAddError(string.Concat(" The enrollment Status of '", enrollStatus.EnrollmentStatusType.ToString(), "' referred by the detail ID '", 
+                                        stuAcadProgramsDto.NewProgram.EnrollmentStatus.Detail.Id.ToString(), "' is different from that in the payload."), "Validation.Exception", stuAcadProgramsDto.Id, stprKey);
+                                }
+                                enrollStat = enrollStatus.Code;
+                            }
+                            else
+                            {
+                                IntegrationApiExceptionAddError("EnrollmentStatus.Detail.Id not a valid GUID for enrollment-statuses.", "GUID.Not.Found", stuAcadProgramsDto.Id, stprKey);
+
+                            }
+                        }
+                        else //if the detail is not there, we will just pass the status to the transaction where we will figure out the status
+                        {
+                            switch (stuAcadProgramsDto.NewProgram.EnrollmentStatus.EnrollStatus)
+                            {
+                                case Dtos.EnrollmentStatusType.Active:
+                                    enrollStat = stuAcadProgramsDto.NewProgram.EnrollmentStatus.EnrollStatus.ToString();
+                                    break;
+                                case Dtos.EnrollmentStatusType.Complete:
+                                    IntegrationApiExceptionAddError("EnrollmentStatus.status of complete is not supported.", "Validation.Exception", stuAcadProgramsDto.Id, stprKey);
+                                    break;
+                                case Dtos.EnrollmentStatusType.Inactive:
+                                    enrollStat = stuAcadProgramsDto.NewProgram.EnrollmentStatus.EnrollStatus.ToString();
+                                    break;
+
+                            }
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                IntegrationApiExceptionAddError("Unable to retrieve enrollment-statuses.", "GUID.Not.Found", stuAcadProgramsDto.Id, stprKey);
+            }
+
+            // Throw errors
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+
+            //create entity
+            Ellucian.Colleague.Domain.Student.Entities.StudentAcademicProgram studentProgEntity = null;
+            try
+            {
+                studentProgEntity = new Ellucian.Colleague.Domain.Student.Entities.StudentAcademicProgram(studentId, programCode, catalogCode, guid, startDate, enrollStat);
+                studentProgEntity.StudentProgramToReplace = string.Concat(studentId, "*", programToRepl);
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(ex.Message, "Missing.Required.Property", guid, stprKey);
+                throw IntegrationApiException;
+            }
+            //get Program Owner
+            if (stuAcadProgramsDto.NewProgram != null &&  stuAcadProgramsDto.NewProgram.ProgramOwner != null)
+            {
+                if (string.IsNullOrEmpty(stuAcadProgramsDto.NewProgram.ProgramOwner.Id))
+                {
+                    IntegrationApiExceptionAddError("ProgramOwner.id is a required property when programOwner is in the message body.", "Missing.Required.Property", guid, stprKey);
+                }
+                else
+                {
+                    var department = (depts).FirstOrDefault(s => s.Guid == stuAcadProgramsDto.NewProgram.ProgramOwner.Id);
+                    if (department == null)
+                    {
+                        IntegrationApiExceptionAddError("ProgramOwner.id is not a valid GUID for educational-institution-units.", "GUID.Not.Found", stuAcadProgramsDto.Id, stprKey);
+                    }
+                    else
+                    {
+                        studentProgEntity.DepartmentCode = department.Code;
+                    }
+                }
+            }
+
+            //get location code
+            if (stuAcadProgramsDto.NewProgram != null && stuAcadProgramsDto.NewProgram.Site != null)
+            {
+                var locationCode = string.Empty;
+                if (string.IsNullOrEmpty(stuAcadProgramsDto.NewProgram.Site.Id))
+                {
+                    IntegrationApiExceptionAddError("Site.id is a required property when site is in the message body.", "Missing.Required.Property", guid, stprKey);
+                }
+                else
+                {
+                    try
+                    {
+                        locationCode = ConvertGuidToCode((await this.GetLocationsAsync(bypassCache)), stuAcadProgramsDto.NewProgram.Site.Id);
+                    }
+                    catch
+                    {
+                        //we will catch this in next statement.
+                    }
+                    if (string.IsNullOrEmpty(locationCode) && stuAcadProgramsDto.NewProgram.Site.Id != null)
+                    {
+                        IntegrationApiExceptionAddError("Site.id is not a valid GUID for sites.", "GUID.Not.Found", stuAcadProgramsDto.Id, stprKey);
+                    }
+                    else
+                    {
+                        studentProgEntity.Location = locationCode;
+                    }
+                }
+            }
+
+            //get academic level code
+
+            if (stuAcadProgramsDto.NewProgram != null && stuAcadProgramsDto.NewProgram.AcademicLevel != null)
+            {
+                var academicLevel = string.Empty;
+                if (string.IsNullOrEmpty(stuAcadProgramsDto.NewProgram.AcademicLevel.Id))
+                {
+                    IntegrationApiExceptionAddError("AcademicLevel.id is a required property when site is in the message body.", "Missing.Required.Property", guid, stprKey);
+                }
+                else
+                {
+                    try
+                    {
+                        academicLevel = await ConvertAcademicLevelGuidToCode(stuAcadProgramsDto.NewProgram.AcademicLevel.Id, bypassCache);
+                    }
+                    catch
+                    {
+                        //we will issue exception in the next statement.
+                    }
+                    if (string.IsNullOrEmpty(academicLevel) && stuAcadProgramsDto.NewProgram.AcademicLevel.Id != null)
+                    {
+                        IntegrationApiExceptionAddError("AcademicLevel.id is not a valid GUID for academic-levels.", "GUID.Not.Found", stuAcadProgramsDto.Id, stprKey);
+                    }
+                    else
+                    {
+                        studentProgEntity.AcademicLevelCode = academicLevel;
+                    }
+                }
+            }
+
+            //get various academic periods
+            if (stuAcadProgramsDto.NewProgram != null && stuAcadProgramsDto.NewProgram.AcademicPeriods != null)
+            {
+                var termEntities = await this.GetTermsAsync(bypassCache);
+                if (stuAcadProgramsDto.NewProgram.AcademicPeriods.Starting != null)
+                {
+                    var termCode = string.Empty;
+                    if (string.IsNullOrEmpty(stuAcadProgramsDto.NewProgram.AcademicPeriods.Starting.Id))
+                    {
+                        IntegrationApiExceptionAddError("AcademicPeriods.starting.id is a required property when academicPeriods.starting is in the message body.", "Missing.Required.Property", guid, stprKey);
+                    }
+                    else
+                    {
+                        try
+                        {
+                            termCode = ConvertGuidToCode(await GetAcademicPeriods(bypassCache), stuAcadProgramsDto.NewProgram.AcademicPeriods.Starting.Id);
+                        }
+                        catch
+                        {
+                            //we will throw exception below.
+                        }
+                        if (string.IsNullOrEmpty(termCode) && stuAcadProgramsDto.NewProgram.AcademicPeriods.Starting.Id != null)
+                        {
+                            IntegrationApiExceptionAddError("AcademicPeriods.starting.id is not a valid GUID for academic-periods.", "GUID.Not.Found", stuAcadProgramsDto.Id, stprKey);
+                        }
+                        else
+                        {
+                            studentProgEntity.StartTerm = termCode;
+                        }
+                    }
+                }
+
+                if (stuAcadProgramsDto.NewProgram != null && stuAcadProgramsDto.NewProgram.AcademicPeriods != null && stuAcadProgramsDto.NewProgram.AcademicPeriods.ExpectedGraduation != null)
+                {
+                    var termCode = string.Empty;
+                    if (string.IsNullOrEmpty(stuAcadProgramsDto.NewProgram.AcademicPeriods.ExpectedGraduation.Id))
+                    {
+                        IntegrationApiExceptionAddError("AcademicPeriods.expectedGraduation.id is a required property when academicPeriods.expectedGraduation is in the message body.", "Missing.Required.Property", guid, stprKey);
+                    }
+                    else
+                    {
+                        try
+                        {
+                            termCode = ConvertGuidToCode(await GetAcademicPeriods(bypassCache), stuAcadProgramsDto.NewProgram.AcademicPeriods.ExpectedGraduation.Id);
+                        }
+                        catch
+                        {
+                            //we will catch it in next statement
+                        }
+                        if (string.IsNullOrEmpty(termCode) && stuAcadProgramsDto.NewProgram.AcademicPeriods.ExpectedGraduation.Id != null)
+                        {
+                            IntegrationApiExceptionAddError("AcademicPeriods.expectedGraduation.id is not a valid GUID for academic-periods.", "GUID.Not.Found", stuAcadProgramsDto.Id, stprKey);
+                        }
+                        else
+                        {
+                            //If the expectedGraduationDate is present in the payload validate that the date fits the term start/end date.
+                            if (stuAcadProgramsDto.NewProgram.ExpectedGraduationDate.HasValue)
+                            {
+                                var termInfo = termEntities.FirstOrDefault(term => term.Code == termCode);
+                                if (termInfo != null)
+                                {
+                                    if ((termInfo.StartDate != null && stuAcadProgramsDto.NewProgram.ExpectedGraduationDate < termInfo.StartDate) || (termInfo.EndDate != null && 
+                                        stuAcadProgramsDto.NewProgram.ExpectedGraduationDate > termInfo.EndDate))
+                                    {
+                                        IntegrationApiExceptionAddError(string.Concat("Expected graduation academicPeriod ID '", stuAcadProgramsDto.NewProgram.AcademicPeriods.ExpectedGraduation.Id.ToString(), "' " +
+                                            "is not valid for the Expected Graduation date of ", Convert.ToDateTime(stuAcadProgramsDto.NewProgram.ExpectedGraduationDate).ToString("yyyy-MM-dd")), "Validation.Exception", 
+                                            stuAcadProgramsDto.Id, stprKey);
+                                    }
+                                }
+                            }
+                            studentProgEntity.AnticipatedCompletionTerm = termCode;
+                        }
+                    }
+                }
+
+            }
+
+            // get degrees and certificate from the credentials in the DTO
+            if (stuAcadProgramsDto.NewProgram != null && stuAcadProgramsDto.NewProgram.Credentials != null && stuAcadProgramsDto.NewProgram.Credentials.Any())
+            {
+                var degrees = new List<string>();
+                var credentials = await GetAcadCredentialsAsync(bypassCache);
+                foreach (var cred in stuAcadProgramsDto.NewProgram.Credentials)
+                {
+                    var credential = credentials.FirstOrDefault(d => d.Guid == cred.Id);
+                    if (credential == null)
+                    {
+                        //throw new ArgumentException(string.Concat(" Credential ID '", cred.Id.ToString(), "' was not found. Valid Credential is required."));
+                        IntegrationApiExceptionAddError("Credentials.id is not a valid GUID for academic-credentials.", "GUID.Not.Found", stuAcadProgramsDto.Id, stprKey);
+                    }
+                    else
+                    {
+                        var type = credential.AcademicCredentialType;
+                        switch (type)
+                        {
+                            case Domain.Base.Entities.AcademicCredentialType.Certificate:
+                                studentProgEntity.AddCcds(credential.Code);
+                                break;
+                            case Domain.Base.Entities.AcademicCredentialType.Degree:
+                                degrees.Add(credential.Code);
+                                break;
+                            //produce error if honor codes are included
+                            case Domain.Base.Entities.AcademicCredentialType.Honorary:
+                                IntegrationApiExceptionAddError("Credentials.id of type honor is not supported.", "Validation.Exception", stuAcadProgramsDto.Id, stprKey);
+                                break;
+
+                            case Domain.Base.Entities.AcademicCredentialType.Diploma:
+                                IntegrationApiExceptionAddError("Credentials.id of type diploma is not supported.", "Validation.Exception", stuAcadProgramsDto.Id, stprKey);
+                                break;
+                        }
+                    }
+
+                }
+
+                //if there is more than one degree in the payload, produce an error
+                if (degrees.Count > 1)
+                {
+                    IntegrationApiExceptionAddError("Credentials array cannot have more than one degree.", "Validation.Exception", stuAcadProgramsDto.Id, stprKey);
+                }
+                else
+                {
+                    studentProgEntity.DegreeCode = degrees.FirstOrDefault();
+                }
+            }
+
+            //get the displicines which included majors, minors, specializations
+            if (stuAcadProgramsDto.NewProgram != null && stuAcadProgramsDto.NewProgram.Disciplines != null && stuAcadProgramsDto.NewProgram.Disciplines.Any())
+            {
+                var disciplines = await GetAcademicDisciplinesAsync(bypassCache);
+                foreach (var dis in stuAcadProgramsDto.NewProgram.Disciplines)
+                {
+
+                    if (string.IsNullOrEmpty(dis.Discipline.Id))
+                    {
+                        IntegrationApiExceptionAddError("Disciplines.discipline.id is a required property when disciplines.discipline is in the message body.", "Missing.Required.Property", guid, stprKey);
+                    }
+                    var discipline = disciplines.FirstOrDefault(d => d.Guid == dis.Discipline.Id);
+                    if (discipline == null)
+                    {
+                        IntegrationApiExceptionAddError("Disciplines.discipline.id is not a valid GUID for academic-disciplines.", "GUID.Not.Found", stuAcadProgramsDto.Id, stprKey);
+                    }
+                    else
+                    {
+                        switch (discipline.AcademicDisciplineType)
+                        {
+                            //getting majors
+                            case Domain.Base.Entities.AcademicDisciplineType.Major:
+                                studentProgEntity.AddMajors(discipline.Code, dis.StartOn, dis.EndOn);
+                                break;
+                            //getting minors
+                            case Domain.Base.Entities.AcademicDisciplineType.Minor:
+                                studentProgEntity.AddMinors(discipline.Code, dis.StartOn, dis.EndOn);
+                                break;
+                            //getting specializations
+                            case Domain.Base.Entities.AcademicDisciplineType.Concentration:
+                                studentProgEntity.AddSpecializations(discipline.Code, dis.StartOn, dis.EndOn);
+                                break;
+                        }
+                    }
+                    //check end date is not before start date
+                    if (dis.EndOn != null && dis.EndOn < dis.StartOn)
+                    {
+                        IntegrationApiExceptionAddError("The requested discipline " + dis.Discipline.Id + " endOn must be on or after the discipline startOn.", "Validation.Exception", stuAcadProgramsDto.Id, stprKey);
+
+                    }
+
+                }
+
+            }
+            //process End date
+            if (stuAcadProgramsDto.NewProgram != null && stuAcadProgramsDto.NewProgram.EndOn != null)
+            {
+                studentProgEntity.EndDate = Convert.ToDateTime(stuAcadProgramsDto.NewProgram.EndOn.Value.ToString("yyyy-MM-dd"));
+            }
+
+            //process expected graduation date
+            if (stuAcadProgramsDto.NewProgram != null && stuAcadProgramsDto.NewProgram.ExpectedGraduationDate.HasValue)
+            {
+                studentProgEntity.AnticipatedCompletionDate = Convert.ToDateTime(stuAcadProgramsDto.NewProgram.ExpectedGraduationDate.Value.ToString("yyyy-MM-dd"));
+            }
+
+            // process admit status
+            if (stuAcadProgramsDto.NewProgram != null && stuAcadProgramsDto.NewProgram.AdmissionClassification != null)
+            {
+                var admitStatus = string.Empty;
+                if (stuAcadProgramsDto.NewProgram.AdmissionClassification.AdmissionCategory == null)
+                {
+                    IntegrationApiExceptionAddError("AdmissionClassification.admissionCategory is a required property when admissionClassification is in the message body.", "Missing.Required.Property", guid, stprKey);
+                }
+                else
+                {
+                    if (string.IsNullOrEmpty(stuAcadProgramsDto.NewProgram.AdmissionClassification.AdmissionCategory.Id))
+                    {
+                        IntegrationApiExceptionAddError("AdmissionClassification.admissionCategory.id is a required property when admissionClassification.admissionCategory is in the message body.", "Missing.Required.Property", guid, stprKey);
+                    }
+                    else
+                    {
+                        try
+                        {
+                            admitStatus = await ConvertAdmissionClassificationGuidToCode(stuAcadProgramsDto.NewProgram.AdmissionClassification.AdmissionCategory.Id, bypassCache);
+                        }
+                        catch
+                        {
+                            //we will throw the exception in tne next statement
+                        }
+                        if (string.IsNullOrEmpty(admitStatus) && stuAcadProgramsDto.NewProgram.AdmissionClassification.AdmissionCategory.Id != null)
+                        {
+                            IntegrationApiExceptionAddError("AdmissionClassification.admissionCategory.id is not a valid GUID for admission-populations.", "GUID.Not.Found", stuAcadProgramsDto.Id, stprKey);
+                        }
+                        else
+                        {
+                            studentProgEntity.AdmitStatus = admitStatus;
+                        }
+                    }
+                }
+
+            }
+            // Throw errors
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+            return studentProgEntity;
         }
 
         /// <summary>
@@ -2174,7 +2837,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (stuAcadProg == null)
             {
 
-                IntegrationApiExceptionAddError("Must provide a StudentAcademicProgramsSubmissions object for update", "sectionRegistrations", guid, stprKey);
+                IntegrationApiExceptionAddError("Must provide a StudentAcademicProgramsSubmissions object for update", "Missing.Required.Property", guid, stprKey);
                 throw IntegrationApiException;
             }
 
@@ -2295,6 +2958,21 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         }
 
         /// <summary>
+        /// Helper method to determine if the user has permission to create and update Student Academic Programs.
+        /// </summary>
+        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
+        private void CheckCreateStudentAcademicProgramReplacementPermission()
+        {
+            bool hasPermission = HasPermission(StudentPermissionCodes.ReplaceStudentAcademicProgram);
+
+            // User is not allowed to create or update courses without the appropriate permissions
+            if (!hasPermission)
+            {
+                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to create or update Student Academic Programs.");
+            }
+        }
+
+        /// <summary>
         /// Helper method to determine if the user has permission to view Student Academic Programs.
         /// </summary>
         /// <exception><see cref="IntegrationApiException">IntegrationApiException</see></exception>
@@ -2381,7 +3059,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
                 if (stuAcadProgramsDto.EnrollmentStatus.Detail != null && !(string.IsNullOrEmpty(stuAcadProgramsDto.EnrollmentStatus.Detail.Id)))
                 {
-                    EnrollmentStatus enrollStatus = enrollStatuses.FirstOrDefault(ct => ct.Guid == stuAcadProgramsDto.EnrollmentStatus.Detail.Id);
+                    Domain.Student.Entities.EnrollmentStatus enrollStatus = enrollStatuses.FirstOrDefault(ct => ct.Guid == stuAcadProgramsDto.EnrollmentStatus.Detail.Id);
 
                     if (enrollStatus != null)
                     {
@@ -2516,17 +3194,17 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     var type = credential.AcademicCredentialType;
                     switch (type)
                     {
-                        case AcademicCredentialType.Certificate:
+                        case Domain.Base.Entities.AcademicCredentialType.Certificate:
                             studentProgEntity.AddCcds(credential.Code);
                             break;
-                        case AcademicCredentialType.Degree:
+                        case Domain.Base.Entities.AcademicCredentialType.Degree:
                             degrees.Add(credential.Code);
                             break;
                         //produce error if honor codes are included
-                        case AcademicCredentialType.Honorary:
+                        case Domain.Base.Entities.AcademicCredentialType.Honorary:
                             throw new ArgumentException(credential.Guid + " is an Honor code. Honor code is not allowed during Student Academic Program.");
 
-                        case AcademicCredentialType.Diploma:
+                        case Domain.Base.Entities.AcademicCredentialType.Diploma:
                             throw new ArgumentException(credential.Guid + " is a Diploma. Diploma is not allowed during Student Academic Program.");
                     }
 
@@ -2565,15 +3243,15 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         switch (discipline.AcademicDisciplineType)
                         {
                             //getting majors
-                            case AcademicDisciplineType.Major:
+                            case Domain.Base.Entities.AcademicDisciplineType.Major:
                                 studentProgEntity.AddMajors(discipline.Code);
                                 break;
                             //getting minors
-                            case AcademicDisciplineType.Minor:
+                            case Domain.Base.Entities.AcademicDisciplineType.Minor:
                                 studentProgEntity.AddMinors(discipline.Code);
                                 break;
                             //getting specializations
-                            case AcademicDisciplineType.Concentration:
+                            case Domain.Base.Entities.AcademicDisciplineType.Concentration:
                                 studentProgEntity.AddSpecializations(discipline.Code);
                                 break;
                         }
@@ -2751,7 +3429,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
                     if (stuAcadProgramsDto.EnrollmentStatus.Detail != null && !(string.IsNullOrEmpty(stuAcadProgramsDto.EnrollmentStatus.Detail.Id)))
                     {
-                        EnrollmentStatus enrollStatus = enrollStatuses.FirstOrDefault(ct => ct.Guid == stuAcadProgramsDto.EnrollmentStatus.Detail.Id);
+                        Domain.Student.Entities.EnrollmentStatus enrollStatus = enrollStatuses.FirstOrDefault(ct => ct.Guid == stuAcadProgramsDto.EnrollmentStatus.Detail.Id);
 
                         if (enrollStatus != null)
                         {
@@ -2941,17 +3619,17 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     var type = credential.AcademicCredentialType;
                     switch (type)
                     {
-                        case AcademicCredentialType.Certificate:
+                        case Domain.Base.Entities.AcademicCredentialType.Certificate:
                             studentProgEntity.AddCcds(credential.Code);
                             break;
-                        case AcademicCredentialType.Degree:
+                        case Domain.Base.Entities.AcademicCredentialType.Degree:
                             degrees.Add(credential.Code);
                             break;
                         //produce error if honor codes are included
-                        case AcademicCredentialType.Honorary:
+                        case Domain.Base.Entities.AcademicCredentialType.Honorary:
                             throw new ArgumentException(credential.Guid + " is an Honor code. Honor code is not allowed during Student Academic Program.");
 
-                        case AcademicCredentialType.Diploma:
+                        case Domain.Base.Entities.AcademicCredentialType.Diploma:
                             throw new ArgumentException(credential.Guid + " is a Diploma. Diploma is not allowed during Student Academic Program.");
                     }
 
@@ -2990,15 +3668,15 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         switch (discipline.AcademicDisciplineType)
                         {
                             //getting majors
-                            case AcademicDisciplineType.Major:
+                            case Domain.Base.Entities.AcademicDisciplineType.Major:
                                 studentProgEntity.AddMajors(discipline.Code);
                                 break;
                             //getting minors
-                            case AcademicDisciplineType.Minor:
+                            case Domain.Base.Entities.AcademicDisciplineType.Minor:
                                 studentProgEntity.AddMinors(discipline.Code);
                                 break;
                             //getting specializations
-                            case AcademicDisciplineType.Concentration:
+                            case Domain.Base.Entities.AcademicDisciplineType.Concentration:
                                 studentProgEntity.AddSpecializations(discipline.Code);
                                 break;
                         }
@@ -3197,7 +3875,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
                         if (stuAcadProgramsDto.EnrollmentStatus.Detail != null && !(string.IsNullOrEmpty(stuAcadProgramsDto.EnrollmentStatus.Detail.Id)))
                         {
-                            EnrollmentStatus enrollStatus = enrollStatuses.FirstOrDefault(ct => ct.Guid == stuAcadProgramsDto.EnrollmentStatus.Detail.Id);
+                            Domain.Student.Entities.EnrollmentStatus enrollStatus = enrollStatuses.FirstOrDefault(ct => ct.Guid == stuAcadProgramsDto.EnrollmentStatus.Detail.Id);
 
                             if (enrollStatus != null)
                             {
@@ -3430,18 +4108,18 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         var type = credential.AcademicCredentialType;
                         switch (type)
                         {
-                            case AcademicCredentialType.Certificate:
+                            case Domain.Base.Entities.AcademicCredentialType.Certificate:
                                 studentProgEntity.AddCcds(credential.Code);
                                 break;
-                            case AcademicCredentialType.Degree:
+                            case Domain.Base.Entities.AcademicCredentialType.Degree:
                                 degrees.Add(credential.Code);
                                 break;
                             //produce error if honor codes are included
-                            case AcademicCredentialType.Honorary:
+                            case Domain.Base.Entities.AcademicCredentialType.Honorary:
                                 IntegrationApiExceptionAddError("Credentials.id of type honor is not supported.", "Validation.Exception", stuAcadProgramsDto.Id, stprKey);
                                 break;
 
-                            case AcademicCredentialType.Diploma:
+                            case Domain.Base.Entities.AcademicCredentialType.Diploma:
                                 IntegrationApiExceptionAddError("Credentials.id of type diploma is not supported.", "Validation.Exception", stuAcadProgramsDto.Id, stprKey);
                                 break;
                         }
@@ -3481,15 +4159,15 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         switch (discipline.AcademicDisciplineType)
                         {
                             //getting majors
-                            case AcademicDisciplineType.Major:
+                            case Domain.Base.Entities.AcademicDisciplineType.Major:
                                 studentProgEntity.AddMajors(discipline.Code, dis.StartOn, dis.EndOn);
                                 break;
                             //getting minors
-                            case AcademicDisciplineType.Minor:
+                            case Domain.Base.Entities.AcademicDisciplineType.Minor:
                                 studentProgEntity.AddMinors(discipline.Code, dis.StartOn, dis.EndOn);
                                 break;
                             //getting specializations
-                            case AcademicDisciplineType.Concentration:
+                            case Domain.Base.Entities.AcademicDisciplineType.Concentration:
                                 studentProgEntity.AddSpecializations(discipline.Code, dis.StartOn, dis.EndOn);
                                 break;
                         }
@@ -3883,7 +4561,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 catch (Exception ex)
                 {
-                    IntegrationApiExceptionAddError(ex.Message, "institutionId");
+                    IntegrationApiExceptionAddError(ex.Message, "Bad.Data");
                     throw IntegrationApiException;
                 }
                 Tuple<IEnumerable<StudentAcademicProgram>, int> studentAcadProgEntitiesTuple = null;
@@ -4230,16 +4908,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             switch (type)
             {
                 //this is the CCD return
-                case AcademicCredentialType.Certificate:
+                case Domain.Base.Entities.AcademicCredentialType.Certificate:
                     returnTuple = new Tuple<string, string>(credentialObject.Code, string.Empty);
                     break;
                 //this is the DEGREE return
-                case AcademicCredentialType.Degree:
+                case Domain.Base.Entities.AcademicCredentialType.Degree:
                     returnTuple = new Tuple<string, string>(string.Empty, credentialObject.Code);
                     break;
-                case AcademicCredentialType.Honorary:
+                case Domain.Base.Entities.AcademicCredentialType.Honorary:
                     throw new ArgumentException(credential + " is an Honor code. Honor code is not allowed to use as a credential filter Student Academic Program.");
-                case AcademicCredentialType.Diploma:
+                case Domain.Base.Entities.AcademicCredentialType.Diploma:
                     throw new ArgumentException(credential + " is a Diploma. Diploma is not allowed to use as a credential filter on Student Academic Program.");
                 default:
                     throw new ArgumentException(credential + " was not found, invalid filter criteria for credential on Student Academic Program");
@@ -4274,16 +4952,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 switch (type)
                 {
                     //this is the CCD return
-                    case AcademicCredentialType.Certificate:
+                    case Domain.Base.Entities.AcademicCredentialType.Certificate:
                         returnTuples.Add(new Tuple<string, string>(credentialObject.Code, string.Empty));
                         break;
                     //this is the DEGREE return
-                    case AcademicCredentialType.Degree:
+                    case Domain.Base.Entities.AcademicCredentialType.Degree:
                         returnTuples.Add(new Tuple<string, string>(string.Empty, credentialObject.Code));
                         break;
-                    case AcademicCredentialType.Honorary:
+                    case Domain.Base.Entities.AcademicCredentialType.Honorary:
                         throw new ArgumentException(sources + " is an Honor code. Honor code is not allowed to use as a credential filter Student Academic Program.");
-                    case AcademicCredentialType.Diploma:
+                    case Domain.Base.Entities.AcademicCredentialType.Diploma:
                         throw new ArgumentException(sources + " is a Diploma. Diploma is not allowed to use as a credential filter on Student Academic Program.");
                     default:
                         throw new ArgumentException(sources + " was not found, invalid filter criteria for credential on Student Academic Program");

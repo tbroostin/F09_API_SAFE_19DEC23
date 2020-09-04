@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Ellucian.Colleague.Dtos.ColleagueFinance</RootNamespace>
     <AssemblyName>Ellucian.Colleague.Dtos.ColleagueFinance</AssemblyName>
-    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
   </PropertyGroup>
@@ -54,15 +54,41 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ApprovalDocument.cs" />
+    <Compile Include="ApprovalDocumentRequest.cs" />
+    <Compile Include="ApprovalDocumentResponse.cs" />
+    <Compile Include="ApprovalItem.cs" />
     <Compile Include="BaseGlComponentQueryCriteria.cs" />
     <Compile Include="BudgetAdjustmentPendingApprovalSummary.cs" />
     <Compile Include="BudgetAdjustmentApproval.cs" />
+    <Compile Include="DocumentApproval.cs" />
+    <Compile Include="DocumentApprovalRequest.cs" />
+    <Compile Include="DocumentApprovalResponse.cs" />
     <Compile Include="NewLineItemDefaultAdditionalInformation.cs" />
+    <Compile Include="ProcurementAcceptReturnItemInformationRequest.cs" />
+    <Compile Include="ProcurementAcceptReturnItemInformationResponse.cs" />
+    <Compile Include="ProcurementItemInformation.cs" />
+    <Compile Include="ProcurementItemInformationResponse.cs" />
+    <Compile Include="ProcurementReturnReason.cs" />
+    <Compile Include="PurchaseOrderCreateUpdateRequest.cs" />
+    <Compile Include="PurchaseOrderCreateUpdateResponse.cs" />
+    <Compile Include="LineItemStatus.cs" />
     <Compile Include="PurchaseOrderLinkSummary.cs" />
+    <Compile Include="VoucherVoidRequest.cs" />
+    <Compile Include="PurchaseOrderVoidRequest.cs" />
+    <Compile Include="VoucherVoidResponse.cs" />
+    <Compile Include="PurchaseOrderVoidResponse.cs" />
+    <Compile Include="VendorCommodity.cs" />
+    <Compile Include="VendorDefaultTaxFormInfo.cs" />
+    <Compile Include="VoucherWebConfiguration.cs" />
+    <Compile Include="RequisitionDeleteRequest.cs" />
+    <Compile Include="RequisitionDeleteResponse.cs" />
     <Compile Include="RequisitionLinkSummary.cs" />
+    <Compile Include="ShipViaCode.cs" />
     <Compile Include="TaxForm.cs" />
     <Compile Include="ModifyRequisition.cs" />
     <Compile Include="FixedAssetsFlag.cs" />
+    <Compile Include="LineItemSummary.cs" />
     <Compile Include="ProcurementCommodityCode.cs" />
     <Compile Include="FinanceQuery.cs" />
     <Compile Include="FinanceQueryComponentSortCriteria.cs" />
@@ -110,6 +136,7 @@
     <Compile Include="ColleagueFinanceWebConfiguration.cs" />
     <Compile Include="PurchaseOrderSummary.cs" />
     <Compile Include="PurchasingDefaults.cs" />
+    <Compile Include="ReceiveProcurementSummary.cs" />
     <Compile Include="RecurringVoucher.cs" />
     <Compile Include="JournalEntry.cs" />
     <Compile Include="JournalEntryItem.cs" />
@@ -131,14 +158,20 @@
     <Compile Include="RequisitionSummary.cs" />
     <Compile Include="ShipToCode.cs" />
     <Compile Include="TodaysFiscalYear.cs" />
+    <Compile Include="VendorContactSummary.cs" />
+    <Compile Include="VendorInfo.cs" />
     <Compile Include="VendorSearchCriteria.cs" />
     <Compile Include="VendorSearchResult.cs" />
+    <Compile Include="VendorsVoucherSearchResult.cs" />
     <Compile Include="Voucher.cs" />
     <Compile Include="Voucher2.cs" />
     <Compile Include="BudgetEntryStatus.cs" />
+    <Compile Include="VoucherCreateUpdateRequest.cs" />
+    <Compile Include="VoucherCreateUpdateResponse.cs" />
     <Compile Include="VoucherStatus.cs" />
     <Compile Include="PurchaseOrder.cs" />
     <Compile Include="PurchaseOrderStatus.cs" />
+    <Compile Include="VoucherSummary.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

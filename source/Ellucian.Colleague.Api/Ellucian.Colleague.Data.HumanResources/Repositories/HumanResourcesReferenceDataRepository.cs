@@ -61,6 +61,20 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         }
 
         /// <summary>
+        /// Gets the Beneficiary categories/types
+        /// </summary>
+        /// <returns>Returns list of Beneficiary Categories</returns>
+        public async Task<IEnumerable<BeneficiaryCategory>> GetBeneficiaryCategoriesAsync()
+        {
+            return await GetOrAddToCacheAsync<IEnumerable<BeneficiaryCategory>>("AllBeneficiaryCategories",
+               async () =>
+               {
+                   return await GetValcodeAsync<BeneficiaryCategory>("HR", "BENEFICIARY.TYPES",
+                       category => new BeneficiaryCategory(category.ValInternalCodeAssocMember, category.ValExternalRepresentationAssocMember, category.ValActionCode1AssocMember));
+               }, Level1CacheTimeoutValue);
+        }
+
+        /// <summary>
         /// Gets an unfiltered list of benefit and deduction records mapped to domain entities
         /// </summary>
         /// <returns></returns>
@@ -952,8 +966,18 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                    ? cl.ValInternalCodeAssocMember : cl.ValExternalRepresentationAssocMember), cl.ValActionCode1AssocMember), bypassCache: ignoreCache);
         }
 
-
-
+        /// <summary>
+        /// Get all TimeUnits from HR.VALCODES
+        /// </summary>
+        /// <param name="ignoreCache"></param>
+        /// <returns>Collection of TimeUnits Entities</returns>
+        public async Task<IEnumerable<TimeUnits>> GetTimeUnitsAsync(bool ignoreCache)
+        {
+            return await GetGuidValcodeAsync<TimeUnits>("HR", "TIME.UNITS",
+               (cl, g) => new TimeUnits(g, cl.ValInternalCodeAssocMember, (string.IsNullOrEmpty(cl.ValExternalRepresentationAssocMember)
+                   ? cl.ValInternalCodeAssocMember : cl.ValExternalRepresentationAssocMember), cl.ValActionCode1AssocMember), bypassCache: ignoreCache);
+        }
+        
         /// <summary>
         /// Get a collection of Assignment Contract Types
         /// </summary>

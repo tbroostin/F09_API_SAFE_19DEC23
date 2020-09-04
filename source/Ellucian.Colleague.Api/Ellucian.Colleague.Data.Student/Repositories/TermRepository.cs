@@ -401,7 +401,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             if (codeCache == null)
             {
                 var allCodesNoCache = await GetAsync(true);
-                if (allCodesCache == null)
+                if ( allCodesNoCache == null)
                 {
                     throw new RepositoryException(string.Concat("No Guid found, Entity:'TERMS', Record ID:'", code, "'"));
                 }

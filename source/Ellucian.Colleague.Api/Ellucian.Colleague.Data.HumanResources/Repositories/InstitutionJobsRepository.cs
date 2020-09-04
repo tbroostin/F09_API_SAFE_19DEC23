@@ -335,6 +335,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 {
                     if (perpos != null)
                     {
+                        string errorKey = string.Empty;
+                        string guid = string.Empty;
                         try
                         {
                             var positionRecord = positionRecords.Where(p => p.Recordkey == perpos.PerposPositionId);
@@ -352,6 +354,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                             Dictionary <string, string> ldmGuidCollection = new Dictionary<string, string>();
                             foreach (var ldmGuidRecord in ldmGuidRecords)
                             {
+                                errorKey = ldmGuidRecord.LdmGuidPrimaryKey;
+                                guid = ldmGuidRecord.Recordkey;
                                 ldmGuidCollection.Add(ldmGuidRecord.LdmGuidPrimaryKey, ldmGuidRecord.Recordkey);
                             }
                           
@@ -362,7 +366,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                         }
                         catch (Exception e)
                         {
-                            LogDataError("InstitutionJobs", perpos.Recordkey, perpos, e, e.Message);
+                            var errorMessage = string.Format("Record key: {0}. {1}", errorKey, "Duplicate GUID found. To resolve errors, run Remove Duplicate GUIDs (RDGU) for PERPOS.");
+                            LogDataError("InstitutionJobs", perpos.Recordkey, perpos, e, errorMessage);
                         }
                     }
                 }

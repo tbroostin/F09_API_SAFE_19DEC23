@@ -42,6 +42,9 @@ namespace Ellucian.Web.Http.Filters
                     //read json data out
                     var responseMessage = actionExecutedContext.Response.Content.ReadAsStringAsync().Result;
 
+                    //set variable to get X-Media-Type value
+                    IEnumerable<string> customMediaTypeValue = null;
+
                     //get the extended data froim the request context
                     object extendedData;
                     actionExecutedContext.Request.Properties.TryGetValue("ExtendedData", out extendedData);
@@ -97,8 +100,20 @@ namespace Ellucian.Web.Http.Filters
                         //if extensions were applied set content first
                         if (extensionsApplied)
                         {
-                            actionExecutedContext.Response.Content = new ObjectContent<IEnumerable<dynamic>>(jsonToModify, new JsonMediaTypeFormatter(), @"application/json");
+                            if (isEnumerable)
+                            {
+                                actionExecutedContext.Response.Content = new ObjectContent<IEnumerable<dynamic>>(jsonToModify, new JsonMediaTypeFormatter(), @"application/json");
+                            }
+                            else
+                            {
+                                actionExecutedContext.Response.Content = new ObjectContent<dynamic>(jsonToModify, new JsonMediaTypeFormatter(), @"application/json");
+                            }
                         }
+
+                        var requestedContentTypeval = actionExecutedContext.ActionContext.RequestContext.RouteData.Values["RequestedContentType"];
+                        if ((requestedContentTypeval != null) && (!actionExecutedContext.Response.Content.Headers.TryGetValues(CustomMediaType, out customMediaTypeValue)))
+                            actionExecutedContext.Response.Content.Headers.Add(CustomMediaType, requestedContentTypeval.ToString());
+
                         return base.OnActionExecutedAsync(actionExecutedContext, cancellationToken);
                     }
 
@@ -129,10 +144,8 @@ namespace Ellucian.Web.Http.Filters
                     }
 
                     var RequestedContentTypeval = actionExecutedContext.ActionContext.RequestContext.RouteData.Values["RequestedContentType"];
-                    IEnumerable<string> customMediaTypeValue = null;
                     if ((RequestedContentTypeval != null) && (!actionExecutedContext.Response.Content.Headers.TryGetValues(CustomMediaType, out customMediaTypeValue)))
                         actionExecutedContext.Response.Content.Headers.Add(CustomMediaType, RequestedContentTypeval.ToString());
-
                 }
             }
             return base.OnActionExecutedAsync(actionExecutedContext, cancellationToken);

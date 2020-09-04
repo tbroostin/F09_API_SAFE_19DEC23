@@ -1,17 +1,12 @@
-﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Coordination.HumanResources.Services;
-using Ellucian.Colleague.Domain.Base.Tests;
+using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
-using Ellucian.Colleague.Domain.HumanResources.Tests;
-using Ellucian.Colleague.Dtos;
-using Ellucian.Web.Adapters;
-using Ellucian.Web.Http.TestUtil;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
@@ -20,6 +15,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
     public class EmploymentStatusEndingReasonServiceTests : HumanResourcesServiceTestsSetup
     {
         public Mock<IHumanResourcesReferenceDataRepository> referenceDataRepository;
+        private IConfigurationRepository _configurationRepository;
+        private Mock<IConfigurationRepository> _configurationRepositoryMock;
         EmploymentStatusEndingReasonService employmentStatusEndingReasonService;
         List<Dtos.EmploymentStatusEndingReason> employmentStatusEndingReasonDtoList = new List<Dtos.EmploymentStatusEndingReason>();
         List<Domain.HumanResources.Entities.EmploymentStatusEndingReason> employmentStatusEndingReasonEntityList = new List<Domain.HumanResources.Entities.EmploymentStatusEndingReason>();
@@ -28,16 +25,20 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         [TestInitialize]
         public void Initialize()
         {
+            _configurationRepositoryMock = new Mock<IConfigurationRepository>();
+            _configurationRepository = _configurationRepositoryMock.Object;
             MockInitialize();
             BuildData();
             referenceDataRepository = new Mock<IHumanResourcesReferenceDataRepository>();
             employmentStatusEndingReasonService = new EmploymentStatusEndingReasonService(referenceDataRepository.Object, adapterRegistryMock.Object,
-                employeeCurrentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
+                employeeCurrentUserFactory, _configurationRepository, roleRepositoryMock.Object, loggerMock.Object);
         }
 
         [TestCleanup]
         public void Cleanup()
         {
+            _configurationRepository = null;
+            _configurationRepositoryMock = null;
             referenceDataRepository = null;
             employmentStatusEndingReasonService = null;
             employmentStatusEndingReasonDtoList = null;

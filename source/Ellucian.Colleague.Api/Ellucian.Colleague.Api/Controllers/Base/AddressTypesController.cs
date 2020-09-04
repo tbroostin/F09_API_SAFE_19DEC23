@@ -1,18 +1,12 @@
-﻿// Copyright 2015-16 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Web;
 using System.Web.Http;
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base.Services;
-using Ellucian.Colleague.Domain.Base.Repositories;
-using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
@@ -51,11 +45,12 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         }
 
 
-        /// <remarks>FOR USE WITH ELLUCIAN HeDM</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
         /// Retrieves all address types.
         /// </summary>
-        /// <returns>All <see cref="Dtos.AddressType">AddressType</see> objects.</returns>
+        /// <returns>All AddressType objects.</returns>
+        [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.AddressType2>> GetAddressTypesAsync()
         {
@@ -70,6 +65,15 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
             try
             {
+                var addressType = await _addressTypeService.GetAddressTypesAsync(bypassCache);
+
+                if (addressType != null && addressType.Any())
+                {
+                    AddEthosContextProperties(await _addressTypeService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _addressTypeService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              addressType.Select(a => a.Id).ToList()));
+                }
+
                 return await _addressTypeService.GetAddressTypesAsync(bypassCache);
             }
             catch (Exception ex)
@@ -79,16 +83,21 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
         }
 
-        /// <remarks>FOR USE WITH ELLUCIAN HeDM</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
         /// Retrieves an address type by GUID.
         /// </summary>
         /// /// <param name="id">Unique ID representing the Address Type to get</param>
-        /// <returns>An <see cref="Dtos.AddressType">AddressType</see> object.</returns>
+        /// <returns>An AddressType object.</returns>
+        [HttpGet, EedmResponseFilter]
         public async Task<Ellucian.Colleague.Dtos.AddressType2> GetAddressTypeByIdAsync(string id)
         {
             try
             {
+                AddEthosContextProperties(
+                    await _addressTypeService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                    await _addressTypeService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                        new List<string>() { id }));
                 return await _addressTypeService.GetAddressTypeByGuidAsync(id);
             }
             catch (Exception ex)
@@ -99,7 +108,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         }
 
         #region Delete Methods
-        /// <remarks>FOR USE WITH ELLUCIAN HeDM</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
         /// Delete an existing Address type in Colleague (Not Supported)
         /// </summary>
@@ -114,7 +123,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         #endregion
 
         #region Put Methods
-        /// <remarks>FOR USE WITH ELLUCIAN HeDM</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
         /// Update a Address Type Record in Colleague (Not Supported)
         /// </summary>
@@ -128,7 +137,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         #endregion
 
         #region Post Methods
-        /// <remarks>FOR USE WITH ELLUCIAN HeDM</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
         /// Create a Address Type Record in Colleague (Not Supported)
         /// </summary>

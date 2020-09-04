@@ -15,8 +15,13 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
         {
             return Task.FromResult<ColleagueFinanceWebConfiguration>(new ColleagueFinanceWebConfiguration()
                 {
-                   DefaultEmailType ="PRI",
-                   PurchasingDefaults= new PurchasingDefaults()
+                DefaultEmailType = "PRI",
+                CfWebReqAllowMiscVendor = true,
+                CfWebReqDesiredDays = 7,
+                CfWebReqGlRequired = true,
+                DefaultAPTypeCode = "AP",
+                DefaultTaxCodes = new List<string> {"GS" ,"PS", "FL1"},
+                PurchasingDefaults = new PurchasingDefaults()
                    {
                        DefaultShipToCode= "MC"
                    }

@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base.Adapters;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Coordination.Base.Tests.UserFactories;
@@ -294,6 +294,155 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     Assert.AreEqual("The encryption key is not active", e.Message);
                     throw;
                 }
+            }
+        }
+
+        [TestClass]
+        public class QueryAttachmentsAsyncTests : AttachmentServiceTests
+        {
+            private AttachmentEntityAdapter attachmentEntityToDtoAdapter;
+            private AttachmentDtoAdapter attachmentDtoToEntityAdapter;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                BaseInitialize();
+                attachmentRepositoryMock.Setup(r => r.QueryAttachmentsAsync(It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<DateTime?>(),
+                    It.IsAny<DateTime?>(), It.IsAny<IEnumerable<string>>()))
+                    .Returns<bool, string, DateTime, DateTime, IEnumerable<string>>((a, b, c, d, e) => testRepository.QueryAttachmentsAsync(a, b, c, d, e));
+                attachmentCollectionRepositoryMock.Setup(r => r.GetAttachmentCollectionsByIdAsync(It.IsAny<IEnumerable<string>>()))
+                    .Returns<IEnumerable<string>>((ids) => testCollectionRepository.GetAttachmentCollectionsByIdAsync(ids));
+                attachmentEntityToDtoAdapter = new AttachmentEntityAdapter(adapterRegistryMock.Object, loggerMock.Object);
+                adapterRegistryMock.Setup(a => a.GetAdapter<Attachment, Dtos.Base.Attachment>()).Returns(attachmentEntityToDtoAdapter);
+                attachmentDtoToEntityAdapter = new AttachmentDtoAdapter(adapterRegistryMock.Object, loggerMock.Object);
+                adapterRegistryMock.Setup(a => a.GetAdapter<Dtos.Base.Attachment, Attachment>()).Returns(attachmentDtoToEntityAdapter);
+                encrRepositoryMock.Setup(e => e.GetKeyAsync(fakeEncrKey.Id)).ReturnsAsync(fakeEncrKey);
+                BuildAttachmentService();
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                BaseCleanup();
+            }
+
+            [TestMethod]
+            public async Task AttachmentService_QueryAttachmentsAsyncSuccess()
+            {
+                var criteria = new Dtos.Base.AttachmentSearchCriteria()
+                {
+                    IncludeActiveAttachmentsOnly = false,
+                    ModifiedStartDate = new DateTime(2020, 3, 1),
+                    ModifiedEndDate = new DateTime(2020, 3, 30),
+                    Owner = string.Empty,
+                    CollectionIds = new List<string>() { "COLLECTION1" }
+                };
+
+                var expected = new List<string>()
+                {
+                    "297c4460-5955-4be5-a6f0-c28f786c4894",
+                    "f7bbd166-aa4b-4bc6-b343-de0cace2cfa2",
+                    "ccf84c4a-351f-481f-8646-28154d0867c8",
+                    "c7f5ba50-3383-464a-8ebf-8e92389ce7b9",
+                    "fd8ba0eb-67b5-43b9-b719-d7a078541d9a",
+                    "c239b1f1-8883-4a74-bf8c-3b853a46c782"
+                };
+                var actual = await attachmentService.QueryAttachmentsAsync(criteria);
+
+                Assert.AreEqual(expected.Count(), actual.Count());
+                foreach (var expectedId in expected)
+                {
+                    Assert.AreEqual(expectedId, actual.ToList().Where(a => a.Id == expectedId).First().Id);
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task AttachmentService_QueryAttachmentsAsyncNoCriteria()
+            {
+                await attachmentService.QueryAttachmentsAsync(null);
+            }
+
+            [TestMethod]
+            public async Task AttachmentService_QueryAttachmentsAsyncNoCollections()
+            {
+                var criteria = new Dtos.Base.AttachmentSearchCriteria()
+                {
+                    CollectionIds = new List<string>() { }
+                };
+
+                string expected = "Collection ID(s) are required to query attachments";
+                string actual = string.Empty;
+
+                try
+                {
+                    await attachmentService.QueryAttachmentsAsync(criteria);
+                }
+                catch (ArgumentException e)
+                {
+                    actual = e.Message;
+                }
+
+                Assert.AreEqual(expected, actual);
+            }           
+
+            [TestMethod]
+            public async Task AttachmentService_QueryAttachmentsStartDateAndEndDateRequired()
+            {
+                string expected = "Start and end date are required to query attachments";
+                string actual = string.Empty;
+
+                // start date without end date
+                var criteria = new Dtos.Base.AttachmentSearchCriteria()
+                {
+                    CollectionIds = new List<string>() { "COLLECTION1" },
+                    ModifiedStartDate = new DateTime(2020, 3, 24)
+                };
+
+                try
+                {
+                    await attachmentService.QueryAttachmentsAsync(criteria);
+                }
+                catch (ArgumentException e)
+                {
+                    actual = e.Message;
+                }
+
+                Assert.AreEqual(expected, actual);
+
+                // end date without start date
+                criteria = new Dtos.Base.AttachmentSearchCriteria()
+                {
+                    CollectionIds = new List<string>() { "COLLECTION1" },
+                    ModifiedEndDate = new DateTime(2020, 3, 24)
+                };
+
+                actual = string.Empty;
+
+                try
+                {
+                    await attachmentService.QueryAttachmentsAsync(criteria);
+                }
+                catch (ArgumentException e)
+                {
+                    actual = e.Message;
+                }
+
+                Assert.AreEqual(expected, actual);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentOutOfRangeException))]
+            public async Task AttachmentService_QueryAttachmentsStartDateAfterEndDate()
+            {
+                var criteria = new Dtos.Base.AttachmentSearchCriteria()
+                {
+                    CollectionIds = new List<string>() { "COLLECTION1" },
+                    ModifiedStartDate = new DateTime(2020, 3, 24),
+                    ModifiedEndDate = new DateTime(2020, 3, 23),
+                };
+
+                await attachmentService.QueryAttachmentsAsync(criteria);
             }
         }
 

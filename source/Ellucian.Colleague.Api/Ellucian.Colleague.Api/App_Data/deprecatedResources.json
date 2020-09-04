@@ -87,9 +87,10 @@
                     "sunsetOn": "2021-12-31",
                     "description": "V16.0.0 moves program, level and school properties to student-academic-programs, moves POST/PUT functionality to admission-applications-submissions, updates withdrawnOn from date-time to date format, and replaces source property with applicationSource to provide more robust support for admission applications."
                 }
-            }        
+            }
         ]
     },
+
     {
         "name": "courses",
         "representations": [
@@ -133,7 +134,7 @@
                     "deprecatedOn": "2019-12-31",
                     "sunsetOn": "2021-12-31",
                     "description": "V1.0.0 of person-external-education replaces external-education which better represents external education a person has received."
-                }               
+                }
             }
         ]
     },
@@ -168,6 +169,7 @@
             }
         ]
     },
+
     {
         "name": "meal-plan-assignments",
         "representations": [
@@ -214,7 +216,7 @@
                 }
             }
         ]
-    },   
+    },
     {
         "name": "person-contacts",
         "representations": [
@@ -243,6 +245,21 @@
                     "deprecatedOn": "2019-09-30",
                     "sunsetOn": "2021-10-01",
                     "description": "Merged with personal-relationships v16.0.0."
+                }
+            }
+        ]
+    },
+    {
+        "name": "personal-relationship-initiation-process",
+        "representations": [
+            {
+                "X-Media-Type": "application/vnd.hedtech.integration.v1.0.0+json",
+                "methods": [
+                    "post"
+                ],
+                "deprecationNotice": {
+                    "deprecatedOn": "2020-06-03",
+                    "description": "V1.0.0 is being released for Beta testing."
                 }
             }
         ]
@@ -507,7 +524,7 @@
     },
     {
         "name": "student-aptitude-assessments",
-        "representations": [           
+        "representations": [
             {
                 "X-Media-Type": "application/vnd.hedtech.integration.v11+json",
                 "methods": [
@@ -530,6 +547,76 @@
                     "deprecatedOn": "2019-09-30",
                     "sunsetOn": "2021-10-01",
                     "description": "V16.0.0 updates assessedOn from date-time to date format."
+                }
+            }
+        ]
+    },
+    {
+        "name": "student-charges",
+        "representations": [
+            {
+                "X-Media-Type": "application/vnd.hedtech.integration.v6+json",
+                "methods": [
+                    "get",
+                    "post"
+                ],
+                "deprecationNotice": {
+                    "deprecatedOn": "2020-03-31",
+                    "sunsetOn": "2022-03-31",
+                    "description": "Version 16.0.0 replaces this version of student-charges and removes the chargeType property, updates the academicPeriod property to required, and adds functionality for tax reporting."
+                }
+            },
+            {
+                "X-Media-Type": "application/vnd.hedtech.integration.v11+json",
+                "methods": [
+                    "get",
+                    "post"
+                ],
+                "deprecationNotice": {
+                    "deprecatedOn": "2020-03-31",
+                    "sunsetOn": "2022-03-31",
+                    "description": "Version 16.0.0 replaces this version of student-charges and removes the chargeType property, updates the academicPeriod property to required, and adds functionality for tax reporting."
+                }
+            }
+        ]
+    },
+    {
+        "name": "student-payments",
+        "representations": [
+            {
+                "X-Media-Type": "application/vnd.hedtech.integration.v6+json",
+                "methods": [
+                    "get",
+                    "post"
+                ],
+                "deprecationNotice": {
+                    "deprecatedOn": "2020-03-31",
+                    "sunsetOn": "2022-03-31",
+                    "description": "Version 16.0.0 replaces this version of student-payments and updates the academicPeriod property to required and adds functionality for tax reporting."
+                }
+            },
+            {
+                "X-Media-Type": "application/vnd.hedtech.integration.v11+json",
+                "methods": [
+                    "get",
+                    "post"
+                ],
+                "deprecationNotice": {
+                    "deprecatedOn": "2020-03-31",
+                    "sunsetOn": "2022-03-31",
+                    "description": "Version 16.0.0 replaces this version of student-payments and updates the academicPeriod property to required and adds functionality for tax reporting."
+                }
+            },
+            {
+                "X-Media-Type": "application/vnd.hedtech.integration.v11.1.0+json",
+                "methods": [
+                    "get",
+                    "post"
+                ],
+                "deprecationNotice": {
+                    "deprecatedOn": "2020-03-31",
+                    "sunsetOn": "2022-03-31",
+                    "description": "Version 16.0.0 replaces this version of student-payments and updates the academicPeriod property to required and adds functionality for tax reporting."
                 }
             }
         ]

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Controllers.Student;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base;
@@ -98,7 +98,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 };
 
                 // controller that will be tested using mock objects
-                sectionsController = new SectionsController(sectionCoordinationService, null, null, logger);
+                sectionsController = new SectionsController(sectionCoordinationService, null, null, null, logger);
                 sectionsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
                 sectionsController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
             }
@@ -196,7 +196,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 };
 
                 // controller that will be tested using mock objects
-                sectionsController = new SectionsController(sectionCoordinationService, null, null, logger);
+                sectionsController = new SectionsController(sectionCoordinationService, null, null, null, logger);
                 sectionsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
                 sectionsController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
             }
@@ -299,7 +299,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 };
 
                 // controller that will be tested using mock objects
-                sectionsController = new SectionsController(sectionCoordinationService, null, null, logger);
+                sectionsController = new SectionsController(sectionCoordinationService, null, null, null, logger);
                 sectionsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
                 sectionsController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
             }
@@ -403,7 +403,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 });
 
                 // controller that will be tested using mock objects
-                sectionsController = new SectionsController(sectionCoordinationService, null, null, logger);
+                sectionsController = new SectionsController(sectionCoordinationService, null, null, null, logger);
                 sectionsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
                 sectionsController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
             }
@@ -505,7 +505,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 sectionWaitlistSetting.ShowRating = true;
 
                 // controller that will be tested using mock objects
-                sectionsController = new SectionsController(sectionCoordinationService, null, null, logger);
+                sectionsController = new SectionsController(sectionCoordinationService, null, null, null, logger);
                 sectionsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
                 sectionsController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
             }
@@ -607,7 +607,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 studentSectionwaitlistInfo.SectionWaitlistConfig.ShowRating = true;
 
                 // controller that will be tested using mock objects
-                sectionsController = new SectionsController(sectionCoordinationService, null, null, logger);
+                sectionsController = new SectionsController(sectionCoordinationService, null, null, null, logger);
                 sectionsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
                 sectionsController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
             }
@@ -706,7 +706,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
 
                 // controller that will be tested using mock objects
-                sectionsController = new SectionsController(sectionCoordinationService, null, null, logger);
+                sectionsController = new SectionsController(sectionCoordinationService, null, null, null, logger);
                 sectionsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
                 sectionsController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
             }
@@ -816,7 +816,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 logger = new Mock<ILogger>().Object;
 
                 // controller that will be tested using mock objects
-                sectionsController = new SectionsController(sectionCoordinationService, null, null, logger);
+                sectionsController = new SectionsController(sectionCoordinationService, null, null, null, logger);
             }
 
             [TestCleanup]
@@ -919,7 +919,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 sectionCoordinationServiceMock.Setup(s => s.ImportGradesAsync(It.IsAny<Ellucian.Colleague.Dtos.Student.SectionGrades>()))
                    .Returns(Task.FromResult<IEnumerable<SectionGradeResponse>>(GetSectionGradeResponse()));
 
-                sectionsController = new SectionsController(sectionCoordinationService, null, null, logger);
+                sectionsController = new SectionsController(sectionCoordinationService, null, null, null, logger);
             }
 
             [TestCleanup]
@@ -1011,7 +1011,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 sectionCoordinationServiceMock.Setup(s => s.ImportGrades2Async(It.IsAny<Ellucian.Colleague.Dtos.Student.SectionGrades2>()))
                    .Returns(Task.FromResult<IEnumerable<SectionGradeResponse>>(GetSectionGradeResponse()));
 
-                sectionsController = new SectionsController(sectionCoordinationService, null, null, logger);
+                sectionsController = new SectionsController(sectionCoordinationService, null, null, null, logger);
             }
 
             [TestCleanup]
@@ -1142,7 +1142,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 sectionCoordinationServiceMock.Setup(s => s.ImportGrades3Async(It.IsAny<Ellucian.Colleague.Dtos.Student.SectionGrades3>()))
                     .Returns(Task.FromResult<IEnumerable<SectionGradeResponse>>(GetSectionGradeResponse()));
 
-                sectionsController = new SectionsController(sectionCoordinationService, null, null, logger);
+                sectionsController = new SectionsController(sectionCoordinationService, null, null, null, logger);
             }
 
             [TestCleanup]
@@ -1333,7 +1333,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 sectionCoordinationServiceMock.Setup(s => s.ImportGrades4Async(It.IsAny<Ellucian.Colleague.Dtos.Student.SectionGrades3>()))
                     .Returns(Task.FromResult<IEnumerable<SectionGradeResponse>>(GetSectionGradeResponse()));
 
-                sectionsController = new SectionsController(sectionCoordinationService, null, null, logger);
+                sectionsController = new SectionsController(sectionCoordinationService, null, null, null, logger);
             }
 
             [TestCleanup]
@@ -1524,7 +1524,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 sectionCoordinationServiceMock.Setup(s => s.ImportIlpGrades1Async(It.IsAny<Ellucian.Colleague.Dtos.Student.SectionGrades3>()))
                     .Returns(Task.FromResult<IEnumerable<SectionGradeResponse>>(GetSectionGradeResponse()));
 
-                sectionsController = new SectionsController(sectionCoordinationService, null, null, logger);
+                sectionsController = new SectionsController(sectionCoordinationService, null, null, null, logger);
             }
 
             [TestCleanup]
@@ -1712,7 +1712,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 registrationGroupServiceMock = new Mock<IRegistrationGroupService>();
                 registrationGroupService = registrationGroupServiceMock.Object;
                 logger = new Mock<ILogger>().Object;
-                sectionsController = new SectionsController(null, null, registrationGroupService, logger);
+                sectionsController = new SectionsController(null, null, registrationGroupService, null, logger);
             }
 
             [TestCleanup]
@@ -1940,7 +1940,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 }
 
                 // mock controller
-                sectionsController = new SectionsController(sectionCoordinationService, null, null, logger);
+                sectionsController = new SectionsController(sectionCoordinationService, null, null, null, logger);
             }
 
             [TestCleanup]
@@ -2210,7 +2210,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 }
 
                 // mock controller
-                sectionsController = new SectionsController(sectionCoordinationService, null, null, logger)
+                sectionsController = new SectionsController(sectionCoordinationService, null, null, null, logger)
                 {
                     Request = new HttpRequestMessage()
                 };
@@ -2539,7 +2539,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
                 sectionCoordinationServiceMock.Setup(s => s.GetDataPrivacyListByApi(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(new List<string>());
                 // mock controller
-                sectionsController = new SectionsController(sectionCoordinationService, null, null, logger)
+                sectionsController = new SectionsController(sectionCoordinationService, null, null, null, logger)
                 {
                     Request = new HttpRequestMessage()
                 };
@@ -2814,7 +2814,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
 
                 // mock controller
-                sectionsController = new SectionsController(sectionCoordinationService, null, null, logger);
+                sectionsController = new SectionsController(sectionCoordinationService, null, null, null, logger);
             }
 
             [TestCleanup]
@@ -3093,7 +3093,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
                 sectionCoordinationServiceMock.Setup(s => s.GetDataPrivacyListByApi(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(new List<string>());
                 // mock controller
-                sectionsController = new SectionsController(sectionCoordinationService, null, null, logger)
+                sectionsController = new SectionsController(sectionCoordinationService, null, null, null, logger)
                 {
                     Request = new HttpRequestMessage()
                 };
@@ -3388,7 +3388,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             }
 
             // mock controller
-            sectionsController = new SectionsController(sectionCoordinationService, null, null, logger);
+            sectionsController = new SectionsController(sectionCoordinationService, null, null, null, logger);
         }
 
         [TestCleanup]
@@ -3658,7 +3658,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             }
 
             // mock controller
-            sectionsController = new SectionsController(sectionCoordinationService, null, null, logger)
+            sectionsController = new SectionsController(sectionCoordinationService, null, null, null, logger)
             {
                 Request = new HttpRequestMessage()
             };
@@ -3975,7 +3975,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             }
 
             // mock controller
-            sectionsController = new SectionsController(adapterRegistry, sectionRepository, sectionCoordinationService, null, null, logger);
+            sectionsController = new SectionsController(adapterRegistry, sectionRepository, sectionCoordinationService, null, null, null,logger);
         }
 
         [TestCleanup]
@@ -4247,7 +4247,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             }
 
             // mock controller
-            sectionsController = new SectionsController(adapterRegistry, sectionRepository, sectionCoordinationService, null, null, logger)
+            sectionsController = new SectionsController(adapterRegistry, sectionRepository, sectionCoordinationService, null, null, null,logger)
             {
                 Request = new HttpRequestMessage()
             };
@@ -4577,7 +4577,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             sectionCoordinationServiceMock.Setup(s => s.GetDataPrivacyListByApi(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(new List<string>());
             // mock controller
-            sectionsController = new SectionsController(sectionCoordinationService, null, null, logger)
+            sectionsController = new SectionsController(sectionCoordinationService, null, null, null, logger)
             {
                 Request = new HttpRequestMessage()
             };
@@ -4852,7 +4852,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
 
             // mock controller
-            sectionsController = new SectionsController(sectionCoordinationService, null, null, logger);
+            sectionsController = new SectionsController(sectionCoordinationService, null, null, null, logger);
         }
 
         [TestCleanup]
@@ -5132,7 +5132,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             sectionCoordinationServiceMock.Setup(s => s.GetDataPrivacyListByApi(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(new List<string>());
             // mock controller
-            sectionsController = new SectionsController(sectionCoordinationService, null, null, logger)
+            sectionsController = new SectionsController(sectionCoordinationService, null, null, null, logger)
             {
                 Request = new HttpRequestMessage()
             };
@@ -5922,7 +5922,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             sectionCoordinationServiceMock.Setup(s => s.GetDataPrivacyListByApi(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(new List<string>());
             // mock controller
-            sectionsController = new SectionsController(sectionCoordinationService, null, null, logger)
+            sectionsController = new SectionsController(sectionCoordinationService, null, null, null, logger)
             {
                 Request = new HttpRequestMessage()
             };
@@ -6252,7 +6252,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             adapterRegistryMock.Setup(reg => reg.GetAdapter<Domain.Student.Entities.SectionMeetingInstance, SectionMeetingInstance>()).Returns(meetingAdapter);
 
             // mock controller
-            sectionsController = new SectionsController(sectionCoordinationService, null, null, logger);
+            sectionsController = new SectionsController(sectionCoordinationService, null, null, null, logger);
         }
 
         [TestCleanup]
@@ -6374,7 +6374,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             sectionCoordinationServiceMock.Setup(svc => svc.GetSections3Async(new List<string>() { "SEC1", "SEC2" }, It.IsAny<Boolean>(), It.IsAny<Boolean>())).Returns(Task.FromResult<PrivacyWrapper<List<Dtos.Student.Section3>>>(privacyWrapper));
 
             // mock controller
-            sectionsController = new SectionsController(sectionCoordinationService, null, null, logger)
+            sectionsController = new SectionsController(sectionCoordinationService, null, null, null, logger)
             {
                 Request = new HttpRequestMessage()
             };
@@ -6521,7 +6521,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             sectionCoordinationServiceMock.Setup(svc => svc.GetSections3Async(new List<string>() { "SEC1", "SEC2" }, It.IsAny<Boolean>(), It.IsAny<Boolean>())).Returns(Task.FromResult<PrivacyWrapper<List<Dtos.Student.Section3>>>(privacyWrapper));
 
             // mock controller
-            sectionsController = new SectionsController(sectionCoordinationService, null, null, logger)
+            sectionsController = new SectionsController(sectionCoordinationService, null, null, null, logger)
             {
                 Request = new HttpRequestMessage()
             };
@@ -6656,7 +6656,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             sectionCoordinationServiceMock.Setup(svc => svc.GetSections2Async(new List<string>() { "SEC1", "SEC2" }, It.IsAny<Boolean>())).Returns(Task.FromResult<PrivacyWrapper<List<Dtos.Student.Section2>>>(privacyWrapper));
 
             // mock controller
-            sectionsController = new SectionsController(sectionCoordinationService, null, null, logger)
+            sectionsController = new SectionsController(sectionCoordinationService, null, null, null, logger)
             {
                 Request = new HttpRequestMessage()
             };
@@ -6767,7 +6767,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             sectionCoordinationServiceMock.Setup(svc => svc.GetSectionEventsICalAsync(new List<string>() { "SEC1", "SEC2" }, null, null)).ReturnsAsync(iCalResult);
 
             // mock controller
-            sectionsController = new SectionsController(sectionCoordinationService, null, null, logger)
+            sectionsController = new SectionsController(sectionCoordinationService, null, null, null, logger)
             {
                 Request = new HttpRequestMessage()
             };
@@ -6881,7 +6881,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             logger = new Mock<ILogger>().Object;
 
             // controller that will be tested using mock objects
-            sectionsController = new SectionsController(sectionCoordinationService, null, null, logger);
+            sectionsController = new SectionsController(sectionCoordinationService, null, null, null, logger);
             sectionsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
             sectionsController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
         }
@@ -7039,7 +7039,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             logger = new Mock<ILogger>().Object;
 
             // controller that will be tested using mock objects
-            sectionsController = new SectionsController(sectionCoordinationService, null, null, logger);
+            sectionsController = new SectionsController(sectionCoordinationService, null, null, null, logger);
             sectionsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
             sectionsController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
         }
@@ -7164,6 +7164,83 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             Assert.AreEqual(1, returnDto.MidtermGrading1Complete.Count());
             Assert.AreEqual(success.MidtermGrading1Complete.ElementAt(0).CompleteOperator, returnDto.MidtermGrading1Complete.ElementAt(0).CompleteOperator);
             Assert.AreEqual(success.MidtermGrading1Complete.ElementAt(0).DateAndTime, returnDto.MidtermGrading1Complete.ElementAt(0).DateAndTime);
+        }
+    }
+
+    [TestClass]
+    public class SectionsController_PostSectionSearchAsync
+    {
+        #region Test Context
+
+        private TestContext testContextInstance;
+
+        /// <summary>
+        ///Gets or sets the test context which provides
+        ///information about and functionality for the current test run.
+        ///</summary>
+        public TestContext TestContext
+        {
+            get
+            {
+                return testContextInstance;
+            }
+            set
+            {
+                testContextInstance = value;
+            }
+        }
+
+        #endregion
+
+        private SectionsController sectionsController;
+
+        private Mock<ICourseService> courseServiceMock;
+        private ICourseService courseService;
+        //private IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Courses> allCourses;
+        private Mock<ILogger> loggerMock;
+
+        [TestInitialize]
+        public async void Initialize()
+        {
+            LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+            EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+            loggerMock = new Mock<ILogger>();
+            courseServiceMock = new Mock<ICourseService>();
+            courseService = courseServiceMock.Object;
+            //allCourses = await new TestCourseRepository().GetAsync();
+            var coursesList = new List<Course>();
+
+            sectionsController = new SectionsController(null, null, null, courseService, loggerMock.Object);
+
+            var sectionPage = new SectionPage();
+            courseServiceMock.Setup(svc => svc.SectionSearchAsync(It.IsAny<SectionSearchCriteria>(), 10, 1)).Returns(Task.FromResult(sectionPage));
+        }
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            sectionsController = null;
+            courseService = null;
+        }
+
+        [TestMethod]
+        public async Task KeywordSearch()
+        {
+            var criteria = new SectionSearchCriteria();
+            criteria.Keyword = "HIST";
+            var response = await sectionsController.PostSectionSearchAsync(criteria, 10, 1);
+            Assert.IsTrue(response is SectionPage);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RethrowsExceptionAsHttpResponseException()
+        {
+            courseServiceMock.Setup(x => x.SectionSearchAsync(It.IsAny<SectionSearchCriteria>(), 10, 1)).Throws(new Exception());
+            var criteria = new SectionSearchCriteria();
+            criteria.Keyword = "HIST";
+            var response = await sectionsController.PostSectionSearchAsync(criteria, 10, 1);
         }
     }
 }

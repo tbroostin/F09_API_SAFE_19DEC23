@@ -1,4 +1,4 @@
-﻿/*Copyright 2015 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2015-2020 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -49,5 +49,10 @@ namespace Ellucian.Colleague.Dtos.Base
         /// Boolean flag to indicate if the communication code is considered a "Required Document" for students
         /// </summary>
         public bool IsStudentViewable { get; set; }
+
+        /// <summary>
+        /// Boolean flag to indicate if the communication code allows attachments
+        /// </summary>
+        public bool AllowsAttachments { get; set; }
     }
 }

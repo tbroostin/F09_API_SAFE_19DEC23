@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 
@@ -26,7 +26,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.UserFactories
                         SecurityToken = "321",
                         SessionTimeout = 30,
                         UserName = "Student",
-                        Roles = new List<string>() { "Budget.Adjustor", "BLANKET.PURCHASE.ORDER.VIEWER", "JOURNAL.ENTRY.VIEWER", "PURCHASE.ORDER.VIEWER", "RECURRING.VOUCHER.VIEWER", "REQUISITION.VIEWER", "VOUCHER.VIEWER", "UPDATE.BLANKET.PURCHASE.ORDERS" },
+                        Roles = new List<string>() { "Budget.Adjustor", "BLANKET.PURCHASE.ORDER.VIEWER", "JOURNAL.ENTRY.VIEWER", "PURCHASE.ORDER.VIEWER", "RECURRING.VOUCHER.VIEWER", "REQUISITION.VIEWER", "VOUCHER.VIEWER", "UPDATE.BLANKET.PURCHASE.ORDERS", "DELETE.REQUISITION", "VOUCHER.CREATER" },
                         SessionFixationId = "abc123"
                     });
                 }
@@ -68,7 +68,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.UserFactories
                         SecurityToken = "321",
                         SessionTimeout = 30,
                         UserName = "Student",
-                        Roles = new List<string>() { "VIEW.REQUISITIONS", "DELETE.REQUISITIONS", "UPDATE.REQUISITIONS", "VIEW.ACCOUNTING.STRINGS" },
+                        Roles = new List<string>() { "VIEW.REQUISITIONS", "DELETE.REQUISITIONS", "UPDATE.REQUISITIONS", "VIEW.ACCOUNTING.STRINGS", "DELETE.REQUISITIONS" },
                         SessionFixationId = "abc123"
                     });
                 }
@@ -89,7 +89,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.UserFactories
                         SecurityToken = "321",
                         SessionTimeout = 30,
                         UserName = "Student",
-                        Roles = new List<string>() { },
+                        Roles = new List<string>() { "DELETE.REQUISITION" },
                         SessionFixationId = "abc123"
                     });
                 }
@@ -383,6 +383,48 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.UserFactories
                         SessionTimeout = 30,
                         UserName = "FixAssetsUser",
                         Roles = new List<string>() { "VIEW.FIXED.ASSETS" },
+                        SessionFixationId = "abc123"
+                    });
+                }
+            }
+        }
+
+        public class ReceiveProcurementUser : ICurrentUserFactory
+        {
+            public ICurrentUser CurrentUser
+            {
+                get
+                {
+                    return new CurrentUser(new Claims()
+                    {
+                        PersonId = "0000143",
+                        ControlId = "123",
+                        Name = "Johnny",
+                        SecurityToken = "321",
+                        SessionTimeout = 30,
+                        UserName = "StudentPO",
+                        Roles = new List<string>() { "UPDATE.RECEIVING"},
+                        SessionFixationId = "abc123"
+                    });
+                }
+            }
+        }
+
+        public class DocumentApprovalUser : ICurrentUserFactory
+        {
+            public ICurrentUser CurrentUser
+            {
+                get
+                {
+                    return new CurrentUser(new Claims()
+                    {
+                        PersonId = "0003884",
+                        ControlId = "123",
+                        Name = "Gary",
+                        SecurityToken = "321",
+                        SessionTimeout = 30,
+                        UserName = "DocumentApprover",
+                        Roles = new List<string>() { "View Document Approval" },
                         SessionFixationId = "abc123"
                     });
                 }

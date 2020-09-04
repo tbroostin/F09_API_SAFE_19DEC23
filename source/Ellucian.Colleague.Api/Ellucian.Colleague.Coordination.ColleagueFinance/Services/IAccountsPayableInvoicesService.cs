@@ -12,7 +12,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
     /// </summary>
     public interface IAccountsPayableInvoicesService : IBaseService
     {
-        Task<Tuple<IEnumerable<Dtos.AccountsPayableInvoices2>, int>> GetAccountsPayableInvoices2Async(int offset, int limit, bool bypassCache = false);
+        Task<Tuple<IEnumerable<Dtos.AccountsPayableInvoices2>, int>> GetAccountsPayableInvoices2Async(int offset, int limit, Dtos.AccountsPayableInvoices2 criteriaFilter, bool bypassCache = false);
         Task<Dtos.AccountsPayableInvoices2> GetAccountsPayableInvoices2ByGuidAsync(string guid);
         Task<Dtos.AccountsPayableInvoices2> PutAccountsPayableInvoices2Async(string guid, Dtos.AccountsPayableInvoices2 accountsPayableInvoices);
         Task<Dtos.AccountsPayableInvoices2> PostAccountsPayableInvoices2Async(Dtos.AccountsPayableInvoices2 accountsPayableInvoices);

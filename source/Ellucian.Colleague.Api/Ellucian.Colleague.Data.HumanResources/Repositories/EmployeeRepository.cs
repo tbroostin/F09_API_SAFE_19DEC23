@@ -159,7 +159,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 if (!string.IsNullOrEmpty(person))
                 {
                     // Get list of valid PERSTAT for person ID from filter
-                    perstatFilteredKeys = await DataReader.SelectAsync("HRPER", new string[] { person }, "SAVING ALL.STATUSES");
+                    perstatFilteredKeys = await DataReader.SelectAsync("HRPER", new string[] { person }, "WITH ALL.STATUSES BY.EXP ALL.STATUSES SAVING ALL.STATUSES");
                     if (!perstatFilteredKeys.Any())
                     {
                         return new Tuple<IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>, int>(employeeEntities, 0);
@@ -1043,7 +1043,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             if (!string.IsNullOrEmpty(person))
             {
                 // Get list of valid PERSTAT for person ID from filter
-                perstatFilteredKeys = await DataReader.SelectAsync("HRPER", new string[] { person }, "SAVING ALL.STATUSES");
+                perstatFilteredKeys = await DataReader.SelectAsync("HRPER", new string[] { person }, "WITH ALL.STATUSES BY.EXP ALL.STATUSES SAVING ALL.STATUSES");
                 if (!perstatFilteredKeys.Any())
                 {
                     return employeeKeys;

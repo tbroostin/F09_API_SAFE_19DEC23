@@ -312,6 +312,13 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                                                .Replace(DmiString._SM, ' ');
                 request.PriReceivingComments = comment;
             }
+
+            var extendedDataTuple = GetEthosExtendedDataLists();
+            if (extendedDataTuple != null && extendedDataTuple.Item1 != null && extendedDataTuple.Item2 != null)
+            {
+                request.ExtendedNames = extendedDataTuple.Item1;
+                request.ExtendedValues = extendedDataTuple.Item2;
+            }
             return request;
         }
     }

@@ -1,4 +1,4 @@
-//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Coordination.Student.Tests.UserFactories;
@@ -19,6 +19,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 {
@@ -206,7 +207,26 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             Tuple<IEnumerable<Dtos.FinancialAidApplicationOutcome>, int> financialAidApplicationOutcomes = await _financialAidApplicationOutcomeService.GetAsync(0, 100, faFilter, false);
             Assert.AreEqual(emptyTuple.Item1.Count(), 0);
         }
-        
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task StudentFinancialAidApplicationService_GetFinancialAidApplicationsAsync_MissingApplicantGuid()
+        {
+            var collection = new List<Fafsa>();
+            foreach (var entity in _financialAidApplicationOutcomeCollection)
+            {
+                entity.CalcResultsGuid = string.Empty;
+                collection.Add(entity);
+            }
+
+            _financialAidApplicationOutcomeRepositoryMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), false, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>()))
+                .ReturnsAsync(new Tuple<IEnumerable<Fafsa>, int>(collection, 3));
+
+            var faFilter = new Dtos.FinancialAidApplicationOutcome();
+            faFilter.Applicant = new Dtos.DtoProperties.FinancialAidApplicationApplicant() { Person = new GuidObject2() { Id = "9ae3a175-1dfd-4937-b97b-3c9ad596e023" } };
+            Tuple<IEnumerable<Dtos.FinancialAidApplicationOutcome>, int> financialAidApplicationOutcomes = await _financialAidApplicationOutcomeService.GetAsync(0, 100, faFilter, false);
+        }
+               
         [TestMethod]
         [ExpectedException(typeof (ArgumentNullException))]
         public async Task FinancialAidApplicationOutcomeService_GetFinancialAidApplicationOutcomeByGuidAsync_Empty()

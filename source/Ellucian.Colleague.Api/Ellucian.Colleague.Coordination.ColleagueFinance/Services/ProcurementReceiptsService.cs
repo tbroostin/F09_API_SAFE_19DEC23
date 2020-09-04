@@ -186,6 +186,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             Dtos.ProcurementReceipts dtoProcurementReceipts = null;
             // verify the user has the permission to create a ProcurementReceipts
             CheckCreateProcurementReceiptsPermission();
+            //extensibility
+            purchaseOrderReceiptsRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
             try
             {

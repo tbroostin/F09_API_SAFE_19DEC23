@@ -679,7 +679,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var studentId = await _personRepository.GetPersonIdFromGuidAsync(studentAptitudeAssessmentsDto.Student.Id);
                 if (string.IsNullOrEmpty(studentId))
                 {
-                    throw new ArgumentException("student.id", string.Concat("Invalid student.id: ", studentAptitudeAssessmentsDto.Student.Id));
+                    throw new ArgumentException(string.Format("Invalid student.id '{0}'.", studentAptitudeAssessmentsDto.Student.Id), "student.id");
+                }
+                if (await _personRepository.IsCorpAsync(studentId))
+                {
+                    throw new ArgumentException(string.Format("Invalid student.id '{0}'. An assessment cannot be assigned to a corporation.", studentAptitudeAssessmentsDto.Student.Id), "student.id");
                 }
 
                 if (studentAptitudeAssessmentsDto.Assessment == null || string.IsNullOrEmpty(studentAptitudeAssessmentsDto.Assessment.Id))
@@ -863,7 +867,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var studentId = await _personRepository.GetPersonIdFromGuidAsync(studentAptitudeAssessmentsDto.Student.Id);
                 if (string.IsNullOrEmpty(studentId))
                 {
-                    throw new ArgumentException("student.id", string.Concat("Invalid student.id: ", studentAptitudeAssessmentsDto.Student.Id));
+                    throw new ArgumentException(string.Format("Invalid student.id '{0}'.", studentAptitudeAssessmentsDto.Student.Id), "student.id");
+                }
+                if (await _personRepository.IsCorpAsync(studentId))
+                {
+                    throw new ArgumentException(string.Format("Invalid student.id '{0}'. An assessment cannot be assigned to a corporation.", studentAptitudeAssessmentsDto.Student.Id),"student.id");
                 }
 
                 if (studentAptitudeAssessmentsDto.Assessment == null || string.IsNullOrEmpty(studentAptitudeAssessmentsDto.Assessment.Id))

@@ -1,11 +1,14 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
+
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Dtos;
 using Ellucian.Data.Colleague;
 using Ellucian.Web.Cache;
+using Ellucian.Web.Http.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
@@ -28,6 +31,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         RelationshipRepository relationshipRepo;
         protected Mock<IColleagueTransactionInvoker> transManagerMock;
         protected IColleagueTransactionInvoker transManager;
+        protected ApiSettings apiSettings;
 
         private const string _primaryId = "PrimaryId";
         private const string _parentId = "ParentId";
@@ -40,6 +44,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             cacheProviderMock = new Mock<ICacheProvider>();
             transFactoryMock = new Mock<IColleagueTransactionFactory>();
             dataReaderMock = new Mock<IColleagueDataReader>();
+            apiSettings = new ApiSettings("TEST");
 
             // set up cache for async
             cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
@@ -54,7 +59,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             transManager = transManagerMock.Object;
 
             // Build  repository
-            relationshipRepo = new RelationshipRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+            relationshipRepo = new RelationshipRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
         }
 
         [TestCleanup]
@@ -198,7 +203,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 .Returns(Task.FromResult<CreateRelationshipsResponse>(ctxError));
             transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManager);
             // relationshipRepo was not getting updated with mock setup, so create a new local repository
-            var localRelationshipRepo = new RelationshipRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+            var localRelationshipRepo = new RelationshipRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
             var result = await localRelationshipRepo.PostRelationshipAsync("CtxError", "FOO", "P2");
         }
@@ -217,7 +222,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 .Returns(Task.FromResult<CreateRelationshipsResponse>(ctxNullResponse));
             transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManager);
             // relationshipRepo was not getting updated with mock setup, so create a new local repository
-            var localRelationshipRepo = new RelationshipRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+            var localRelationshipRepo = new RelationshipRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
             var result = await localRelationshipRepo.PostRelationshipAsync("CtxNullResponse", "FOO", "P2");
         }
@@ -236,7 +241,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 .Returns(Task.FromResult<CreateRelationshipsResponse>(ctxEmptyResponse));
             transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManager);
             // relationshipRepo was not getting updated with mock setup, so create a new local repository
-            var localRelationshipRepo = new RelationshipRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+            var localRelationshipRepo = new RelationshipRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
             var result = await localRelationshipRepo.PostRelationshipAsync("CtxEmptyResponse", "FOO", "P2");
         }
@@ -267,7 +272,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(localDataReaderMock.Object);
             transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManager);
             // relationshipRepo was not getting updated with mock setup, so create a new local repository
-            var localRelationshipRepo = new RelationshipRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+            var localRelationshipRepo = new RelationshipRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
             var result = await localRelationshipRepo.PostRelationshipAsync("newRelNotFound", "FOO", "P2");
         }
@@ -292,12 +297,12 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             var localDataReaderMock = new Mock<IColleagueDataReader>();
             localDataReaderMock.Setup<Task<Data.Base.DataContracts.Relationship>>(dr =>
                 dr.ReadRecordAsync<Data.Base.DataContracts.Relationship>(It.IsAny<string>(), true))
-                .Returns(Task.FromResult<Relationship>(new Relationship() { RsId1 = p1, RsId2 = p2, RsRelationType = relType, RsPrimaryRelationshipFlag = "N" }));
+                .Returns(Task.FromResult<DataContracts.Relationship>(new DataContracts.Relationship() { RsId1 = p1, RsId2 = p2, RsRelationType = relType, RsPrimaryRelationshipFlag = "N" }));
 
             transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(localDataReaderMock.Object);
             transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManager);
             // relationshipRepo was not getting updated with mock setup, so create a new local repository
-            var localRelationshipRepo = new RelationshipRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+            var localRelationshipRepo = new RelationshipRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
             var result = await localRelationshipRepo.PostRelationshipAsync(p1, relType, p2);
             Assert.AreEqual(p1, result.PrimaryEntity);
@@ -335,7 +340,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 
         string[] personRelationshipsIds = new[] { "1", "2" };
         private List<string> guarianRelationshipTypes = new List<string>() { "WA", "GU" };
-        Collection<Relationship> relationshipDataContracts;// = dataFromDataReader();
+        Collection<DataContracts.Relationship> relationshipDataContracts;// = dataFromDataReader();
         Collection<Relation> relationContracts;// = GetRelationData();
         Collection<Person> people;
         Collection<Person> nonPersonRelpeople;
@@ -432,7 +437,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         [ExpectedException(typeof(KeyNotFoundException))]
         public async Task GetPersonalRelationshipById2Async_relationshipContract_Null()
         {
-            dataReaderMock.Setup(i => i.ReadRecordAsync<Relationship>("RELATIONSHIP", It.IsAny<string>(), It.IsAny<bool>()))
+            dataReaderMock.Setup(i => i.ReadRecordAsync<DataContracts.Relationship>("RELATIONSHIP", It.IsAny<string>(), It.IsAny<bool>()))
                 .ReturnsAsync(null);
             await relationshipRepo.GetPersonalRelationshipById2Async("1");
         }
@@ -441,7 +446,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         [ExpectedException(typeof(InvalidOperationException))]
         public async Task GetPersonalRelationshipById2Async_IsCor()
         {
-            dataReaderMock.Setup(i => i.ReadRecordAsync<Relationship>("RELATIONSHIP", It.IsAny<string>(), It.IsAny<bool>()))
+            dataReaderMock.Setup(i => i.ReadRecordAsync<DataContracts.Relationship>("RELATIONSHIP", It.IsAny<string>(), It.IsAny<bool>()))
                 .ReturnsAsync(relationshipDataContracts.FirstOrDefault());
             dataReaderMock.Setup(i => i.BulkReadRecordAsync<Person>(It.IsAny<string[]>(), It.IsAny<bool>()))
                 .ReturnsAsync(new Collection<Person>()
@@ -454,7 +459,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         [TestMethod]
         public async Task GetPersonalRelationshipById2Async()
         {
-            dataReaderMock.Setup(i => i.ReadRecordAsync<Relationship>("RELATIONSHIP", It.IsAny<string>(), It.IsAny<bool>()))
+            dataReaderMock.Setup(i => i.ReadRecordAsync<DataContracts.Relationship>("RELATIONSHIP", It.IsAny<string>(), It.IsAny<bool>()))
                 .ReturnsAsync(relationshipDataContracts.FirstOrDefault());
             dataReaderMock.Setup(i => i.BulkReadRecordAsync<Person>(It.IsAny<string[]>(), It.IsAny<bool>()))
                 .ReturnsAsync(people);
@@ -541,7 +546,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             dataReaderMock.Setup(i => i.BatchReadRecordColumnsAsync("PERSON", It.IsAny<string[]>(), It.IsAny<string[]>()))
                 .ReturnsAsync(dict);
             dataReaderMock.Setup(i => i.SelectAsync("RELATION", It.IsAny<string[]>(), It.IsAny<string>()))
-                .ReturnsAsync(new string[] {"1", "2" });
+                .ReturnsAsync(new string[] { "1", "2" });
             var repoData = await relationshipRepo.GetRelationships2Async(0, 2, new string[] { "1", "2" }, "RelType", "InvRelType");
             Assert.AreEqual(relationshipDataContracts.Count, repoData.Item1.Count());
 
@@ -692,7 +697,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         [ExpectedException(typeof(KeyNotFoundException))]
         public async Task PersonGuardinRelationships_GetAByIdAsync_DataContract_KeyNotFoundException()
         {
-            dataReaderMock.Setup(i => i.ReadRecordAsync<Relationship>("RELATIONSHIP", "1", It.IsAny<bool>())).ReturnsAsync(null);
+            dataReaderMock.Setup(i => i.ReadRecordAsync<DataContracts.Relationship>("RELATIONSHIP", "1", It.IsAny<bool>())).ReturnsAsync(null);
             var actual = await relationshipRepo.GetPersonGuardianRelationshipByIdAsync("1");
         }
 
@@ -784,9 +789,9 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 
             dataReaderMock.Setup(i => i.SelectAsync("RELATIONSHIP", It.IsAny<string>())).ReturnsAsync(personRelationshipsIds);
             dataReaderMock.Setup(i => i.SelectAsync("RELATIONSHIP", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(personRelationshipsIds);
-            dataReaderMock.Setup<Task<Collection<Relationship>>>(i => i.BulkReadRecordAsync<Relationship>("RELATIONSHIP", personRelationshipsIds, true)).ReturnsAsync(relationshipDataContracts);
+            dataReaderMock.Setup<Task<Collection<DataContracts.Relationship>>>(i => i.BulkReadRecordAsync<DataContracts.Relationship>("RELATIONSHIP", personRelationshipsIds, true)).ReturnsAsync(relationshipDataContracts);
             dataReaderMock.Setup<Task<Collection<Relation>>>(i => i.BulkReadRecordAsync<Relation>("RELATION", It.IsAny<string>(), true)).ReturnsAsync(relationContracts);
-            dataReaderMock.Setup(i => i.ReadRecordAsync<Relationship>("RELATIONSHIP", personRelationshipsId, true)).ReturnsAsync(relationshipDataContracts[0]);
+            dataReaderMock.Setup(i => i.ReadRecordAsync<DataContracts.Relationship>("RELATIONSHIP", personRelationshipsId, true)).ReturnsAsync(relationshipDataContracts[0]);
             dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Institutions>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(_institutionsDataContracts);
 
             IEnumerable<string> sublist = new List<string>() { _parentId, _primaryId, _childId };
@@ -811,14 +816,13 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             });
 
             // Build  repository
-            relationshipRepo = new RelationshipRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+            relationshipRepo = new RelationshipRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
             return relationshipRepo;
         }
         #endregion
     }
 
-    
 
     [TestClass]
     public class RelationshipRepositoryTests_PUT_V16 : BaseRepositorySetup
@@ -826,9 +830,10 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         #region DECLARATIONS
 
         private RelationshipRepository relationshipRepository;
+        protected ApiSettings apiSettings;
 
-        private Domain.Base.Entities.Relationship relationship;
-        private Relationship entityRelationship;
+        private Domain.Base.Entities.Relationship relationshipEntity;
+        private DataContracts.Relationship relationshipDataContract;
         private Relation relation;
         private UpdatePersonRelationshipResponse response;
         private Collection<Person> persons;
@@ -850,7 +855,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 
             InitializeTestMock();
 
-            relationshipRepository = new RelationshipRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+            apiSettings = new ApiSettings("TEST");
+            relationshipRepository = new RelationshipRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
         }
 
         [TestCleanup]
@@ -867,7 +873,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 new Person(){ RecordGuid = "1c49eed8-5fe7-4120-b1cf-f23266b9e874", Recordkey = "2", Gender = "F"}
             };
 
-            relationship = new Domain.Base.Entities.Relationship("1", "2", "1", true, null, null) { Guid = guid };
+            relationshipEntity = new Domain.Base.Entities.Relationship("1", "2", "1", true, null, null) { Guid = guid };
 
             relation = new Relation() { Recordkey = "1", RelationComments = "comments" };
 
@@ -876,7 +882,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 {"1", new GuidLookupResult() { Entity = "RELATIONSHIP", PrimaryKey = "1" } }
             };
 
-            entityRelationship = new Relationship()
+            relationshipDataContract = new DataContracts.Relationship()
             {
                 RsId1 = "1",
                 RsId2 = "2",
@@ -894,7 +900,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             transManagerMock.Setup(mgr => mgr.ExecuteAsync<UpdatePersonRelationshipRequest, UpdatePersonRelationshipResponse>(It.IsAny<UpdatePersonRelationshipRequest>())).ReturnsAsync(response);
             dataReaderMock.Setup(d => d.BulkReadRecordAsync<Person>(It.IsAny<string[]>(), true)).ReturnsAsync(persons);
             dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(dicResult);
-            dataReaderMock.Setup(d => d.ReadRecordAsync<Relationship>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(entityRelationship);
+            dataReaderMock.Setup(d => d.ReadRecordAsync<DataContracts.Relationship>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(relationshipDataContract);
             dataReaderMock.Setup(r => r.ReadRecordAsync<Relation>(It.IsAny<string>(), true)).ReturnsAsync(relation);
         }
 
@@ -921,7 +927,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             };
             dataReaderMock.SetupSequence(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).Returns(Task.FromResult<Dictionary<string, GuidLookupResult>>(dicResult1))
                 .Returns(Task.FromResult<Dictionary<string, GuidLookupResult>>(dicResult1));
-            var result = await relationshipRepository.UpdatePersonalRelationshipsAsync(relationship);
+            var result = await relationshipRepository.UpdatePersonalRelationshipsAsync(relationshipEntity);
 
             Assert.IsNotNull(result);
             Assert.AreEqual(result.Guid, guid);
@@ -940,7 +946,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 }
             };
             transManagerMock.Setup(mgr => mgr.ExecuteAsync<UpdatePersonRelationshipRequest, UpdatePersonRelationshipResponse>(It.IsAny<UpdatePersonRelationshipRequest>())).ReturnsAsync(response);
-            await relationshipRepository.UpdatePersonalRelationshipsAsync(relationship);
+            await relationshipRepository.UpdatePersonalRelationshipsAsync(relationshipEntity);
         }
 
         [TestMethod]
@@ -956,7 +962,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 }
             };
             transManagerMock.Setup(mgr => mgr.ExecuteAsync<UpdatePersonRelationshipRequest, UpdatePersonRelationshipResponse>(It.IsAny<UpdatePersonRelationshipRequest>())).ReturnsAsync(response);
-            await relationshipRepository.UpdatePersonalRelationshipsAsync(relationship);
+            await relationshipRepository.UpdatePersonalRelationshipsAsync(relationshipEntity);
         }
 
         [TestMethod]
@@ -964,7 +970,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         {
             response = new UpdatePersonRelationshipResponse() { RelationshipGuid = guid };
             transManagerMock.Setup(mgr => mgr.ExecuteAsync<UpdatePersonRelationshipRequest, UpdatePersonRelationshipResponse>(It.IsAny<UpdatePersonRelationshipRequest>())).ReturnsAsync(response);
-            var result = await relationshipRepository.UpdatePersonalRelationshipsAsync(relationship);
+            var result = await relationshipRepository.UpdatePersonalRelationshipsAsync(relationshipEntity);
 
             Assert.IsNotNull(result);
             Assert.AreEqual(result.Guid, guid);
@@ -975,6 +981,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
     public class RelationshipRepositoryTests_DELETE_V13 : BaseRepositorySetup
     {
         #region DECLARATIONS
+
+        protected ApiSettings apiSettings;
 
         private RelationshipRepository relationshipRepository;
 
@@ -990,8 +998,9 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         public void Initialize()
         {
             MockInitialize();
+            apiSettings = new ApiSettings("TEST");
 
-            relationshipRepository = new RelationshipRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+            relationshipRepository = new RelationshipRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
         }
 
         [TestCleanup]
@@ -1057,5 +1066,386 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             transManagerMock.Setup(mgr => mgr.ExecuteAsync<DeleteRelationshipRequest, DeleteRelationshipResponse>(It.IsAny<DeleteRelationshipRequest>())).ReturnsAsync(response);
             await relationshipRepository.DeletePersonRelationshipAsync(guid);
         }
+    }
+
+    [TestClass]
+    public class RelationshipRepositoryTests_CreatePersonalRelationshipInitiationProcess : BaseRepositorySetup
+    {
+        #region DECLARATIONS
+
+        private RelationshipRepository relationshipRepository;
+
+        private Domain.Base.Entities.PersonalRelationshipInitiation personRelationshipsEntity;
+        private DataContracts.Relationship entityRelationship;
+        private Relation relation;
+        private ProcessRelationshipRequestResponse response;
+        private Collection<Person> persons;
+
+        private Dictionary<string, GuidLookupResult> dicResult;
+
+        private string guid = "1a49eed8-5fe7-4120-b1cf-f23266b9e874";
+
+        #endregion
+
+        #region TEST SETUP
+
+        [TestInitialize]
+        public void Initialize()
+        {
+            MockInitialize();
+
+            InitializeTestData();
+
+            InitializeTestMock();
+
+            apiSettings = new ApiSettings("TEST");
+            relationshipRepository = new RelationshipRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+        }
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            MockCleanup();
+        }
+
+        private void InitializeTestData()
+        {
+            persons = new Collection<Person>()
+            {
+                new Person(){ RecordGuid = "1b49eed8-5fe7-4120-b1cf-f23266b9e874", Recordkey = "1", Gender = "M"},
+                new Person(){ RecordGuid = "1c49eed8-5fe7-4120-b1cf-f23266b9e874", Recordkey = "2", Gender = "F"}
+            };
+
+            personRelationshipsEntity = new Domain.Base.Entities.PersonalRelationshipInitiation()
+            {
+                PersonMatchRequestGuid = guid,
+                AddressLines = new List<string>() { "line 1", "line 2" },
+                AddressType = "HOM",
+                BirthDate = new DateTime(1970, 12, 25),
+                CarrierRoute = "route",
+                City = "Buffalo",
+                Comment = "comment",
+                CorrectionDigit = "1",
+                Country = "USA",
+                County = "Erie",
+                DeliveryPoint = "1",
+                Email = "test@test.com",
+                EmailType = "HOME",
+                EndDate = new DateTime(2020, 12, 1),
+                FirstName = "First",
+                LastName = "Last",
+                InverseRelationshipType = "UN",
+                Locality = "1",
+                MiddleName = "Middle",
+                Originator = "Elevate",
+                PersonId = "1",
+                PersonMatchRequestId = "",
+                Phone = "716-999-9999",
+                PhoneType = "BUS",
+                PostalCode = "14225",
+                Region = "US",
+                RelatedPersonGuid = "1c49eed8-5fe7-4120-b1cf-f23266b9e874",
+                RelatedPersonId = "2",
+                RelationshipGuid = Guid.NewGuid().ToString(),
+                RelationshipId = "0001",
+                RelationshipType = "UN",
+                RequestType = "",
+                StartDate = new DateTime(2020, 12, 01),
+                State = "NY",
+                Status = "Active",
+                SubjectPersonGuid = Guid.NewGuid().ToString(),
+                SubRegion = "NY",
+                Zip = "14225"
+            };
+
+            relation = new Relation() { Recordkey = "1", RelationComments = "comments" };
+
+            dicResult = new Dictionary<string, GuidLookupResult>()
+            {
+                {"1", new GuidLookupResult() { Entity = "RELATIONSHIP", PrimaryKey = "1" } }
+            };
+
+            entityRelationship = new DataContracts.Relationship()
+            {
+                RsId1 = "1",
+                RsId2 = "2",
+                RecordGuid = guid,
+                Recordkey = "1",
+                RsRelationType = "1",
+                RsPrimaryRelationshipFlag = "Y",
+            };
+
+            response = new ProcessRelationshipRequestResponse() { RelationshipGuid = guid };
+        }
+
+        private void InitializeTestMock()
+        {
+            transManagerMock.Setup(mgr => mgr.ExecuteAsync<ProcessRelationshipRequestRequest, ProcessRelationshipRequestResponse>(It.IsAny<ProcessRelationshipRequestRequest>()))
+                .ReturnsAsync(response);
+            dataReaderMock.Setup(d => d.BulkReadRecordAsync<Person>(It.IsAny<string[]>(), true)).ReturnsAsync(persons);
+            dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(dicResult);
+            dataReaderMock.Setup(d => d.ReadRecordAsync<DataContracts.Relationship>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(entityRelationship);
+            dataReaderMock.Setup(r => r.ReadRecordAsync<Relation>(It.IsAny<string>(), true)).ReturnsAsync(relation);
+        }
+
+        #endregion
+
+        [TestMethod]
+        [ExpectedException(typeof(RepositoryException))]
+        public async Task RelationshipRepository_CreatePersonalRelationshipInitiationProcessAsync_Entity_Null()
+        {
+            await relationshipRepository.CreatePersonalRelationshipInitiationProcessAsync(null);
+        }
+
+
+        [TestMethod]
+        public async Task RelationshipRepository_CreatePersonalRelationshipInitiationProcessAsync()
+        {
+            dicResult = new Dictionary<string, GuidLookupResult>()
+            {
+                {"1", new GuidLookupResult() { Entity = "RELATIONSHIP", PrimaryKey = null } }
+            };
+            var dicResult1 = new Dictionary<string, GuidLookupResult>()
+            {
+                {"1", new GuidLookupResult() { Entity = "RELATIONSHIP", PrimaryKey = "1" } }
+            };
+            dataReaderMock.SetupSequence(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).Returns(Task.FromResult<Dictionary<string, GuidLookupResult>>(dicResult1))
+                .Returns(Task.FromResult<Dictionary<string, GuidLookupResult>>(dicResult1));
+
+
+            relationshipRepository.EthosExtendedDataDictionary = new Dictionary<string, string>();
+            relationshipRepository.EthosExtendedDataDictionary.Add("ExtendedKey", "ExtendedValue");
+
+            var result = await relationshipRepository.CreatePersonalRelationshipInitiationProcessAsync(personRelationshipsEntity);
+
+            Assert.IsNotNull(result);
+            Assert.AreEqual(result.Item1.Guid, guid);
+        }
+
+
+
+        [TestMethod]
+        [ExpectedException(typeof(RepositoryException))]
+        public async Task RelationshipRepository_CreatePersonalRelationshipInitiationProcessAsync_Invalid_Response_With_ErrorCodes()
+        {
+            response = new ProcessRelationshipRequestResponse()
+            {
+                ErrorOccurred = true,
+                ProcessRelationshipRequestErrors
+                 = new List<ProcessRelationshipRequestErrors>()
+                {
+                    new ProcessRelationshipRequestErrors() { ErrorCodes = "400", ErrorMessages = "ErrorMessages"}
+                }
+            };
+            transManagerMock.Setup(mgr => mgr.ExecuteAsync<ProcessRelationshipRequestRequest, ProcessRelationshipRequestResponse>(It.IsAny<ProcessRelationshipRequestRequest>()))
+              .ReturnsAsync(response);
+            await relationshipRepository.CreatePersonalRelationshipInitiationProcessAsync(personRelationshipsEntity);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(RepositoryException))]
+        public async Task RelationshipRepository_CreatePersonalRelationshipInitiationProcessAsync_Invalid_Response_WithOut_ErrorCodes()
+        {
+            response = new ProcessRelationshipRequestResponse()
+            {
+                ErrorOccurred = true,
+                ProcessRelationshipRequestErrors = new List<ProcessRelationshipRequestErrors>()
+                {
+                    new ProcessRelationshipRequestErrors() { ErrorCodes = "400", ErrorMessages = "ErrorMessages"}
+                }
+            };
+
+            transManagerMock.Setup(mgr => mgr.ExecuteAsync<ProcessRelationshipRequestRequest, ProcessRelationshipRequestResponse>(It.IsAny<ProcessRelationshipRequestRequest>()))
+                .ReturnsAsync(response);
+            await relationshipRepository.CreatePersonalRelationshipInitiationProcessAsync(personRelationshipsEntity);
+        }
+
+        [TestMethod]
+        public async Task RelationshipRepository_CreatePersonalRelationshipInitiationProcessAsync_Properties()
+        {
+            response = new ProcessRelationshipRequestResponse() { RelationshipGuid = guid };
+
+            var request = new ProcessRelationshipRequestRequest
+            {
+                RelationshipGuid = Guid.Empty.ToString(),
+                RelationshipId = string.Empty,
+                RequestType = personRelationshipsEntity.RequestType,
+                SubjectPersonId = personRelationshipsEntity.PersonId,
+                RelatedPersonId = personRelationshipsEntity.RelatedPersonId,
+                DirectRelationship = personRelationshipsEntity.RelationshipType,
+                ReciprocalRelationship = personRelationshipsEntity.InverseRelationshipType,
+                Status = personRelationshipsEntity.Status,
+                StartDate = personRelationshipsEntity.StartDate,
+                EndDate = personRelationshipsEntity.EndDate,
+                Comments = new List<string>() { personRelationshipsEntity.Comment },
+                PersonMatchRequestGuid = Guid.Empty.ToString(),
+                PersonMatchRequestId = string.Empty,
+                LastName = personRelationshipsEntity.LastName,
+                FirstName = personRelationshipsEntity.FirstName,
+                MiddleName = personRelationshipsEntity.MiddleName,
+                AddressType = personRelationshipsEntity.AddressType,
+                AddressLines = personRelationshipsEntity.AddressLines,
+                City = personRelationshipsEntity.City,
+                State = personRelationshipsEntity.State,
+                Country = personRelationshipsEntity.Country,
+                County = personRelationshipsEntity.County,
+                Zip = personRelationshipsEntity.Zip,
+                Locality = personRelationshipsEntity.Locality,
+                Region = personRelationshipsEntity.Region,
+                SubRegion = personRelationshipsEntity.SubRegion,
+                PostalCode = personRelationshipsEntity.PostalCode,
+                DeliveryPoint = personRelationshipsEntity.DeliveryPoint,
+                CarrierRoute = personRelationshipsEntity.CarrierRoute,
+                CorrectionDigit = personRelationshipsEntity.CorrectionDigit,
+                BirthDate = personRelationshipsEntity.BirthDate,
+                EmailTypes = personRelationshipsEntity.EmailType,
+                EmailAddresses = personRelationshipsEntity.Email,
+                PhoneTypes = personRelationshipsEntity.PhoneType,
+                PhoneNumbers = personRelationshipsEntity.Phone,
+            };
+
+            transManagerMock.Setup(mgr => mgr.ExecuteAsync<ProcessRelationshipRequestRequest, ProcessRelationshipRequestResponse>(request))
+              .ReturnsAsync(response);
+
+            var result = await relationshipRepository.CreatePersonalRelationshipInitiationProcessAsync(personRelationshipsEntity);
+
+            Assert.IsNotNull(result);
+            Assert.AreEqual(result.Item1.Guid, guid);
+            Assert.IsNull(result.Item2);
+        }
+
+
+        [TestMethod]
+        public async Task RelationshipRepository_CreatePersonalRelationshipInitiationProcessAsync_EmptyRelationshipGuid()
+        {
+
+            response = new ProcessRelationshipRequestResponse() { RelationshipGuid = string.Empty, PersonMatchRequestGuid = guid };
+
+            transManagerMock.Setup(mgr => mgr.ExecuteAsync<ProcessRelationshipRequestRequest, ProcessRelationshipRequestResponse>(It.IsAny<ProcessRelationshipRequestRequest>()))
+                .ReturnsAsync(response);
+
+            var result = await relationshipRepository.CreatePersonalRelationshipInitiationProcessAsync(personRelationshipsEntity);
+
+            Assert.IsNotNull(result);
+            Assert.IsNull(result.Item1);
+            Assert.AreEqual(result.Item2, guid);
+        }
+
+
+
+        [TestMethod]
+        [ExpectedException(typeof(RepositoryException))]
+        public async Task RelationshipRepository_CreatePersonalRelationshipInitiationProcessAsync_Person_IsCorp()
+        {
+
+            response = new ProcessRelationshipRequestResponse() { RelationshipGuid = string.Empty, PersonMatchRequestGuid = string.Empty };
+
+            persons = new Collection<Person>()
+            {
+                new Person(){ RecordGuid = "1b49eed8-5fe7-4120-b1cf-f23266b9e874", Recordkey = "1", PersonCorpIndicator = "Y" },
+            };
+
+            dataReaderMock.Setup(d => d.BulkReadRecordAsync<Person>(It.IsAny<string[]>(), true)).ReturnsAsync(persons);
+
+            transManagerMock.Setup(mgr => mgr.ExecuteAsync<ProcessRelationshipRequestRequest, ProcessRelationshipRequestResponse>(It.IsAny<ProcessRelationshipRequestRequest>()))
+                .ReturnsAsync(response);
+            await relationshipRepository.CreatePersonalRelationshipInitiationProcessAsync(personRelationshipsEntity);
+        }
+
+        
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task RelationshipRepository_GetPersonalRelationshipById2Async_NullArgument()
+        {
+            await relationshipRepository.GetPersonalRelationshipById2Async(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task RelationshipRepository_GetPersonalRelationshipById2Async_EmptyStringArgument()
+        {
+            await relationshipRepository.GetPersonalRelationshipById2Async("");
+        }
+
+        [TestMethod]
+        public async Task RelationshipRepository_GetPersonalRelationshipById2Async_Empty_RelationshipId()
+        {
+            dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(null);
+
+            Domain.Base.Entities.Relationship retval = null;
+            try
+            {
+                retval = await relationshipRepository.GetPersonalRelationshipById2Async(entityRelationship.Recordkey);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                Assert.AreEqual("Personal relationship record not found for id: 1", ex.Message);
+            }
+            Assert.IsNull(retval);
+        }
+
+        [TestMethod]
+        public async Task RelationshipRepository_GetPersonalRelationshipById2Async_Empty_RelationshipEntity()
+        {
+            dataReaderMock.Setup(d => d.ReadRecordAsync<DataContracts.Relationship>("RELATIONSHIP", It.IsAny<string>(), true)).ReturnsAsync(null);
+           
+            Domain.Base.Entities.Relationship retval = null;
+            try
+            {
+                retval = await relationshipRepository.GetPersonalRelationshipById2Async(entityRelationship.Recordkey);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                Assert.AreEqual("Did not find personal relationship for id: 1", ex.Message);
+            }
+            Assert.IsNull(retval);
+        }
+
+
+       
+        [TestMethod]
+        public async Task RelationshipRepository_GetPersonalRelationshipById2Async_RelationshipEntity_ISCorp()
+        {
+            persons = new Collection<Person>()
+            {
+                new Person(){ RecordGuid = "1b49eed8-5fe7-4120-b1cf-f23266b9e874", Recordkey = "1", PersonCorpIndicator = "Y" },
+            };
+
+            dataReaderMock.Setup(d => d.BulkReadRecordAsync<Person>(It.IsAny<string[]>(), true)).ReturnsAsync(persons);
+
+            Domain.Base.Entities.Relationship retval = null;
+            try
+            {
+                retval = await relationshipRepository.GetPersonalRelationshipById2Async(entityRelationship.Recordkey);
+            }
+            catch (InvalidOperationException ex)
+            {
+                Assert.AreEqual("The personal relationships resource requires that each member of the relationship be a person", ex.Message);
+            }
+            Assert.IsNull(retval);
+        }
+
+        [TestMethod]
+        public async Task RelationshipRepository_GetPersonalRelationshipById2Async_RelationshipEntity_EmptyRelationshipGuid()
+        {
+            persons = new Collection<Person>()
+            {
+                new Person(){ RecordGuid = string.Empty, Recordkey = "1" },
+            };
+
+            dataReaderMock.Setup(d => d.BulkReadRecordAsync<Person>(It.IsAny<string[]>(), true)).ReturnsAsync(persons);
+
+            Domain.Base.Entities.Relationship retval = null;
+            try
+            {
+                retval = await relationshipRepository.GetPersonalRelationshipById2Async(entityRelationship.Recordkey);
+            }
+            catch (RepositoryException ex)
+            {
+                Assert.AreEqual("No guid found for record key: 1", ex.Errors[0].Message);
+            }
+            Assert.IsNull(retval);
+        }
+
     }
 }

@@ -141,6 +141,16 @@ namespace Ellucian.Colleague.Domain.Finance.Tests
             throw new NotImplementedException();
         }
 
+        public Task<Dictionary<string, string>> GetHierarchyAddressIdsAsync(List<string> ids, string hierarchy, DateTime? date)
+        {
+            throw new NotImplementedException();
+        }
+        
+        public Task<Dictionary<string, string>> GetAddressGuidsCollectionAsync(IEnumerable<string> addressIds)
+        {
+            throw new NotImplementedException();
+        }
+
         public AccountHolder GetAccountHolder(string personId)
         {
             throw new NotImplementedException();

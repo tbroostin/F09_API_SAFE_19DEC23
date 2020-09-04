@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -55,7 +55,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="commentSubjectArea">find all of the records in REMARKS where the REMARKS.TYPE matches the code corresponding to the guid in commentSubjectArea.id.</param>
         /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>
         /// <returns>List of Comments <see cref="Dtos.Comments"/> objects representing matching comments</returns>
-        [HttpGet, FilteringFilter(IgnoreFiltering = true)]
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), FilteringFilter(IgnoreFiltering = true)]
         [ValidateQueryStringFilter(new string[] { "subjectMatter", "commentSubjectArea" }, false, true)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
         public async Task<IHttpActionResult> GetCommentsAsync(Paging page, [FromUri] string subjectMatter = "", [FromUri] string commentSubjectArea = "")
@@ -90,10 +90,15 @@ namespace Ellucian.Colleague.Api.Controllers
                 return new PagedHttpActionResult<IEnumerable<Dtos.Comments>>(pageOfItems.Item1, page, pageOfItems.Item2, this.Request);
 
             }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -122,7 +127,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="id">GUID to desired comment</param>
         /// <returns>A comment object <see cref="Dtos.Comments"/> in HEDM format</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
         public async Task<Dtos.Comments> GetCommentsByGuidAsync(string id)
         {
             var bypassCache = false;
@@ -155,21 +160,22 @@ namespace Ellucian.Colleague.Api.Controllers
                 return comment;
 
             }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
-            catch (KeyNotFoundException e)
-            {
-                _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
-            }
+            
             catch (RepositoryException e)
             {
                 _logger.Error(e.ToString());
@@ -192,7 +198,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="comment">DTO of the new comment</param>
         /// <returns>A comment object <see cref="Dtos.Comments"/> in HEDM format</returns>
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
         public async Task<Dtos.Comments> PostCommentsAsync([ModelBinder(typeof(EedmModelBinder))] Dtos.Comments comment)
         {
             if (comment == null)
@@ -214,10 +220,15 @@ namespace Ellucian.Colleague.Api.Controllers
 
                 return commentCreate;
             }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -252,7 +263,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="id">GUID of the comment to update</param>
         /// <param name="comment">DTO of the updated comment</param>
         /// <returns>A comment object <see cref="Dtos.Comments"/> in HEDM format</returns>
-        [HttpPut, EedmResponseFilter]
+        [HttpPut, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2),  EedmResponseFilter]
         public async Task<Dtos.Comments> PutCommentsAsync([FromUri] string id, [ModelBinder(typeof(EedmModelBinder))] Dtos.Comments comment)
         {
             if (string.IsNullOrEmpty(id))
@@ -299,10 +310,15 @@ namespace Ellucian.Colleague.Api.Controllers
 
                 return commentReturn; 
             }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -335,7 +351,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Delete (DELETE) a comment
         /// </summary>
         /// <param name="id">GUID to desired comment</param>
-        [HttpDelete]
+        [HttpDelete, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task DeleteCommentByGuidAsync(string id)
         {
             if (string.IsNullOrEmpty(id))
@@ -349,10 +365,15 @@ namespace Ellucian.Colleague.Api.Controllers
                 // On delete, just return nothing.
                
             }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {

@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Coordination.Student.Tests.UserFactories;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -89,6 +89,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             IEnumerable<Domain.Base.Entities.School> schoolEntities;
             IEnumerable<Domain.Student.Entities.AdmissionApplicationStatusType> admissionApplicationStatusTypes;
             IEnumerable<Domain.Student.Entities.StudentLoad> studentLoads;
+            IEnumerable<Domain.Student.Entities.EducationGoals> educationGoals;
+            IEnumerable<Domain.Student.Entities.CareerGoal> careerGoals;
+            IEnumerable<Domain.Student.Entities.ApplicationInfluence> influences;
 
             Tuple<IEnumerable<Domain.Student.Entities.AdmissionApplication>, int> admissionEntitiesTuple;
             Tuple<IEnumerable<Dtos.AdmissionApplication>, int> admissionDtoTuple;
@@ -316,7 +319,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                         AppliedOn = new DateTime(2016, 02, 01),
                         AdmittedOn = new DateTime(2016, 02, 01),
                         MatriculatedOn = new DateTime(2016, 02, 01),
-                        ApplicationSource = new Dtos.GuidObject2("b90812ee-b573-4acb-88b0-6999a050be4f")
+                        ApplicationSource = new Dtos.GuidObject2("b90812ee-b573-4acb-88b0-6999a050be4f"),
+                        EducationalGoal = new Dtos.GuidObject2("b90812ee-b573-4acb-88b0-6999a050be4f"),
+                        CareerGoals = new List<Dtos.GuidObject2>() { new Dtos.GuidObject2("b90812ee-b573-4acb-88b0-6999a050be4f") },
+                        Influences = new List<Dtos.GuidObject2>() { new Dtos.GuidObject2("b90812ee-b573-4acb-88b0-6999a050be4f") }
                     },
                     new Dtos.AdmissionApplication3()
                     {
@@ -369,8 +375,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                         ApplicationStartTerm = "CODE1",
                         ApplicationStudentLoadIntent = "F",
                         ApplicationAcadProgramGuid = "b90812ee-b573-4acb-88b0-6999a050be4f",
-                        ApplicationSource = "CODE1"
-
+                        ApplicationSource = "CODE1",
+                        EducationalGoal = "CODE1",
+                        CareerGoals = new List<string>(){"CODE1" },
+                        Influences = new List<string>(){"CODE1" }
                     },
                     new Domain.Student.Entities.AdmissionApplication("3f67b180-ce1d-4552-8d81-feb96b9fea5b", "1")
                     {
@@ -380,7 +388,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                         },
                         ApplicationAdmitStatus = "CODE1",
                         ApplicationAcadProgramGuid = "b90812ee-b573-4acb-88b0-6999a050be4f",
-                        ApplicationSource = "CODE2"
+                        ApplicationSource = "CODE2",
+                        EducationalGoal = "CODE1",
+                        CareerGoals = new List<string>(){"CODE1" },
+                        Influences = new List<string>(){"CODE1" }
                     },
                     new Domain.Student.Entities.AdmissionApplication("bf67e156-8f5d-402b-8101-81b0a2796873", "3")
                     {
@@ -391,7 +402,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                         ApplicationResidencyStatus = "CODE1",
                         ApplicationAcadProgram = "CODE2",
                         ApplicationAcadProgramGuid = "b90812ee-b573-4acb-88b0-6999a050be4f",
-                        ApplicationSource = "CODE3"
+                        ApplicationSource = "CODE3",
+                        EducationalGoal = "CODE1",
+                        CareerGoals = new List<string>(){"CODE1" },
+                        Influences = new List<string>(){"CODE1" }
                     },
                     new Domain.Student.Entities.AdmissionApplication("0111d6ef-5a86-465f-ac58-4265a997c136", "3")
                     {
@@ -402,7 +416,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                         ApplicationLocations = new List<string>() { "CODE1" },
                         ApplicationSchool = "CODE1",
                         ApplicationAcadProgramGuid = "b90812ee-b573-4acb-88b0-6999a050be4f",
-                        ApplicationSource = "CODE4"
+                        ApplicationSource = "CODE4",
+                        EducationalGoal = "CODE1",
+                        CareerGoals = new List<string>(){"CODE1" },
+                        Influences = new List<string>(){"CODE1" }
                     }
                 };
 
@@ -536,6 +553,33 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     new Domain.Student.Entities.StudentLoad("O", "Overload"){Sp1 = "3" }
                 };
 
+                //Education Goals
+                educationGoals = new List<Domain.Student.Entities.EducationGoals>()
+                {
+                    new Domain.Student.Entities.EducationGoals("b90812ee-b573-4acb-88b0-6999a050be4f", "CODE1", "DESC1"),
+                    new Domain.Student.Entities.EducationGoals("f9871d1d-a7c0-4239-b4e3-6ee6b5bc9d52", "CODE2", "DESC2"),
+                    new Domain.Student.Entities.EducationGoals("abe5524b-6704-4f09-b858-763ee2ab5fe4", "CODE3", "DESC3"),
+                    new Domain.Student.Entities.EducationGoals("2158ad73-3416-467b-99d5-1b7b92599389", "CODE4", "DESC4")
+                };
+
+                //Career Goals
+                careerGoals = new List<Domain.Student.Entities.CareerGoal>()
+                {
+                    new Domain.Student.Entities.CareerGoal("b90812ee-b573-4acb-88b0-6999a050be4f", "CODE1", "DESC1"),
+                    new Domain.Student.Entities.CareerGoal("f9871d1d-a7c0-4239-b4e3-6ee6b5bc9d52", "CODE2", "DESC2"),
+                    new Domain.Student.Entities.CareerGoal("abe5524b-6704-4f09-b858-763ee2ab5fe4", "CODE3", "DESC3"),
+                    new Domain.Student.Entities.CareerGoal("2158ad73-3416-467b-99d5-1b7b92599389", "CODE4", "DESC4")
+                };
+
+                //Influences
+                influences = new List<Domain.Student.Entities.ApplicationInfluence>()
+                {
+                    new Domain.Student.Entities.ApplicationInfluence("b90812ee-b573-4acb-88b0-6999a050be4f", "CODE1", "DESC1"),
+                    new Domain.Student.Entities.ApplicationInfluence("f9871d1d-a7c0-4239-b4e3-6ee6b5bc9d52", "CODE2", "DESC2"),
+                    new Domain.Student.Entities.ApplicationInfluence("abe5524b-6704-4f09-b858-763ee2ab5fe4", "CODE3", "DESC3"),
+                    new Domain.Student.Entities.ApplicationInfluence("2158ad73-3416-467b-99d5-1b7b92599389", "CODE4", "DESC4")
+                };                
+
                 //Tuple
                 admissionEntitiesTuple = new Tuple<IEnumerable<Domain.Student.Entities.AdmissionApplication>, int>(admissionEntities, admissionEntities.Count());
                 admissionDtoTuple = new Tuple<IEnumerable<Dtos.AdmissionApplication>, int>(admissionDtos, admissionDtos.Count());
@@ -593,6 +637,24 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     studentReferenceDataRepositoryMock.Setup(i => i.GetWithdrawReasonsGuidAsync(withdrawReasonEntity.Code)).ReturnsAsync(withdrawReasonEntity.Guid);
                 }
                 studentReferenceDataRepositoryMock.Setup(i => i.GetStudentLoadsAsync()).ReturnsAsync(studentLoads);
+
+                foreach (var educationGoal in educationGoals)
+                {
+                    studentReferenceDataRepositoryMock.Setup(i => i.GetEducationGoalGuidAsync(educationGoal.Code)).ReturnsAsync(educationGoal.Guid);
+                }
+                studentReferenceDataRepositoryMock.Setup(i => i.GetEducationGoalsAsync(It.IsAny<bool>())).ReturnsAsync(educationGoals);
+
+                foreach (var careerGoal in careerGoals)
+                {
+                    studentReferenceDataRepositoryMock.Setup(i => i.GetCareerGoalGuidAsync(careerGoal.Code)).ReturnsAsync(careerGoal.Guid);
+                }
+                studentReferenceDataRepositoryMock.Setup(i => i.GetCareerGoalsAsync(It.IsAny<bool>())).ReturnsAsync(careerGoals);
+
+                foreach (var influence in influences)
+                {
+                    studentReferenceDataRepositoryMock.Setup(i => i.GetApplicationInfluenceGuidAsync(influence.Code)).ReturnsAsync(influence.Guid);
+                }
+                studentReferenceDataRepositoryMock.Setup(i => i.GetApplicationInfluencesAsync(It.IsAny<bool>())).ReturnsAsync(influences);
 
                 referenceRepositoryMock.Setup(i => i.GetLocationsAsync(It.IsAny<bool>())).ReturnsAsync(locationEntities);
                 foreach (var locationEntity in locationEntities)
@@ -1982,6 +2044,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             IEnumerable<Domain.Base.Entities.AcademicDiscipline> academicDisciplineEntities;
             IEnumerable<Domain.Base.Entities.School> schoolEntities;
             IEnumerable<Domain.Student.Entities.AdmissionApplicationStatusType> admissionApplicationStatusTypes;
+            IEnumerable<Domain.Student.Entities.CareerGoal> careerGoalEntities;
+            IEnumerable<Domain.Student.Entities.EducationGoals> educationalGoalEntities;
+            IEnumerable<Domain.Student.Entities.ApplicationInfluence> applicationInfluenceEntities;
 
             string guid = "bbd216fb-0fc5-4f44-ae45-42d3cdd1e89a";
 
@@ -2052,6 +2117,29 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                                 new GuidObject2("a90812ee-b573-4acb-88b0-6999a050be4b"),
                                 new GuidObject2("2158ad73-3416-467b-99d5-1b7b92599389")
                             }
+                        }
+                    },
+                    EducationalGoal = new Dtos.GuidObject2("b90812ee-b573-4acb-88b0-6999a050be4f"),
+                    CareerGoals = new List<GuidObject2>()
+                    {
+                        new GuidObject2()
+                        {
+                            Id = "b90812ee-b573-4acb-88b0-6999a050be4f"
+                        },
+                        new GuidObject2()
+                        {
+                            Id = "f9871d1d-a7c0-4239-b4e3-6ee6b5bc9d52"
+                        }
+                    },
+                    Influences = new List<Dtos.GuidObject2>()
+                    {
+                        new GuidObject2()
+                        {
+                            Id = "b90812ee-b573-4acb-88b0-6999a050be4f"
+                        },
+                        new GuidObject2()
+                        {
+                            Id = "f9871d1d-a7c0-4239-b4e3-6ee6b5bc9d52"
                         }
                     }
                 };
@@ -2191,7 +2279,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                         ApplicationStartTerm = "CODE1",
                         ApplicationStudentLoadIntent = "F", ApplicationAdmissionsRep = "1", ApplicationSource="CODE1",
                         ApplicationResidencyStatus = "CODE1",
-                        ApplicationAcadProgram = "CODE2", ApplicationAdmitStatus = "CODE1", ApplicationWithdrawReason="CODE1",ApplicationWithdrawDate=DateTime.Now, ApplicationAttendedInstead="1",ApplicationIntgType="CODE1"
+                        ApplicationAcadProgram = "CODE2", ApplicationAdmitStatus = "CODE1", ApplicationWithdrawReason="CODE1",ApplicationWithdrawDate=DateTime.Now, ApplicationAttendedInstead="1",ApplicationIntgType="CODE1",
+                        EducationalGoal = "CODE1",
+                        CareerGoals = new List<string>{"CODE1", "CODE2"},
+                        Influences = new List<string>{"CODE1", "CODE2"}
                     }
                 };
 
@@ -2308,6 +2399,31 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     new Domain.Student.Entities.AcademicDepartment("p90812ee-b573-4acb-88b0-6999a050be4o", "CODE1", "DESC1", true),
                     new Domain.Student.Entities.AcademicDepartment("f9871d1d-a7c0-4239-b4e3-6ee6b5bc9d52", "CODE1", "DESC1", true),
                 };
+
+                educationalGoalEntities = new List<Domain.Student.Entities.EducationGoals>()
+                {
+                    new Domain.Student.Entities.EducationGoals("b90812ee-b573-4acb-88b0-6999a050be4f", "CODE1", "DESC1"),
+                    new Domain.Student.Entities.EducationGoals("f9871d1d-a7c0-4239-b4e3-6ee6b5bc9d52", "CODE2", "DESC2"),
+                    new Domain.Student.Entities.EducationGoals("abe5524b-6704-4f09-b858-763ee2ab5fe4", "CODE3", "DESC3"),
+                    new Domain.Student.Entities.EducationGoals("2158ad73-3416-467b-99d5-1b7b92599389", "CODE4", "DESC4")
+                };
+
+                careerGoalEntities = new List<Domain.Student.Entities.CareerGoal>()
+                {
+                    new Domain.Student.Entities.CareerGoal("b90812ee-b573-4acb-88b0-6999a050be4f", "CODE1", "DESC1"),
+                    new Domain.Student.Entities.CareerGoal("f9871d1d-a7c0-4239-b4e3-6ee6b5bc9d52", "CODE2", "DESC2"),
+                    new Domain.Student.Entities.CareerGoal("abe5524b-6704-4f09-b858-763ee2ab5fe4", "CODE3", "DESC3"),
+                    new Domain.Student.Entities.CareerGoal("2158ad73-3416-467b-99d5-1b7b92599389", "CODE4", "DESC4")
+                };
+
+                applicationInfluenceEntities = new List<Domain.Student.Entities.ApplicationInfluence>()
+                {
+                    new Domain.Student.Entities.ApplicationInfluence("b90812ee-b573-4acb-88b0-6999a050be4f", "CODE1", "DESC1"),
+                    new Domain.Student.Entities.ApplicationInfluence("f9871d1d-a7c0-4239-b4e3-6ee6b5bc9d52", "CODE2", "DESC2"),
+                    new Domain.Student.Entities.ApplicationInfluence("abe5524b-6704-4f09-b858-763ee2ab5fe4", "CODE3", "DESC3"),
+                    new Domain.Student.Entities.ApplicationInfluence("2158ad73-3416-467b-99d5-1b7b92599389", "CODE4", "DESC4")
+                };
+
                 studentReferenceDataRepositoryMock.Setup(repo => repo.GetAcademicDepartmentsAsync(It.IsAny<bool>())).ReturnsAsync(_academicDepartments);
             }
 
@@ -2372,6 +2488,21 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 foreach (var schoolEntity in schoolEntities)
                 {
                     referenceRepositoryMock.Setup(i => i.GetSchoolsGuidAsync(schoolEntity.Code)).ReturnsAsync(schoolEntity.Guid);
+                }
+                studentReferenceDataRepositoryMock.Setup(i => i.GetCareerGoalsAsync(It.IsAny<bool>())).ReturnsAsync(careerGoalEntities);
+                foreach (var careerGoalEntity in careerGoalEntities)
+                {
+                    studentReferenceDataRepositoryMock.Setup(i => i.GetCareerGoalGuidAsync(careerGoalEntity.Code)).ReturnsAsync(careerGoalEntity.Guid);
+                }
+                studentReferenceDataRepositoryMock.Setup(i => i.GetEducationGoalsAsync(It.IsAny<bool>())).ReturnsAsync(educationalGoalEntities);
+                foreach (var educationalGoalEntity in educationalGoalEntities)
+                {
+                    studentReferenceDataRepositoryMock.Setup(i => i.GetEducationGoalGuidAsync(educationalGoalEntity.Code)).ReturnsAsync(educationalGoalEntity.Guid);
+                }
+                studentReferenceDataRepositoryMock.Setup(i => i.GetApplicationInfluencesAsync(It.IsAny<bool>())).ReturnsAsync(applicationInfluenceEntities);
+                foreach (var applicationInfluenceEntity in applicationInfluenceEntities)
+                {
+                    studentReferenceDataRepositoryMock.Setup(i => i.GetApplicationInfluenceGuidAsync(applicationInfluenceEntity.Code)).ReturnsAsync(applicationInfluenceEntity.Guid);
                 }
 
                 admissionApplicationsRepositoryMock.Setup(x => x.CreateAdmissionApplicationAsync(It.IsAny<Domain.Student.Entities.AdmissionApplication>())).ReturnsAsync(admissionEntities.FirstOrDefault());
@@ -2581,7 +2712,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 personRepositoryMock.Setup(repo => repo.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
                 var actual = await admissionApplicationService.UpdateAdmissionApplicationsSubmissionAsync(guid, admissionSubmissionConvertDto, It.IsAny<bool>());
             }
-
+            
             [TestMethod]
             public async Task UpdateAdmissionApplicationsSubmissionAsync()
             {

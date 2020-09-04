@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Tests.UserFactories;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -50,6 +50,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             private FixedAssets fixedAsset;            
             private IEnumerable<AssetCategories> assetCategories;
             private IEnumerable<AssetTypes> assetTypes;
+            private IEnumerable<FixedAssetsFlag> fixedAssetsFlagEntities;
             private IEnumerable<Domain.Base.Entities.Room> rooms;
             private IEnumerable<Domain.Base.Entities.Building> buildings;
             private IEnumerable<Domain.Base.Entities.ItemCondition> itemConditions;
@@ -153,7 +154,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
                 roles.FirstOrDefault().AddPermission(new Permission(ColleagueFinancePermissionCodes.ViewFixedAssets));
 
-            }
+                fixedAssetsFlagEntities = new List<FixedAssetsFlag>
+                {
+                    new FixedAssetsFlag("S", "Single"), new FixedAssetsFlag("M", "Multi-Valued")
+                };
+        }
 
             //private FixedAssets getFixedAsset(FixedAssetStatus status = FixedAssetStatus.Outstanding)
             private FixedAssets getFixedAsset()
@@ -185,6 +190,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 referenceDataRepositoryMock.Setup(f => f.GetBuildings2Async(It.IsAny<bool>())).ReturnsAsync(buildings);
                 referenceDataRepositoryMock.Setup(r => r.GetItemConditionsAsync(It.IsAny<bool>())).ReturnsAsync(itemConditions);
                 referenceDataRepositoryMock.Setup(r => r.GetAcquisitionMethodsAsync(It.IsAny<bool>())).ReturnsAsync(acquisitionMethods);
+                colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetFixedAssetTransferFlagsAsync()).ReturnsAsync(fixedAssetsFlagEntities);
+                var fixedAssetsFlagAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.FixedAssetsFlag, Dtos.ColleagueFinance.FixedAssetsFlag>(adapterRegistryMock.Object, loggerMock.Object);
+                adapterRegistryMock.Setup(reg => reg.GetAdapter<Domain.ColleagueFinance.Entities.FixedAssetsFlag, Dtos.ColleagueFinance.FixedAssetsFlag>()).Returns(fixedAssetsFlagAdapter);
 
             }
 
@@ -348,6 +356,17 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 var result = await fixedAssetService.GetFixedAssetsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>());
                 Assert.IsNotNull(result);
                 Assert.AreEqual(result.Item1.FirstOrDefault().Id, guid);
+            }
+
+            [TestMethod]
+            public async Task FixedAssetService_GetFixedAssetTransferFlagsAsync()
+            {
+                var fixedAssetflagDtos = await fixedAssetService.GetFixedAssetTransferFlagsAsync();
+                Assert.AreEqual(fixedAssetflagDtos.ToList().Count, fixedAssetsFlagEntities.ToList().Count);
+                Assert.AreEqual(fixedAssetflagDtos.ToList()[0].Code, fixedAssetsFlagEntities.ToList()[0].Code);
+                Assert.AreEqual(fixedAssetflagDtos.ToList()[0].Description, fixedAssetsFlagEntities.ToList()[0].Description);
+                Assert.AreEqual(fixedAssetflagDtos.ToList()[1].Code, fixedAssetsFlagEntities.ToList()[1].Code);
+                Assert.AreEqual(fixedAssetflagDtos.ToList()[1].Description, fixedAssetsFlagEntities.ToList()[1].Description);
             }
             #endregion
         }

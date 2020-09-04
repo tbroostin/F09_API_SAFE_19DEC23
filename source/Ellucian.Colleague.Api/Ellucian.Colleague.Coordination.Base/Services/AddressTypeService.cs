@@ -1,4 +1,4 @@
-﻿// Copyright 2015-16 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,15 +23,15 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         private const string _dataOrigin = "Colleague";
 
         public AddressTypeService(IAdapterRegistry adapterRegistry, IReferenceDataRepository referenceDataRepository,
-                                         ICurrentUserFactory currentUserFactory,
+                                         ICurrentUserFactory currentUserFactory, IConfigurationRepository configurationRepository,
                                          IRoleRepository roleRepository,
                                          ILogger logger)
-            : base(adapterRegistry, currentUserFactory, roleRepository, logger)
+            : base(adapterRegistry, currentUserFactory, roleRepository, logger, null, configurationRepository)
         {
             _referenceDataRepository = referenceDataRepository;
         }
 
-        /// <remarks>FOR USE WITH ELLUCIAN HeDM</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
         /// Gets all address types
         /// </summary>

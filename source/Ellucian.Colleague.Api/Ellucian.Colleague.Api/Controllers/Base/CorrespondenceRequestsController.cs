@@ -1,4 +1,4 @@
-﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -13,11 +13,12 @@ using Ellucian.Web.License;
 using Ellucian.Web.Security;
 using slf4net;
 using System.Threading.Tasks;
+using Ellucian.Colleague.Domain.Base.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.Base
 {
     /// <summary>
-    /// The CorrespondenceRequestsController exposes a person's correspondence requests
+    /// The CorrespondenceRequestsController provides access to retrieve and update a person's correspondence requests
     /// </summary>
     [Authorize]
     [LicenseProvider(typeof(EllucianLicenseProvider))]
@@ -74,6 +75,54 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 Logger.Error(e, e.Message);
                 throw CreateHttpResponseException("Unknown error occurred getting CorrespondenceRequests resource. See log for details.", System.Net.HttpStatusCode.BadRequest);
             }
+        }
+
+        /// <summary>
+        /// Used to notify back office users when a self-service user has uploaded a new attachment associated with one of their correspondence requests.
+        /// If a status code has been specified, the status of the correspondence request will also be changed.
+        /// </summary>
+        /// <accessComments>
+        /// Users may submit attachment notifications for their own correspondence requests.
+        /// </accessComments>
+        /// <param name="attachmentNotification">Object that contains the person Id, Communication code and optionally the assign date of the correspondence request.</param>
+        /// <returns>The CorrespondenceRequest notified of an attachment</returns>
+        /// <exception cref="HttpResponseException">Thrown if the personId or communication code properties of the input object are null, empty,
+        /// if the correspondence request cannot be updated due to a record lock, 
+        /// or if the user does not have access to the person's correspondence requests</exception> 
+        public async Task<CorrespondenceRequest> PutAttachmentNotificationAsync(CorrespondenceAttachmentNotification attachmentNotification)
+        {
+            CorrespondenceRequest returnDto = null;
+            if (attachmentNotification == null || string.IsNullOrEmpty(attachmentNotification.PersonId) || string.IsNullOrEmpty(attachmentNotification.CommunicationCode))
+            {
+                throw CreateHttpResponseException("Must provide person Id and communication code.", System.Net.HttpStatusCode.BadRequest);
+            }
+            try
+            {
+                returnDto = await CorrespondenceRequestsService.AttachmentNotificationAsync(attachmentNotification);
+            }
+            catch (RecordLockException ioex)
+            {
+                // Record lock - status could not be updated
+                Logger.Error(ioex, "PutAttachmentNotificationAsync failed due to a record lock.");
+                throw CreateHttpResponseException(ioex.Message, System.Net.HttpStatusCode.Conflict);
+            }
+            catch (PermissionsException peex)
+            {
+                Logger.Error(peex, "PutAttachmentNotificationAsync failed due to a permission problem.");
+                throw CreateHttpResponseException(peex.Message, System.Net.HttpStatusCode.Forbidden);
+            }
+            catch (KeyNotFoundException nfex)
+            {
+                // Record lock - status could not be updated
+                Logger.Error(nfex, "PutAttachmentNotificationAsync failed due to the record not found.");
+                throw CreateHttpResponseException(nfex.Message, System.Net.HttpStatusCode.NotFound);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "PutAttachmentNotificationAsync failed due to a repository error.");
+                throw CreateHttpResponseException(ex.Message, System.Net.HttpStatusCode.BadRequest);
+            }
+            return returnDto;
         }
     }
 }

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Coordination.Base.Services
 {
-    public interface IPhoneTypeService
+    public interface IPhoneTypeService : IBaseService
     {
         /// <remarks>FOR USE WITH ELLUCIAN HeDM</remarks>
         /// <summary>

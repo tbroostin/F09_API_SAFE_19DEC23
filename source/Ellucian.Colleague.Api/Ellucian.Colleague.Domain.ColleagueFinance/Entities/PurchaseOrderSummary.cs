@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -50,6 +50,11 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         public ReadOnlyCollection<RequisitionSummary> Requisitions { get; private set; }
         private readonly List<RequisitionSummary> requisitions = new List<RequisitionSummary>();
 
+        /// <summary>
+        /// List of VoucherIds
+        /// </summary>
+        public ReadOnlyCollection<string> VoucherIds { get; private set; }
+        private readonly List<string> voucherIds = new List<string>();
 
         /// <summary>
         /// This constructor initializes the purchase order summary domain entity
@@ -69,10 +74,11 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
 
             this.number = number;
             Requisitions = this.requisitions.AsReadOnly();
+            VoucherIds = this.voucherIds.AsReadOnly();
         }
 
         /// <summary>
-        /// Add requisitions to the list for the purchase orders.
+        /// Add an associated requisition to the purchase order.
         /// </summary>
         /// <param name="requisition">The associated requisition</param>
         public void AddRequisition(RequisitionSummary requisition)
@@ -85,6 +91,20 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
                 this.requisitions.Add(requisition);
             }
         }
-        
+        /// <summary>
+        /// Add an associated voucherId to the purchase order.
+        /// </summary>
+        /// <param name="voucherId">The associated voucher id</param>
+        public void AddVoucherId(string voucherId)
+        {
+            if (string.IsNullOrEmpty(voucherId))
+                throw new ArgumentNullException("voucherId", "voucherId must have a value.");
+
+            if (!voucherIds.Any(x => x == voucherId))
+            {
+                this.voucherIds.Add(voucherId);
+            }
+        }
+
     }
 }

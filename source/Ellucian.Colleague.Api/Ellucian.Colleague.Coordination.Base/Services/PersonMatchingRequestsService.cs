@@ -228,7 +228,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
                 foreach (var entity in entities.Item1)
                 {
-                    dtos.Add(ConvertEntityToDtoAsync(entity, personDict));
+                    dtos.Add(ConvertPersonMatchRequestEntityToDtoAsync(entity, personDict));
                 }
 
                 if (IntegrationApiException != null)
@@ -274,7 +274,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
                 Dictionary<string, string> personDict = await _personRepository.GetPersonGuidsCollectionAsync(new List<string>() { entity.PersonId });
 
-                var dto = ConvertEntityToDtoAsync(entity, personDict);
+                var dto = ConvertPersonMatchRequestEntityToDtoAsync(entity, personDict);
 
                 if (IntegrationApiException != null)
                 {
@@ -331,7 +331,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 // return the newly created PersonMatchingRequests
                 Dictionary<string, string> personDict = await _personRepository.GetPersonGuidsCollectionAsync(new List<string>() { createdPersonMatchRequest.PersonId });
 
-                var dto = ConvertEntityToDtoAsync(createdPersonMatchRequest, personDict);
+                var dto = ConvertPersonMatchRequestEntityToDtoAsync(createdPersonMatchRequest, personDict);
 
                 if (IntegrationApiException != null)
                 {
@@ -364,7 +364,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <param name="personDict"></param>
         /// <param name="stAcadPrgDict"></param>
         /// <returns></returns>
-        private PersonMatchingRequests ConvertEntityToDtoAsync(PersonMatchRequest source, Dictionary<string, string> personDict)
+        private PersonMatchingRequests ConvertPersonMatchRequestEntityToDtoAsync(PersonMatchRequest source, Dictionary<string, string> personDict)
         {
             PersonMatchingRequests dto = new PersonMatchingRequests();
 

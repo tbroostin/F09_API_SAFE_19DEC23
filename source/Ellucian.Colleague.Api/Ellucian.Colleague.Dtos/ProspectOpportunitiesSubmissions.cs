@@ -61,5 +61,20 @@ namespace Ellucian.Colleague.Dtos
 
         [JsonProperty("personSource", DefaultValueHandling = DefaultValueHandling.Ignore)]
         public GuidObject2 PersonSource { get; set; }
+
+        /// <summary>
+        /// The education goal associated with the application
+        /// </summary>
+        [JsonProperty("educationalGoal", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public GuidObject2 EducationalGoal { get; set; }
+
+        /// <summary>
+        /// The career goals associated with the application
+        /// </summary>
+        [JsonProperty("careerGoals", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public List<GuidObject2> CareerGoals
+        {
+            get; set;
+        }
     }
 }

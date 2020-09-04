@@ -28,6 +28,18 @@ namespace Ellucian.Colleague.Dtos.DtoProperties
         public GuidObject2 Organization { get; set; }
 
         /// <summary>
+        /// The comment is made about this institution.
+        /// </summary>
+        [DataMember(Name = "institution", EmitDefaultValue = false)]
+        public GuidObject2 Institution { get; set; }
+
+        /// <summary>
+        /// The comment is made about this institution Unit (Not Supported).
+        /// </summary>
+        [DataMember(Name = "institutionUnit", EmitDefaultValue = false)]
+        public GuidObject2 InstitutionUnit { get; set; }
+
+        /// <summary>
         /// Constructor
         /// </summary>
         [JsonConstructor]

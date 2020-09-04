@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -15,32 +15,37 @@ using slf4net;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.EnumProperties;
+using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Coordination.Base.Services;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
     [RegisterType]
-    public class RoommateCharacteristicsService : IRoommateCharacteristicsService
+    public class RoommateCharacteristicsService : BaseCoordinationService, IRoommateCharacteristicsService
     {
 
         private readonly IStudentReferenceDataRepository _referenceDataRepository;
         private readonly ILogger _logger;
 
         public RoommateCharacteristicsService(
-
+            IAdapterRegistry adapterRegistry,
             IStudentReferenceDataRepository referenceDataRepository,
+            ICurrentUserFactory currentUserFactory,
+            IConfigurationRepository configurationRepository,
+            IRoleRepository roleRepository,
             ILogger logger)
+            : base(adapterRegistry, currentUserFactory, roleRepository, logger, null, configurationRepository)
         {
-
             _referenceDataRepository = referenceDataRepository;
             _logger = logger;
         }
 
-        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
-        /// <summary>
-        /// Gets all roommate-characteristics
-        /// </summary>
-        /// <returns>Collection of RoommateCharacteristics DTO objects</returns>
-        public async Task<IEnumerable<Ellucian.Colleague.Dtos.RoommateCharacteristics>> GetRoommateCharacteristicsAsync(bool bypassCache = false)
+    /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
+    /// <summary>
+    /// Gets all roommate-characteristics
+    /// </summary>
+    /// <returns>Collection of RoommateCharacteristics DTO objects</returns>
+    public async Task<IEnumerable<Ellucian.Colleague.Dtos.RoommateCharacteristics>> GetRoommateCharacteristicsAsync(bool bypassCache = false)
         {
             var roommateCharacteristicsCollection = new List<Ellucian.Colleague.Dtos.RoommateCharacteristics>();
 

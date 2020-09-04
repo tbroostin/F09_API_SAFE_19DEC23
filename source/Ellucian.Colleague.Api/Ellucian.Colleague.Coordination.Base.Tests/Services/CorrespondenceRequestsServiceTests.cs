@@ -1,20 +1,19 @@
-﻿//Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
+﻿//Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base.Services;
-using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Base.Tests;
-using Ellucian.Colleague.Domain.Base;
+using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using System.Threading.Tasks;
-using Ellucian.Colleague.Domain.Repositories;
 using slf4net;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 {
@@ -44,108 +43,122 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 }
             }
         }
+        public Mock<IAdapterRegistry> adapterRegistryMock;
+        public Mock<IRoleRepository> roleRepositoryMock;
+        public Mock<ILogger> loggerMock;
+        public ICurrentUserFactory currentUserFactory;
+        private IConfigurationRepository baseConfigurationRepository;
+        private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
+
+        private string personId;
+
+        private TestCorrespondenceRequestsRepository testCorrespondenceRequestsRepository;
+        //private TestFinancialAidReferenceDataRepository testReferenceDataRepository;
+
+        private IEnumerable<Domain.Base.Entities.CorrespondenceRequest> inputCorrespondenceRequestEntities;
+        private Domain.Base.Entities.CorrespondenceRequest responseCorrespondenceRequestEntity;
+        private AutoMapperAdapter<Domain.Base.Entities.CorrespondenceRequest, Dtos.Base.CorrespondenceRequest> CorrespondenceRequestDtoAdapter;
+
+        private List<Dtos.Base.CorrespondenceRequest> expectedCorrespondenceRequests;
+        private IEnumerable<Dtos.Base.CorrespondenceRequest> actualCorrespondenceRequests;
+
+        private Mock<ICorrespondenceRequestsRepository> CorrespondenceRequestsRepositoryMock;
+        // private Mock<IFinancialAidReferenceDataRepository> referenceDataRepositoryMock;
+
+        private CorrespondenceRequestsService CorrespondenceRequestsService;
+
+        [TestInitialize]
+        public async void BaseInitialize()
+        {
+            adapterRegistryMock = new Mock<IAdapterRegistry>();
+            loggerMock = new Mock<ILogger>();
+            roleRepositoryMock = new Mock<IRoleRepository>();
+            currentUserFactory = new StudentUserFactory();
+            baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
+            baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
+
+            personId = currentUserFactory.CurrentUser.PersonId;
+
+            testCorrespondenceRequestsRepository = new TestCorrespondenceRequestsRepository();
+            inputCorrespondenceRequestEntities = await testCorrespondenceRequestsRepository.GetCorrespondenceRequestsAsync(personId);
+            responseCorrespondenceRequestEntity = inputCorrespondenceRequestEntities.First();
+
+            CorrespondenceRequestsRepositoryMock = new Mock<ICorrespondenceRequestsRepository>();
+            CorrespondenceRequestsRepositoryMock.Setup(l => l.GetCorrespondenceRequestsAsync(personId)).ReturnsAsync(inputCorrespondenceRequestEntities);
+            CorrespondenceRequestsRepositoryMock.Setup(cc => cc.AttachmentNotificationAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<string>())).ReturnsAsync(responseCorrespondenceRequestEntity);
+
+            CorrespondenceRequestDtoAdapter = new AutoMapperAdapter<Domain.Base.Entities.CorrespondenceRequest, Dtos.Base.CorrespondenceRequest>(adapterRegistryMock.Object, loggerMock.Object);
+            expectedCorrespondenceRequests = new List<Dtos.Base.CorrespondenceRequest>();
+            foreach (var letterEntity in inputCorrespondenceRequestEntities)
+            {
+                expectedCorrespondenceRequests.Add(CorrespondenceRequestDtoAdapter.MapToType(letterEntity));
+            }
+
+            adapterRegistryMock.Setup<ITypeAdapter<Domain.Base.Entities.CorrespondenceRequest, Dtos.Base.CorrespondenceRequest>>(
+                a => a.GetAdapter<Domain.Base.Entities.CorrespondenceRequest, Dtos.Base.CorrespondenceRequest>()
+                ).Returns(CorrespondenceRequestDtoAdapter);
+
+            CorrespondenceRequestsService = new CorrespondenceRequestsService(adapterRegistryMock.Object,
+                CorrespondenceRequestsRepositoryMock.Object,
+                baseConfigurationRepository,
+                null,
+                currentUserFactory,
+                roleRepositoryMock.Object,
+                loggerMock.Object);
+
+            actualCorrespondenceRequests = await CorrespondenceRequestsService.GetCorrespondenceRequestsAsync(personId);
+        }
+
+        [TestCleanup]
+        public void BaseCleanup()
+        {
+            adapterRegistryMock = null;
+            loggerMock = null;
+            roleRepositoryMock = null;
+            currentUserFactory = null;
+            baseConfigurationRepositoryMock = null;
+            baseConfigurationRepository = null;
+
+            personId = null;
+            testCorrespondenceRequestsRepository = null;
+            inputCorrespondenceRequestEntities = null;
+            CorrespondenceRequestDtoAdapter = null;
+            expectedCorrespondenceRequests = null;
+            actualCorrespondenceRequests = null;
+            CorrespondenceRequestsRepositoryMock = null;
+            CorrespondenceRequestsService = null;
+        }
+
+        private void BuildService(ICurrentUserFactory userFactory = null)
+        {
+            if (userFactory == null)
+            {
+                userFactory = currentUserFactory;
+            }
+            CorrespondenceRequestsService = new CorrespondenceRequestsService(adapterRegistryMock.Object,
+                                CorrespondenceRequestsRepositoryMock.Object,
+                                baseConfigurationRepository,
+                                null,
+                                userFactory,
+                                roleRepositoryMock.Object,
+                                loggerMock.Object);
+        }
 
         #region GetCorrespondenceRequestsTests
         [TestClass]
-        public class GetCorrespondenceRequestsTests
+        public class GetCorrespondenceRequestsTests : CorrespondenceRequestsServiceTests
         {
 
-            public Mock<IAdapterRegistry> adapterRegistryMock;
-            public Mock<IRoleRepository> roleRepositoryMock;
-            public Mock<ILogger> loggerMock;
-            public ICurrentUserFactory currentUserFactory;
-            private IConfigurationRepository baseConfigurationRepository;
-            private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
-
-            private string personId;
-
-            private TestCorrespondenceRequestsRepository testCorrespondenceRequestsRepository;
-            //private TestFinancialAidReferenceDataRepository testReferenceDataRepository;
-
-            private IEnumerable<Domain.Base.Entities.CorrespondenceRequest> inputCorrespondenceRequestEntities;
-            private AutoMapperAdapter<Domain.Base.Entities.CorrespondenceRequest, Dtos.Base.CorrespondenceRequest> CorrespondenceRequestDtoAdapter;
-
-            private List<Dtos.Base.CorrespondenceRequest> expectedCorrespondenceRequests;
-            private IEnumerable<Dtos.Base.CorrespondenceRequest> actualCorrespondenceRequests;
-
-            private Mock<ICorrespondenceRequestsRepository> CorrespondenceRequestsRepositoryMock;
-            // private Mock<IFinancialAidReferenceDataRepository> referenceDataRepositoryMock;
-
-            private CorrespondenceRequestsService CorrespondenceRequestsService;
-
             [TestInitialize]
-            public async void Initialize()
+            public void Initialize()
             {
-                adapterRegistryMock = new Mock<IAdapterRegistry>();
-                loggerMock = new Mock<ILogger>();
-                roleRepositoryMock = new Mock<IRoleRepository>();
-                currentUserFactory = new StudentUserFactory();
-                baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
-                baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
-
-                personId = currentUserFactory.CurrentUser.PersonId;
-
-                testCorrespondenceRequestsRepository = new TestCorrespondenceRequestsRepository();
-                inputCorrespondenceRequestEntities = await testCorrespondenceRequestsRepository.GetCorrespondenceRequestsAsync(personId);
-
-                CorrespondenceRequestsRepositoryMock = new Mock<ICorrespondenceRequestsRepository>();
-                CorrespondenceRequestsRepositoryMock.Setup(l => l.GetCorrespondenceRequestsAsync(personId)).ReturnsAsync(inputCorrespondenceRequestEntities);
-
-                CorrespondenceRequestDtoAdapter = new AutoMapperAdapter<Domain.Base.Entities.CorrespondenceRequest, Dtos.Base.CorrespondenceRequest>(adapterRegistryMock.Object, loggerMock.Object);
-                expectedCorrespondenceRequests = new List<Dtos.Base.CorrespondenceRequest>();
-                foreach (var letterEntity in inputCorrespondenceRequestEntities)
-                {
-                    expectedCorrespondenceRequests.Add(CorrespondenceRequestDtoAdapter.MapToType(letterEntity));
-                }
-
-                adapterRegistryMock.Setup<ITypeAdapter<Domain.Base.Entities.CorrespondenceRequest, Dtos.Base.CorrespondenceRequest>>(
-                    a => a.GetAdapter<Domain.Base.Entities.CorrespondenceRequest, Dtos.Base.CorrespondenceRequest>()
-                    ).Returns(CorrespondenceRequestDtoAdapter);
-
-                CorrespondenceRequestsService = new CorrespondenceRequestsService(adapterRegistryMock.Object,
-                    CorrespondenceRequestsRepositoryMock.Object,
-                    baseConfigurationRepository,
-                    null,
-                    currentUserFactory,
-                    roleRepositoryMock.Object,
-                    loggerMock.Object);
-
-                actualCorrespondenceRequests = await CorrespondenceRequestsService.GetCorrespondenceRequestsAsync(personId);
+                base.BaseInitialize();
             }
 
             [TestCleanup]
             public void Cleanup()
             {
-                adapterRegistryMock = null;
-                loggerMock = null;
-                roleRepositoryMock = null;
-                currentUserFactory = null;
-                baseConfigurationRepositoryMock = null;
-                baseConfigurationRepository = null;
-
-                personId = null;
-                testCorrespondenceRequestsRepository = null;
-                inputCorrespondenceRequestEntities = null;
-                CorrespondenceRequestDtoAdapter = null;
-                expectedCorrespondenceRequests = null;
-                actualCorrespondenceRequests = null;
-                CorrespondenceRequestsRepositoryMock = null;
-                CorrespondenceRequestsService = null;
-            }
-
-            private void BuildService(ICurrentUserFactory userFactory = null)
-            {
-                if (userFactory == null)
-                {
-                    userFactory = currentUserFactory;
-                }
-                CorrespondenceRequestsService = new CorrespondenceRequestsService(adapterRegistryMock.Object,
-                                    CorrespondenceRequestsRepositoryMock.Object,
-                                    baseConfigurationRepository,
-                                    null,
-                                    userFactory,
-                                    roleRepositoryMock.Object,
-                                    loggerMock.Object);
+                base.BaseCleanup();
             }
 
             [TestMethod]
@@ -268,6 +281,84 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             }
         }
-        #endregion        
+        #endregion
+
+        [TestClass]
+        public class AttachmentNotificationAsyncTests : CorrespondenceRequestsServiceTests
+        {
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                base.BaseInitialize();
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                base.BaseCleanup();
+            }
+
+            [TestMethod]
+            public async Task AttachmentNotificationAsync_Success()
+            {
+                var inputNotification = new CorrespondenceAttachmentNotification() { PersonId = personId, CommunicationCode = "Code", AssignDate = DateTime.Today.AddDays(-2) };
+                var actual = await CorrespondenceRequestsService.AttachmentNotificationAsync(inputNotification);
+                Assert.AreEqual(responseCorrespondenceRequestEntity.PersonId, actual.PersonId);
+                Assert.AreEqual(responseCorrespondenceRequestEntity.Code, actual.Code);
+                Assert.AreEqual(responseCorrespondenceRequestEntity.AssignDate, actual.AssignDate);
+                Assert.AreEqual(responseCorrespondenceRequestEntity.Instance, actual.Instance);
+                Assert.AreEqual(responseCorrespondenceRequestEntity.Status.ToString(), actual.Status.ToString());
+                Assert.AreEqual(responseCorrespondenceRequestEntity.StatusDescription, actual.StatusDescription);
+                Assert.AreEqual(responseCorrespondenceRequestEntity.StatusDate, actual.StatusDate);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task AttachmentNotificationAsync_NullInput()
+            {
+                await CorrespondenceRequestsService.AttachmentNotificationAsync(null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task AttachmentNotificationAsync_NullPersonId()
+            {
+                var inputNotification = new CorrespondenceAttachmentNotification() { CommunicationCode = "CommCode", AssignDate = DateTime.Today.AddDays(-2) };
+                await CorrespondenceRequestsService.AttachmentNotificationAsync(inputNotification);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task AttachmentNotificationAsync_EmptyPersonId()
+            {
+                var inputNotification = new CorrespondenceAttachmentNotification() { PersonId = string.Empty, CommunicationCode = "CommCode", AssignDate = DateTime.Today.AddDays(-2) };
+                await CorrespondenceRequestsService.AttachmentNotificationAsync(inputNotification);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task AttachmentNotificationAsync_NullCommunicationCode()
+            {
+                var inputNotification = new CorrespondenceAttachmentNotification() { PersonId = "PersonId", AssignDate = DateTime.Today.AddDays(-2) };
+                await CorrespondenceRequestsService.AttachmentNotificationAsync(inputNotification);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task AttachmentNotificationAsync_EmptyCommunicationCode()
+            {
+                var inputNotification = new CorrespondenceAttachmentNotification() { PersonId = "PersonId", CommunicationCode = string.Empty, AssignDate = DateTime.Today.AddDays(-2) };
+                await CorrespondenceRequestsService.AttachmentNotificationAsync(inputNotification);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task AttachmentService_PutAttachmentAsyncNoPermissions()
+            {
+                var inputNotification = new CorrespondenceAttachmentNotification() { PersonId = "PersonId", CommunicationCode = "Code", AssignDate = DateTime.Today.AddDays(-2) };
+                await CorrespondenceRequestsService.AttachmentNotificationAsync(inputNotification);
+            }
+        }
     }
 }

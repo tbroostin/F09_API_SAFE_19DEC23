@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
 using Ellucian.Colleague.Domain.Base.Exceptions;
@@ -257,6 +257,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 var bankCode = bankCodesRecords.FirstOrDefault(b => b.Recordkey == accountsPayableSourcesRecord.AptBankCode);
                 if (bankCode != null)
                     accountsPayableSource.directDeposit = bankCode.BankEftActiveFlag;
+                accountsPayableSource.Source = accountsPayableSourcesRecord.AptSource;
                 accountsPayableSourcesEntities.Add(accountsPayableSource);
             }
 
@@ -286,7 +287,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             if (codeCache == null)
             {
                 var allCodesNoCache = await GetAccountsPayableSourcesAsync(true);
-                if (allCodesCache == null)
+                if (allCodesNoCache == null)
                 {
                     throw new RepositoryException(string.Concat("No Guid found, Entity:'AP.TYPES', Record ID:'", code, "'"));
                 }
@@ -381,7 +382,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             if(assetTypeDataContracts == null || !assetTypeDataContracts.Any())
             {
-                return null;
+                logger.Info("Unable to read records from ASSET.TYPES. Might be empty.");
+                return assetTypeEntities;
             }
 
             foreach (var assetTypeDataContract in assetTypeDataContracts)
@@ -455,7 +457,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             if (codeCache == null)
             {
                 var allCodesNoCache = await GetCommodityCodesAsync(true);
-                if (allCodesCache == null)
+                if (allCodesNoCache == null)
                 {
                     throw new RepositoryException(string.Concat("No Guid found, Entity:'COMMODITY.CODES', Record ID:'", code, "'"));
                 }
@@ -509,7 +511,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             if (codeCache == null)
             {
                 var allCodesNoCache = await GetCommodityUnitTypesAsync(true);
-                if (allCodesCache == null)
+                if (allCodesNoCache == null)
                 {
                     throw new RepositoryException(string.Concat("No Guid found, Entity:'UNIT.ISSUES', Record ID:'", code, "'"));
                 }
@@ -611,7 +613,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             if (codeCache == null)
             {
                 var allCodesNoCache = await GetFreeOnBoardTypesAsync(true);
-                if (allCodesCache == null)
+                if (allCodesNoCache == null)
                 {
                     throw new RepositoryException(string.Concat("No Guid found, Entity:'FOBS', Record ID:'", code, "'"));
                 }
@@ -631,6 +633,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             return guid;
 
         }
+
         /// <summary>
         /// Gets ShippingMethod
         /// </summary>
@@ -640,6 +643,49 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         {
             return await GetGuidCodeItemAsync<ShipVias, ShippingMethod>("AllShippingMethods", "SHIP.VIAS",
             (sm, g) => new ShippingMethod(g, sm.Recordkey, sm.ShipViasDesc), bypassCache: ignoreCache);
+        }
+
+        /// <summary>
+        /// Get guid for ShippingMethod code
+        /// </summary>
+        /// <param name="code">ShippingMethod code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetShippingMethodGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetShippingMethodsAsync(false);
+            ShippingMethod codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
+
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetShippingMethodsAsync(true);
+                if (allCodesNoCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'SHIP.VIAS', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'SHIP.VIAS', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'SHIP.VIAS', Record ID:'", code, "'"));
+            }
+            return guid;
+
         }
 
         /// <summary>
@@ -684,7 +730,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             if (codeCache == null)
             {
                 var allCodesNoCache = await GetShipToDestinationsAsync(true);
-                if (allCodesCache == null)
+                if (allCodesNoCache == null)
                 {
                     throw new RepositoryException(string.Concat("No Guid found, Entity:'SHIP.TO.CODES', Record ID:'", code, "'"));
                 }
@@ -706,6 +752,61 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         }
 
         /// <summary>
+        /// Get a collection of IntgVendorAddressUsages
+        /// </summary>
+        /// <param name="ignoreCache">Bypass cache flag</param>
+        /// <returns>Collection of IntgVendorAddressUsages</returns>
+        public async Task<IEnumerable<IntgVendorAddressUsages>> GetIntgVendorAddressUsagesAsync(bool ignoreCache)
+        {
+            return await GetGuidValcodeAsync<IntgVendorAddressUsages>("CF", "INTG.VENDOR.ADDRESS.USAGES",
+                (cl, g) => new IntgVendorAddressUsages(g, cl.ValInternalCodeAssocMember, (string.IsNullOrEmpty(cl.ValExternalRepresentationAssocMember)
+                    ? cl.ValInternalCodeAssocMember : cl.ValExternalRepresentationAssocMember)), bypassCache: ignoreCache);
+        }
+
+        /// <summary>
+        /// Get guid for IntgVendorAddressUsages code
+        /// </summary>
+        /// <param name="code">IntgVendorAddressUsages code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetIntgVendorAddressUsagesGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetIntgVendorAddressUsagesAsync(false);
+            IntgVendorAddressUsages codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
+
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetIntgVendorAddressUsagesAsync(true);
+                if (allCodesNoCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'CF.VALCODES - INTG.VENDOR.ADDRESS.USAGES', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'CF.VALCODES - INTG.VENDOR.ADDRESS.USAGES', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'CF.VALCODES - INTG.VENDOR.ADDRESS.USAGES', Record ID:'", code, "'"));
+            }
+            return guid;
+
+        }
+
+        /// <summary>
         /// Get a collection of Collection of VendorHoldReasons domain objects
         /// </summary>
         /// <param name="ignoreCache">Bypass cache flag</param>
@@ -714,6 +815,49 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         {
             return await GetGuidValcodeAsync<VendorHoldReasons>("CF", "INTG.VENDOR.HOLD.REASONS",
                 (cl, g) => new VendorHoldReasons(g, cl.ValInternalCodeAssocMember, cl.ValExternalRepresentationAssocMember), bypassCache: ignoreCache);
+
+        }
+
+        /// <summary>
+        /// Get guid for VendorHoldReasons code
+        /// </summary>
+        /// <param name="code">VendorHoldReasons code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetVendorHoldReasonsGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetVendorHoldReasonsAsync(false);
+            VendorHoldReasons codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
+
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetVendorHoldReasonsAsync(true);
+                if (allCodesNoCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'CF.VALCODES - INTG.VENDOR.HOLD.REASONS', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'CF.VALCODES - INTG.VENDOR.HOLD.REASONS', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'CF.VALCODES - INTG.VENDOR.HOLD.REASONS', Record ID:'", code, "'"));
+            }
+            return guid;
 
         }
 
@@ -750,7 +894,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             if (codeCache == null)
             {
                 var allCodesNoCache = await GetVendorTermsAsync(true);
-                if (allCodesCache == null)
+                if (allCodesNoCache == null)
                 {
                     throw new RepositoryException(string.Concat("No Guid found, Entity:'VENDOR.TERMS', Record ID:'", code, "'"));
                 }
@@ -782,6 +926,48 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             (cu, g) => new VendorType(g, cu.Recordkey, cu.VendorTypesDesc), bypassCache: ignoreCache);
         }
 
+        /// <summary>
+        /// Get guid for VendorTypes code
+        /// </summary>
+        /// <param name="code">VendorTypes code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetVendorTypesGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetVendorTypesAsync(false);
+            VendorType codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
+
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetVendorTypesAsync(true);
+                if (allCodesNoCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'VENDOR.TYPES', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'VENDOR.TYPES', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'VENDOR.TYPES', Record ID:'", code, "'"));
+            }
+            return guid;
+
+        }
 
         /// <summary>
         /// Get a collection of AcctStructureIntg
@@ -1040,6 +1226,19 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         }
 
         /// <summary>
+        /// Get a collection of ShipViaCodes
+        /// </summary>
+        /// <returns>Collection of ShipViaCodes</returns>
+        public async Task<IEnumerable<ShipViaCode>> GetShipViaCodesAsync()
+        {
+            return await GetOrAddToCacheAsync<IEnumerable<ShipViaCode>>("ShipViaCodes", async () =>
+            {
+                return await GetCodeItemAsync<ShipVias, ShipViaCode>("AllShipViaCodes", "SHIP.VIAS",
+                itemCode => new ShipViaCode(itemCode.Recordkey, itemCode.ShipViasDesc));
+            });
+        }
+
+        /// <summary>
         /// Get a collection of Commodity Codes
         /// </summary>
         /// <returns>Collection of Commodity Codes</returns>
@@ -1081,9 +1280,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         }
 
         /// <summary>
-        /// Get a Commodity Code
+        /// Returns a Commodity Code
         /// </summary>
-        /// <returns>Commodity Code entity</returns>
+        /// <returns>Procurement Commodity Code entity</returns>
         public async Task<Domain.ColleagueFinance.Entities.ProcurementCommodityCode> GetCommodityCodeByCodeAsync(string recordKey)
         {
             var cc = await DataReader.ReadRecordAsync<CommodityCodes>(recordKey);

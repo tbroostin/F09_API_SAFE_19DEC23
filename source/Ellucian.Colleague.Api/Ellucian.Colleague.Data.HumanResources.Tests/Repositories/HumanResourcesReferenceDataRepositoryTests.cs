@@ -40,7 +40,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             public void Initialize()
             {
                 MockInitialize();
-                
+
                 _assignmentContractTypesCollection = new Collection<Ellucian.Colleague.Data.HumanResources.DataContracts.AsgmtContractTypes>()
                 {
                     new Ellucian.Colleague.Data.HumanResources.DataContracts.AsgmtContractTypes()
@@ -49,7 +49,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                         ActypDesc = "Fixed by Assignment w/ Subr"
                     }
 
-                };               
+                };
                 dataReaderMock.Setup(r => r.BulkReadRecordAsync<Ellucian.Colleague.Data.HumanResources.DataContracts.AsgmtContractTypes>("ASGMT.CONTRACT.TYPES", "", true)).ReturnsAsync(_assignmentContractTypesCollection);
                 hRRDR = new HumanResourcesReferenceDataRepository(cacheProvider, transFactory, logger);
             }
@@ -60,8 +60,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 MockCleanup();
             }
 
-           
-           [TestMethod]
+
+            [TestMethod]
             public async Task GetAssignmentContractTypesAsync()
             {
                 var result = await hRRDR.GetAssignmentContractTypesAsync(false);
@@ -339,6 +339,94 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 }
                 return valcodeResponse;
             }
+        }
+
+        /// <summary>
+        /// Test class for Beneficiary category
+        /// </summary>
+        [TestClass]
+        public class BeneficiaryCategoryTests
+        {
+            Mock<IColleagueTransactionFactory> _transFactoryMock;
+            Mock<ICacheProvider> _cacheProviderMock;
+            Mock<IColleagueDataReader> _dataAccessorMock;
+            Mock<ILogger> _loggerMock;
+            IEnumerable<BeneficiaryCategory> _allBeneficiaryCategories;
+            ApplValcodes _beneficiaryTypeValcodeResponse;
+            string _valcodeName;
+
+            HumanResourcesReferenceDataRepository _referenceDataRepo;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = new Mock<ILogger>();
+
+                // Build beneficiary types responses used for mocking
+                _allBeneficiaryCategories = new TestBeneficiaryCategoryRepository().GetBeneficiaryCategoriesAsync();
+                _beneficiaryTypeValcodeResponse = BuildValcodeResponse(_allBeneficiaryCategories);
+
+                // Build HR reference data repository
+                _referenceDataRepo = BuildValidReferenceDataRepository();
+                _valcodeName = _referenceDataRepo.BuildFullCacheKey("BENEFICIARY.TYPES");
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                _transFactoryMock = null;
+                _dataAccessorMock = null;
+                _cacheProviderMock = null;
+                _beneficiaryTypeValcodeResponse = null;
+                _allBeneficiaryCategories = null;
+                _referenceDataRepo = null;
+            }
+
+            [TestMethod]
+            public async Task GetsBeneficiaryCategoryAsync()
+            {
+                var beneficiaryCategories = await _referenceDataRepo.GetBeneficiaryCategoriesAsync();
+                for (int i = 0; i < beneficiaryCategories.Count(); i++)
+                {
+                    Assert.AreEqual(_allBeneficiaryCategories.ElementAt(i).Code, beneficiaryCategories.ElementAt(i).Code);
+                    Assert.AreEqual(_allBeneficiaryCategories.ElementAt(i).Description, beneficiaryCategories.ElementAt(i).Description);
+                }
+            }
+
+            private HumanResourcesReferenceDataRepository BuildValidReferenceDataRepository()
+            {
+                // transaction factory mock
+                _transFactoryMock = new Mock<IColleagueTransactionFactory>();
+                // Cache Provider Mock
+                _cacheProviderMock = new Mock<ICacheProvider>();
+                // Set up data accessor for mocking 
+                _dataAccessorMock = new Mock<IColleagueDataReader>();
+
+                // Set up dataAccessorMock as the object for the DataAccessor
+                _transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(_dataAccessorMock.Object);
+
+                // Setup response to beneficiary type valcode read
+                _dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("HR.VALCODE", "BENEFICIARY.TYPES", It.IsAny<bool>())).ReturnsAsync(_beneficiaryTypeValcodeResponse);
+                _cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x => x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+
+                // Construct repository
+                _referenceDataRepo = new HumanResourcesReferenceDataRepository(_cacheProviderMock.Object, _transFactoryMock.Object, _loggerMock.Object);
+
+                return _referenceDataRepo;
+            }
+
+            private ApplValcodes BuildValcodeResponse(IEnumerable<BeneficiaryCategory> beneficiaryCategories)
+            {
+                ApplValcodes valcodeResponse = new ApplValcodes();
+                valcodeResponse.ValsEntityAssociation = new List<ApplValcodesVals>();
+                foreach (var item in beneficiaryCategories)
+                {
+                    valcodeResponse.ValsEntityAssociation.Add(new ApplValcodesVals("", item.Description, item.ProcessingCode, item.Code, "", "", ""));
+                }
+                return valcodeResponse;
+            }
+
         }
 
         /// <summary>
@@ -1896,7 +1984,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             [ExpectedException(typeof(RepositoryException))]
             public async Task GetsEmploymentStatusEndingReasonsGuidAsync_Invalid()
             {
-               await referenceDataRepo.GetEmploymentStatusEndingReasonsGuidAsync("invalid");
+                await referenceDataRepo.GetEmploymentStatusEndingReasonsGuidAsync("invalid");
             }
 
 
@@ -3216,7 +3304,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 {
                     PmZeroBendedOnStub = "Y",
                     PmInstitutionName = "Ellucian University",
-                    PmInstitutionAddress = new List<string>() { "2003 Edmund Halley Dr.", "Ste 500"},
+                    PmInstitutionAddress = new List<string>() { "2003 Edmund Halley Dr.", "Ste 500" },
                     PmInstitutionCity = "Reston",
                     PmInstitutionState = "VA",
                     PmInstitutionZipcode = "20191"

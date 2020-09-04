@@ -8,6 +8,8 @@ using System.Text;
 using Ellucian.Colleague.Coordination.Base.Reports;
 using Microsoft.Reporting.WebForms;
 using System.IO;
+using System.Data;
+using System.Xml.Serialization;
 
 namespace Ellucian.Colleague.Coordination.Base.Utility
 {
@@ -66,6 +68,36 @@ namespace Ellucian.Colleague.Coordination.Base.Utility
         public bool FileExists(string path)
         {
             return File.Exists(path);
+        }
+
+        /// <summary>
+        /// Converts the given array to dataset
+        /// </summary>
+        /// <param name="values"></param>
+        /// <returns>Dataset</returns>
+        public DataSet ConvertToDataSet(Object[] values)
+        {
+            DataSet ds = new DataSet();
+
+            if (values == null)
+            {
+                return ds;
+            }
+
+            try
+            {
+                XmlSerializer xmlSerializer = new XmlSerializer(values.GetType());
+                StringWriter writer = new StringWriter();
+                xmlSerializer.Serialize(writer, values);
+                StringReader reader = new StringReader(writer.ToString());
+                ds.ReadXml(reader);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+
+            return ds;
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 
 using System;
@@ -6,9 +6,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Coordination.Student.Services;
+using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Dtos;
+using Ellucian.Web.Adapters;
+using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
@@ -25,11 +29,26 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         private Mock<ILogger> _loggerMock;
         private Mock<IStudentReferenceDataRepository> _referenceRepositoryMock;
 
+        private Mock<IAdapterRegistry> _adapterRegistryMock;
+        private IAdapterRegistry _adapterRegistry;
+        private ICurrentUserFactory _currentStudentFactory;
+        private IConfigurationRepository _configurationRepository;
+        private Mock<IConfigurationRepository> _configurationRepositoryMock;
+        private Mock<IRoleRepository> _roleRepoMock;
+        private IRoleRepository _roleRepo;
+
         [TestInitialize]
         public async void Initialize()
         {
             _referenceRepositoryMock = new Mock<IStudentReferenceDataRepository>();
             _loggerMock = new Mock<ILogger>();
+
+            _adapterRegistryMock = new Mock<IAdapterRegistry>();
+            _adapterRegistry = _adapterRegistryMock.Object;
+            _configurationRepositoryMock = new Mock<IConfigurationRepository>();
+            _configurationRepository = _configurationRepositoryMock.Object;
+            _roleRepoMock = new Mock<IRoleRepository>();
+            _roleRepo = _roleRepoMock.Object;
 
             _roommateCharacteristicsCollection = new List<Domain.Student.Entities.RoommateCharacteristics>()
                 {
@@ -42,7 +61,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             _referenceRepositoryMock.Setup(repo => repo.GetRoommateCharacteristicsAsync(It.IsAny<bool>()))
                 .ReturnsAsync(_roommateCharacteristicsCollection);
 
-            _roommateCharacteristicsService = new RoommateCharacteristicsService(_referenceRepositoryMock.Object, _loggerMock.Object);
+            _currentStudentFactory = new StudentServiceTests.CurrentUserSetup.StudentUserFactory();
+            _roommateCharacteristicsService = new RoommateCharacteristicsService(_adapterRegistry, _referenceRepositoryMock.Object, _currentStudentFactory, _configurationRepository, _roleRepo, _loggerMock.Object);                        
         }
 
         [TestCleanup]

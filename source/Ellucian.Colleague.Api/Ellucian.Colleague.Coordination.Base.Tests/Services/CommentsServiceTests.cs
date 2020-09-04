@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -16,9 +16,9 @@ using Ellucian.Web.Security;
 using Ellucian.Web.Adapters;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Data.Colleague;
-using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Dtos.DtoProperties;
 using Ellucian.Colleague.Domain.Base;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 {
@@ -84,6 +84,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             private Domain.Entities.Permission permissionViewAnyComment;
             private Domain.Entities.Permission permissionCreateUpdateAnyComment;
             private Domain.Entities.Permission permissionDeleteAnyComment;
+            Dictionary<string, string> personGuids = new Dictionary<string, string>();
+
 
             [TestInitialize]
             public void Initialize()
@@ -153,6 +155,11 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     };
 
                     commentsCollection.Add(comment);
+
+                    var output = string.Empty;
+                    if (!personGuids.TryGetValue(source.RemarksDonorId, out output))
+                        personGuids.Add(source.RemarksDonorId, subjectMatterPersonId);
+
                 }
 
 
@@ -162,6 +169,20 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 _referenceDataRepositoryMock.Setup(repo => repo.GetRemarkCodesAsync(It.IsAny<bool>()))
               .ReturnsAsync(allRemarkCodes);
 
+              
+                foreach (var type in allRemarkTypes)
+                {
+                    _referenceDataRepositoryMock.Setup(repo => repo.GetRemarkTypesGuidAsync(type.Code)).ReturnsAsync(type.Guid);
+                }
+
+
+                foreach (var type in allRemarkCodes)
+                {
+                    _referenceDataRepositoryMock.Setup(repo => repo.GetRemarkCodesGuidAsync(type.Code)).ReturnsAsync(type.Guid);
+                }
+
+               
+                _personRepositoryMock.Setup(i => i.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(personGuids);
 
                 _commentsService = new CommentsService(_adapterRegistry, _currentUserFactory,
                     _roleRepo, _remarkRepository, _referenceDataRepository, _personRepository, baseConfigurationRepository, _logger);
@@ -190,12 +211,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             #region GetCommentsAsync
 
-            //[TestMethod]
-            //[ExpectedException(typeof(ArgumentNullException))]
-            //public async Task CommentsService_Comments_ArgumentNullException()
-            //{
-            //    await _commentsService.GetCommentsAsync(, "", "", "");
-            //}
+           
 
             [TestMethod]
             public async Task CommentsService_GetComments_CommentSubjectArea()
@@ -243,6 +259,9 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 _remarkRepositoryMock.Setup(x => x.GetRemarksAsync(It.IsAny<int>(), It.IsAny<int>(), "", It.IsAny<string>())).ReturnsAsync(remark);
                 _personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(subjectMatterPersonId);
 
+
+
+
                 var actualComments = (await _commentsService.GetCommentsAsync(0, 100, "", ""));
                 Assert.IsNotNull(actualComments);
                 var expectedComments = commentsCollection;
@@ -287,7 +306,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(KeyNotFoundException))]
             public async Task CommentsService_GetCommentById_InvalidID()
             {
                 IEnumerable<Remark> remarks = _allRemarks.Where(x => x.Guid == remarkGuid);
@@ -360,6 +379,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 _remarkRepositoryMock.Setup(x => x.UpdateRemarkAsync(It.IsAny<Remark>())).ReturnsAsync(remark);
                 _personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(subjectMatterPersonId);
                 _personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("0011905");
+                Dictionary<string, Dictionary<string, string>> personDict = new Dictionary<string, Dictionary<string, string>>();
+                personDict.Add("0011905", new Dictionary<string, string>());
+                personDict["0011905"].Add("PERSON.CORP.INDICATOR", "");
+                _remarkRepositoryMock.Setup(x => x.GetPersonDictionaryCollectionAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(personDict);
                
             
                 var actual = await _commentsService.PostCommentAsync(comment);
@@ -394,7 +417,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CommentsService_PostComment_CommentNull()
             {
                 var comment = commentsCollection.FirstOrDefault(x => x.Id == remarkGuid);
@@ -411,7 +434,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CommentsService_PostComment_CommentEmpty()
             {
                 var comment = commentsCollection.FirstOrDefault(x => x.Id == remarkGuid);
@@ -428,7 +451,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CommentsService_PostComment_SubjectMatterNull()
             {
                 var comment = commentsCollection.FirstOrDefault(x => x.Id == remarkGuid);
@@ -445,7 +468,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CommentsService_PostComment_SubjectMatterPersonIdNull()
             {
                 var comment = commentsCollection.FirstOrDefault(x => x.Id == remarkGuid);
@@ -465,7 +488,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CommentsService_PostComment_CommentSubjectAreaIdNull()
             {
                 var comment = commentsCollection.FirstOrDefault(x => x.Id == remarkGuid);
@@ -482,7 +505,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CommentsService_PostComment_SourceIdNull()
             {
                 var comment = commentsCollection.FirstOrDefault(x => x.Id == remarkGuid);
@@ -535,6 +558,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 _remarkRepositoryMock.Setup(x => x.UpdateRemarkAsync(It.IsAny<Remark>())).ReturnsAsync(remark);
                 _personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(subjectMatterPersonId);
                 _personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("0011905");
+                Dictionary<string, Dictionary<string, string>> personDict = new Dictionary<string, Dictionary<string, string>>();
+                personDict.Add("0011905", new Dictionary<string, string>());
+                personDict["0011905"].Add("PERSON.CORP.INDICATOR", "");
+                _remarkRepositoryMock.Setup(x => x.GetPersonDictionaryCollectionAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(personDict);
 
 
                 var actual = await _commentsService.PutCommentAsync(comment.Id, comment);

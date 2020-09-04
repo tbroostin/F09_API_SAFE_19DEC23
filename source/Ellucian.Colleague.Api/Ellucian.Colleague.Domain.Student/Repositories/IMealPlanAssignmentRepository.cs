@@ -13,6 +13,7 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
     /// </summary>
     public interface IMealPlanAssignmentRepository : IEthosExtended
     {
+        Task<string> GetMealPlanAssignmentIdFromGuidAsync( string guid );
         Task<MealPlanAssignment> GetByIdAsync(string id);
 
         Task<Tuple<IEnumerable<MealPlanAssignment>, int>> GetAsync(int offset, int limit, string person = "", string term = "", string mealplan = "", string status = "", string startDate = "", string endDate = "");

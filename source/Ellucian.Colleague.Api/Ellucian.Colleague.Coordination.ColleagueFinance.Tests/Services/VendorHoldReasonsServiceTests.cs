@@ -1,5 +1,6 @@
-﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
+using Ellucian.Colleague.Domain.Base.Repositories;
 //using Ellucian.Colleague.Domain.Base.;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
 using Ellucian.Colleague.Domain.ColleagueFinance.Tests;
@@ -25,14 +26,20 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         List<Domain.ColleagueFinance.Entities.VendorHoldReasons> vendorHoldReasonEntityList = new List<Domain.ColleagueFinance.Entities.VendorHoldReasons>();
         string id = "03ef76f3-61be-4990-8a99-9a80282fc420";
 
+        private IConfigurationRepository _configurationRepository;
+        private Mock<IConfigurationRepository> _configurationRepositoryMock;
+
         [TestInitialize]
         public void Initialize()
         {
+            _configurationRepositoryMock = new Mock<IConfigurationRepository>();
+            _configurationRepository = _configurationRepositoryMock.Object;
+
             MockInitialize();
             BuildData();
             referenceDataRepository = new Mock<IColleagueFinanceReferenceDataRepository>();
             vendorHoldReasonsService = new VendorHoldReasonsService(referenceDataRepository.Object, adapterRegistryMock.Object,
-                GLCurrentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
+                GLCurrentUserFactory, _configurationRepository, roleRepositoryMock.Object, loggerMock.Object);
         }
 
         [TestCleanup]

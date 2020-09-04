@@ -46,6 +46,12 @@ namespace Ellucian.Colleague.Dtos
         public GuidObject2 ParentDiscipline { get; set; }
 
         /// <summary>
+        /// The state of a student's discipline within a program.
+        /// </summary>
+        [JsonProperty("status", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public GuidObject2 EnrollmentStatus { get; set; }
+
+        /// <summary>
         /// The academic disciplines offered as part of an academic program.
         /// </summary>
         public StudentAcademicProgramDisciplines2()

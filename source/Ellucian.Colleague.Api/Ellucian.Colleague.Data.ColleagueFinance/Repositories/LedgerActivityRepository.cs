@@ -274,7 +274,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     if (!string.IsNullOrEmpty(person.PersonCorpIndicator) && person.PersonCorpIndicator.ToUpper().Equals("Y", StringComparison.OrdinalIgnoreCase))
                     {
                         corpFlag = "Y";
-                        var inst = DataReader.ReadRecordAsync<Institutions>("INSTITUTIONS", glaFyr.GlaAcctId);
+                        var inst = await DataReader.ReadRecordAsync<Institutions>("INSTITUTIONS", glaFyr.GlaAcctId);
                         if (inst != null)
                         {
                             instFlag = "Y";

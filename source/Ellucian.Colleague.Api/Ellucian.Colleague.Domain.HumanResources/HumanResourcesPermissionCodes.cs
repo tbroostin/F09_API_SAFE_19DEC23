@@ -135,5 +135,12 @@ namespace Ellucian.Colleague.Domain.HumanResources
         /// In terms of Human Resources, this permission enables users(admins) to view any employee's total compensation statement. 
         /// </summary>
         public const string ViewAllTotalCompensation = "VIEW.ALL.TOTAL.COMPENSATION";
+        
+        /// <summary>
+        /// This permits a role to view, approve, unapprove, reject and unreject leave requests. 
+        /// More specifically, a user with a role associated to this permission can view and take actions on leave requests of all employees whose 
+        /// primary position they supervise.
+        /// </summary>
+        public const string ApproveRejectLeaveRequest = "APPROVE.REJECT.LEAVE.REQUEST";
     }
 }

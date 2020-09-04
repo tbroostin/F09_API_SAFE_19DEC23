@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -24,7 +24,8 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
         Task<PurchaseOrder> GetPurchaseOrderAsync(string purchaseOrderId, string personId, GlAccessLevel glAccessLevel, IEnumerable<string> expenseAccounts);
 
 
-        Task<Tuple<IEnumerable<PurchaseOrder>, int>> GetPurchaseOrdersAsync(int offset, int limit);
+        Task<Tuple<IEnumerable<PurchaseOrder>, int>> GetPurchaseOrdersAsync(int offset, int limit, string orderNumber);
+
         Task<PurchaseOrder> GetPurchaseOrdersByGuidAsync(string guid);
         Task<PurchaseOrder> UpdatePurchaseOrdersAsync(PurchaseOrder purchaseOrdersEntity);
         Task<PurchaseOrder> CreatePurchaseOrdersAsync(PurchaseOrder purchaseOrdersEntity);
@@ -36,6 +37,21 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
         Task<IDictionary<string, string>> GetProjectIdsFromReferenceNo(string[] projectRefNo);
         Task<IEnumerable<PurchaseOrderSummary>> GetPurchaseOrderSummaryByPersonIdAsync(string personId);
 
+        Task<PurchaseOrderCreateUpdateResponse> CreatePurchaseOrderAsync(PurchaseOrderCreateUpdateRequest createUpdateRequest);
+
+        /// <summary>
+        /// Update a Purchase Order
+        /// </summary>
+        /// <param name="voidRequest"></param>
+        /// <returns></returns>
+        Task<PurchaseOrderCreateUpdateResponse> UpdatePurchaseOrderAsync(PurchaseOrderCreateUpdateRequest createUpdateRequest, PurchaseOrder originalPurchaseOrder);
+
+        /// <summary>
+        /// Void a Purchase Order
+        /// </summary>
+        /// <param name="voidRequest"></param>
+        /// <returns></returns>
+        Task<PurchaseOrderVoidResponse> VoidPurchaseOrderAsync(PurchaseOrderVoidRequest voidRequest);
 
     }
 }

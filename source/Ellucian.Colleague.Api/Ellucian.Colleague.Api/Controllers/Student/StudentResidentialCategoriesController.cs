@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -17,6 +17,7 @@ using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http.Filters;
+using System.Linq;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -46,7 +47,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// Return all studentResidentialCategories
         /// </summary>
         /// <returns>List of StudentResidentialCategories <see cref="Dtos.StudentResidentialCategories"/> objects representing matching studentResidentialCategories</returns>
-        [HttpGet]
+        [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.StudentResidentialCategories>> GetStudentResidentialCategoriesAsync()
         {
@@ -60,7 +61,15 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
-                return await _studentResidentialCategoriesService.GetStudentResidentialCategoriesAsync(bypassCache);
+                var studentResidentialCategories = await _studentResidentialCategoriesService.GetStudentResidentialCategoriesAsync(bypassCache);
+
+                if (studentResidentialCategories != null && studentResidentialCategories.Any())
+                {
+                    AddEthosContextProperties(await _studentResidentialCategoriesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _studentResidentialCategoriesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              studentResidentialCategories.Select(a => a.Id).ToList()));
+                }
+                return studentResidentialCategories;
             }
             catch (KeyNotFoundException e)
             {
@@ -99,7 +108,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="guid">GUID to desired studentResidentialCategories</param>
         /// <returns>A studentResidentialCategories object <see cref="Dtos.StudentResidentialCategories"/> in EEDM format</returns>
-        [HttpGet]
+        [HttpGet, EedmResponseFilter]
         public async Task<Dtos.StudentResidentialCategories> GetStudentResidentialCategoriesByGuidAsync(string guid)
         {
             if (string.IsNullOrEmpty(guid))
@@ -109,6 +118,10 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                AddEthosContextProperties(
+                   await _studentResidentialCategoriesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                   await _studentResidentialCategoriesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                       new List<string>() { guid }));
                 return await _studentResidentialCategoriesService.GetStudentResidentialCategoriesByGuidAsync(guid);
             }
             catch (KeyNotFoundException e)

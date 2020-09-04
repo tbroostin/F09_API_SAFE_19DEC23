@@ -1,4 +1,4 @@
-﻿/*Copyright 2015-2017 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2015-2020 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -83,6 +83,126 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
         /// if the Department of Education does not provide the institution with a national loan repayment rate.
         /// </summary>
         public decimal? NationalRepaymentRateAverage { get; set; }
+
+        /// <summary>
+        /// This is a list of strings that identify all codes associated with tuition and fees
+        /// </summary>
+        public List<string> TuitionAndFees { get; set; }
+
+        /// <summary>
+        /// This is a list of strings that identify all codes associated with books and supplies
+        /// </summary>
+        public List<string> BooksAndSupplies { get; set; }
+
+        /// <summary>
+        /// This is a list of strings that identify all codes associated with transportation
+        /// </summary>
+        public List<string> Transportation { get; set; }
+
+        /// <summary>
+        /// This is a list of strings that identify all codes associated with other education costs
+        /// </summary>
+        public List<string> OtherEducationCosts { get; set; }
+
+        /// <summary>
+        /// This is a list of strings that identify all codes associated with school scholarships
+        /// </summary>
+        public List<string> SchoolScholarships { get; set; }
+
+        /// <summary>
+        /// This is a list of strings that identify all codes associated with state scholarships
+        /// </summary>
+        public List<string> StateScholarships { get; set; }
+
+        /// <summary>
+        /// This is a list of strings that identify all codes associated with other scholarships
+        /// </summary>
+        public List<string> OtherScholarships { get; set; }
+
+        /// <summary>
+        /// This is a list of strings that identify all codes associated with pell grants
+        /// </summary>
+        public List<string> PellGrants { get; set; }
+
+        /// <summary>
+        /// This is a list of strings that identify all codes associated with school grants
+        /// </summary>
+        public List<string> SchoolGrants { get; set; }
+
+        /// <summary>
+        /// This is a list of strings that identify all codes associated with state grants
+        /// </summary>
+        public List<string> StateGrants { get; set; }
+
+        /// <summary>
+        /// This is a list of strings that identify all codes associated with other grants
+        /// </summary>
+        public List<string> OtherGrants { get; set; }
+
+        /// <summary>
+        /// This is a list of strings that identify all codes associated with direct subsidized loans
+        /// </summary>
+        public List<string> DlSubLoans { get; set; }
+
+        /// <summary>
+        /// This is a list of strings that identify all codes associated with direct unsubsidized loans
+        /// </summary>
+        public List<string> DlUnsubLoans { get; set; }
+
+        /// <summary>
+        /// This is a list of strings that identify all codes associated with private loans
+        /// </summary>
+        public List<string> PrivateLoans { get; set; }
+
+        /// <summary>
+        /// This is a list of strings that identify all codes associated with school loans
+        /// </summary>
+        public List<string> SchoolLoans { get; set; }
+
+        /// <summary>
+        /// This is a list of strings that identify all codes associated with other loans
+        /// </summary>
+        public List<string> OtherLoans { get; set; }
+
+        /// <summary>
+        /// This is a list of strings that identify all codes associated with parent PLUS loans
+        /// </summary>
+        public List<string> ParentPlusLoans { get; set; }
+
+        /// <summary>
+        /// This is a list of strings that identify all codes associated with work studies
+        /// </summary>
+        public List<string> WorkStudy { get; set; }
+
+        /// <summary>
+        /// This is a list of strings that identify all codes associated with other jobs
+        /// </summary>
+        public List<string> OtherJobs { get; set; }
+
+        /// <summary>
+        /// This is a list of strings that identify all codes associated with housing and meals for on campus
+        /// </summary>
+        public List<string> HousingAndMealsOn { get; set; }
+
+        /// <summary>
+        /// This is a list of strings that identify all codes associated with housing and meals for off campus
+        /// </summary>
+        public List<string> HousingAndMealsOff { get; set; }
+
+        /// <summary>
+        /// This is a string that contains the ID for the Loan Amount Text Rule
+        /// </summary>
+        public string LoanAmountTextRuleId { get; set; }
+
+        /// <summary>
+        /// This is a string that contains the ID for the Education Benefits Text Rule
+        /// </summary>
+        public string EducationBenTextRuleId { get; set; }
+
+        /// <summary>
+        /// This is a string that contains the ID for the Next Steps Text Rule
+        /// </summary>
+        public string NextStepsRuleId { get; set; }
 
 
         public ShoppingSheetConfiguration()

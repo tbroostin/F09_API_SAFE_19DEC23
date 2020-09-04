@@ -352,12 +352,30 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             try
             {
                 var configSettings = await _configurationSettingsService.GetConfigurationSettingsByGuidAsync(guid, true);
-                if (configSettings != null && configSettings.Source != null && configurationSettings != null && configurationSettings.Source != null)
+                if (configSettings != null && configurationSettings != null)
                 {
-                    if (configSettings.Source.Value == configurationSettings.Source.Value && configSettings.Source.Title != configurationSettings.Source.Title)
+                    IntegrationApiException exception = null;
+
+                    if (configSettings.Source != null && configurationSettings.Source != null 
+                        && configSettings.Source.Value.Equals(configurationSettings.Source.Value, StringComparison.OrdinalIgnoreCase)
+                        && !configSettings.Source.Title.Equals(configurationSettings.Source.Title, StringComparison.OrdinalIgnoreCase))
                     {
-                        var exception = new IntegrationApiException();
+                        exception = new IntegrationApiException();
                         exception.AddError(new IntegrationApiError("Validation.Exception", "An error occurred attempting to validate data.", "The Source Title cannot be changed for a configuration setting."));
+                        
+                    }
+                    if (!configSettings.Title.Equals(configurationSettings.Title, StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (exception == null) exception = new IntegrationApiException();
+                        exception.AddError(new IntegrationApiError("Validation.Exception", "An error occurred attempting to validate data.", "The title cannot be changed for a configuration setting."));
+                    }
+                    if (!configSettings.Description.Equals(configurationSettings.Description, StringComparison.OrdinalIgnoreCase))
+                    {
+                        if ( exception == null) exception = new IntegrationApiException();
+                        exception.AddError(new IntegrationApiError("Validation.Exception", "An error occurred attempting to validate data.", "The Description cannot be changed for a configuration setting."));         
+                    }
+                    if (exception != null)
+                    {
                         throw exception;
                     }
                 }

@@ -1,6 +1,7 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates
+﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates
 
 using Ellucian.Colleague.Data.Student.DataContracts;
+using Ellucian.Colleague.Domain.Base.Services;
 using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Student.Entities;
@@ -26,6 +27,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
     {
         // Sets the maximum number of records to bulk read at one time
         readonly int readSize;
+        const string AllStudentFinancialAidNeedSummaryCache = "AllStudentFinancialAidNeedSummary";
+        const int AllStudentFinancialAidNeedSummaryCacheTimeout = 20; // Clear from cache every 20 minutes
+
+        RepositoryException exception = null;
 
         /// <summary>
         /// Constructor to instantiate a student financial aid need summary repository object
@@ -39,6 +44,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             // Using level 1 cache time out value for data that rarely changes.
             CacheTimeout = Level1CacheTimeoutValue;
             this.readSize = ((apiSettings != null) && (apiSettings.BulkReadSize > 0)) ? apiSettings.BulkReadSize : 5000;
+
+            exception = new RepositoryException();
+
         }
 
         /// <summary>
@@ -60,6 +68,42 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         }
 
         /// <summary>
+        /// Using a collection of  ids, get a dictionary collection of associated guids
+        /// </summary>
+        /// <param name="ids">collection of ids</param>
+        /// <returns>Dictionary consisting of an id (key) and guid (value)</returns>
+        public async Task<Dictionary<string, string>> GetIsirCalcResultsGuidsCollectionAsync(IEnumerable<string> ids)
+        {
+            if ((ids == null) || (ids != null && !ids.Any()))
+            {
+                return new Dictionary<string, string>();
+            }
+            var guidCollection = new Dictionary<string, string>();
+
+            var personGuidLookup = ids
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Distinct().ToList()
+                .ConvertAll(p => new RecordKeyLookup("ISIR.CALC.RESULTS", p, false)).ToArray();
+            var recordKeyLookupResults = await DataReader.SelectAsync(personGuidLookup);
+            foreach (var recordKeyLookupResult in recordKeyLookupResults)
+            {
+                try
+                {
+                    var splitKeys = recordKeyLookupResult.Key.Split(new[] { "+" }, StringSplitOptions.RemoveEmptyEntries);
+                    if (!guidCollection.ContainsKey(splitKeys[1]))
+                    {
+                        guidCollection.Add(splitKeys[1], recordKeyLookupResult.Value.Guid);
+                    }
+                }
+                catch (Exception) // Do not throw error.
+                {
+                }
+            }
+
+            return guidCollection;
+        }
+
+        /// <summary>
         /// Get Student Financial Aid Need Sumarries.
         /// </summary>
         /// <param name="offset">Offset for paging results</param>
@@ -76,23 +120,59 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             //var csAcyrIDs = new List<string>();
             var studentNeedSummaryIds = new List<string>();
 
-            // Check CS.ACYR from 2006 and forward.
-            for (int year = 2006; year <= DateTime.Today.Year; year += 1)
-            {
-                string stringYear = year.ToString();
-                if (faSuiteYears.Contains(stringYear))
+            string studentFinancialAidAwardsCacheKey = CacheSupport.BuildCacheKey(AllStudentFinancialAidNeedSummaryCache, faSuiteYears);
+
+
+            var keyCache = await CacheSupport.GetOrAddKeyCacheToCache(
+                this,
+                ContainsKey,
+                GetOrAddToCacheAsync,
+                AddOrUpdateCacheAsync,
+                transactionInvoker,
+                studentFinancialAidAwardsCacheKey,
+                "",
+                offset,
+                limit,
+                AllStudentFinancialAidNeedSummaryCacheTimeout,
+                async () =>
                 {
-                    string[] csAcyrIds = await DataReader.SelectAsync("CS." + year, "WITH (CS.NEED NE '' AND CS.FED.ISIR.ID NE '') OR WITH (CS.INST.NEED NE '' AND CS.INST.ISIR.ID NE '')");
-                    totalCount += csAcyrIds.Count();
-                    Array.Sort(csAcyrIds);
-                    foreach (var id in csAcyrIds)
+
+                    // Check CS.ACYR from 2006 and forward.
+                    for (int year = 2006; year <= DateTime.Today.Year; year += 1)
                     {
-                        studentNeedSummaryIds.Add(string.Concat(year, '.', id));
+                        string stringYear = year.ToString();
+                        if (faSuiteYears.Contains(stringYear))
+                        {
+                            string[] csAcyrIds = await DataReader.SelectAsync("CS." + year, "WITH (CS.NEED NE '' AND CS.FED.ISIR.ID NE '') OR WITH (CS.INST.NEED NE '' AND CS.INST.ISIR.ID NE '')");
+                            totalCount += csAcyrIds.Count();
+                            Array.Sort(csAcyrIds);
+                            foreach (var id in csAcyrIds)
+                            {
+                                studentNeedSummaryIds.Add(string.Concat(year, '.', id));
+                            }
+                        }
                     }
-                }
+
+                    CacheSupport.KeyCacheRequirements requirements = new CacheSupport.KeyCacheRequirements()
+                    {
+                        limitingKeys = studentNeedSummaryIds.Distinct().ToList(),
+                        criteria = ""
+                    };
+
+                    return requirements;
+
+                });
+
+            if (keyCache == null || keyCache.Sublist == null || !keyCache.Sublist.Any())
+            {
+                return new Tuple<IEnumerable<StudentNeedSummary>, int>(new List<StudentNeedSummary>(), 0);
             }
 
-            var subItems = studentNeedSummaryIds.Skip(offset).Take(limit).ToArray();
+            var subItems = keyCache.Sublist.ToArray();
+
+            totalCount = keyCache.TotalCount.Value;
+
+
             List<string> years = subItems.GroupBy(s => s.Split('.')[0])
                            .Select(g => g.First().Split('.')[0]).Distinct()
                            .ToList();
@@ -109,7 +189,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 //Bulk read the ISIR.FAFSAs                                             
                 var federalApplications = csAcyrDataContracts.Select(x => x.CsFedIsirId).Distinct().ToList();
                 var institutionalApplications = csAcyrDataContracts.Select(x => x.CsInstIsirId).Distinct().ToList();
-                var applications = federalApplications.Union(institutionalApplications);                
+                var applications = federalApplications.Union(institutionalApplications);
                 var isirFafsaContracts = new List<IsirFafsa>();
                 if (applications != null)
                 {
@@ -161,32 +241,45 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         }
                     }
                 }
-                
-                foreach (var dataContract in csAcyrDataContracts)
-                {
-                    var studentId = dataContract.Recordkey;
-                    var id = dataContract.RecordGuid;
-                    var studentTaAcyrContracts = new List<TaAcyr>();
-                    foreach (var taAcyrContract in taAcyrContracts)
-                    {
-                        if (taAcyrContract.Recordkey.Split('*')[0] == studentId)
-                        {
-                            studentTaAcyrContracts.Add(taAcyrContract);
-                        }
-                    }
-                    
-                    var notAwardedCategories = await GetNotAwardedCategoriesAsync();
-                    
-                    var studentNeedSummary = BuildStudentNeedSummary(id, studentId, year, 
-                        dataContract,
-                        isirFafsaContracts,
-                        studentTaAcyrContracts,
-                        awardContracts,
-                        notAwardedCategories);                    
 
-                    studentNeedSummaryEntities.Add(studentNeedSummary);
+                try
+                {
+                    foreach (var dataContract in csAcyrDataContracts)
+                    {
+                        var studentId = dataContract.Recordkey;
+                        var id = dataContract.RecordGuid;
+                        var studentTaAcyrContracts = new List<TaAcyr>();
+                        foreach (var taAcyrContract in taAcyrContracts)
+                        {
+                            if (taAcyrContract.Recordkey.Split('*')[0] == studentId)
+                            {
+                                studentTaAcyrContracts.Add(taAcyrContract);
+                            }
+                        }
+
+                        var notAwardedCategories = await GetNotAwardedCategoriesAsync();
+
+                        var studentNeedSummary = BuildStudentNeedSummary(id, studentId, year,
+                            dataContract,
+                            isirFafsaContracts,
+                            studentTaAcyrContracts,
+                            awardContracts,
+                            notAwardedCategories);
+
+                        studentNeedSummaryEntities.Add(studentNeedSummary);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    exception.AddError(new RepositoryError("Global.Internal.Error", ex.Message));
                 }
             }
+
+            if (exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
+
             return new Tuple<IEnumerable<StudentNeedSummary>, int>(studentNeedSummaryEntities, totalCount);
         }
 
@@ -194,163 +287,203 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// Get the Student Financial Aid Need Summary requested
         /// </summary>
         /// <param name="id">StudentFinancialAidBeedSummaries GUID</param>
-        /// <exception cref="ArgumentNullException">Thrown if the id argument is null or empty</exception>
+        /// <exception cref="RepositoryException">Thrown if the id argument is null or empty</exception>
         /// <exception cref="KeyNotFoundException">Thrown if no database records exist for the given id argument</exception>
         public async Task<StudentNeedSummary> GetByIdAsync(string id)
         {
             if (string.IsNullOrEmpty(id))
             {
-                throw new ArgumentNullException("id");
+                throw new RepositoryException("id");
             }
 
             // Read the CS.ACYR record
             var recordInfo = await GetRecordInfoFromGuidAsync(id);
             if (recordInfo == null || string.IsNullOrEmpty(recordInfo.PrimaryKey) || string.IsNullOrEmpty(recordInfo.Entity) || recordInfo.Entity.Substring(0, 3) != "CS.")
             {
-                throw new KeyNotFoundException(string.Format("No LDM.GUID record found for CS.ACYR record with guid {0}'. ", id));
+                throw new KeyNotFoundException(string.Format("No student-financial-aid-need-summaries was found for GUID {0}'. ", id));
             }
-            var year = recordInfo.Entity.Substring(3, 4);
-            int thisYear = Convert.ToInt32(year);
+
+            var year = string.Empty;
+            int thisYear = 0;
+            try
+            {
+                year = recordInfo.Entity.Substring(3, 4);
+                thisYear = Convert.ToInt32(year);
+            }
+            catch (Exception)
+            {
+                var errorMessage = string.Format("An error occurred extracting the year from the record key '{0}'.", recordInfo);
+                throw new RepositoryException(errorMessage);
+            }
+
             if (thisYear < 2006)
             {
                 var errorMessage = string.Format("Guid '{0}' is for invalid year {1}.  Only years 2006 and later are valid'. ", id, year);
-                throw new ArgumentException(errorMessage);
+                throw new RepositoryException(errorMessage);
             }
             var csAcyrFile = string.Concat("CS.", year);
             var csAcyrDataContract = await DataReader.ReadRecordAsync<CsAcyr>(csAcyrFile, recordInfo.PrimaryKey);
+
+            if (csAcyrDataContract == null)
             {
-                if (csAcyrDataContract == null)
-                {
-                    throw new KeyNotFoundException(string.Format("No CS.ACYR record found for guid {0}'. ", id));
-                }
-                var foundNeedAndApplication = false;
-                if (csAcyrDataContract.CsNeed.HasValue && (!string.IsNullOrEmpty(csAcyrDataContract.CsFedIsirId))) 
-                {
-                    foundNeedAndApplication = true;
-                }
-                if (csAcyrDataContract.CsInstNeed.HasValue && (!string.IsNullOrEmpty(csAcyrDataContract.CsInstIsirId)))
-                {
-                    foundNeedAndApplication = true;
-                }
-                if (foundNeedAndApplication != true)
-                {
-                    var errorMessage = string.Format("CS.ACYR for guid '{0}' is not valid.  Must have federal need and application or institutional need and application.", id);
-                    throw new ArgumentException(errorMessage);
-                }
+                throw new KeyNotFoundException(string.Format("No CS.ACYR record found for guid {0}'. ", id));
+            }
+            var foundNeedAndApplication = false;
+            if (csAcyrDataContract.CsNeed.HasValue && (!string.IsNullOrEmpty(csAcyrDataContract.CsFedIsirId)))
+            {
+                foundNeedAndApplication = true;
+            }
+            if (csAcyrDataContract.CsInstNeed.HasValue && (!string.IsNullOrEmpty(csAcyrDataContract.CsInstIsirId)))
+            {
+                foundNeedAndApplication = true;
+            }
+            if (foundNeedAndApplication != true)
+            {
+                var errorMessage = string.Format("CS.ACYR for guid '{0}' is not valid.  Must have federal need and application or institutional need and application.", id);
+                throw new RepositoryException(errorMessage);
             }
 
-            // Read SA.ACYR
-            var saAcyrFile = string.Concat("SA.", year);
-            var saAcyrContract = await DataReader.ReadRecordAsync<SaAcyr>(saAcyrFile, recordInfo.PrimaryKey);
 
-            // Read TA.ACYR records and their AWARDS records
-            var taAcyrIds = new List<string>();
-            if (saAcyrContract.SaAward.Any())
+            StudentNeedSummary studentNeedSummary = null;
+            try
             {
-                if (saAcyrContract.SaTerms != null)
+                // Read SA.ACYR
+                var saAcyrFile = string.Concat("SA.", year);
+                var saAcyrContract = await DataReader.ReadRecordAsync<SaAcyr>(saAcyrFile, recordInfo.PrimaryKey);
+
+                // Read TA.ACYR records and their AWARDS records
+                var taAcyrIds = new List<string>();
+                if (saAcyrContract.SaAward.Any())
                 {
-                    foreach (var award in saAcyrContract.SaAward)
+                    if (saAcyrContract.SaTerms != null)
                     {
-                        foreach (var term in saAcyrContract.SaTerms)
+                        foreach (var award in saAcyrContract.SaAward)
                         {
-                            var taAcyrId = saAcyrContract.Recordkey + "*" + award + "*" + term;
-                            taAcyrIds.Add(taAcyrId);
+                            foreach (var term in saAcyrContract.SaTerms)
+                            {
+                                var taAcyrId = saAcyrContract.Recordkey + "*" + award + "*" + term;
+                                taAcyrIds.Add(taAcyrId);
+                            }
                         }
                     }
                 }
-            }
-            var taAcyrContracts = new List<TaAcyr>();
-            var awardContracts = new List<Awards>();
-            var awardIds = new List<string>();
-            var taAcyrFile = string.Concat("TA.", year);
-            if (taAcyrIds != null)
-            {
-                var bulkRecords = await DataReader.BulkReadRecordAsync<TaAcyr>(taAcyrFile, taAcyrIds.ToArray());
-                if (bulkRecords != null)
+                var taAcyrContracts = new List<TaAcyr>();
+                var awardContracts = new List<Awards>();
+                var awardIds = new List<string>();
+                var taAcyrFile = string.Concat("TA.", year);
+                if (taAcyrIds != null)
                 {
-                    taAcyrContracts.AddRange(bulkRecords);
-                    awardIds = taAcyrContracts.Select(x => x.Recordkey.Split('*')[1]).Distinct().ToList();
-                    var bulkAwardRecords = await DataReader.BulkReadRecordAsync<Awards>("AWARDS", awardIds.ToArray());
-                    if (bulkAwardRecords != null)
+                    var bulkRecords = await DataReader.BulkReadRecordAsync<TaAcyr>(taAcyrFile, taAcyrIds.ToArray());
+                    if (bulkRecords != null)
                     {
-                        awardContracts.AddRange(bulkAwardRecords);
+                        taAcyrContracts.AddRange(bulkRecords);
+                        awardIds = taAcyrContracts.Select(x => x.Recordkey.Split('*')[1]).Distinct().ToList();
+                        var bulkAwardRecords = await DataReader.BulkReadRecordAsync<Awards>("AWARDS", awardIds.ToArray());
+                        if (bulkAwardRecords != null)
+                        {
+                            awardContracts.AddRange(bulkAwardRecords);
+                        }
                     }
                 }
-            }
-       
-            //Read the ISIR.FAFSA(s) records
-            var applications = new List<string>();
-            if (!string.IsNullOrEmpty(csAcyrDataContract.CsFedIsirId))
-            {
-                applications.Add(csAcyrDataContract.CsFedIsirId);
-            }
-            if (!string.IsNullOrEmpty(csAcyrDataContract.CsInstIsirId) && csAcyrDataContract.CsInstIsirId != csAcyrDataContract.CsFedIsirId)
-            {
-                applications.Add(csAcyrDataContract.CsInstIsirId);
-            }
-            var isirFafsaContracts = new List<IsirFafsa>();
-            if (applications != null)
-            {
-                var bulkRecords = await DataReader.BulkReadRecordAsync<IsirFafsa>("ISIR.FAFSA", applications.ToArray());
-                if (bulkRecords != null)
+
+                //Read the ISIR.FAFSA(s) records
+                var applications = new List<string>();
+                if (!string.IsNullOrEmpty(csAcyrDataContract.CsFedIsirId))
                 {
-                    isirFafsaContracts.AddRange(bulkRecords);
+                    applications.Add(csAcyrDataContract.CsFedIsirId);
                 }
+                if (!string.IsNullOrEmpty(csAcyrDataContract.CsInstIsirId) && csAcyrDataContract.CsInstIsirId != csAcyrDataContract.CsFedIsirId)
+                {
+                    applications.Add(csAcyrDataContract.CsInstIsirId);
+                }
+                var isirFafsaContracts = new List<IsirFafsa>();
+                if (applications != null)
+                {
+                    var bulkRecords = await DataReader.BulkReadRecordAsync<IsirFafsa>("ISIR.FAFSA", applications.ToArray());
+                    if (bulkRecords != null)
+                    {
+                        isirFafsaContracts.AddRange(bulkRecords);
+                    }
+                }
+
+
+                var notAwardedCategories = await GetNotAwardedCategoriesAsync();
+
+                var studentId = recordInfo.PrimaryKey;
+                studentNeedSummary = BuildStudentNeedSummary(id, studentId, year,
+                    csAcyrDataContract,
+                    isirFafsaContracts,
+                    taAcyrContracts,
+                    awardContracts,
+                    notAwardedCategories);
+
+            }
+            catch (Exception ex)
+            {
+                exception.AddError(new RepositoryError("Global.Internal.Error", ex.Message));
             }
 
-            var notAwardedCategories = await GetNotAwardedCategoriesAsync();
 
-            var studentId = recordInfo.PrimaryKey;
-            var studentNeedSummary = BuildStudentNeedSummary(id, studentId, year,
-                csAcyrDataContract,
-                isirFafsaContracts,
-                taAcyrContracts,
-                awardContracts,
-                notAwardedCategories);              
+            if (exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
+
 
             return studentNeedSummary;
         }
 
-        private StudentNeedSummary BuildStudentNeedSummary(string id, string studentId, string year, 
+        private StudentNeedSummary BuildStudentNeedSummary(string id, string studentId, string year,
             CsAcyr csAcyrDataContract,
             List<IsirFafsa> isirFafsaContracts,
             List<TaAcyr> taAcyrContracts,
             List<Awards> awardContracts,
             IEnumerable<string> notAwardedCategories)
         {
-            var studentNeedSummary = new StudentNeedSummary(studentId, year, id);
+            StudentNeedSummary studentNeedSummary = null;
+
 
             try
             {
-                // Save federal and institutional need values
-                studentNeedSummary.FederalNeedAmount = csAcyrDataContract.CsNeed;
-                studentNeedSummary.InstitutionalNeedAmount = csAcyrDataContract.CsInstNeed;
+                studentNeedSummary = new StudentNeedSummary(studentId, year, id)
+                {
 
-                // Save federal and institutional application keys (ISIR.FASFA keys)
-                studentNeedSummary.CsFederalIsirId = csAcyrDataContract.CsFedIsirId;
+                    // Save federal and institutional need values
+                    FederalNeedAmount = csAcyrDataContract.CsNeed,
+                    InstitutionalNeedAmount = csAcyrDataContract.CsInstNeed,
+
+                    // Save federal and institutional application keys (ISIR.FASFA keys)
+                    CsFederalIsirId = csAcyrDataContract.CsFedIsirId,
+
+                    CsInstitutionalIsirId = csAcyrDataContract.CsInstIsirId
+
+                };
+
                 // Check if the fed ID has been corrected.
                 var fedIsirId = csAcyrDataContract.CsFedIsirId;
-                var fedOutcome = isirFafsaContracts.Where(fa => fa.Recordkey == fedIsirId).FirstOrDefault();
-                if (fedOutcome != null)
+                if (isirFafsaContracts != null && isirFafsaContracts.Any())
                 {
-                    if (!string.IsNullOrEmpty(fedOutcome.IfafCorrectionId))
+                    var fedOutcome = isirFafsaContracts.Where(fa => fa.Recordkey == fedIsirId).FirstOrDefault();
+                    if (fedOutcome != null)
                     {
-                        studentNeedSummary.CsFederalIsirId = fedOutcome.IfafCorrectionId;
+                        if (!string.IsNullOrEmpty(fedOutcome.IfafCorrectionId))
+                        {
+                            studentNeedSummary.CsFederalIsirId = fedOutcome.IfafCorrectionId;
+                        }
                     }
-                }           
 
-                studentNeedSummary.CsInstitutionalIsirId = csAcyrDataContract.CsInstIsirId;
-                // Check if the inst ID has been corrected.
-                var instIsirId = csAcyrDataContract.CsInstIsirId;
-                var instOutcome = isirFafsaContracts.Where(fa => fa.Recordkey == instIsirId).FirstOrDefault();
-                if (instOutcome != null)
-                {
-                    if (!string.IsNullOrEmpty(instOutcome.IfafCorrectionId))
+
+                    // Check if the inst ID has been corrected.
+                    var instIsirId = csAcyrDataContract.CsInstIsirId;
+                    var instOutcome = isirFafsaContracts.Where(fa => fa.Recordkey == instIsirId).FirstOrDefault();
+                    if (instOutcome != null)
                     {
-                        studentNeedSummary.CsInstitutionalIsirId = instOutcome.IfafCorrectionId;
+                        if (!string.IsNullOrEmpty(instOutcome.IfafCorrectionId))
+                        {
+                            studentNeedSummary.CsInstitutionalIsirId = instOutcome.IfafCorrectionId;
+                        }
                     }
-                }                          
-                
+                }
                 // Save budget duration
                 studentNeedSummary.BudgetDuration = csAcyrDataContract.CsBudgetDuration;
 
@@ -366,7 +499,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 studentNeedSummary.InstitutionalFamilyContribution = csAcyrDataContract.CsInstFc;
 
                 // Calculate total need reduction
-                if (taAcyrContracts.Any())
+                if (taAcyrContracts != null && taAcyrContracts.Any())
                 {
                     studentNeedSummary.HasAward = true;
                     decimal familyContributionAwarded = 0;
@@ -395,21 +528,21 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     {
                         institutionalNeed = csAcyrDataContract.CsInstNeed.GetValueOrDefault();
                     }
-                    if (familyContributionAwardedInteger >= 0)                        
-                    {                        
+                    if (familyContributionAwardedInteger >= 0)
+                    {
                         federalFamilyContributionAdjusted = 0;
                         if (federalNeed >= 0)
-                        {                            
-                            var federalFamilyContribution = studentNeedSummary.FederalFamilyContribution ?? 0;     
+                        {
+                            var federalFamilyContribution = studentNeedSummary.FederalFamilyContribution ?? 0;
                             if (familyContributionAwardedInteger > federalFamilyContribution)
                             {
                                 federalFamilyContributionAdjusted = familyContributionAwardedInteger - federalFamilyContribution;
-                            }                         
+                            }
                         }
                         institutionalFamilyContributionAdjusted = 0;
                         if (institutionalNeed >= 0)
                         {
-                            var institutionalFamilyContribution = studentNeedSummary.InstitutionalFamilyContribution ?? 0; 
+                            var institutionalFamilyContribution = studentNeedSummary.InstitutionalFamilyContribution ?? 0;
                             if (familyContributionAwardedInteger > institutionalFamilyContribution)
                             {
                                 institutionalFamilyContributionAdjusted = familyContributionAwardedInteger - institutionalFamilyContribution;
@@ -420,14 +553,18 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     studentNeedSummary.InstitutionalTotalNeedReduction = institutionalFamilyContributionAdjusted + costAwardedInteger + needAwardedInteger;
                 }
             }
-            catch
+            catch (ArgumentNullException ex)
             {
-                var message = "Could not build Student Need Summary for ID " + id;
-                throw new Exception(message);
+                throw new RepositoryException(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                var message = "Could not build Student Financial Aid Need Summary for ID '" + id + "'. " + ex.Message;
+                throw new RepositoryException(message);
             }
             return studentNeedSummary;
         }
-        
+
         private static void AddAwardAmounts(IEnumerable<string> notAwardedCategories, ref decimal familyContributionAwarded, ref decimal costAwarded, ref decimal needAwarded, TaAcyr taAcyrContract, Awards awardRecord)
         {
             // Add to calculation if award category exists and not in the parameterized list of NOT awarded categories

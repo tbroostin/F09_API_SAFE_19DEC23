@@ -1,19 +1,11 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Web;
 using System.Web.Http;
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
-using Ellucian.Colleague.Coordination.Base.Services;
-using Ellucian.Colleague.Domain.Base.Repositories;
-using Ellucian.Colleague.Dtos.Base;
-using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using slf4net;
@@ -47,11 +39,12 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             _logger = logger;
         }
 
-        /// <remarks>FOR USE WITH ELLUCIAN EEDM VERSION 7</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN HEDM VERSION 7</remarks>
         /// <summary>
         /// Retrieves all employment termination reasons.
         /// </summary>
         /// <returns>All employmentT termination reason objects.</returns>
+        [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.EmploymentStatusEndingReason>> GetEmploymentTerminationReasonsAsync()
         {
@@ -65,7 +58,15 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                         bypassCache = true;
                     }
                 }
-                return await _employmentStatusEndingReasonService.GetEmploymentStatusEndingReasonsAsync(bypassCache);
+                var employmentTerminationReasons = await _employmentStatusEndingReasonService.GetEmploymentStatusEndingReasonsAsync(bypassCache);
+
+                if (employmentTerminationReasons != null && employmentTerminationReasons.Any())
+                {
+                    AddEthosContextProperties(await _employmentStatusEndingReasonService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                              await _employmentStatusEndingReasonService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              employmentTerminationReasons.Select(a => a.Id).ToList()));
+                }
+                return employmentTerminationReasons;
             }
             catch (Exception ex)
             {
@@ -74,15 +75,20 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
         }
 
-        /// <remarks>FOR USE WITH ELLUCIAN EEDM VERSION 7</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN HEDM VERSION 7</remarks>
         /// <summary>
         /// Retrieves a employment termination reason by Id.
         /// </summary>
         /// <returns>A <see cref="Ellucian.Colleague.Dtos.EmploymentStatusEndingReason">EmploymentStatusEndingReason.</see></returns>
+        [HttpGet, EedmResponseFilter]
         public async Task<Ellucian.Colleague.Dtos.EmploymentStatusEndingReason> GetEmploymentTerminationReasonByIdAsync(string id)
         {
             try
             {
+                AddEthosContextProperties(
+                    await _employmentStatusEndingReasonService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                    await _employmentStatusEndingReasonService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                        new List<string>() { id }));
                 return await _employmentStatusEndingReasonService.GetEmploymentStatusEndingReasonByIdAsync(id);
             }
             catch (Exception ex)

@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -22,6 +22,41 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
         /// <param name="versionNumber">Voucher API version number.</param>
         /// <returns>Voucher domain entity.</returns>
         Task<Voucher> GetVoucherAsync(string voucherId, string personId, GlAccessLevel glAccessLevel, IEnumerable<string> glAccessAccounts, int versionNumber);
+
+        /// <summary>
+        /// Get all vouchers requested for a given person.
+        /// </summary>
+        /// <param name="personId"></param>
+        /// <returns>List of voucher domain entity list</returns>
+        Task<IEnumerable<VoucherSummary>> GetVoucherSummariesByPersonIdAsync(string personId);
+
+        /// <summary>
+        /// Create a new voucher
+        /// </summary>
+        /// <param name="createUpdateRequest"></param>
+        /// <returns>VoucherCreateUpdateResponse</returns>
+        Task<VoucherCreateUpdateResponse> CreateVoucherAsync(VoucherCreateUpdateRequest createUpdateRequest);
+
+        /// <summary>
+        /// Get person payment address
+        /// </summary>
+        /// <param name="personId"></param>
+        /// <returns></returns>
+        Task<VendorsVoucherSearchResult> GetReimbursePersonAddressForVoucherAsync(string personId);
+
+        /// <summary>
+        /// Update a voucher
+        /// </summary>
+        /// <param name="createUpdateRequest"></param>
+        /// <returns>VoucherCreateUpdateResponse</returns>
+        Task<VoucherCreateUpdateResponse> UpdateVoucherAsync(VoucherCreateUpdateRequest createUpdateRequest, Voucher originalVoucher);
+
+        /// <summary>
+        /// Void a voucher.
+        /// </summary>
+        /// <param name="voucherVoidRequest">The voucher void request DTO.</param>        
+        /// <returns>The voucher void response DTO.</returns>
+        Task<VoucherVoidResponse> VoidVoucherAsync(VoucherVoidRequest voucherVoidRequest);
 
     }
 }

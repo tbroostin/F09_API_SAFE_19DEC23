@@ -147,6 +147,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         public bool IsPrimary { get; set; }
         public string AdmitStatus { get; set; }
         public CurriculumObjectiveCategory CurriculumObjective { get; set; }
+        public string StudentProgramToReplace { get; set; }
 
 
         #endregion

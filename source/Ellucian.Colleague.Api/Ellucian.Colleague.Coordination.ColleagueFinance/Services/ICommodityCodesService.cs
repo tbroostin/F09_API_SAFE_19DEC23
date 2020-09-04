@@ -13,6 +13,6 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         Task<IEnumerable<Ellucian.Colleague.Dtos.CommodityCode>> GetCommodityCodesAsync(bool bypassCache);
         Task<Ellucian.Colleague.Dtos.CommodityCode> GetCommodityCodeByIdAsync(string id);
         Task<IEnumerable<Ellucian.Colleague.Dtos.ColleagueFinance.ProcurementCommodityCode>> GetAllCommodityCodesAsync();
-        Task<Ellucian.Colleague.Dtos.ColleagueFinance.ProcurementCommodityCode> GetCommodityCodeByCodeAsync(string code);
+        Task<Ellucian.Colleague.Dtos.ColleagueFinance.ProcurementCommodityCode> GetCommodityCodeByCodeAsync(string commodityCode);
     }
 }

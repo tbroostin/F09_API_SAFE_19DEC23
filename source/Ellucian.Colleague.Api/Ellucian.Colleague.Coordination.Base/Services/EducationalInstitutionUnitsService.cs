@@ -500,7 +500,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 var divisions = await GetAllDivisionsAsync(ignoreCache);
                 if (divisions != null)
                 {
-                    division = divisions.FirstOrDefault(d => d.Code == source.Division);
+                    division = divisions.FirstOrDefault( d => d != null && !string.IsNullOrWhiteSpace( d.Code ) && d.Code == source.Division );
                     if (division != null)
                         parents.Unit = new GuidObject2(division.Guid);
                 }
@@ -514,7 +514,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     parents.Institution = new GuidObject2(institution);
             }
             // if department institutionId isnt found, lookup division institution id
-            if ((parents.Institution == null) && (division != null) && (!string.IsNullOrEmpty(division.InstitutionId)))
+            if ((parents.Institution == null) && (division != null) && (!string.IsNullOrWhiteSpace(division.InstitutionId)))
             {
                 var institution = await _personRepository.GetPersonGuidFromIdAsync(division.InstitutionId);
                 if (!string.IsNullOrEmpty(institution))
@@ -534,7 +534,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     var schools = await GetAllSchoolsAsync(ignoreCache);
                     if (schools != null)
                     {
-                        var school = schools.FirstOrDefault(s => s.Code == schoolCode);
+                        var school = schools.FirstOrDefault( s => s != null && !string.IsNullOrWhiteSpace( s.Code ) && s.Code == schoolCode );
                         //if (school != null)
                         //parents.Institution = new GuidObject2(school.Guid);
                         if ((school != null) && (!string.IsNullOrEmpty(school.InstitutionId)))
@@ -585,7 +585,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 var divisions = await GetAllDivisionsAsync(ignoreCache);
                 if (divisions != null)
                 {
-                    division = divisions.FirstOrDefault(d => d.Code == source.Division);
+                    division = divisions.FirstOrDefault(d => d != null && !string.IsNullOrWhiteSpace(d.Code) && d.Code == source.Division);
                     if (division != null)
                         parents.Unit = new GuidObject2(division.Guid);
                 }
@@ -619,7 +619,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     var schools = await GetAllSchoolsAsync(ignoreCache);
                     if (schools != null)
                     {
-                        var school = schools.FirstOrDefault(s => s.Code == schoolCode);
+                        var school = schools.FirstOrDefault(s => s != null && !string.IsNullOrWhiteSpace(s.Code) && s.Code == schoolCode);
                         //if (school != null)
                         //    parents.Institution = new GuidObject2(school.Guid);
                         if ((school != null) && (!string.IsNullOrEmpty(school.InstitutionId)))
@@ -669,7 +669,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 var divisions = await GetAllDivisionsAsync(ignoreCache);
                 if (divisions != null)
                 {
-                    division = divisions.FirstOrDefault(d => d.Code == source.Division);
+                    division = divisions.FirstOrDefault( d => d != null && !string.IsNullOrWhiteSpace( d.Code ) && d.Code == source.Division );
                     if (division != null)
                         parents.Unit = new GuidObject2(division.Guid);
                 }
@@ -703,7 +703,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     var schools = await GetAllSchoolsAsync(ignoreCache);
                     if (schools != null)
                     {
-                        var school = schools.FirstOrDefault(s => s.Code == schoolCode);
+                        var school = schools.FirstOrDefault(s => s != null && !string.IsNullOrWhiteSpace(s.Code) && s.Code == schoolCode);
                         //if (school != null)
                         //    parents.Institution = new GuidObject2(school.Guid);
                         if ((school != null) && (!string.IsNullOrEmpty(school.InstitutionId)))
@@ -871,7 +871,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 var schools = await GetAllSchoolsAsync(ignoreCache);
                 if (schools != null)
                 {
-                    school = schools.FirstOrDefault(s => s.Code == source.SchoolCode);
+                    school = schools.FirstOrDefault( s => s != null && !string.IsNullOrWhiteSpace( s.Code ) && s.Code == source.SchoolCode );
                     if (school != null)
                     {
                         parents.Unit = new GuidObject2(school.Guid);
@@ -929,7 +929,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 var schools = await GetAllSchoolsAsync(ignoreCache);
                 if (schools != null)
                 {
-                    school = schools.FirstOrDefault(s => s.Code == source.SchoolCode);
+                    school = schools.FirstOrDefault(s => s != null && !string.IsNullOrWhiteSpace(s.Code) && s.Code == source.SchoolCode);
                     if (school != null)
                     {
                         parents.Unit = new GuidObject2(school.Guid);
@@ -986,7 +986,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 var schools = await GetAllSchoolsAsync(ignoreCache);
                 if (schools != null)
                 {
-                    school = schools.FirstOrDefault(s => s.Code == source.SchoolCode);
+                    school = schools.FirstOrDefault( s => s != null && !string.IsNullOrWhiteSpace( s.Code ) && s.Code == source.SchoolCode );
                     if (school != null)
                     {
                         parents.Unit = new GuidObject2(school.Guid);

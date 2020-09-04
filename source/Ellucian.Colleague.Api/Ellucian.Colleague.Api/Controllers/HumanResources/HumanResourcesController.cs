@@ -125,6 +125,8 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// 2. Users who have the permission - ACCEPT.REJECT.TIME.ENTRY - are considered supervisors and can get resources owned by their
         /// supervisees. If a supervisor user attempts to get a resource owned by a non-supervisee, this endpoint will throw a 403.
         /// 3. This endpoint does not support proxy access. Use <code>GET /human-resources</code> instead.
+        /// 4. Users who have the permission - APPROVE.REJECT.LEAVE.REQUEST - are considered leave approvers and you have access to 
+        /// the Human Resource Demographics of the employees whose leave requests you handle.
         /// </accessComments> 
         [HttpGet]
         public async Task<HumanResourceDemographics> GetSpecificHumanResourceDemographicsAsync(string id)
@@ -141,7 +143,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             catch (ArgumentNullException ane)
             {
-                
+
                 logger.Error(ane, "Some argument is null and is expected not to be");
                 throw CreateHttpResponseException(ane.Message, HttpStatusCode.BadRequest);
             }

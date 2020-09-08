@@ -12,6 +12,7 @@ using slf4net;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Web.Http;
 
@@ -46,6 +47,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Retrieves information for all grade change reasons.
         /// </summary>
         /// <returns>All <see cref="Dtos.GradeChangeReason">GradeChangeReasons</see></returns>
+        [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Dtos.GradeChangeReason>> GetGradeChangeReasonsAsync()
         {
@@ -59,7 +61,16 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             try
             {
-                return await _gradeChangeReasonService.GetAsync(bypassCache);
+                var gradeChangeReasons = await _gradeChangeReasonService.GetAsync(bypassCache);
+
+                if (gradeChangeReasons != null && gradeChangeReasons.Any())
+                {
+                    AddEthosContextProperties(await _gradeChangeReasonService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _gradeChangeReasonService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              gradeChangeReasons.Select(a => a.Id).ToList()));
+                }
+
+                return gradeChangeReasons;                
             }
             catch(Exception ex)
             {
@@ -73,6 +84,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// </summary>
         /// <param name="id">The id of the grade change reason</param>
         /// <returns>The requested <see cref="Dtos.GradeChangeReason">GradeChangeReason</see></returns>
+        [HttpGet, EedmResponseFilter]
         public async Task<Dtos.GradeChangeReason> GetGradeChangeReasonByIdAsync(string id)
         {
             try
@@ -81,6 +93,10 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 {
                     throw new ArgumentNullException(id, "Grade Change Reason id cannot be null or empty");
                 }
+                AddEthosContextProperties(
+                    await _gradeChangeReasonService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                    await _gradeChangeReasonService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                        new List<string>() { id }));
                 return await _gradeChangeReasonService.GetGradeChangeReasonByIdAsync(id);
             }
             catch(Exception ex)

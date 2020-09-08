@@ -244,7 +244,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 UnitQuantity = integStudentCharge.InviIntgUnitQty,
                 Usage = integStudentCharge.InviIntgUsage,
                 OriginatedOn = integStudentCharge.InviIntgOriginatedOn,
-                OverrideDescription = integStudentCharge.InviIntgOverrideDesc
+                OverrideDescription = integStudentCharge.InviIntgOverrideDesc,
+                BillingStartDate = integStudentCharge.InviIntgBillingStartDate,
+                BillingEndDate = integStudentCharge.InviIntgBillingEndDate
             };
             return studentCharge;
         }
@@ -282,7 +284,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 ElevateFlag = studentCharge.ChargeFromElevate,
                 InviIntgUsage = studentCharge.Usage,
                 InviIntgOriginatedOn = studentCharge.OriginatedOn,
-                InviIntgOverrideDesc = studentCharge.OverrideDescription
+                InviIntgOverrideDesc = studentCharge.OverrideDescription,
+                InviIntgBillingStartDate = studentCharge.BillingStartDate,
+                InviIntgBillingEndDate = studentCharge.BillingEndDate
             };
 
             ////Guid reqdness HEDM-2628, since transaction doesn't support 00000000-0000-0000-0000-000000000000, we have to assign empty string

@@ -1,4 +1,4 @@
-﻿//Copyright 2014-2016 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -73,7 +73,8 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                                          chCorr.MailingCorrRecvdActDtAssocMember,
                                          chCorr.MailingCorrReceivedDateAssocMember,
                                          chCorr.MailingCorrRecvdInstanceAssocMember,
-                                         chCorr.MailingCorrRecvdStatusAssocMember);
+                                         chCorr.MailingCorrRecvdStatusAssocMember,
+                                         chCorr.MailingCorrRecvdAsgnDtAssocMember);
 
                         studentDocumentList.Add(studentDoc);
 
@@ -109,7 +110,8 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                                                     request.CoreqCcExpActDtAssocMember,
                                                     request.CoreqCcDateAssocMember,
                                                     request.CoreqCcInstanceAssocMember,
-                                                    request.CoreqCcStatusAssocMember);
+                                                    request.CoreqCcStatusAssocMember,
+                                                    request.CoreqCcAssignDtAssocMember);
                                 studentDocumentList.Add(studentDoc);
                             }
                             catch (Exception e)
@@ -135,12 +137,13 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
         /// <param name="instanceDescription">document instance description</param>
         /// <param name="statusCode">document status code</param>        
         /// <returns>StudentDocument entity</returns>
-        private StudentDocument CreateStudentDocument(string studentId, string code, DateTime? dueDate, DateTime? statusDate, string instanceDescription, string statusCode)
+        private StudentDocument CreateStudentDocument(string studentId, string code, DateTime? dueDate, DateTime? statusDate, string instanceDescription, string statusCode, DateTime? assignDate)
         {
             var studentDocument = new StudentDocument(studentId, code);
             studentDocument.DueDate = dueDate;
             studentDocument.StatusDate = statusDate;
             studentDocument.Instance = instanceDescription;
+            studentDocument.AssignDate = assignDate;
 
             if (statusCode == null) statusCode = string.Empty;
             var documentStatuses = GetDocumentStatuses();

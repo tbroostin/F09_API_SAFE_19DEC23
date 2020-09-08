@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates
 
 using System;
 using System.Collections.Generic;
@@ -31,6 +31,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         public static char _SM = Convert.ToChar(DynamicArray.SM);
 
         public int GlSecurityTransactionCallCount { get; set; }
+        private RepositoryException exception = new RepositoryException();
 
         private readonly string _colleagueTimeZone;
 
@@ -117,7 +118,12 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             var detailIds = intgGlPostings.IgpTranDetails.ToArray();
             var intgGlPostingsDetail = await DataReader.BulkReadRecordAsync<IntgGlPostingsDetail>(detailIds);
 
-            return BuildGeneralLedgerTransaction2(intgGlPostings, intgGlPostingsDetail);
+            var generalLedgerTransactionEntity = BuildGeneralLedgerTransaction2(intgGlPostings, intgGlPostingsDetail);
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
+            return generalLedgerTransactionEntity;
         }
 
         /// <summary>
@@ -161,16 +167,19 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <returns>A general ledger transaction domain entity</returns>
         /// <exception cref="ArgumentNullException">Thrown if the id argument is null or empty</exception>
         /// <exception cref="KeyNotFoundException">Thrown if no database records exist for the given id argument</exception>
-        public async Task<IEnumerable<GeneralLedgerTransaction>> Get2Async(string personId, GlAccessLevel glAccessLevel)
+        public async Task<IEnumerable<GeneralLedgerTransaction>> Get2Async(string personId, GlAccessLevel glAccessLevel, bool journalEntryPermission = true, bool budgetEntryPermission = true, bool encumbranceEntryPermission = true)
         {
             var intgGlPostingsEntities = new List<GeneralLedgerTransaction>();
             // Read the INTG.GL.POSTINGS record
             var criteria = "WITH IGP.SOURCE NE ''";
+            if (!journalEntryPermission) criteria += " AND WITH IGP.SOURCE NE 'JE' AND WITH IGP.SOURCE NE 'AA'";
+            if (!budgetEntryPermission) criteria += " AND WITH IGP.SOURCE NE 'BU' AND WITH IGP.SOURCE NE 'AB' AND WITH IGP.SOURCE NE 'BC'";
+            if (!encumbranceEntryPermission) criteria += " AND WITH IGP.SOURCE NE 'AE' AND WITH IGP.SOURCE NE 'EP'";
             var intgGlPostings = await DataReader.BulkReadRecordAsync<IntgGlPostings>(criteria);
             {
                 if (intgGlPostings == null)
                 {
-                    throw new KeyNotFoundException("No records selected from INTG.GL.POSTINGS in Colleague.");
+                    return intgGlPostingsEntities;
                 }
             }
             // Read the INTG.GL.POSTINGS.DETAIL records
@@ -179,7 +188,15 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             foreach (var intgGlPostingEntity in intgGlPostings)
             {
-                intgGlPostingsEntities.Add(BuildGeneralLedgerTransaction2(intgGlPostingEntity, intgGlPostingsDetail));
+                var generalLedgerTransactionEntity = BuildGeneralLedgerTransaction2(intgGlPostingEntity, intgGlPostingsDetail);
+                if (generalLedgerTransactionEntity != null)
+                {
+                    intgGlPostingsEntities.Add(generalLedgerTransactionEntity);
+                }
+            }
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
             }
             return intgGlPostingsEntities;
         }
@@ -214,7 +231,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
             else
             {
-                return await this.GetByIdAsync(response.Id, personId, glAccessLevel);
+                var generalLedgerTransactionEntity = await GetByIdAsync(response.Id, personId, glAccessLevel);
+                return generalLedgerTransactionEntity;
             }
         }
 
@@ -246,7 +264,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
             else
             {
-                return await this.GetByIdAsync(response.Id, personId, glAccessLevel);
+                var generalLedgerTransactionEntity = await GetByIdAsync(response.Id, personId, glAccessLevel);
+                return generalLedgerTransactionEntity;
             }
         }
 
@@ -260,13 +279,13 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 if (!string.IsNullOrEmpty(glTrans.IgpSourceAssocMember) && glTrans.IgpTrDateAssocMember.HasValue && !string.IsNullOrEmpty(glTrans.IgpTranDetailsAssocMember))
                 {
                     GenLedgrTransaction transactionItem = new GenLedgrTransaction(glTrans.IgpSourceAssocMember.ToUpper(), glTrans.IgpTrDateAssocMember.Value.AddHours(12))
-                        {
-                            ReferenceNumber = glTrans.IgpRefNoAssocMember,
-                            ReferencePersonId = glTrans.IgpAcctIdAssocMember,
-                            TransactionTypeReferenceDate = glTrans.IgpSysDateAssocMember,
-                            TransactionNumber = glTrans.IgpTranNoAssocMember,
-                            TransactionDetailLines = new List<GenLedgrTransactionDetail>()
-                        };
+                    {
+                        ReferenceNumber = glTrans.IgpRefNoAssocMember,
+                        ReferencePersonId = glTrans.IgpAcctIdAssocMember,
+                        TransactionTypeReferenceDate = glTrans.IgpSysDateAssocMember,
+                        TransactionNumber = glTrans.IgpTranNoAssocMember,
+                        TransactionDetailLines = new List<GenLedgrTransactionDetail>()
+                    };
 
                     try
                     {
@@ -313,7 +332,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     }
                     catch
                     {
-                        throw new KeyNotFoundException(string.Format("INTG.GL.POSTINGS.DETAIL key {0} is missing from Colleague.", glTrans.IgpTranDetailsAssocMember));
+                        throw new KeyNotFoundException(string.Format("INTG.GL.POSTINGS.DETAIL key {0} is missing from Colleague.", glTrans.IgpTranDetailsAssocMember));  
                     }
                 }
             }
@@ -347,6 +366,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         ReferencePersonId = glTrans.IgpAcctIdAssocMember,
                         TransactionTypeReferenceDate = glTrans.IgpSysDateAssocMember,
                         TransactionNumber = glTrans.IgpTranNoAssocMember,
+                        ExternalBatchReference = glTrans.IgpExtBatchAssocMember,
                         TransactionDetailLines = new List<GenLedgrTransactionDetail>()
                     };
 
@@ -400,11 +420,20 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     catch(ArgumentNullException e)
                     {
                         string message = string.Format("{0}, Id: {1}", e.Message, integGlPosting.Recordkey);
-                        throw new ArgumentNullException(message);
+                        exception.AddError(new RepositoryError("Bad.Data", message)
+                        {
+                            SourceId = integGlPosting.Recordkey,
+                            Id = integGlPosting.RecordGuid
+                        });
                     }
                     catch
                     {
-                        throw new KeyNotFoundException(string.Format("INTG.GL.POSTINGS.DETAIL key {0} is missing from Colleague.", glTrans.IgpTranDetailsAssocMember));
+                        //throw new KeyNotFoundException(string.Format("INTG.GL.POSTINGS.DETAIL key {0} is missing from Colleague.", glTrans.IgpTranDetailsAssocMember));
+                        exception.AddError(new RepositoryError("Bad.Data", string.Format("INTG.GL.POSTINGS.DETAIL key {0} is missing from Colleague.", glTrans.IgpTranDetailsAssocMember))
+                        {
+                            SourceId = integGlPosting.Recordkey,
+                            Id = integGlPosting.RecordGuid
+                        });
                     }
                 }
             }
@@ -422,6 +451,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             var tranType = new List<string>();
             var tranRefNo = new List<string>();
             var tranNo = new List<string>();
+            var tranExtBatch = new List<string>();
             var tranTrDate = new List<Nullable<DateTime>>();
             var tranRefDate = new List<Nullable<DateTime>>();
             var tranAcctId = new List<string>();
@@ -438,6 +468,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 tranType.Add(transaction.Source);
                 tranRefNo.Add(transaction.ReferenceNumber);
                 tranNo.Add(transaction.TransactionNumber);
+                tranExtBatch.Add(transaction.ExternalBatchReference);
                 tranTrDate.Add(transaction.LedgerDate.Date);
                 if (transaction.TransactionTypeReferenceDate.HasValue)
                     tranRefDate.Add(transaction.TransactionTypeReferenceDate.GetValueOrDefault().Date);
@@ -510,6 +541,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 TranType = tranType,
                 TranRefNo = tranRefNo,
                 TranNo = tranNo,
+                TranExtBatch = tranExtBatch,
                 TranRefDate = tranRefDate,
                 TranTrDate = tranTrDate,
                 TranAcctId = tranAcctId,
@@ -543,10 +575,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             if (!string.IsNullOrEmpty(updateResponse.Error))
             {
                 var errorMessage = string.Format("Error(s) occurred updating general-ledger-transactions for id: '{0}'.", request.PostingGuid);
-                var exception = new RepositoryException(errorMessage);
+
                 foreach (var errMsg in updateResponse.CreateGlPostingError)
                 {
-                    exception.AddError(new RepositoryError(string.IsNullOrEmpty(errMsg.ErrorCodes) ? "" : errMsg.ErrorCodes, errMsg.ErrorMessages));
+                    exception.AddError(new RepositoryError("Create.Update.Exception", string.Concat(errMsg.ErrorCodes, " ", errMsg.ErrorMessages)));
                     errorMessage += string.Join(Environment.NewLine, errMsg.ErrorMessages);
                 }
                 logger.Error(errorMessage.ToString());
@@ -598,13 +630,22 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 }
             }
             var response = await CreateGeneralLedgerTransaction2(generalLedgerTransaction, GlConfig);
-            if (response.Id.Equals(string.Empty, StringComparison.OrdinalIgnoreCase) || response.Id.Equals(Guid.Empty.ToString(), StringComparison.OrdinalIgnoreCase))
+            if (response == null || string.IsNullOrEmpty(response.Id) || response.Id.Equals(string.Empty, StringComparison.OrdinalIgnoreCase) || response.Id.Equals(Guid.Empty.ToString(), StringComparison.OrdinalIgnoreCase))
             {
+                if (exception != null && exception.Errors != null && exception.Errors.Any())
+                {
+                    throw exception;
+                }
                 return response;
             }
             else
             {
-                return await this.GetById2Async(response.Id, personId, glAccessLevel);
+                var generalLedgerTransactionEntity = await this.GetById2Async(response.Id, personId, glAccessLevel); 
+                if (exception != null && exception.Errors != null && exception.Errors.Any())
+                {
+                    throw exception;
+                }
+                return generalLedgerTransactionEntity;
             }
         }
         
@@ -632,13 +673,22 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 }
             }
             var response = await CreateGeneralLedgerTransaction2(generalLedgerTransaction, GlConfig);
-            if(response.Id.Equals(string.Empty, StringComparison.OrdinalIgnoreCase) || response.Id.Equals(Guid.Empty.ToString(), StringComparison.OrdinalIgnoreCase))
+            if(response != null || string.IsNullOrEmpty(response.Id) || response.Id.Equals(string.Empty, StringComparison.OrdinalIgnoreCase) || response.Id.Equals(Guid.Empty.ToString(), StringComparison.OrdinalIgnoreCase))
             {
+                if (exception != null && exception.Errors != null && exception.Errors.Any())
+                {
+                    throw exception;
+                }
                 return response;
             }
             else
             {
-                return await this.GetById2Async(response.Id, personId, glAccessLevel);
+                var generalLedgerTransactionEntity = await this.GetById2Async(response.Id, personId, glAccessLevel);
+                if (exception != null && exception.Errors != null && exception.Errors.Any())
+                {
+                    throw exception;
+                }
+                return generalLedgerTransactionEntity;
             }
         }
 
@@ -652,6 +702,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         {
             var tranType = new List<string>();
             var tranRefNo = new List<string>();
+            var tranExtBatch = new List<string>();
             var tranNo = new List<string>();
             var tranTrDate = new List<Nullable<DateTime>>();
             var tranRefDate = new List<Nullable<DateTime>>();
@@ -676,6 +727,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             {
                 tranType.Add(transaction.Source);
                 tranRefNo.Add(transaction.ReferenceNumber);
+                tranExtBatch.Add(transaction.ExternalBatchReference);
                 tranNo.Add(transaction.TransactionNumber);
                 tranTrDate.Add(transaction.LedgerDate.Date);
                 if (transaction.TransactionTypeReferenceDate.HasValue)
@@ -726,7 +778,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                                 }
                                 catch (ArgumentOutOfRangeException)
                                 {
-                                    throw new InvalidOperationException(string.Format("Invalid GL account number: {0}", formatGl));
+                                    //throw new InvalidOperationException(string.Format("Invalid GL account number: {0}", formatGl));
+                                    exception.AddError(new RepositoryError("Bad.Data", string.Format("Invalid GL account number: {0}", formatGl))
+                                    {
+                                        Id = generalLedgerTransaction.Id
+                                    });
                                 }
                             }
                             formatGl = tempGlNo;
@@ -796,6 +852,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 SubmittedBy = generalLedgerTransaction.SubmittedBy,
                 TranType = tranType,
                 TranRefNo = tranRefNo,
+                TranExtBatch = tranExtBatch,
                 TranNo = tranNo,
                 TranRefDate = tranRefDate,
                 TranTrDate = tranTrDate,
@@ -838,18 +895,17 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             if (!string.IsNullOrEmpty(updateResponse.Error) && !updateResponse.Error.Equals("0", StringComparison.OrdinalIgnoreCase))
             {
                 var errorMessage = "Error(s) occurred updating general-ledger-transactions";
-                var exception = new RepositoryException(errorMessage);
+
                 foreach (var errMsg in updateResponse.CreateGlPostingError)
                 {
                     exception.AddError(new RepositoryError("Create.Update.Exception", string.Concat(errMsg.ErrorCodes, " ", errMsg.ErrorMessages))
                     {
-                        Id = updateResponse.PostingGuid,
+                        Id = !string.IsNullOrEmpty(updateResponse.PostingGuid) ? updateResponse.PostingGuid : request.PostingGuid,
                         SourceId = updateResponse.PostingId
                     });
                     errorMessage += string.Join(Environment.NewLine, errMsg.ErrorMessages);
                 }
                 logger.Error(errorMessage.ToString());
-                throw exception;
             }
 
             // Process the messages returned by colleague

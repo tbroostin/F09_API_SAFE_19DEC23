@@ -240,6 +240,11 @@ namespace Ellucian.Colleague.Domain.Student.Tests
             throw new NotImplementedException();
         }
 
+        public Task<SectionRegistrationResponse> GetSectionRegistrationById2Async(string id)
+        {
+            throw new NotImplementedException();
+        }
+
         public Task<Tuple<IEnumerable<StudentAcadCredCourseSecInfo>, int>> GetSectionRegistrationGradeOptionsAsync(int offset, int limit, StudentAcadCredCourseSecInfo criteria)
         {
             throw new NotImplementedException();

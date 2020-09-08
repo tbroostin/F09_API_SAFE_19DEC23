@@ -80,7 +80,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             var criteriaValues = GetFilterObject<Dtos.SectionInstructors>(_logger, "criteria");
 
             if (CheckForEmptyFilterParameters())
-                return new PagedHttpActionResult<IEnumerable<Dtos.SectionInstructors>>(new List<Dtos.SectionInstructors>(), page, this.Request);
+                return new PagedHttpActionResult<IEnumerable<Dtos.SectionInstructors>>(new List<Dtos.SectionInstructors>(), page, 0, this.Request);
 
             if (criteriaValues != null)
             {

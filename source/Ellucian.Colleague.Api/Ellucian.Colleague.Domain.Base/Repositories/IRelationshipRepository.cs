@@ -135,6 +135,8 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <returns>Domain.Base.Entities.Relationship</returns>
         Task<Domain.Base.Entities.Relationship> UpdatePersonalRelationshipsAsync(Domain.Base.Entities.Relationship personRelationshipsEntity);
 
+        Task<Tuple<Domain.Base.Entities.Relationship, string>> CreatePersonalRelationshipInitiationProcessAsync(Domain.Base.Entities.PersonalRelationshipInitiation personalRelationshipsEntity);
+
         /// <summary>
         /// Delete person relationship
         /// </summary>

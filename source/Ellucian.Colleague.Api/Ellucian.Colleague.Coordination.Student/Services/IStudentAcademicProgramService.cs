@@ -32,6 +32,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
         Task<Ellucian.Colleague.Dtos.StudentAcademicProgramsSubmissions> GetStudentAcademicProgramSubmissionByGuidAsync(string guid);
         Task<Ellucian.Colleague.Dtos.StudentAcademicPrograms4> CreateStudentAcademicProgramSubmissionAsync(StudentAcademicProgramsSubmissions acadProgEnroll, bool bypassCache = false);
-        Task<StudentAcademicPrograms4> UpdateStudentAcademicProgramSubmissionAsync(Ellucian.Colleague.Dtos.StudentAcademicProgramsSubmissions acadProgEnroll, bool bypassCache = false); 
+        Task<StudentAcademicPrograms4> UpdateStudentAcademicProgramSubmissionAsync(Ellucian.Colleague.Dtos.StudentAcademicProgramsSubmissions acadProgEnroll, bool bypassCache = false);
+        Task<Dtos.StudentAcademicPrograms4> CreateStudentAcademicProgramReplacementsAsync(StudentAcademicProgramReplacements studentAcademicPrograms, bool bypassCache);
     }
 }

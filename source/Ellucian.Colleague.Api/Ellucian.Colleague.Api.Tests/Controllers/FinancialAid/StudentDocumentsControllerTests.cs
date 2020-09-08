@@ -130,7 +130,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.FinancialAid
             public void NumberOfKnownPropertiesTest()
             {
                 var studentDocumentProperties = typeof(StudentDocument).GetProperties(BindingFlags.Public | BindingFlags.Instance);
-                Assert.AreEqual(7, studentDocumentProperties.Length);
+                Assert.AreEqual(8, studentDocumentProperties.Length);
             }
 
             [TestMethod]

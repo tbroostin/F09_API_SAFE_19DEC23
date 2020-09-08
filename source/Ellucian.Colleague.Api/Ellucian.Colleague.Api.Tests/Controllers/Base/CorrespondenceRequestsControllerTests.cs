@@ -1,4 +1,4 @@
-﻿//Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2018-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,60 +14,58 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
 using System.Threading.Tasks;
+using System.Net;
+using Ellucian.Colleague.Domain.Base.Exceptions;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Base
 {
     [TestClass]
     public class CorrespondenceRequestsControllerTests
     {
-        #region GetCorrespondenceRequests Tests
-        [TestClass]
-        public class GetCorrespondenceRequestsControllerTests
+        #region Test Context
+        private TestContext testContextInstance;
+
+        /// <summary>
+        ///Gets or sets the test context which provides
+        ///information about and functionality for the current test run.
+        ///</summary>
+        public TestContext TestContext
         {
-            #region Test Context
-            private TestContext testContextInstance;
-
-            /// <summary>
-            ///Gets or sets the test context which provides
-            ///information about and functionality for the current test run.
-            ///</summary>
-            public TestContext TestContext
+            get
             {
-                get
-                {
-                    return testContextInstance;
-                }
-                set
-                {
-                    testContextInstance = value;
-                }
+                return testContextInstance;
             }
-            #endregion
-
-            private Mock<IAdapterRegistry> adapterRegistryMock;
-            private Mock<ILogger> loggerMock;
-            private Mock<ICorrespondenceRequestsService> correspondenceRequestsServiceMock;
-
-            private string personId;
-
-            private IEnumerable<CorrespondenceRequest> expectedCorrespondenceRequests;
-            private List<CorrespondenceRequest> testCorrespondenceRequests;
-            private IEnumerable<CorrespondenceRequest> actualCorrespondenceRequests;
-
-            private CorrespondenceRequestsController CorrespondenceRequestsController;
-
-            [TestInitialize]
-            public async void Initialize()
+            set
             {
-                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
-                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+                testContextInstance = value;
+            }
+        }
+        #endregion
 
-                adapterRegistryMock = new Mock<IAdapterRegistry>();
-                loggerMock = new Mock<ILogger>();
-                correspondenceRequestsServiceMock = new Mock<ICorrespondenceRequestsService>();
+        private Mock<IAdapterRegistry> adapterRegistryMock;
+        private Mock<ILogger> loggerMock;
+        private Mock<ICorrespondenceRequestsService> correspondenceRequestsServiceMock;
 
-                personId = "0003914";
-                expectedCorrespondenceRequests = new List<CorrespondenceRequest>()
+        private string personId;
+
+        private IEnumerable<CorrespondenceRequest> expectedCorrespondenceRequests;
+        private List<CorrespondenceRequest> testCorrespondenceRequests;
+        private IEnumerable<CorrespondenceRequest> actualCorrespondenceRequests;
+        private CorrespondenceAttachmentNotification correspondenceAttachmentNotification;
+        private CorrespondenceRequestsController CorrespondenceRequestsController;
+
+        [TestInitialize]
+        public async void ControllerTestsInitialize()
+        {
+            LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+            EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+            adapterRegistryMock = new Mock<IAdapterRegistry>();
+            loggerMock = new Mock<ILogger>();
+            correspondenceRequestsServiceMock = new Mock<ICorrespondenceRequestsService>();
+
+            personId = "0003914";
+            expectedCorrespondenceRequests = new List<CorrespondenceRequest>()
                 {
                     new CorrespondenceRequest()
                     {
@@ -87,33 +85,45 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                     }
                 };
 
-                testCorrespondenceRequests = new List<CorrespondenceRequest>();
-                foreach (var document in expectedCorrespondenceRequests)
+            correspondenceAttachmentNotification = new CorrespondenceAttachmentNotification() { PersonId = "x", CommunicationCode = "y", AssignDate = DateTime.Today.AddDays(-2) };
+            testCorrespondenceRequests = new List<CorrespondenceRequest>();
+            foreach (var document in expectedCorrespondenceRequests)
+            {
+                var testCorrespondenceRequest = new CorrespondenceRequest();
+                foreach (var property in typeof(CorrespondenceRequest).GetProperties(BindingFlags.Public | BindingFlags.Instance))
                 {
-                    var testCorrespondenceRequest = new CorrespondenceRequest();
-                    foreach (var property in typeof(CorrespondenceRequest).GetProperties(BindingFlags.Public | BindingFlags.Instance))
-                    {
-                        property.SetValue(testCorrespondenceRequest, property.GetValue(document, null), null);
-                    }
-                    testCorrespondenceRequests.Add(testCorrespondenceRequest);
+                    property.SetValue(testCorrespondenceRequest, property.GetValue(document, null), null);
                 }
-
-                correspondenceRequestsServiceMock.Setup<Task<IEnumerable<CorrespondenceRequest>>>(d => d.GetCorrespondenceRequestsAsync(personId)).ReturnsAsync(testCorrespondenceRequests);
-                CorrespondenceRequestsController = new CorrespondenceRequestsController(adapterRegistryMock.Object, correspondenceRequestsServiceMock.Object, loggerMock.Object);
-                actualCorrespondenceRequests = await CorrespondenceRequestsController.GetCorrespondenceRequestsAsync(personId);
+                testCorrespondenceRequests.Add(testCorrespondenceRequest);
             }
 
-            [TestCleanup]
-            public void Cleanup()
+            correspondenceRequestsServiceMock.Setup<Task<IEnumerable<CorrespondenceRequest>>>(d => d.GetCorrespondenceRequestsAsync(personId)).ReturnsAsync(testCorrespondenceRequests);
+            CorrespondenceRequestsController = new CorrespondenceRequestsController(adapterRegistryMock.Object, correspondenceRequestsServiceMock.Object, loggerMock.Object);
+            actualCorrespondenceRequests = await CorrespondenceRequestsController.GetCorrespondenceRequestsAsync(personId);
+        }
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            adapterRegistryMock = null;
+            loggerMock = null;
+            correspondenceRequestsServiceMock = null;
+            personId = null;
+            expectedCorrespondenceRequests = null;
+            testCorrespondenceRequests = null;
+            actualCorrespondenceRequests = null;
+            CorrespondenceRequestsController = null;
+        }
+
+        #region GetCorrespondenceRequests Tests
+        [TestClass]
+        public class GetCorrespondenceRequestsControllerTests : CorrespondenceRequestsControllerTests
+        {
+
+            [TestInitialize]
+            public void Initialize()
             {
-                adapterRegistryMock = null;
-                loggerMock = null;
-                correspondenceRequestsServiceMock = null;
-                personId = null;
-                expectedCorrespondenceRequests = null;
-                testCorrespondenceRequests = null;
-                actualCorrespondenceRequests = null;
-                CorrespondenceRequestsController = null;
+                base.ControllerTestsInitialize();
             }
 
             [TestMethod]
@@ -130,7 +140,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             public void NumberOfKnownPropertiesTest()
             {
                 var correspondenceRequestsProperties = typeof(CorrespondenceRequest).GetProperties(BindingFlags.Public | BindingFlags.Instance);
-                Assert.AreEqual(7, correspondenceRequestsProperties.Length);
+                Assert.AreEqual(8, correspondenceRequestsProperties.Length);
             }
 
             [TestMethod]
@@ -212,7 +222,95 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         }
         #endregion
 
+        [TestClass]
+        public class CorrespondenceRequestsController_PutAttachmentNotificationAsyncTests : CorrespondenceRequestsControllerTests
+        {
+            [TestInitialize]
+            public void Initialize()
+            {
+                base.ControllerTestsInitialize();
+            }
 
+            [TestMethod]
+            public async Task CorrespondenceRequestsController_PutAttachmentNotificationAsync_Success()
+            {
+                correspondenceRequestsServiceMock.Setup(x => x.AttachmentNotificationAsync(It.IsAny<CorrespondenceAttachmentNotification>())).ReturnsAsync(expectedCorrespondenceRequests.First());
+
+                var correspondenceRequest = expectedCorrespondenceRequests.First();
+                var actual = await CorrespondenceRequestsController.PutAttachmentNotificationAsync(correspondenceAttachmentNotification);
+                Assert.AreEqual(correspondenceRequest, actual);
+
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task CorrespondenceRequestsController_PutAttachmentNotificationAsync_PermissionsException()
+            {
+                try
+                {
+                    correspondenceRequestsServiceMock.Setup(x => x.AttachmentNotificationAsync(It.IsAny<CorrespondenceAttachmentNotification>())).Throws<PermissionsException>();
+
+                    await CorrespondenceRequestsController.PutAttachmentNotificationAsync(correspondenceAttachmentNotification);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(HttpStatusCode.Forbidden, ex.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task CorrespondenceRequestsController_PutAttachmentNotificationAsync_KeyNotFoundException()
+            {
+                try
+                {
+                    correspondenceRequestsServiceMock.Setup(x => x.AttachmentNotificationAsync(It.IsAny<CorrespondenceAttachmentNotification>())).Throws<KeyNotFoundException>();
+
+                    await CorrespondenceRequestsController.PutAttachmentNotificationAsync(correspondenceAttachmentNotification);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(HttpStatusCode.NotFound, ex.Response.StatusCode);
+                    throw;
+                }
+            }
+
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task CorrespondenceRequestsController_PutAttachmentNotificationAsync_RecordLockException()
+            {
+                try
+                {
+                    correspondenceRequestsServiceMock.Setup(x => x.AttachmentNotificationAsync(It.IsAny<CorrespondenceAttachmentNotification>())).Throws<RecordLockException>();
+
+                    await CorrespondenceRequestsController.PutAttachmentNotificationAsync(correspondenceAttachmentNotification);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(HttpStatusCode.Conflict, ex.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task CorrespondenceRequestsController_PutAttachmentNotificationAsync__Exception()
+            {
+                try
+                {
+                    correspondenceRequestsServiceMock.Setup(x => x.AttachmentNotificationAsync(It.IsAny<CorrespondenceAttachmentNotification>())).Throws<Exception>();
+
+                    await CorrespondenceRequestsController.PutAttachmentNotificationAsync(correspondenceAttachmentNotification);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(HttpStatusCode.BadRequest, ex.Response.StatusCode);
+                    throw;
+                }
+            }
+        }
     }
 }
 

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Net;
 using System.Linq;
@@ -2170,7 +2170,7 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
         /// <summary>
-        /// Get a section 
+        /// Get a section
         /// </summary>
         /// <returns><see cref="Section3">Section3</see> object</returns>
         /// <exception cref="ArgumentNullException">The resource id must be provided.</exception>
@@ -2497,7 +2497,7 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
-        /// Given a section ID return list of section meeting instances - i.e. specific class meeting times.  
+        /// Given a section ID return list of section meeting instances - i.e. specific class meeting times.
         /// </summary>
         /// <param name="sectionIds">A set of section IDs</param>
         /// <returns>A list of section meeting instance Dtos.</returns>
@@ -2526,7 +2526,7 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
-        /// Retrieves student attendances for a specific section 
+        /// Retrieves student attendances for a specific section
         /// </summary>
         /// <param name="sectionId">section Id (required)</param>
         /// <param name="includeCrossListedSections">If yes, attendances for sections crosslisted to the sectionId will also be included</param>
@@ -2563,7 +2563,7 @@ namespace Ellucian.Colleague.Api.Client
 
         /// <summary>
         /// Retrieves student attendances for a given studentId for the given sectionIds.
-        /// If  sectionIds is not provided then attendances from all the student's sections is returned. 
+        /// If  sectionIds is not provided then attendances from all the student's sections is returned.
         /// </summary>
         /// <param name="sectionId">section Id (required)</param>
         /// <returns> <see cref="StudentSectionsAttendances"/> section wise student's attendances</returns>
@@ -3413,7 +3413,7 @@ namespace Ellucian.Colleague.Api.Client
         /// Returns registration eligibility information for a student
         /// </summary>
         /// <param name="studentId">Id of student to check registration eligibility for</param>
-        /// <returns><see cref="RegistrationEligibility">Registration Eligibility Information</see> including messages returned by 
+        /// <returns><see cref="RegistrationEligibility">Registration Eligibility Information</see> including messages returned by
         /// the student eligibility check and booleans indicating whether the student is eligible and whether the user can override and
         /// register the student even if the student is ineligible.</returns>
         public RegistrationEligibility CheckRegistrationEligibility(string studentId)
@@ -3444,7 +3444,7 @@ namespace Ellucian.Colleague.Api.Client
         /// Returns registration eligibility information for a student async.
         /// </summary>
         /// <param name="studentId">Id of student to check registration eligibility for</param>
-        /// <returns><see cref="RegistrationEligibility">Registration Eligibility Information</see> including messages returned by 
+        /// <returns><see cref="RegistrationEligibility">Registration Eligibility Information</see> including messages returned by
         /// the student eligibility check and booleans indicating whether the student is eligible and whether the user can override and
         /// register the student even if the student is ineligible.</returns>
         public async Task<RegistrationEligibility> CheckRegistrationEligibilityAsync(string studentId)
@@ -4153,7 +4153,7 @@ namespace Ellucian.Colleague.Api.Client
         }
         // <summary>
         // Posts connection status from Colleague to Recruiter.
-        // </summary>       
+        // </summary>
         public ConnectionStatus PostConnectionStatus(ConnectionStatus connectionStatus)
         {
             string urlPath = UrlUtility.CombineUrlPath(_recruiterConnectionStatusPath);
@@ -4177,7 +4177,7 @@ namespace Ellucian.Colleague.Api.Client
         }
         // <summary>
         // Posts connection status from Colleague to Recruiter async.
-        // </summary>       
+        // </summary>
         public async Task<ConnectionStatus> PostConnectionStatusAsync(ConnectionStatus connectionStatus)
         {
             string urlPath = UrlUtility.CombineUrlPath(_recruiterConnectionStatusPath);
@@ -4892,7 +4892,7 @@ namespace Ellucian.Colleague.Api.Client
         /// <param name="studentIds">Student ID</param>
         /// <returns>PersonRestriction DTO objects</returns>
         /// <exception cref="ArgumentNullException">The resource studentId must be provided.</exception>
-        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception> 
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
         public IEnumerable<PersonRestriction> GetStudentRestrictions(string studentId)
         {
             if (string.IsNullOrEmpty(studentId))
@@ -4924,7 +4924,7 @@ namespace Ellucian.Colleague.Api.Client
         /// <param name="useCache">Use Cache</param>
         /// <returns>PersonRestriction DTO objects</returns>
         /// <exception cref="ArgumentNullException">The resource studentId must be provided.</exception>
-        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>        
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
         public async Task<IEnumerable<PersonRestriction>> GetStudentRestrictionsAsync(string studentId, bool useCache = false)
         {
             if (string.IsNullOrEmpty(studentId))
@@ -4956,7 +4956,7 @@ namespace Ellucian.Colleague.Api.Client
         /// <param name="useCache">Use Cache</param>
         /// <returns>PersonRestriction DTO objects</returns>
         /// <exception cref="ArgumentNullException">The resource studentId must be provided.</exception>
-        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>        
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
         public async Task<IEnumerable<PersonRestriction>> GetStudentRestrictions2Async(string studentId, bool useCache = false)
         {
             if (string.IsNullOrEmpty(studentId))
@@ -5317,7 +5317,7 @@ namespace Ellucian.Colleague.Api.Client
         /// <param name="facultyIds">Post in Body a list of faculty keys</param>
         /// <returns>list of faculty office hours</returns>
         public async Task<IEnumerable<FacultyOfficeHours>> GetFacultyOfficeHoursAsync(IEnumerable<string> facultyIds)
-        {            
+        {
             try
             {
                 if (facultyIds == null)
@@ -6192,7 +6192,7 @@ namespace Ellucian.Colleague.Api.Client
 
         }
         /// <summary>
-        /// Process registration requests for student 
+        /// Process registration requests for student
         /// </summary>
         /// <param name="studentId">Id of the student being registered</param>
         /// <param name="sectionRegistrations">Section registration items being submitted for registration</param>
@@ -6387,7 +6387,7 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
         /// <summary>
-        /// Get a student's transcript viewing restrictions asynchronously. 
+        /// Get a student's transcript viewing restrictions asynchronously.
         /// </summary>
         /// <param name="studentId">Id of student</param>
         /// <returns>A list of transcript viewing restrictions. If none it is an empty list.</returns>
@@ -6910,7 +6910,7 @@ namespace Ellucian.Colleague.Api.Client
             return permissions;
         }
         /// <summary>
-        /// Client method to Post (create) a new waiver. 
+        /// Client method to Post (create) a new waiver.
         /// </summary>
         /// <param name="studentWaiver">Waiver object</param>
         /// <returns>Created Waiver object</returns>
@@ -6952,7 +6952,7 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
         /// <summary>
-        /// Client method to Post (create) a new waiver. 
+        /// Client method to Post (create) a new waiver.
         /// </summary>
         /// <param name="studentWaiver">Waiver object</param>
         /// <returns>Created Waiver object</returns>
@@ -7357,7 +7357,7 @@ namespace Ellucian.Colleague.Api.Client
 
         }
         /// <summary>
-        /// Client method to Post (add) a new student petition. 
+        /// Client method to Post (add) a new student petition.
         /// </summary>
         /// <param name="studentPetitionToAdd">StudentPetition object</param>
         /// <returns>The StudentPetition object created</returns>
@@ -7399,7 +7399,7 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
         /// <summary>
-        /// Client method to Post (add) a new student petition async. 
+        /// Client method to Post (add) a new student petition async.
         /// </summary>
         /// <param name="studentPetitionToAdd">StudentPetition object</param>
         /// <returns>The StudentPetition object created</returns>
@@ -7646,7 +7646,7 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
-        /// Client method to Post (create) a new graduation application asynchronously. 
+        /// Client method to Post (create) a new graduation application asynchronously.
         /// </summary>
         /// <param name="graduationApplication">Graduation Application object</param>
         /// <returns>Created Graduation Application object</returns>
@@ -7685,7 +7685,7 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
-        /// Client method to Post (create) a new graduation application. 
+        /// Client method to Post (create) a new graduation application.
         /// </summary>
         /// <param name="graduationApplication">Graduation Application object</param>
         /// <returns>Created Graduation Application object</returns>
@@ -7853,15 +7853,15 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
-        /// Get a list of<see cref="StudentWaitlistStatus"/> 
+        /// Get a list of<see cref="StudentWaitlistStatus"/>
         /// </summary>
         /// <returns>A list of<see cref="StudentWaitlistStatus"/></returns>
         public async Task<IEnumerable<StudentWaitlistStatus>> GetStudentWaitlistStatusesAsync()
         {
             try
-            {               
+            {
                 var headers = new NameValueCollection();
-                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);                
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
                 var response = await ExecuteGetRequestWithResponseAsync(_waitlistStatusesPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<StudentWaitlistStatus>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -8027,7 +8027,7 @@ namespace Ellucian.Colleague.Api.Client
                 if (string.IsNullOrEmpty(studentId))
                 {
                     throw new ArgumentNullException("studentId", "Cannot fetch section waitlist info without a student ID.");
-                }           
+                }
                 var urlPath = UrlUtility.CombineUrlPath(new[] { _sectionsPath, sectionId.ToString(), _waitlistInfoPath });
                 var query = UrlUtility.BuildEncodedQueryString(new[] { "studentId", studentId});
                 urlPath = UrlUtility.CombineUrlPathAndArguments(urlPath, query);
@@ -8044,7 +8044,7 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
         /// <summary>
-        /// Async client method to update an existing graduation application. 
+        /// Async client method to update an existing graduation application.
         /// </summary>
         /// <param name="graduationApplication">Graduation Application object</param>
         /// <returns>Updated Graduation Application object</returns>
@@ -8115,7 +8115,7 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
-        /// Client method to Post (create) a new student request. 
+        /// Client method to Post (create) a new student request.
         /// </summary>
         /// <param name="studentRequest">Student Request object</param>
         /// <returns>Created a new Student Request object</returns>
@@ -8158,7 +8158,7 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         ///// <summary>
-        ///// Client method to Post (create) a new student request. 
+        ///// Client method to Post (create) a new student request.
         ///// </summary>
         ///// <param name="studentRequest">Student Request object</param>
         ///// <returns>Created a new Student Request object</returns>
@@ -8908,7 +8908,7 @@ namespace Ellucian.Colleague.Api.Client
         /// <summary>
         /// Searches for advisees within an advisor's assigned advisee list or within the global pool (depending on advisor's permissions) async.
         /// </summary>
-        /// <param name="studentKeyword">The search string used when searching students by name or ID</param>        
+        /// <param name="studentKeyword">The search string used when searching students by name or ID</param>
         /// <returns>A list of matching students, which may be empty</returns>
         /// <exception cref="System.ArgumentException">Thrown when studentKeyword is not supplied.</exception>
         /// <exception cref="Ellucian.Colleague.Api.Client.Exceptions.AdvisingException">Thrown when the search fails</exception>
@@ -9122,7 +9122,7 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
-        /// Create a new add authorization for a student in a section. 
+        /// Create a new add authorization for a student in a section.
         /// </summary>
         /// <param name="addAuthorizationInput">Input for a new add authorization. Must have  section Id and student Id.</param>
         /// <returns>Newly created add authorization</returns>
@@ -9196,7 +9196,7 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
-        /// Returns graduation application eligibilty information for a student 
+        /// Returns graduation application eligibilty information for a student
         /// </summary>
         /// <param name="studentId">(Required) Id of student</param>
         /// <param name="programCodes">List of program Codes for which graduation application eligibility is desired. Must provide at least 1</param>
@@ -10319,7 +10319,7 @@ namespace Ellucian.Colleague.Api.Client
         /// <summary>
         /// Gets all the CampusOrganization2 objects matching the query criteria.
         /// </summary>
-        /// <param name="criteria">CampusOrganizationQueryCriteria object</param>     
+        /// <param name="criteria">CampusOrganizationQueryCriteria object</param>
         /// <returns>CampusOrganization2 objects</returns>
         public async Task<IEnumerable<CampusOrganization2>> GetCampusOrganizations2Async(List<string> campusOrganizationIds)
         {
@@ -10372,7 +10372,7 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
-        /// Retrieves a given student's Colleague Self-Service Quick Registration information for the provided academic term codes. 
+        /// Retrieves a given student's Colleague Self-Service Quick Registration information for the provided academic term codes.
         /// If the Colleague Self-Service Quick Registration workflow is disabled then no quick registration sections will be returned for any academic terms.
         /// If the Colleague Self-Service Quick Registration workflow is enabled then quick registration sections will be returned for any academic terms. Quick registration sections are any course sections in
         /// Colleague Self-Service Quick Registration terms that the student has planned to register for but has not yet registered.
@@ -10395,6 +10395,924 @@ namespace Ellucian.Colleague.Api.Client
             catch (Exception ex)
             {
                 logger.Error(ex, string.Format("Unable to retrieve Colleague Self-Service Quick Registration information for student {0}.", studentId));
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Search for sections brings back a page containing a page worth of sections that meet the criteria and associated filters asynchronously.
+        /// </summary>
+        /// <param name="sectionSearchCriteria">A <see cref="SectionSearchCriteria">Section Search Criteria</see> containing keywords, course Ids or Section Ids, along with filter settings</param>
+        /// <returns><see cref="SectionPage">SectionPage</see> containing the page information for total number of sections, sections on the current page, and filters</returns>
+        public async Task<SectionPage> SearchSectionsAsync(SectionSearchCriteria sectionSearchCriteria, int pageSize, int pageIndex)
+        {
+            if (sectionSearchCriteria.Keyword == null) sectionSearchCriteria.Keyword = string.Empty;
+            if (!string.IsNullOrEmpty(sectionSearchCriteria.Keyword))
+            {
+                sectionSearchCriteria.Keyword = sectionSearchCriteria.Keyword.Replace("/", "_~");
+            }
+
+            try
+            {
+                // Build url path + subject
+                var queryString = UrlUtility.BuildEncodedQueryString("pageSize", pageSize.ToString(), "pageIndex", pageIndex.ToString());
+                var urlPath = UrlUtility.CombineUrlPathAndArguments(_sectionsSearchPath, queryString);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                // Use URL path to call web api method (including query string)
+                var response = await ExecutePostRequestWithResponseAsync(sectionSearchCriteria, urlPath, headers: headers);
+
+                var sectionPage = JsonConvert.DeserializeObject<SectionPage>(await response.Content.ReadAsStringAsync());
+
+                return sectionPage;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.ToString());
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Requests the full set of case types
+        /// </summary>
+        /// <returns>A set of Case Types</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<CaseType>> GetCaseTypesAsync()
+        {
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_caseTypesPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<CaseType>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to get case types");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get case types");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Requests the full set of case priorities
+        /// </summary>
+        /// <returns>A set of Case Priority</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<CasePriority>> GetCasePrioritiesAsync()
+        {
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_casePrioritiesPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<CasePriority>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to get case priorities");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get case priorities");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Requests the full set of case categories
+        /// </summary>
+        /// <returns>A set of Case categories</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<CaseCategory>> GetCaseCategoriesAsync()
+        {
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_caseCategoriesPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<CaseCategory>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to get case categories");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get case categories");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Requests the full set of case closure reasons
+        /// </summary>
+        /// <returns>A set of Case closure reasons</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<CaseClosureReason>> GetCaseClosureReasonsAsync()
+        {
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_caseClosureReasonsPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<CaseClosureReason>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to get case closure reasons");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get case closure reasons");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Add Retention Alert case for a student.
+        /// </summary>
+        /// <param name="retentionAlertCase">Retention Alert Case information</param>
+        /// <returns>Retention Alert Case Create Response</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        /// <exception cref="ArgumentNullException">The student academic program must be provided.</exception>
+        public async Task<RetentionAlertCaseCreateResponse> AddRetentionAlertCaseAsync(RetentionAlertCase retentionAlertCase)
+        {
+            if (retentionAlertCase == null)
+            {
+                throw new ArgumentNullException("retentionAlertCase", "retentionAlertCase cannot be null.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCasePath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(retentionAlertCase, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<RetentionAlertCaseCreateResponse>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.ToString());
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Update Retention Alert case for a student.
+        /// </summary>
+        /// <param name="retentionAlertCase">Retention Alert Case information</param>
+        /// <returns>Retention Alert Case Create Response</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        /// <exception cref="ArgumentNullException">The student academic program must be provided.</exception>
+        public async Task<RetentionAlertCaseCreateResponse> UpdateRetentionAlertCaseAsync(string id, RetentionAlertCase retentionAlertCase)
+        {
+            if (retentionAlertCase == null)
+            {
+                throw new ArgumentNullException("retentionAlertCase", "retentionAlertCase cannot be null.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCasePath, id);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePutRequestWithResponseAsync(retentionAlertCase, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<RetentionAlertCaseCreateResponse>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.ToString());
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Retrieve Retention Alert Cases information
+        /// </summary>
+        /// <param name="criteria"></param>
+        /// <returns>Retention Alert Work Case list</returns>
+        public async Task<IEnumerable<RetentionAlertWorkCase>> QueryRetentionAlertWorkCasesAsync(RetentionAlertQueryCriteria criteria)
+        {
+            if (criteria == null)
+            {
+                throw new ArgumentNullException("criteria", "Criteria cannot be empty/null for Retention alert cases.");
+            }
+            try
+            {
+                string[] pathStrings = new string[] { _qapiPath, _retentionAlertCasesPath };
+                var urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<RetentionAlertWorkCase>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get Retention Alert work Cases");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Retrieves retention alert contributions
+        /// </summary>
+        /// <param name="criteria">Contributions Query Criteria</param>
+        /// <returns>Retention alert contributions list</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<RetentionAlertWorkCase>> QueryRetentionAlertContributionsAsync(ContributionsQueryCriteria criteria)
+        {
+            if (criteria == null)
+            {
+                throw new ArgumentNullException("criteria", "Criteria cannot be empty/null for Retention alert contributions.");
+            }
+            try
+            {
+                string[] pathStrings = new string[] { _qapiPath, _retentionAlertContributionsPath };
+                var urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<RetentionAlertWorkCase>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to get retention alert contributions");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get retention alert contributions");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets the retention alert case detail.
+        /// </summary>
+        /// <param name="caseId">The case identifier.</param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException">caseId - Case ID is required to retrieve retention alert case detail.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<RetentionAlertCaseDetail> GetRetentionAlertCaseDetailAsync(string caseId)
+        {
+            if (string.IsNullOrEmpty(caseId))
+            {
+                throw new ArgumentNullException("caseId", "Case ID is required to retrieve retention alert case detail.");
+            }
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCaseDetailPath, caseId);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<RetentionAlertCaseDetail>(await response.Content.ReadAsStringAsync());
+            }
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to get retention alert case detail");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get retention alert case detail");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Adds the retention alert case note asynchronous.
+        /// </summary>
+        /// <param name="caseId">Case ID</param>
+        /// <param name="retentionAlertCaseNote">The retention alert case note.</param>
+        /// <returns>Retention alert work case action response</returns>
+        /// <exception cref="ArgumentNullException">retentionAlertCaseNote - retentionAlertCaseNote cannot be null.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<RetentionAlertWorkCaseActionResponse> AddRetentionAlertCaseNoteAsync(string caseId, RetentionAlertWorkCaseNote retentionAlertCaseNote)
+        {
+            if (string.IsNullOrEmpty(caseId))
+            {
+                throw new ArgumentNullException("caseId", "caseId cannot be null.");
+            }
+            if (retentionAlertCaseNote == null)
+            {
+                throw new ArgumentNullException("retentionAlertCaseNote", "retentionAlertCaseNote cannot be null.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCasesPath, caseId, "case-history");
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianRetentionAlertCaseNoteVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(retentionAlertCaseNote, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<RetentionAlertWorkCaseActionResponse>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to add retention alert case note");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to add retention alert case note");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Adds a followup to a retention alert case, this will not update the Case Owner with the current user asynchronous.
+        /// </summary>
+        /// <param name="caseId">Case ID</param>
+        /// <param name="retentionAlertCaseNote">The retention alert case note.</param>
+        /// <returns>Retention alert work case action response</returns>
+        /// <exception cref="ArgumentNullException">retentionAlertCaseNote - retentionAlertCaseNote cannot be null.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<RetentionAlertWorkCaseActionResponse> AddRetentionAlertCaseFollowUpAsync(string caseId, RetentionAlertWorkCaseNote retentionAlertCaseNote)
+        {
+            if (string.IsNullOrEmpty(caseId))
+            {
+                throw new ArgumentNullException("caseId", "caseId cannot be null.");
+            }
+            if (retentionAlertCaseNote == null)
+            {
+                throw new ArgumentNullException("retentionAlertCaseNote", "retentionAlertCaseNote cannot be null.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCasesPath, caseId, "case-history");
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianRetentionAlertCaseFollowUpVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(retentionAlertCaseNote, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<RetentionAlertWorkCaseActionResponse>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to add retention alert case note");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to add retention alert case note");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Adds the retention alert case comm code asynchronous.
+        /// </summary>
+        /// <param name="caseId">Case ID</param>
+        /// <param name="retentionAlertCaseCommCode">The retention alert case comm code.</param>
+        /// <returns>Retention alert work case action response</returns>
+        /// <exception cref="ArgumentNullException">retentionAlertCaseCommCode - retentionAlertCaseCommCode cannot be null.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<RetentionAlertWorkCaseActionResponse> AddRetentionAlertCaseCommCodeAsync(string caseId, RetentionAlertWorkCaseCommCode retentionAlertCaseCommCode)
+        {
+            if (string.IsNullOrEmpty(caseId))
+            {
+                throw new ArgumentNullException("caseId", "caseId cannot be null.");
+            }
+            if (retentionAlertCaseCommCode == null)
+            {
+                throw new ArgumentNullException("retentionAlertCaseCommCode", "retentionAlertCaseCommCode cannot be null.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCasesPath, caseId, "case-history");
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianRetentionAlertCaseCommCodeVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(retentionAlertCaseCommCode, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<RetentionAlertWorkCaseActionResponse>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to add retention alert communication code");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to add retention alert communication code");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Adds the retention alert case type asynchronous.
+        /// </summary>
+        /// <param name="caseId">Case ID</param>
+        /// <param name="retentionAlertCaseType">Type of the retention alert case.</param>
+        /// <returns>Retention alert work case action response</returns>
+        /// <exception cref="ArgumentNullException">retentionAlertCaseType - retentionAlertCaseType cannot be null.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<RetentionAlertWorkCaseActionResponse> AddRetentionAlertCaseTypeAsync(string caseId, RetentionAlertWorkCaseType retentionAlertCaseType)
+        {
+            if (string.IsNullOrEmpty(caseId))
+            {
+                throw new ArgumentNullException("caseId", "caseId cannot be null.");
+            }
+            if (retentionAlertCaseType == null)
+            {
+                throw new ArgumentNullException("retentionAlertCaseType", "retentionAlertCaseType cannot be null.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCasesPath, caseId, "case-history");
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianRetentionAlertCaseTypeVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(retentionAlertCaseType, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<RetentionAlertWorkCaseActionResponse>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to add retention alert case Type");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to add retention alert case Type");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Changes the retention alert case priority asynchronous.
+        /// </summary>
+        /// <param name="caseId">Case ID</param>
+        /// <param name="retentionAlertCasePriority">The retention alert case priority.</param>
+        /// <returns>Retention alert work case action response</returns>
+        /// <exception cref="ArgumentNullException">retentionAlertCasePriority - retentionAlertCasePriority cannot be null.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<RetentionAlertWorkCaseActionResponse> ChangeRetentionAlertCasePriorityAsync(string caseId, RetentionAlertWorkCasePriority retentionAlertCasePriority)
+        {
+            if (string.IsNullOrEmpty(caseId))
+            {
+                throw new ArgumentNullException("caseId", "caseId cannot be null.");
+            }
+            if (retentionAlertCasePriority == null)
+            {
+                throw new ArgumentNullException("retentionAlertCasePriority", "retentionAlertCasePriority cannot be null.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCasesPath, caseId, "case-history");
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianRetentionAlertCasePriorityVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(retentionAlertCasePriority, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<RetentionAlertWorkCaseActionResponse>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to change retention alert case priority");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to change retention alert case priority");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Closes the retention alert case asynchronous.
+        /// </summary>
+        /// <param name="caseId">Case ID</param>
+        /// <param name="retentionAlertCaseClose">The retention alert case close.</param>
+        /// <returns>Retention alert work case action response</returns>
+        /// <exception cref="ArgumentNullException">retentionAlertCaseClose - retentionAlertCaseClose cannot be null.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<RetentionAlertWorkCaseActionResponse> CloseRetentionAlertCaseAsync(string caseId, RetentionAlertWorkCaseClose retentionAlertCaseClose)
+        {
+            if (string.IsNullOrEmpty(caseId))
+            {
+                throw new ArgumentNullException("caseId", "caseId cannot be null.");
+            }
+            if (retentionAlertCaseClose == null)
+            {
+                throw new ArgumentNullException("retentionAlertCaseClose", "retentionAlertCaseClose cannot be null.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCasesPath, caseId, "case-history");
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianRetentionAlertCaseCloseVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(retentionAlertCaseClose, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<RetentionAlertWorkCaseActionResponse>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to close retention alert case");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to close retention alert case");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Set Reminder for Retention Alert Case.
+        /// </summary>
+        /// <param name="caseId">Case ID</param>
+        /// <param name="reminder">Retention Alert reminder information</param>
+        /// <returns>Retention alert work case action response</returns>
+        /// <exception cref="ArgumentNullException">retentionAlertCaseClose - retentionAlertCaseClose cannot be null.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<RetentionAlertWorkCaseActionResponse> SetRetentionAlertCaseReminderAsync(string caseId, RetentionAlertWorkCaseSetReminder reminder)
+        {
+            if (string.IsNullOrEmpty(caseId))
+            {
+                throw new ArgumentNullException("caseId", "caseId cannot be null.");
+            }
+            if (reminder == null)
+            {
+                throw new ArgumentNullException("reminder", "reminder cannot be null.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCasesPath, caseId, "case-history");
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianRetentionAlertCaseSetReminderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(reminder, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<RetentionAlertWorkCaseActionResponse>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to set reminder for alert case");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to set reminder for alert case");
+                throw;
+            }
+        }
+
+        public async Task<RetentionAlertWorkCaseActionResponse> ManageRetentionAlertCaseRemindersAsync(string caseId, RetentionAlertWorkCaseManageReminders reminders)
+        {
+            if (string.IsNullOrEmpty(caseId))
+            {
+                throw new ArgumentNullException("caseId", "caseId cannot be null or empty.");
+            }
+            if (reminders == null)
+            {
+                throw new ArgumentNullException("reminders", "reminders cannot be null.");
+            }
+
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCasesPath, caseId, "case-history");
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianRetentionAlertCaseManageRemindersVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(reminders, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<RetentionAlertWorkCaseActionResponse>(await response.Content.ReadAsStringAsync());
+                return resource;
+            } catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to clear case reminders.");
+                throw;
+            } catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to clear case reminder dates.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets the retention alert permissions
+        /// </summary>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        /// <returns>Retention alert permissions for the current user</returns>
+        public async Task<RetentionAlertPermissions> GetRetentionAlertPermissionsAsync()
+        {
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                string urlPath = UrlUtility.CombineUrlPath(_retentionAlertPath, _permissionsPath);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<RetentionAlertPermissions>(await response.Content.ReadAsStringAsync());
+            }
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to get retention alert permissions");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get retention alert permissions");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Sends the retention alert mail asynchronous.
+        /// </summary>
+        /// <param name="caseId">Case ID</param>
+        /// <param name="retentionAlertWorkCaseSendMail">The retention alert send mail.</param>
+        /// <returns>Retention alert send mail response</returns>
+        /// <exception cref="ArgumentNullException">retentionAlertWorkCaseSendMail - retentionAlertWorkCaseSendMail cannot be null.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<RetentionAlertWorkCaseActionResponse> SendRetentionAlertWorkCaseMailAsync(string caseId, RetentionAlertWorkCaseSendMail retentionAlertWorkCaseSendMail)
+        {
+            if (caseId == null)
+            {
+                throw new ArgumentNullException("caseId", "caseId cannot be null.");
+            }
+            if (retentionAlertWorkCaseSendMail == null)
+            {
+                throw new ArgumentNullException("retentionAlertWorkCaseSendMail", "retentionAlertWorkCaseSendMail cannot be null.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCasesPath, caseId, "case-send-mail");
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianRetentionAlertCaseSendMailVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(retentionAlertWorkCaseSendMail, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<RetentionAlertWorkCaseActionResponse>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to send retention alert case mail");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to send retention alert case mail");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Retrieves retention alert open cases
+        /// </summary>
+        /// <returns>Retention alert open cases list</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<RetentionAlertOpenCase>> GetRetentionAlertOpenCasesAsync()
+        {
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_retentionAlertPath, _openCases);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<RetentionAlertOpenCase>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to get retention alert open cases");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get retention alert open cases");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Retrieves retention alert closed cases grouped by closure reason
+        /// </summary>
+        /// <param name="categoryId">Retention Alert Case Category Id</param>
+        /// <returns>Retrieves retention alert closed cases grouped by closure reason</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<RetentionAlertClosedCasesByReason>> GetRetentionAlertClosedCasesByReasonAsync(string categoryId)
+        {
+            if (string.IsNullOrEmpty(categoryId))
+            {
+                throw new ArgumentNullException("categoryId", "categoryId cannot be null or empty.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_retentionAlertPath, _closedCasesByReason, categoryId);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<RetentionAlertClosedCasesByReason>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to get retention alert open cases");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get retention alert open cases");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Reassigns the retention alert case 
+        /// </summary>
+        /// <param name="caseId">Case ID</param>
+        /// <param name="retentionAlertWorkCaseReassign">The retention alert case reassign object</param>
+        /// <returns>Retention alert Work case action response</returns>
+        /// <exception cref="ArgumentNullException">retentionAlertWorkCaseReassign - retentionAlertWorkCaseReassign cannot be null.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<RetentionAlertWorkCaseActionResponse> ReassignRetentionAlertWorkCaseAsync(string caseId, RetentionAlertWorkCaseReassign retentionAlertWorkCaseReassign)
+        {
+            if (caseId == null)
+            {
+                throw new ArgumentNullException("caseId", "caseId cannot be null.");
+            }
+            if (retentionAlertWorkCaseReassign == null)
+            {
+                throw new ArgumentNullException("retentionAlertWorkCaseReassign", "retentionAlertWorkCaseReassign cannot be null.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCasesPath, caseId, _caseHistoryPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianRetentionAlertCaseReassignVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(retentionAlertWorkCaseReassign, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<RetentionAlertWorkCaseActionResponse>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to reassign retention alert case");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to reassign retention alert case");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get a Summmary of Retnetion Alert Case Grouped by Retention Alert Category 
+        /// </summary>
+        /// <param name="caseCategoryId">Retention Alert Case Category Ids to use to group cases by Retention Alert Category.</param>
+        /// <returns>A Summary of Retention Alert Cases Grouped by Category</returns>
+        /// <exception cref="ArgumentNullException">caseIds - caseIds can not be null.</exception>
+        /// <exception cref="ArgumentException">caseIds - caseIds cannot be empty.</exception>
+        public async Task<RetentionAlertGroupOfCasesSummary> GetRetentionAlertCaseOwnerSummaryAsync(string caseCategoryId)
+        {
+            if (string.IsNullOrEmpty(caseCategoryId))
+            {
+                throw new ArgumentNullException("caseCategoryId", "caseCategoryId cannot be null or empty.");
+            }
+
+            try
+            {
+                string[] pathStrings = new string[] { _retentionAlertPath, _retentionAlertCaseOwnerSummary, caseCategoryId };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<RetentionAlertGroupOfCasesSummary>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to get a Group of Cases Summary");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get a Group of Cases Summary");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Queries the retention alert case category org roles asynchronous.
+        /// </summary>
+        /// <param name="caseCategoryIds">The case category ids.</param>
+        /// <returns>Retention Alert CaseCategory Org Roles</returns>
+        /// <exception cref="ArgumentException">caseCategoryIds - caseCategoryIds cannot be null or empty.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<List<RetentionAlertCaseCategoryOrgRoles>> QueryRetentionAlertCaseCategoryOrgRolesAsync(List<string> caseCategoryIds)
+        {
+            if (caseCategoryIds == null || !caseCategoryIds.Any())
+            {
+                throw new ArgumentNullException("caseCategoryIds", "caseCategoryIds cannot be null or empty.");
+            }
+            try
+            {
+                string[] pathStrings = new string[] { _qapiPath, _retentionAlertCaseCategoryOrgRoles };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(caseCategoryIds, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<List<RetentionAlertCaseCategoryOrgRoles>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to get a List of Case Category Org Roles");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get a List of Case Category Org Roles");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Set the Case Worker email preference
+        /// </summary>
+        /// <param name="orgEntityId"></param>
+        /// <param name="sendEmailPreference"></param>
+        /// <returns></returns>
+        public async Task<RetentionAlertSendEmailPreference> SetRetentionAlertEmailPreferenceAsync(string orgEntityId, RetentionAlertSendEmailPreference sendEmailPreference)
+        {
+            if (string.IsNullOrEmpty(orgEntityId))
+            {
+                throw new ArgumentNullException("orgEntityId", "orgEntityId cannot be null or empty.");
+            }
+            if (sendEmailPreference == null)
+            {
+                throw new ArgumentNullException("sendEmailPreference", "sendEmailPreference cannot be null.");
+            }
+
+            try
+            {
+                string[] pathStrings = new string[] { _retentionAlertCaseWorker, orgEntityId, _emailPreference };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(sendEmailPreference, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<RetentionAlertSendEmailPreference>(await response.Content.ReadAsStringAsync());
+                return resource;
+            } catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to set retention alert case worker email preference.");
+                throw;
+            } catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to set retention alert case worker email preference.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get the Case Worker email preference
+        /// </summary>
+        /// <param name="orgEntityId"></param>
+        /// <returns></returns>
+        public async Task<RetentionAlertSendEmailPreference> GetRetentionAlertEmailPreferenceAsync(string orgEntityId)
+        {
+            if (string.IsNullOrEmpty(orgEntityId))
+            {
+                throw new ArgumentNullException("orgEntityId", "orgEntityId cannot be null or empty.");
+            }
+
+            try
+            {
+                string[] pathStrings = new string[] { _retentionAlertCaseWorker, orgEntityId, _emailPreference };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<RetentionAlertSendEmailPreference>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get retention alert case worker email preference.");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get retention alert case worker email preference.");
                 throw;
             }
         }

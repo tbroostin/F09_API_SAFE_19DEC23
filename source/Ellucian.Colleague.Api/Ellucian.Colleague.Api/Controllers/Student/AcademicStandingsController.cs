@@ -1,13 +1,9 @@
-﻿// Copyright 2012-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Net.Http.Headers;
 using Ellucian.Web.Http.Controllers;
-using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Dtos.Student;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using System.Web.Http;
@@ -80,6 +76,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// If the request header "Cache-Control" attribute is set to "no-cache" the data returned will be pulled fresh from the database, otherwise cached data is returned.
         /// </summary>
         /// <returns>All accounting codes objects.</returns>
+        [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.AcademicStanding>> GetAcademicStandingsAsync()
         {
@@ -93,7 +90,15 @@ namespace Ellucian.Colleague.Api.Controllers
             }
             try
             {
-                return await _academicStandingsService.GetAcademicStandingsAsync(bypassCache);
+                var academicStandings = await _academicStandingsService.GetAcademicStandingsAsync(bypassCache);
+
+                if (academicStandings != null && academicStandings.Any())
+                {
+                    AddEthosContextProperties(await _academicStandingsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                              await _academicStandingsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              academicStandings.Select(a => a.Id).ToList()));
+                }
+                return academicStandings;
             }
             catch (Exception ex)
             {
@@ -108,10 +113,16 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="id">Id of accounting code to retrieve</param>
         /// <returns>A <see cref="Ellucian.Colleague.Dtos.AcademicStanding">accounting code.</see></returns>
+        [HttpGet, EedmResponseFilter]
         public async Task<Ellucian.Colleague.Dtos.AcademicStanding> GetAcademicStandingByIdAsync(string id)
         {
             try
             {
+
+                AddEthosContextProperties(
+                    await _academicStandingsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                    await _academicStandingsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                        new List<string>() { id }));
                 return await _academicStandingsService.GetAcademicStandingByIdAsync(id);
             }
             catch (KeyNotFoundException ex)

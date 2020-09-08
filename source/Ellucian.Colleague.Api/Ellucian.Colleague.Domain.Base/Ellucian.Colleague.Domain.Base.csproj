@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Ellucian.Colleague.Domain.Base</RootNamespace>
     <AssemblyName>Ellucian.Colleague.Domain.Base</AssemblyName>
-    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <EnableCodeInspectionOnBuild>true</EnableCodeInspectionOnBuild>
     <TargetFrameworkProfile />
@@ -38,26 +38,26 @@
     <SignAssembly>false</SignAssembly>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Ellucian.Colleague.Configuration, Version=1.21.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.21.0.7\lib\net451\Ellucian.Colleague.Configuration.dll</HintPath>
+    <Reference Include="Ellucian.Colleague.Configuration, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\Ellucian.Colleague.Configuration.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Colleague.Domain, Version=1.21.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.21.0.7\lib\net451\Ellucian.Colleague.Domain.dll</HintPath>
+    <Reference Include="Ellucian.Colleague.Domain, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\Ellucian.Colleague.Domain.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Colleague.Legacy, Version=1.21.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.21.0.7\lib\net451\Ellucian.Colleague.Legacy.dll</HintPath>
+    <Reference Include="Ellucian.Colleague.Legacy, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\Ellucian.Colleague.Legacy.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Colleague.Property, Version=1.21.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.21.0.7\lib\net451\Ellucian.Colleague.Property.dll</HintPath>
+    <Reference Include="Ellucian.Colleague.Property, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\Ellucian.Colleague.Property.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Data.Colleague, Version=1.21.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.21.0.7\lib\net451\Ellucian.Data.Colleague.dll</HintPath>
+    <Reference Include="Ellucian.Data.Colleague, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\Ellucian.Data.Colleague.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Dmi.Client, Version=1.21.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.21.0.7\lib\net451\Ellucian.Dmi.Client.dll</HintPath>
+    <Reference Include="Ellucian.Dmi.Client, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\Ellucian.Dmi.Client.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Dmi.Runtime, Version=1.21.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.21.0.7\lib\net451\Ellucian.Dmi.Runtime.dll</HintPath>
+    <Reference Include="Ellucian.Dmi.Runtime, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\Ellucian.Dmi.Runtime.dll</HintPath>
     </Reference>
     <Reference Include="Ellucian.Logging, Version=1.0.0.1, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
       <HintPath>..\packages\Ellucian.Logging.MSEL.1.0.0.248\lib\net451\Ellucian.Logging.dll</HintPath>
@@ -77,8 +77,8 @@
     <Reference Include="Ellucian.Web.Utility, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
       <HintPath>..\packages\Ellucian.Web.Utility.1.0.0.184\lib\net451\Ellucian.Web.Utility.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.WebServices.Core.Config, Version=1.21.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.21.0.7\lib\net451\Ellucian.WebServices.Core.Config.dll</HintPath>
+    <Reference Include="Ellucian.WebServices.Core.Config, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\Ellucian.WebServices.Core.Config.dll</HintPath>
     </Reference>
     <Reference Include="KellermanSoftware.Compare-NET-Objects, Version=2.1.0.0, Culture=neutral, PublicKeyToken=d970ace04cc85217, processorArchitecture=MSIL">
       <HintPath>..\packages\CompareNETObjects.2.01.0.0\lib\net451\KellermanSoftware.Compare-NET-Objects.dll</HintPath>
@@ -129,10 +129,10 @@
       <HintPath>..\packages\slf4net.0.1.32.1\lib\net35\slf4net.dll</HintPath>
     </Reference>
     <Reference Include="System, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.21.0.7\lib\net451\System.dll</HintPath>
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\System.dll</HintPath>
     </Reference>
     <Reference Include="System.ComponentModel.DataAnnotations, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.21.0.7\lib\net451\System.ComponentModel.DataAnnotations.dll</HintPath>
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\System.ComponentModel.DataAnnotations.dll</HintPath>
     </Reference>
     <Reference Include="System.Core" />
     <Reference Include="System.IdentityModel" />
@@ -141,7 +141,7 @@
       <HintPath>..\packages\System.IdentityModel.Tokens.Jwt.4.0.1\lib\net45\System.IdentityModel.Tokens.Jwt.dll</HintPath>
     </Reference>
     <Reference Include="System.Runtime.Serialization, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.21.0.7\lib\net451\System.Runtime.Serialization.dll</HintPath>
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\System.Runtime.Serialization.dll</HintPath>
     </Reference>
     <Reference Include="System.Threading.Tasks.Dataflow, Version=4.5.24.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -159,8 +159,25 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Entities\AgreementPeriod.cs" />
+    <Compile Include="Entities\BulkRequest.cs" />
+    <Compile Include="Entities\BulkRequestDetails.cs" />
+    <Compile Include="Entities\BulkRequestStatus.cs" />
+    <Compile Include="Entities\CaseCategory.cs" />
+    <Compile Include="Entities\CaseClosureReason.cs" />
+    <Compile Include="Entities\CasePriority.cs" />
+    <Compile Include="Entities\CaseType.cs" />
     <Compile Include="Entities\BoxCodes.cs" />
+    <Compile Include="Entities\CollectionConfigurationSettingsSource.cs" />
     <Compile Include="Entities\CommerceTaxCodeRate.cs" />
+    <Compile Include="Entities\CompoundConfigurationSettings.cs" />
+    <Compile Include="Entities\CompoundConfigurationSettingsOptionsSource.cs" />
+    <Compile Include="Entities\CompoundConfigurationSettingsProperty.cs" />
+    <Compile Include="Entities\CollectionConfigurationSettings.cs" />
+    <Compile Include="Entities\DefaultSettingsAdvancedSearch.cs" />
+    <Compile Include="Entities\DefaultSettingsAdvancedSearchOptions.cs" />
+    <Compile Include="Entities\ContributionsQueryCriteria.cs" />
+    <Compile Include="Entities\DefaultSettingsResource.cs" />
+    <Compile Include="Entities\DefaultSettings.cs" />
     <Compile Include="Entities\IntgIsoCurrencyCodes.cs" />
     <Compile Include="Entities\Attachment.cs" />
     <Compile Include="Entities\AttachmentOwnerAction.cs" />
@@ -174,6 +191,7 @@
     <Compile Include="Entities\CurrencyConv.cs" />
     <Compile Include="Entities\IntgPersonEmerPhoneTypes.cs" />
     <Compile Include="Entities\IntgPersonEmerTypes.cs" />
+    <Compile Include="Entities\ItemConditions.cs" />
     <Compile Include="Entities\Language2.cs" />
     <Compile Include="Entities\DeprecatedResources.cs" />
     <Compile Include="Entities\AltIdTypes.cs" />
@@ -198,7 +216,11 @@
     <Compile Include="Entities\AcquisitionMethod.cs" />
     <Compile Include="Entities\ItemCondition.cs" />
     <Compile Include="Entities\LanguageIsoCodes.cs" />
+    <Compile Include="Entities\CompoundConfigurationSettingsOptions.cs" />
+    <Compile Include="Entities\MappingSettingsOptions.cs" />
+    <Compile Include="Entities\MappingSettings.cs" />
     <Compile Include="Entities\Message.cs" />
+    <Compile Include="Entities\OfficeCodeAttachmentCollection.cs" />
     <Compile Include="Entities\OrganizationalPersonPosition.cs" />
     <Compile Include="Entities\ExternalEmploymentStatus.cs" />
     <Compile Include="Entities\OrganizationalPersonPositionStatus.cs" />
@@ -211,6 +233,7 @@
     <Compile Include="Entities\PersonAgreementStatus.cs" />
     <Compile Include="Entities\PersonalPronounType.cs" />
     <Compile Include="Entities\PersonFilterCriteria.cs" />
+    <Compile Include="Entities\PersonalRelationshipInitiation.cs" />
     <Compile Include="Entities\PersonMatchRequestInitiationOtherNames.cs" />
     <Compile Include="Entities\PersonMatchRequestInitiation.cs" />
     <Compile Include="Entities\PersonMatchRequestType.cs" />
@@ -222,12 +245,41 @@
     <Compile Include="Entities\Position.cs" />
     <Compile Include="Entities\ProjectType.cs" />
     <Compile Include="Entities\PersonMatchRequest.cs" />
+    <Compile Include="Entities\RetentionAlertCaseCategoryOrgRoles.cs" />
+    <Compile Include="Entities\RetentionAlertCaseCategoryOrgRole.cs" />
+    <Compile Include="Entities\RetentionAlertCaseReassignmentDetail.cs" />
+    <Compile Include="Entities\RequiredDocumentCollectionMapping.cs" />
     <Compile Include="Entities\RequiredDocumentConfiguration.cs" />
+    <Compile Include="Entities\RetentionAlertCaseRecipEmail.cs" />
+    <Compile Include="Entities\RetentionAlertClosedCase.cs" />
+    <Compile Include="Entities\RetentionAlertGroupOfCasesSummary.cs" />
+    <Compile Include="Entities\RetentionAlertGroupOfCases.cs" />
+    <Compile Include="Entities\RetentionAlertClosedCasesByReason.cs" />
+    <Compile Include="Entities\RetentionAlertOpenCase.cs" />
+    <Compile Include="Entities\RetentionAlertPermissions.cs" />
+    <Compile Include="Entities\RetentionAlertWorkCaseClose.cs" />
+    <Compile Include="Entities\RetentionAlertWorkCaseManageReminder.cs" />
+    <Compile Include="Entities\RetentionAlertWorkCasePriority.cs" />
+    <Compile Include="Entities\RetentionAlertWorkCaseCommCode.cs" />
+    <Compile Include="Entities\RetentionAlertWorkCaseReassign.cs" />
+    <Compile Include="Entities\RetentionAlertWorkCaseManageReminders.cs" />
+    <Compile Include="Entities\RetentionAlertWorkCaseSendMail.cs" />
+    <Compile Include="Entities\RetentionAlertWorkCaseSetReminder.cs" />
+    <Compile Include="Entities\RetentionAlertSendEmailPreference.cs" />
+    <Compile Include="Entities\RetentionAlertWorkCaseType.cs" />
+    <Compile Include="Entities\RetentionAlertWorkCaseNote.cs" />
+    <Compile Include="Entities\RetentionAlertCaseDetail.cs" />
+    <Compile Include="Entities\RetentionAlertCaseHistory.cs" />
+    <Compile Include="Entities\RetentionAlertWorkCaseActionResponse.cs" />
+    <Compile Include="Entities\RetentionAlertCase.cs" />
+    <Compile Include="Entities\RetentionAlertCaseCreateResponse.cs" />
+    <Compile Include="Entities\RetentionAlertWorkCase.cs" />
     <Compile Include="Entities\SelfServiceConfiguration.cs" />
     <Compile Include="Entities\ContactRoles.cs" />
     <Compile Include="Entities\SessionConfiguration.cs" />
     <Compile Include="Entities\SpecialDay.cs" />
     <Compile Include="Entities\ProxyWorkflowConstants.cs" />
+    <Compile Include="Entities\TaxForms2.cs" />
     <Compile Include="Entities\UserProfileConfiguration2.cs" />
     <Compile Include="Entities\NameAddressHierarchy.cs" />
     <Compile Include="Entities\PersonFormattedName.cs" />
@@ -475,6 +527,10 @@
     <Compile Include="IRoomAvailabilityService.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Repositories\IAgreementsRepository.cs" />
+    <Compile Include="Repositories\IBulkRequestRepository.cs" />
+    <Compile Include="Repositories\ICompoundConfigurationSettingsRepository.cs" />
+    <Compile Include="Repositories\ICollectionConfigurationSettingsRepository.cs" />
+    <Compile Include="Repositories\IDefaultSettingsRepository.cs" />
     <Compile Include="Repositories\IInstitutionsAttendRepository.cs" />
     <Compile Include="Repositories\ICurrencyRepository.cs" />
     <Compile Include="Repositories\ICountryRepository.cs" />
@@ -489,6 +545,7 @@
     <Compile Include="Repositories\IEncryptionKeyRepository.cs" />
     <Compile Include="Repositories\IEthosExtended.cs" />
     <Compile Include="Repositories\IConfigurationSettingsRepository.cs" />
+    <Compile Include="Repositories\IMappingSettingsRepository.cs" />
     <Compile Include="Repositories\IPersonExternalEducationCredentialsRepository.cs" />
     <Compile Include="Repositories\IGeographicAreasRepository.cs" />
     <Compile Include="Repositories\IExternalEmploymentsRepository.cs" />
@@ -532,6 +589,7 @@
     <Compile Include="Repositories\IStaffRepository.cs" />
     <Compile Include="Repositories\IPersonRestrictionRepository.cs" />
     <Compile Include="Repositories\ITaxFormConsentRepository.cs" />
+    <Compile Include="RetentionAlertPermissionCodes.cs" />
     <Compile Include="Services\AddressProcessor.cs" />
     <Compile Include="Services\CacheSupport.cs" />
     <Compile Include="Services\CommunicationDomainService.cs" />

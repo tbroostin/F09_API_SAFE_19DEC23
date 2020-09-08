@@ -77,6 +77,30 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
         }
 
+        /// <summary>
+        /// Gets all Ship Via Codes with descriptions
+        /// </summary>
+        /// <returns>Collection of ShipViaCodes</returns>
+        public async Task<IEnumerable<Dtos.ColleagueFinance.ShipViaCode>> GetShipViaCodesAsync()
+        {
+            var shipViaCodeCollection = new List<Dtos.ColleagueFinance.ShipViaCode>();
+
+            var shipViaCodesEntities = await _referenceDataRepository.GetShipViaCodesAsync();
+            if (shipViaCodesEntities != null && shipViaCodesEntities.Any())
+            {
+                //sort the entities on code, then by description
+                shipViaCodesEntities = shipViaCodesEntities.OrderBy(x => x.Code);
+                if (shipViaCodesEntities != null && shipViaCodesEntities.Any())
+                {
+                    foreach (var shipViaCodeEntity in shipViaCodesEntities)
+                    {
+                        //convert shipViaCode entity to dto
+                        shipViaCodeCollection.Add(ConvertShipViaCodeEntityToDto(shipViaCodeEntity));
+                    }
+                }
+            }
+            return shipViaCodeCollection;
+        }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
@@ -91,12 +115,19 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             shippingMethods.Id = source.Guid;
             shippingMethods.Code = source.Code;
             shippingMethods.Title = source.Description;
-            shippingMethods.Description = null;           
-                                                                        
+            shippingMethods.Description = null;
+
             return shippingMethods;
         }
 
-      
+        private Ellucian.Colleague.Dtos.ColleagueFinance.ShipViaCode ConvertShipViaCodeEntityToDto(Ellucian.Colleague.Domain.ColleagueFinance.Entities.ShipViaCode source)
+        {
+            var shipViaCode = new Ellucian.Colleague.Dtos.ColleagueFinance.ShipViaCode();
+            shipViaCode.Code = source.Code;
+            shipViaCode.Description = source.Description;
+            return shipViaCode;
+        }
+        
     }
-  
+
 }

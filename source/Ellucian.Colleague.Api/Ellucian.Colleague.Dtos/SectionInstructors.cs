@@ -63,7 +63,7 @@ namespace Ellucian.Colleague.Dtos
         /// </summary>
 
         [JsonProperty("workLoad", DefaultValueHandling = DefaultValueHandling.Ignore)]
-        public decimal WorkLoad { get; set; }
+        public decimal? WorkLoad { get; set; }
 
         /// <summary>
         /// The percentage of the total responsibility for managing the instructional method's activities attributed to the instructor for the assignment.

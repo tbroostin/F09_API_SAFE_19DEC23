@@ -37,7 +37,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
         /// <param name="personId"></param>
         /// <param name="glAccessLevel"></param>
         /// <returns></returns>
-        Task<IEnumerable<GeneralLedgerTransaction>> Get2Async(string personId, GlAccessLevel glAccessLevel);
+        Task<IEnumerable<GeneralLedgerTransaction>> Get2Async(string personId, GlAccessLevel glAccessLevel, bool journalEntryPermission = true, bool budgetEntryPermission = true, bool encumbranceEntryPermission = true);
         /// <summary>
         /// Update a single general ledger transaction for the data model version 6
         /// </summary>

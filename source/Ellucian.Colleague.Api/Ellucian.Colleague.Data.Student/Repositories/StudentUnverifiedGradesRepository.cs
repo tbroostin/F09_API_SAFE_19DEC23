@@ -19,6 +19,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Text;
+using Ellucian.Colleague.Domain.Base.Services;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -29,6 +30,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
     public class StudentUnverifiedGradesRepository : BaseColleagueRepository, IStudentUnverifiedGradesRepository
     {
         private RepositoryException exception;
+        const string AllStudentUnverifiedGradesCache = "AllStudentUnverifiedGradesKeys";
+        const int AllStudentUnverifiedGradesCacheTimeout = 20;
 
         private Dictionary<string, string> _admissionApplicationDict = new Dictionary<string, string>();
 
@@ -57,136 +60,12 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             string student = "", string studentAcadCredId = "", string section = "")
         {
             List<Domain.Student.Entities.StudentUnverifiedGrades> studentUnverifiedGradesEntities = new List<Domain.Student.Entities.StudentUnverifiedGrades>();
-
-            string[] limitingKeys = null;
-
-            if ((!string.IsNullOrEmpty(studentAcadCredId)) && (string.IsNullOrEmpty(student)) && (string.IsNullOrEmpty(section)))
-            {
-                // sectionRegistration filter only
-                var studentAcadCredDataContract = await DataReader.ReadRecordAsync<DataContracts.StudentAcadCred>("STUDENT.ACAD.CRED", studentAcadCredId);
-                if (studentAcadCredDataContract == null)
-                {
-                    return new Tuple<IEnumerable<StudentUnverifiedGrades>, int>(null, 0);
-                }
-                if (string.IsNullOrEmpty(studentAcadCredDataContract.StcStudentCourseSec))
-                {
-                    return new Tuple<IEnumerable<StudentUnverifiedGrades>, int>(null, 0);
-                }
-                limitingKeys = new string[] { studentAcadCredDataContract.StcStudentCourseSec };
-            }
-
-            if ((!string.IsNullOrEmpty(studentAcadCredId)) && (!string.IsNullOrEmpty(student)) && (string.IsNullOrEmpty(section)))
-            {
-                // sectionRegistration filter and student filter
-                var studentAcadCredDataContract = await DataReader.ReadRecordAsync<DataContracts.StudentAcadCred>("STUDENT.ACAD.CRED", studentAcadCredId);
-                if (studentAcadCredDataContract == null)
-                {
-                    return new Tuple<IEnumerable<StudentUnverifiedGrades>, int>(null, 0);
-                }
-                if (string.IsNullOrEmpty(studentAcadCredDataContract.StcStudentCourseSec))
-                {
-                    return new Tuple<IEnumerable<StudentUnverifiedGrades>, int>(null, 0);
-                }
-                if (student == studentAcadCredDataContract.StcPersonId)
-                {
-                    limitingKeys = new string[] { studentAcadCredDataContract.StcStudentCourseSec };
-                }
-                else
-                {
-                    return new Tuple<IEnumerable<StudentUnverifiedGrades>, int>(null, 0);
-                }
-            }
-
-            if ((string.IsNullOrEmpty(studentAcadCredId)) && (!string.IsNullOrEmpty(student)) && (string.IsNullOrEmpty(section)))
-            {
-                // student filter only
-                var personStDataContract = await DataReader.ReadRecordAsync<Base.DataContracts.PersonSt>("PERSON.ST", student);
-                if (personStDataContract == null)
-                {
-                    return new Tuple<IEnumerable<StudentUnverifiedGrades>, int>(null, 0);
-                }
-                limitingKeys = personStDataContract.PstStudentCourseSec.ToArray();
-            }
-
-            if ((string.IsNullOrEmpty(studentAcadCredId)) && (string.IsNullOrEmpty(student)) && (!string.IsNullOrEmpty(section)))
-            {
-                // section filter only
-                limitingKeys = await DataReader.SelectAsync("STUDENT.COURSE.SEC", "WITH SCS.COURSE.SECTION = '" + section + "'");
-                if (string.IsNullOrEmpty(limitingKeys.ToString()))
-                {
-                    return new Tuple<IEnumerable<StudentUnverifiedGrades>, int>(null, 0);
-                }
-            }
-
-            //  StudentUnverifiedGradesController will not allow these filter combinations, but adding support from repo directly
-
-            if ((!string.IsNullOrEmpty(studentAcadCredId)) && (string.IsNullOrEmpty(student)) && (!string.IsNullOrEmpty(section)))
-            {
-                // sectionRegistration filter and section filter
-                var studentAcadCredDataContract = await DataReader.ReadRecordAsync<DataContracts.StudentAcadCred>("STUDENT.ACAD.CRED", studentAcadCredId);
-                if (studentAcadCredDataContract == null)
-                {
-                    return new Tuple<IEnumerable<StudentUnverifiedGrades>, int>(null, 0);
-                }
-                if (string.IsNullOrEmpty(studentAcadCredDataContract.StcStudentCourseSec))
-                {
-                    return new Tuple<IEnumerable<StudentUnverifiedGrades>, int>(null, 0);
-                }
-                var scsLimitingKeys = new string[] { studentAcadCredDataContract.StcStudentCourseSec };
-                limitingKeys = await DataReader.SelectAsync("STUDENT.COURSE.SEC", scsLimitingKeys, "WITH SCS.COURSE.SECTION = '" + section + "'");
-                if (string.IsNullOrEmpty(limitingKeys.ToString()))
-                {
-                    return new Tuple<IEnumerable<StudentUnverifiedGrades>, int>(null, 0);
-                }
-            }
-
-            if ((string.IsNullOrEmpty(studentAcadCredId)) && (!string.IsNullOrEmpty(student)) && (!string.IsNullOrEmpty(section)))
-            {
-                // student filter and section filter
-                var personStDataContract = await DataReader.ReadRecordAsync<Base.DataContracts.PersonSt>("PERSON.ST", student);
-                if (personStDataContract == null)
-                {
-                    return new Tuple<IEnumerable<StudentUnverifiedGrades>, int>(null, 0);
-                }
-                var scsLimitingKeys = personStDataContract.PstStudentCourseSec.ToArray();
-                limitingKeys = await DataReader.SelectAsync("STUDENT.COURSE.SEC", scsLimitingKeys, "WITH SCS.COURSE.SECTION = '" + section + "'");
-                if (string.IsNullOrEmpty(limitingKeys.ToString()))
-                {
-                    return new Tuple<IEnumerable<StudentUnverifiedGrades>, int>(null, 0);
-                }
-            }
-
-            if ((!string.IsNullOrEmpty(studentAcadCredId)) && (!string.IsNullOrEmpty(student)) && (!string.IsNullOrEmpty(section)))
-            {
-                // sectionRegistration filter, student filter, and section filter
-                var studentAcadCredDataContract = await DataReader.ReadRecordAsync<DataContracts.StudentAcadCred>("STUDENT.ACAD.CRED", studentAcadCredId);
-                if (studentAcadCredDataContract == null)
-                {
-                    return new Tuple<IEnumerable<StudentUnverifiedGrades>, int>(null, 0);
-                }
-                if (string.IsNullOrEmpty(studentAcadCredDataContract.StcStudentCourseSec))
-                {
-                    return new Tuple<IEnumerable<StudentUnverifiedGrades>, int>(null, 0);
-                }
-                if (student == studentAcadCredDataContract.StcPersonId)
-                {
-                    var scsLimitingKeys = new string[] { studentAcadCredDataContract.StcStudentCourseSec };
-                    limitingKeys = await DataReader.SelectAsync("STUDENT.COURSE.SEC", scsLimitingKeys, "WITH SCS.COURSE.SECTION = '" + section + "'");
-                    if (string.IsNullOrEmpty(limitingKeys.ToString()))
-                    {
-                        return new Tuple<IEnumerable<StudentUnverifiedGrades>, int>(null, 0);
-                    }
-                }
-                else
-                {
-                    return new Tuple<IEnumerable<StudentUnverifiedGrades>, int>(null, 0);
-                }
-
-            }
+            string studentUnverifiedGradesKeys = CacheSupport.BuildCacheKey(AllStudentUnverifiedGradesCache,
+                    student, studentAcadCredId, section);
 
             int totalCount = 0;
-            string[] subList = null;
-            string[] studentCourseSecIds = null;
+            string[] limitingKeys = null;
+
             var criteria = new StringBuilder();
             criteria.Append("WITH STC.FINAL.GRADE");
             criteria.Append(" OR WITH SCS.MID.TERM.GRADE1");
@@ -198,11 +77,159 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             criteria.Append(" OR WITH SCS.LAST.ATTEND.DATE");
             criteria.Append(" OR WITH SCS.NEVER.ATTENDED.FLAG");
 
-            studentCourseSecIds = await DataReader.SelectAsync("STUDENT.COURSE.SEC", limitingKeys, criteria.ToString());
+            var keyCacheObject = await CacheSupport.GetOrAddKeyCacheToCache(
+                this,
+                ContainsKey,
+                GetOrAddToCacheAsync,
+                AddOrUpdateCacheAsync,
+                transactionInvoker,
+                studentUnverifiedGradesKeys,
+                "STUDENT.COURSE.SEC",
+                offset,
+                limit,
+                AllStudentUnverifiedGradesCacheTimeout,
+                async () =>
+                {
+                    if ((!string.IsNullOrEmpty(studentAcadCredId)) && (string.IsNullOrEmpty(student)) && (string.IsNullOrEmpty(section)))
+                    {
+                            // sectionRegistration filter only
+                            var studentAcadCredDataContract = await DataReader.ReadRecordAsync<DataContracts.StudentAcadCred>("STUDENT.ACAD.CRED", studentAcadCredId);
+                        if (studentAcadCredDataContract == null)
+                        {
+                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                        }
+                        if (string.IsNullOrEmpty(studentAcadCredDataContract.StcStudentCourseSec))
+                        {
+                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                        }
+                        limitingKeys = new string[] { studentAcadCredDataContract.StcStudentCourseSec };
+                    }
 
-            totalCount = studentCourseSecIds.Count();
-            Array.Sort(studentCourseSecIds);
-            subList = studentCourseSecIds.Skip(offset).Take(limit).ToArray();
+                    if ((!string.IsNullOrEmpty(studentAcadCredId)) && (!string.IsNullOrEmpty(student)) && (string.IsNullOrEmpty(section)))
+                    {
+                            // sectionRegistration filter and student filter
+                            var studentAcadCredDataContract = await DataReader.ReadRecordAsync<DataContracts.StudentAcadCred>("STUDENT.ACAD.CRED", studentAcadCredId);
+                        if (studentAcadCredDataContract == null)
+                        {
+                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                        }
+                        if (string.IsNullOrEmpty(studentAcadCredDataContract.StcStudentCourseSec))
+                        {
+                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                        }
+                        if (student == studentAcadCredDataContract.StcPersonId)
+                        {
+                            limitingKeys = new string[] { studentAcadCredDataContract.StcStudentCourseSec };
+                        }
+                        else
+                        {
+                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                        }
+                    }
+
+                    if ((string.IsNullOrEmpty(studentAcadCredId)) && (!string.IsNullOrEmpty(student)) && (string.IsNullOrEmpty(section)))
+                    {
+                            // student filter only
+                            var personStDataContract = await DataReader.ReadRecordAsync<Base.DataContracts.PersonSt>("PERSON.ST", student);
+                        if (personStDataContract == null)
+                        {
+                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                        }
+                        limitingKeys = personStDataContract.PstStudentCourseSec.ToArray();
+                    }
+
+                    if ((string.IsNullOrEmpty(studentAcadCredId)) && (string.IsNullOrEmpty(student)) && (!string.IsNullOrEmpty(section)))
+                    {
+                            // section filter only
+                            limitingKeys = await DataReader.SelectAsync("STUDENT.COURSE.SEC", "WITH SCS.COURSE.SECTION = '" + section + "'");
+                        if (limitingKeys == null || !limitingKeys.Any())
+                        {
+                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                        }
+                    }
+
+                    //  StudentUnverifiedGradesController will not allow these filter combinations, but adding support from repo directly
+
+                    if ((!string.IsNullOrEmpty(studentAcadCredId)) && (string.IsNullOrEmpty(student)) && (!string.IsNullOrEmpty(section)))
+                    {
+                            // sectionRegistration filter and section filter
+                            var studentAcadCredDataContract = await DataReader.ReadRecordAsync<DataContracts.StudentAcadCred>("STUDENT.ACAD.CRED", studentAcadCredId);
+                        if (studentAcadCredDataContract == null)
+                        {
+                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                        }
+                        if (string.IsNullOrEmpty(studentAcadCredDataContract.StcStudentCourseSec))
+                        {
+                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                        }
+                        var scsLimitingKeys = new string[] { studentAcadCredDataContract.StcStudentCourseSec };
+                        limitingKeys = await DataReader.SelectAsync("STUDENT.COURSE.SEC", scsLimitingKeys, "WITH SCS.COURSE.SECTION = '" + section + "'");
+                        if (limitingKeys == null || !limitingKeys.Any())
+                        {
+                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                        }
+                    }
+
+                    if ((string.IsNullOrEmpty(studentAcadCredId)) && (!string.IsNullOrEmpty(student)) && (!string.IsNullOrEmpty(section)))
+                    {
+                            // student filter and section filter
+                            var personStDataContract = await DataReader.ReadRecordAsync<Base.DataContracts.PersonSt>("PERSON.ST", student);
+                        if (personStDataContract == null)
+                        {
+                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                        }
+                        var scsLimitingKeys = personStDataContract.PstStudentCourseSec.ToArray();
+                        limitingKeys = await DataReader.SelectAsync("STUDENT.COURSE.SEC", scsLimitingKeys, "WITH SCS.COURSE.SECTION = '" + section + "'");
+                        if (limitingKeys == null || !limitingKeys.Any())
+                        {
+                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                        }
+                    }
+
+                    if ((!string.IsNullOrEmpty(studentAcadCredId)) && (!string.IsNullOrEmpty(student)) && (!string.IsNullOrEmpty(section)))
+                    {
+                            // sectionRegistration filter, student filter, and section filter
+                            var studentAcadCredDataContract = await DataReader.ReadRecordAsync<DataContracts.StudentAcadCred>("STUDENT.ACAD.CRED", studentAcadCredId);
+                        if (studentAcadCredDataContract == null)
+                        {
+                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                        }
+                        if (string.IsNullOrEmpty(studentAcadCredDataContract.StcStudentCourseSec))
+                        {
+                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                        }
+                        if (student == studentAcadCredDataContract.StcPersonId)
+                        {
+                            var scsLimitingKeys = new string[] { studentAcadCredDataContract.StcStudentCourseSec };
+                            limitingKeys = await DataReader.SelectAsync("STUDENT.COURSE.SEC", scsLimitingKeys, "WITH SCS.COURSE.SECTION = '" + section + "'");
+                            if (limitingKeys == null || !limitingKeys.Any())
+                            {
+                                return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                            }
+                        }
+                        else
+                        {
+                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                        }
+
+                    }
+
+                    return new CacheSupport.KeyCacheRequirements()
+                    {
+                        limitingKeys = limitingKeys != null && limitingKeys.Any() ? limitingKeys.Distinct().ToList() : null,
+                        criteria = criteria.ToString(),
+                    };
+                });
+
+            if (keyCacheObject == null || keyCacheObject.Sublist == null || !keyCacheObject.Sublist.Any())
+            {
+                return new Tuple<IEnumerable<StudentUnverifiedGrades>, int>(new List<StudentUnverifiedGrades>(), 0);
+            }
+
+            totalCount = keyCacheObject.TotalCount.Value;
+
+            //Array.Sort(limitingKeys);
+            var subList = keyCacheObject.Sublist.ToArray();
 
             // Now we have criteria, so we can select and read the records
             Collection<DataContracts.StudentCourseSec> studentCourseSecDataContracts = null;
@@ -219,24 +246,32 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     List<string> studentCourseSecKey = new List<string>();
                     studentCourseSecKey.Add(studentCourseSecDataContract.Recordkey);
                     var studentAcadCredDataContract = studentAcadCredDataContracts.Where(s => s.Recordkey == studentCourseSecDataContract.ScsStudentAcadCred).FirstOrDefault();
-
+                    if (studentAcadCredDataContract == null)
+                    {
+                        exception.AddError(new RepositoryError("Bad.Data", string.Format("Could not read STUDENT.ACAD.CRED with ID : '{0}'.", studentCourseSecDataContract.ScsStudentAcadCred))
+                        {
+                            Id = studentCourseSecDataContract.RecordGuid,
+                            SourceId = studentCourseSecDataContract.Recordkey
+                        });
+                    }
                     StudentUnverifiedGrades studentUnverifiedGrades = null;
                     try
                     {
                         studentUnverifiedGrades = new StudentUnverifiedGrades(studentCourseSecDataContract.RecordGuid, studentCourseSecDataContract.Recordkey);
-                        
+                        if (studentUnverifiedGrades != null)
+                        {
+                            StudentUnverifiedGrades studentUnverifiedGradesEntity = BuildStudentUnverifiedGrades(studentUnverifiedGrades, studentCourseSecDataContract, studentAcadCredDataContract);
+                            studentUnverifiedGradesEntities.Add(studentUnverifiedGradesEntity);
+                        }
                     }
                     catch (Exception ex)
                     {
-                        exception.AddError(new RepositoryError( "NewStudentUnverifiedGrades", ex.Message));
+                        exception.AddError(new RepositoryError("Bad.Data", ex.Message)
+                        {
+                            Id = studentCourseSecDataContract.RecordGuid,
+                            SourceId = studentCourseSecDataContract.Recordkey
+                        });
                     }
-
-                    if (studentUnverifiedGrades != null)
-                    {
-                        Domain.Student.Entities.StudentUnverifiedGrades studentUnverifiedGradesEntity = BuildStudentUnverifiedGrades(studentUnverifiedGrades, studentCourseSecDataContract, studentAcadCredDataContract);
-                        studentUnverifiedGradesEntities.Add(studentUnverifiedGradesEntity);
-                    }
-
                 }
                 if (exception.Errors != null && exception.Errors.Any())
                 {
@@ -245,8 +280,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
 
             return studentUnverifiedGradesEntities.Any() ?
-                new Tuple<IEnumerable<Domain.Student.Entities.StudentUnverifiedGrades>, int>(studentUnverifiedGradesEntities, totalCount) :
-                new Tuple<IEnumerable<Domain.Student.Entities.StudentUnverifiedGrades>, int>(new List<Domain.Student.Entities.StudentUnverifiedGrades>(), 0);
+                new Tuple<IEnumerable<StudentUnverifiedGrades>, int>(studentUnverifiedGradesEntities, totalCount) :
+                new Tuple<IEnumerable<StudentUnverifiedGrades>, int>(new List<StudentUnverifiedGrades>(), 0);
         }
 
         /// <summary>
@@ -311,7 +346,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             StudentAcadCred studentAcadCredDataContract = await DataReader.ReadRecordAsync<StudentAcadCred>("STUDENT.ACAD.CRED", studentAcadCredId);
             if (studentAcadCredDataContract == null)
             {
-                var errorMessage = string.Format("Could not read read STUDENT.ACAD.CRED with ID : '{0}'.", studentAcadCredId);
+                var errorMessage = string.Format("Could not read STUDENT.ACAD.CRED with ID : '{0}'.", studentAcadCredId);
                 throw new ArgumentException(errorMessage);
             }
 
@@ -322,17 +357,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             catch (Exception ex)
             {
-                exception.AddError(new RepositoryError("NewStudentUnverifiedGrades", ex.Message));
+                exception.AddError(new RepositoryError("Bad.Data", ex.Message));
             }
-
-            //HED - 23209 / 24644
-            //var allGrades = string.Concat(studentAcadCredDataContract.StcFinalGrade, studentCourseSecDataContract.ScsMidTermGrade1, studentCourseSecDataContract.ScsMidTermGrade2,
-            //    studentCourseSecDataContract.ScsMidTermGrade3, studentCourseSecDataContract.ScsMidTermGrade4, studentCourseSecDataContract.ScsMidTermGrade5,
-            //    studentCourseSecDataContract.ScsMidTermGrade6);
-            //if (string.IsNullOrEmpty(allGrades) && !studentCourseSecDataContract.ScsLastAttendDate.HasValue && string.IsNullOrEmpty(studentCourseSecDataContract.ScsNeverAttendedFlag))
-            //{
-            //    exception.AddError(new RepositoryError("invalid.Details", string.Format("Record has no midterm grades, final grade, last attendance date, or never attended flag, Entity: 'STUDENT.COURSE.SEC', Record ID '{0}'", studentCourseSecDataContract.Recordkey)));
-            //}
 
             if (exception.Errors != null && exception.Errors.Any())
             {
@@ -375,20 +401,23 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 studentUnverifiedGrades.LastAttendDate =  studentCourseSecDataContract.ScsLastAttendDate;
             studentUnverifiedGrades.HasNeverAttended = studentCourseSecDataContract.ScsNeverAttendedFlag.ToUpper() == "Y";
 
-            studentUnverifiedGrades.StudentAcadaCredId = studentAcadCredDataContract.Recordkey;
-
-            studentUnverifiedGrades.GradeScheme = studentAcadCredDataContract.StcGradeScheme;
-            studentUnverifiedGrades.IncompleteGradeExtensionDate = studentAcadCredDataContract.StcGradeExpireDate;
-            studentUnverifiedGrades.FinalGrade = studentAcadCredDataContract.StcFinalGrade;
-
-            // For final grade date, use verified grade date if it exists, otherwise STUDENT.ACAD.CRED change date.
-            if (studentAcadCredDataContract.StcVerifiedGradeDate != null)
+            if (studentAcadCredDataContract != null)
             {
-                studentUnverifiedGrades.FinalGradeDate = studentAcadCredDataContract.StcVerifiedGradeDate;
-            }
-            else
-            {
-                studentUnverifiedGrades.FinalGradeDate = studentAcadCredDataContract.StudentAcadCredChgdate;
+                studentUnverifiedGrades.StudentAcadaCredId = studentAcadCredDataContract.Recordkey;
+
+                studentUnverifiedGrades.GradeScheme = studentAcadCredDataContract.StcGradeScheme;
+                studentUnverifiedGrades.IncompleteGradeExtensionDate = studentAcadCredDataContract.StcGradeExpireDate;
+                studentUnverifiedGrades.FinalGrade = studentAcadCredDataContract.StcFinalGrade;
+
+                // For final grade date, use verified grade date if it exists, otherwise STUDENT.ACAD.CRED change date.
+                if (studentAcadCredDataContract.StcVerifiedGradeDate != null)
+                {
+                    studentUnverifiedGrades.FinalGradeDate = studentAcadCredDataContract.StcVerifiedGradeDate;
+                }
+                else
+                {
+                    studentUnverifiedGrades.FinalGradeDate = studentAcadCredDataContract.StudentAcadCredChgdate;
+                }
             }
             return studentUnverifiedGrades;
         }
@@ -431,7 +460,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             catch (Exception ex)
             {
-                throw new RepositoryException(string.Format("Error occured while getting guids for {0}.", filename), ex); ;
+                throw new RepositoryException(string.Format("Error occured while getting guids for {0}.", filename), ex);
             }
 
             return guidCollection;
@@ -465,7 +494,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 gradeDataContract = await DataReader.ReadRecordAsync<DataContracts.Grades>(request.FinalGrade);
                 if (gradeDataContract == null)
                 {
-                    throw new RepositoryException(string.Format("Unable to locate final grade: '{0}'", request.FinalGrade));
+                    exception.AddError(new RepositoryError("Create.Update.Exception", string.Format("Unable to locate final grade: '{0}'", request.FinalGrade))
+                    {
+                        Id = request.Guid,
+                        SourceId = request.StudentCourseSecId
+                    });
                 }
             }
             else if (!string.IsNullOrEmpty(request.MidtermGrade1))
@@ -473,7 +506,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 gradeDataContract = await DataReader.ReadRecordAsync<DataContracts.Grades>(request.MidtermGrade1);
                 if (gradeDataContract == null)
                 {
-                    throw new RepositoryException(string.Format("Unable to locate midterm grade 1: '{0}'", request.MidtermGrade1));
+                    exception.AddError(new RepositoryError("Create.Update.Exception", string.Format("Unable to locate midterm grade 1: '{0}'", request.MidtermGrade1))
+                    {
+                        Id = request.Guid,
+                        SourceId = request.StudentCourseSecId
+                    });
                 }
             }
             else if (!string.IsNullOrEmpty(request.MidtermGrade2))
@@ -481,7 +518,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 gradeDataContract = await DataReader.ReadRecordAsync<DataContracts.Grades>(request.MidtermGrade2);
                 if (gradeDataContract == null)
                 {
-                    throw new RepositoryException(string.Format("Unable to locate midterm grade 2: '{0}'", request.MidtermGrade2));
+                    exception.AddError(new RepositoryError("Create.Update.Exception", string.Format("Unable to locate midterm grade 2: '{0}'", request.MidtermGrade2))
+                    {
+                        Id = request.Guid,
+                        SourceId = request.StudentCourseSecId
+                    });
                 }
             }
             else if (!string.IsNullOrEmpty(request.MidtermGrade3))
@@ -489,7 +530,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 gradeDataContract = await DataReader.ReadRecordAsync<DataContracts.Grades>(request.MidtermGrade3);
                 if (gradeDataContract == null)
                 {
-                    throw new RepositoryException(string.Format("Unable to locate midterm grade 3: '{0}'", request.MidtermGrade3));
+                    exception.AddError(new RepositoryError("Create.Update.Exception", string.Format("Unable to locate midterm grade 3: '{0}'", request.MidtermGrade3))
+                    {
+                        Id = request.Guid,
+                        SourceId = request.StudentCourseSecId
+                    });
                 }
             }
             else if (!string.IsNullOrEmpty(request.MidtermGrade4))
@@ -497,7 +542,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 gradeDataContract = await DataReader.ReadRecordAsync<DataContracts.Grades>(request.MidtermGrade4);
                 if (gradeDataContract == null)
                 {
-                    throw new RepositoryException(string.Format("Unable to locate midterm grade 4: '{0}'", request.MidtermGrade4));
+                    exception.AddError(new RepositoryError("Create.Update.Exception", string.Format("Unable to locate midterm grade 4: '{0}'", request.MidtermGrade4))
+                    {
+                        Id = request.Guid,
+                        SourceId = request.StudentCourseSecId
+                    });
                 }
             }
             else if (!string.IsNullOrEmpty(request.MidtermGrade5))
@@ -505,7 +554,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 gradeDataContract = await DataReader.ReadRecordAsync<DataContracts.Grades>(request.MidtermGrade5);
                 if (gradeDataContract == null)
                 {
-                    throw new RepositoryException(string.Format("Unable to locate midterm grade 5: '{0}'", request.MidtermGrade5));
+                    exception.AddError(new RepositoryError("Create.Update.Exception", string.Format("Unable to locate midterm grade 5: '{0}'", request.MidtermGrade5))
+                    {
+                        Id = request.Guid,
+                        SourceId = request.StudentCourseSecId
+                    });
                 }
             }
             else if (!string.IsNullOrEmpty(request.MidtermGrade6))
@@ -513,8 +566,16 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 gradeDataContract = await DataReader.ReadRecordAsync<DataContracts.Grades>(request.MidtermGrade6);
                 if (gradeDataContract == null)
                 {
-                    throw new RepositoryException(string.Format("Unable to locate midterm grade 6: '{0}'", request.MidtermGrade6));
+                    exception.AddError(new RepositoryError("Create.Update.Exception", string.Format("Unable to locate midterm grade 6: '{0}'", request.MidtermGrade6))
+                    {
+                        Id = request.Guid,
+                        SourceId = request.StudentCourseSecId
+                    });
                 }
+            }
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
             }
 
             importGradesRequest.Grade = request.GradeId;
@@ -548,7 +609,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     //collect all the failure messages
                     if (message != null && !string.IsNullOrEmpty(message.ErrorMessge))
                     {
-                        repositoryException.AddError(new RepositoryError(string.IsNullOrEmpty(message.StatusCode) ? "" : message.StatusCode, message.ErrorMessge) { Id = importGradesResponse.Guid, SourceId = request.StudentCourseSecId });
+                        repositoryException.AddError(new RepositoryError("Create.Update.Exception", string.Concat(string.IsNullOrEmpty(message.StatusCode) ? "" : message.StatusCode + ": ", message.ErrorMessge)) 
+                        { 
+                            Id = importGradesResponse.Guid, 
+                            SourceId = request.StudentCourseSecId 
+                        });
                     }
                 }
                 throw repositoryException;

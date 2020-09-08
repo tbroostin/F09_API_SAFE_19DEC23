@@ -206,7 +206,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             }
             if (!CurrentUser.IsPerson(id))
             {
-                if (!HasPermission(HumanResourcesPermissionCodes.ViewSuperviseeData))
+                if (!(HasPermission(HumanResourcesPermissionCodes.ViewSuperviseeData) || (HasPermission(HumanResourcesPermissionCodes.ApproveRejectLeaveRequest))))
                 {
                     throw new PermissionsException(string.Format("User {0} does not have permission to access demographics for {1}", CurrentUser.PersonId, id));
                 }

@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -102,10 +102,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         }
 
         /// <summary>
-        /// Retrieves the list of expense GL account DTOs for which the user has access.
+        /// Retrieves the list of active expense GL account DTOs for which the user has access.
         /// </summary>
         /// <param name="glClass">Optional: null for all the user GL accounts, expense for only the expense type GL accounts.</param>
-        /// <returns>A collection of expense GL account DTOs for the user.</returns>
+        /// <returns>A collection of active expense GL account DTOs for the user.</returns>
         public async Task<IEnumerable<Dtos.ColleagueFinance.GlAccount>> GetUserGeneralLedgerAccountsAsync(string glClass)
         {
             Stopwatch watch = null;
@@ -161,14 +161,17 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 throw new ArgumentNullException("glClass", "glClass must be null for all types or expense.");
             }
 
-            if (glAccounts != null && glAccounts.Any())
+            // Limit the list of accounts to those that are active.
+            List<string> activeGlAccounts = await generalLedgerAccountRepository.GetActiveGeneralLedgerAccounts(glAccounts);
+
+            if (activeGlAccounts != null && activeGlAccounts.Any())
             {
                 if (logger.IsInfoEnabled)
                 {
                     watch.Restart();
                 }
 
-                var glAccountEntities = await generalLedgerAccountRepository.GetUserGeneralLedgerAccountsAsync(glAccounts, glAccountStructure);
+                var glAccountEntities = await generalLedgerAccountRepository.GetUserGeneralLedgerAccountsAsync(activeGlAccounts, glAccountStructure);
 
                 if (logger.IsInfoEnabled)
                 {
@@ -185,6 +188,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     {
                         watch.Restart();
                     }
+
+                    glAccountEntities = glAccountEntities.OrderBy(x => x.GlAccountNumber, StringComparer.Ordinal).ToList();
 
                     foreach (var glAccount in glAccountEntities)
                     {

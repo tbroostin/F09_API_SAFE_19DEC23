@@ -24,6 +24,11 @@ namespace Ellucian.Colleague.Dtos.DtoProperties
         [DataMember(Name = "accountingString", EmitDefaultValue = false)]
         public string AccountingString { get; set; }
 
+        /// <summary>
+        /// The tax form component associated with the line item.
+        /// </summary>
+        [DataMember(Name = "taxFormComponent", EmitDefaultValue = false)]
+        public GuidObject2 TaxFormComponent { get; set; }
 
         /// <summary>
         /// The allocation of line item values to the accounting string.

@@ -24,6 +24,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class MealPlanAssignmentRepository : BaseColleagueRepository, IMealPlanAssignmentRepository
     {
+        RepositoryException repositoryException = new RepositoryException();
+
         /// <summary>
         /// Constructor to instantiate a Meal Plan Assignment repository object
         /// </summary>
@@ -34,6 +36,38 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             : base(cacheProvider, transactionFactory, logger)
         {
 
+        }
+
+        /// <summary>
+        /// Get the record key from a GUID
+        /// </summary>
+        /// <param name="guid">The GUID</param>
+        /// <returns>Primary key</returns>
+        public async Task<string> GetMealPlanAssignmentIdFromGuidAsync( string guid )
+        {
+            if( string.IsNullOrEmpty( guid ) )
+            {
+                throw new ArgumentNullException( "guid" );
+            }
+
+            var idDict = await DataReader.SelectAsync( new GuidLookup[] { new GuidLookup( guid ) } );
+            if( idDict == null || idDict.Count == 0 )
+            {
+                throw new KeyNotFoundException( "MealPlanAssignment GUID " + guid + " not found." );
+            }
+
+            var foundEntry = idDict.FirstOrDefault();
+            if( foundEntry.Value == null )
+            {
+                throw new KeyNotFoundException( "MealPlanAssignment GUID " + guid + " lookup failed." );
+            }
+
+            if( foundEntry.Value.Entity != "MEAL.PLAN.ASSIGNMENT" || !string.IsNullOrEmpty( foundEntry.Value.SecondaryKey ) )
+            {
+                throw new RepositoryException( "GUID '" + guid + "' is not valid for student-academic-programs." );
+            }
+
+            return foundEntry.Value.PrimaryKey;
         }
 
         /// <summary>
@@ -129,10 +163,27 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
             }
 
-            foreach (var intgStudentMealPlansEntity in mealPlanAssignments)
+            foreach( var source in mealPlanAssignments )
             {
-                mealPlanAssignmentEntities.Add(BuildMealPlanAssignment(intgStudentMealPlansEntity));
+                try
+                {
+                    mealPlanAssignmentEntities.Add( BuildMealPlanAssignment( source ) );
+                }
+                catch( ArgumentNullException e )
+                {
+                    repositoryException.AddError( new RepositoryError( "Missing.Required.Property", e.Message )
+                    {
+                        Id = source.RecordGuid,
+                        SourceId = source.Recordkey
+                    } );
+                }
             }
+
+            if( repositoryException.Errors != null && repositoryException.Errors.Any() )
+            {
+                throw repositoryException;
+            }
+
             return new Tuple<IEnumerable<Domain.Student.Entities.MealPlanAssignment>, int>(mealPlanAssignmentEntities, totalCount);
         }
 

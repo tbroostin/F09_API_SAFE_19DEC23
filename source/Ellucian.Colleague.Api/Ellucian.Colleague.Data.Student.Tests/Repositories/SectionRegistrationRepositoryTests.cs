@@ -1030,6 +1030,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [TestMethod]
             public async Task SectionRegistration_GetSectionRegistrations3Async()
             {
+                dataAccessorMock.Setup(repo => repo.SelectAsync(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(new[] { "1" });
                 dataAccessorMock.Setup(repo => repo.SelectAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(new[] { "1" });
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<StudentAcadCred>(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(new Collection<StudentAcadCred>() { studentAcadCred });
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<StudentCourseSec>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(new Collection<StudentCourseSec>() { studentCourseSec });
@@ -1043,6 +1044,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [TestMethod]
             public async Task SectionRegistration_GetSectionRegistrations3Async_WithOverride()
             {
+                dataAccessorMock.Setup(repo => repo.SelectAsync(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(new[] { "1" });
                 dataAccessorMock.Setup(repo => repo.SelectAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(new[] { "1" });
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<StudentAcadCred>(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(new Collection<StudentAcadCred>() { studentAcadCred });
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<StudentCourseSec>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(new Collection<StudentCourseSec>() { studentCourseSec });
@@ -1370,6 +1372,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 var request = new StudentAcadCredCourseSecInfo("8003");
                 dataAccessorMock.Setup(repo => repo.SelectAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(new[] { "1" });
+                dataAccessorMock.Setup(repo => repo.SelectAsync(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(new[] { "1" });
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<StudentAcadCred>(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(new Collection<StudentAcadCred>() { studentAcadCred });
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<StudentCourseSec>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(new Collection<StudentCourseSec>() { studentCourseSec });
                 var response = await sectionRegistrationRepo.GetSectionRegistrationGradeOptionsAsync(0, 1, request);

@@ -1020,6 +1020,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 OrderedOn = DateTime.Today,
                 TransactionDate = DateTime.Today,
                 Status = Dtos.EnumProperties.BlanketPurchaseOrdersStatus.Notapproved,
+                PaymentSource = new Dtos.GuidObject2("d18288c0-cca7-45b1-a310-39e376db0c3d"),
                 Vendor = new Dtos.BlanketPurchaseOrdersVendor()
                 {
                     ExistingVendor = new Dtos.DtoProperties.PurchaseOrdersExistingVendorDtoProperty()

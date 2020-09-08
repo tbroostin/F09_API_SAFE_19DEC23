@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
+using Ellucian.Colleague.Dtos.Attributes;
 using Ellucian.Colleague.Dtos.Converters;
 using Ellucian.Colleague.Dtos.DtoProperties;
 using Ellucian.Colleague.Dtos.EnumProperties;
@@ -32,6 +33,7 @@ namespace Ellucian.Colleague.Dtos
         /// <summary>
         /// A system-generated number associated with the invoice
         /// </summary>
+        [FilterProperty("criteria")]
         [DataMember(Name = "invoiceNumber", EmitDefaultValue = false)]
         public string InvoiceNumber { get; set; }
 
@@ -40,6 +42,12 @@ namespace Ellucian.Colleague.Dtos
         /// </summary>
         [DataMember(Name = "vendorInvoiceNumber", EmitDefaultValue = false)]
         public string VendorInvoiceNumber { get; set; }
+
+        /// <summary>
+        /// The type of accounts payable invoice, i.e. Procurement, eProcurement, or Travel.
+        /// </summary>
+        [DataMember(Name = "type", EmitDefaultValue = false)]
+        public AccountsPayableInvoicesType? Type { get; set; }
 
         /// <summary>
         /// The transaction date for the invoice. This will be the date used when entering the transactions into the general ledger.

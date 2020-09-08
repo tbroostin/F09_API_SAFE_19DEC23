@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -19,6 +19,7 @@ using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Dtos.DtoProperties;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Student;
+using Ellucian.Colleague.Domain.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
@@ -302,9 +303,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 CheckViewHousingAssignmentPermissions();
 
-                var housingAssignmentEntity = await _housingAssignmentRepository.GetHousingAssignmentByGuidAsync(guid);
+                    var housingAssignmentEntity = await _housingAssignmentRepository.GetHousingAssignmentByGuidAsync(guid);
 
-                BuildLocalPersonGuids(new List<Ellucian.Colleague.Domain.Student.Entities.HousingAssignment>() { housingAssignmentEntity });
+                    BuildLocalPersonGuids(new List<Ellucian.Colleague.Domain.Student.Entities.HousingAssignment>() { housingAssignmentEntity });
 
                 return await ConvertHousingAssignmentsEntityToDto(housingAssignmentEntity, bypassCache);
             }
@@ -668,7 +669,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 case HousingAssignmentsStatus.NotSet:
                     return string.Empty;
                 default:
-                    throw new InvalidOperationException("Status is required.");
+                    // Used for filter so issue no error if problem found.  (Need to return empty set instead.)
+                    return null;
             }
         }
 
@@ -747,15 +749,44 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             if (string.IsNullOrEmpty(source.StudentId))
             {
-                throw new InvalidOperationException(string.Format("Student id is required. Guid: {0}", source.Guid));
+                throw new InvalidOperationException(string.Format("Person id is required. Guid: {0}", source.Guid));
             }
 
             var studentGuidKP = (await this.GetPersonGuidsAsync()).FirstOrDefault(i => i.Key.Equals(source.StudentId, StringComparison.OrdinalIgnoreCase));
             if (string.IsNullOrEmpty(studentGuidKP.Value))
             {
-                throw new KeyNotFoundException(string.Format("No student guid found for id: {0}", source.StudentId));
+                throw new KeyNotFoundException(string.Format("No person guid found for id: {0}", source.StudentId));
             }
             return new GuidObject2(studentGuidKP.Value);
+        }
+
+        /// <summary>
+        /// Converts person to student guid object
+        /// </summary>
+        /// <param name="source"></param>
+        /// <returns></returns>
+        private async Task<GuidObject2> ConvertPersonEntityToDto2(Domain.Student.Entities.HousingAssignment source)
+        {
+            if (string.IsNullOrEmpty(source.StudentId))
+            {
+                IntegrationApiExceptionAddError("Student id is required.", guid: source.Guid, id: source.RecordKey);
+                return null;
+            }
+            try
+            {
+                var studentGuidKP = (await this.GetPersonGuidsAsync()).FirstOrDefault(i => i.Key.Equals(source.StudentId, StringComparison.OrdinalIgnoreCase));
+                if (string.IsNullOrEmpty(studentGuidKP.Value))
+                {
+                    IntegrationApiExceptionAddError("No student guid found for id: " + source.StudentId, guid: source.Guid, id: source.RecordKey);
+                    return null;
+                }
+                return new GuidObject2(studentGuidKP.Value);
+            }
+            catch
+            {
+                IntegrationApiExceptionAddError("No student guid found for id: " + source.StudentId, guid: source.Guid, id: source.RecordKey);
+                return null;
+            }
         }
 
         /// <summary>
@@ -779,6 +810,31 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         }
 
         /// <summary>
+        /// Converts room to guid object
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="bypassCache"></param>
+        /// <returns></returns>
+        private async Task<GuidObject2> ConvertRoomEntityToDto2(Domain.Student.Entities.HousingAssignment source, bool bypassCache)
+        {
+            var buildingRoom = string.Concat(source.Building, "*", source.RoomId);
+            if (string.IsNullOrEmpty(buildingRoom))
+            {
+                return null;
+            }
+            try
+            {
+                var room = (await this.GetRooms(bypassCache)).FirstOrDefault(i => i.Id.Equals(buildingRoom, StringComparison.OrdinalIgnoreCase));
+                return new GuidObject2(room.Guid);
+            }
+            catch
+            {
+                IntegrationApiExceptionAddError("No room found for code: " + buildingRoom, guid: source.Guid, id: source.RecordKey);
+                return null;
+            }            
+        }
+
+        /// <summary>
         /// Converts term to academic period guid object
         /// </summary>
         /// <param name="source"></param>
@@ -798,6 +854,29 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         }
 
         /// <summary>
+        /// Converts term to academic period guid object
+        /// </summary>
+        /// <param name="source"></param>
+        /// <returns></returns>
+        private async Task<GuidObject2> ConvertTermEntityToDto2(Domain.Student.Entities.HousingAssignment source)
+        {
+            if (string.IsNullOrEmpty(source.Term))
+            {
+                return null;
+            }
+            try
+            {
+                var acadPeriod = (await this.GetAcademicPeriods()).FirstOrDefault(i => i.Code.Equals(source.Term));
+                return new GuidObject2(acadPeriod.Guid);
+            }
+            catch
+            {
+                IntegrationApiExceptionAddError("No academic period found for term: " + source.Term, guid: source.Guid, id: source.RecordKey);
+                return null;
+            }            
+        }
+
+        /// <summary>
         /// Converts status to HousingAssignmentsStatus dto
         /// </summary>
         /// <param name="source"></param>
@@ -807,6 +886,39 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (source.Statuses == null || !source.Statuses.Any())
             {
                 throw new InvalidOperationException(string.Format("Status is required. Guid: {0}", source.Guid));
+            }
+            
+            // Colleague considers the topmost/first status in the list to be the effective status.  Colleague does not keep it in sorted order.
+            var status = source.Statuses.FirstOrDefault();
+
+            switch (status.Status)
+            {
+                case "A":
+                    return new Tuple<HousingAssignmentsStatus, DateTimeOffset?>(HousingAssignmentsStatus.Assigned, (DateTimeOffset?)status.StatusDate);
+                case "C":
+                    return new Tuple<HousingAssignmentsStatus, DateTimeOffset?>(HousingAssignmentsStatus.Canceled, (DateTimeOffset?)status.StatusDate);
+                case "T":
+                    return new Tuple<HousingAssignmentsStatus, DateTimeOffset?>(HousingAssignmentsStatus.Terminated, (DateTimeOffset?)status.StatusDate);
+                case "R":
+                    return new Tuple<HousingAssignmentsStatus, DateTimeOffset?>(HousingAssignmentsStatus.Pending, (DateTimeOffset?)status.StatusDate);
+                case "L":
+                    return new Tuple<HousingAssignmentsStatus, DateTimeOffset?>(HousingAssignmentsStatus.Prorated, (DateTimeOffset?)status.StatusDate);
+                default:
+                    return new Tuple<HousingAssignmentsStatus, DateTimeOffset?>(HousingAssignmentsStatus.Pending, (DateTimeOffset?)status.StatusDate);
+            }
+        }
+
+        /// <summary>
+        /// Converts status to HousingAssignmentsStatus dto
+        /// </summary>
+        /// <param name="source"></param>
+        /// <returns></returns>
+        private Tuple<HousingAssignmentsStatus, DateTimeOffset?> ConvertStatusEntityToDto2(Domain.Student.Entities.HousingAssignment source)
+        {
+            if (source.Statuses == null || !source.Statuses.Any())
+            {
+                IntegrationApiExceptionAddError("Status is required.", guid: source.Guid, id: source.RecordKey);
+                return null;
             }
 
             // Colleague considers the topmost/first status in the list to be the effective status.  Colleague does not keep it in sorted order.
@@ -891,6 +1003,42 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         }
 
         /// <summary>
+        /// Converts to rate override dto
+        /// </summary>
+        /// <param name="rate"></param>
+        /// <param name="reason"></param>
+        /// <param name="bypassCache"></param>
+        /// <returns></returns>
+        private async Task<HousingAssignmentRateOverrideProperty> ConvertOverrideEntityToDto2(Domain.Student.Entities.HousingAssignment source, bool bypassCache)
+        {
+            var rate = source.RateOverride;
+            var reason = source.RateOverrideReason;
+                
+            HousingAssignmentRateOverrideProperty overrideRate = new HousingAssignmentRateOverrideProperty();
+
+            if (rate.HasValue)
+            {
+                overrideRate.HousingAssignmentRate = new HousingAssignmentRateChargeProperty()
+                {
+                    RateValue = rate.Value,
+                    RateCurrency = (await GetHostCountryAsync()).ToUpper().Equals("USA", StringComparison.OrdinalIgnoreCase) ? CurrencyIsoCode.USD : CurrencyIsoCode.NotSet
+                };
+            }
+
+            if (!string.IsNullOrEmpty(reason))
+            {
+                var billingOverrideReason = (await this.GetBillingOverrideReasons(bypassCache)).FirstOrDefault(i => i.Code.Equals(reason, StringComparison.OrdinalIgnoreCase));
+                if (billingOverrideReason == null)
+                {
+                    IntegrationApiExceptionAddError("No billing override reason found for code: " + reason, guid: source.Guid, id: source.RecordKey);
+                    return null;
+                }
+                overrideRate.RateOverrideReason = new GuidObject2(billingOverrideReason.Guid);
+            }
+            return overrideRate;
+        }
+
+        /// <summary>
         /// Converts to additional charges dto
         /// </summary>
         /// <param name="source"></param>
@@ -926,6 +1074,64 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         }
 
         /// <summary>
+        /// Converts to additional charges dto
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="bypassCache"></param>
+        /// <returns></returns>
+        private async Task<IEnumerable<HousingAssignmentAdditionalChargeProperty>> ConvertAdditionalChargesEntityToDto2(Domain.Student.Entities.HousingAssignment source, bool bypassCache)
+        {
+            List<HousingAssignmentAdditionalChargeProperty> addlCharges = new List<HousingAssignmentAdditionalChargeProperty>();
+
+            if (source.ArAdditionalAmounts != null && source.ArAdditionalAmounts.Any())
+            {
+                foreach (var item in source.ArAdditionalAmounts)
+                {
+                    try
+                    {
+                        var accountingCode = (await this.GetAccountingCodes(bypassCache)).FirstOrDefault(i => i.Code.Equals(item.AraaArCode, StringComparison.OrdinalIgnoreCase)); 
+                        if (accountingCode == null)
+                        {
+                            if (!string.IsNullOrEmpty(item.AraaArCode))
+                            {
+                                IntegrationApiExceptionAddError("No accounting code found for code: " + item.AraaArCode, guid: source.Guid, id: source.RecordKey);
+                            }
+                            else
+                            {
+                                IntegrationApiExceptionAddError("No accounting code found.", guid: source.Guid, id: source.RecordKey);
+                            }
+                            return null;
+                        }
+                        HousingAssignmentAdditionalChargeProperty acctAddlCharges = new HousingAssignmentAdditionalChargeProperty()
+                        {
+                            AccountingCode = new GuidObject2(accountingCode.Guid),
+                            HousingAssignmentRate = new HousingAssignmentRateChargeProperty()
+                            {
+                                RateValue = ConvertChargeCreditToValue(item.AraaChargeAmt, item.AraaCrAmt),
+                                RateCurrency = (await GetHostCountryAsync()).ToUpper().Equals("USA", StringComparison.OrdinalIgnoreCase) ? CurrencyIsoCode.USD : CurrencyIsoCode.NotSet
+                            }
+                        };
+                        addlCharges.Add(acctAddlCharges);
+                    }
+                    catch
+                    {
+                        if (!string.IsNullOrEmpty(item.AraaArCode))
+                        {
+                            IntegrationApiExceptionAddError("No accounting code found for code: " + item.AraaArCode, guid: source.Guid, id: source.RecordKey);
+                        }
+                        else
+                        {
+                            IntegrationApiExceptionAddError("No accounting code found.", guid: source.Guid, id: source.RecordKey);
+                        }
+                        return null;
+                    }
+                }
+            }
+
+            return addlCharges.Any() ? addlCharges : null;
+        }
+
+        /// <summary>
         /// Converts to res type to guid object dto
         /// </summary>
         /// <param name="source"></param>
@@ -943,6 +1149,30 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 throw new KeyNotFoundException(string.Format("No resident type found for code {0}", source));
             }
             return new GuidObject2(residentType.Guid);
+        }
+
+        /// <summary>
+        /// Converts to res type to guid object dto
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="bypassCache"></param>
+        /// <returns></returns>
+        private async Task<GuidObject2> ConvertHousingResTypeEntityToDto2(Domain.Student.Entities.HousingAssignment source, bool bypassCache)
+        {
+            if (string.IsNullOrEmpty(source.ResidentStaffIndicator))
+            {
+                return null;
+            }
+            try
+            {
+                var residentType = (await this.GetHousingResidentTypes(bypassCache)).FirstOrDefault(i => i.Code.Equals(source.ResidentStaffIndicator, StringComparison.OrdinalIgnoreCase));
+                return new GuidObject2(residentType.Guid);
+            }
+            catch
+            {
+                IntegrationApiExceptionAddError("No resident type found for code: " + source.ResidentStaffIndicator, guid: source.Guid, id: source.RecordKey);
+                return null;
+            }            
         }
 
         /// <summary>
@@ -982,6 +1212,21 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         }
 
         /// <summary>
+        /// Checks housing assignment view permissions
+        /// </summary>
+        private void CheckViewHousingAssignmentPermissions2()
+        {
+            // access is ok if the current user has the view housing request
+            if (!HasPermission(StudentPermissionCodes.ViewHousingAssignment) && !HasPermission(StudentPermissionCodes.CreateUpdateHousingAssignment))
+            {
+                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view housing-assignments.");
+                IntegrationApiExceptionAddError("User '" + CurrentUser.UserId + "' is not authorized to view housing-assignments.", "Access.Denied",
+                    httpStatusCode: System.Net.HttpStatusCode.Forbidden);
+                throw IntegrationApiException;
+            }
+        }
+
+        /// <summary>
         /// Checks housing assignment create or update permissions
         /// </summary>
         private void CheckCreateUpdateHousingAssignmentPermissions()
@@ -991,6 +1236,21 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 logger.Error("User '" + CurrentUser.UserId + "' is not authorized to create or update housing-assignments.");
                 throw new PermissionsException("User is not authorized to create or update housing-assignments.");
+            }
+        }
+
+        /// <summary>
+        /// Checks housing assignment create or update permissions
+        /// </summary>
+        private void CheckCreateUpdateHousingAssignmentPermissions2()
+        {
+            // access is ok if the current user has the view housing request
+            if (!HasPermission(StudentPermissionCodes.CreateUpdateHousingAssignment))
+            {
+                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to create or update housing-assignments.");
+                IntegrationApiExceptionAddError("User '" + CurrentUser.UserId + "' is not authorized to create or update housing-assignments.", "Access.Denied",
+                    httpStatusCode: System.Net.HttpStatusCode.Forbidden);
+                throw IntegrationApiException;
             }
         }
 
@@ -1020,7 +1280,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             catch (Exception)
             {
-                throw new InvalidOperationException("Invalid Date format in arguments");
+                // Used for filter so issue no error if problem found.  (Need to return empty set instead.)
+                return null;
             }
         }
 
@@ -1036,7 +1297,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns></returns>
         public async Task<Tuple<IEnumerable<HousingAssignment2>, int>> GetHousingAssignments2Async(int offset, int limit, HousingAssignment2 criteriaFilter, bool bypassCache = false)
         {
-            CheckViewHousingAssignmentPermissions();
+            CheckViewHousingAssignmentPermissions2();
             string person = string.Empty, term = string.Empty, status = string.Empty, startDate = string.Empty, endDate = string.Empty;
             if (criteriaFilter != null)
             {
@@ -1080,11 +1341,24 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 //process status filter
                 if (criteriaFilter.Status != null)
                     status = ConvertStatusDtoToEntity(criteriaFilter.Status);
+                if (status == null)
+                {
+                    return new Tuple<IEnumerable<Dtos.HousingAssignment2>, int>(new List<Dtos.HousingAssignment2>(), 0);
+                }
+
                 //process startOn and endOn filter
                 try
                 {
                     startDate = criteriaFilter.StartOn.HasValue ? await ConvertDateArgument(criteriaFilter.StartOn.ToString()) : string.Empty;
+                    if (startDate == null)
+                    {
+                        return new Tuple<IEnumerable<Dtos.HousingAssignment2>, int>(new List<Dtos.HousingAssignment2>(), 0);
+                    }
                     endDate = criteriaFilter.EndOn.HasValue ? await ConvertDateArgument(criteriaFilter.EndOn.ToString()) : string.Empty;
+                    if (endDate == null)
+                    {
+                        return new Tuple<IEnumerable<Dtos.HousingAssignment2>, int>(new List<Dtos.HousingAssignment2>(), 0);
+                    }
                 }
                 catch (Exception)
                 {
@@ -1108,6 +1382,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     {
                         housingAssignmentsCollection.Add(await ConvertHousingAssignmentsEntityToDto2Async(housingAssignments, bypassCache));
                     }
+                    if (IntegrationApiException != null)
+                    {
+                        throw IntegrationApiException;
+                    }
                 }
 
                 return new Tuple<IEnumerable<Dtos.HousingAssignment2>, int>(housingAssignmentsCollection, totalCount);
@@ -1126,19 +1404,25 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns></returns>
         public async Task<HousingAssignment2> GetHousingAssignmentByGuid2Async(string id, bool bypassCache = false)
         {
+            CheckViewHousingAssignmentPermissions2();
+
             try
             {
-                CheckViewHousingAssignmentPermissions();
-
                 var housingAssignmentEntity = await _housingAssignmentRepository.GetHousingAssignmentByGuidAsync(id);
 
                 BuildLocalPersonGuids(new List<Ellucian.Colleague.Domain.Student.Entities.HousingAssignment>() { housingAssignmentEntity });
 
-                return await ConvertHousingAssignmentsEntityToDto2Async(housingAssignmentEntity, bypassCache);
+                var housingAssignmentDtos = await ConvertHousingAssignmentsEntityToDto2Async(housingAssignmentEntity, bypassCache);
+                if (IntegrationApiException != null)
+                {
+                    throw IntegrationApiException;
+                }
+                return housingAssignmentDtos;
             }
-            catch (Exception e)
+            catch (RepositoryException ex)
             {
-                throw e;
+                IntegrationApiExceptionAddError(ex, guid: id);
+                throw IntegrationApiException;
             }
         }
 
@@ -1161,7 +1445,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var housingAssignmentId = await _housingAssignmentRepository.GetHousingAssignmentKeyAsync(housingAssignmentDto.Id);
                 if (!string.IsNullOrEmpty(housingAssignmentId))
                 {
-                    CheckCreateUpdateHousingAssignmentPermissions();
+                    CheckCreateUpdateHousingAssignmentPermissions2();
 
                     _housingAssignmentRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
@@ -1173,7 +1457,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
                     ClearReferenceData();
 
-                    return await this.ConvertHousingAssignmentsEntityToDto2Async(updatedHousingAssignmentEntity, true);
+                    var housingAssignmentDto2 = await this.ConvertHousingAssignmentsEntityToDto2Async(updatedHousingAssignmentEntity, true);
+                    if (IntegrationApiException != null)
+                    {
+                        throw IntegrationApiException;
+                    }
+                    return housingAssignmentDto2;
                 }
             }
             catch (Exception e)
@@ -1197,7 +1486,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             try
             {
-                CheckCreateUpdateHousingAssignmentPermissions();
+                CheckCreateUpdateHousingAssignmentPermissions2();
 
                 _housingAssignmentRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
@@ -1205,7 +1494,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var createdHousingAssignmentEntity = await _housingAssignmentRepository.UpdateHousingAssignmentAsync(housingAssignmentEntity);
                 BuildLocalPersonGuids(new List<Ellucian.Colleague.Domain.Student.Entities.HousingAssignment>() { createdHousingAssignmentEntity });
 
-                return await this.ConvertHousingAssignmentsEntityToDto2Async(createdHousingAssignmentEntity, true);
+                var housingAssignmentDto2 = await this.ConvertHousingAssignmentsEntityToDto2Async(createdHousingAssignmentEntity, true);
+                if (IntegrationApiException != null)
+                {
+                    throw IntegrationApiException;
+                }
+                return housingAssignmentDto2;
             }
             catch (Exception e)
             {
@@ -1226,26 +1520,28 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             housingAssignment.Id = source.Guid;
             housingAssignment.HousingRequest = string.IsNullOrEmpty(source.HousingRequest) ? null : new GuidObject2(source.HousingRequest);
-            housingAssignment.Person = await ConvertPersonEntityToDto(source);
-            housingAssignment.Room = await ConvertRoomEntityToDto(string.Concat(source.Building, "*", source.RoomId), bypassCache);
-            housingAssignment.AcademicPeriod = await ConvertTermEntityToDto(source);
+            housingAssignment.Person = await ConvertPersonEntityToDto2(source);
+            housingAssignment.Room = await ConvertRoomEntityToDto2(source, bypassCache);
+            housingAssignment.AcademicPeriod = await ConvertTermEntityToDto2(source);
             if (!source.StartOn.HasValue)
             {
-                throw new InvalidOperationException(string.Format("Start on date is required. Guid: {0}", source.Guid));
+                IntegrationApiExceptionAddError("Start on date is required.", guid: source.Guid, id: source.RecordKey);
             }
             housingAssignment.StartOn = source.StartOn.Value;
             housingAssignment.EndOn = source.EndDate.HasValue ? source.EndDate.Value : default(DateTimeOffset?);
-            var statusStatusDate = ConvertStatusEntityToDto(source);
-
-            housingAssignment.Status = statusStatusDate.Item1;
-            housingAssignment.StatusDate = statusStatusDate.Item2.HasValue ? statusStatusDate.Item2.Value.Date : default(DateTime?);
+            var statusStatusDate = ConvertStatusEntityToDto2(source);
+            if (statusStatusDate != null)
+            {
+                housingAssignment.Status = statusStatusDate.Item1;
+                housingAssignment.StatusDate = statusStatusDate.Item2.HasValue ? statusStatusDate.Item2.Value.Date : default(DateTime?);
+            }
             housingAssignment.ContractNumber = string.IsNullOrEmpty(source.ContractNumber) ? null : source.ContractNumber;
             housingAssignment.Comment = string.IsNullOrEmpty(source.Comments) ? null : source.Comments;
             housingAssignment.RoomRates = await ConvertRoomRateEntityToDto2(source, bypassCache);
             housingAssignment.RatePeriod = ConvertEntityRatePeriodToDto(source.RatePeriod);
-            housingAssignment.RateOverride = source.RateOverride.HasValue ? await ConvertOverrideEntityToDto(source.RateOverride, source.RateOverrideReason, bypassCache) : null;
-            housingAssignment.AdditionalCharges = await ConvertAdditionalChargesEntityToDto(source, bypassCache);
-            housingAssignment.ResidentType = await ConvertHousingResTypeEntityToDto(source.ResidentStaffIndicator, bypassCache);
+            housingAssignment.RateOverride = source.RateOverride.HasValue ? await ConvertOverrideEntityToDto2(source, bypassCache) : null;
+            housingAssignment.AdditionalCharges = await ConvertAdditionalChargesEntityToDto2(source, bypassCache);
+            housingAssignment.ResidentType = await ConvertHousingResTypeEntityToDto2(source, bypassCache);
 
             return housingAssignment;
         }
@@ -1263,19 +1559,32 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 //person is required
                 if (source.Person == null || string.IsNullOrEmpty(source.Person.Id))
                 {
-                    throw new InvalidOperationException("Person is required.");
+                    IntegrationApiExceptionAddError("Person is required.");
                 }
-                var personKey = await _personRepository.GetPersonIdFromGuidAsync(source.Person.Id);
-                if (string.IsNullOrEmpty(personKey))
+                var personKey = string.Empty;
+                try
                 {
-                    throw new KeyNotFoundException(string.Format("No person found. guid: {0}", source.Person.Id));
+                    personKey = await _personRepository.GetPersonIdFromGuidAsync(source.Person.Id);
+                    if (string.IsNullOrEmpty(personKey))
+                    {
+                        IntegrationApiExceptionAddError(string.Format("No person found. guid: {0}", source.Person.Id));
+                    }
                 }
+                catch
+                {
+                    IntegrationApiExceptionAddError(string.Format("No person found. guid: {0}", source.Person.Id));
+                }                
 
                 //room
                 var roomEntity = (await GetRooms(true)).FirstOrDefault(i => i.Guid.Equals(source.Room.Id, StringComparison.OrdinalIgnoreCase));
                 if (roomEntity == null)
                 {
-                    throw new KeyNotFoundException(string.Format("No room found. guid: {0}", source.Room.Id));
+                    IntegrationApiExceptionAddError(string.Format("No room found. guid: {0}", source.Room.Id));
+                }
+
+                if (IntegrationApiException != null)
+                {
+                    throw IntegrationApiException;
                 }
 
                 //Create the domain entity
@@ -1287,7 +1596,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 //academicPeriod
                 if (source.RatePeriod == RatePeriod.Term && string.IsNullOrEmpty(source.AcademicPeriod.Id))
                 {
-                    throw new InvalidOperationException("A term must be specified if the rate period is Term .");
+                    IntegrationApiExceptionAddError("A term must be specified if the rate period is Term.");
                 }
 
                 if (source.AcademicPeriod != null && !string.IsNullOrEmpty(source.AcademicPeriod.Id))
@@ -1295,22 +1604,32 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     var acadPeriod = (await GetAcademicPeriods()).FirstOrDefault(i => i.Guid.Equals(source.AcademicPeriod.Id, StringComparison.OrdinalIgnoreCase));
                     if (acadPeriod == null)
                     {
-                        throw new KeyNotFoundException(string.Format("No academic period found. guid: {0}", source.AcademicPeriod.Id));
+                        IntegrationApiExceptionAddError(string.Format("No academic period found. guid: {0}", source.AcademicPeriod.Id));
                     }
-                    destinationEntity.Term = acadPeriod.Code;
+                    else
+                    {
+                        destinationEntity.Term = acadPeriod.Code;
+                    }
                 }
                 //status
                 var status = string.Empty;
-                if (source.Status != HousingAssignmentsStatus.NotSet)
+                if (source.Status != null)
                 {
-                    destinationEntity.Status = ConvertStatusDtoToEntity(source.Status);
+                    if (source.Status != HousingAssignmentsStatus.NotSet)
+                    {
+                        destinationEntity.Status = ConvertStatusDtoToEntity(source.Status);
+                    }
+                }
+                else
+                {
+                    IntegrationApiExceptionAddError("Status is required.");
                 }
 
                 if (!source.StatusDate.HasValue)
                 {
-                    throw new InvalidOperationException("Status date is required.");
+                    IntegrationApiExceptionAddError("Status date is required.");
                 }
-                if (source.StatusDate.HasValue)
+                else
                 {
                     destinationEntity.StatusDate = source.StatusDate.Value;
                 }
@@ -1325,7 +1644,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var roomRates = source.RoomRates ?? null;
                 if (roomRates != null && roomRates.Any() && roomRates.Count() > 1)
                 {
-                    throw new InvalidOperationException("Only a single room rate is permitted.");
+                    IntegrationApiExceptionAddError("Only a single room rate is permitted.");
                 }
 
                 if (roomRates != null && roomRates.Any())
@@ -1334,9 +1653,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
                     if (string.IsNullOrEmpty(singleRoomRate.Id))
                     {
-                        throw new InvalidOperationException("Id is required for the room rate.");
+                        IntegrationApiExceptionAddError("Id is required for the room rate.");
                     }
-                    if (!string.IsNullOrEmpty(singleRoomRate.Id))
+                    else
                     {
                         var rmRates = await RoomRatesAsync(true);
                         if (rmRates != null && rmRates.Any())
@@ -1344,20 +1663,23 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                             var rmRate = rmRates.FirstOrDefault(i => i.Guid.Equals(singleRoomRate.Id, StringComparison.OrdinalIgnoreCase));
                             if (rmRate == null)
                             {
-                                throw new KeyNotFoundException(string.Format("No room rate found for guid: '{0}'", singleRoomRate.Id));
+                                IntegrationApiExceptionAddError(string.Format("No room rate found for guid: '{0}'", singleRoomRate.Id));
                             }
-                            if (rmRate.EndDate.HasValue && rmRate.EndDate.Value > source.EndOn.Value)
+                            if (rmRate != null)
                             {
-                                throw new InvalidOperationException("The specified Housing Rate Table is not active on housing assignment start date.");
+                                if (rmRate.EndDate.HasValue && rmRate.EndDate.Value > source.EndOn.Value)
+                                {
+                                    IntegrationApiExceptionAddError("The specified Housing Rate Table is not active on housing assignment start date.");
+                                }
+                                destinationEntity.RoomRateTable = rmRate.Code;
                             }
-                            destinationEntity.RoomRateTable = rmRate.Code;
                         }
                     }
 
                     //ratePeriod
                     if (string.IsNullOrEmpty(singleRoomRate.Id) && source.RatePeriod.HasValue)
                     {
-                        throw new InvalidOperationException("A valid roomrate id is required when rate period is specified.");
+                        IntegrationApiExceptionAddError("A valid roomrate id is required when rate period is specified.");
                     }
                 }
 
@@ -1372,13 +1694,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     //RateOverride
                     if (source.RateOverride.HousingAssignmentRate != null && source.RateOverride.HousingAssignmentRate.RateValue == null)
                     {
-                        throw new InvalidOperationException("Rate value is required for the rate override.");
+                        IntegrationApiExceptionAddError("Rate value is required for the rate override.");
                     }
 
                     if (source.RateOverride.HousingAssignmentRate != null && source.RateOverride.HousingAssignmentRate.RateValue != null &&
                         source.RateOverride.HousingAssignmentRate.RateValue < 0)
                     {
-                        throw new ArgumentException("The override rate value must be set greater than zero. ");
+                        IntegrationApiExceptionAddError("The override rate value must be set greater than zero.");
                     }
 
                     //rateOverride.HousingAssignmentRate.RateValue
@@ -1387,43 +1709,46 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     if (source.RateOverride.HousingAssignmentRate.RateValue != null && source.RateOverride.HousingAssignmentRate.RateCurrency != Dtos.EnumProperties.CurrencyIsoCode.USD &&
                         source.RateOverride.HousingAssignmentRate.RateCurrency != Dtos.EnumProperties.CurrencyIsoCode.CAD)
                     {
-                        throw new ArgumentException("The override rate currency must be set to either 'USD' or 'CAD'. ");
+                        IntegrationApiExceptionAddError("The override rate currency must be set to either 'USD' or 'CAD'.");
                     }
 
                     //RateOverrideReason
                     if (source.RateOverride.RateOverrideReason != null && string.IsNullOrEmpty(source.RateOverride.RateOverrideReason.Id))
                     {
-                        throw new InvalidOperationException("An Override Rate Reason must be specified with an Override Rate.");
+                        IntegrationApiExceptionAddError("An Override Rate Reason must be specified with an Override Rate.");
                     }
                     var rateOverrideReason = (await GetBillingOverrideReasons(true)).FirstOrDefault(i => i.Guid.Equals(source.RateOverride.RateOverrideReason.Id, StringComparison.OrdinalIgnoreCase));
                     if (rateOverrideReason == null)
                     {
-                        throw new KeyNotFoundException(string.Format("No rate override reason found for guid: {0}", source.RateOverride.RateOverrideReason.Id));
+                        IntegrationApiExceptionAddError(string.Format("No rate override reason found for guid: {0}", source.RateOverride.RateOverrideReason.Id));
                     }
-                    destinationEntity.RateOverrideReason = rateOverrideReason.Code;
+                    else
+                    {
+                        destinationEntity.RateOverrideReason = rateOverrideReason.Code;
+                    }
                 }
 
                 //additionalCharges
                 if (source.AdditionalCharges != null && (source.AdditionalCharges.Any(i => i.AccountingCode == null || (i.AccountingCode != null && string.IsNullOrEmpty(i.AccountingCode.Id)))))
                 {
-                    throw new InvalidOperationException(string.Format("Accounting code is required for additional charges."));
+                    IntegrationApiExceptionAddError(string.Format("Accounting code is required for additional charges."));
                 }
 
                 if (source.AdditionalCharges != null && (source.AdditionalCharges.Any(i => i.AccountingCode == null || (i.AccountingCode != null && i.HousingAssignmentRate == null))))
                 {
-                    throw new InvalidOperationException(string.Format("Charge is required for additional charges."));
+                    IntegrationApiExceptionAddError(string.Format("Charge is required for additional charges."));
                 }
 
                 if (source.AdditionalCharges != null && (source.AdditionalCharges.Any(i => i.AccountingCode == null ||
                     (i.AccountingCode != null && i.HousingAssignmentRate != null && i.HousingAssignmentRate.RateCurrency == CurrencyIsoCode.NotSet))))
                 {
-                    throw new InvalidOperationException(string.Format("Currency is required for the additional charges."));
+                    IntegrationApiExceptionAddError(string.Format("Currency is required for the additional charges."));
                 }
 
                 if (source.AdditionalCharges != null && (source.AdditionalCharges.Any(i => i.AccountingCode == null ||
                     (i.AccountingCode != null && i.HousingAssignmentRate != null && (i.HousingAssignmentRate.RateValue == null || !i.HousingAssignmentRate.RateValue.HasValue)))))
                 {
-                    throw new InvalidOperationException("Value is required for the additional charges.");
+                    IntegrationApiExceptionAddError("Value is required for the additional charges.");
                 }
 
                 if (source.AdditionalCharges != null && source.AdditionalCharges.Any())
@@ -1431,35 +1756,47 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     List<ArAdditionalAmount> arAddlAmountList = new List<ArAdditionalAmount>();
                     foreach (var additionalCharge in source.AdditionalCharges)
                     {
-                        var acctCode = (await this.GetAccountingCodes(true)).FirstOrDefault(i => i.Guid.Equals(additionalCharge.AccountingCode.Id));
-                        if (acctCode == null)
+                        if (additionalCharge.AccountingCode != null && additionalCharge.AccountingCode.Id != null)
                         {
-                            throw new KeyNotFoundException(string.Format("No accounting code found for guid: {0}", additionalCharge.AccountingCode.Id));
-                        }
-                        ArAdditionalAmount addlAmt = new ArAdditionalAmount()
-                        {
-                            AraaArCode = acctCode.Code
-                        };
-                        if (additionalCharge.HousingAssignmentRate.RateValue.HasValue)
-                        {
-                            if (additionalCharge.HousingAssignmentRate.RateValue.Value > 0)
+                            var acctCode = (await this.GetAccountingCodes(true)).FirstOrDefault(i => i.Guid.Equals(additionalCharge.AccountingCode.Id));
+                            if (acctCode == null)
                             {
-                                addlAmt.AraaChargeAmt = additionalCharge.HousingAssignmentRate.RateValue.Value;
+                                IntegrationApiExceptionAddError(string.Format("No accounting code found for guid: {0}", additionalCharge.AccountingCode.Id));
                             }
-                            else if (additionalCharge.HousingAssignmentRate.RateValue.Value < 0)
+                            else
                             {
-                                addlAmt.AraaCrAmt = additionalCharge.HousingAssignmentRate.RateValue.Value;
+                                ArAdditionalAmount addlAmt = new ArAdditionalAmount()
+                                {
+                                    AraaArCode = acctCode.Code
+                                };
+                                if (additionalCharge.HousingAssignmentRate != null && additionalCharge.HousingAssignmentRate.RateValue != null)
+                                {
+                                    if (additionalCharge.HousingAssignmentRate.RateValue.HasValue)
+                                    {
+                                        if (additionalCharge.HousingAssignmentRate.RateValue.Value > 0)
+                                        {
+                                            addlAmt.AraaChargeAmt = additionalCharge.HousingAssignmentRate.RateValue.Value;
+                                        }
+                                        else if (additionalCharge.HousingAssignmentRate.RateValue.Value < 0)
+                                        {
+                                            addlAmt.AraaCrAmt = additionalCharge.HousingAssignmentRate.RateValue.Value;
+                                        }
+                                    }
+                                    arAddlAmountList.Add(addlAmt);
+                                }
                             }
                         }
-                        arAddlAmountList.Add(addlAmt);
                     }
-                    destinationEntity.ArAdditionalAmounts = arAddlAmountList;
+                    if (arAddlAmountList.Any())
+                    {
+                        destinationEntity.ArAdditionalAmounts = arAddlAmountList;
+                    }                    
                 }
 
                 //residentType
                 if (source.ResidentType != null && string.IsNullOrEmpty(source.ResidentType.Id))
                 {
-                    throw new InvalidOperationException("Id is required for the resident type.");
+                    IntegrationApiExceptionAddError("Id is required for the resident type.");
                 }
 
                 if (source.ResidentType != null)
@@ -1467,9 +1804,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     var resType = (await GetHousingResidentTypes(true)).FirstOrDefault(i => i.Guid.Equals(source.ResidentType.Id, StringComparison.OrdinalIgnoreCase));
                     if (resType == null)
                     {
-                        throw new KeyNotFoundException(string.Format("No resident type found for guid: {0}", source.ResidentType.Id));
+                        IntegrationApiExceptionAddError(string.Format("No resident type found for guid: {0}", source.ResidentType.Id));
                     }
-                    destinationEntity.ResidentStaffIndicator = resType.Code;
+                    else
+                    {
+                        destinationEntity.ResidentStaffIndicator = resType.Code;
+                    }
                 }
 
 
@@ -1478,9 +1818,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     if (source.ContractNumber.Length > 16)
                     {
-                        throw new InvalidOperationException("Contract number cannot be more than 16 characters.");
+                        IntegrationApiExceptionAddError("Contract number cannot be more than 16 characters.");
                     }
-                    destinationEntity.ContractNumber = source.ContractNumber;
+                    else
+                    {
+                        destinationEntity.ContractNumber = source.ContractNumber;
+                    }
                 }
 
                 //comments
@@ -1489,12 +1832,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     destinationEntity.Comments = source.Comment;
                 }
 
+                if (IntegrationApiException != null)
+                {
+                    throw IntegrationApiException;
+                }
+
                 return destinationEntity;
-            }
-            catch (InvalidOperationException e)
-            {
-                throw new Exception(string.Concat(e.Message, " housing assignment guid: ", source.Id));
-            }
+                                
+            }      
             catch (Exception e)
             {
                 throw e;
@@ -1513,20 +1858,32 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 return null;
             }
-            var rmRates = await RoomRatesAsync(bypassCache);
-            if (rmRates != null && rmRates.Any())
+            try
             {
-                var roomRate = rmRates.FirstOrDefault(i => i.Code.Equals(source.RoomRateTable, StringComparison.OrdinalIgnoreCase));
-                if (roomRate == null)
+                var rmRates = await RoomRatesAsync(bypassCache);
+                if (rmRates != null && rmRates.Any())
                 {
-                    throw new KeyNotFoundException(string.Format("No room rate for code{0}, guid: {1}", source.RoomRateTable, source.Guid));
+                    try
+                    {
+                        var roomRate = rmRates.FirstOrDefault(i => i.Code.Equals(source.RoomRateTable, StringComparison.OrdinalIgnoreCase));
+                        return new List<GuidObject2>() { new GuidObject2(roomRate.Guid) };
+                    }
+                    catch
+                    {
+                        IntegrationApiExceptionAddError("No room rate for code " + source.RoomRateTable, guid: source.Guid, id: source.RecordKey);
+                        return null;
+                    }
                 }
-                return new List<GuidObject2>() { new GuidObject2(roomRate.Guid) };
+                else
+                {
+                    return null;
+                }
             }
-            else
+            catch
             {
+                IntegrationApiExceptionAddError("No room rate for code " + source.RoomRateTable, guid: source.Guid, id: source.RecordKey);
                 return null;
-            }
+            }            
         }
         #endregion
     }

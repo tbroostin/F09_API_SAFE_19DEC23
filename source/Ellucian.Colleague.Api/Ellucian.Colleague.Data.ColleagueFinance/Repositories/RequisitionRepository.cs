@@ -798,6 +798,35 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         }
 
         /// <summary>
+        ///  Build Requisition for delete Request
+        /// </summary>
+        /// <param name="deleteRequest"></param>
+        /// <returns></returns>
+        private TxDeleteRequisitionRequest BuildRequisitionDeleteRequest(RequisitionDeleteRequest deleteRequest)
+        {
+            var request = new TxDeleteRequisitionRequest();
+            var personId = deleteRequest.PersonId;
+            var requisitionId = deleteRequest.RequisitionId;
+            var confirmationEmailAddresses = deleteRequest.ConfirmationEmailAddresses;
+            
+            if (!string.IsNullOrEmpty(personId))
+            {
+                request.AUserId = personId;
+            }
+            if (!string.IsNullOrEmpty(requisitionId))
+            {
+                request.ARequisitionId = requisitionId;
+            }
+            if (!string.IsNullOrEmpty(confirmationEmailAddresses))
+            {
+                request.AConfirmationEmailAddress = confirmationEmailAddresses;
+            }
+
+            return request;
+
+        }
+
+        /// <summary>
         /// Update a requisition 
         /// </summary>
         /// <param name="requisitionEntity">requisition domain entity to update</param>
@@ -952,6 +981,51 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 }
                 response.WarningOccured = (!string.IsNullOrEmpty(updateResponse.AWarning) && updateResponse.AWarning == "1") ? true : false;
                 response.WarningMessages = (updateResponse.AlWarningMessages != null || updateResponse.AlWarningMessages.Any()) ? updateResponse.AlWarningMessages : new List<string>();
+
+            }
+            catch (Exception e)
+            {
+                logger.Error(e.Message);
+                throw e;
+            }
+
+            return response;
+        }
+
+        /// <summary>
+        /// Delete a requisition.
+        /// </summary>       
+        /// <param name="RequisitionDeleteRequest">The requisition delete request domain entity.</param>        
+        /// <returns>The requisition delete response entity</returns>
+        public async Task<RequisitionDeleteResponse> DeleteRequisitionsAsync(RequisitionDeleteRequest deleteRequest)
+        {
+            if (deleteRequest == null)
+                throw new ArgumentNullException("deleteRequestEntity", "Must provide a deleteRequestEntity to delete a requisition.");
+
+            RequisitionDeleteResponse response = new RequisitionDeleteResponse();
+            var request = BuildRequisitionDeleteRequest(deleteRequest);
+
+            try
+            {
+                // write the  data
+                var deleteResponse = await transactionInvoker.ExecuteAsync<TxDeleteRequisitionRequest, TxDeleteRequisitionResponse>(request);
+                if (!(deleteResponse.AErrorOccurred) && (deleteResponse.AlErrorMessages == null || !deleteResponse.AlErrorMessages.Any()))
+                {
+                    response.ErrorOccured = false;
+                    response.ErrorMessages = new List<string>();
+                }
+                else
+                {
+                    response.ErrorOccured = true;
+                    response.ErrorMessages = deleteResponse.AlErrorMessages;
+                    response.ErrorMessages.RemoveAll(message => string.IsNullOrEmpty(message));
+                }
+
+                response.RequisitionId = deleteResponse.ARequisitionId;
+                response.RequisitionNumber = deleteResponse.ARequisitionNumber;
+
+                response.WarningOccured = deleteResponse.AWarningOccurred;
+                response.WarningMessages = (deleteResponse.AlWarningMessages != null || deleteResponse.AlWarningMessages.Any()) ? deleteResponse.AlWarningMessages : new List<string>();
 
             }
             catch (Exception e)

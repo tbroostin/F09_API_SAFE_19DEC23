@@ -1,17 +1,17 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
 using slf4net;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
-
 
 namespace Ellucian.Colleague.Coordination.Base.Services
 {
@@ -92,7 +92,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             admissionApplicationSupportingItemStatuses.Title = source.Description;
             admissionApplicationSupportingItemStatuses.Description = null;
 
-            admissionApplicationSupportingItemStatuses.Type = ConvertAdmissionApplicationSupportingItemStatusesTypeDomainEnumToAdmissionApplicationSupportingItemStatusesTypeDtoEnum(source.Description);
+            admissionApplicationSupportingItemStatuses.Type = ConvertAdmissionApplicationSupportingItemStatusesTypeDomainEnumToAdmissionApplicationSupportingItemStatusesTypeDtoEnum(source.Action);
 
             return admissionApplicationSupportingItemStatuses;
         }
@@ -107,17 +107,18 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <returns>AdmissionApplicationSupportingItemStatusesType DTO enumeration value</returns>
         private Ellucian.Colleague.Dtos.EnumProperties.AdmissionApplicationSupportingItemStatusType ConvertAdmissionApplicationSupportingItemStatusesTypeDomainEnumToAdmissionApplicationSupportingItemStatusesTypeDtoEnum(string source)
         {
-            switch (source)
+            switch ( source )
             {
-
-                case "Incomplete":
-                    return Dtos.EnumProperties.AdmissionApplicationSupportingItemStatusType.Incomplete;
-                case "Received":
-                    return Dtos.EnumProperties.AdmissionApplicationSupportingItemStatusType.Received;
-                case "Waived":
-                    return Dtos.EnumProperties.AdmissionApplicationSupportingItemStatusType.Waived;
+                case "1":
+                    {
+                        return AdmissionApplicationSupportingItemStatusType.Received;
+                    }
+                case "0":
+                    {
+                        return AdmissionApplicationSupportingItemStatusType.Waived;                        
+                    }
                 default:
-                    return Dtos.EnumProperties.AdmissionApplicationSupportingItemStatusType.Incomplete;
+                    return AdmissionApplicationSupportingItemStatusType.Incomplete;
             }
         }
     }

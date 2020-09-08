@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Tests;
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
@@ -142,7 +142,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 cs.SecFaculty.Add("1");
                 // Pointer to CourseSecMeeting
                 cs.SecMeeting.Add("1");
-
+               
                 BuildLdmConfiguration(dataReaderMock, out cdDefaults);
 
                 MockRecordAsync<CourseSections>("COURSE.SECTIONS", cs, cs.RecordGuid);
@@ -191,6 +191,20 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 MockRecordsAsync<InstrMethods>("INSTR.METHODS", BuildValidInstrMethodResponse());
 
 
+                // Set up repo response for GUID course types - the read record and the select
+                var allCourseTypes = new TestCourseTypeRepository().Get().ToList();
+                var courseTypeValcodeResponse = BuildValcodeResponse(allCourseTypes);
+
+                dataReaderMock.Setup<Task<ApplValcodes>>(acc => acc.ReadRecordAsync<ApplValcodes>("ST.VALCODES", "COURSE.TYPES", It.IsAny<bool>())).ReturnsAsync(courseTypeValcodeResponse);
+                dataReaderMock.Setup(r => r.SelectAsync(It.IsAny<RecordKeyLookup[]>())).Returns<RecordKeyLookup[]>(rkla =>
+                {
+                    var selectResult = new Dictionary<string, RecordKeyLookupResult>();
+                    foreach (var rkl in rkla)
+                    {
+                        selectResult.Add(rkl.ResultKey, new RecordKeyLookupResult() { Guid = Guid.NewGuid().ToString().ToLowerInvariant() });
+                    }
+                    return Task.FromResult(selectResult);
+                });
 
 
                 // Set up repo response for section statuses
@@ -780,6 +794,90 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 Assert.IsTrue(result.HideInCatalog);
             }
+
+            [TestMethod]
+            public void SectionRepository_TestAllFields_ShowSpecialIcon_True()
+            {
+                // Section 12345 (csId) has COURSE.TYPE STND AND HONORS and HONORS has special processing I. So Show Icon is true.
+                Assert.IsTrue(result.ShowSpecialIcon);
+            }
+
+            [TestMethod]
+            public async Task SectionRepository_TestAllFields_ShowSpecialIcon_False()
+            {
+                // Section 54321 (csId2) has COURSE.TYPE STND AND HONORS and HONORS has special processing I. So Show Icon is true.
+                string csId2 = "54321";
+
+                CourseSections cs2 = new CourseSections()
+                {
+                    RecordGuid = Guid.NewGuid().ToString().ToLowerInvariant(),
+                    Recordkey = csId2,
+                    RecordModelName = "sections",
+                    SecAcadLevel = "UG",
+                    SecActiveStudents = new List<string>(),
+                    SecAllowAuditFlag = "N",
+                    SecAllowPassNopassFlag = "N",
+                    SecAllowWaitlistFlag = "Y",
+                    SecBookOptions = new List<string>() { "R", "O", "C" },
+                    SecBooks = new List<string>() { "Book 1", "Book 2", "Book 3" },
+                    SecCapacity = 30,
+                    SecCeus = null,
+                    SecCloseWaitlistFlag = "Y",
+                    SecCourse = "210",
+                    SecCourseLevels = new List<string>() { "100" },
+                    SecCourseTypes = new List<string>() { "STND" },
+                    SecCredType = "IN",
+                    SecEndDate = new DateTime(2014, 12, 15),
+                    SecFaculty = new List<string>(),
+                    SecFacultyConsentFlag = "Y",
+                    SecGradeScheme = "UGR",
+                    SecGradeSubschemesId = "UGS",
+                    SecInstrMethods = new List<string>() { "LEC", "LAB" },
+                    SecLocation = "MAIN",
+                    SecMaxCred = 6m,
+                    SecMeeting = new List<string>(),
+                    SecMinCred = 3m,
+                    SecName = "MATH-4350-01",
+                    SecNo = "01",
+                    SecNoWeeks = 10,
+                    SecOnlyPassNopassFlag = "N",
+                    SecPortalSite = csId,
+                    SecShortTitle = "Statistics",
+                    SecStartDate = DateTime.Today.AddDays(-10),
+                    SecTerm = "2014/FA",
+                    SecTopicCode = "ABC",
+                    SecVarCredIncrement = 1m,
+                    SecWaitlistMax = 10,
+                    SecWaitlistRating = "SR",
+                    SecXlist = null,
+                    SecHideInCatalog = "Y",
+                    SecOtherRegBillingRates = new List<string>() { "123", "124" },
+                    SecSynonym = "Synonym",
+                    SecAttendTrackingType = "A" // Corresponds to HoursByDateWithoutSectionMeeting in AttendanceTrackingType enum
+                };
+                cs2.SecEndDate = cs.SecStartDate.Value.AddDays(69);
+                cs2.SecContactEntityAssociation = new List<CourseSectionsSecContact>();
+                cs2.SecContactEntityAssociation.Add(new CourseSectionsSecContact("LEC", 20.00m, 45.00m, "T", 37.50m));
+                cs2.SecContactEntityAssociation.Add(new CourseSectionsSecContact("LAB", 10.00m, 15.00m, "T", 45.00m));
+                cs2.SecDepartmentsEntityAssociation = new List<CourseSectionsSecDepartments>();
+                cs2.SecDepartmentsEntityAssociation.Add(new CourseSectionsSecDepartments("MATH", 75m));
+                cs2.SecDepartmentsEntityAssociation.Add(new CourseSectionsSecDepartments("PSYC", 25m));
+                cs2.SecStatusesEntityAssociation = new List<CourseSectionsSecStatuses>();
+                cs2.SecStatusesEntityAssociation.Add(new CourseSectionsSecStatuses(new DateTime(2001, 5, 15), "A"));
+                // Instr methods association - instructional method and load
+                cs2.SecContactEntityAssociation = new List<CourseSectionsSecContact>();
+                cs2.SecContactEntityAssociation.Add(new CourseSectionsSecContact("LEC", 20.00m, 0m, "", 0m));
+                cs2.SecContactEntityAssociation.Add(new CourseSectionsSecContact("LAB", 10.00m, 0m, "", 0m));
+                // Pointer to CourseSecFaculty
+                cs2.SecFaculty.Add("1");
+                // Pointer to CourseSecMeeting
+                cs2.SecMeeting.Add("1");
+
+                MockRecordAsync<CourseSections>("COURSE.SECTIONS", cs2, cs2.RecordGuid);
+                var result2 = await sectionRepo.GetSectionAsync(csId2);
+                Assert.IsFalse(result2.ShowSpecialIcon);
+            }
+
 
             [TestMethod]
             public void SectionRepository_MeetingLoadFactor_MeetingsCount()
@@ -4316,22 +4414,22 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task SectionRepository_PutSectionMeeting2Async_NullSection_ArgumentNullException()
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task SectionRepository_PutSectionMeeting2Async_NullSection_Exception()
             {
                 secMeet = await repository.PutSectionMeeting2Async(null, meet1Guid);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task SectionRepository_PutSectionMeeting2Async_NullMeetingId_ArgumentNullException()
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task SectionRepository_PutSectionMeeting2Async_NullMeetingId_Exception()
             {
                 secMeet = await repository.PutSectionMeeting2Async(section, null);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task SectionRepository_PutSectionMeeting2Async_NullMeeting_KeyNotFoundException()
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task SectionRepository_PutSectionMeeting2Async_NullMeeting_Exception()
             {
                 secMeet = await repository.PutSectionMeeting2Async(section, Guid.NewGuid().ToString());
             }
@@ -10114,9 +10212,20 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             courseTypesResponse.ValsEntityAssociation = new List<ApplValcodesVals>();
             foreach (var item in courseTypes)
             {
-                courseTypesResponse.ValsEntityAssociation.Add(new ApplValcodesVals("", item.Description, "2", item.Code, "3", "", ""));
+                 courseTypesResponse.ValsEntityAssociation.Add(new ApplValcodesVals("", item.Description, item.Categorization, item.Code, "3", "", ""));
             }
             return courseTypesResponse;
+        }
+        private static Dictionary<string, RecordKeyLookupResult> BuildCourseTypeGuidResponse(IEnumerable<CourseType> courseTypes)
+        {
+            Dictionary<string, RecordKeyLookupResult> courseTypesDictionary = new Dictionary<string, RecordKeyLookupResult>();
+
+            foreach (var item in courseTypes)
+            {
+                // will assume no guids are found
+
+            }
+            return courseTypesDictionary;
         }
 
         private static void BuildValidReferenceDataRepository(IEnumerable<CourseType> allCourseTypes, ApplValcodes courseTypeValcodeResponse)

@@ -1,4 +1,4 @@
-﻿// Copyright 2014 Ellucian Company L.P. and its affiliates
+﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
@@ -13,7 +13,7 @@ namespace Ellucian.Colleague.Dtos
         /// <summary>
         /// Globally unique Identifier (GUID)
         /// </summary>
-        [JsonProperty("id")]
+        [JsonProperty("id", DefaultValueHandling = DefaultValueHandling.Ignore)]
         public string Id { get; set; }
 
         /// <summary>

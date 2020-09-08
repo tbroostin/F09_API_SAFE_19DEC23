@@ -125,7 +125,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 {
                     try
                     {
-                        Catalog newCatalog = new Catalog(catalog.RecordGuid, catalog.Recordkey, catalog.CatDesc, catalog.CatStartDate.GetValueOrDefault(), catalog.CatHideInSsWhatIf);
+                        Catalog newCatalog = new Catalog(catalog.RecordGuid, catalog.Recordkey, string.IsNullOrEmpty(catalog.CatDesc) ? catalog.Recordkey : catalog.CatDesc, catalog.CatStartDate.GetValueOrDefault(), catalog.CatHideInSsWhatIf);
                         if (catalog.CatEndDate != null)
                         {
                             newCatalog.EndDate = catalog.CatEndDate.GetValueOrDefault(DateTime.MinValue);

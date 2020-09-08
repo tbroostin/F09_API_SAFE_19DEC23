@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
 using Ellucian.Data.Colleague;
@@ -54,12 +54,39 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 {
                     cfWebConfigurationEntity.CfWebReqAllowMiscVendor = cfWebDefaults.CfwebReqAllowMiscVendor.ToUpper() == "Y"; 
                 }
-               
+                if (!string.IsNullOrEmpty(cfWebDefaults.CfwebPoGlRequired))
+                {
+                    cfWebConfigurationEntity.CfWebPoGlRequired = cfWebDefaults.CfwebPoGlRequired.ToUpper() == "Y";
+                }
+                if (!string.IsNullOrEmpty(cfWebDefaults.CfwebPoAllowMiscVendor))
+                {
+                    cfWebConfigurationEntity.CfWebPoAllowMiscVendor = cfWebDefaults.CfwebPoAllowMiscVendor.ToUpper() == "Y";
+                }
+
                 if (cfWebDefaults.CfwebTaxCodes != null && cfWebDefaults.CfwebTaxCodes.Any())
                 {
                     cfWebConfigurationEntity.DefaultTaxCodes = new List<string>();
                     cfWebConfigurationEntity.DefaultTaxCodes = cfWebDefaults.CfwebTaxCodes;
                 }
+
+                VoucherWebConfiguration requestPaymentConfiguration = new VoucherWebConfiguration();
+                if(!string.IsNullOrEmpty(cfWebDefaults.CfwebCkrApType))
+                {
+                    requestPaymentConfiguration.DefaultAPTypeCode = cfWebDefaults.CfwebCkrApType;
+                }
+                if (!string.IsNullOrEmpty(cfWebDefaults.CfwebCkrReqInvoiceNo))
+                {
+                    requestPaymentConfiguration.IsInvoiceEntryRequired = cfWebDefaults.CfwebCkrReqInvoiceNo.ToUpper() == "Y";
+                }
+                if (!string.IsNullOrEmpty(cfWebDefaults.CfwebCkrAllowMiscVendor))
+                {
+                    requestPaymentConfiguration.AllowMiscVendor = cfWebDefaults.CfwebCkrAllowMiscVendor.ToUpper() == "Y";
+                }
+                if (!string.IsNullOrEmpty(cfWebDefaults.CfwebCkrGlRequired))
+                {
+                    requestPaymentConfiguration.GlRequiredForVoucher = cfWebDefaults.CfwebCkrGlRequired.ToUpper() == "Y";
+                }
+                cfWebConfigurationEntity.RequestPaymentDefaults = requestPaymentConfiguration;
 
                 if (purchaseDefaults!=null)
                 {

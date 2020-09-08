@@ -1,4 +1,4 @@
-//Copyright 2017 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -16,9 +16,7 @@ using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Exceptions;
-using Ellucian.Web.Http.Models;
 using Ellucian.Web.Http.Filters;
-using Ellucian.Web.Http;
 using System.Linq;
 
 namespace Ellucian.Colleague.Api.Controllers.HumanResources
@@ -63,8 +61,15 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             try
             {
-                AddDataPrivacyContextProperty((await _beneficiaryPreferenceTypesService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
-                return await _beneficiaryPreferenceTypesService.GetBeneficiaryPreferenceTypesAsync(bypassCache);
+                var beneficiaryPreferenceTypes = await _beneficiaryPreferenceTypesService.GetBeneficiaryPreferenceTypesAsync(bypassCache);
+
+                if (beneficiaryPreferenceTypes != null && beneficiaryPreferenceTypes.Any())
+                {
+                    AddEthosContextProperties(await _beneficiaryPreferenceTypesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                              await _beneficiaryPreferenceTypesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              beneficiaryPreferenceTypes.Select(a => a.Id).ToList()));
+                }
+                return beneficiaryPreferenceTypes;
             }
             catch (KeyNotFoundException e)
             {
@@ -98,7 +103,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
         }
 
-        /// <summary>
+        /// <summary>BeneficiaryPreferenceTypesController
         /// Read (GET) a beneficiaryPreferenceTypes using a GUID
         /// </summary>
         /// <param name="guid">GUID to desired beneficiaryPreferenceTypes</param>
@@ -121,7 +126,10 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             try
             {
-                AddDataPrivacyContextProperty((await _beneficiaryPreferenceTypesService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
+                AddEthosContextProperties(
+                    await _beneficiaryPreferenceTypesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                    await _beneficiaryPreferenceTypesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                        new List<string>() { guid }));
                 return await _beneficiaryPreferenceTypesService.GetBeneficiaryPreferenceTypesByGuidAsync(guid);
             }
             catch (KeyNotFoundException e)

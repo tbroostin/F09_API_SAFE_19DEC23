@@ -11,6 +11,7 @@ using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Data.Colleague;
 using Ellucian.Web.Adapters;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -48,6 +49,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private IEnumerable<AdmissionApplicationSupportingItem> admissionApplicationSupportingItemsCollection;
 
             private Tuple<IEnumerable<AdmissionApplicationSupportingItem>, int> domainAdmissionSupportingItmesTuple;
+
+            private IEnumerable<CommunicationCode> communicationCodes;
 
             private string guid = "157d73eb-7194-4988-872d-0d425df8dfd3";
 
@@ -97,6 +100,13 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 };
 
                 domainAdmissionSupportingItmesTuple = new Tuple<IEnumerable<AdmissionApplicationSupportingItem>, int>(admissionApplicationSupportingItemsCollection, admissionApplicationSupportingItemsCollection.Count());
+
+                communicationCodes = new List<CommunicationCode>()
+                {
+                    new CommunicationCode(Guid.NewGuid().ToString(), "1", "accepted"),
+                    new CommunicationCode(Guid.NewGuid().ToString(), "2", "incomplete"),
+                    new CommunicationCode(Guid.NewGuid().ToString(), "3", "waived")
+                };
             }
 
             private void InitializeTestMock()
@@ -107,8 +117,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 admissionApplicationSupportingItemsRepositoryMock.Setup(a => a.GetAdmissionApplicationSupportingItemsAsync(It.IsAny<int>(), It.IsAny<int>(), false))
                     .ReturnsAsync(domainAdmissionSupportingItmesTuple);
 
-                admissionApplicationSupportingItemsRepositoryMock.Setup(a => a.GetGuidFromIdAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
-                    .ReturnsAsync("257d73eb-7194-4988-872d-0d425df8dfd0");
+                referenceDataRepositoryMock.Setup(rr => rr.GetAdmissionApplicationSupportingItemTypesAsync(It.IsAny<bool>())).ReturnsAsync(communicationCodes);
             }
 
             [TestCleanup]
@@ -182,9 +191,6 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 AdmissionApplicationSupportingItem expected = new AdmissionApplicationSupportingItem(guid, "1", "1", "1", "instance", DateTime.Today, "1") { };
 
-                admissionApplicationSupportingItemsRepositoryMock.Setup(a => a.GetGuidFromIdAsync("VALCODES", It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
-                    .ReturnsAsync(null);
-
                 admissionApplicationSupportingItemsRepositoryMock.Setup(a => a.GetAdmissionApplicationSupportingItemsByGuidAsync(It.IsAny<string>())).ReturnsAsync(expected);
 
                 var result = await admissionApplicationSupportingItemsService.GetAdmissionApplicationSupportingItemsByGuidAsync(guid);
@@ -219,6 +225,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private IEnumerable<AdmissionApplicationSupportingItem> admissionApplicationSupportingItemsCollection;
 
             private IEnumerable<CorrStatus> corrStatus;
+
+            private IEnumerable<CommunicationCode> communicationCodes;
 
             private AdmissionApplicationSupportingItems admissionApplicationSupportingItems;
 
@@ -273,7 +281,14 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 corrStatus = new List<CorrStatus>() { new CorrStatus("444d73eb-7194-4988-872d-0d425df8dfd1", "1", "desc") { Action="1" }, new CorrStatus("444d73eb-7194-4988-872d-0d425df8dfd2", "0", "desc") { Action="0" }, new CorrStatus("444d73eb-7194-4988-872d-0d425df8dfd2", "2", "desc") { Action = "2" }, new CorrStatus("444d73eb-7194-4988-872d-0d425df8dfd3", "status_003", "desc")  };
                 
-                entityIds = new KeyValuePair<string, GuidLookupResult>( "1", new GuidLookupResult() { Entity = "APPL.SUPPORTING.ITEMS", PrimaryKey = "1", SecondaryKey = "1*123*12343*678" }) ;
+                entityIds = new KeyValuePair<string, GuidLookupResult>( "1", new GuidLookupResult() { Entity = "APPL.SUPPORTING.ITEMS", PrimaryKey = "1", SecondaryKey = "1*123*12343*678" });
+
+                communicationCodes = new List<CommunicationCode>()
+                {
+                    new CommunicationCode(Guid.NewGuid().ToString(), "1", "accepted"),
+                    new CommunicationCode(Guid.NewGuid().ToString(), "2", "incomplete"),
+                    new CommunicationCode(Guid.NewGuid().ToString(), "3", "waived")
+                };
             }
 
             private void InitializeTestMock()
@@ -283,7 +298,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 admissionApplicationSupportingItemsRepositoryMock.Setup(x => x.GetApplicationIdFromGuidAsync("157d73eb-7194-4988-872d-0d425df8dfd0")).ReturnsAsync("1");
 
-                admissionApplicationSupportingItemsRepositoryMock.Setup(x => x.GetIdFromGuidAsync("333d73eb-7194-4988-872d-0d425df8dfd0")).ReturnsAsync("2");
+                admissionApplicationSupportingItemsRepositoryMock.Setup(x => x.GetIdFromGuidAsync("333d73eb-7194-4988-872d-0d425df8dfd0", It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync("2");
 
                 admissionApplicationSupportingItemsRepositoryMock.Setup(x => x.GetPersonIdFromApplicationIdAsync(It.IsAny<string>())).ReturnsAsync("1");
 
@@ -294,7 +309,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 admissionApplicationSupportingItemsRepositoryMock.Setup( x =>x.GetAdmissionApplicationSupportingItemsIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(entityIds);
 
                 admissionApplicationSupportingItemsRepositoryMock.Setup(x => x.UpdateAdmissionApplicationSupportingItemsAsync(It.IsAny<AdmissionApplicationSupportingItem>())).ReturnsAsync(admissionApplicationSupportingItemsCollection.FirstOrDefault());
-                
+
+                referenceDataRepositoryMock.Setup(rr => rr.GetAdmissionApplicationSupportingItemTypesAsync(It.IsAny<bool>())).ReturnsAsync(communicationCodes);
+
             }
 
             [TestCleanup]
@@ -339,93 +356,203 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(RepositoryException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreateAdmissionApplicationSupportingItemsAsync_Throws_RepositoryException()
             {
-                admissionApplicationSupportingItemsRepositoryMock.Setup(x => x.CreateAdmissionApplicationSupportingItemsAsync(It.IsAny<AdmissionApplicationSupportingItem>())).Throws(new RepositoryException());
-                await admissionApplicationSupportingItemsService.CreateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItems);
+                try
+                {
+                    admissionApplicationSupportingItemsRepositoryMock.Setup(x => x.CreateAdmissionApplicationSupportingItemsAsync(It.IsAny<AdmissionApplicationSupportingItem>())).Throws(new RepositoryException());
+                    await admissionApplicationSupportingItemsService.CreateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItems);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.IsTrue(ex.Errors.Any());
+                    Assert.AreEqual(ex.Errors[0].Message, "Repository exception", "Throws RepositoryException");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreateAdmissionApplicationSupportingItemsAsync_Throws_Exception()
             {
-                admissionApplicationSupportingItemsRepositoryMock.Setup(x => x.CreateAdmissionApplicationSupportingItemsAsync(It.IsAny<AdmissionApplicationSupportingItem>())).Throws(new Exception());
-                await admissionApplicationSupportingItemsService.CreateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItems);
+                try
+                {
+                    admissionApplicationSupportingItemsRepositoryMock.Setup(x => x.CreateAdmissionApplicationSupportingItemsAsync(It.IsAny<AdmissionApplicationSupportingItem>())).Throws(new Exception());
+                    await admissionApplicationSupportingItemsService.CreateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItems);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.IsTrue(ex.Errors.Any());
+                    Assert.AreEqual(ex.Errors[0].Message, "Exception of type 'System.Exception' was thrown.", "Throws Exception");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreateAdmissionApplicationSupportingItemsAsync_Application_As_Null()
             {
-                admissionApplicationSupportingItems.Application = null;
-                await admissionApplicationSupportingItemsService.CreateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItems);
+                try
+                {
+                    admissionApplicationSupportingItems.Application = null;
+                    await admissionApplicationSupportingItemsService.CreateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItems);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.IsTrue(ex.Errors.Any());
+                    Assert.AreEqual(ex.Errors[0].Message, "The Application Id is required for a PUT or POST request.", "Application as Null");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreateAdmissionApplicationSupportingItemsAsync_Application_Id_As_Null()
             {
-                admissionApplicationSupportingItems.Application.Id = null;
-                await admissionApplicationSupportingItemsService.CreateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItems);
+                try
+                { 
+                    admissionApplicationSupportingItems.Application.Id = null;
+                    await admissionApplicationSupportingItemsService.CreateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItems);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.IsTrue(ex.Errors.Any());
+                    Assert.AreEqual(ex.Errors[0].Message, "The Application Id is required for a PUT or POST request.", "Application Id as Null");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreateAdmissionApplicationSupportingItemsAsync_Type_As_Null()
             {
-                admissionApplicationSupportingItems.Type = null;
-                await admissionApplicationSupportingItemsService.CreateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItems);
+                try
+                {
+                    admissionApplicationSupportingItems.Type = null;
+                    await admissionApplicationSupportingItemsService.CreateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItems);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.IsTrue(ex.Errors.Any());
+                    Assert.AreEqual(ex.Errors[0].Message, "The Type Id is required for a PUT or POST request.", "Type as Null");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreateAdmissionApplicationSupportingItemsAsync_Type_Id_As_Null()
             {
-                admissionApplicationSupportingItems.Type.Id = null;
-                await admissionApplicationSupportingItemsService.CreateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItems);
+                try
+                {
+                    admissionApplicationSupportingItems.Type.Id = null;
+                    await admissionApplicationSupportingItemsService.CreateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItems);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.IsTrue(ex.Errors.Any());
+                    Assert.AreEqual(ex.Errors[0].Message, "The Type Id is required for a PUT or POST request.", "Type Id as Null");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreateAdmissionApplicationSupportingItemsAsync_Status_As_Null()
             {
-                admissionApplicationSupportingItems.Status = null;
-                await admissionApplicationSupportingItemsService.CreateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItems);
+                try
+                {
+                    admissionApplicationSupportingItems.Status = null;
+                    await admissionApplicationSupportingItemsService.CreateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItems);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.IsTrue(ex.Errors.Any());
+                    Assert.AreEqual(ex.Errors[0].Message, "The Status Type or Status Detail ID is required for a PUT or POST request.", "Status as Null");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreateAdmissionApplicationSupportingItemsAsync_Status_Type_As_NotSet()
             {
-                admissionApplicationSupportingItems.Status.Type = AdmissionApplicationSupportingItemsType.NotSet;
-                admissionApplicationSupportingItems.Status.Detail = null;
-                await admissionApplicationSupportingItemsService.CreateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItems);
+                try
+                {
+                    admissionApplicationSupportingItems.Status.Type = AdmissionApplicationSupportingItemsType.NotSet;
+                    admissionApplicationSupportingItems.Status.Detail = null;
+                    await admissionApplicationSupportingItemsService.CreateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItems);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.IsTrue(ex.Errors.Any());
+                    Assert.AreEqual(ex.Errors[0].Message, "The Status Type or Status Detail ID is required for a PUT or POST request.", "Status Type as NotSet");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreateAdmissionApplicationSupportingItemsAsync_Status_Detail_Id_As_Null()
             {
-                admissionApplicationSupportingItems.Status.Type = AdmissionApplicationSupportingItemsType.NotSet;
-                admissionApplicationSupportingItems.Status.Detail.Id = null;
-                await admissionApplicationSupportingItemsService.CreateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItems);
+                try
+                {
+                    admissionApplicationSupportingItems.Status.Type = AdmissionApplicationSupportingItemsType.NotSet;
+                    admissionApplicationSupportingItems.Status.Detail.Id = null;
+                    await admissionApplicationSupportingItemsService.CreateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItems);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.IsTrue(ex.Errors.Any());
+                    Assert.AreEqual(ex.Errors[0].Message, "The Status Type or Status Detail ID is required for a PUT or POST request.", "Status Detail Id as Null");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreateAdmissionApplicationSupportingItemsAsync_GetIdFromGuidAsync_Returns_Null()
             {
-                admissionApplicationSupportingItemsRepositoryMock.Setup(x => x.GetIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
-                await admissionApplicationSupportingItemsService.CreateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItems);
+                try
+                {
+                    admissionApplicationSupportingItemsRepositoryMock.Setup(x => x.GetIdFromGuidAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(null);
+                    await admissionApplicationSupportingItemsService.CreateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItems);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.IsTrue(ex.Errors.Any());
+                    Assert.AreEqual(ex.Errors[0].Message, "No type was found for guid '333d73eb-7194-4988-872d-0d425df8dfd0'.", "GetIdFromGuidAsync Returns Null");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreateAdmissionApplicationSupportingItemsAsync_GetIdFromGuidAsync_Type_Returns_Null()
             {
-                admissionApplicationSupportingItemsRepositoryMock.Setup(x => x.GetIdFromGuidAsync("333d73eb-7194-4988-872d-0d425df8dfd0")).ReturnsAsync(null);
-                await admissionApplicationSupportingItemsService.CreateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItems);
+                try
+                {
+                    admissionApplicationSupportingItemsRepositoryMock.Setup(x => x.GetIdFromGuidAsync("333d73eb-7194-4988-872d-0d425df8dfd0", It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(null);
+                    await admissionApplicationSupportingItemsService.CreateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItems);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.IsTrue(ex.Errors.Any());
+                    Assert.AreEqual(ex.Errors[0].Message, "No type was found for guid '333d73eb-7194-4988-872d-0d425df8dfd0'.", "GetIdFromGuidAsync Type Returns Null");
+                    throw ex;
+                }
             }
 
             [TestMethod]
@@ -524,11 +651,21 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(RepositoryException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdateAdmissionApplicationSupportingItemsAsync_Throws_RepositoryException()
             {
-                admissionApplicationSupportingItemsRepositoryMock.Setup(x => x.UpdateAdmissionApplicationSupportingItemsAsync(It.IsAny<AdmissionApplicationSupportingItem>())).ThrowsAsync(new RepositoryException());
-                await admissionApplicationSupportingItemsService.UpdateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItems);
+                try
+                {
+                    admissionApplicationSupportingItemsRepositoryMock.Setup(x => x.UpdateAdmissionApplicationSupportingItemsAsync(It.IsAny<AdmissionApplicationSupportingItem>())).ThrowsAsync(new RepositoryException());
+                    await admissionApplicationSupportingItemsService.UpdateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItems);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.IsTrue(ex.Errors.Any());
+                    Assert.AreEqual(ex.Errors[0].Message, "Repository exception", "Throws Repository Exception");
+                    throw ex;
+                }
             }
 
             [TestMethod]
@@ -540,19 +677,39 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdateAdmissionApplicationSupportingItemsAsync_Throws_ArgumentException()
             {
-                admissionApplicationSupportingItemsRepositoryMock.Setup(x => x.UpdateAdmissionApplicationSupportingItemsAsync(It.IsAny<AdmissionApplicationSupportingItem>())).ThrowsAsync(new ArgumentException());
-                await admissionApplicationSupportingItemsService.UpdateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItems);
+                try
+                {
+                    admissionApplicationSupportingItemsRepositoryMock.Setup(x => x.UpdateAdmissionApplicationSupportingItemsAsync(It.IsAny<AdmissionApplicationSupportingItem>())).ThrowsAsync(new ArgumentException());
+                    await admissionApplicationSupportingItemsService.UpdateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItems);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.IsTrue(ex.Errors.Any());
+                    Assert.AreEqual(ex.Errors[0].Message, "Value does not fall within the expected range.", "Throws ArgumentException");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdateAdmissionApplicationSupportingItemsAsync_Throws_Exception()
             {
-                admissionApplicationSupportingItemsRepositoryMock.Setup(x => x.UpdateAdmissionApplicationSupportingItemsAsync(It.IsAny<AdmissionApplicationSupportingItem>())).ThrowsAsync(new Exception());
-                await admissionApplicationSupportingItemsService.UpdateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItems);
+                try
+                {
+                    admissionApplicationSupportingItemsRepositoryMock.Setup(x => x.UpdateAdmissionApplicationSupportingItemsAsync(It.IsAny<AdmissionApplicationSupportingItem>())).ThrowsAsync(new Exception());
+                    await admissionApplicationSupportingItemsService.UpdateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItems);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.IsTrue(ex.Errors.Any());
+                    Assert.AreEqual(ex.Errors[0].Message, "Exception of type 'System.Exception' was thrown.", "Throws Exception");
+                    throw ex;
+                }
             }
 
             [TestMethod]

@@ -118,7 +118,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             academicDisciplineServiceMock.Setup<Task<AcademicDiscipline>>(s => s.GetAcademicDisciplineByGuidAsync(academicDisciplineId)).Returns(Task.FromResult(testAcademicDiscipline));
             academicDisciplineServiceMock.Setup<Task<AcademicDiscipline2>>(s => s.GetAcademicDiscipline2ByGuidAsync(academicDisciplineId, It.IsAny<bool>())).Returns(Task.FromResult(testAcademicDiscipline2));
-            academicDisciplineServiceMock.Setup(s => s.GetExtendedEthosDataByResource(It.IsAny<Web.Http.EthosExtend.EthosResourceRouteInfo>(), It.IsAny<IEnumerable<string>>())).ReturnsAsync(new List<Web.Http.EthosExtend.EthosExtensibleData>());
+            academicDisciplineServiceMock.Setup(s => s.GetExtendedEthosDataByResource(It.IsAny<Web.Http.EthosExtend.EthosResourceRouteInfo>(), It.IsAny<IEnumerable<string>>(), It.IsAny<bool>())).ReturnsAsync(new List<Web.Http.EthosExtend.EthosExtensibleData>());
             academicDisciplinesController = new AcademicDisciplinesController(adapterRegistryMock.Object, academicDisciplineServiceMock.Object, loggerMock.Object)
             {
                 Request = new HttpRequestMessage()

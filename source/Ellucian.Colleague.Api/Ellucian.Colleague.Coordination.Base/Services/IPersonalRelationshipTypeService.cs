@@ -1,8 +1,5 @@
-﻿// Copyright 2015-17 Ellucian Company L.P. and its affiliates.
-using System;
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Coordination.Base.Services

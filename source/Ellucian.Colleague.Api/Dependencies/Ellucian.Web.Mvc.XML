@@ -1192,6 +1192,44 @@
             The password used by security operations (e.g. password reset in Self-Service)
             </summary>
         </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.SpecialIconPath">
+            <summary>
+            Special Icon Path
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.OverridePlanningRegistrationWithBaselineRegistration">
+            <summary>
+            Use Baseline Registration instead of Planning (if licensed)
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.UseMalwareScanner">
+            <summary>
+            Whether or not to use a malware scanner while uploading attachments
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.MalwareScannerTypes">
+            <summary>
+            Get/Set malware scanner types
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.MalwareScannerType">
+            <summary>
+            Gets or sets the selected malware scanner type
+            </summary>
+            <value>
+            The selected scanner type
+            </value>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.MalwareScannerExePath">
+            <summary>
+            Full directory path to the malware scanner executable
+            </summary>
+        </member>
+        <member name="P:Ellucian.Web.Mvc.Models.Settings.MalwareScannerArgTemplate">
+            <summary>
+            Additional arguments to be passed to the malware scanner
+            </summary>
+        </member>
         <member name="T:Ellucian.Web.Mvc.Models.Site">
             <summary>
             Site  base model

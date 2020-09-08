@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -51,6 +51,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// Retrieves all rehire types.
         /// </summary>
         /// <returns>All JobChangeReason objects.</returns>
+        [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.JobChangeReason>> GetJobChangeReasonsAsync()
         {
@@ -64,7 +65,16 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                         bypassCache = true;
                     }
                 }
-                return await _jobChangeReasonService.GetJobChangeReasonsAsync(bypassCache);
+                var rehireTypes = await _jobChangeReasonService.GetJobChangeReasonsAsync(bypassCache);
+
+                if (rehireTypes != null && rehireTypes.Any())
+                {
+                    AddEthosContextProperties(await _jobChangeReasonService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _jobChangeReasonService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              rehireTypes.Select(a => a.Id).ToList()));
+                }
+
+                return rehireTypes;                
             }
             catch (Exception ex)
             {
@@ -78,10 +88,15 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// Retrieves a rehire type by ID.
         /// </summary>
         /// <returns>A <see cref="Ellucian.Colleague.Dtos.JobChangeReason">JobChangeReason.</see></returns>
+        [HttpGet, EedmResponseFilter]
         public async Task<Ellucian.Colleague.Dtos.JobChangeReason> GetJobChangeReasonByIdAsync(string id)
         {
             try
             {
+                AddEthosContextProperties(
+                    await _jobChangeReasonService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                    await _jobChangeReasonService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                        new List<string>() { id }));
                 return await _jobChangeReasonService.GetJobChangeReasonByGuidAsync(id);
             }
             catch (Exception ex)

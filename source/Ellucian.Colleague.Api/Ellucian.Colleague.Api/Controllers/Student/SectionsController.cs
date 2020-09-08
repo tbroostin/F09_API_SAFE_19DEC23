@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates
+﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -22,6 +22,7 @@ using slf4net;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -45,6 +46,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         private readonly ISectionCoordinationService _sectionCoordinationService;
         private readonly ISectionRegistrationService _sectionRegistrationService;
         private readonly IRegistrationGroupService _registrationGroupService;
+        private readonly ICourseService _courseService;
         private readonly ILogger _logger;
 
         /// <summary>
@@ -53,15 +55,18 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="sectionCoordinationService">Service of type <see cref="ISectionCoordinationService">ISectionCoordinationService</see></param>
         /// <param name="sectionRegistrationService">Service of type <see cref="ISectionRegistrationService">ISectionRegistrationService</see></param>
         /// <param name="registrationGroupService">Service of type <see cref="IRegistrationGroupService">IRegistrationGroupService</see></param>
+        /// <param name="courseService">Service of type <see cref="ICourseService">courseService</see></param>
         /// <param name="logger">Logger of type <see cref="ILogger">ILogger</see></param>
         public SectionsController(ISectionCoordinationService sectionCoordinationService,
             ISectionRegistrationService sectionRegistrationService,
             IRegistrationGroupService registrationGroupService,
+            ICourseService courseService,
             ILogger logger)
         {
             _sectionCoordinationService = sectionCoordinationService;
             _sectionRegistrationService = sectionRegistrationService;
             _registrationGroupService = registrationGroupService;
+            _courseService = courseService;
             _logger = logger;
         }
 
@@ -2797,6 +2802,32 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 _logger.Error(e,"Failure to retrieve section events Ical");
                 throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Performs a search of sections in Colleague that are available for registration. 
+        /// The criteria supplies a keyword, course Ids, section Id and various filters which may be used to search and narrow a list of sections.
+        ///     If keyword is null or empty and there are no course Ids or section Ids, then no sections will be returned.
+        /// </summary> 
+        /// <param name="criteria"><see cref="SectionSearchCriteria">Section search criteria</see></param>
+        /// <param name="pageSize">integer page size</param>
+        /// <param name="pageIndex">integer page index</param>
+        /// <returns>A <see cref="SectionPage">page</see> of sections matching criteria with totals and filter information.</returns>
+        /// <accessComments>Section search can be accessed by any authenticated user or guest user.</accessComments>
+        public async Task<SectionPage> PostSectionSearchAsync([FromBody]SectionSearchCriteria criteria, int pageSize, int pageIndex)
+        {
+            criteria.Keyword = criteria.Keyword != null ? criteria.Keyword.Replace("_~", "/") : null;
+
+            try
+            {
+                SectionPage sectionPage = await _courseService.SectionSearchAsync(criteria, pageSize, pageIndex);
+                return sectionPage;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.ToString() + ex.StackTrace);
+                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
             }
         }
     }

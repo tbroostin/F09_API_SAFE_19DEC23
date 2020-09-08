@@ -1,10 +1,8 @@
-//Copyright 2017 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using Ellucian.Colleague.Coordination.Base.Adapters;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
@@ -13,8 +11,6 @@ using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
 using slf4net;
 using System.Threading.Tasks;
-using Ellucian.Colleague.Dtos;
-using Ellucian.Colleague.Dtos.EnumProperties;
 
 namespace Ellucian.Colleague.Coordination.Base.Services
 {
@@ -29,15 +25,16 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             IReferenceDataRepository referenceDataRepository,
             IAdapterRegistry adapterRegistry,
             ICurrentUserFactory currentUserFactory,
+            IConfigurationRepository configurationRepository,
             IRoleRepository roleRepository,
             ILogger logger)
-            : base(adapterRegistry, currentUserFactory, roleRepository, logger)
+            : base(adapterRegistry, currentUserFactory, roleRepository, logger, null, configurationRepository)
         {
 
             _referenceDataRepository = referenceDataRepository;
         }
 
-        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN HEDM</remarks>
         /// <summary>
         /// Gets all external-employment-statuses
         /// </summary>
@@ -57,7 +54,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             return externalEmploymentStatusesCollection;
         }
 
-        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN HEDM</remarks>
         /// <summary>
         /// Get a ExternalEmploymentStatuses from its GUID
         /// </summary>
@@ -79,7 +76,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         }
 
 
-        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN HEDM</remarks>
         /// <summary>
         /// Converts a ExternalEmploymentStatuses domain entity to its corresponding ExternalEmploymentStatuses DTO
         /// </summary>

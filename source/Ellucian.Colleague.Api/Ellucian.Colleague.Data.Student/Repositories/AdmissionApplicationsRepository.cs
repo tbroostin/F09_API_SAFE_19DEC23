@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
@@ -19,7 +19,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
-
+using Ellucian.Colleague.Domain.Base.Services;
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
     /// <summary>
@@ -42,6 +42,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         }
 
         RepositoryException exception = new RepositoryException();
+
+        const int AllAdmissionApplicationsCacheTimeout = 20; // Clear from cache every 20 minutes
+        const string AllAdmissionApplicationsCache = "AllAdmissionApplications";
 
         #region GET methods
 
@@ -108,77 +111,109 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             string[] subList = null;
             string[] applicationIds = null;
 
-            string admissionApplicationCacheKey = string.Concat("AllAdmissionApplicationKeys", applicant, academicPeriod, personFilter);
-            if (offset == 0 && ContainsKey(BuildFullCacheKey(admissionApplicationCacheKey)))
-            {
-                ClearCache(new List<string> { admissionApplicationCacheKey });
-            }
-            applicationIds = await GetOrAddToCacheAsync<string[]>(admissionApplicationCacheKey,
-                async () =>
-                {
-                    string[] limitingKeys = new string[] { };
-                    var criteria = "WITH APPL.APPLICANT NE ''";
-                    // Applicant Filter
-                    if (!string.IsNullOrEmpty(applicant))
-                    {
-                        criteria = string.Format("WITH APPL.APPLICANT = '{0}'", applicant);
-                    }
-                    // Academic Period Filter
-                    if (!string.IsNullOrEmpty(academicPeriod))
-                    {
-                        criteria = string.Concat(criteria, " AND APPL.START.TERM EQ '", academicPeriod, "'");
-                    }
+            string allAdmissionApplicationsCacheKey = CacheSupport.BuildCacheKey(AllAdmissionApplicationsCache, applicant, academicPeriod, personFilter,
+                    filterPersonIds);
 
-                    var applStatusesSpCodeIds = await DataReader.SelectAsync("APPLICATION.STATUSES", "WITH APPS.SPECIAL.PROCESSING.CODE EQ ''");
+            var keyCache = await CacheSupport.GetOrAddKeyCacheToCache(
+               this,
+               ContainsKey,
+               GetOrAddToCacheAsync,
+               AddOrUpdateCacheAsync,
+               transactionInvoker,
+               allAdmissionApplicationsCacheKey,
+               "APPLICATIONS",
+               offset,
+               limit,
+               AllAdmissionApplicationsCacheTimeout,
+               async () =>
+               {
+                   string[] limitingKeys = new string[] { };
+                   var criteria = "WITH APPL.APPLICANT NE ''";
+                   // Applicant Filter
+                   if (!string.IsNullOrEmpty(applicant))
+                   {
+                       criteria = string.Format("WITH APPL.APPLICANT = '{0}'", applicant);
+                   }
+                   // Academic Period Filter
+                   if (!string.IsNullOrEmpty(academicPeriod))
+                   {
+                       criteria = string.Concat(criteria, " AND APPL.START.TERM EQ '", academicPeriod, "'");
+                   }
 
-                    var currStatus = string.Empty;
-                    foreach (var applStatusesSpCodeId in applStatusesSpCodeIds)
-                    {
-                        currStatus += string.Format("AND APPL.CURRENT.STATUS NE '{0}' ", applStatusesSpCodeId);
-                    }
+                   var applStatusesSpCodeIds = await DataReader.SelectAsync("APPLICATION.STATUSES", "WITH APPS.SPECIAL.PROCESSING.CODE EQ ''");
 
-                    #region  Named query person filter
-                    if (filterPersonIds != null && filterPersonIds.Any())
-                    {
-                        // Set limiting keys to previously retrieved personIds from SAVE.LIST.PARMS
-                        limitingKeys = filterPersonIds;
-                        var applicantApplicationId = await DataReader.SelectAsync("APPLICANTS", limitingKeys, "WITH APP.APPLICATIONS NE '' BY.EXP APP.APPLICATIONS SAVING APP.APPLICATIONS");
-                        if (applicantApplicationId == null || !applicantApplicationId.Any())
-                        {
-                            return applicantApplicationId;
-                        }
-                        limitingKeys = applicantApplicationId;
-                    }
-                    #endregion
+                   var currStatus = string.Empty;
+                   foreach (var applStatusesSpCodeId in applStatusesSpCodeIds)
+                   {
+                       currStatus += string.Format("AND APPL.CURRENT.STATUS NE '{0}' ", applStatusesSpCodeId);
+                   }
 
-                    applicationIds = (applStatusesSpCodeIds != null && applStatusesSpCodeIds.Any())
-                        ? await DataReader.SelectAsync("APPLICATIONS", limitingKeys, string.Concat(criteria, " ", currStatus))
-                        : await DataReader.SelectAsync("APPLICATIONS", limitingKeys, criteria);
+                   #region  Named query person filter
+                   if (filterPersonIds != null && filterPersonIds.Any())
+                   {
+                       // Set limiting keys to previously retrieved personIds from SAVE.LIST.PARMS
+                       limitingKeys = filterPersonIds;
+                       var applicantApplicationId = await DataReader.SelectAsync("APPLICANTS", limitingKeys, "WITH APP.APPLICATIONS NE '' BY.EXP APP.APPLICATIONS SAVING APP.APPLICATIONS");
+                       if (applicantApplicationId == null || !applicantApplicationId.Any())
+                       {
+                           return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                       }
+                       limitingKeys = applicantApplicationId;
+                   }
+                   #endregion
 
-                    Array.Sort(applicationIds);
-                    return applicationIds;
-                }, 20);
+                   applicationIds = (applStatusesSpCodeIds != null && applStatusesSpCodeIds.Any())
+                       ? await DataReader.SelectAsync("APPLICATIONS", limitingKeys, string.Concat(criteria, " ", currStatus))
+                       : await DataReader.SelectAsync("APPLICATIONS", limitingKeys, criteria);
+                   
+                   CacheSupport.KeyCacheRequirements requirements = new CacheSupport.KeyCacheRequirements()
+                   {
+                       limitingKeys = applicationIds.ToList()
+                   };
 
-            if (applicationIds == null || !applicationIds.Any())
+                   return requirements;
+
+               });
+
+            if (keyCache == null || keyCache.Sublist == null || !keyCache.Sublist.Any())
             {
                 return new Tuple<IEnumerable<AdmissionApplication>, int>(new List<AdmissionApplication>(), 0);
             }
 
-            totalCount = applicationIds.Count();
-            subList = applicationIds.Skip(offset).Take(limit).ToArray();
-            var applicationDataContracts = await DataReader.BulkReadRecordAsync<DataContracts.Applications>("APPLICATIONS", subList);
+            totalCount = keyCache.TotalCount.Value;
+            subList = keyCache.Sublist.ToArray();
+            var applicationDataContracts = await DataReader.BulkReadRecordAsync<DataContracts.Applications>("APPLICATIONS", subList);                       
 
             if (applicationDataContracts != null && applicationDataContracts.Any())
             {
+                // Bulk read the applicants for the applications
+                Collection<Applicants> applicantDataContracts = null;
+                var applicantIds = applicationDataContracts.Where(ap => (!string.IsNullOrWhiteSpace(ap.ApplApplicant)))
+                          .Select(ap => ap.ApplApplicant).Distinct().ToArray();
+                if (applicantIds != null && applicantIds.Any())
+                {
+                    var applicants = await DataReader.SelectAsync("APPLICANTS", applicantIds, "");
+                    if (applicants != null && applicants.Any())
+                    {
+                        applicantDataContracts = await DataReader.BulkReadRecordAsync<DataContracts.Applicants>(applicants);
+                    }
+                }
+
                 var studentProgramIds = new List<string>();
                 studentProgramIds.AddRange(applicationDataContracts.Where(i => !string.IsNullOrEmpty(i.ApplAcadProgram)).Select(i => string.Concat(i.ApplApplicant, "*", i.ApplAcadProgram)));
                 var programData = await DataReader.BulkReadRecordAsync<StudentPrograms>(studentProgramIds.Distinct().ToArray());
 
                 foreach (var applicationDataContract in applicationDataContracts)
                 {
+                    Applicants applicantDataContract = null;
+                    if (applicantDataContracts != null)
+                    {
+                        //applicantDataContract = applicantDataContracts.Where(app => app.Recordkey == applicationDataContract.ApplApplicant).FirstOrDefault();
+                        applicantDataContract = applicantDataContracts.FirstOrDefault(app => app.Recordkey == applicationDataContract.ApplApplicant);
+                    }
                     // passing in a null for personOriginCodes in 3rd argument since it is not returned in the admission applications DTO. 
                     // Its only in the build for get guid so that partial put merge logic never loses it.
-                    applicationEntities.Add(BuildAdmissionApplication2(applicationDataContract, programData, null));
+                    applicationEntities.Add(BuildAdmissionApplication2(applicationDataContract, applicantDataContract, programData, null));
                 }
             }
 
@@ -272,6 +307,13 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     throw new KeyNotFoundException("admission-applications not found for guid " + guid);
                 }
             }
+
+            DataContracts.Applicants applicantDataContract = null;            
+            if (admissionApplicationDataContract != null && (!string.IsNullOrEmpty(admissionApplicationDataContract.ApplApplicant)))
+            {
+                applicantDataContract = await DataReader.ReadRecordAsync<Applicants>("APPLICANTS", admissionApplicationDataContract.ApplApplicant);
+            }
+
             var studentProgramIds = new List<string>();
             studentProgramIds.Add(string.Concat(admissionApplicationDataContract.ApplApplicant, "*", admissionApplicationDataContract.ApplAcadProgram));
             var programData = await DataReader.BulkReadRecordAsync<StudentPrograms>(studentProgramIds.Distinct().ToArray());
@@ -296,7 +338,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 throw exception;
             }
 
-            return BuildAdmissionApplication2(admissionApplicationDataContract, programData, personOriginCode);
+            return BuildAdmissionApplication2(admissionApplicationDataContract, applicantDataContract, programData, personOriginCode);
         }
 
 
@@ -383,10 +425,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// BuildAdmissionApplication
         /// </summary>
         /// <param name="application"></param>
+        /// <param name="applicant"></param>
         /// <param name="programData"></param>
         /// <param name="personOriginCode"></param>
         /// <returns>AdmissionApplication domain entity</returns>
-        private AdmissionApplication BuildAdmissionApplication2(Applications application,
+        private AdmissionApplication BuildAdmissionApplication2(Applications application, Applicants applicant,
             Collection<StudentPrograms> programData, string personOriginCode)
         {
             try
@@ -403,7 +446,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 applicationEntity.ApplicationLocations = application.ApplLocations;
                 applicationEntity.ApplicationResidencyStatus = application.ApplResidencyStatus;
                 applicationEntity.ApplicationStudentLoadIntent = application.ApplStudentLoadIntent;
-                applicationEntity.ApplicationAcadProgram = application.ApplAcadProgram;
+                applicationEntity.ApplicationAcadProgram = application.ApplAcadProgram;                
+                applicationEntity.CareerGoals = application.ApplIntgCareerGoals;
+                applicationEntity.Influences = application.ApplInfluencedToApply;
+
+                if (applicant != null)
+                {
+                    applicationEntity.EducationalGoal = applicant.AppOrigEducGoal;
+                }
 
                 var key = string.Concat(application.ApplApplicant, "*", application.ApplAcadProgram);
                 if (programData == null || !programData.Any())
@@ -614,7 +664,12 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns></returns>
         public async Task<string> GetRecordKeyAsync(string guid)
         {
-            return await GetRecordKeyFromGuidAsync(guid);
+            var recordInfo = await GetRecordInfoFromGuidAsync(guid);
+            if (recordInfo == null || string.IsNullOrEmpty(recordInfo.PrimaryKey) || recordInfo.Entity != "APPLICATIONS")
+            {
+                throw new KeyNotFoundException(string.Format("Applications record {0} does not exist.", guid));
+            }
+            return recordInfo.PrimaryKey;
         }
 
         /// <summary>
@@ -728,7 +783,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 request.Source = string.IsNullOrEmpty(entity.ApplicationSource) ? string.Empty : entity.ApplicationSource;
                 request.WithdrawalInstitutionAttended = string.IsNullOrEmpty(entity.ApplicationAttendedInstead) ? string.Empty : entity.ApplicationAttendedInstead;
                 request.WithdrawalReason = string.IsNullOrEmpty(entity.ApplicationWithdrawReason) ? string.Empty : entity.ApplicationWithdrawReason;
-                request.WithdrawnOn = entity.WithdrawnOn.HasValue ? entity.WithdrawnOn.Value.Date.ToString() : string.Empty;
+                request.WithdrawnOn = entity.WithdrawnOn.HasValue ? entity.WithdrawnOn.Value.Date.ToString() : string.Empty;                
 
 
                 return request;
@@ -774,7 +829,12 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             studentProgramIds.Add(string.Concat(admissionApplicationDataContract.ApplApplicant, "*", admissionApplicationDataContract.ApplAcadProgram));
             var programData = await DataReader.BulkReadRecordAsync<StudentPrograms>(studentProgramIds.Distinct().ToArray());
 
-            return BuildAdmissionApplicationSubmission(admissionApplicationDataContract, programData);
+            var applicantData = new Applicants();
+            if (!string.IsNullOrEmpty(admissionApplicationDataContract.ApplApplicant))
+            {
+                applicantData = await DataReader.ReadRecordAsync<Applicants>("APPLICANTS", admissionApplicationDataContract.ApplApplicant);
+            }
+            return BuildAdmissionApplicationSubmission(admissionApplicationDataContract, programData, applicantData);
         }
 
 
@@ -893,7 +953,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 request.WithdrawalInstitutionAttended = string.IsNullOrEmpty(entity.ApplicationAttendedInstead) ? string.Empty : entity.ApplicationAttendedInstead;
                 request.WithdrawalReason = string.IsNullOrEmpty(entity.ApplicationWithdrawReason) ? string.Empty : entity.ApplicationWithdrawReason;
                 request.WithdrawnOn = entity.WithdrawnOn;
-                request.ccds = entity.ApplicationCredentials;                
+                request.ccds = entity.ApplicationCredentials;
+                request.EducGoal = entity.EducationalGoal;
+                request.CareerGoals = entity.CareerGoals;
+                request.Influences = entity.Influences;
 
                 // Majors, Minors, and Concentrations (specializations)
                 if (entity.ApplicationDisciplines != null && entity.ApplicationDisciplines.Any())
@@ -956,7 +1019,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <param name="programData"></param>
         /// <returns>AdmissionApplication domain entity</returns>
         private AdmissionApplication BuildAdmissionApplicationSubmission(Applications application,
-            Collection<StudentPrograms> programData)
+            Collection<StudentPrograms> programData, Applicants applicantData)
         {
             try
             {
@@ -1000,6 +1063,12 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 applicationEntity.ApplicationAttendedInstead = application.ApplAttendedInstead;
                 applicationEntity.ApplicationComments = application.ApplComments;
                 applicationEntity.ApplicationWithdrawDate = application.ApplWithdrawDate;
+                applicationEntity.CareerGoals = application.ApplIntgCareerGoals;
+                applicationEntity.Influences = application.ApplInfluencedToApply;
+                if (applicantData != null && !string.IsNullOrEmpty(applicantData.AppOrigEducGoal))
+                {
+                    applicationEntity.EducationalGoal = applicantData.AppOrigEducGoal;
+                }
 
                 return applicationEntity;
             }

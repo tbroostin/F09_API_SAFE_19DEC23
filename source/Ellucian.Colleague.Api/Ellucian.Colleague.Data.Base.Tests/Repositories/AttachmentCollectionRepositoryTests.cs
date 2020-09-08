@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -126,6 +126,27 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             {
                 await repository.GetAttachmentCollectionByIdAsync(string.Empty);
             }
+
+            [TestMethod]
+            public async Task AttachmentCollectionRepository_GetAttachmentCollectionByIdAsync_Exception()
+            {
+                dataReaderMock.Setup(accessor =>
+                    accessor.ReadRecordAsync<DataContracts.AttachmentCollections>
+                    (It.IsAny<string>(), It.IsAny<bool>())).Throws(new Exception());
+
+                string expected = "Error occurred retrieving attachment collection metadata";
+                string actual = string.Empty;
+                try
+                {
+                    await repository.GetAttachmentCollectionByIdAsync("COLLECTION1");
+                }
+                catch (Exception e)
+                {
+                    actual = e.Message;
+                }
+
+                Assert.AreEqual(expected, actual);
+            }
         }
 
         [TestClass]
@@ -202,6 +223,26 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             public async Task AttachmentCollectionRepository_GetAttachmentCollectionsByIdAsync_EmptyId()
             {
                 await repository.GetAttachmentCollectionsByIdAsync(new List<string>());
+            }
+
+            [TestMethod]
+            public async Task AttachmentCollectionRepository_GetAttachmentCollectionsByIdAsync_Exception()
+            {
+                dataReaderMock.Setup(a => a.BulkReadRecordAsync<DataContracts.AttachmentCollections>
+                    (It.IsAny<string[]>(), It.IsAny<bool>())).Throws(new Exception());
+
+                string expected = "Error occurred retrieving bulk attachment collection metadata";
+                string actual = string.Empty;
+                try
+                {
+                    await repository.GetAttachmentCollectionsByIdAsync(new List<string>() { "COLLECTION1", "COLLECTION2" });
+                }
+                catch (Exception e)
+                {
+                    actual = e.Message;
+                }
+
+                Assert.AreEqual(expected, actual);
             }
         }
 
@@ -280,6 +321,26 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             {
                 await repository.GetAttachmentCollectionsByUserAsync(string.Empty, new List<string>());
             }
+
+            [TestMethod]
+            public async Task AttachmentCollectionRepository_GetAttachmentCollectionsByUserAsync_Exception()
+            {
+                dataReaderMock.Setup(a => a.BulkReadRecordAsync<DataContracts.AttachmentCollections>
+                    (It.IsAny<string>(), It.IsAny<bool>())).Throws(new Exception());
+
+                string expected = "Error occurred retrieving attachment collection metadata by user";
+                string actual = string.Empty;
+                try
+                {
+                    await repository.GetAttachmentCollectionsByUserAsync("0000001", new List<string>() { "41", "33" });
+                }
+                catch (Exception e)
+                {
+                    actual = e.Message;
+                }
+
+                Assert.AreEqual(expected, actual);
+            }
         }
 
         [TestClass]
@@ -349,8 +410,10 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             [TestMethod]
             public async Task AttachmentCollectionRepository_PostAttachmentCollectionAsync_Success()
             {
-                var expectedResponse = new UpdateAttachmentCollectionsResponse();
-                expectedResponse.ErrorMsg = string.Empty;
+                var expectedResponse = new UpdateAttachmentCollectionsResponse
+                {
+                    ErrorMsg = string.Empty
+                };
 
                 transManagerMock.Setup(accessor =>
                     accessor.ExecuteAsync<UpdateAttachmentCollectionsRequest, UpdateAttachmentCollectionsResponse>
@@ -394,8 +457,10 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             [ExpectedException(typeof(RepositoryException))]
             public async Task AttachmentCollectionRepository_PostAttachmentCollectionAsync_ErrorResponse()
             {
-                var expectedResponse = new UpdateAttachmentCollectionsResponse();
-                expectedResponse.ErrorMsg = "error occurred";
+                var expectedResponse = new UpdateAttachmentCollectionsResponse
+                {
+                    ErrorMsg = "error occurred"
+                };
 
                 transManagerMock.Setup(accessor =>
                     accessor.ExecuteAsync<UpdateAttachmentCollectionsRequest, UpdateAttachmentCollectionsResponse>
@@ -462,8 +527,10 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             [TestMethod]
             public async Task AttachmentCollectionRepository_PutAttachmentCollectionAsync_Success()
             {
-                var expectedResponse = new UpdateAttachmentCollectionsResponse();
-                expectedResponse.ErrorMsg = string.Empty;
+                var expectedResponse = new UpdateAttachmentCollectionsResponse
+                {
+                    ErrorMsg = string.Empty
+                };
 
                 transManagerMock.Setup(accessor =>
                     accessor.ExecuteAsync<UpdateAttachmentCollectionsRequest, UpdateAttachmentCollectionsResponse>
@@ -509,8 +576,10 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             [ExpectedException(typeof(RepositoryException))]
             public async Task AttachmentCollectionRepository_PutAttachmentCollectionAsync_ErrorResponse()
             {
-                var expectedResponse = new UpdateAttachmentCollectionsResponse();
-                expectedResponse.ErrorMsg = "error occurred";
+                var expectedResponse = new UpdateAttachmentCollectionsResponse
+                {
+                    ErrorMsg = "error occurred"
+                };
 
                 transManagerMock.Setup(accessor =>
                     accessor.ExecuteAsync<UpdateAttachmentCollectionsRequest, UpdateAttachmentCollectionsResponse>

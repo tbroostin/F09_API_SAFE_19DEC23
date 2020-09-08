@@ -1,23 +1,25 @@
-﻿//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
-using System;
-using System.Collections.Generic;
-using Ellucian.Colleague.Domain.Student.Entities;
-using Ellucian.Colleague.Domain.Student.Repositories;
-using Ellucian.Colleague.Domain.Repositories;
-using Ellucian.Web.Adapters;
-using Ellucian.Web.Dependency;
-using Ellucian.Web.Security;
-using slf4net;
-using System.Threading.Tasks;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student;
-using System.Linq;
+using Ellucian.Colleague.Domain.Student.Entities;
+using Ellucian.Colleague.Domain.Student.Repositories;
+using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.DtoProperties;
 using Ellucian.Colleague.Dtos.EnumProperties;
-using Ellucian.Colleague.Dtos;
-using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Data.Colleague.Exceptions;
+using Ellucian.Web.Adapters;
+using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Security;
+using slf4net;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
@@ -85,6 +87,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     try
                     {
                         person = await _personRepository.GetPersonIdFromGuidAsync(personGuid);
+                        if(string.IsNullOrEmpty(person))
+                        {
+                            return new Tuple<IEnumerable<Dtos.StudentMealPlans2>, int>( new List<Dtos.StudentMealPlans2>(), 0 );
+                        }
                     }
                     catch (Exception)
                     {
@@ -102,7 +108,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         {
                             return new Tuple<IEnumerable<Dtos.StudentMealPlans2>, int>(new List<Dtos.StudentMealPlans2>(), 0);
                         }
-                        var mealPlanEntity = mealPlans.FirstOrDefault(mp => mp.Guid == mealplanGuid);
+                        var mealPlanEntity = mealPlans.FirstOrDefault( mp => mp.Guid.Equals( mealplanGuid, StringComparison.InvariantCultureIgnoreCase ) );
                         if (mealPlanEntity == null)
                         {
                             return new Tuple<IEnumerable<Dtos.StudentMealPlans2>, int>(new List<Dtos.StudentMealPlans2>(), 0);
@@ -125,8 +131,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         {
                             return new Tuple<IEnumerable<Dtos.StudentMealPlans2>, int>(new List<Dtos.StudentMealPlans2>(), 0);
                         }
-                        var academicPeriodEntity = academicPeriods.FirstOrDefault(mp => mp.Guid == academicPeriodGuid);
-                        if (academicPeriodEntity == null)
+                        var academicPeriodEntity = academicPeriods.FirstOrDefault( mp => mp.Guid.Equals( academicPeriodGuid, StringComparison.InvariantCultureIgnoreCase ) );
+                        if (academicPeriodEntity == null || string.IsNullOrEmpty( academicPeriodEntity.Code ))
                         {
                             return new Tuple<IEnumerable<Dtos.StudentMealPlans2>, int>(new List<Dtos.StudentMealPlans2>(), 0);
                         }
@@ -169,9 +175,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 else
                     return new Tuple<IEnumerable<Ellucian.Colleague.Dtos.StudentMealPlans2>, int>(new List<Ellucian.Colleague.Dtos.StudentMealPlans2>(), 0);
             }
-            catch (RepositoryException e)
+            catch(IntegrationApiException)
             {
-                throw e;
+                throw;
+            }
+            catch (RepositoryException)
+            {
+                throw;
             }
             catch (ArgumentException e)
             {
@@ -200,16 +210,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 var stuMealPlan = new List<Dtos.StudentMealPlans2>();
                 var stuMealPlanEntity = await _studentMealPlanRepository.GetByIdAsync(guid);
-                if (stuMealPlanEntity == null)
-                    throw new KeyNotFoundException("meal-plan-assignments not found for GUID " + guid);
+                if ( stuMealPlanEntity == null )
+                    throw new KeyNotFoundException( string.Format( "No meal plan assignment was found for guid '{0}'.", guid ) );
                 var stuMealPlanDto = await ConvertMealPlanAssignmentEntityToDto2Async(new List<MealPlanAssignment>() { stuMealPlanEntity });
-                if (stuMealPlanDto == null)
-                    throw new KeyNotFoundException("meal-plan-assignments not found for GUID " + guid);
+                if ( stuMealPlanDto == null || !stuMealPlanDto.Any() )
+                    throw new KeyNotFoundException( string.Format( "No meal plan assignment was found for guid '{0}'.", guid ) );
                 return stuMealPlanDto.FirstOrDefault();
             }
             catch (InvalidOperationException ex)
             {
-                throw new KeyNotFoundException("meal-plan-assignments not found for GUID " + guid, ex);
+                throw new KeyNotFoundException( string.Format( "No meal plan assignment was found for guid '{0}'.", guid, ex ) );
             }
         }
 
@@ -222,42 +232,60 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns><see cref="Dtos.StudentMealPlans2">StudentMealPlans</see></returns>
         public async Task<StudentMealPlans2> PutStudentMealPlans2Async(string guid, Dtos.StudentMealPlans2 studentMealPlansDto2)
         {
+            string recordKey = string.Empty;
             try
             {
-                if (studentMealPlansDto2 == null)
-                    throw new ArgumentNullException("MealPlanAssignments", "Must provide a meal plan assignment request body for update");
-                if (string.IsNullOrEmpty(studentMealPlansDto2.Id))
-                    throw new ArgumentNullException("MealPlanAssignments", "Must provide a guid for meal plan assignment update");
+                if( studentMealPlansDto2 == null )
+                    throw new ArgumentNullException( "MealPlanAssignments", "Must provide a meal plan assignment request body for update" );
+                if( string.IsNullOrEmpty( studentMealPlansDto2.Id ) )
+                    throw new ArgumentNullException( "MealPlanAssignments", "Must provide a guid for meal plan assignment update" );
 
                 // verify the user has the permission to update a StudentMealPlans
                 CheckCreateMealPlanAssignmentPermission();
 
                 _studentMealPlanRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
+                try
+                {
+                    recordKey = await _studentMealPlanRepository.GetMealPlanAssignmentIdFromGuidAsync( guid );
+                }
+                catch( Exception e )
+                {
+                    IntegrationApiExceptionAddError( e.Message, "Validation.Exception", guid, recordKey );
+                    throw IntegrationApiException;
+                }
 
                 // map the DTO to entities
                 var StudentMealPlansEntity
-                    = await ConvertStudentMealPlansDtoToEntity2Async(studentMealPlansDto2);
+                    = await ConvertStudentMealPlansDtoToEntity2Async( studentMealPlansDto2, recordKey );
+
+                if( IntegrationApiException != null )
+                {
+                    throw IntegrationApiException;
+                }
 
                 // update the entity in the database
                 var updatedStudentMealPlansEntity =
-                    await _studentMealPlanRepository.UpdateMealPlanAssignmentAsync(StudentMealPlansEntity);
-                var dtoStudentMealPlans = await ConvertMealPlanAssignmentEntityToDto2Async(new List<MealPlanAssignment>() { updatedStudentMealPlansEntity }, true);
+                    await _studentMealPlanRepository.UpdateMealPlanAssignmentAsync( StudentMealPlansEntity );
+                var dtoStudentMealPlans = await ConvertMealPlanAssignmentEntityToDto2Async( new List<MealPlanAssignment>() { updatedStudentMealPlansEntity }, true );
 
 
                 // return the newly updated DTO
                 return dtoStudentMealPlans.FirstOrDefault();
 
             }
-            catch (RepositoryException ex)
+            catch( IntegrationApiException )
             {
-                throw ex;
+                throw;
             }
-            catch (Exception ex)
+            catch( RepositoryException )
             {
-                throw new Exception(ex.Message, ex.InnerException);
+                throw;
             }
-
-
+            catch( Exception e )
+            {
+                IntegrationApiExceptionAddError( e.Message, "Validation.Exception", guid, recordKey );
+                throw IntegrationApiException;
+            }
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN DATA MODEL</remarks>
@@ -285,6 +313,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 // map the DTO to entities
                 var StudentMealPlansEntity
                     = await ConvertStudentMealPlansDtoToEntity2Async(studentMealPlansDto2);
+                
+                if( IntegrationApiException != null )
+                {
+                    throw IntegrationApiException;
+                }
 
                 // create the entity in the database
                 createdStudentMealPlans = await _studentMealPlanRepository.CreateMealPlanAssignmentAsync(StudentMealPlansEntity);
@@ -294,13 +327,19 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 return dtoStudentMealPlans.FirstOrDefault();
 
             }
-            catch (RepositoryException ex)
+
+            catch( IntegrationApiException )
             {
-                throw ex;
+                throw;
             }
-            catch (Exception ex)
+            catch( RepositoryException )
             {
-                throw new Exception(ex.Message, ex.InnerException);
+                throw;
+            }
+            catch( Exception e )
+            {
+                IntegrationApiExceptionAddError( e.Message, "Validation.Exception", string.Empty, string.Empty );
+                throw IntegrationApiException;
             }
         }
 
@@ -316,10 +355,18 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var studentMealPlans = new List<Ellucian.Colleague.Dtos.StudentMealPlans2>();
             //get person ids and get the associated Guids
             var ids = new List<string>();
-
-            ids.AddRange(sources.Where(p => (!string.IsNullOrEmpty(p.PersonId)))
-                .Select(p => p.PersonId).Distinct().ToList());
-            var personGuidCollection = await _personRepository.GetPersonGuidsCollectionAsync(ids);
+            Dictionary<string, string> personGuidCollection = null;
+            List<Domain.Student.Entities.MealPlanRates> mealPlanRates = new List<Domain.Student.Entities.MealPlanRates>();
+            try
+            {
+                ids.AddRange( sources.Where( p => p != null && !string.IsNullOrEmpty( p.PersonId ) )
+                    .Select( p => p.PersonId ).Distinct().ToList() );
+                personGuidCollection = await _personRepository.GetPersonGuidsCollectionAsync( ids );
+            }
+            catch( ColleagueDataReaderException e )
+            {
+                IntegrationApiExceptionAddError( e.Message, "Bad.Data" );
+            }
 
             foreach (var source in sources)
             {
@@ -327,21 +374,28 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 //get term guid
                 if (!string.IsNullOrEmpty(source.Term))
                 {
+                    string term = string.Empty;
                     try
                     {
-                        var term = await _termRepository.GetAcademicPeriodsGuidAsync(source.Term);
-                        if (!string.IsNullOrEmpty(term))
-                            studentMealPlan.AcademicPeriod = new Dtos.GuidObject2(term);
+                        term = await _termRepository.GetAcademicPeriodsGuidAsync( source.Term );
+                        if( string.IsNullOrEmpty( term ) )
+                        {
+                            IntegrationApiExceptionAddError( string.Format( "Academic period guid not found for meal plan assignment Id: '{0}'.", source.Term ), "GUID.Not.Found", source.Guid, source.Id );
+                        }
+                        else
+                        {
+                            studentMealPlan.AcademicPeriod = new Dtos.GuidObject2( term );
+                        }
                     }
-                    catch (RepositoryException ex)
+                    catch( RepositoryException )
                     {
-                        throw new Exception(ex.Message);
+                        IntegrationApiExceptionAddError( string.Format( "Academic period guid not found for term Id: '{0}'.", source.Term ), "GUID.Not.Found", source.Guid, source.Id );
                     }
                 }
 
                 if ((source.OverrideRate != null) && (source.OverrideRate.HasValue) && (source.OverrideRate > 0))
                 {
-                    studentMealPlan.OverrideRate = await BuildAssignedOverrideAsync(source, bypassCache);
+                    studentMealPlan.OverrideRate = await BuildAssignedOverride2Async(source, bypassCache);
                 }
 
                 if (source.NoRatePeriods != null) studentMealPlan.NumberOfPeriods = source.NoRatePeriods;
@@ -349,36 +403,58 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 if (!string.IsNullOrEmpty(source.MealPlan))
                 {
                     var startDate = Convert.ToDateTime(source.StartDate);
-                    var mealPlanRates = await GetMealPlanRatesAsync(bypassCache);
-
-                    if (mealPlanRates == null || ! mealPlanRates.Any())
+                    
+                    try
                     {
-                        throw new Exception("Unable to retrieve meal plan rates");
-                    }
-                    var mealPlanRate = mealPlanRates.Where(mpr => mpr.Code == source.MealPlan && mpr.MealPlansMealPlanRates != null)
-                        .OrderByDescending(mpr => mpr.MealPlansMealPlanRates.EffectiveDates);
+                        mealPlanRates = (await GetMealPlanRatesAsync( bypassCache )).ToList();
 
-                    if (mealPlanRate != null)
-                    {
-                        var mealPlanGuid = string.Empty;
-                        foreach (var mealPlan in mealPlanRate)
+                        if( mealPlanRates == null || !mealPlanRates.Any() )
                         {
-                            if ((mealPlan.MealPlansMealPlanRates != null) && (DateTime.Compare(startDate, Convert.ToDateTime(mealPlan.MealPlansMealPlanRates.EffectiveDates)) >= 0))
+                            IntegrationApiExceptionAddError( "Meal plan rates not found.", "Validation.Exception" );
+
+                        }
+                        else
+                        {
+                            var mealPlanRate = mealPlanRates.Where( mpr => mpr != null && !string.IsNullOrEmpty( mpr.Code ) && mpr.Code.Equals( source.MealPlan, StringComparison.InvariantCultureIgnoreCase )
+                                                && mpr.MealPlansMealPlanRates != null )
+                                .OrderByDescending( mpr => mpr.MealPlansMealPlanRates.EffectiveDates );
+
+                            if( mealPlanRate != null )
                             {
-                                mealPlanGuid = mealPlan.Guid;
-                                break;
+                                var mealPlanGuid = string.Empty;
+                                foreach( var mealPlan in mealPlanRate )
+                                {
+                                    if( ( mealPlan.MealPlansMealPlanRates != null ) && ( DateTime.Compare( startDate, Convert.ToDateTime( mealPlan.MealPlansMealPlanRates.EffectiveDates ) ) >= 0 ) )
+                                    {
+                                        mealPlanGuid = mealPlan.Guid;
+                                        break;
+                                    }
+                                }
+
+                                if( !string.IsNullOrEmpty( mealPlanGuid ) )
+                                {
+                                    studentMealPlan.AssignedRates = new List<Dtos.GuidObject2>() { new Dtos.GuidObject2( mealPlanGuid ) };
+                                }
                             }
                         }
-
-                        if (!string.IsNullOrEmpty(mealPlanGuid))
-                        {
-                            studentMealPlan.AssignedRates = new List<Dtos.GuidObject2>() { new Dtos.GuidObject2(mealPlanGuid) };
-                        }
+                    }
+                    catch(ArgumentNullException e)
+                    {
+                        IntegrationApiExceptionAddError( e.Message, "Bad.Data", source.Guid, source.Id );
+                    }
+                    catch(RepositoryException e)
+                    {
+                        IntegrationApiExceptionAddError( e, "Bad.Data", source.Guid, source.Id );
                     }
                 }
                 if (source.EndDate != null)
                 {
                     studentMealPlan.EndOn = Convert.ToDateTime(source.EndDate);
+                }
+
+                if(string.IsNullOrEmpty(source.Guid))
+                {
+                    IntegrationApiExceptionAddError( string.Format( "Meal plan assignment guid is missing Id: '{0}'.", source.Id ), "GUID.Not.Found", source.Guid, source.Id );
                 }
                 studentMealPlan.Id = source.Guid;
 
@@ -387,13 +463,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     try
                     {
-                        var mealplanGuid = await _referenceDataRepository.GetMealPlanGuidAsync(source.MealPlan);
-                        if (!string.IsNullOrEmpty(mealplanGuid))
-                            studentMealPlan.MealPlan = new Dtos.GuidObject2(mealplanGuid);
+                        var mealplanGuid = await _referenceDataRepository.GetMealPlanGuidAsync( source.MealPlan );
+                        if( !string.IsNullOrEmpty( mealplanGuid ) )
+                            studentMealPlan.MealPlan = new Dtos.GuidObject2( mealplanGuid );
                     }
-                    catch (RepositoryException ex)
+                    catch( RepositoryException e )
                     {
-                        throw new Exception(ex.Message);
+                        IntegrationApiExceptionAddError( e, "Bad.Data", source.Guid, source.Id );
                     }
                 }
                 //get person guid
@@ -402,7 +478,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     var studentGuid = string.Empty;
                     if (!personGuidCollection.TryGetValue(source.PersonId, out studentGuid))
                     {
-                        throw new Exception(string.Concat("Person guid not found for person Id: '", source.PersonId));
+                        IntegrationApiExceptionAddError( string.Format( "Person guid not found for person Id: '{0}'.", source.PersonId ), "GUID.Not.Found", source.Guid, source.Id );
                     }
                     else
                     {
@@ -442,6 +518,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 studentMealPlans.Add(studentMealPlan);
             }
 
+            if( IntegrationApiException != null )
+            {
+                throw IntegrationApiException;
+            }
 
             return studentMealPlans;
         }
@@ -453,7 +533,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <param name="source">StudentMealPlans DTO</param>
         /// <returns>MealPlanAssignment</returns>
-        private async Task<MealPlanAssignment> ConvertStudentMealPlansDtoToEntity2Async(Ellucian.Colleague.Dtos.StudentMealPlans2 source, bool bypassCache = false)
+        private async Task<MealPlanAssignment> ConvertStudentMealPlansDtoToEntity2Async(Ellucian.Colleague.Dtos.StudentMealPlans2 source, string recordKey = "", bool bypassCache = false)
         {
             //check for required data
             //handle empty guid
@@ -465,6 +545,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var status = string.Empty;
             DateTime? statusDate = new DateTime();
             DateTime? startDate = new DateTime();
+            MealPlanAssignment studentMealPlans = null;
+            
             if (!string.Equals(source.Id, Guid.Empty.ToString()))
             {
                 guid = source.Id;
@@ -472,15 +554,22 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             //get person ID
             if (source.Person != null && !string.IsNullOrEmpty(source.Person.Id))
             {
-                personId = await _personRepository.GetPersonIdFromGuidAsync(source.Person.Id);
-                if (string.IsNullOrEmpty(personId))
+                try
                 {
-                    throw new ArgumentException(string.Concat(" Person ID '", source.Person.Id.ToString(), "' was not found. Valid Person is required."));
+                    personId = await _personRepository.GetPersonIdFromGuidAsync( source.Person.Id );
+                    if( string.IsNullOrEmpty( personId ) )
+                    {
+                        IntegrationApiExceptionAddError( string.Format( "Person ID '{0}' was not found. Valid Person is required.", source.Person.Id ), "Validation.Exception", guid, recordKey );
+                    }
+                }
+                catch(Exception e)
+                {
+                    IntegrationApiExceptionAddError( e.Message, "Validation.Exception", guid, recordKey );
                 }
             }
             else
             {
-                throw new ArgumentException(string.Concat("Person is required."));
+                IntegrationApiExceptionAddError( "Person is required.", "Missing.Request.Property", guid, recordKey );
             }
             //get mealplan ID
             if (source.MealPlan != null && !string.IsNullOrEmpty(source.MealPlan.Id))
@@ -488,34 +577,37 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var mealPlans = await GetMealPlansAsync(bypassCache);
                 if (mealPlans == null)
                 {
-                    throw new Exception("Unable to retrieve meal plans");
-                }
-                var mealPlan = mealPlans.FirstOrDefault(mp => mp.Guid == source.MealPlan.Id);
-                if (mealPlan == null)
-                {
-                    throw new ArgumentException(string.Concat(" Meal Plan ID '", source.MealPlan.Id.ToString(), "' was not found. Valid Meal Plan is required."));
+                    IntegrationApiExceptionAddError("Unable to retrieve meal plans.", "Validation.Exception", guid, recordKey);
                 }
                 else
                 {
-                    mealplanId = mealPlan.Code;
+                    var mealPlan = mealPlans.FirstOrDefault(mp => mp != null && mp.Guid.Equals(source.MealPlan.Id, StringComparison.InvariantCultureIgnoreCase));
+                    if (mealPlan == null)
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Meal Plan ID '{0}' was not found. Valid Meal Plan is required.", source.MealPlan.Id), "Missing.Request.ID", guid, recordKey);
+                    }
+                    else
+                    {
+                        mealplanId = mealPlan.Code;
+                    }
                 }
 
             }
             else
             {
-                throw new ArgumentException(string.Concat("MealPlan is required."));
+                IntegrationApiExceptionAddError( "MealPlan is required.", "Missing.Request.Property", guid, recordKey );
             }
             //get status code
             if (source.Status == null || source.Status == Dtos.EnumProperties.StudentMealPlansStatus.NotSet)
             {
-                throw new ArgumentException(string.Concat("Invalid Status. Status is required."));
+                IntegrationApiExceptionAddError( "Invalid Status. Status is required.", "Missing.Request.Property", guid, recordKey );
             }
             else
             {
                 var statusCode = ConvertStudentMealPlansStatusDtoEnumToStatus(source.Status);
                 if (string.IsNullOrEmpty(statusCode))
                 {
-                    throw new ArgumentException(string.Concat(" Status '", source.Status.ToString(), "' was not found. Valid Status is required."));
+                    IntegrationApiExceptionAddError( string.Format( "Status '{0}' was not found. Valid Status is required.", source.Status ), "Validation.Exception", guid, recordKey );
                 }
                 else
                 {
@@ -530,7 +622,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             if (source.StartOn == null || source.StartOn == DateTime.MinValue)
             {
-                throw new ArgumentException(string.Concat("Start Date is required."));
+                IntegrationApiExceptionAddError( "Start Date is required.", "Missing.Request.Property", guid, recordKey );
             }
             else
             {
@@ -539,7 +631,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             //get status date
             if (source.StatusDate == null || source.StatusDate == DateTime.MinValue)
             {
-                throw new ArgumentException(string.Concat("Status Date is required."));
+                IntegrationApiExceptionAddError( "Status Date is required.", "Missing.Request.Property", guid, recordKey );
             }
             else
             {
@@ -547,7 +639,15 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
             //now we can create the entity
-            var studentMealPlans = new MealPlanAssignment(guid, id, personId, mealplanId, startDate, NoPeriods, status, statusDate);
+            try
+            {
+                studentMealPlans = new MealPlanAssignment( guid, id, personId, mealplanId, startDate, NoPeriods, status, statusDate );
+            }
+            catch(Exception e)
+            {
+                IntegrationApiExceptionAddError( e.Message, "Missing.Required.Property", guid, recordKey );
+                throw IntegrationApiException;
+            }
 
             //get the term
             if (source.AcademicPeriod != null && !string.IsNullOrEmpty(source.AcademicPeriod.Id))
@@ -556,14 +656,20 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
                 if (academicPeriodEntities == null)
                 {
-                    throw new Exception("Unable to retrieve academic periods");
+                    IntegrationApiExceptionAddError("Unable to retrieve academic periods.", "Validation.Exception", guid, recordKey);
                 }
-                var term = academicPeriodEntities.FirstOrDefault(mp => mp.Guid == source.AcademicPeriod.Id);
-                if (term == null)
+                else
                 {
-                    throw new Exception(string.Concat(" Academic Period '", source.AcademicPeriod.Id, "' was not found."));
+                    var term = academicPeriodEntities.FirstOrDefault(mp => mp.Guid == source.AcademicPeriod.Id);
+                    if (term == null)
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Academic Period '{0}' was not found.", source.AcademicPeriod.Id), "Missing.Request.ID", guid, recordKey);
+                    }
+                    else
+                    {
+                        studentMealPlans.Term = term.Code;
+                    }
                 }
-                studentMealPlans.Term = term.Code;
             }
 
             //get end on
@@ -602,7 +708,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 if(source.AssignedRates.Count() > 1)
                 {
-                    throw new InvalidOperationException("Only a single assigned rate is permitted.");
+                    IntegrationApiExceptionAddError( "Only a single assigned rate is permitted.", "Validation.Exception", guid, recordKey );
                 }
                 var defaultRate = source.AssignedRates.FirstOrDefault();
                 DateTime? effectiveDate = new DateTime();
@@ -611,18 +717,19 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     var mealPlanRates = await GetMealPlanRatesAsync(bypassCache);
                     if (mealPlanRates == null || !mealPlanRates.Any())
                     {
-                        throw new Exception("Unable to retrieve meal plan rates.");
+                        IntegrationApiExceptionAddError( "Unable to retrieve meal plan rates.", "Validation.Exception", guid, recordKey );
                     }
-                    var mealPlanRate = mealPlanRates.FirstOrDefault(mpr => mpr.Guid == defaultRate.Id);
+                    var mealPlanRate = mealPlanRates.FirstOrDefault( mpr => mpr != null && mpr.Guid.Equals( defaultRate.Id, StringComparison.InvariantCultureIgnoreCase ) );
                     if (mealPlanRate == null)
                     {
-                        throw new Exception(string.Concat(" Meal Plan rate '", defaultRate.Id.ToString(), "' was not found."));
+                        IntegrationApiExceptionAddError( string.Format( "Meal Plan rate '{0}' was not found.", defaultRate.Id ), "Missing.Request.ID", guid, recordKey );
                     }
                     else
                     {
                         if (mealPlanRate.Code != mealplanId)
                         {
-                            throw new Exception(string.Concat("Meal plan '", mealPlanRate.Code, "' from meal plan rate does not match assignment's meal plan '", mealplanId, "'"));
+                            IntegrationApiExceptionAddError( string.Format( "Meal plan '{0}' from meal plan rate does not match assignment's meal plan '{1}'.", mealPlanRate.Code, mealplanId ), 
+                                "Missing.Request.ID", guid, recordKey );
                         }
                         var correctMealPlanRate = string.Empty;
                         //
@@ -649,7 +756,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         }
                         if (correctMealPlanRate != defaultRate.Id)
                         {
-                            throw new Exception(string.Concat(" Invalid meal plan rate '", defaultRate.Id.ToString(), "' with effective date '", effectiveDate, "' for start date of '", startDate, "'"));
+                            IntegrationApiExceptionAddError( string.Format( "Invalid meal plan rate '{0}' with effective date '{1}' for start date of '{2}'.", defaultRate.Id, effectiveDate, startDate ),
+                                "Validation.Exception", guid, recordKey );
                         }
                     }
                 }
@@ -667,14 +775,20 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         var accountingCodeEntities = await GetAccountingCodesAsync(bypassCache);
                         if (accountingCodeEntities == null)
                         {
-                            throw new Exception("Unable to retrieve accounting codes");
+                            IntegrationApiExceptionAddError("Unable to retrieve accounting codes.", "Validation.Exception", guid, recordKey);
                         }
-                        var accountingCode = accountingCodeEntities.FirstOrDefault(mpr => mpr.Guid == source.OverrideRate.AccountingCode.Id);
-                        if (accountingCode == null)
+                        else
                         {
-                            throw new Exception(string.Concat(" Accounting Code '", source.OverrideRate.AccountingCode.Id.ToString(), "' was not found."));
+                            var accountingCode = accountingCodeEntities.FirstOrDefault(mpr => mpr != null && mpr.Guid.Equals(source.OverrideRate.AccountingCode.Id, StringComparison.InvariantCultureIgnoreCase));
+                            if (accountingCode == null)
+                            {
+                                IntegrationApiExceptionAddError(string.Format("Accounting Code '{0}' was not found.", source.OverrideRate.AccountingCode.Id), "Missing.Request.ID", guid, recordKey);
+                            }
+                            else
+                            {
+                                studentMealPlans.OverrideArCode = accountingCode.Code;
+                            }
                         }
-                        studentMealPlans.OverrideArCode = accountingCode.Code;
                     }
                     //get override reason
                     if (source.OverrideRate.OverrideReason != null)
@@ -682,32 +796,38 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         var billingOverrideReasonsEntities = await GetBillingOverrideReasonsAsync(bypassCache);
                         if (billingOverrideReasonsEntities == null)
                         {
-                            throw new Exception("Unable to retrieve billing override reasons");
+                            IntegrationApiExceptionAddError("Unable to retrieve billing override reasons.", "Validation.Exception", guid, recordKey);
                         }
-                        var billingOverrideReason = billingOverrideReasonsEntities.FirstOrDefault(mpr => mpr.Guid == source.OverrideRate.OverrideReason.Id);
-                        if (billingOverrideReason == null)
+                        else
                         {
-                            throw new Exception(string.Concat("Override Reason '", source.OverrideRate.OverrideReason.Id.ToString(), "' was not found."));
+                            var billingOverrideReason = billingOverrideReasonsEntities.FirstOrDefault(mpr => mpr != null && mpr.Guid.Equals(source.OverrideRate.OverrideReason.Id, StringComparison.InvariantCultureIgnoreCase));
+                            if (billingOverrideReason == null)
+                            {
+                                IntegrationApiExceptionAddError(string.Format("Override Reason '{0}' was not found.", source.OverrideRate.OverrideReason.Id), "Missing.Request.ID", guid, recordKey);
+                            }
+                            else
+                            {
+                                studentMealPlans.RateOverrideReason = billingOverrideReason.Code;
+                            }
                         }
-                        studentMealPlans.RateOverrideReason = billingOverrideReason.Code;
                     }
                     //get rate value
                     if (source.OverrideRate.Rate != null)
                     {
                         if (source.OverrideRate.Rate.Value != null && source.OverrideRate.Rate.Currency != Dtos.EnumProperties.CurrencyIsoCode.USD && source.OverrideRate.Rate.Currency != Dtos.EnumProperties.CurrencyIsoCode.CAD)
                         {
-                            throw new ArgumentException("The override rate currency must be set to either 'USD' or 'CAD'. ");
+                            IntegrationApiExceptionAddError( "The override rate currency must be set to either 'USD' or 'CAD'.", "Validation.Exception", guid, recordKey );
                         }
                         if (source.OverrideRate.Rate.Value < 0)
                         {
-                            throw new ArgumentException("The override rate amount must be set greater than zero. ");
+                            IntegrationApiExceptionAddError( "The override rate amount must be set greater than zero.", "Validation.Exception", guid, recordKey );
                         }
                         studentMealPlans.OverrideRate = source.OverrideRate.Rate.Value;
                     }
                 }
-                catch (Exception ex)
+                catch (Exception e)
                 {
-                    throw new Exception(ex.Message, ex.InnerException);
+                    IntegrationApiExceptionAddError( e.Message, "Global.Internal.Error", guid, recordKey );
                 }
             }
 
@@ -1561,7 +1681,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 studentMealPlansOverrideRate.RatePeriod = ConvertMealPlanRateToMealPlanRatesRatePeriodDtoEnum(mealPlan.RatePeriod);
             }
-            
+
             return studentMealPlansOverrideRate;
         }
 
@@ -1688,6 +1808,99 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
         }
 
+        /// <summary>
+        ///  Build StudentMealPlanAssignedOverrideDtoProperty
+        /// </summary>
+        /// <param name="source">MealPlanAssignment domain entity</param>
+        /// <param name="bypassCache"></param>
+        /// <returns><see cref="StudentMealPlanAssignedOverrideDtoProperty">Dtos.StudentMealPlanAssignedOverrideDtoProperty object</see></returns>
+        private async Task<StudentMealPlansOverrideRateDtoProperty> BuildAssignedOverride2Async( MealPlanAssignment source, bool bypassCache = false )
+        {
+            var studentMealPlansOverrideRate = new StudentMealPlansOverrideRateDtoProperty();
+            if( !( string.IsNullOrEmpty( source.OverrideArCode ) ) )
+            {
+                var accountingCodeEntities = await GetAccountingCodesAsync( bypassCache );
+                if( accountingCodeEntities == null )
+                {
+                    //throw new Exception("Unable to retrieve accounting codes");
+                    IntegrationApiExceptionAddError( "Unable to retrieve accounting codes.", "Validation.Exception" );
+                }
+                else
+                {
+                    var accountingCode = accountingCodeEntities.FirstOrDefault( mpr => mpr != null && !string.IsNullOrEmpty( mpr.Code ) && mpr.Code.Equals( source.OverrideArCode, StringComparison.InvariantCultureIgnoreCase ) );
+                    if( accountingCode == null )
+                    {
+                        string message = string.Concat( "Unable to locate guid for override AR code: ", source.OverrideArCode, ", Entity: 'MEAL.PLAN.ASSIGNMENTS', Record ID: '", source.Id, "'",
+                            " Student: '", source.PersonId, "'", " Term: '", source.Term, '"' );
+                        IntegrationApiExceptionAddError( message, "GUID.Not.Found", source.Guid, source.Id );
+                    }
+                    else
+                    {
+                        studentMealPlansOverrideRate.AccountingCode = new Dtos.GuidObject2( accountingCode.Guid );
+                    }
+                }
+            }
+
+            if( !( string.IsNullOrEmpty( source.RateOverrideReason ) ) )
+            {
+                var billingOverrideReasonsEntities = await GetBillingOverrideReasonsAsync( bypassCache );
+                if( billingOverrideReasonsEntities == null )
+                {
+                    IntegrationApiExceptionAddError( "Unable to retrieve billing override reasons.", "Validation.Exception" );
+                }
+                else
+                {
+                    var billingOverrideReason = billingOverrideReasonsEntities.FirstOrDefault( mpr => mpr != null && !string.IsNullOrEmpty( mpr.Code ) && mpr.Code.Equals( source.RateOverrideReason, StringComparison.InvariantCultureIgnoreCase ) );
+                    if( billingOverrideReason == null )
+                    {
+                        string message = string.Concat( "Unable to locate guid for rate override reason: ", source.RateOverrideReason, ", Entity: 'MEAL.PLAN.ASSIGNMENTS', Record ID: '", source.Id, "' ",
+                            " Student: '", source.PersonId, "'", " Term: '", source.Term, '"' );
+                        IntegrationApiExceptionAddError( message, "GUID.Not.Found", source.Guid, source.Id );
+
+                    }
+                    else
+                    {
+                        studentMealPlansOverrideRate.OverrideReason = new Dtos.GuidObject2( billingOverrideReason.Guid );
+                    }
+                }
+            }
+
+            if( ( source.OverrideRate != null ) && ( source.OverrideRate.HasValue ) )
+            {
+                studentMealPlansOverrideRate.Rate = new Amount2DtoProperty()
+                {
+                    Currency = ( await GetHostCountryAsync() ).ToUpper() == "USA" ? CurrencyIsoCode.USD : CurrencyIsoCode.CAD,
+                    Value = source.OverrideRate
+                };
+            }
+
+            if( !string.IsNullOrEmpty( source.MealPlan ) )
+            {
+                var mealPlans = await GetMealPlansAsync( bypassCache );
+
+                if( mealPlans == null )
+                {
+                    IntegrationApiExceptionAddError( "Unable to retrieve meal plans.", "Validation.Exception" );
+
+                }
+                else
+                {
+                    var mealPlan = mealPlans.FirstOrDefault( mpr => mpr != null && !string.IsNullOrEmpty( mpr.Code ) && mpr.Code.Equals( source.MealPlan, StringComparison.InvariantCultureIgnoreCase ) );
+                    if( mealPlan == null )
+                    {
+                        string message = string.Concat( "Unable to locate guid for MealPlan: ", source.MealPlan, ", Entity: 'MEAL.PLAN.ASSIGNMENTS', Record ID: '", source.Id, "' ",
+                            " Student: '", source.PersonId, "'", " Term: '", source.Term, '"' );
+                        IntegrationApiExceptionAddError( message, "GUID.Not.Found", source.Guid, source.Id );
+                    }
+                    else
+                    {
+                        studentMealPlansOverrideRate.RatePeriod = ConvertMealPlanRateToMealPlanRatesRatePeriodDtoEnum( mealPlan.RatePeriod );
+                    }
+                }
+            }
+
+            return studentMealPlansOverrideRate;
+        }
 
     }
 }

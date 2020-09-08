@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -19,6 +19,7 @@ using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http;
+using System.Linq;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -48,7 +49,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// Return all roommateCharacteristics
         /// </summary>
         /// <returns>List of RoommateCharacteristics <see cref="Dtos.RoommateCharacteristics"/> objects representing matching roommateCharacteristics</returns>
-        [HttpGet]
+        [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.RoommateCharacteristics>> GetRoommateCharacteristicsAsync()
         {
@@ -62,7 +63,16 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
-                return await _roommateCharacteristicsService.GetRoommateCharacteristicsAsync(bypassCache);
+                var roommateCharacteristics = await _roommateCharacteristicsService.GetRoommateCharacteristicsAsync(bypassCache);
+
+                if (roommateCharacteristics != null && roommateCharacteristics.Any())
+                {
+                    AddEthosContextProperties(await _roommateCharacteristicsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _roommateCharacteristicsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              roommateCharacteristics.Select(a => a.Id).ToList()));
+                }                
+
+                return roommateCharacteristics;
             }
             catch (KeyNotFoundException e)
             {
@@ -101,7 +111,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="guid">GUID to desired roommateCharacteristics</param>
         /// <returns>A roommateCharacteristics object <see cref="Dtos.RoommateCharacteristics"/> in EEDM format</returns>
-        [HttpGet]
+        [HttpGet, EedmResponseFilter]
         public async Task<Dtos.RoommateCharacteristics> GetRoommateCharacteristicsByGuidAsync(string guid)
         {
             if (string.IsNullOrEmpty(guid))
@@ -111,6 +121,10 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                AddEthosContextProperties(
+                    await _roommateCharacteristicsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                    await _roommateCharacteristicsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                        new List<string>() { guid }));
                 return await _roommateCharacteristicsService.GetRoommateCharacteristicsByGuidAsync(guid);
             }
             catch (KeyNotFoundException e)

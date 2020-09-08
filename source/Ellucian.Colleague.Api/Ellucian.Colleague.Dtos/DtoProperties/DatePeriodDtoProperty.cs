@@ -1,11 +1,10 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Dtos.Converters;
-using Ellucian.Colleague.Dtos.DtoProperties;
 using Newtonsoft.Json;
 using System;
 
-namespace Ellucian.Colleague.Dtos
+namespace Ellucian.Colleague.Dtos.DtoProperties
 {
     /// <summary>
     /// The date period

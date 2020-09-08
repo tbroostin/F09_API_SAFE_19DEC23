@@ -11,7 +11,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
     public class VendorDefaultTaxFormInfo
     {
         /// <summary>
-        /// Document vendor ID.
+        /// vendor ID.
         /// </summary>
         public string VendorId { get { return vendorId; } }
 
@@ -21,19 +21,19 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         private readonly string vendorId;
 
         /// <summary>
-        /// Tax form.
+        /// Default Tax form.
         /// </summary>
         public string TaxForm { get; set; }
 
         /// <summary>
-        /// Tax form code.
+        /// Default Tax form box code.
         /// </summary>
-        public string TaxFormCode { get; set; }
+        public string TaxFormBoxCode { get; set; }
 
         /// <summary>
-        /// Tax form location.
+        /// Default Tax form state / location.
         /// </summary>
-        public string TaxFormLoc { get; set; }
+        public string TaxFormState { get; set; }
         
 
         public VendorDefaultTaxFormInfo(string vendorId)

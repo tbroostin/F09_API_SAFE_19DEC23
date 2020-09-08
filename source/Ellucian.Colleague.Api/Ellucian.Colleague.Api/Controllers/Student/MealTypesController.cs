@@ -19,6 +19,7 @@ using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http;
+using System.Linq;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -49,7 +50,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
                 /// <returns>List of MealTypes <see cref="Dtos.MealTypes"/> objects representing matching mealTypes</returns>
         [HttpGet]
-        [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
+        [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true), EedmResponseFilter]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.MealTypes>> GetMealTypesAsync()
                 {
             var bypassCache = false;
@@ -61,8 +62,17 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 }
             }
             try
-            {                    return await _mealTypesService.GetMealTypesAsync(bypassCache);
-                            }
+            {
+                var mealTypes = await _mealTypesService.GetMealTypesAsync(bypassCache);
+
+                if (mealTypes != null && mealTypes.Any())
+                {
+                    AddEthosContextProperties(await _mealTypesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _mealTypesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              mealTypes.Select(a => a.Id).ToList()));
+                }
+                return mealTypes;
+            }
             catch (KeyNotFoundException e)
             {
                 _logger.Error(e.ToString());
@@ -101,6 +111,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="guid">GUID to desired mealTypes</param>
         /// <returns>A mealTypes object <see cref="Dtos.MealTypes"/> in EEDM format</returns>
         [HttpGet]
+        [EedmResponseFilter]
         public async Task<Dtos.MealTypes> GetMealTypesByGuidAsync(string guid)
         {
             if (string.IsNullOrEmpty(guid))
@@ -110,6 +121,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                AddEthosContextProperties(
+                   await _mealTypesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                   await _mealTypesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                       new List<string>() { guid }));
+
                 return await _mealTypesService.GetMealTypesByGuidAsync(guid);
             }
             catch (KeyNotFoundException e)

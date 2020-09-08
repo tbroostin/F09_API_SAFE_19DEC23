@@ -29,9 +29,14 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <param name="currentUserFactory">currentUserFactory</param>
         /// <param name="roleRepository">roleRepository</param>
         /// <param name="logger">logger</param>
-        public GradeChangeReasonService(IConfigurationRepository configurationRepository, IReferenceDataRepository referenceDataRepository, IAdapterRegistry adapterRegistry,
-                                        ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, ILogger logger)
-                                        : base(adapterRegistry, currentUserFactory, roleRepository, logger)
+        public GradeChangeReasonService(
+            IConfigurationRepository configurationRepository, 
+            IReferenceDataRepository referenceDataRepository, 
+            IAdapterRegistry adapterRegistry,
+            ICurrentUserFactory currentUserFactory, 
+            IRoleRepository roleRepository, 
+            ILogger logger)
+            : base(adapterRegistry, currentUserFactory, roleRepository, logger, null, configurationRepository)
         {
             _configurationRepository = configurationRepository;
             _referenceDataRepository = referenceDataRepository;

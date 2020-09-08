@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -15,6 +15,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
@@ -28,6 +29,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
     public class AttachmentRepository : BaseColleagueRepository, IAttachmentRepository
     {
         private readonly string colleagueTimeZone;
+        private IntlParams internationalParameters;
 
         private const string attachmentActiveStatus = "A";
         private const string attachmentDeletedStatus = "D";
@@ -99,9 +101,17 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             criteria.Append(string.Format(" AND ATT.STATUS EQ '{0}'", attachmentActiveStatus));
 
             // do not include the encryption metadata
-            var attachmentRecords = await DataReader.BulkReadRecordAsync<AttachmentsNoEncr>(criteria.ToString());
-
-            return BuildAttachments(attachmentRecords);
+            try
+            {
+                var attachmentRecords = await DataReader.BulkReadRecordAsync<AttachmentsNoEncr>(criteria.ToString());
+                return BuildAttachments(attachmentRecords);
+            }
+            catch (Exception e)
+            {
+                string error = "Error occurred retrieving bulk attachment metadata";
+                logger.Error(e, error);
+                throw new RepositoryException(error);
+            }            
         }
 
         /// <summary>
@@ -115,9 +125,17 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 throw new ArgumentNullException("attachmentId");
 
             // get the attachment by ID, including encryption metadata
-            var attachmentRecord = await DataReader.ReadRecordAsync<Attachments>(attachmentId);
-
-            return BuildAttachments(new List<Attachments>() { attachmentRecord }).FirstOrDefault();            
+            try
+            {
+                var attachmentRecord = await DataReader.ReadRecordAsync<Attachments>(attachmentId);
+                return BuildAttachments(new List<Attachments>() { attachmentRecord }).FirstOrDefault();
+            }
+            catch (Exception e)
+            {
+                string error = "Error occurred retrieving attachment metadata";
+                logger.Error(e, string.Format("{0} for attachment ID {1}", error, attachmentId));
+                throw new RepositoryException(error);
+            }        
         }
 
         /// <summary>
@@ -131,9 +149,17 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 throw new ArgumentNullException("attachmentId");
 
             // get the attachment by ID w/ no encryption metadata
-            var attachmentRecord = await DataReader.ReadRecordAsync<AttachmentsNoEncr>(attachmentId);
-
-            return BuildAttachments(new List<AttachmentsNoEncr>() { attachmentRecord }).FirstOrDefault();
+            try
+            {
+                var attachmentRecord = await DataReader.ReadRecordAsync<AttachmentsNoEncr>(attachmentId);
+                return BuildAttachments(new List<AttachmentsNoEncr>() { attachmentRecord }).FirstOrDefault();
+            }
+            catch (Exception e)
+            {
+                string error = "Error occurred retrieving attachment metadata";
+                logger.Error(e, string.Format("{0} for attachment ID {1}", error, attachmentId));
+                throw new RepositoryException(error);
+            }
         }
 
         /// <summary>
@@ -167,9 +193,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             try
             {
-                await DmiFileTransferClient.SendDownloadRequestAsync(attachmentContentPath, tempAttachmentPath).ConfigureAwait(false);               
+                await DmiFileTransferClient.SendDownloadRequestAsync(attachmentContentPath, tempAttachmentPath).ConfigureAwait(false);
+                return tempAttachmentPath;
             }
-            catch (Exception)
+            catch (Exception e)
             {
                 // error occurred, delete the temp file
                 if (File.Exists(tempAttachmentPath))
@@ -178,15 +205,115 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         File.Delete(tempAttachmentPath);
                     }
-                    catch (Exception e)
+                    catch (Exception fde)
                     {
-                        logger.Info(e, string.Format("Could not delete temp file {0}", tempAttachmentPath));
+                        logger.Info(fde, string.Format("Could not delete temp file {0}", tempAttachmentPath));
                     }
                 }
-                throw;
+                string error = "Error occurred retrieving attachment content";
+                logger.Error(e, error);
+                throw new RepositoryException(error);
+            }
+        }
+
+        /// <summary>
+        /// Query attachments
+        /// </summary>
+        /// <param name="includeActiveOnly">True if only attachments with an active status must be returned</param>
+        /// <param name="owner">The attachment owner to query by</param>
+        /// <param name="modifyStartDate">The start of the attachment modified date range to query by</param>
+        /// <param name="modifyEndDate">The end of the attachment modified date range to query by</param>
+        /// <param name="collectionIds">List of collection IDs to query by</param>
+        /// <returns>List of <see cref="Attachment">Attachments</see></returns>
+        public async Task<IEnumerable<Attachment>> QueryAttachmentsAsync(bool includeActiveOnly, string owner, DateTime? modifyStartDate,
+            DateTime? modifyEndDate, IEnumerable<string> collectionIds)
+        {
+            if (collectionIds == null || !collectionIds.Any())
+                throw new ArgumentException("Collection ID(s) are required to query attachments");
+            if (!modifyStartDate.HasValue || !modifyEndDate.HasValue)
+                throw new ArgumentException("Start and end date are required to query attachments");
+            if (DateTime.Compare(modifyStartDate.Value, modifyEndDate.Value) > 0)
+                throw new ArgumentOutOfRangeException("modifyStartDate", "Attachment query start date cannot be later than end date");
+
+            var criteria = new StringBuilder();
+            // owner
+            if (!string.IsNullOrEmpty(owner))
+            {
+                criteria.Append(string.Format("WITH (ATT.OWNER EQ '{0}')", owner));
+            }
+            // collection ID(s)
+            var collectionIdCriteria = new StringBuilder();
+            foreach (var collectionId in collectionIds)
+            {
+                if (!string.IsNullOrEmpty(collectionId))
+                {
+                    if (collectionIdCriteria.Length > 0)
+                        collectionIdCriteria.Append(string.Format(" OR ATT.COLLECTION.ID EQ '{0}'", collectionId));
+                    else
+                        collectionIdCriteria.Append(string.Format(" WITH (ATT.COLLECTION.ID EQ '{0}'", collectionId));
+                }
+            }
+            if (collectionIdCriteria.Length > 0)
+            {
+                collectionIdCriteria.Append(")");
+                criteria.Append(collectionIdCriteria.ToString());
+            }
+            else
+            {
+                throw new ArgumentException("No valid Collection ID(s) provided to query attachments");
+            }
+            // date range
+            var internationalParameters = GetInternationalParameters();
+            var formattedStartDate = UniDataFormatter.UnidataFormatDate(modifyStartDate.Value, internationalParameters.HostShortDateFormat,
+                internationalParameters.HostDateDelimiter);
+            var formattedEndDate = UniDataFormatter.UnidataFormatDate(modifyEndDate.Value, internationalParameters.HostShortDateFormat,
+                internationalParameters.HostDateDelimiter);
+            criteria.Append(string.Format(" AND (ATTACHMENTS.CHGDATE GE '{0}' AND ATTACHMENTS.CHGDATE LE '{1}')",
+                formattedStartDate, formattedEndDate));
+            // active attachments only
+            if (includeActiveOnly)
+            {
+                criteria.Append(string.Format(" AND (ATT.STATUS EQ '{0}')", attachmentActiveStatus));
             }
 
-            return tempAttachmentPath;
+            // do not include the encryption metadata
+            try
+            {
+                var attachmentRecords = await DataReader.BulkReadRecordAsync<AttachmentsNoEncr>(criteria.ToString());
+                return BuildAttachments(attachmentRecords);
+            }
+            catch (Exception e)
+            {
+                string error = "Error occurred retrieving attachment metadata by query";
+                logger.Error(e, error);
+                throw new RepositoryException(error);
+            }
+        }
+
+        // get the date format
+        private IntlParams GetInternationalParameters()
+        {
+            if (internationalParameters == null)
+            {
+                internationalParameters = GetOrAddToCache("InternationalParameters",
+                () =>
+                {
+                    var intlParams = DataReader.ReadRecord<IntlParams>("INTL.PARAMS", "INTERNATIONAL");
+                    if (intlParams == null)
+                    {
+                        logger.Info("Unable to access international parameters INTL.PARAMS INTERNATIONAL.");
+                        // default to US with a / delimiter.
+                        intlParams = new IntlParams
+                        {
+                            HostShortDateFormat = "MDY",
+                            HostDateDelimiter = "/"
+                        };
+                    }
+                    return intlParams;
+                }, Level1CacheTimeoutValue);
+            }
+
+            return internationalParameters;
         }
 
         /// <summary>
@@ -281,13 +408,35 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             attachmentContentStream.Position = 0;
 
             // post the attachment metadata
-            var attachmentEntity = await PostAttachmentAsync(attachment);            
+            var attachmentEntity = await PostAttachmentAsync(attachment);
 
-            // read the stream in chunks, passing them through the CTX until the whole stream is processed, then close the stream
+            ExceptionDispatchInfo uploadCapturedException = null;
+            // read the stream in chunks, passing them through DMI until the whole stream is processed, then close the stream
             using (attachmentContentStream)
             {
-                await DmiFileTransferClient.SendUploadRequestAsync(
-                    attachmentContentPath, attachment.Size.Value, attachmentContentStream).ConfigureAwait(false);
+                try
+                {
+                    await DmiFileTransferClient.SendUploadRequestAsync(
+                        attachmentContentPath, attachment.Size.Value, attachmentContentStream).ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    uploadCapturedException = ExceptionDispatchInfo.Capture(e);
+                }
+            }
+
+            if (uploadCapturedException != null)
+            {
+                Exception e = uploadCapturedException.SourceException;
+
+                // the file upload failed
+                logger.Error(e, string.Format("Attachment content upload failed for attachment {0} ({1}) : error = {2}",
+                    attachment.Id, attachment.Name, e.Message));
+
+                // rollback the associated attachment metadata
+                await RollbackAttachmentAsync(attachment);
+
+                throw new RepositoryException("Attachment content upload failed");
             }
 
             // return the newly created attachment
@@ -499,6 +648,38 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     return attachmentDeletedStatus;
                 default:
                     return attachmentActiveStatus;
+            }
+        }
+
+        // Rollback attachment metadata
+        private async Task RollbackAttachmentAsync(Attachment attachment)
+        {
+            // setup the rollback request
+            var rollbackRequest = new CrudAttachmentContentRequest()
+            {
+                Id = attachment.Id,
+                Action = "FULLDELETE"
+            };
+
+            try
+            {
+                // call the CTX to delete the attachment
+                var rollbackResponse = await transactionInvoker.ExecuteAsync<CrudAttachmentContentRequest, CrudAttachmentContentResponse>(rollbackRequest);
+                if (rollbackResponse == null)
+                {
+                    logger.Info(string.Format("No response received rolling back attachment, attachment {0} ({1})",
+                        attachment.Id, attachment.Name));
+                }
+                if (!string.IsNullOrEmpty(rollbackResponse.ErrorMsg))
+                {
+                    logger.Info(string.Format("Error occurred rolling back attachment, attachment {0} ({1}) : error = {2}",
+                        attachment.Id, attachment.Name, rollbackResponse.ErrorMsg));
+                }
+            }
+            catch (Exception e)
+            {
+                logger.Info(e, string.Format("Exception occurred rolling back attachment, attachment {0} ({1}) : error = {2}", 
+                    attachment.Id, attachment.Name, e.Message));
             }
         }
     }

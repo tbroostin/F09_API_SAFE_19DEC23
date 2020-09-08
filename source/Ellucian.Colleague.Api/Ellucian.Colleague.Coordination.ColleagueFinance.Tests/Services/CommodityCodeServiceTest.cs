@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
 using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -10,6 +10,7 @@ using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -63,6 +64,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
                 allCommodityCodes = new TestColleagueFinanceReferenceDataRepository().GetCommodityCodesAsync(false).Result;
                 allCFCommodityCodes = new TestColleagueFinanceReferenceDataRepository().GetCFCommodityCodesAsync().Result;
+                var procurementCommodityCodeDtoAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.ProcurementCommodityCode, Dtos.ColleagueFinance.ProcurementCommodityCode>(adapterRegistryMock.Object, loggerMock.Object);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Domain.ColleagueFinance.Entities.ProcurementCommodityCode, Dtos.ColleagueFinance.ProcurementCommodityCode>()).Returns(procurementCommodityCodeDtoAdapter);
+
                 commodityCodeService = new CommodityCodesService(adapterRegistryMock.Object, configurationRepository, currentUserFactory, roleRepoMock.Object,
                     refRepo, logger);
             }
@@ -110,6 +114,39 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 var commodityCode = await commodityCodeService.GetAllCommodityCodesAsync();
                 Assert.AreEqual(commodityCode.FirstOrDefault().Code, thisCC.Code);
                 Assert.AreEqual(commodityCode.FirstOrDefault().Description, thisCC.Description);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetCommodityCodeByCodeAsync_ArgumentNull()
+            {
+                await commodityCodeService.GetCommodityCodeByCodeAsync(null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetCommodityCodeByCodeAsync_ArgumentEmpty()
+            {
+                await commodityCodeService.GetCommodityCodeByCodeAsync("");
+            }
+
+            [TestMethod]
+            public async Task GetCommodityCodeByCodeAsync_ReturnsCommodityCodeData()
+            {
+                Ellucian.Colleague.Domain.ColleagueFinance.Entities.ProcurementCommodityCode thisCC = await new TestColleagueFinanceReferenceDataRepository().GetCommodityCodeByCodeAsync("10900");
+                Assert.IsNotNull(thisCC.TaxCodes);
+                Assert.IsTrue(thisCC.TaxCodes.Count > 0);
+                commodityCodeService = new CommodityCodesService(adapterRegistryMock.Object, configurationRepository, currentUserFactory, roleRepoMock.Object,
+                   new TestColleagueFinanceReferenceDataRepository(), logger);
+
+                var commodityCode = await commodityCodeService.GetCommodityCodeByCodeAsync("10900");
+                Assert.AreEqual(commodityCode.Code, thisCC.Code);
+                Assert.AreEqual(commodityCode.Description, thisCC.Description);
+                Assert.AreEqual(commodityCode.DefaultDescFlag, thisCC.DefaultDescFlag);
+                Assert.AreEqual(commodityCode.FixedAssetsFlag, thisCC.FixedAssetsFlag);
+                Assert.IsNotNull(commodityCode.TaxCodes);
+                Assert.IsTrue(commodityCode.TaxCodes.Count>0);
+                Assert.AreEqual(commodityCode.TaxCodes.First(), thisCC.TaxCodes.First());                
             }
         }
 

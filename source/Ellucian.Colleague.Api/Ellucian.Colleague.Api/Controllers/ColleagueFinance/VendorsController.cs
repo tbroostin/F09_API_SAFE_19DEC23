@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -27,6 +27,8 @@ using Ellucian.Web.Http.ModelBinding;
 using System.Web.Http.ModelBinding;
 using Newtonsoft.Json.Linq;
 using Ellucian.Colleague.Dtos.ColleagueFinance;
+using Ellucian.Colleague.Dtos.EnumProperties;
+using Ellucian.Colleague.Dtos.DtoProperties;
 
 namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 {
@@ -80,7 +82,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             var criteriaObj = GetFilterObject<Vendors>(_logger, "criteria");
 
             if (CheckForEmptyFilterParameters())
-                return new PagedHttpActionResult<IEnumerable<Vendors>>(new List<Vendors>(), page, this.Request);
+                return new PagedHttpActionResult<IEnumerable<Vendors>>(new List<Vendors>(), page, 0, this.Request);
 
             var criteriaValue = new Dtos.Filters.VendorFilter();
             if (criteriaObj.VendorDetail != null && criteriaObj.VendorDetail.Institution != null && !string.IsNullOrEmpty(criteriaObj.VendorDetail.Institution.Id))
@@ -104,7 +106,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             if (criteriaObj.relatedReference != null && criteriaObj.relatedReference.Any())
             {
                 // Not supported in Colleague therefore always return an empty set.
-                return new PagedHttpActionResult<IEnumerable<Vendors>>(new List<Vendors>(), page, this.Request);
+                return new PagedHttpActionResult<IEnumerable<Vendors>>(new List<Vendors>(), page, 0, this.Request);
             }
 
             try
@@ -125,7 +127,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -196,7 +198,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -274,7 +276,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -363,7 +365,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
@@ -514,19 +516,22 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 
         #endregion
 
-        #region EEDM Vendors v11
+        #region EEDM Vendors v11.1.0
 
         /// <summary>
         /// Return all vendors
         /// </summary>
         /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>
         /// <param name="criteria">The default named query implementation for filtering</param>
+        ///  <param name="vendorDetail">Vendor detail id GUId filter as in person or organization or institution guid</param>
         /// <returns>List of Vendors <see cref="Dtos.Vendors2"/> objects representing matching vendors</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("criteria", typeof(Vendors2))]
+        [QueryStringFilterFilter("vendorDetail", typeof(Dtos.Filters.VendorDetail))]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
-        public async Task<IHttpActionResult> GetVendorsAsync2(Paging page, QueryStringFilter criteria)
+
+        public async Task<IHttpActionResult> GetVendorsAsync2(Paging page, QueryStringFilter criteria, QueryStringFilter vendorDetail)
         {
             var bypassCache = false;
             if (Request.Headers.CacheControl != null)
@@ -542,12 +547,21 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
 
             string vendorDetails = "";
+            string vendorDetailFilterValue = string.Empty;
+            var vendorDetailFilterObj = GetFilterObject<Dtos.Filters.VendorDetail>(_logger, "vendorDetail");
+            if ((vendorDetailFilterObj != null) && (vendorDetailFilterObj.vendorDetail != null))
+            {
+                vendorDetails = vendorDetailFilterObj.vendorDetail.Id;
+            }
+
+           
             List<string> relatedReferences = null, statuses = null, classifications = null, types = null;
+            string taxId = string.Empty;
 
             var criteriaObj = GetFilterObject<Vendors2>(_logger, "criteria");
 
             if (CheckForEmptyFilterParameters())
-                return new PagedHttpActionResult<IEnumerable<Vendors2>>(new List<Vendors2>(), page, this.Request);
+                return new PagedHttpActionResult<IEnumerable<Vendors2>>(new List<Vendors2>(), page, 0, this.Request);
 
             if (criteriaObj.VendorDetail != null && criteriaObj.VendorDetail.Institution != null && !string.IsNullOrEmpty(criteriaObj.VendorDetail.Institution.Id))
                 vendorDetails = criteriaObj.VendorDetail.Institution.Id;
@@ -567,12 +581,20 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                     statuses.Add(status.ToString());
                 }
             }
+            // to avoid breaking change, we are supporting both at this time. 
             if (criteriaObj.relatedReference != null && criteriaObj.relatedReference.Any())
             {
                 relatedReferences = criteriaObj.relatedReference.Select(rr => rr.Type.ToString()).ToList();
                 // We don't support "paymentVendor" therefore return an empty set.
                 if (relatedReferences.Contains("PaymentVendor"))
-                    return new PagedHttpActionResult<IEnumerable<Vendors2>>(new List<Vendors2>(), page, this.Request);
+                    return new PagedHttpActionResult<IEnumerable<Vendors2>>(new List<Vendors2>(), page, 0, this.Request);
+            }
+            if (criteriaObj.RelatedVendor != null && criteriaObj.RelatedVendor.Any())
+            {
+                relatedReferences = criteriaObj.RelatedVendor.Select(rr => rr.Type.ToString()).ToList();
+                // We don't support "paymentVendor" therefore return an empty set.
+                if (relatedReferences.Contains("PaymentVendor"))
+                    return new PagedHttpActionResult<IEnumerable<Vendors2>>(new List<Vendors2>(), page, 0, this.Request);
             }
             if (criteriaObj.Types != null && criteriaObj.Types.Any())
             {
@@ -582,11 +604,15 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                     types.Add(type.ToString());
                 }
             }
+            if (!string.IsNullOrEmpty(criteriaObj.TaxId))
+            {
+                taxId = criteriaObj.TaxId;
+            }
 
             try
             {
                 var pageOfItems = await _vendorsService.GetVendorsAsync2(page.Offset, page.Limit, vendorDetails, classifications,
-                    statuses, relatedReferences, types, bypassCache);
+                    statuses, relatedReferences, types, taxId, bypassCache);
 
                 AddEthosContextProperties(await _vendorsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                               await _vendorsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -603,7 +629,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -632,7 +658,8 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// </summary>
         /// <param name="guid">GUID to desired vendor</param>
         /// <returns>A vendor object <see cref="Dtos.Vendors2"/> in EEDM format</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
+        
         public async Task<Dtos.Vendors2> GetVendorsByGuidAsync2(string guid)
         {
             if (string.IsNullOrEmpty(guid))
@@ -673,7 +700,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -702,37 +729,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// </summary>
         /// <param name="vendor">DTO of the new vendor</param>
         /// <returns>A vendor object <see cref="Dtos.Vendors"/> in EEDM format</returns>
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
         public async Task<Dtos.Vendors2> PostVendorsAsync2([ModelBinder(typeof(EedmModelBinder))] Dtos.Vendors2 vendor)
         {
-            if (vendor == null)
-            {
-                throw CreateHttpResponseException(new IntegrationApiException("Null vendor argument",
-                    IntegrationApiUtility.GetDefaultApiError("The request body is required.")));
-            }
             try
-            {
-                ValidateVendor2(vendor);
-
-                var vendorDetail = vendor.VendorDetail;
-
-                if ((vendorDetail.Institution != null) && ((string.IsNullOrEmpty(vendorDetail.Institution.Id))
-                     || (string.Equals(vendorDetail.Institution.Id, Guid.Empty.ToString()))))
-                {
-                    throw new ArgumentNullException("Vendor.VendorDetail.Institution", "The institution id is required when submitting a vendorDetail institution. ");
-                }
-                if ((vendorDetail.Organization != null) && ((string.IsNullOrEmpty(vendorDetail.Organization.Id))
-                     || (string.Equals(vendorDetail.Organization.Id, Guid.Empty.ToString()))))
-                {
-                    throw new ArgumentNullException("Vendor.VendorDetail.Organization", "The organization id is required when submitting a vendorDetail organization. ");
-                }
-                if ((vendorDetail.Person != null) && ((string.IsNullOrEmpty(vendorDetail.Person.Id))
-                    || (string.Equals(vendorDetail.Person.Id, Guid.Empty.ToString()))))
-                {
-                    throw new ArgumentNullException("Vendor.VendorDetail.Person", "The person id is required when submitting a vendorDetail person. ");
-                }
-
-
+            {                
                 //call import extend method that needs the extracted extension data and the config
                 await _vendorsService.ImportExtendedEthosData(await ExtractExtendedData(await _vendorsService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
 
@@ -752,7 +753,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -777,16 +778,39 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         }
 
         /// <summary>
+        /// Static helper method to convert a repository error into an integration API error
+        /// </summary>
+        /// <param name="message"></param>
+        /// <param name="code"></param>
+        /// <param name="guid"></param>
+        /// <param name="id"></param>
+        /// <param name="httpStatusCode"></param>
+        /// <returns>An integration API error</returns>
+        private static IntegrationApiError ConvertToIntegrationApiError(string message, string code = null, string guid = null,
+            string id = null, System.Net.HttpStatusCode httpStatusCode = System.Net.HttpStatusCode.BadRequest)
+        {
+            if (string.IsNullOrEmpty(code))
+                code = "Global.Internal.Error";
+
+            return new IntegrationApiError()
+            {
+                Code = code,
+                Message = message,
+                Guid = !string.IsNullOrEmpty(guid) ? guid : null,
+                Id = !string.IsNullOrEmpty(id) ? id : null,
+                StatusCode = httpStatusCode
+            };
+        }
+
+        /// <summary>
         /// Update (PUT) an existing vendor
         /// </summary>
         /// <param name="guid">GUID of the vendor to update</param>
         /// <param name="vendor">DTO of the updated vendor</param>
         /// <returns>A vendor object <see cref="Dtos.Vendors2"/> in EEDM format</returns>
-        [HttpPut, EedmResponseFilter]
+        [HttpPut, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
         public async Task<Dtos.Vendors2> PutVendorsAsync2([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.Vendors2 vendor)
         {
-            ValidateUpdateRequest2(guid, vendor);
-
             try
             {
                 //get Data Privacy List
@@ -794,53 +818,84 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 
                 //call import extend method that needs the extracted extension dataa and the config
                 await _vendorsService.ImportExtendedEthosData(await ExtractExtendedData(await _vendorsService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
+                // get original DTO
+                Dtos.Vendors2 origVendor = null;
+                try
+                {
+                    origVendor = await _vendorsService.GetVendorsByGuidAsync2(guid);
+                }
+                catch
+                { }
+
+                //get the merged DTO. 
 
                 var mergedVendor =
-                    await PerformPartialPayloadMerge(vendor, async () => await _vendorsService.GetVendorsByGuidAsync2(guid),
-                    dpList, _logger);
-
-                if(vendor.VendorDetail == null)
+                    await PerformPartialPayloadMerge(vendor, origVendor, dpList, _logger);
+                //issue error for those things that cannot be updated.
+                if (mergedVendor != null && origVendor != null)
                 {
-                    throw new ArgumentNullException("The vendorDetail is required when submitting a vendor.");
-                }
-
-                if (vendor.VendorDetail.Institution != null || mergedVendor.VendorDetail.Institution != null)
-                {
-                    if (vendor.VendorDetail.Institution == null || mergedVendor.VendorDetail.Institution == null || vendor.VendorDetail.Institution.Id != mergedVendor.VendorDetail.Institution.Id)
+                    var integrationApiException = new IntegrationApiException();
+                    //vendor detail cannot be changed.
+                    if (mergedVendor.VendorDetail == null)
                     {
-                        throw new ArgumentException("Updates to vendorDetail are not permitted.");
+                        integrationApiException.AddError(ConvertToIntegrationApiError("Updates to vendorDetail are not permitted.", "Validation.Exception", mergedVendor.Id));
                     }
-                }
-
-                if (vendor.VendorDetail.Organization != null || mergedVendor.VendorDetail.Organization != null)
-                {
-                    if (vendor.VendorDetail.Organization == null || mergedVendor.VendorDetail.Organization == null || vendor.VendorDetail.Organization.Id != mergedVendor.VendorDetail.Organization.Id)
+                    else
                     {
-                        throw new ArgumentException("Updates to vendorDetail are not permitted.");
-                    }
-                }
+                        if (origVendor.VendorDetail != null && mergedVendor.VendorDetail != null)
+                        {
+                            if (origVendor.VendorDetail.Institution != null && mergedVendor.VendorDetail.Institution != null && origVendor.VendorDetail.Institution.Id != mergedVendor.VendorDetail.Institution.Id)
+                            {
+                                integrationApiException.AddError(ConvertToIntegrationApiError("Updates to vendorDetail are not permitted.", "Validation.Exception", mergedVendor.Id));
+                            }
+                            if (origVendor.VendorDetail.Organization != null && mergedVendor.VendorDetail.Organization != null && origVendor.VendorDetail.Organization.Id != mergedVendor.VendorDetail.Organization.Id)
+                            {
+                                integrationApiException.AddError(ConvertToIntegrationApiError("Updates to vendorDetail are not permitted.", "Validation.Exception", mergedVendor.Id));
+                            }
+                            if (origVendor.VendorDetail.Person != null && mergedVendor.VendorDetail.Person != null && origVendor.VendorDetail.Person.Id != mergedVendor.VendorDetail.Person.Id)
+                            {
+                                integrationApiException.AddError(ConvertToIntegrationApiError("Updates to vendorDetail are not permitted.", "Validation.Exception", mergedVendor.Id));
+                            }
+                            if (origVendor.VendorDetail.Organization != null && mergedVendor.VendorDetail.Organization == null)
+                            {
+                                integrationApiException.AddError(ConvertToIntegrationApiError("Updates to vendorDetail are not permitted.", "Validation.Exception", mergedVendor.Id));
+                            }
+                            if (origVendor.VendorDetail.Person != null && mergedVendor.VendorDetail.Person == null)
+                            {
+                                integrationApiException.AddError(ConvertToIntegrationApiError("Updates to vendorDetail are not permitted.", "Validation.Exception", mergedVendor.Id));
+                            }
+                            if (origVendor.VendorDetail.Institution != null && mergedVendor.VendorDetail.Institution == null)
+                            {
+                                integrationApiException.AddError(ConvertToIntegrationApiError("Updates to vendorDetail are not permitted.", "Validation.Exception", mergedVendor.Id));
+                            }
 
-                if (vendor.VendorDetail.Person != null || mergedVendor.VendorDetail.Person != null)
-                {
-                    if (vendor.VendorDetail.Person == null || mergedVendor.VendorDetail.Person == null || vendor.VendorDetail.Person.Id != mergedVendor.VendorDetail.Person.Id)
+
+                        }
+                    }
+                    //startDate cannot be changed.
+                    if (origVendor.StartOn != mergedVendor.StartOn)
                     {
-                        throw new ArgumentException("Updates to vendorDetail are not permitted.");
+                        integrationApiException.AddError(ConvertToIntegrationApiError("Update to startOn date is not permitted.", "Validation.Exception", mergedVendor.Id));
                     }
+                    //default address cannot be changed.
+                    if (!CompareAddress(origVendor.DefaultAddresses, mergedVendor.DefaultAddresses))
+                    {
+                        integrationApiException.AddError(ConvertToIntegrationApiError("The default addresses for a vendor cannot be updated.", "Validation.Exception", mergedVendor.Id));
+                    }
+                    if (integrationApiException != null && integrationApiException.Errors != null && integrationApiException.Errors.Any())
+                    {
+                        throw integrationApiException;
+                    }
+
                 }
 
-                ValidateVendor2(mergedVendor);
                 var vendorReturn = await _vendorsService.PutVendorAsync2(guid, mergedVendor);
-
-                //store dataprivacy list and get the extended data to store
-                AddEthosContextProperties(dpList,
-                    await _vendorsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(), new List<string>() { guid }));
-
                 return vendorReturn;
             }
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
@@ -862,7 +917,6 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
-
             catch (Exception e)
             {
                 _logger.Error(e.ToString());
@@ -870,115 +924,61 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
         }
 
-        /// <summary>
-        /// Helper method to validate vendors PUT/POST.
-        /// </summary>
-        /// <param name="vendor">Vendors DTO object of type <see cref="Dtos.Vendors"/></param>
+        #endregion
 
-        private void ValidateVendor2(Vendors2 vendor)
+
+        private bool CompareAddress(List<VendorsAddressesDtoProperty> origAddrs, List<VendorsAddressesDtoProperty> mergedAddrs)
         {
-            if (vendor == null)
+            bool isEqual = true;
+            // if both of them are null then they are equal.
+            if (origAddrs == null && mergedAddrs == null)
             {
-                throw new ArgumentNullException("Vendor", "The id is required when submitting a vendor. ");
+                return isEqual;
             }
-
-            if (vendor.EndOn != null)
+            // if one of them is null
+            if (origAddrs == null && mergedAddrs != null)
             {
-                throw new ArgumentNullException("Vendor.EndOn", "The endOn date can not be updated when submitting a vendor. ");
+                isEqual = false;
+                return isEqual;
             }
-
-            if (vendor.VendorDetail == null)
+            // if one of them is null
+            if (origAddrs != null && mergedAddrs == null)
             {
-                throw new ArgumentNullException("Vendor.VendorDetail", "The vendorDetail is required when submitting a vendor. ");
+                isEqual = false;
+                return isEqual;
             }
-
-            var vendorDetail = vendor.VendorDetail;
-            if ((vendorDetail.Institution == null) && (vendorDetail.Organization == null) && (vendorDetail.Person == null))
+            if (origAddrs != null && mergedAddrs != null)
             {
-                throw new ArgumentNullException("Vendor.VendorDetail", "Either a Institution, Organizatation, or Person is required when submitting a vendorDetail. ");
-            }
-
-            if ((vendorDetail.Organization != null) && ((vendorDetail.Person != null) || (vendorDetail.Institution != null)))
-            {
-                throw new ArgumentNullException("Vendor.VendorDetail", "Only one of either an organization, person or institution can be specified as a vendor. ");
-            }
-            if ((vendorDetail.Person != null) && ((vendorDetail.Organization != null) || (vendorDetail.Institution != null)))
-            {
-                throw new ArgumentNullException("Vendor.VendorDetail", "Only one of either an organization, person or institution can be specified as a vendor. ");
-            }
-            if ((vendorDetail.Institution != null) && ((vendorDetail.Person != null) || (vendorDetail.Organization != null)))
-            {
-                throw new ArgumentNullException("Vendor.VendorDetail", "Only one of either an organization, person or institution can be specified as a vendor. ");
-            }
-
-
-            if (vendor.Classifications != null)
-            {
-                foreach (var classification in vendor.Classifications)
+                //check the count to make sure they both have same number of addresses otherwise throw an exception
+                if (origAddrs.Count != mergedAddrs.Count)
                 {
-                    if (string.IsNullOrEmpty(classification.Id))
-                        throw new ArgumentNullException("Vendor.Classification", "The classification id is required when submitting classifications. ");
+                    isEqual = false;
                 }
-            }
-
-            if (vendor.PaymentTerms != null)
-            {
-                foreach (var paymentTerm in vendor.PaymentTerms)
+                else
                 {
-                    if (string.IsNullOrEmpty(paymentTerm.Id))
-                        throw new ArgumentNullException("Vendor.PaymentTerms", "The paymentTerms id is required when submitting paymentTerms. ");
-                }
-            }
-
-            if (vendor.VendorHoldReasons != null)
-            {
-                foreach (var vendorHoldReason in vendor.VendorHoldReasons)
-                {
-                    if (string.IsNullOrEmpty(vendorHoldReason.Id))
+                    if (origAddrs != null && origAddrs.Any())
                     {
-                        throw new ArgumentNullException("Vendor.VendorHoldReasons", "The vendorHoldReason id is required when submitting vendorHoldReasons. ");
+                        foreach (var addr in origAddrs)
+                        {
+                            var addrId = string.Empty;
+                            var usageId = string.Empty;
+                            if (addr.Address != null)
+                                addrId = addr.Address.Id;
+                            if (addr.Usage != null)
+                                usageId = addr.Usage.Id;
+                            var compAddr = mergedAddrs.Where(ad => ad.Address != null && ad.Usage != null && ad.Address.Id == addrId && ad.Usage.Id == usageId);
+                            if (compAddr != null && compAddr.Count() != 1)
+                            {
+                                isEqual = false;
+                                break;
+                            }
+                        }
                     }
                 }
             }
 
+            return isEqual;
         }
-
-
-        /// <summary>
-        /// Validate the request on Put meets conditions for guid consistency 
-        /// </summary>
-        /// <param name="guid"></param>
-        /// <param name="request"></param>
-        private void ValidateUpdateRequest2(string guid, BaseModel2 request)
-        {
-            if (string.IsNullOrEmpty(guid))
-            {
-                throw CreateHttpResponseException(new IntegrationApiException("Null id argument",
-                    IntegrationApiUtility.GetDefaultApiError("The GUID must be specified in the request URL.")));
-            }
-            if (request == null)
-            {
-                throw CreateHttpResponseException(new IntegrationApiException("Null argument",
-                    IntegrationApiUtility.GetDefaultApiError("The request body is required.")));
-            }
-            if (string.IsNullOrEmpty(request.Id))
-            {
-                request.Id = guid.ToLowerInvariant();
-            }
-            else if ((string.Equals(guid, Guid.Empty.ToString())) || (string.Equals(request.Id, Guid.Empty.ToString())))
-            {
-                throw CreateHttpResponseException(new IntegrationApiException("GUID empty",
-                    IntegrationApiUtility.GetDefaultApiError("GUID must be specified.")));
-            }
-            else if (guid.ToLowerInvariant() != request.Id.ToLowerInvariant())
-            {
-                throw CreateHttpResponseException(new IntegrationApiException("GUID mismatch",
-                    IntegrationApiUtility.GetDefaultApiError("GUID not the same as in request body.")));
-            }
-        }
-
-        #endregion
-
         /// <summary>
         /// Get the list of vendors based on keyword search.
         /// </summary>
@@ -1025,6 +1025,100 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 throw CreateHttpResponseException("Unable to search vendors", HttpStatusCode.BadRequest);
             }
         }
+
+        /// <summary>
+        /// Get the list of vendors based on keyword search for Vouchers.
+        /// </summary>
+        /// <param name="searchCriteria"> The search criteria containing keyword for vendor search.</param>
+        /// <returns> The vendor search results for Vouchers</returns>      
+        /// <accessComments>
+        /// Requires at least one of the permissions VIEW.VENDOR, CREATE.UPDATE.VOUCHER
+        /// </accessComments>
+        [HttpPost]
+        public async Task<IEnumerable<VendorsVoucherSearchResult>> QueryVendorForVoucherAsync(VendorSearchCriteria searchCriteria)
+        {
+            if (searchCriteria == null)
+            {
+                string message = "Vendor search criteria must be specified.";
+                _logger.Error(message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
+            }
+            if (string.IsNullOrEmpty(searchCriteria.QueryKeyword))
+            {
+                string message = "query keyword is required to query.";
+                _logger.Error(message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
+            }
+
+            try
+            {
+                var vendorSearchResults = await _vendorsService.QueryVendorForVoucherAsync(searchCriteria);
+                return vendorSearchResults;
+            }
+            catch (ArgumentNullException anex)
+            {
+                _logger.Error(anex, "Invalid argument.");
+                throw CreateHttpResponseException("Invalid argument.", HttpStatusCode.BadRequest);
+            }
+            catch (KeyNotFoundException knfex)
+            {
+                _logger.Error(knfex, "Record not found.");
+                throw CreateHttpResponseException("Record not found.", HttpStatusCode.NotFound);
+            }
+            // Application exceptions will be caught below.
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Unable to find vendors.");
+                throw CreateHttpResponseException("Unable to find vendors.", HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Retrieves a vendor's tax form, box no and state to be defaulted in procurement document.
+        /// </summary>
+        /// <param name="vendorId">vendor id.</param>        
+        /// <param name="apType">AP type.</param>
+        /// <returns>VendorDefaultTaxFormInfo DTO.</returns>
+        /// <accessComments>
+        /// Requires at least one of the permissions VIEW.VENDOR, CREATE.UPDATE.VOUCHER, CREATE.UPDATE.REQUISITION,
+        /// CREATE.UPDATE.PURCHASE.ORDER  and CREATE.UPDATE.VOUCHER
+        /// </accessComments>
+        [HttpGet]
+        public async Task<VendorDefaultTaxFormInfo> GetVendorDefaultTaxFormInfoAsync(string vendorId, string apType)
+        {
+            if (string.IsNullOrEmpty(vendorId))
+            {
+                string message = "vendor id must be specified.";
+                _logger.Error(message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
+            }
+            try
+            {
+                var vendorDefaultTaxFormInfoDto = await _vendorsService.GetVendorDefaultTaxFormInfoAsync(vendorId, apType);
+                return vendorDefaultTaxFormInfoDto;
+            }
+            catch (ArgumentNullException anex)
+            {
+                _logger.Error(anex, "Invalid argument.");
+                throw CreateHttpResponseException("Invalid argument.", HttpStatusCode.BadRequest);
+            }
+            catch (PermissionsException peex)
+            {
+                _logger.Error(peex, "Insufficient permissions to get the vendor default tax form info.");
+                throw CreateHttpResponseException("Insufficient permissions to get the vendor default tax form info.", HttpStatusCode.Forbidden);
+            }
+            catch (KeyNotFoundException knfex)
+            {
+                _logger.Error(knfex, "Record not found.");
+                throw CreateHttpResponseException("Record not found.", HttpStatusCode.NotFound);
+            }
+            // Application exceptions will be caught below.
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Unable to populate vendor default tax form info.");
+                throw CreateHttpResponseException("Unable to populate vendor default tax form info.", HttpStatusCode.BadRequest);
+            }
+        }        
     }
 
 }

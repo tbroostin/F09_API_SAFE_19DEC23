@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -404,20 +404,20 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                                         switch (studentLoad.Sp1)
                                         {
                                             case "1":
-                                                studentAcadPeriodLoad.AcademicLoad = AcademicLoad.PartTime;
+                                                studentAcadPeriodLoad.AcademicLoad = AcademicLoad2.PartTime;
                                                 break;
                                             case "2":
-                                                studentAcadPeriodLoad.AcademicLoad = AcademicLoad.FullTime;
+                                                studentAcadPeriodLoad.AcademicLoad = AcademicLoad2.FullTime;
                                                 break;
                                             case "3":
-                                                studentAcadPeriodLoad.AcademicLoad = AcademicLoad.OverLoad;
+                                                studentAcadPeriodLoad.AcademicLoad = AcademicLoad2.OverLoad;
                                                 break;
                                             default:
-                                                studentAcadPeriodLoad.AcademicLoad = AcademicLoad.NotSet;
+                                                studentAcadPeriodLoad.AcademicLoad = AcademicLoad2.NotSet;
                                                 break;
                                         }
 
-                                        if (studentAcadPeriodLoad.AcademicLoad != AcademicLoad.NotSet)
+                                        if (studentAcadPeriodLoad.AcademicLoad != AcademicLoad2.NotSet)
                                             studentLoads.Add(studentAcadPeriodLoad);
                                     }
                                 }

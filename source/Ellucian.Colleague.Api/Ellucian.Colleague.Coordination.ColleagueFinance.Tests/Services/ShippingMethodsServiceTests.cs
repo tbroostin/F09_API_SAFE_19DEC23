@@ -25,6 +25,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
     {
         private const string shippingMethodsGuid = "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc";
         private const string shippingMethodsCode = "AT";
+        private const string shipViaCodesCode = "MC";
         private ICollection<ShippingMethod> _shippingMethodsCollection;
         private ShippingMethodsService _shippingMethodsService;
         private Mock<IAdapterRegistry> adapterRegistryMock;
@@ -35,6 +36,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         private Mock<ILogger> _loggerMock;
         private Mock<IColleagueFinanceReferenceDataRepository> _referenceRepositoryMock;
         private Mock<IConfigurationRepository> _configurationRepositoryMock;
+        private IEnumerable<ShipViaCode> _shipViaCodesCollection;
 
         private Domain.Entities.Permission permissionViewAnyPerson;
 
@@ -62,7 +64,17 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     new ShippingMethod("d2253ac7-9931-4560-b42f-1fccd43c952e", "CU", "Cultural")
                 };
 
-           
+            _shipViaCodesCollection = new List<ShipViaCode>()
+                {
+                    new ShipViaCode("CD","Datatel - Central Dist. Office"),
+                    new ShipViaCode("DT","Datatel - Downtown"),
+                    new ShipViaCode("EC","Datatel - Extension Center"),
+                    new ShipViaCode("MC","Datatel - Main Campus")
+                };
+
+            _referenceRepositoryMock.Setup(repo => repo.GetShipViaCodesAsync())
+                .ReturnsAsync(_shipViaCodesCollection);
+
             _referenceRepositoryMock.Setup(repo => repo.GetShippingMethodsAsync(It.IsAny<bool>()))
                 .ReturnsAsync(_shippingMethodsCollection);
 
@@ -76,6 +88,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             _shippingMethodsCollection = null;
             _referenceRepositoryMock = null;
             _loggerMock = null;
+            _shipViaCodesCollection = null;
         }
 
         [TestMethod]
@@ -163,6 +176,31 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             Assert.IsNull(result.Description);
             Assert.IsNotNull(result.Title);
             
+        }
+
+        [TestMethod]
+        public async Task ShippingMethodsService_GetShipViaCodesAsync()
+        {
+            var results = await _shippingMethodsService.GetShipViaCodesAsync();
+            Assert.IsTrue(results is IEnumerable<Ellucian.Colleague.Dtos.ColleagueFinance.ShipViaCode>);
+            Assert.IsNotNull(results);
+        }
+
+        [TestMethod]
+        public async Task ShippingMethodsService_GetShipViaCodesAsync_Count()
+        {
+            var results = await _shippingMethodsService.GetShipViaCodesAsync();
+            Assert.AreEqual(4, results.Count());
+        }
+
+        [TestMethod]
+        public async Task ShippingMethodsService_GetShipViaCodesAsync_Properties()
+        {
+            var result =
+                (await _shippingMethodsService.GetShipViaCodesAsync()).FirstOrDefault(x => x.Code == shipViaCodesCode);
+            Assert.IsNotNull(result.Code);
+            Assert.IsNotNull(result.Description);
+
         }
     }
 }

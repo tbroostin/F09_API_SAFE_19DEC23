@@ -1,4 +1,4 @@
-﻿//Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2018-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,6 +25,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests
             public string Instance;
             public DateTime? DueDate;
             public DateTime? StatusDate;
+            public DateTime? AssignDate;
         }
 
         public MailingRecord MailingData = new MailingRecord()
@@ -36,8 +37,9 @@ namespace Ellucian.Colleague.Domain.Base.Tests
                     Code = "FAC01STX",
                     StatusCode = "",
                     Instance = "Instance1",
-                    DueDate = new DateTime(2014, 08, 01),
-                    StatusDate = null
+                    DueDate = DateTime.Today.AddDays(30),
+                    StatusDate = null,
+                    AssignDate = DateTime.Today.AddDays(-30)
                 },
 
                 new ChangeCorrespondanceRecord()
@@ -45,8 +47,9 @@ namespace Ellucian.Colleague.Domain.Base.Tests
                     Code = "FAC01CPK",
                     StatusCode = "F",
                     Instance = "Instance2",
-                    DueDate = new DateTime(2014, 09, 28),
-                    StatusDate = DateTime.Today
+                    DueDate = DateTime.Today.AddDays(10),
+                    StatusDate = DateTime.Today,
+                    AssignDate = DateTime.Today.AddDays(-10)
                 },
 
                 new ChangeCorrespondanceRecord()
@@ -54,8 +57,9 @@ namespace Ellucian.Colleague.Domain.Base.Tests
                     Code = "DEPDUE",
                     StatusCode = "Z",
                     Instance = "Instance3",
-                    DueDate = new DateTime(2014, 12, 25),
-                    StatusDate = new DateTime(2014, 12, 25)
+                    DueDate = DateTime.Today.AddDays(10),
+                    StatusDate = new DateTime(2014, 12, 25),
+                    AssignDate = DateTime.Today.AddDays(-100)
                 },
 
                 new ChangeCorrespondanceRecord()
@@ -64,7 +68,8 @@ namespace Ellucian.Colleague.Domain.Base.Tests
                     StatusCode = "Y",
                     Instance = "Instance4",
                     DueDate = null,
-                    StatusDate = DateTime.Today
+                    StatusDate = DateTime.Today,
+                    AssignDate = null
                 }
 
             },
@@ -88,6 +93,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests
             public DateTime? StatusDate;
             public string Instance;
             public string StatusCode;
+            public DateTime? AssignDate;
         }
 
         public List<CorrespondanceTrackRecord> CorrespondanceTrackData = new List<CorrespondanceTrackRecord>()
@@ -106,8 +112,9 @@ namespace Ellucian.Colleague.Domain.Base.Tests
                     {
                         Code = "FA14SAP",
                         Instance = "SAP Document",
-                        StatusDate = new DateTime(2014, 3, 13),
-                        StatusCode = "Y"
+                        StatusDate = DateTime.Today,
+                        StatusCode = "Y",
+                        AssignDate = DateTime.Today
                     },
                     new CorrespondanceRequestRecord()
                     {
@@ -165,7 +172,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests
             correspondenceRequestsList.AddRange(
                 MailingData.ChangeCorespondanceData
                     .Select(cor =>
-                        CreateCorrespondenceRequest(personId, cor.Code, cor.DueDate, cor.StatusDate, cor.Instance, cor.StatusCode)
+                        CreateCorrespondenceRequest(personId, cor.Code, cor.DueDate, cor.StatusDate, cor.Instance, cor.StatusCode, cor.AssignDate)
                     )
                 );
 
@@ -175,20 +182,21 @@ namespace Ellucian.Colleague.Domain.Base.Tests
                 currentCorrespondanceTracks
                     .SelectMany(track => track.CorrespondanceRequests)
                     .Select(req =>
-                        CreateCorrespondenceRequest(personId, req.Code, req.DueDate, req.StatusDate, req.Instance, req.StatusCode)
+                        CreateCorrespondenceRequest(personId, req.Code, req.DueDate, req.StatusDate, req.Instance, req.StatusCode, req.AssignDate)
                     )
                 );
 
             return Task.FromResult(correspondenceRequestsList.AsEnumerable());
         }
 
-        private CorrespondenceRequest CreateCorrespondenceRequest(string personId, string code, DateTime? dueDate, DateTime? statusDate, string instance, string statusCode)
+        private CorrespondenceRequest CreateCorrespondenceRequest(string personId, string code, DateTime? dueDate, DateTime? statusDate, string instance, string statusCode, DateTime? assignDate)
         {
             var correspondenceRequest = new CorrespondenceRequest(personId, code)
             {
                 DueDate = dueDate,
                 StatusDate = statusDate,
-                Instance = instance
+                Instance = instance,
+                AssignDate = assignDate
             };
 
             if (statusCode == null) statusCode = string.Empty;
@@ -216,6 +224,11 @@ namespace Ellucian.Colleague.Domain.Base.Tests
             }
 
             return correspondenceRequest;
+        }
+
+        public Task<CorrespondenceRequest> AttachmentNotificationAsync(string personId, string communicationCode, DateTime? assignDate, string instance)
+        {
+            throw new NotImplementedException();
         }
     }
 }

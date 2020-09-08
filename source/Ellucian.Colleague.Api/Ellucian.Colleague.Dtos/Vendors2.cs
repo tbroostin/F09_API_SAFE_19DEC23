@@ -26,6 +26,13 @@ namespace Ellucian.Colleague.Dtos
         public VendorDetailsDtoProperty VendorDetail { get; set; }
 
         /// <summary>
+        /// The federal tax identification number for the vendor.
+        /// </summary>
+        [DataMember(Name = "taxId", EmitDefaultValue = false)]
+        [FilterProperty("criteria")]
+        public string TaxId { get; set; }
+
+        /// <summary>
         /// The vendor assigned to receive payment for this vendor or the parent vendor.
         /// </summary>
         [DataMember(Name = "relatedVendors", EmitDefaultValue = false)]
@@ -92,6 +99,12 @@ namespace Ellucian.Colleague.Dtos
         public CurrencyIsoCode? DefaultCurrency { get; set; }
 
         /// <summary>
+        /// The default tax form component associated with the vendor.
+        /// </summary>
+        [DataMember(Name = "defaultTaxFormComponent", EmitDefaultValue = false)]        
+        public GuidObject2 DefaultTaxFormComponent { get; set; }
+
+        /// <summary>
         /// Comment generated regarding the vendor.
         /// </summary>
         [DataMember(Name = "comment", EmitDefaultValue = false)]
@@ -102,5 +115,11 @@ namespace Ellucian.Colleague.Dtos
         /// </summary>
         [JsonProperty("relatedReference", DefaultValueHandling = DefaultValueHandling.Ignore)]
         public List<RelatedVendorDtoProperty> relatedReference { get; set; }
+
+        /// <summary>
+        /// The default address(es) associated with the vendor  
+        /// </summary>
+        [JsonProperty("defaultAddresses", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public List<VendorsAddressesDtoProperty> DefaultAddresses { get; set; }
     }
 }

@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Coordination.Base.Utility;
@@ -726,6 +726,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 parameters.Add(utility.BuildReportParameter("UnionDues", pdfData.UnionDues));
                 parameters.Add(utility.BuildReportParameter("CharitableDonations", pdfData.CharitableDonations));
                 parameters.Add(utility.BuildReportParameter("RPPorDPSPRegistrationNumber", pdfData.RPPorDPSPRegistrationNumber));
+                parameters.Add(utility.BuildReportParameter("Amended", pdfData.Amended));
                 parameters.Add(utility.BuildReportParameter("PensionAdjustment", pdfData.PensionAdjustment));
                 parameters.Add(utility.BuildReportParameter("EmployeesPPIPPremiums", pdfData.EmployeesPPIPPremiums));
                 parameters.Add(utility.BuildReportParameter("PPIPInsurableEarnings", pdfData.PPIPInsurableEarnings));

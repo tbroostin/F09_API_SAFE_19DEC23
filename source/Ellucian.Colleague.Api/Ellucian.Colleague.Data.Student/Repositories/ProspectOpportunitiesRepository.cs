@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Data.Student.DataContracts;
@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using Ellucian.Colleague.Domain.Base.Services;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -26,6 +27,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
     public class ProspectOpportunitiesRepository : BaseColleagueRepository, IProspectOpportunitiesRepository
     {
         RepositoryException exception = new RepositoryException();
+
+        const int AllProspectOpportunitiesCacheTimeout = 20; // Clear from cache every 20 minutes
+        const string AllProspectOpportunitiesCache = "AllProspectOpportunities";
 
         #region ..ctor
 
@@ -57,118 +61,143 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         {
             List<ProspectOpportunity> entities = new List<ProspectOpportunity>();
             Collection<Applications> applications = new Collection<Applications>();
-
+                       
             string criteria = string.Empty;
             string[] limitingKeys = new string[] { };
             int totalCount = 0;
-            var applicationLimitingKeys = new List<string>();
+            string[] applicationIds = null;
+            string[] subList = null;
 
-            #region  Named query person filter
-            if (filterPersonIds != null)
-            {
-                // Set limiting keys to previously retrieved personIds from SAVE.LIST.PARMS
-                limitingKeys = filterPersonIds;
-                var applicantApplicationId = (await DataReader.SelectAsync("APPLICANTS", limitingKeys, "WITH APP.APPLICATIONS NE '' BY.EXP APP.APPLICATIONS SAVING APP.APPLICATIONS")).ToList();
-                if (applicantApplicationId != null && applicantApplicationId.Any())
-                {
-                    applicationLimitingKeys.AddRange(applicantApplicationId);
-                }
-                if (applicationLimitingKeys == null || !applicationLimitingKeys.Any())
-                {
-                    return new Tuple<IEnumerable<ProspectOpportunity>, int>(new List<ProspectOpportunity>(), 0);
-                }
-                limitingKeys = applicationLimitingKeys.ToArray();
-            }
-
-            #endregion
-
-            #region criteria filter
-
+            var prospectFilter = string.Empty;
+            var academicPeriodFilter = string.Empty;
             if (criteriaObj != null)
             {
-                if (!string.IsNullOrWhiteSpace(criteriaObj.ProspectId))
+                if (!string.IsNullOrEmpty(criteriaObj.ProspectId))
                 {
-
-                    var record = await DataReader.ReadRecordAsync<Applicants>(criteriaObj.ProspectId);
-
-                    if (record == null)
-                    {
-                        return new Tuple<IEnumerable<ProspectOpportunity>, int>(new List<ProspectOpportunity>(), 0);
-                    }
-
-                    if(record.AppApplications == null || !record.AppApplications.Any())
-                    {
-                        return new Tuple<IEnumerable<ProspectOpportunity>, int>(new List<ProspectOpportunity>(), 0);
-                    }
-
-                    limitingKeys = record.AppApplications.ToArray();
-
-                    limitingKeys = await DataReader.SelectAsync("APPLICATIONS", limitingKeys, criteria);
-                    if (limitingKeys == null || !limitingKeys.Any())
-                    {
-                        return new Tuple<IEnumerable<ProspectOpportunity>, int>(new List<ProspectOpportunity>(), 0);
-                    }
+                    prospectFilter = criteriaObj.ProspectId;
                 }
-
-                if (!string.IsNullOrWhiteSpace(criteriaObj.EntryAcademicPeriod))
+                if (!string.IsNullOrEmpty(criteriaObj.EntryAcademicPeriod))
                 {
-                    criteria = string.Format("WITH APPL.START.TERM EQ '{0}'", criteriaObj.EntryAcademicPeriod);
-                    limitingKeys = await DataReader.SelectAsync("APPLICATIONS", limitingKeys, criteria);
-                    if (limitingKeys == null || !limitingKeys.Any())
-                    {
-                        return new Tuple<IEnumerable<ProspectOpportunity>, int>(new List<ProspectOpportunity>(), 0);
-                    }
+                    academicPeriodFilter = criteriaObj.EntryAcademicPeriod;
                 }
             }
 
-            #endregion
+            string allProspectOpportunitiesCacheKey = CacheSupport.BuildCacheKey(AllProspectOpportunitiesCache, prospectFilter, academicPeriodFilter, filterPersonIds);
 
-            string[] applStatusesSpCodeIds = await GetApplStatusSpCodes(bypassCache);
-            if (applStatusesSpCodeIds == null || !applStatusesSpCodeIds.Any())
+            var keyCache = await CacheSupport.GetOrAddKeyCacheToCache(
+               this,
+               ContainsKey,
+               GetOrAddToCacheAsync,
+               AddOrUpdateCacheAsync,
+               transactionInvoker,
+               allProspectOpportunitiesCacheKey,
+               "APPLICATIONS",
+               offset,
+               limit,
+               AllProspectOpportunitiesCacheTimeout,
+               async () =>
+               {
+                   #region  Named query person filter
+                   if (filterPersonIds != null && filterPersonIds.Any())
+                   {
+                       // Set limiting keys to previously retrieved personIds from SAVE.LIST.PARMS
+                       limitingKeys = filterPersonIds;
+                       var applicantApplicationId = await DataReader.SelectAsync("APPLICANTS", limitingKeys, "WITH APP.APPLICATIONS NE '' BY.EXP APP.APPLICATIONS SAVING APP.APPLICATIONS");
+                       if (applicantApplicationId == null || !applicantApplicationId.Any())
+                       {
+                           return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                       }
+                       limitingKeys = applicantApplicationId;
+                   }
+                   #endregion
+
+                   #region criteria filter
+
+                   if (criteriaObj != null)
+                   {
+                       // Prospect Filter
+                       if (!string.IsNullOrWhiteSpace(criteriaObj.ProspectId))
+                       {
+                           criteria = string.Format("WITH APPL.APPLICANT = '{0}'", criteriaObj.ProspectId);
+                       }
+
+                       if (!string.IsNullOrWhiteSpace(criteriaObj.EntryAcademicPeriod))
+                       {
+                           criteria = string.Concat(criteria, " AND APPL.START.TERM EQ '", criteriaObj.EntryAcademicPeriod, "'");
+                       }
+                   }
+
+                   #endregion
+                                                                         
+                   string[] applStatusesSpCodeIds = await GetApplStatusSpCodes(bypassCache);
+                   if (applStatusesSpCodeIds == null || !applStatusesSpCodeIds.Any())
+                   {
+                       return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                   }
+                   var currStatus = string.Empty;
+                   foreach (var applStatusesSpCodeId in applStatusesSpCodeIds)
+                   {
+                       if (string.IsNullOrEmpty(currStatus))
+                       {
+                           currStatus = string.Format("WITH APPL.INTG.KEY.IDX NE '' AND APPL.STATUS EQ '{0}'", applStatusesSpCodeId);
+                       }
+                       else
+                       {
+                           currStatus += string.Format(" '{0}'", applStatusesSpCodeId);
+                       }
+                   }                                    
+                   
+                   if (applStatusesSpCodeIds == null || !applStatusesSpCodeIds.Any())
+                   {
+                       return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                   }
+
+                   CacheSupport.KeyCacheRequirements requirements = new CacheSupport.KeyCacheRequirements()
+                   {
+                       criteria = string.Concat(currStatus, " ", criteria),
+                       limitingKeys = limitingKeys.ToList()
+                   };
+            
+                   return requirements;
+               });
+
+
+            if (keyCache == null || keyCache.Sublist == null || !keyCache.Sublist.Any())
             {
                 return new Tuple<IEnumerable<ProspectOpportunity>, int>(new List<ProspectOpportunity>(), 0);
             }
-            var currStatus = string.Empty;
-            foreach (var applStatusesSpCodeId in applStatusesSpCodeIds)
+
+            totalCount = keyCache.TotalCount.Value;
+            subList = keyCache.Sublist.ToArray();
+            
+            applications = await DataReader.BulkReadRecordAsync<Applications>(subList);
+
+            Collection<Applicants> applicants = null;
+            if (applications != null && applications.Any())
             {
-                if (string.IsNullOrEmpty(currStatus))
+                // Bulk read the applicants for the applications
+                var applicantIds = applications.Where(ap => (!string.IsNullOrWhiteSpace(ap.ApplApplicant)))
+                          .Select(ap => ap.ApplApplicant).Distinct().ToArray();
+                if (applicantIds != null && applicantIds.Any())
                 {
-                    currStatus = string.Format("WITH APPL.INTG.KEY.IDX NE '' AND APPL.STATUS EQ '{0}'", applStatusesSpCodeId);
+                    var applicantKeys = await DataReader.SelectAsync("APPLICANTS", applicantIds, "");
+                    if (applicantKeys != null && applicantKeys.Any())
+                    {
+                        applicants = await DataReader.BulkReadRecordAsync<DataContracts.Applicants>(applicantKeys);
+                    }
                 }
-                else
-                {
-                    currStatus += string.Format(" '{0}'", applStatusesSpCodeId);
-                }
             }
-
-            limitingKeys = await DataReader.SelectAsync("APPLICATIONS", limitingKeys, currStatus);
-
-            if (limitingKeys == null || !limitingKeys.Any())
-            {
-                return new Tuple<IEnumerable<ProspectOpportunity>, int>(new List<ProspectOpportunity>(), 0);
-            }
-
-            totalCount = limitingKeys.Count();
-            var sublist = limitingKeys.Skip(offset).Take(limit).Distinct().ToArray();
-
-            if(sublist == null || !sublist.Any())
-            {
-                return new Tuple<IEnumerable<ProspectOpportunity>, int>(new List<ProspectOpportunity>(), 0);
-            }
-
-            applications = await DataReader.BulkReadRecordAsync<Applications>(sublist);
 
             Dictionary<string, string> dict = null;
 
             try
             {
-                dict = await GetGuidsCollectionAsync(sublist);
+                dict = await GetGuidsCollectionAsync(subList);
             }
             catch (Exception ex)
             {
-                exception.AddError(new RepositoryError("Bad.Data", ex.Message));
-                exception.AddError(new RepositoryError("Bad.Data", "Guids not found for APPLICATION with APPL.INTG.KEY.IDX."));
-                throw exception;
+                // Suppress any possible exception with missing primary GUIDs.  We will report any missing GUIDs in a collection as
+                // we process the list of applications                
             }
 
             if (dict == null || !dict.Any())
@@ -180,8 +209,21 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             foreach (var application in applications)
             {
-                ProspectOpportunity entity = BuildEntity(application, dict);
-                entities.Add(entity);
+                if (application != null && !string.IsNullOrEmpty(application.ApplApplicant))
+                {
+                    Applicants applicant = null;
+                    if (applicants != null)
+                    {
+                        applicant = applicants.FirstOrDefault(app => app.Recordkey == application.ApplApplicant);
+                    }
+                    ProspectOpportunity entity = BuildEntity(application, dict, applicant);
+                    entities.Add(entity);
+                }
+            }
+
+            if (exception != null && exception.Errors.Any())
+            {
+                throw exception;
             }
 
             return entities.Any() ? new Tuple<IEnumerable<ProspectOpportunity>, int>(entities, totalCount) :
@@ -231,7 +273,12 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 throw new RepositoryException(string.Format("No prospect opportunity was found for guid '{0}'", id));
             }
-
+            
+            DataContracts.Applicants applicant = null;
+            if (entity != null && (!string.IsNullOrEmpty(entity.ApplApplicant)))
+            {
+                applicant = await DataReader.ReadRecordAsync<Applicants>("APPLICANTS", entity.ApplApplicant);
+            }
             var combinedSocodes = applStatusesSpCodeIds.Intersect(entity.ApplStatus);
             if(combinedSocodes == null || !combinedSocodes.Any())
             {
@@ -256,7 +303,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 throw exception;
             }
 
-            return BuildEntity(entity, dict);
+            return BuildEntity(entity, dict, applicant);
         }
 
         /// <summary>
@@ -480,6 +527,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 request.WithdrawnOn = entity.WithdrawnOn;
                 request.ccds = entity.ApplicationCredentials;
                 request.PersonSource = entity.PersonSource;
+                request.EducGoal = entity.EducationalGoal;
+                request.CareerGoals = entity.CareerGoals;
 
                 // Majors, Minors, and Concentrations (specializations)
                 if (entity.ApplicationDisciplines != null && entity.ApplicationDisciplines.Any())
@@ -836,21 +885,34 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <param name="source"></param>
         /// <param name="dict"></param>
         /// <returns></returns>
-        private ProspectOpportunity BuildEntity(Applications source, Dictionary<string, string> dict)
+        private ProspectOpportunity BuildEntity(Applications source, Dictionary<string, string> dict, Applicants applicant)
         {
             ProspectOpportunity entity = null;
             string guid = string.Empty;
             string key = string.Concat(source.Recordkey, "|", source.Recordkey);
             dict.TryGetValue(key, out guid);
-            entity = new ProspectOpportunity(guid, source.Recordkey)
+            if (string.IsNullOrEmpty(guid))
             {
-                ProspectId = source.ApplApplicant,
-                StudentAcadProgId = string.Concat(source.ApplApplicant, "*", source.ApplAcadProgram),
-                EntryAcademicPeriod = source.ApplStartTerm,
-                AdmissionPopulation = source.ApplAdmitStatus,
-                Site = (source.ApplLocations != null && source.ApplLocations.Any()) ? source.ApplLocations.FirstOrDefault() : string.Empty
-            };
-
+                exception.AddError(new RepositoryError("Bad.Data", string.Concat("Guid not found for APPLICATION " + source.Recordkey)));
+            }
+            else
+            {
+                var appEducGoal = string.Empty;
+                if (applicant != null)
+                {
+                    appEducGoal = applicant.AppOrigEducGoal;
+                }
+                entity = new ProspectOpportunity(guid, source.Recordkey)
+                {
+                    ProspectId = source.ApplApplicant,
+                    StudentAcadProgId = string.Concat(source.ApplApplicant, "*", source.ApplAcadProgram),
+                    EntryAcademicPeriod = source.ApplStartTerm,
+                    AdmissionPopulation = source.ApplAdmitStatus,
+                    Site = (source.ApplLocations != null && source.ApplLocations.Any()) ? source.ApplLocations.FirstOrDefault() : string.Empty,
+                    CareerGoals = source.ApplIntgCareerGoals,
+                    EducationalGoal = appEducGoal
+                };
+            }
             return entity;
         }
 

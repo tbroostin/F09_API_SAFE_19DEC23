@@ -26,7 +26,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// <summary>
         /// This is the line item tax code amount.
         /// </summary>
-        public decimal TaxAmount { get; set; }
+        public decimal? TaxAmount { get; set; }
 
         /// <summary>
         /// This is the line item tax code GL number.
@@ -45,7 +45,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// <param name="taxCode">This is the line item tax code.</param>
         /// <param name="taxAmount">This is the line item tax amount.</param>
         /// /// <exception cref="ArgumentNullException">Thrown if any of the applicable parameters are null.</exception>
-        public LineItemTax(string taxCode, decimal taxAmount)
+        public LineItemTax(string taxCode, decimal? taxAmount)
         {
             if (string.IsNullOrEmpty(taxCode))
             {

@@ -1,62 +1,171 @@
-﻿//Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2018-2020 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Data.Base.DataContracts;
+using Ellucian.Colleague.Data.Base.Repositories;
+using Ellucian.Colleague.Data.Base.Transactions;
+using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Colleague.Domain.Base.Exceptions;
+using Ellucian.Colleague.Domain.Base.Tests;
+using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Data.Colleague.DataContracts;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using Ellucian.Colleague.Data.Base.Tests.Repositories;
-using Ellucian.Colleague.Data.Base.DataContracts;
-using Ellucian.Colleague.Data.Base.Repositories;
-using Ellucian.Colleague.Domain.Base.Entities;
-using Ellucian.Colleague.Domain.Base.Tests;
-using Ellucian.Data.Colleague.DataContracts;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
 using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 {
     [TestClass]
-    public class CorrespondenceRequestsRepositoryTests
+    public class CorrespondenceRequestsRepositoryTests : BaseRepositorySetup
     {
+        private string personId;
+
+        private IEnumerable<CorrespondenceRequest> actualCorrespondenceRequests;
+
+        private CorrespondenceRequestsRepository actualCorrespondenceRequestsRepository;
+
+        private IEnumerable<CorrespondenceRequest> expectedCorrespondenceRequests;
+
+        private TestCorrespondenceRequestsRepository expectedCorrespondenceRequestsRepository;
+
+        private NotifyCommReqAttachmentRequest updateRequest;
+
+        private CorrespondenceRequest expectedNotifyCorrespondenceRequest;
+
+        [TestInitialize]
+        public async void BaseInitialize()
+        {
+            MockInitialize();
+
+            expectedCorrespondenceRequestsRepository = new TestCorrespondenceRequestsRepository();
+            personId = expectedCorrespondenceRequestsRepository.personId;
+            expectedCorrespondenceRequests = await expectedCorrespondenceRequestsRepository.GetCorrespondenceRequestsAsync(personId);
+            expectedNotifyCorrespondenceRequest = expectedCorrespondenceRequests.Where(cc => cc.PersonId == personId && cc.Code == "FA14SAP" && cc.AssignDate == DateTime.Today && cc.Instance == "SAP Document").FirstOrDefault();
+            
+            actualCorrespondenceRequestsRepository = BuildCorrespondenceRequestsRepository();
+
+            actualCorrespondenceRequests = await actualCorrespondenceRequestsRepository.GetCorrespondenceRequestsAsync(personId);
+        }
+
+
+
+        [TestCleanup]
+        public void BaseCleanup()
+        {
+            transFactoryMock = null;
+            dataReaderMock = null;
+            cacheProviderMock = null;
+            actualCorrespondenceRequests = null;
+            actualCorrespondenceRequestsRepository = null;
+            expectedCorrespondenceRequests = null;
+        }
+
+        private CorrespondenceRequestsRepository BuildCorrespondenceRequestsRepository()
+        {
+            dataReaderMock.Setup(m => m.ReadRecordAsync<Mailing>(personId, true))
+                .Returns<string, bool>(
+                    (a, b) =>
+                    {
+                        if (expectedCorrespondenceRequestsRepository.MailingData == null) return null;
+                        return Task.FromResult(new Mailing()
+                        {
+                            Recordkey = personId,
+                            MailingCurrentCrcCode = expectedCorrespondenceRequestsRepository.MailingData.CurrentCorrespondanceRequestCodes,
+                            ChCorrEntityAssociation =
+                                (expectedCorrespondenceRequestsRepository.MailingData.ChangeCorespondanceData == null) ? null :
+                                expectedCorrespondenceRequestsRepository.MailingData.ChangeCorespondanceData
+                                    .Where(chCorr => chCorr != null)
+                                    .Select(chCorr =>
+                                        new MailingChCorr()
+                                        {
+                                            MailingCorrReceivedAssocMember = chCorr.Code,
+                                            MailingCorrRecvdActDtAssocMember = chCorr.DueDate,
+                                            MailingCorrRecvdStatusAssocMember = chCorr.StatusCode,
+                                            MailingCorrReceivedDateAssocMember = chCorr.StatusDate,
+                                            MailingCorrRecvdInstanceAssocMember = chCorr.Instance,
+                                            MailingCorrRecvdAsgnDtAssocMember = chCorr.AssignDate
+                                        }
+                                    ).ToList()
+                        });
+                    }
+                );
+
+            dataReaderMock.Setup(r => r.BulkReadRecordAsync<Coreq>(It.IsAny<string[]>(), true))
+                .Returns<string[], bool>(
+                    (recordIds, b) =>
+                    {
+                        if (expectedCorrespondenceRequestsRepository.CorrespondanceTrackData == null) return null;
+                        return Task.FromResult(new Collection<Coreq>(
+                            expectedCorrespondenceRequestsRepository.CorrespondanceTrackData
+                                .Where(track => track != null && recordIds.Contains(string.Format("{0}*{1}", personId, track.Code)) && track.CorrespondanceRequests != null)
+                                .Select(track =>
+                                    new Coreq()
+                                    {
+                                        Recordkey = string.Format("{0}*{1}", personId, track.Code),
+                                        CoreqRequestsEntityAssociation = track.CorrespondanceRequests
+                                            .Where(coreq => coreq != null)
+                                            .Select(coreq =>
+                                                new CoreqCoreqRequests()
+                                                {
+                                                    CoreqCcCodeAssocMember = coreq.Code,
+                                                    CoreqCcExpActDtAssocMember = coreq.DueDate,
+                                                    CoreqCcDateAssocMember = coreq.StatusDate,
+                                                    CoreqCcInstanceAssocMember = coreq.Instance,
+                                                    CoreqCcStatusAssocMember = coreq.StatusCode,
+                                                    CoreqCcAssignDtAssocMember = coreq.AssignDate
+                                                }
+                                            ).ToList()
+                                    }
+                                ).ToList()
+                            ));
+                    }
+                );
+
+            dataReaderMock.Setup(r => r.ReadRecord<ApplValcodes>("CORE.VALCODES", "CORR.STATUSES", true))
+                .Returns<string, string, bool>(
+                    (a, b, c) =>
+                    {
+                        if (expectedCorrespondenceRequestsRepository.statusValcodeValues == null) return null;
+                        return new ApplValcodes()
+                        {
+                            ValsEntityAssociation = expectedCorrespondenceRequestsRepository.statusValcodeValues
+                                .Select(val =>
+                                    new ApplValcodesVals()
+                                    {
+                                        ValInternalCodeAssocMember = val.InternalCode,
+                                        ValActionCode1AssocMember = val.Action1Code,
+                                        ValExternalRepresentationAssocMember = val.Desc
+                                    }
+                                ).ToList()
+                        };
+                    }
+                );
+
+            // Set up a valid NotifyCommReqAttachment response
+            NotifyCommReqAttachmentResponse notifyResponse = new NotifyCommReqAttachmentResponse();
+            notifyResponse.ErrorMessages = null;
+            transManagerMock.Setup(mgr => mgr.ExecuteAsync<NotifyCommReqAttachmentRequest, NotifyCommReqAttachmentResponse>(It.Is<NotifyCommReqAttachmentRequest>(r => r.PersonId == personId))).ReturnsAsync(notifyResponse).Callback<NotifyCommReqAttachmentRequest>(req => updateRequest = req);
+            
+
+            return new CorrespondenceRequestsRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
+        }
+
         #region GetCorrespondenceRequests Tests
         [TestClass]
-        public class GetCorrespondenceRequestsTests : BaseRepositorySetup
+        public class GetCorrespondenceRequestsTests : CorrespondenceRequestsRepositoryTests
         {
-            private string personId;
-
-            private IEnumerable<CorrespondenceRequest> actualCorrespondenceRequests;
-
-            private CorrespondenceRequestsRepository actualCorrespondenceRequestsRepository;
-
-            private IEnumerable<CorrespondenceRequest> expectedCorrespondenceRequests;
-
-            private TestCorrespondenceRequestsRepository expectedCorrespondenceRequestsRepository;
-
             [TestInitialize]
-            public async void Initialize()
+            public void Initialize()
             {
-                MockInitialize();
-
-                expectedCorrespondenceRequestsRepository = new TestCorrespondenceRequestsRepository();
-                personId = expectedCorrespondenceRequestsRepository.personId;
-                expectedCorrespondenceRequests = await expectedCorrespondenceRequestsRepository.GetCorrespondenceRequestsAsync(personId);
-
-                actualCorrespondenceRequestsRepository = BuildCorrespondenceRequestsRepository();
-
-                actualCorrespondenceRequests = await actualCorrespondenceRequestsRepository.GetCorrespondenceRequestsAsync(personId);
+                base.BaseInitialize();
             }
-
-
 
             [TestCleanup]
             public void Cleanup()
             {
-                transFactoryMock = null;
-                dataReaderMock = null;
-                cacheProviderMock = null;
-                actualCorrespondenceRequests = null;
-                actualCorrespondenceRequestsRepository = null;
-                expectedCorrespondenceRequests = null;
+                base.BaseCleanup();
             }
 
             [TestMethod]
@@ -79,6 +188,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     Assert.AreEqual(testCorrReq.Status, repositoryCorrReq.Status);
                     Assert.AreEqual(testCorrReq.StatusDate, repositoryCorrReq.StatusDate);
                     Assert.AreEqual(testCorrReq.Instance, repositoryCorrReq.Instance);
+                    Assert.AreEqual(testCorrReq.AssignDate, repositoryCorrReq.AssignDate);
                 }
             }
 
@@ -354,91 +464,119 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             }
 
 
-            private CorrespondenceRequestsRepository BuildCorrespondenceRequestsRepository()
-            {
-                dataReaderMock.Setup(m => m.ReadRecordAsync<Mailing>(personId, true))
-                    .Returns<string, bool>(
-                        (a, b) =>
-                        {
-                            if (expectedCorrespondenceRequestsRepository.MailingData == null) return null;
-                            return Task.FromResult(new Mailing()
-                            {
-                                Recordkey = personId,
-                                MailingCurrentCrcCode = expectedCorrespondenceRequestsRepository.MailingData.CurrentCorrespondanceRequestCodes,
-                                ChCorrEntityAssociation =
-                                    (expectedCorrespondenceRequestsRepository.MailingData.ChangeCorespondanceData == null) ? null :
-                                    expectedCorrespondenceRequestsRepository.MailingData.ChangeCorespondanceData
-                                        .Where(chCorr => chCorr != null)
-                                        .Select(chCorr =>
-                                            new MailingChCorr()
-                                            {
-                                                MailingCorrReceivedAssocMember = chCorr.Code,
-                                                MailingCorrRecvdActDtAssocMember = chCorr.DueDate,
-                                                MailingCorrRecvdStatusAssocMember = chCorr.StatusCode,
-                                                MailingCorrReceivedDateAssocMember = chCorr.StatusDate,
-                                                MailingCorrRecvdInstanceAssocMember = chCorr.Instance
-                                            }
-                                        ).ToList()
-                            });
-                        }
-                    );
 
-                dataReaderMock.Setup(r => r.BulkReadRecordAsync<Coreq>(It.IsAny<string[]>(), true))
-                    .Returns<string[], bool>(
-                        (recordIds, b) =>
-                        {
-                            if (expectedCorrespondenceRequestsRepository.CorrespondanceTrackData == null) return null;
-                            return Task.FromResult(new Collection<Coreq>(
-                                expectedCorrespondenceRequestsRepository.CorrespondanceTrackData
-                                    .Where(track => track != null && recordIds.Contains(string.Format("{0}*{1}", personId, track.Code)) && track.CorrespondanceRequests != null)
-                                    .Select(track =>
-                                        new Coreq()
-                                        {
-                                            Recordkey = string.Format("{0}*{1}", personId, track.Code),
-                                            CoreqRequestsEntityAssociation = track.CorrespondanceRequests
-                                                .Where(coreq => coreq != null)
-                                                .Select(coreq =>
-                                                    new CoreqCoreqRequests()
-                                                    {
-                                                        CoreqCcCodeAssocMember = coreq.Code,
-                                                        CoreqCcExpActDtAssocMember = coreq.DueDate,
-                                                        CoreqCcDateAssocMember = coreq.StatusDate,
-                                                        CoreqCcInstanceAssocMember = coreq.Instance,
-                                                        CoreqCcStatusAssocMember = coreq.StatusCode
-                                                    }
-                                                ).ToList()
-                                        }
-                                    ).ToList()
-                                ));
-                        }
-                    );
-
-                dataReaderMock.Setup(r => r.ReadRecord<ApplValcodes>("CORE.VALCODES", "CORR.STATUSES", true))
-                    .Returns<string, string, bool>(
-                        (a, b, c) =>
-                        {
-                            if (expectedCorrespondenceRequestsRepository.statusValcodeValues == null) return null;
-                            return new ApplValcodes()
-                            {
-                                ValsEntityAssociation = expectedCorrespondenceRequestsRepository.statusValcodeValues
-                                    .Select(val =>
-                                        new ApplValcodesVals()
-                                        {
-                                            ValInternalCodeAssocMember = val.InternalCode,
-                                            ValActionCode1AssocMember = val.Action1Code,
-                                            ValExternalRepresentationAssocMember = val.Desc
-                                        }
-                                    ).ToList()
-                            };
-                        }
-                    );
-
-                return new CorrespondenceRequestsRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
-            }
         }
 
         #endregion
 
+        [TestClass]
+        public class AttachmentNotificationAsyncTests : CorrespondenceRequestsRepositoryTests
+        {
+            [TestInitialize]
+            public void Initialize()
+            {
+                base.BaseInitialize();
+            }
 
+            [TestCleanup]
+            public void Cleanup()
+            {
+                base.BaseCleanup();
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task AttachmentNotificationAsyncTests_PersonIdNull()
+            {
+                await actualCorrespondenceRequestsRepository.AttachmentNotificationAsync(null, "CCode", DateTime.Today, null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task AttachmentNotificationAsyncTests_PersonIdEmpty()
+            {
+                await actualCorrespondenceRequestsRepository.AttachmentNotificationAsync(string.Empty, "CCode", DateTime.Today, null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task AttachmentNotificationAsyncTests_CommunicationCodeNull()
+            {
+                await actualCorrespondenceRequestsRepository.AttachmentNotificationAsync("PersonId", null, DateTime.Today, null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task AttachmentNotificationAsyncTests_CommunicationCodeEmpty()
+            {
+                await actualCorrespondenceRequestsRepository.AttachmentNotificationAsync("PersonId", string.Empty, DateTime.Today, null);
+            }
+
+            [TestMethod]
+            public async Task AttachmentNotificationAsyncTests_Success()
+            {
+                var correspondenceRequestResult = await actualCorrespondenceRequestsRepository.AttachmentNotificationAsync(personId, "FA14SAP", DateTime.Today, "SAP Document");
+                Assert.IsInstanceOfType(correspondenceRequestResult, typeof(CorrespondenceRequest));
+                Assert.AreEqual(expectedNotifyCorrespondenceRequest.PersonId, correspondenceRequestResult.PersonId);
+                Assert.AreEqual(expectedNotifyCorrespondenceRequest.Code, correspondenceRequestResult.Code);
+                Assert.AreEqual(expectedNotifyCorrespondenceRequest.AssignDate, correspondenceRequestResult.AssignDate);
+                Assert.AreEqual(expectedNotifyCorrespondenceRequest.Instance, correspondenceRequestResult.Instance);
+                Assert.AreEqual(expectedNotifyCorrespondenceRequest.Status, correspondenceRequestResult.Status);
+                Assert.AreEqual(expectedNotifyCorrespondenceRequest.StatusDescription, correspondenceRequestResult.StatusDescription);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task AttachmentNotificationAsyncTests_CannotFindRequestAfterSuccessfulNotification()
+            {
+                await actualCorrespondenceRequestsRepository.AttachmentNotificationAsync(personId, "Code", DateTime.Today, null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(RecordLockException))]
+            public async Task AttachmentNotificationAsyncTests_CTXReturnsLockedMessage()
+            {
+                // Set up NotifyCommReqAttachment response contains lock error
+                NotifyCommReqAttachmentResponse notifyResponse2 = new NotifyCommReqAttachmentResponse();
+                notifyResponse2.ErrorMessages = new List<string>() { "Message 1", "MAILING record is locked by a user or process." };
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<NotifyCommReqAttachmentRequest, NotifyCommReqAttachmentResponse>(It.Is<NotifyCommReqAttachmentRequest>(r => r.PersonId == personId))).ReturnsAsync(notifyResponse2).Callback<NotifyCommReqAttachmentRequest>(req => updateRequest = req);
+
+                await actualCorrespondenceRequestsRepository.AttachmentNotificationAsync(personId, "FA14SAP", DateTime.Today, "SAP Document");
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(KeyNotFoundException))]
+            public async Task AttachmentNotificationAsyncTests_CTXReturnsNotFoundMessage()
+            {
+                // Set up NotifyCommReqAttachment response contains lock error
+                NotifyCommReqAttachmentResponse notifyResponse2 = new NotifyCommReqAttachmentResponse();
+                notifyResponse2.ErrorMessages = new List<string>() { "Message 1", "MAILING record does not exist." };
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<NotifyCommReqAttachmentRequest, NotifyCommReqAttachmentResponse>(It.Is<NotifyCommReqAttachmentRequest>(r => r.PersonId == personId))).ReturnsAsync(notifyResponse2).Callback<NotifyCommReqAttachmentRequest>(req => updateRequest = req);
+
+                await actualCorrespondenceRequestsRepository.AttachmentNotificationAsync(personId, "FA14SAP", DateTime.Today, "SAP Document");
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task AttachmentNotificationAsyncTests_CTXReturnsAnyOtherMessage()
+            {
+                // Set up NotifyCommReqAttachment response contains lock error
+                NotifyCommReqAttachmentResponse notifyResponse2 = new NotifyCommReqAttachmentResponse();
+                notifyResponse2.ErrorMessages = new List<string>() { "Message 1", "Message 2." };
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<NotifyCommReqAttachmentRequest, NotifyCommReqAttachmentResponse>(It.Is<NotifyCommReqAttachmentRequest>(r => r.PersonId == personId))).ReturnsAsync(notifyResponse2).Callback<NotifyCommReqAttachmentRequest>(req => updateRequest = req);
+
+                await actualCorrespondenceRequestsRepository.AttachmentNotificationAsync(personId, "FA14SAP", DateTime.Today, "SAP Document");
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task AttachmentNotificationAsyncTests_CTXReturnsException()
+            {
+                // Set up NotifyCommReqAttachment response to throw an exception
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<NotifyCommReqAttachmentRequest, NotifyCommReqAttachmentResponse>(It.Is<NotifyCommReqAttachmentRequest>(r => r.PersonId == personId))).ThrowsAsync(new TimeoutException());
+
+                await actualCorrespondenceRequestsRepository.AttachmentNotificationAsync(personId, "FA14SAP", DateTime.Today, "SAP Document");
+            }
+        }
     }
 }

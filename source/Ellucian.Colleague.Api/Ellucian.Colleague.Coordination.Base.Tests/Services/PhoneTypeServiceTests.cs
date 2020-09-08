@@ -64,7 +64,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             // Set up current user
             _currentUserFactory = new PersonServiceTests.CurrentUserSetup.PersonUserFactory();
-            _phoneTypesService = new PhoneTypeService(_adapterRegistry, _refRepo, _currentUserFactory, _roleRepo, _logger);
+            _phoneTypesService = new PhoneTypeService(_adapterRegistry, _refRepo, _currentUserFactory, _roleRepo, _logger, _configurationRepository);
 
             allPhoneTypes = new TestPhoneTypeRepository().Get();
             _refRepoMock.Setup(repo => repo.GetPhoneTypesAsync(It.IsAny<bool>())).ReturnsAsync(allPhoneTypes);

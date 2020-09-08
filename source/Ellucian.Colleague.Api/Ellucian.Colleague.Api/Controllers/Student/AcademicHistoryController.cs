@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
@@ -210,8 +210,10 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Student Ids: List of IDs.
         /// BestFit: (Optional) If true, non-term credit is fitted into terms based on dates.
         /// Filter: (Optional) If true, then filter to only active credits.
-        /// Term: (Optional) Term filter for academic history</param>
+        /// Term: (Optional) Term filter for academic history.
+        /// IncludeStudentSections: (Optional) If true, credits are returned as student sections.</param>
         /// <returns>PilotAcademicHistoryLevel DTO Objects</returns>
+        /// <accessComments>Users with the VIEW.STUDENT.INFORMATION permission can query students' academic history levels.</accessComments>
         [HttpPost]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.Student.PilotAcademicHistoryLevel>> QueryPilotAcademicHistoryLevelAsync([FromBody] AcademicHistoryQueryCriteria criteria)
         {

@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -46,6 +46,11 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         /// The DueDate, if any, of the CorrespondenceRequest. Initialized to null.
         /// </summary>
         public DateTime? DueDate { get; set; }
+
+        /// <summary>
+        /// The correspondence request's assign date. Needed to match up to correct item in the database along with Code and person.
+        /// </summary>
+        public DateTime? AssignDate { get; set; }
 
         /// <summary>
         /// Correspondence Request status description

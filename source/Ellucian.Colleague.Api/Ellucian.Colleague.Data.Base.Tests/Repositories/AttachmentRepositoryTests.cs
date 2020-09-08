@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Exceptions;
@@ -6,6 +6,7 @@ using Ellucian.Data.Colleague.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -42,7 +43,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             [TestInitialize]
             public void AttachmentRepository_GetAttachmentByIdWithEncrMetadataAsync_Initialize()
             {
-                base.Initialize();
+                Initialize();
 
                 userData = new DataContracts.Attachments()
                 {
@@ -107,6 +108,27 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             {
                 await repository.GetAttachmentByIdWithEncrMetadataAsync(string.Empty);
             }
+
+            [TestMethod]
+            public async Task AttachmentRepository_GetAttachmentByIdWithEncrMetadataAsync_Exception()
+            {
+                dataReaderMock.Setup(accessor =>
+                    accessor.ReadRecordAsync<DataContracts.Attachments>
+                    (It.IsAny<string>(), It.IsAny<bool>())).Throws(new Exception());
+
+                string expected = "Error occurred retrieving attachment metadata";
+                string actual = string.Empty;
+                try
+                {
+                    await repository.GetAttachmentByIdWithEncrMetadataAsync(userData.Recordkey);
+                }
+                catch (Exception e)
+                {
+                    actual = e.Message;
+                }
+
+                Assert.AreEqual(expected, actual);
+            }
         }
 
         [TestClass]
@@ -117,7 +139,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             [TestInitialize]
             public void AttachmentRepository_GetAttachmentByIdNoEncrMetadataAsync_Initialize()
             {
-                base.Initialize();
+                Initialize();
 
                 userData = new DataContracts.AttachmentsNoEncr()
                 {
@@ -174,6 +196,27 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             {
                 await repository.GetAttachmentByIdNoEncrMetadataAsync(string.Empty);
             }
+
+            [TestMethod]
+            public async Task AttachmentRepository_GetAttachmentByIdNoEncrMetadataAsync_Exception()
+            {
+                dataReaderMock.Setup(accessor =>
+                    accessor.ReadRecordAsync<DataContracts.AttachmentsNoEncr>
+                    (It.IsAny<string>(), It.IsAny<bool>())).Throws(new Exception());
+
+                string expected = "Error occurred retrieving attachment metadata";
+                string actual = string.Empty;
+                try
+                {
+                    await repository.GetAttachmentByIdNoEncrMetadataAsync(userData.Recordkey);
+                }
+                catch (Exception e)
+                {
+                    actual = e.Message;
+                }
+
+                Assert.AreEqual(expected, actual);
+            }
         }
 
         [TestClass]
@@ -184,7 +227,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             [TestInitialize]
             public void AttachmentRepository_GetAttachmentsAsync_Initialize()
             {
-                base.Initialize();
+                Initialize();
 
                 // user data w/ encryption properties
                 userData = new Collection<DataContracts.AttachmentsNoEncr>();
@@ -289,25 +332,35 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             {
                 await repository.GetAttachmentsAsync(string.Empty, string.Empty, string.Empty);
             }
+
+            [TestMethod]
+            public async Task AttachmentRepository_GetAttachmentsAsync_OwnerAndCollectionException()
+            {
+                dataReaderMock.Setup(a => a.BulkReadRecordAsync<DataContracts.AttachmentsNoEncr>
+                    (It.IsAny<string>(), It.IsAny<bool>())).Throws(new Exception());
+
+                string expected = "Error occurred retrieving bulk attachment metadata";
+                string actual = string.Empty;
+                try
+                {
+                    await repository.GetAttachmentsAsync("0000001", "COLLECTION1", null);
+                }
+                catch (Exception e)
+                {
+                    actual = e.Message;
+                }
+
+                Assert.AreEqual(expected, actual);
+            }
         }
 
         [TestClass]
         public class AttachmentRepository_GetAttachmentContentAsyncTests : AttachmentRepositoryTests
         {
-            Domain.Base.Entities.Attachment userData;
-
             [TestInitialize]
             public void AttachmentRepository_GetAttachmentContentAsync_Initialize()
             {
-                base.Initialize();
-
-                userData = new Domain.Base.Entities.Attachment("f070516e-09f4-4232-af06-78391100e213", "COLLECTION1", "myattachment.pdf",
-                    "application/pdf", 100, "0000001")
-                {
-                    Size = 10000,
-                    Status = Domain.Base.Entities.AttachmentStatus.Active,
-                    TagOne = "tag"
-                };
+                Initialize();
             }
 
             [TestMethod]
@@ -315,6 +368,174 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             public async Task AttachmentRepository_GetAttachmentContentAsync_NullAttachment()
             {
                 await repository.GetAttachmentContentAsync(null);
+            }
+        }
+
+        [TestClass]
+        public class AttachmentRepository_QueryAttachmentsAsyncTests : AttachmentRepositoryTests
+        {
+            Collection<DataContracts.AttachmentsNoEncr> userData;
+
+            [TestInitialize]
+            public void AttachmentRepository_QueryAttachmentsAsync_Initialize()
+            {
+                Initialize();
+
+                userData = new Collection<DataContracts.AttachmentsNoEncr>();
+                var attachment1 = new DataContracts.AttachmentsNoEncr()
+                {
+                    Recordkey = "f070516e-09f4-4232-af06-78391100e213",
+                    AttCollectionId = "COLLECTION1",
+                    AttContentType = "application/pdf",
+                    AttName = "myattachment.pdf",
+                    AttOwner = "0000001",
+                    AttSize = 10000,
+                    AttStatus = "Active",
+                    AttTagOne = "tag",
+                    AttachmentsAddopr = "USER",
+                    AttachmentsChgopr = "USER2",
+                    AttachmentsDelopr = "USER3"
+                };
+                userData.Add(attachment1);
+                var attachment2 = new DataContracts.AttachmentsNoEncr()
+                {
+                    Recordkey = "90c96aff-4d7b-4f65-a35a-b87ba6c2fc68",
+                    AttCollectionId = "COLLECTION1",
+                    AttContentType = "application/pdf",
+                    AttName = "myattachment2.pdf",
+                    AttOwner = "0000001",
+                    AttSize = 10000,
+                    AttStatus = "Active",
+                    AttTagOne = "tag",
+                    AttachmentsAddopr = "USER",
+                    AttachmentsChgopr = "USER2",
+                    AttachmentsDelopr = "USER3"
+                };
+                userData.Add(attachment2);
+            }
+
+            [TestMethod]
+            public async Task AttachmentRepository_QueryAttachmentsAsync_Success()
+            {
+                dataReaderMock.Setup(a => a.BulkReadRecordAsync<DataContracts.AttachmentsNoEncr>
+                    (It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(userData);
+
+                var actual = await repository.QueryAttachmentsAsync(true, "0000001", new DateTime(2020, 3, 26), new DateTime(2020, 3, 27),
+                    new List<string>() { "COLLECTION1", "COLLECTION2" });
+                Assert.AreEqual(userData.Count(), actual.Count());
+                foreach (var collection in userData)
+                {
+                    Assert.AreEqual(collection.Recordkey, actual.Where(a => a.Id == collection.Recordkey).First().Id);
+                }
+                
+                dataReaderMock.Verify();
+            }
+
+            [TestMethod]
+            public async Task AttachmentRepository_QueryAttachmentsAsync_NoCollections()
+            {
+                string expected = "Collection ID(s) are required to query attachments";
+                string actual = string.Empty;
+                
+                // null collection
+                try
+                {
+                    await repository.QueryAttachmentsAsync(false, null, new DateTime(2020, 1, 2), new DateTime(2020, 2, 3), null);
+                }
+                catch (ArgumentException e)
+                {
+                    actual = e.Message;
+                }
+
+                Assert.AreEqual(expected, actual);
+
+                // empty collection
+                actual = string.Empty;
+                try
+                {
+                    await repository.QueryAttachmentsAsync(false, null, new DateTime(2020, 1, 2), new DateTime(2020, 2, 3), new List<string>());
+                }
+                catch (ArgumentException e)
+                {
+                    actual = e.Message;
+                }
+
+                Assert.AreEqual(expected, actual);
+
+                // empty collection string
+                expected = "No valid Collection ID(s) provided to query attachments";
+                actual = string.Empty;
+                try
+                {
+                    await repository.QueryAttachmentsAsync(false, null, new DateTime(2020, 1, 2), new DateTime(2020, 2, 3), new List<string>() { string.Empty, string.Empty });
+                }
+                catch (ArgumentException e)
+                {
+                    actual = e.Message;
+                }
+
+                Assert.AreEqual(expected, actual);
+            }
+
+            [TestMethod]
+            public async Task AttachmentRepository_QueryAttachmentsAsync_StartDateAndEndDateRequired()
+            {
+                string expected = "Start and end date are required to query attachments";
+                string actual = string.Empty;
+
+                // start date without end date
+                try
+                {
+                    await repository.QueryAttachmentsAsync(false, null, DateTime.Now, null, new List<string>() { "COLLECTION1" });
+                }
+                catch (ArgumentException e)
+                {
+                    actual = e.Message;
+                }
+
+                Assert.AreEqual(expected, actual);
+
+                // end date without start date
+                actual = string.Empty;
+                try
+                {
+                    await repository.QueryAttachmentsAsync(false, null, null, DateTime.Now, new List<string>() { "COLLECTION1" });
+                }
+                catch (ArgumentException e)
+                {
+                    actual = e.Message;
+                }
+
+                Assert.AreEqual(expected, actual);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentOutOfRangeException))]
+            public async Task AttachmentRepository_QueryAttachmentsAsync_InvalidStartDate()
+            {
+                await repository.QueryAttachmentsAsync(false, null, new DateTime(2020, 3, 2), new DateTime(2020, 3, 1),
+                    new List<string>() { "COLLECTION1" });               
+            }
+
+            [TestMethod]
+            public async Task AttachmentRepository_QueryAttachmentsAsync_Exception()
+            {
+                dataReaderMock.Setup(a => a.BulkReadRecordAsync<DataContracts.AttachmentsNoEncr>
+                    (It.IsAny<string>(), It.IsAny<bool>())).Throws(new Exception());
+
+                string expected = "Error occurred retrieving attachment metadata by query";
+                string actual = string.Empty;
+                try
+                {
+                    await repository.QueryAttachmentsAsync(true, "0000001", new DateTime(2020, 3, 26), new DateTime(2020, 3, 27),
+                    new List<string>() { "COLLECTION1", "COLLECTION2" });
+                }
+                catch (Exception e)
+                {
+                    actual = e.Message;
+                }
+
+                Assert.AreEqual(expected, actual);
             }
         }
 
@@ -327,7 +548,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             [TestInitialize]
             public void AttachmentRepository_PostAttachmentAsync_Initialize()
             {
-                base.Initialize();
+                Initialize();
 
                 userData = new DataContracts.Attachments()
                 {
@@ -356,8 +577,10 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             [TestMethod]
             public async Task AttachmentRepository_PostAttachmentAsync_Success()
             {
-                var expectedResponse = new UpdateAttachmentsResponse();
-                expectedResponse.ErrorMsg = string.Empty;
+                var expectedResponse = new UpdateAttachmentsResponse
+                {
+                    ErrorMsg = string.Empty
+                };
 
                 transManagerMock.Setup(accessor =>
                     accessor.ExecuteAsync<UpdateAttachmentsRequest, UpdateAttachmentsResponse>
@@ -402,8 +625,10 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             [ExpectedException(typeof(RepositoryException))]
             public async Task AttachmentRepository_PostAttachmentAsync_ErrorResponse()
             {
-                var expectedResponse = new UpdateAttachmentsResponse();
-                expectedResponse.ErrorMsg = "error occurred";
+                var expectedResponse = new UpdateAttachmentsResponse
+                {
+                    ErrorMsg = "error occurred"
+                };
 
                 transManagerMock.Setup(accessor =>
                     accessor.ExecuteAsync<UpdateAttachmentsRequest, UpdateAttachmentsResponse>
@@ -443,28 +668,12 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         [TestClass]
         public class AttachmentRepository_PostAttachmentAndContentAsyncTests : AttachmentRepositoryTests
         {
-            DataContracts.Attachments userData;
             Domain.Base.Entities.Attachment attachment;
 
             [TestInitialize]
             public void AttachmentRepository_PostAttachmentAndContentAsync_Initialize()
             {
-                base.Initialize();
-
-                userData = new DataContracts.Attachments()
-                {
-                    Recordkey = "f070516e-09f4-4232-af06-78391100e213",
-                    AttCollectionId = "COLLECTION1",
-                    AttContentType = "application/pdf",
-                    AttName = "myattachment.pdf",
-                    AttOwner = "0000001",
-                    AttSize = 10000,
-                    AttStatus = "Active",
-                    AttTagOne = "tag",
-                    AttachmentsAddopr = "USER",
-                    AttachmentsChgopr = "USER2",
-                    AttachmentsDelopr = "USER3"
-                };
+                Initialize();
 
                 attachment = new Domain.Base.Entities.Attachment("f070516e-09f4-4232-af06-78391100e213", "COLLECTION1", "myattachment.pdf",
                     "application/pdf", 100, "0000001")
@@ -499,7 +708,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             [TestInitialize]
             public void AttachmentRepository_PutAttachmentAsync_Initialize()
             {
-                base.Initialize();
+                Initialize();
 
                 userData = new DataContracts.Attachments()
                 {
@@ -528,8 +737,10 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             [TestMethod]
             public async Task AttachmentRepository_PutAttachmentAsync_Success()
             {
-                var expectedResponse = new UpdateAttachmentsResponse();
-                expectedResponse.ErrorMsg = string.Empty;
+                var expectedResponse = new UpdateAttachmentsResponse
+                {
+                    ErrorMsg = string.Empty
+                };
 
                 transManagerMock.Setup(accessor =>
                     accessor.ExecuteAsync<UpdateAttachmentsRequest, UpdateAttachmentsResponse>
@@ -574,8 +785,10 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             [ExpectedException(typeof(RepositoryException))]
             public async Task AttachmentRepository_PutAttachmentAsync_ErrorResponse()
             {
-                var expectedResponse = new UpdateAttachmentsResponse();
-                expectedResponse.ErrorMsg = "error occurred";
+                var expectedResponse = new UpdateAttachmentsResponse
+                {
+                    ErrorMsg = "error occurred"
+                };
 
                 transManagerMock.Setup(accessor =>
                     accessor.ExecuteAsync<UpdateAttachmentsRequest, UpdateAttachmentsResponse>
@@ -620,7 +833,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             [TestInitialize]
             public void AttachmentRepository_DeleteAttachmentAsync_Initialize()
             {
-                base.Initialize();
+                Initialize();
 
                 attachment = new Domain.Base.Entities.Attachment("f070516e-09f4-4232-af06-78391100e213", "COLLECTION1", "myattachment.pdf",
                     "application/pdf", 100, "0000001")
@@ -634,8 +847,10 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             [TestMethod]
             public async Task AttachmentRepository_DeleteAttachmentAsync_Success()
             {
-                var expectedResponse = new CrudAttachmentContentResponse();
-                expectedResponse.ErrorMsg = string.Empty;
+                var expectedResponse = new CrudAttachmentContentResponse
+                {
+                    ErrorMsg = string.Empty
+                };
 
                 transManagerMock.Setup(accessor =>
                     accessor.ExecuteAsync<CrudAttachmentContentRequest, CrudAttachmentContentResponse>
@@ -677,8 +892,10 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             [ExpectedException(typeof(RepositoryException))]
             public async Task AttachmentRepository_DeleteAttachmentAsync_ErrorResponse()
             {
-                var expectedResponse = new CrudAttachmentContentResponse();
-                expectedResponse.ErrorMsg = "error occurred";
+                var expectedResponse = new CrudAttachmentContentResponse
+                {
+                    ErrorMsg = "error occurred"
+                };
 
                 transManagerMock.Setup(accessor =>
                     accessor.ExecuteAsync<CrudAttachmentContentRequest, CrudAttachmentContentResponse>

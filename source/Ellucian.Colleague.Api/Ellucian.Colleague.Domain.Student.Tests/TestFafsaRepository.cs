@@ -1,4 +1,4 @@
-﻿//Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Student.Entities;
 using System;
@@ -206,7 +206,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests
 
         private Fafsa BuildFafsa(string studentId, string awardYear, CsStudentRecord csStudentRecord, IsirFafsaRecord isirFafsaRecord, IsirResultRecord isirResultRecord)
         {
-            var fafsaEntity = new Fafsa(isirFafsaRecord.id, awardYear, studentId, isirFafsaRecord.guid)
+            var fafsaEntity = new Fafsa(isirFafsaRecord.id, studentId, awardYear, isirFafsaRecord.guid)
             {
                 CalcResultsGuid = isirFafsaRecord.guid,
                 ParentsAdjustedGrossIncome = isirFafsaRecord.parentAgi,

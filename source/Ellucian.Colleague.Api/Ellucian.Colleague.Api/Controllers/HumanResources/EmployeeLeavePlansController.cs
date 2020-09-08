@@ -1,4 +1,4 @@
-﻿/*Copyright 2017-2018 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2017-2020 Ellucian Company L.P. and its affiliates.*/
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -114,16 +114,18 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         }
 
         /// <summary>
-        /// Return all EmployeeLeavePlan objects that you have permission to access. As an employeee, you will have access to only your leave plans.
+        /// Returns all EmployeeLeavePlan objects that you have permission to access. As an employeee, you will have access to only your leave plans.
         /// As a supervisor (or the proxy of a supervisor), you will have access to the leave plans of your (or your proxy's) direct reports.
-        /// This is used by Self Service
+        /// As a leave approver, you have access to the leave plans of the employees whose leave requests you handle.
+        /// This is used by Self Service.
         /// </summary>
         /// <param name="effectivePersonId">Optional parameter for passing the effective person id in a proxy scenario</param>
         /// <accessComments>
-        /// 1. As an employee you have access to your own leave plans
-        /// 2. As a supervisor with the APPROVE.REJECT.TIME.ENTRY permission, you have access to your own leave plans and your supervisees' leave plans
+        /// 1. As an employee you have access to your own leave plans.
+        /// 2. As a supervisor with the APPROVE.REJECT.TIME.ENTRY permission, you have access to your own leave plans and your supervisees' leave plans.
         /// 3. As the proxy of a supervisor, you have access to that supervisor's leave plans and that supervisor's supervisees' leave plans.
-        /// 4. As an admin, you have access to anyone's leave plans
+        /// 4. As an admin, you have access to anyone's leave plans.
+        /// 5. As a leave approver with the APPROVE.REJECT.LEAVE.REQUEST permission, you have access to the leave plans of the employees whose leave requests you handle.
         /// </accessComments>
         /// <returns>A collection of EmployeeLeavePlan objects</returns>
         [HttpGet]

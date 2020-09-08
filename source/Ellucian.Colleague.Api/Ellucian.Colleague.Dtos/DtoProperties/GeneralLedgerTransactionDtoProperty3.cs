@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 using System.Runtime.Serialization;
 using Ellucian.Colleague.Dtos.DtoProperties;
 using Ellucian.Colleague.Dtos.EnumProperties;
@@ -43,6 +43,12 @@ namespace Ellucian.Colleague.Dtos.DtoProperties
         /// </summary>
         [JsonProperty("transactionTypeReferenceDate", DefaultValueHandling = DefaultValueHandling.Ignore)]
         public DateTimeOffset? TransactionTypeReferenceDate { get; set; }
+
+        /// <summary>
+        /// An external reference number that identifies the transaction as being included in a specified batch.
+        /// </summary>
+        [JsonProperty("externalBatchReference", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public string ExternalBatchReference { get; set; }
 
         /// <summary>
         /// The person or organization associated with the transaction.

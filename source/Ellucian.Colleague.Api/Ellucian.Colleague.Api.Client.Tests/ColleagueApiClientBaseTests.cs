@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Rest.Client.Exceptions;
 using Ellucian.Web.Http.TestUtil;
@@ -2116,6 +2116,83 @@ namespace Ellucian.Colleague.Api.Client.Tests
 
         #endregion
 
+        #region PutAttachmentNotificationAsync
+        [TestMethod]
+        public async Task Client_PutAttachmentNotificationAsync()
+        {
+            // Arrange
+            var correspondenceAttachmentNotification = new CorrespondenceAttachmentNotification() { PersonId = "PersonID", CommunicationCode = "CCcode", AssignDate = DateTime.Today.AddDays(-1) };
+            var correspondenceRequestResponse = new CorrespondenceRequest() { PersonId = "PersonID", Code = "CCcode", AssignDate = DateTime.Today.AddDays(-1), Status = CorrespondenceRequestStatus.Incomplete, StatusDate = DateTime.Today, DueDate = DateTime.Today.AddDays(2), StatusDescription = "ReceivedNotReviewed" };
+            var serializedResponse = JsonConvert.SerializeObject(correspondenceRequestResponse);
+               setResponse(serializedResponse, HttpStatusCode.OK);
+
+            var response = new HttpResponseMessage(HttpStatusCode.OK);
+            response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+            var mockHandler = new MockHandler();
+            mockHandler.Responses.Enqueue(response);
+
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+            var client = new ColleagueApiClient(testHttpClient, _logger);
+
+            // Act
+            var clientResponse = await client.PutAttachmentNotificationAsync(correspondenceAttachmentNotification);
+
+            // Assert that the expected item is found in the response
+            var actualJson = JsonConvert.SerializeObject(clientResponse);
+            var expectedJson = JsonConvert.SerializeObject(correspondenceRequestResponse);
+            Assert.AreEqual(expectedJson, actualJson);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task Client_PutAttachmentNotificationAsync_NullArg()
+        {
+            var mockHandler = new MockHandler();
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+            setResponse(string.Empty, HttpStatusCode.OK);
+
+            var client = new ColleagueApiClient(testHttpClient, _logger);
+
+            // Act
+            var clientResponse = await client.PutAttachmentNotificationAsync(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentException))]
+        public async Task Client_PutAttachmentAsync_NoPersonId()
+        {
+
+            var correspondenceAttachmentNotification = new CorrespondenceAttachmentNotification() { CommunicationCode = "CCcode", AssignDate = DateTime.Today }; var mockHandler = new MockHandler();
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+            setResponse(string.Empty, HttpStatusCode.OK);
+
+            var client = new ColleagueApiClient(testHttpClient, _logger);
+
+            // Act
+            var clientResponse = await client.PutAttachmentNotificationAsync(correspondenceAttachmentNotification);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentException))]
+        public async Task Client_PutAttachmentAsync_NoCommunicationCode()
+        {
+
+            var correspondenceAttachmentNotification = new CorrespondenceAttachmentNotification() { PersonId = "PersonId", AssignDate = DateTime.Today }; var mockHandler = new MockHandler();
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+            setResponse(string.Empty, HttpStatusCode.OK);
+
+            var client = new ColleagueApiClient(testHttpClient, _logger);
+
+            // Act
+            var clientResponse = await client.PutAttachmentNotificationAsync(correspondenceAttachmentNotification);
+        }
+        #endregion
+
         #region GetAuthenticationSchemeAsync
 
         [TestMethod]
@@ -2569,6 +2646,46 @@ namespace Ellucian.Colleague.Api.Client.Tests
                 Assert.AreEqual(Convert.ToBase64String(encrMetadata.EncrIV), Convert.ToBase64String(resultTuple.Item3.EncrIV));
                 Assert.AreEqual(encrMetadata.EncrKeyId, resultTuple.Item3.EncrKeyId);
                 Assert.AreEqual(encrMetadata.EncrType, resultTuple.Item3.EncrType);
+            }
+
+            [TestMethod]
+            public async Task Client_QueryAttachmentsAsync()
+            {
+                // Arrange
+
+                var fakeAttachment = GetFakeAttachment1();
+                var fakeAttachmentCollection = new List<Attachment>() { fakeAttachment };
+                var serializedResponse = JsonConvert.SerializeObject(fakeAttachmentCollection);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType)
+                };
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler)
+                {
+                    BaseAddress = new Uri(_serviceUrl)
+                };
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                var criteria = new AttachmentSearchCriteria()
+                {
+                    CollectionIds = new List<string>() { "COLLECTION1" },
+                    IncludeActiveAttachmentsOnly = false,
+                    ModifiedStartDate = new DateTime(2020, 3, 27),
+                    ModifiedEndDate = new DateTime(2020, 3, 28)
+                };
+
+                // Act
+                var clientResponse = await client.QueryAttachmentsAsync(criteria);
+
+                // Assert that the expected item is found in the response
+                var actualJson = JsonConvert.SerializeObject(clientResponse);
+                var expectedJson = JsonConvert.SerializeObject(fakeAttachmentCollection);
+                Assert.AreEqual(expectedJson, actualJson);
             }
 
             [TestMethod]

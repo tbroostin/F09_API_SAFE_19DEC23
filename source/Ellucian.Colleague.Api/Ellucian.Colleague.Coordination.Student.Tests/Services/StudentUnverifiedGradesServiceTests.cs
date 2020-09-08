@@ -423,37 +423,45 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(InvalidOperationException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentUnverifiedGradesService_GetStudentUnverifiedGradesByGuidAsync_InvalidOperationException()
             {
                 _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetStudentUnverifiedGradeByGuidAsync(It.IsAny<string>())).Throws<InvalidOperationException>();
 
-                await _studentUnverifiedGradesService.GetStudentUnverifiedGradesByGuidAsync("99");
+                try
+                {
+                    await _studentUnverifiedGradesService.GetStudentUnverifiedGradesByGuidAsync("99");
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("Operation is not valid due to the current state of the object.", ex.Errors[0].Message);
+                    throw;
+                }
             }
 
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task StudentUnverifiedGradesService_GetStudentUnverifiedGradesByGuidAsync_NoStudentGuidFound()
+            {
+                Domain.Student.Entities.StudentUnverifiedGrades entity = _studentUnverifiedGradesCollection.First();
+                var expected = _dtoStudentUnverifiedGradesList.FirstOrDefault(x => x.Id == entity.Guid);
 
-            //[TestMethod]
-            //[ExpectedException(typeof(IntegrationApiException))]
-            //public async Task StudentUnverifiedGradesService_GetStudentUnverifiedGradesByGuidAsync_NoStudentGuidFound()
-            //{
-            //    Domain.Student.Entities.StudentUnverifiedGrades entity = _studentUnverifiedGradesCollection.First();
-            //    var expected = _dtoStudentUnverifiedGradesList.FirstOrDefault(x => x.Id == entity.Guid);
+                entity.StudentId = "notFoundID";
 
-            //    entity.StudentId = "notFoundID";
+                _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetStudentUnverifiedGradeByGuidAsync(It.IsAny<string>())).ReturnsAsync(entity);
 
-            //    _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetStudentUnverifiedGradeByGuidAsync(It.IsAny<string>())).ReturnsAsync(entity);
-
-            //    try
-            //    {
-            //        await _studentUnverifiedGradesService.GetStudentUnverifiedGradesByGuidAsync("99");
-            //    }
-            //    catch (IntegrationApiException ex)
-            //    {
-            //        Assert.IsNotNull(ex.Errors);
-            //        Assert.AreEqual("Unable to locate PERSONS guid for id 'notFoundID'.", ex.Errors[0].Message);
-            //        throw;
-            //    }
-            //}
+                try
+                {
+                    await _studentUnverifiedGradesService.GetStudentUnverifiedGradesByGuidAsync("99");
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("Unable to locate PERSONS guid for id 'notFoundID'.", ex.Errors[0].Message);
+                    throw;
+                }
+            }
 
 
             [TestMethod]
@@ -477,7 +485,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 catch (IntegrationApiException ex)
                 {
                     Assert.IsNotNull(ex.Errors);
-                    Assert.AreEqual("User 'Samwise' is not authorized to view student unverified grades.", ex.Errors[0].Message);
+                    Assert.AreEqual("User 'Samwise' is not authorized to view student-unverified-grades.", ex.Errors[0].Message);
                     throw;
                 }
             }
@@ -559,14 +567,24 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             #region StudentUnverifiedGradesSubmissions PUT
 
             [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentUnverifiedGradesService_Put_PermissionsException()
             {
-                await _studentUnverifiedGradesService.UpdateStudentUnverifiedGradesSubmissionsAsync(_studentUnverifiedGradesSubmissions);
+                try
+                {
+                    await _studentUnverifiedGradesService.UpdateStudentUnverifiedGradesSubmissionsAsync(_studentUnverifiedGradesSubmissions);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("User 'ILP' is not authorized to create student-unverified-grades-submissions.", ex.Errors[0].Message);
+                    Assert.AreEqual("Access.Denied", ex.Errors[0].Code);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentUnverifiedGradesService_Put_InvalidId()
             {
                 viewStudentUnverifiedGradeSubmissionRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.ViewStudentUnverifiedGradesSubmissions));
@@ -574,11 +592,21 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 // var studentUnverifiedGradesSubmissionsEntityId = await _studentUnverifiedGradesRepository.GetStudentUnverifiedGradesIdFromGuidAsync(studentUnverifiedGradesSubmissions.Id);
                 _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetStudentUnverifiedGradesIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(string.Empty);
-                await _studentUnverifiedGradesService.UpdateStudentUnverifiedGradesSubmissionsAsync(_studentUnverifiedGradesSubmissions);
+
+                try
+                {
+                    await _studentUnverifiedGradesService.UpdateStudentUnverifiedGradesSubmissionsAsync(_studentUnverifiedGradesSubmissions);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("Unable to obtain id for SectionRegistration:  secGuid1", ex.Errors[0].Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentUnverifiedGradesService_Put_InvalidGradeID()
             {
                 viewStudentUnverifiedGradeSubmissionRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.ViewStudentUnverifiedGradesSubmissions));
@@ -592,13 +620,24 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 // var studentAcadCredId = await this._studentUnverifiedGradesRepository.GetStudentAcademicCredIdFromGuidAsync(source.SectionRegistration.Id);
                 _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetStudentAcademicCredIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(expectedEntity.StudentAcadaCredId);
+                
+                _studentUnverifiedGradesSubmissions.Grade.Grade.Id = "invalidGrade";
 
-                var actual = await _studentUnverifiedGradesService.UpdateStudentUnverifiedGradesSubmissionsAsync(_studentUnverifiedGradesSubmissions);
+                try
+                {
+                    var actual = await _studentUnverifiedGradesService.UpdateStudentUnverifiedGradesSubmissionsAsync(_studentUnverifiedGradesSubmissions);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("Unable to retrieve grade definition for id: 'invalidGrade'.", ex.Errors[0].Message);
+                    throw;
+                }
             }
 
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentUnverifiedGradesService_Put_FinalGradeExpirationDate()
             {
                 viewStudentUnverifiedGradeSubmissionRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.ViewStudentUnverifiedGradesSubmissions));
@@ -609,11 +648,20 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetStudentUnverifiedGradesIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(expectedEntity.StudentCourseSecId);
                 _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetStudentAcademicCredIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(expectedEntity.StudentAcadaCredId);
 
-                await _studentUnverifiedGradesService.UpdateStudentUnverifiedGradesSubmissionsAsync(_studentUnverifiedGradesSubmissions);
+                try
+                {
+                    await _studentUnverifiedGradesService.UpdateStudentUnverifiedGradesSubmissionsAsync(_studentUnverifiedGradesSubmissions);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("Incomplete grade details only apply to final grades.", ex.Errors[0].Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentUnverifiedGradesService_Put_FinalGradesException()
             {
                 viewStudentUnverifiedGradeSubmissionRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.ViewStudentUnverifiedGradesSubmissions));
@@ -626,12 +674,20 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 _studentUnverifiedGradesSubmissions.Grade.IncompleteGrade.ExtensionDate = null;
 
-
-                await _studentUnverifiedGradesService.UpdateStudentUnverifiedGradesSubmissionsAsync(_studentUnverifiedGradesSubmissions);
+                try
+                {
+                    await _studentUnverifiedGradesService.UpdateStudentUnverifiedGradesSubmissionsAsync(_studentUnverifiedGradesSubmissions);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("Incomplete grade details only apply to final grades.", ex.Errors[0].Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(RepositoryException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentUnverifiedGradesService_Put_RepositoryException()
             {
                 viewStudentUnverifiedGradeSubmissionRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.ViewStudentUnverifiedGradesSubmissions));
@@ -646,7 +702,16 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 _studentUnverifiedGradesRepositoryMock.Setup(x => x.UpdateStudentUnverifiedGradesSubmissionsAsync(It.IsAny<Domain.Student.Entities.StudentUnverifiedGrades>()))
                     .Throws<RepositoryException>();
 
-                var actual = await _studentUnverifiedGradesService.UpdateStudentUnverifiedGradesSubmissionsAsync(_studentUnverifiedGradesSubmissions);
+                try
+                {
+                    var actual = await _studentUnverifiedGradesService.UpdateStudentUnverifiedGradesSubmissionsAsync(_studentUnverifiedGradesSubmissions);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("Repository exception", ex.Errors[0].Message);
+                    throw;
+                }
             }
 
             [TestMethod]
@@ -669,7 +734,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentUnverifiedGradesService_Put_ArgumentException()
             {
                 viewStudentUnverifiedGradeSubmissionRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.ViewStudentUnverifiedGradesSubmissions));
@@ -684,7 +749,16 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 _studentUnverifiedGradesRepositoryMock.Setup(x => x.UpdateStudentUnverifiedGradesSubmissionsAsync(It.IsAny<Domain.Student.Entities.StudentUnverifiedGrades>()))
                     .Throws<ArgumentException>();
 
-                var actual = await _studentUnverifiedGradesService.UpdateStudentUnverifiedGradesSubmissionsAsync(_studentUnverifiedGradesSubmissions);
+                try
+                {
+                    var actual = await _studentUnverifiedGradesService.UpdateStudentUnverifiedGradesSubmissionsAsync(_studentUnverifiedGradesSubmissions);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("Value does not fall within the expected range.", ex.Errors[0].Message);
+                    throw;
+                }
             }
 
             [TestMethod]
@@ -715,14 +789,24 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             #region StudentUnverifiedGradesSubmissions POST
 
             [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentUnverifiedGradesService_Post_PermissionsException()
             {
-                await _studentUnverifiedGradesService.CreateStudentUnverifiedGradesSubmissionsAsync(_studentUnverifiedGradesSubmissions);
+                try
+                {
+                    await _studentUnverifiedGradesService.CreateStudentUnverifiedGradesSubmissionsAsync(_studentUnverifiedGradesSubmissions);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("User 'ILP' is not authorized to create student-unverified-grades-submissions.", ex.Errors[0].Message);
+                    Assert.AreEqual("Access.Denied", ex.Errors[0].Code);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentUnverifiedGradesService_Post_InvalidId()
             {
                 viewStudentUnverifiedGradeSubmissionRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.ViewStudentUnverifiedGradesSubmissions));
@@ -730,11 +814,20 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 // var studentUnverifiedGradesSubmissionsEntityId = await _studentUnverifiedGradesRepository.GetStudentUnverifiedGradesIdFromGuidAsync(studentUnverifiedGradesSubmissions.Id);
                 _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetStudentUnverifiedGradesIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(string.Empty);
-                await _studentUnverifiedGradesService.CreateStudentUnverifiedGradesSubmissionsAsync(_studentUnverifiedGradesSubmissions);
+                try
+                {
+                    await _studentUnverifiedGradesService.CreateStudentUnverifiedGradesSubmissionsAsync(_studentUnverifiedGradesSubmissions);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("Unable to obtain id for SectionRegistration:  secGuid1", ex.Errors[0].Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentUnverifiedGradesService_Post_InvalidGradeID()
             {
                 viewStudentUnverifiedGradeSubmissionRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.ViewStudentUnverifiedGradesSubmissions));
@@ -749,12 +842,23 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 // var studentAcadCredId = await this._studentUnverifiedGradesRepository.GetStudentAcademicCredIdFromGuidAsync(source.SectionRegistration.Id);
                 _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetStudentAcademicCredIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(expectedEntity.StudentAcadaCredId);
 
-                var actual = await _studentUnverifiedGradesService.CreateStudentUnverifiedGradesSubmissionsAsync(_studentUnverifiedGradesSubmissions);
+                _studentUnverifiedGradesSubmissions.Grade.Grade.Id = "invalidGrade";
+
+                try
+                {
+                    var actual = await _studentUnverifiedGradesService.CreateStudentUnverifiedGradesSubmissionsAsync(_studentUnverifiedGradesSubmissions);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("Unable to retrieve grade definition for id: 'invalidGrade'.", ex.Errors[0].Message);
+                    throw;
+                }
             }
 
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentUnverifiedGradesService_Post_FinalGradeExpirationDate()
             {
                 viewStudentUnverifiedGradeSubmissionRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.ViewStudentUnverifiedGradesSubmissions));
@@ -765,11 +869,20 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetStudentUnverifiedGradesIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(expectedEntity.StudentCourseSecId);
                 _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetStudentAcademicCredIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(expectedEntity.StudentAcadaCredId);
 
-                await _studentUnverifiedGradesService.CreateStudentUnverifiedGradesSubmissionsAsync(_studentUnverifiedGradesSubmissions);
+                try
+                {
+                    await _studentUnverifiedGradesService.CreateStudentUnverifiedGradesSubmissionsAsync(_studentUnverifiedGradesSubmissions);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("Incomplete grade details only apply to final grades.", ex.Errors[0].Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentUnverifiedGradesService_Post_FinalGradesException()
             {
                 viewStudentUnverifiedGradeSubmissionRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.ViewStudentUnverifiedGradesSubmissions));
@@ -782,11 +895,20 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 _studentUnverifiedGradesSubmissions.Grade.IncompleteGrade.ExtensionDate = null;
 
-                await _studentUnverifiedGradesService.CreateStudentUnverifiedGradesSubmissionsAsync(_studentUnverifiedGradesSubmissions);
+                try
+                {
+                    await _studentUnverifiedGradesService.CreateStudentUnverifiedGradesSubmissionsAsync(_studentUnverifiedGradesSubmissions);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("Incomplete grade details only apply to final grades.", ex.Errors[0].Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(RepositoryException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentUnverifiedGradesService_Post_RepositoryException()
             {
                 viewStudentUnverifiedGradeSubmissionRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.ViewStudentUnverifiedGradesSubmissions));
@@ -801,11 +923,20 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 _studentUnverifiedGradesRepositoryMock.Setup(x => x.CreateStudentUnverifiedGradesSubmissionsAsync(It.IsAny<Domain.Student.Entities.StudentUnverifiedGrades>()))
                     .Throws<RepositoryException>();
 
-                var actual = await _studentUnverifiedGradesService.CreateStudentUnverifiedGradesSubmissionsAsync(_studentUnverifiedGradesSubmissions);
+                try
+                {
+                    var actual = await _studentUnverifiedGradesService.CreateStudentUnverifiedGradesSubmissionsAsync(_studentUnverifiedGradesSubmissions);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("Repository exception", ex.Errors[0].Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentUnverifiedGradesService_Post_KeyNotFoundException()
             {
                 viewStudentUnverifiedGradeSubmissionRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.ViewStudentUnverifiedGradesSubmissions));
@@ -820,11 +951,20 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 _studentUnverifiedGradesRepositoryMock.Setup(x => x.CreateStudentUnverifiedGradesSubmissionsAsync(It.IsAny<Domain.Student.Entities.StudentUnverifiedGrades>()))
                     .Throws<KeyNotFoundException>();
 
-                var actual = await _studentUnverifiedGradesService.CreateStudentUnverifiedGradesSubmissionsAsync(_studentUnverifiedGradesSubmissions);
+                try
+                {
+                    var actual = await _studentUnverifiedGradesService.CreateStudentUnverifiedGradesSubmissionsAsync(_studentUnverifiedGradesSubmissions);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("The given key was not present in the dictionary.", ex.Errors[0].Message);
+                    throw;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentUnverifiedGradesService_Post_ArgumentException()
             {
                 viewStudentUnverifiedGradeSubmissionRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.ViewStudentUnverifiedGradesSubmissions));
@@ -839,7 +979,16 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 _studentUnverifiedGradesRepositoryMock.Setup(x => x.CreateStudentUnverifiedGradesSubmissionsAsync(It.IsAny<Domain.Student.Entities.StudentUnverifiedGrades>()))
                     .Throws<ArgumentException>();
 
-                var actual = await _studentUnverifiedGradesService.CreateStudentUnverifiedGradesSubmissionsAsync(_studentUnverifiedGradesSubmissions);
+                try
+                {
+                    var actual = await _studentUnverifiedGradesService.CreateStudentUnverifiedGradesSubmissionsAsync(_studentUnverifiedGradesSubmissions);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors);
+                    Assert.AreEqual("Value does not fall within the expected range.", ex.Errors[0].Message);
+                    throw;
+                }
             }
 
             [TestMethod]

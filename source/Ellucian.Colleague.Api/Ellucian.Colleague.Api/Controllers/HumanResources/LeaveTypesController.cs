@@ -1,4 +1,4 @@
-//Copyright 2017 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -64,8 +64,17 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             try
             {
                 var temp = await _leaveTypesService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache);
-                AddDataPrivacyContextProperty((await _leaveTypesService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());               
-                return await _leaveTypesService.GetLeaveTypesAsync(bypassCache);
+                AddDataPrivacyContextProperty((await _leaveTypesService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
+                var leaveTypes = await _leaveTypesService.GetLeaveTypesAsync(bypassCache);
+
+                if (leaveTypes != null && leaveTypes.Any())
+                {
+                    AddEthosContextProperties(await _leaveTypesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _leaveTypesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              leaveTypes.Select(a => a.Id).ToList()));
+                }
+
+                return leaveTypes;                
             }
             catch (KeyNotFoundException e)
             {
@@ -123,7 +132,11 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             try
             {
                AddDataPrivacyContextProperty((await _leaveTypesService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
-               return await _leaveTypesService.GetLeaveTypesByGuidAsync(guid);
+                AddEthosContextProperties(
+                    await _leaveTypesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                    await _leaveTypesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                        new List<string>() { guid }));
+                return await _leaveTypesService.GetLeaveTypesByGuidAsync(guid);
             }
             catch (KeyNotFoundException e)
             {

@@ -16,6 +16,9 @@ using Moq;
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.ColleagueFinance.Transactions;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Base.Transactions;
+using Ellucian.Web.Http.Configuration;
+using Ellucian.Colleague.Domain.Base.Services;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 {
@@ -26,10 +29,12 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         // So using the already created Mock data that is used there and add to it for testing
         // this accounts payable invoices tests.
         #region Initialize and Cleanup
+        ApiSettings apiSettings;
 
         private AccountsPayableInvoicesRepository accountsPayableInvoicesRepo;
+        protected Mock<IColleagueTransactionFactory> transFactoryMock;        
         private Mock<IColleagueTransactionInvoker> transactionInvoker = null;
-        private TestVoucherRepository testVoucherRepository;
+        private TestAccountsPayableInvoicesRepository testVoucherRepository;
         private AccountsPayableInvoices accountsPayableInvoicesEntity;
         private Voucher voucherDomainEntity;
         UpdateVouchersIntegrationResponse response;
@@ -60,15 +65,22 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
             // Set up a mock transaction invoker for the colleague transaction that gets
             // the GL accounts descriptions for the GL accounts in a project line item.
+            dataReaderMock = new Mock<IColleagueDataReader>();
+
+            // transaction factory mock
+            transFactoryMock = new Mock<IColleagueTransactionFactory>();
+
             transactionInvoker = new Mock<IColleagueTransactionInvoker>();
             transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transactionInvoker.Object);
+            transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataReaderMock.Object);
 
             // Initialize the Voucher repository
-            testVoucherRepository = new TestVoucherRepository();
+            testVoucherRepository = new TestAccountsPayableInvoicesRepository();
             this.voucherDataContract = new Vouchers();
             personContract = new Base.DataContracts.Person();
             Taxes = new List<LineItemTax>();
-
+            apiSettings = new ApiSettings("TEST");
+                        
             BuildData();
             accountsPayableInvoicesRepo = new AccountsPayableInvoicesRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
             versionNumber = 2;
@@ -79,12 +91,12 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         {
             cacheProviderMock = null;
             transFactoryMock = null;
-            transFactoryMock = null;
             loggerMock = null;
             dataReaderMock = null;
             hierarchyNameResponse = null;
             transactionInvoker = null;
             accountsPayableInvoicesEntity = null;
+            apiSettings = null;
         }
         #endregion
 
@@ -100,6 +112,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
                 //adding values that are missing in defaults of Vouchers
                 this.voucherDataContract.VouDiscAmt = 1.5m;
+                this.voucherDataContract.VouManualCashDisc = "Y";
                 this.voucherDataContract.VouAddressId = "112233";
                 this.voucherDataContract.VouNet = 2.5m;
                 this.voucherDataContract.VouPayFlag = "Y";
@@ -289,8 +302,37 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
                 var purchaseOrder = new PurchaseOrders() { PoNo = "P0000001" };
                 dataReaderMock.Setup(repo => repo.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), true)).ReturnsAsync(purchaseOrder);
+               
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 21,
+                    CacheName = "AllAccountsPayableInvoices",
+                    Entity = "VOUCHERS",
+                    Sublist = voucherIds.ToList(),
+                    TotalCount = 21,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    },
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 7625,
+                        KeyCacheMin = 5906,
+                        KeyCachePart = "001",
+                        KeyCacheSize = 1720
+                    }
+                }
+                };
+                transactionInvoker.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
 
-                var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 100);
+                var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 100, It.IsAny<string>());
 
                 Assert.AreEqual(dataContractVouchers.Count(), accountsPayables.Item1.Count());
 
@@ -444,7 +486,36 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 var purchaseOrder = new PurchaseOrders() { PoNo = "P0000001" };
                 dataReaderMock.Setup(repo => repo.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), true)).ReturnsAsync(purchaseOrder);
 
-                var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 3);
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 3,
+                    CacheName = "AllAccountsPayableInvoices",
+                    Entity = "VOUCHERS",
+                    Sublist = voucherIds.ToList(),
+                    TotalCount = 21,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    },
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 7625,
+                        KeyCacheMin = 5906,
+                        KeyCachePart = "001",
+                        KeyCacheSize = 1720
+                    }
+                }
+                };
+                transactionInvoker.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
+
+                var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 3, It.IsAny<string>());
 
                 Assert.AreEqual(3, accountsPayables.Item1.Count());
 
@@ -452,15 +523,19 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(KeyNotFoundException))]
         public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesAsync_Vouchers_Null()
         {
             dataReaderMock.Setup(repo => repo.SelectAsync("VOUCHERS", It.IsAny<string>())).ReturnsAsync(voucherIds);
+            dataReaderMock.Setup(repo => repo.SelectAsync("AP.TYPES", It.IsAny<string>())).ReturnsAsync(new string[] { "AP" });
             dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<DataContracts.Vouchers>("VOUCHERS", It.IsAny<string[]>(), true)).ReturnsAsync(null);
 
             dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", It.IsAny<string[]>(), true)).ReturnsAsync(people);
 
-            var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 100);
+            transactionInvoker.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(null);
+
+            var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 100, It.IsAny<string>());
+            Assert.AreEqual(0, accountsPayables.Item1.Count());
 
         }
 
@@ -511,7 +586,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
        
         [TestMethod]
-        [ExpectedException(typeof(ArgumentNullException))]
+        [ExpectedException(typeof(RepositoryException))]
         public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesAsync_PersonsRecs_Is_Null()
         {
             List<string> rcVouSchedulesIds = new List<string>();
@@ -553,11 +628,40 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             string[] personIds = { "0001234", "0000002" };
             dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", personIds, true)).ReturnsAsync(null);
 
-            var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 100);
+            GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+            {
+                Offset = 0,
+                Limit = 21,
+                CacheName = "AllAccountsPayableInvoices",
+                Entity = "VOUCHERS",
+                Sublist = voucherIds.ToList(),
+                TotalCount = 21,
+                KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    },
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 7625,
+                        KeyCacheMin = 5906,
+                        KeyCachePart = "001",
+                        KeyCacheSize = 1720
+                    }
+                }
+            };
+            transactionInvoker.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                .ReturnsAsync(resp);
+
+            var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 100, It.IsAny<string>());
         }
 
         [TestMethod]
-        [ExpectedException(typeof(KeyNotFoundException))]
+        [ExpectedException(typeof(ArgumentException))]
         public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesByGuidAsync_VoucherStatus_isNull()
         {
             string voucherId = "1";
@@ -572,7 +676,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(KeyNotFoundException))]
+        [ExpectedException(typeof(ArgumentException))]
         public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesByGuidAsync_VoucherStatus_ContainsInvalidStatus()
         {
             string voucherId = "1";
@@ -588,7 +692,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(KeyNotFoundException))]
+        [ExpectedException(typeof(ArgumentException))]
         public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesByGuidAsync_VoucherStatus_ContainsInProgressStatus()
         {
             string voucherId = "1";
@@ -604,7 +708,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(KeyNotFoundException))]
+        [ExpectedException(typeof(ArgumentException))]
         public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesByGuidAsync_VoucherStatus_Contains_Cancelled()
         {
             string voucherId = "1";
@@ -668,7 +772,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(KeyNotFoundException))]
+        [ExpectedException(typeof(ArgumentException))]
         public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesByGuidAsync_MissingAPType()
         {
             string voucherId = "1";
@@ -1205,6 +1309,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         private Base.DataContracts.Person person;
         private List<string> apTypes;
 
+        private Collection<Projects> projectDataContracts;
+        private Collection<Items> itemsDataContracts;
+        private Collection<ProjectsLineItems> projectLineItemDataContracts;
         private string guid = "1a49eed8-5fe7-4120-b1cf-f23266b9e874";
 
         #endregion
@@ -1249,9 +1356,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 VouTaxesEntityAssociation = new List<VouchersVouTaxes>()
                 {
 
-                }
+                },
+                VouItemsId = new List<string>() { "1"}
             };
 
+           
             person = new Base.DataContracts.Person()
             {
                 RecordGuid = guid,
@@ -1294,6 +1403,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 VoucherVendorTerms = "1",
                 Comments = "comments",
                 PurchaseOrderId = "1",
+               
                 VoucherTaxes = new List<LineItemTax>() { new LineItemTax("1", 50) },
             };
 
@@ -1323,6 +1433,139 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             });
 
             accountsPayableInvoiceEntity.AddAccountsPayableInvoicesLineItem(lineItem);
+            ConvertLineItemsIntoDataContracts();
+
+        }
+
+        private void ConvertLineItemsIntoDataContracts()
+        {
+            this.itemsDataContracts = new Collection<Items>();
+            this.projectDataContracts = new Collection<Projects>();
+            this.projectLineItemDataContracts = new Collection<ProjectsLineItems>();
+
+            foreach (var lineItem in this.accountsPayableInvoiceEntity.LineItems)
+            {
+                // Populate the line items directly
+                var itemsDataContract = new Items()
+                {
+                    Recordkey = lineItem.Id,
+                    ItmDesc = new List<string>() { lineItem.Description },
+                    ItmVouQty = lineItem.Quantity,
+                    ItmVouPrice = lineItem.Price,
+                    ItmVouExtPrice = lineItem.ExtendedPrice,
+                    ItmVouIssue = lineItem.UnitOfIssue,
+                    ItmInvoiceNo = lineItem.InvoiceNumber,
+                    ItmTaxForm = lineItem.TaxForm,
+                    ItmTaxFormCode = lineItem.TaxFormCode,
+                    ItmTaxFormLoc = lineItem.TaxFormLocation,
+                    ItmComments = lineItem.Comments,
+                    VouchGlEntityAssociation = new List<ItemsVouchGl>(),
+                    VouGlTaxesEntityAssociation = new List<ItemsVouGlTaxes>()
+                };
+
+                // Populate the GL Distributions
+
+                int counter = 0;
+                foreach (var glDistr in lineItem.GlDistributions)
+                {
+                    counter++;
+
+                    decimal localGlAmount = 0,
+                        foreignGlAmount = 0;
+
+                    // The amount from the LineItemGlDistribution domain entity is always going to be a local amount.
+                    // If the voucher is in foreign currency, we need to manually set the test foreign amounts since
+                    // they cannot be gotten from the domain entity. Currently, there is only one foreign currency voucher
+                    // in the test data.
+                    localGlAmount = glDistr.Amount;
+                    if (!string.IsNullOrEmpty(this.accountsPayableInvoiceEntity.CurrencyCode))
+                    {
+                        if (counter == 1)
+                        {
+                            foreignGlAmount = 150.00m;
+                        }
+                        else if (counter == 2)
+                        {
+                            foreignGlAmount = 100.00m;
+                        }
+                        else
+                        {
+                            foreignGlAmount = 50.00m;
+                        }
+                    }
+
+                    itemsDataContract.VouchGlEntityAssociation.Add(new ItemsVouchGl()
+                    {
+                        ItmVouGlNoAssocMember = glDistr.GlAccountNumber,
+                        ItmVouGlQtyAssocMember = glDistr.Quantity,
+                        ItmVouProjectCfIdAssocMember = glDistr.ProjectId,
+                        ItmVouPrjItemIdsAssocMember = glDistr.ProjectLineItemId,
+                        ItmVouGlAmtAssocMember = localGlAmount,
+                        ItmVouGlForeignAmtAssocMember = foreignGlAmount
+                    });
+
+                    this.projectDataContracts.Add(new Projects()
+                    {
+                        Recordkey = glDistr.ProjectId,
+                        PrjRefNo = glDistr.ProjectNumber
+                    });
+
+                    this.projectLineItemDataContracts.Add(new ProjectsLineItems()
+                    {
+                        Recordkey = glDistr.ProjectLineItemId,
+                        PrjlnProjectItemCode = glDistr.ProjectLineItemCode
+                    });
+                }
+
+                // Populate the taxes
+                int taxCounter = 0;
+                foreach (var taxDistr in lineItem.LineItemTaxes)
+                {
+                    taxCounter++;
+                    decimal? localTaxAmount = null,
+                        foreignTaxAmount = null;
+
+                    // The amount from the LineItemTax domain entity is going to be in local currency unless there is a
+                    // currency code on the voucher.
+                    //
+                    // If the voucher does not have a currency code, the tax amount in the domain entity will be in local
+                    // currency, and the foreign tax amount on the data contract will be null. 
+                    //
+                    // If the voucher does have a currency code, the tax amount in the domain entity will be in foreign
+                    // currency, and we need to manually set the test local tax amounts since they cannot be gotten from
+                    // the domain entity. Currently, there is only one foreign currency voucher in the test data.
+
+                    if (string.IsNullOrEmpty(this.accountsPayableInvoiceEntity.CurrencyCode))
+                    {
+                        localTaxAmount = taxDistr.TaxAmount;
+                    }
+                    else
+                    {
+                        foreignTaxAmount = taxDistr.TaxAmount;
+                        if (counter == 1)
+                        {
+                            localTaxAmount = 15.00m;
+                        }
+                        else if (counter == 2)
+                        {
+                            localTaxAmount = 25.00m;
+                        }
+                        else
+                        {
+                            localTaxAmount = 10.00m;
+                        }
+                    }
+
+                    itemsDataContract.VouGlTaxesEntityAssociation.Add(new ItemsVouGlTaxes()
+                    {
+                        ItmVouGlTaxCodeAssocMember = taxDistr.TaxCode,
+                        ItmVouGlTaxAmtAssocMember = localTaxAmount,
+                        ItmVouGlForeignTaxAmtAssocMember = foreignTaxAmount
+                    });
+                }
+
+                this.itemsDataContracts.Add(itemsDataContract);
+            }
         }
 
         private void InitializeTestMock()
@@ -1332,6 +1575,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             dataReaderMock.Setup(r => r.ReadRecordAsync<Vouchers>(It.IsAny<string>(), true)).ReturnsAsync(voucher);
             dataReaderMock.Setup(r => r.ReadRecordAsync<Base.DataContracts.Person>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(person);
             dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(apTypes.ToArray());
+            string[] itemsId = { "1"};
+            dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<DataContracts.Items>(itemsId, true)).ReturnsAsync(this.itemsDataContracts);
+
         }
 
         #endregion
@@ -1408,15 +1654,15 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(KeyNotFoundException))]
-        public async Task ActPayInvService_CreateAccountsPayableInvoices_Get_VoucherType_Null_ArgumentException()
+        [ExpectedException(typeof(ArgumentException))]
+        public async Task ActPayInvService_CreateAccountsPayableInvoices_Get_VoucherType_Null_RepositorytException()
         {
             voucher.VouApType = "2";
             await accountsPayableInvoicesRepository.CreateAccountsPayableInvoicesAsync(accountsPayableInvoiceEntity);
         }
 
         [TestMethod]
-        [ExpectedException(typeof(KeyNotFoundException))]
+        [ExpectedException(typeof(ArgumentException))]
         public async Task ActPayInvService_CreateAccountsPayableInvoices_Get_VoucherStatus_Cancelled_OR_Voided_ArgumentException()
         {
             voucher.VouStatus = new List<string>() { "X", "V" };

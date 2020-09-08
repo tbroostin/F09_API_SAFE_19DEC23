@@ -1,4 +1,5 @@
-﻿// Copyright 2016 - 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
+
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base.Services;
@@ -12,7 +13,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.ComponentModel;
 using System.Net;
-using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Ellucian.Web.Http;
@@ -21,8 +21,6 @@ using Ellucian.Colleague.Api.Utility;
 using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.ModelBinding;
 using System.Web.Http.ModelBinding;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Ellucian.Web.Security;
 using Ellucian.Web.Http.Exceptions;
 
@@ -126,7 +124,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <param name="page"></param>
         /// <param name="criteria"></param>
         /// <returns></returns>
-        [HttpGet]
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 200), EedmResponseFilter]
         [FilteringFilter(IgnoreFiltering = true)]
         [ValidateQueryStringFilter()]
@@ -263,6 +261,80 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
         }
+
+        /// <summary>
+        /// Retrieves a person visa by ID.
+        /// </summary>
+        /// <param name="id">Id of person visa to retrieve</param>
+        /// <returns>A <see cref="Ellucian.Colleague.Dtos.PersonVisa">person visa</see></returns>
+        [EedmResponseFilter, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        public async Task<Ellucian.Colleague.Dtos.PersonVisa> GetPersonVisaById2Async([FromUri] string id)
+        {
+            try
+            {
+                bool bypassCache = false;
+                if (Request.Headers.CacheControl != null)
+                {
+                    if (Request.Headers.CacheControl.NoCache)
+                    {
+                        bypassCache = true;
+                    }
+                }
+
+                if (string.IsNullOrEmpty(id))
+                {
+                    // throw new ArgumentNullException("Must provide an id for person-visas.");
+                    var exception = new IntegrationApiException();
+                    exception.AddError(new IntegrationApiError("Missing.Guid",
+                            "The GUID must be provided in the URL.",
+                                "Please provide a GUID in the URL."));
+                    throw exception;
+                }
+
+                var personVisa = await _personVisasService.GetPersonVisaById2Async(id);
+
+                if (personVisa != null)
+                {
+
+                    AddEthosContextProperties(await _personVisasService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                              await _personVisasService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              new List<string>() { personVisa.Id }));
+                }
+
+
+                return personVisa;
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
         #endregion
 
         #region POST
@@ -331,6 +403,61 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 throw CreateHttpResponseException(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Creates a PersonVisa.
+        /// </summary>
+        /// <param name="personVisa"><see cref="Dtos.PersonVisa">personVisa</see> to create</param>
+        /// <returns>Newly created <see cref="Dtos.PersonVisa">PersonVisa</see></returns>
+        [HttpPost, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
+        public async Task<Dtos.PersonVisa> PostPersonVisa2Async([ModelBinder(typeof(EedmModelBinder))] Dtos.PersonVisa personVisa)
+        {
+            try
+            {
+              
+                //call import extend method that needs the extracted extension data and the config
+                await _personVisasService.ImportExtendedEthosData(await ExtractExtendedData(await _personVisasService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
+
+                var personVisaReturn = await _personVisasService.PostPersonVisa2Async(personVisa);
+
+                //store dataprivacy list and get the extended data to store 
+                AddEthosContextProperties(await _personVisasService.GetDataPrivacyListByApi(GetRouteResourceName(), true),
+                   await _personVisasService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(), new List<string>() { personVisaReturn.Id }));
+
+                return personVisaReturn;
+
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentNullException ex)
+            {
+                _logger.Error(ex.ToString());
+                throw CreateHttpResponseException(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.Error(ex.ToString());
+                throw CreateHttpResponseException(ex.Message);
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.ToString());
+                throw CreateHttpResponseException(ex.Message);
+            }
+        }
         #endregion
 
         #region PUT
@@ -365,7 +492,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                     throw new InvalidOperationException("id in URL is not the same as in request body.");
                 }
 
-                Validate(personVisa);
+                //Validate(personVisa);
 
                 //get Data Privacy List
                 var dpList = await _personVisasService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
@@ -408,6 +535,66 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 throw CreateHttpResponseException(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Updates a person visa.
+        /// </summary>
+        /// <param name="id">id of the personVisa to update</param>
+        /// <param name="personVisa"><see cref="Dtos.PersonVisa">personVisa</see> to create</param>
+        /// <returns>Updated <see cref="Dtos.PersonVisa">Dtos.PersonVisa</see></returns>
+        [HttpPut, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
+        public async Task<Dtos.PersonVisa> PutPersonVisa2Async([FromUri] string id, [ModelBinder(typeof(EedmModelBinder))] Dtos.PersonVisa personVisa)
+        {
+            try
+            {
+               
+                //get Data Privacy List
+                var dpList = await _personVisasService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
+
+                //call import extend method that needs the extracted extension data and the config
+                await _personVisasService.ImportExtendedEthosData(await ExtractExtendedData(await _personVisasService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
+
+                var personVisaReturn = await _personVisasService.PutPersonVisa2Async(id,
+                  await PerformPartialPayloadMerge(personVisa, async () => await _personVisasService.GetPersonVisaById2Async(id),
+                  dpList, _logger));
+
+                AddEthosContextProperties(dpList,
+                    await _personVisasService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(), new List<string>() { id }));
+
+                return personVisaReturn;
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }           
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentNullException ex)
+            {
+                _logger.Error(ex.ToString());
+                throw CreateHttpResponseException(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.Error(ex.ToString());
+                throw CreateHttpResponseException(ex.Message);
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.ToString());
+                throw CreateHttpResponseException(ex.Message);
+            }
+        }
+
         #endregion
 
         #region DELETE
@@ -423,75 +610,6 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         }
         #endregion
 
-        #region Validate
-        /// <summary>
-        /// Check for all required fields
-        /// </summary>
-        /// <param name="personVisa">personVisa</param>
-        private static void Validate(Dtos.PersonVisa personVisa)
-        {
-            if (personVisa.Person != null && string.IsNullOrEmpty(personVisa.Person.Id))
-            {
-                throw new ArgumentNullException("Must provide an id for person.");
-            }
-
-            if (personVisa.VisaType == null)
-            {
-                throw new ArgumentNullException("Must provide a visaType category for update.");
-            }
-
-            if (personVisa.VisaType != null && personVisa.VisaType.VisaTypeCategory == null)
-            {
-                throw new ArgumentNullException("Must provide a visaType category for update.");
-            }
-
-            if (personVisa.VisaType != null && personVisa.VisaType.Detail != null && string.IsNullOrEmpty(personVisa.VisaType.Detail.Id))
-            {
-                throw new ArgumentNullException("Must provide an id category for visa type detail.");
-            }
-
-            if (personVisa.Entries != null && personVisa.Entries.Count() > 1)
-            {
-                throw new InvalidOperationException("Colleague only supports a single port of entry.");
-            }
-
-            if (personVisa.RequestedOn != null && personVisa.IssuedOn != null)
-            {
-                if (personVisa.RequestedOn > personVisa.IssuedOn)
-                {
-                    throw new InvalidOperationException("requestedOn date cannot be after issuedOn date.");
-                }
-            }
-
-            if (personVisa.RequestedOn != null && personVisa.ExpiresOn != null)
-            {
-                if (personVisa.RequestedOn > personVisa.ExpiresOn)
-                {
-                    throw new InvalidOperationException("requestedOn date cannot be after expiresOn date.");
-                }
-            }
-
-            if (personVisa.IssuedOn != null && personVisa.ExpiresOn != null)
-            {
-                if (personVisa.IssuedOn > personVisa.ExpiresOn)
-                {
-                    throw new InvalidOperationException("issuedOn date cannot be after expiresOn date.");
-                }
-            }
-
-            if (personVisa.Entries != null && personVisa.Entries.Count() == 1 && personVisa.IssuedOn != null && personVisa.ExpiresOn != null)
-            {
-                if (personVisa.Entries.First().EnteredOn < personVisa.IssuedOn)
-                {
-                    throw new InvalidOperationException("enteredOn date cannot be before issuedOn date.");
-                }
-
-                if (personVisa.Entries.First().EnteredOn > personVisa.ExpiresOn)
-                {
-                    throw new InvalidOperationException("enteredOn date cannot be after expiresOn date.");
-                }
-            }
-        }
-        #endregion
+      
     }
 }

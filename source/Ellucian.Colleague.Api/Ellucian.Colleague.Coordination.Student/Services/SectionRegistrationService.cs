@@ -335,7 +335,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
             // process the request
-            var response = await _sectionRegistrationRepository.GetSectionRegistrationByIdAsync(recordKey);
+            var response = await _sectionRegistrationRepository.GetSectionRegistrationById2Async(recordKey);
 
             //Get all person ids
             var personIds = new[] { response.StudentId };
@@ -4468,7 +4468,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                             SectionRegistrationsGradeOptionsGrades dtoGrade = new SectionRegistrationsGradeOptionsGrades()
                             {
                                 Grade = new GuidObject2(grd.Guid),
-                                Value = grd.GradeValue.HasValue ? grd.GradeValue.Value.ToString() : null
+                                Value = grd.LetterGrade
                             };
 
                             //grades.incompleteGradeDetails.finalGradeDefault.id

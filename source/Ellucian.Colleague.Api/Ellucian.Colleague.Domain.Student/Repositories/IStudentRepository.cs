@@ -35,12 +35,7 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         Task<IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Student>> GetStudentsByIdAsync(IEnumerable<string> studentIds, Term termData, IEnumerable<CitizenshipStatus> citizenshipStatus, bool inheritFromPerson = true, bool getDegreePlan = true, bool filterAdvisorsByTerm = false, bool filterEndedAdvisements = false);
         Task<string> GetTranscriptAsync(string studentId, string transcriptGrouping);
         Task<IEnumerable<Domain.Student.Entities.StudentAccess>> GetStudentAccessAsync(IEnumerable<string> ids);
-        Task<IEnumerable<StudentCohort>> GetAllStudentCohortAsync(bool bypassCache);
-        /// <summary>
-        /// Resident Type to identify resident type of student.
-        /// </summary>
-        Task<IEnumerable<ResidencyStatus>> GetResidencyStatusesAsync(bool ignoreCache);
-
+        Task<IEnumerable<StudentCohort>> GetAllStudentCohortAsync(bool bypassCache);       
         Task<Entities.Student> GetDataModelStudentFromGuidAsync(string guid);
         Task<Entities.Student> GetDataModelStudentFromGuid2Async(string guid);
         Task<Tuple<IEnumerable<Entities.Student>, int>> GetDataModelStudentsAsync(int offset, int limit, bool bypassCache, string person = "", string type = "", string cohort = "", string residency = "");

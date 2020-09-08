@@ -3,6 +3,7 @@
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Web.Adapters;
@@ -12,7 +13,9 @@ using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
@@ -132,95 +135,110 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                     if (category.ToLower() != "term" && category.ToLower() != "subterm")
                     {
-                        academicPeriodEntities = null;
+                        return academicPeriodCollection;
                     }
                 }
-
-                //Start on
-                if(startOn.HasValue)
+                if (academicPeriodEntities != null && academicPeriodEntities.Any() && ((startOn.HasValue) || (endOn.HasValue)))
                 {
-                    if(filterQualifiers != null && filterQualifiers.Any() && filterQualifiers.ContainsKey("StartOn"))
-                    {
-                        if (filterQualifiers.ContainsValue("GE"))
-                        {
-                            var restrictedTerms = academicPeriodEntities.Where(te => te.StartDate >= startOn.Value.Date).ToList();
-                            academicPeriodEntities = restrictedTerms;
-                        }
-                        else if (filterQualifiers.ContainsValue("GT"))
-                        {
-                            var restrictedTerms = academicPeriodEntities.Where(te => te.StartDate > startOn.Value.Date).ToList();
-                            academicPeriodEntities = restrictedTerms;
-                        }
-                        else if (filterQualifiers.ContainsValue("LT"))
-                        {
-                            var restrictedTerms = academicPeriodEntities.Where(te => te.StartDate < startOn.Value.Date).ToList();
-                            academicPeriodEntities = restrictedTerms;
-                        }
-                        else if (filterQualifiers.ContainsValue("LE"))
-                        {
-                            var restrictedTerms = academicPeriodEntities.Where(te => te.StartDate <= startOn.Value.Date).ToList();
-                            academicPeriodEntities = restrictedTerms;
-                        }
-                        else if (filterQualifiers.ContainsValue("NE"))
-                        {
-                            var restrictedTerms = academicPeriodEntities.Where(te => !te.StartDate.Equals(startOn.Value.Date)).ToList();
-                            academicPeriodEntities = restrictedTerms;
-                        }
-                        else if (filterQualifiers.ContainsValue("EQ"))
-                        {
-                            var restrictedTerms = academicPeriodEntities.Where(te => te.StartDate.Equals(startOn.Value.Date)).ToList();
-                            academicPeriodEntities = restrictedTerms;
-                        }
-                    }
-                    else
-                    {
-                        var restrictedTerms = academicPeriodEntities.Where(te => te.StartDate.Equals(startOn.Value.Date)).ToList();
-                        academicPeriodEntities = restrictedTerms;
-                    }
-                }
+                    Expression<Func<AcademicPeriod, bool>> final = null;
+                    var parameter = Expression.Parameter(typeof(AcademicPeriod), "s");
 
-                //End on
-                if (endOn.HasValue)
-                {
-                    if (filterQualifiers != null && filterQualifiers.Any() && filterQualifiers.ContainsKey("EndOn"))
+                    Expression startOnExpression = null;
+                    if (startOn.HasValue)
                     {
-                        if (filterQualifiers.ContainsValue("GE"))
+                        string startOperator = "";
+                        if (filterQualifiers != null && filterQualifiers.ContainsKey("StartOn"))
                         {
-                            var restrictedTerms = academicPeriodEntities.Where(te => te.EndDate >= endOn.Value.Date).ToList();
-                            academicPeriodEntities = restrictedTerms;
+                            filterQualifiers.TryGetValue("StartOn", out startOperator);
                         }
-                        else if (filterQualifiers.ContainsValue("GT"))
+                                                                     
+                        var propertyExpression = Expression.PropertyOrField(parameter, "StartDate");
+                        var constant = Expression.Constant(startOn.Value.Date, typeof(DateTime));
+
+                        if (string.IsNullOrEmpty(startOperator))
                         {
-                            var restrictedTerms = academicPeriodEntities.Where(te => te.EndDate > endOn.Value.Date).ToList();
-                            academicPeriodEntities = restrictedTerms;
+                            startOnExpression = Expression.Equal(propertyExpression, constant);
                         }
-                        else if (filterQualifiers.ContainsValue("LT"))
+                        else
                         {
-                            var restrictedTerms = academicPeriodEntities.Where(te => te.EndDate < endOn.Value.Date).ToList();
-                            academicPeriodEntities = restrictedTerms;
-                        }
-                        else if (filterQualifiers.ContainsValue("LE"))
-                        {
-                            var restrictedTerms = academicPeriodEntities.Where(te => te.EndDate <= endOn.Value.Date).ToList();
-                            academicPeriodEntities = restrictedTerms;
-                        }
-                        else if (filterQualifiers.ContainsValue("NE"))
-                        {
-                            var restrictedTerms = academicPeriodEntities.Where(te => !te.EndDate.Equals(endOn.Value.Date)).ToList();
-                            academicPeriodEntities = restrictedTerms;
-                        }
-                        else if (filterQualifiers.ContainsValue("EQ"))
-                        {
-                            var restrictedTerms = academicPeriodEntities.Where(te => te.EndDate.Equals(endOn.Value.Date)).ToList();
-                            academicPeriodEntities = restrictedTerms;
+                            switch (startOperator)
+                            {
+                                case ("GE"):
+                                    startOnExpression = Expression.GreaterThanOrEqual(propertyExpression, constant); break;
+                                case ("GT"):
+                                    startOnExpression = Expression.GreaterThan(propertyExpression, constant); break;
+                                case ("LE"):
+                                    startOnExpression = Expression.LessThanOrEqual(propertyExpression, constant); break;
+                                case ("LT"):
+                                    startOnExpression = Expression.LessThan(propertyExpression, constant); break;
+                                case ("NE"):
+                                    startOnExpression = Expression.NotEqual(propertyExpression, constant); break;
+                                case ("EQ"):
+                                    startOnExpression = Expression.Equal(propertyExpression, constant); break;
+                                default:
+                                    startOnExpression = Expression.Equal(propertyExpression, constant); break;
+                            }
                         }
                     }
-                    else
+
+                    Expression endOnExpression = null;
+                    if (endOn.HasValue)
                     {
-                        var restrictedTerms = academicPeriodEntities.Where(te => te.EndDate.Equals(endOn.Value.Date)).ToList();
-                        academicPeriodEntities = restrictedTerms;
+                        string endOperator = "";
+                        if (filterQualifiers != null && filterQualifiers.ContainsKey("EndOn"))
+                        {
+                            filterQualifiers.TryGetValue("EndOn", out endOperator);
+                        }
+
+                        var propertyExpression = Expression.PropertyOrField(parameter, "EndDate");
+                        var constant = Expression.Constant(endOn.Value.Date, typeof(DateTime));
+
+                        if (string.IsNullOrEmpty(endOperator))
+                        {
+                            endOnExpression = Expression.Equal(propertyExpression, constant);
+                        }
+                        else
+                        {
+                            switch (endOperator)
+                            {
+                                case ("GE"):
+                                    endOnExpression = Expression.GreaterThanOrEqual(propertyExpression, constant); break;
+                                case ("GT"):
+                                    endOnExpression = Expression.GreaterThan(propertyExpression, constant); break;
+                                case ("LE"):
+                                    endOnExpression = Expression.LessThanOrEqual(propertyExpression, constant); break;
+                                case ("LT"):
+                                    endOnExpression = Expression.LessThan(propertyExpression, constant); break;
+                                case ("NE"):
+                                    endOnExpression = Expression.NotEqual(propertyExpression, constant); break;
+                                case ("EQ"):
+                                    endOnExpression = Expression.Equal(propertyExpression, constant); break;
+                                default:
+                                    endOnExpression = Expression.Equal(propertyExpression, constant); break;
+                            }
+                        }
+                    }
+
+                    if (startOnExpression != null && endOnExpression == null)
+                    {
+                        final = Expression.Lambda<Func<AcademicPeriod, bool>>(startOnExpression, parameter);
+                    }
+                    else if (startOnExpression == null && endOnExpression != null)
+                    {
+                        final = Expression.Lambda<Func<AcademicPeriod, bool>>(endOnExpression, parameter);
+                    }
+                    else if (startOnExpression != null && endOnExpression != null)
+                    {
+                        var combinedExpression = Expression.And(startOnExpression, endOnExpression);
+                        final = Expression.Lambda<Func<AcademicPeriod, bool>>(combinedExpression, parameter);
+                    }
+
+                    if (final != null)
+                    {
+                        academicPeriodEntities = academicPeriodEntities.AsQueryable().Where(final);
                     }
                 }
+            
 
                 if (academicPeriodEntities != null && academicPeriodEntities.Any())
                 {

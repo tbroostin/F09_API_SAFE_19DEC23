@@ -383,14 +383,43 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public void Initialize()
             {
                 MockInitialize();
-
-              
-
             }
 
             #region TESTS FOR FUNCTIONALITY
-           
-     
+
+            [TestMethod]
+            public async Task getActualStudentFinancialAidAwards2_WithPersonFilter()
+            {
+                FinAid fa = new FinAid() { FaSaYears = new List<string>() { "YEAR1", "YEAR2" } };
+                dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<FinAid>(It.IsAny<string[]>(), true)).ReturnsAsync(new Collection<FinAid>() { fa });
+
+                var actual = await awardRepo.Get2Async(0, 10, false, false, null, new List<string>() { "YEAR1", "YEAR2" }, null, fa.FaSaYears);
+                Assert.IsNotNull(actual);
+                Assert.AreEqual(0, actual.Item2);
+            }
+
+            [TestMethod]
+            public async Task getActualStudentFinancialAidAwards2_WithPersonFilter_No_FaSaYears()
+            {
+                FinAid fa = new FinAid() { FaSaYears = new List<string>() { "" } };
+                dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<FinAid>(It.IsAny<string[]>(), true)).ReturnsAsync(new Collection<FinAid>() { fa });
+
+                var actual = await awardRepo.Get2Async(0, 10, false, false, null, new List<string>() { "YEAR1", "YEAR2" }, null, fa.FaSaYears);
+                Assert.IsNotNull(actual);
+                Assert.AreEqual(0, actual.Item2);
+            }
+
+            [TestMethod]
+            public async Task getActualStudentFinancialAidAwards2_WithPersonFilter_NoRecords()
+            {
+                FinAid fa = new FinAid() { FaSaYears = new List<string>() { "YEAR1", "YEAR2" } };
+                dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<FinAid>(It.IsAny<string[]>(), true)).ReturnsAsync(new Collection<FinAid>());
+
+                var actual = await awardRepo.Get2Async(0, 10, false, false, null, new List<string>() { "YEAR1", "YEAR2" }, null, fa.FaSaYears);
+                Assert.IsNotNull(actual);
+                Assert.AreEqual(0, actual.Item2);
+            }
+
             [TestMethod]
             public async Task getActualStudentFinancialAidAwards2_WithStudentId()
             {

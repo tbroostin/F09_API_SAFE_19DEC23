@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -805,6 +805,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 admissionApplication.Withdrawal = await ConvertEntityToWithdrawlDto3Async(source.ApplicationAttendedInstead, source.ApplicationWithdrawReason,
                     source.ApplicationWithdrawDate, withdrawnOn, personGuidCollection, bypassCache, source.Guid, source.ApplicationRecordKey);
                 admissionApplication.Comment = string.IsNullOrEmpty(source.ApplicationComments) ? null : source.ApplicationComments;
+                admissionApplication.EducationalGoal = await ConvertEntityToEducationalGoalGuidObjectDto2Async(source.EducationalGoal, source.Guid, source.ApplicationRecordKey);
+                admissionApplication.CareerGoals = await ConvertEntityToApplicationCareerGoalGuidObjectsDto2Async(source.CareerGoals, source.Guid, source.ApplicationRecordKey);
+                admissionApplication.Influences = await ConvertEntityToApplicationInfluenceGuidObjectsDto2Async(source.Influences, source.Guid, source.ApplicationRecordKey);
 
             return admissionApplication;
         }
@@ -1367,6 +1370,100 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         }
 
         /// <summary>
+        /// Convert code to guid.
+        /// </summary>
+        /// <param name="sourceCode"></param>
+        /// <returns></returns>
+        private async Task<List<GuidObject2>> ConvertEntityToApplicationInfluenceGuidObjectsDto2Async(List<string> sourceCodes, string sourceGuid, string sourceRecordKey)
+        {
+            if (sourceCodes == null || !sourceCodes.Any())
+            {
+                return null;
+            }
+            var sourceObjects = new List<GuidObject2>();
+            foreach (var sourceCode in sourceCodes)
+            {
+                var applicationInfluencesGuid = string.Empty;
+                try
+                {
+                    applicationInfluencesGuid = await _studentReferenceDataRepository.GetApplicationInfluenceGuidAsync(sourceCode.ToString());
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex, guid: sourceGuid, id: sourceRecordKey);
+                }
+                if (string.IsNullOrEmpty(applicationInfluencesGuid))
+                {
+                    IntegrationApiExceptionAddError(string.Concat("Application influence not found for code '", sourceCode, "'"), "source.id", sourceGuid, sourceRecordKey);
+                }
+                var sourceObject = new GuidObject2 (applicationInfluencesGuid);
+                sourceObjects.Add(sourceObject);
+            }
+            return sourceObjects;
+        }
+
+
+        /// <summary>
+        /// Convert code to guid.
+        /// </summary>
+        /// <param name="sourceCode"></param>
+        /// <returns></returns>
+        private async Task<List<GuidObject2>> ConvertEntityToApplicationCareerGoalGuidObjectsDto2Async(List<string> sourceCodes, string sourceGuid, string sourceRecordKey)
+        {
+            if (sourceCodes == null || !sourceCodes.Any())
+            {
+                return null;
+            }
+            var sourceObjects = new List<GuidObject2>();
+            foreach (var sourceCode in sourceCodes)
+            {
+                var careerGoalGuid = string.Empty;
+                try
+                {
+                    careerGoalGuid = await _studentReferenceDataRepository.GetCareerGoalGuidAsync(sourceCode.ToString());
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex, guid: sourceGuid, id: sourceRecordKey);
+                }
+                if (string.IsNullOrEmpty(careerGoalGuid))
+                {
+                    IntegrationApiExceptionAddError(string.Concat("Career goal not found for code '", sourceCode, "'"), "source.id", sourceGuid, sourceRecordKey);
+                }
+                var sourceObject = new GuidObject2(careerGoalGuid);
+                sourceObjects.Add(sourceObject);
+            }
+            return sourceObjects;
+        }
+
+        /// <summary>
+        /// Convert code to guid.
+        /// </summary>
+        /// <param name="sourceCode"></param>
+        /// <returns></returns>
+        private async Task<GuidObject2> ConvertEntityToEducationalGoalGuidObjectDto2Async(string sourceCode, string sourceGuid, string sourceRecordKey)
+        {
+            if (string.IsNullOrEmpty(sourceCode))
+            {
+                return null;
+            }
+            var educationGoalGuid = string.Empty;
+            try
+            {
+                educationGoalGuid = await _studentReferenceDataRepository.GetEducationGoalGuidAsync(sourceCode);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex, guid: sourceGuid, id: sourceRecordKey);
+            }
+            if (string.IsNullOrEmpty(educationGoalGuid))
+            {
+                IntegrationApiExceptionAddError(string.Concat("Education goal not found for code '", sourceCode, "'"), "source.id", sourceGuid, sourceRecordKey);
+            }
+            return new GuidObject2(educationGoalGuid);
+        }
+
+        /// <summary>
         /// Gets discipline guid object
         /// </summary>
         /// <param name="sourceCodes"></param>
@@ -1894,7 +1991,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             return _admissionResidencyTypes;
         }
-
+               
         /// <summary>
         /// AcademicLevels
         /// </summary>
@@ -2009,15 +2106,44 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             return _studentLoads;
         }
 
-        //private IEnumerable<Domain.Base.Entities.Department> _departments = null;
-        //private async Task<IEnumerable<Domain.Base.Entities.Department>> DepartmentsAsync(bool bypassCache = false)
-        //{
-        //    if (_departments == null)
-        //    {
-        //        _departments = await _referenceDataRepository.GetDepartmentsAsync(bypassCache);
-        //    }
-        //    return _departments;
-        //}
+        /// <summary>
+        /// Educational goal
+        /// </summary>
+        private IEnumerable<Domain.Student.Entities.EducationGoals> _educationalGoals;
+        private async Task<IEnumerable<Domain.Student.Entities.EducationGoals>> EducationalGoalsAsync(bool bypassCache)
+        {
+            if (_educationalGoals == null)
+            {
+                _educationalGoals = await _studentReferenceDataRepository.GetEducationGoalsAsync(bypassCache);
+            }
+            return _educationalGoals;
+        }
+
+        /// <summary>
+        /// Career goal
+        /// </summary>
+        private IEnumerable<Domain.Student.Entities.CareerGoal> _careerGoals;
+        private async Task<IEnumerable<Domain.Student.Entities.CareerGoal>> CareerGoalsAsync(bool bypassCache)
+        {
+            if (_careerGoals == null)
+            {
+                _careerGoals = await _studentReferenceDataRepository.GetCareerGoalsAsync(bypassCache);
+            }
+            return _careerGoals;
+        }
+
+        /// <summary>
+        /// Influences
+        /// </summary>
+        private IEnumerable<Domain.Student.Entities.ApplicationInfluence> _applicationInfluences;
+        private async Task<IEnumerable<Domain.Student.Entities.ApplicationInfluence>> ApplicationInfluencesAsync(bool bypassCache)
+        {
+            if (_applicationInfluences == null)
+            {
+                _applicationInfluences = await _studentReferenceDataRepository.GetApplicationInfluencesAsync(bypassCache);
+            }
+            return _applicationInfluences;
+        }
         #endregion
 
         #region PUT/POST V11
@@ -2605,38 +2731,62 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
                 //type.id
                 if (!string.IsNullOrEmpty(source.ApplicationIntgType))
-                {                    
-                    var intgTypeGuid = await _studentReferenceDataRepository.GetAdmissionApplicationTypesGuidAsync(source.ApplicationIntgType);
-                    if (string.IsNullOrEmpty(intgTypeGuid))
+                {
+                    try
+                    {
+                        var intgTypeGuid = await _studentReferenceDataRepository.GetAdmissionApplicationTypesGuidAsync(source.ApplicationIntgType);
+                        if (string.IsNullOrEmpty(intgTypeGuid))
+                        {
+                            IntegrationApiExceptionAddError(string.Format("Unable to locate guid for type ID '{0}'", source.ApplicationIntgType),
+                            "type.id", source.Guid, source.ApplicationRecordKey);
+                        }
+                        dto.Type = new GuidObject2(intgTypeGuid);
+                    }
+                    catch
                     {
                         IntegrationApiExceptionAddError(string.Format("Unable to locate guid for type ID '{0}'", source.ApplicationIntgType),
-                        "type.id", source.Guid, source.ApplicationRecordKey);
+                            "type.id", source.Guid, source.ApplicationRecordKey);
                     }
-                    dto.Type = new GuidObject2(intgTypeGuid);
                 }
 
                 //academicPeriod.id
                 if (!string.IsNullOrEmpty(source.ApplicationStartTerm))
                 {
-                    var termsGuid = await _termRepository.GetAcademicPeriodsGuidAsync(source.ApplicationStartTerm);
-                    if (string.IsNullOrEmpty(termsGuid))
+                    try
+                    {
+                        var termsGuid = await _termRepository.GetAcademicPeriodsGuidAsync(source.ApplicationStartTerm);
+                        if (string.IsNullOrEmpty(termsGuid))
+                        {
+                            IntegrationApiExceptionAddError(string.Format("Term not found for code '{0}'. ", source.ApplicationStartTerm),
+                            "academicPeriod.id", source.Guid, source.ApplicationRecordKey);
+                        }
+                        dto.AcademicPeriod = new GuidObject2(termsGuid);
+                    }
+                    catch
                     {
                         IntegrationApiExceptionAddError(string.Format("Term not found for code '{0}'. ", source.ApplicationStartTerm),
-                        "academicPeriod.id", source.Guid, source.ApplicationRecordKey);
+                            "academicPeriod.id", source.Guid, source.ApplicationRecordKey);
                     }
-                    dto.AcademicPeriod = new GuidObject2(termsGuid);
                 }
 
                 //source.id
                 if (!string.IsNullOrEmpty(source.ApplicationSource))
                 {
-                    var applicationSourcesGuid = await _studentReferenceDataRepository.GetApplicationSourcesGuidAsync(source.ApplicationSource);
-                    if (string.IsNullOrEmpty(applicationSourcesGuid))
+                    try
+                    {
+                        var applicationSourcesGuid = await _studentReferenceDataRepository.GetApplicationSourcesGuidAsync(source.ApplicationSource);
+                        if (string.IsNullOrEmpty(applicationSourcesGuid))
+                        {
+                            IntegrationApiExceptionAddError(string.Format("Application source not found for code '{0}'. ", source.ApplicationSource),
+                            "source.id", source.Guid, source.ApplicationRecordKey);
+                        }
+                        dto.ApplicationSource = new GuidObject2(applicationSourcesGuid);
+                    }
+                    catch
                     {
                         IntegrationApiExceptionAddError(string.Format("Application source not found for code '{0}'. ", source.ApplicationSource),
-                        "source.id", source.Guid, source.ApplicationRecordKey);
+                            "source.id", source.Guid, source.ApplicationRecordKey);
                     }
-                    dto.ApplicationSource = new GuidObject2(applicationSourcesGuid);
                 }
 
                 //owner.id
@@ -2657,13 +2807,21 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 //admissionPopulation.id
                 if (!string.IsNullOrEmpty(source.ApplicationAdmitStatus))
                 {
-                    var admissionPopulationsGuid = await _studentReferenceDataRepository.GetAdmissionPopulationsGuidAsync(source.ApplicationAdmitStatus);
-                    if (string.IsNullOrEmpty(admissionPopulationsGuid))
+                    try
+                    {
+                        var admissionPopulationsGuid = await _studentReferenceDataRepository.GetAdmissionPopulationsGuidAsync(source.ApplicationAdmitStatus);
+                        if (string.IsNullOrEmpty(admissionPopulationsGuid))
+                        {
+                            IntegrationApiExceptionAddError(string.Format("Application admit status not found for code {0}. ", source.ApplicationAdmitStatus),
+                            "admissionPopulation.id", source.Guid, source.ApplicationRecordKey);
+                        }
+                        dto.AdmissionPopulation = new GuidObject2(admissionPopulationsGuid);
+                    }
+                    catch
                     {
                         IntegrationApiExceptionAddError(string.Format("Application admit status not found for code {0}. ", source.ApplicationAdmitStatus),
-                        "admissionPopulation.id", source.Guid, source.ApplicationRecordKey);
+                            "admissionPopulation.id", source.Guid, source.ApplicationRecordKey);
                     }
-                    dto.AdmissionPopulation = new GuidObject2(admissionPopulationsGuid);
                 }
 
                 //site.id
@@ -2672,26 +2830,42 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     string location = source.ApplicationLocations.FirstOrDefault();
                     if (!string.IsNullOrEmpty(location))
                     {
-                        var siteGuid = await _referenceDataRepository.GetLocationsGuidAsync(location);
-                        if (string.IsNullOrEmpty(siteGuid))
+                        try
+                        {
+                            var siteGuid = await _referenceDataRepository.GetLocationsGuidAsync(location);
+                            if (string.IsNullOrEmpty(siteGuid))
+                            {
+                                IntegrationApiExceptionAddError(string.Format("Unable to locate guid for site ID '{0}'", location),
+                                    "site.id", source.Guid, source.ApplicationRecordKey);
+                            }
+                            dto.Site = new GuidObject2(siteGuid);
+                        }
+                        catch
                         {
                             IntegrationApiExceptionAddError(string.Format("Unable to locate guid for site ID '{0}'", location),
-                                "site.id", source.Guid, source.ApplicationRecordKey);
+                                    "site.id", source.Guid, source.ApplicationRecordKey);
                         }
-                        dto.Site = new GuidObject2(siteGuid);
                     }
                 }
 
                 //residencyType.id
                 if (!string.IsNullOrEmpty(source.ApplicationResidencyStatus))
                 {
-                    var residencyTypeGuid = await _studentReferenceDataRepository.GetAdmissionResidencyTypesGuidAsync(source.ApplicationResidencyStatus);
-                    if (string.IsNullOrEmpty(residencyTypeGuid))
+                    try
+                    {
+                        var residencyTypeGuid = await _studentReferenceDataRepository.GetAdmissionResidencyTypesGuidAsync(source.ApplicationResidencyStatus);
+                        if (string.IsNullOrEmpty(residencyTypeGuid))
+                        {
+                            IntegrationApiExceptionAddError(string.Format("Residency type not found for code {0}. ", source.ApplicationResidencyStatus),
+                            "residencyType.id", source.Guid, source.ApplicationRecordKey);
+                        }
+                        dto.ResidencyType = new GuidObject2(residencyTypeGuid);
+                    }
+                    catch
                     {
                         IntegrationApiExceptionAddError(string.Format("Residency type not found for code {0}. ", source.ApplicationResidencyStatus),
-                        "residencyType.id", source.Guid, source.ApplicationRecordKey);
+                            "residencyType.id", source.Guid, source.ApplicationRecordKey);
                     }
-                    dto.ResidencyType = new GuidObject2(residencyTypeGuid);
                 }
 
                 //academicLoad
@@ -2718,15 +2892,23 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     var academicLevel = programEntity.AcadLevelCode;
                     if (!string.IsNullOrEmpty(academicLevel))
                     {
-                        var acadLevelEntity = (await AcademicLevelsAsync(false)).FirstOrDefault(i => i.Code.Equals(academicLevel, StringComparison.OrdinalIgnoreCase));
-                        if (acadLevelEntity == null)
+                        try
+                        {
+                            var acadLevelEntity = (await AcademicLevelsAsync(false)).FirstOrDefault(i => i.Code.Equals(academicLevel, StringComparison.OrdinalIgnoreCase));
+                            if (acadLevelEntity == null)
+                            {
+                                IntegrationApiExceptionAddError(string.Format("Academic level not found for code {0}. ", academicLevel),
+                                    "applicationAcademicPrograms[0].academicLevel.id", source.Guid, source.ApplicationRecordKey);
+                            }
+                            else
+                            {
+                                academicLevelGuid = acadLevelEntity.Guid;
+                            }
+                        }
+                        catch
                         {
                             IntegrationApiExceptionAddError(string.Format("Academic level not found for code {0}. ", academicLevel),
-                                "applicationAcademicPrograms[0].academicLevel.id", source.Guid, source.ApplicationRecordKey);
-                        }
-                        else
-                        {
-                            academicLevelGuid = acadLevelEntity.Guid;
+                                    "applicationAcademicPrograms[0].academicLevel.id", source.Guid, source.ApplicationRecordKey);
                         }
                     }
                 }
@@ -2741,33 +2923,41 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     foreach (var discipline in source.ApplicationDisciplines)
                     {
-                        var disciplineEntity = (await AcademicDisciplinesAsync(false)).FirstOrDefault(i => i.Code.Equals(discipline.Code, StringComparison.OrdinalIgnoreCase));
-                        if (disciplineEntity == null)
+                        try
+                        {
+                            var disciplineEntity = (await AcademicDisciplinesAsync(false)).FirstOrDefault(i => i.Code.Equals(discipline.Code, StringComparison.OrdinalIgnoreCase));
+                            if (disciplineEntity == null)
+                            {
+                                IntegrationApiExceptionAddError(string.Format("Unable to locate guid for academic discipline '{0}'.", discipline),
+                                    "applicationPrograms[0].disciplines", source.Guid, source.ApplicationRecordKey);
+                            }
+                            else
+                            {
+                                string deptGuid = "";
+                                if (!string.IsNullOrEmpty(discipline.AdministeringInstitutionUnit))
+                                {
+                                    var acadDeptEntity = (await AcademicDepartmentsAsync(false)).FirstOrDefault(i => i.Code.Equals(discipline.AdministeringInstitutionUnit, StringComparison.OrdinalIgnoreCase));
+                                    if (acadDeptEntity != null && !string.IsNullOrEmpty(acadDeptEntity.Guid))
+                                    {
+                                        deptGuid = acadDeptEntity.Guid;
+                                    }
+                                }
+                                if (applicationAcademicProgram.Disciplines == null)
+                                {
+                                    applicationAcademicProgram.Disciplines = new List<AdmissionApplicationSubmissionDiscipline>();
+                                }
+                                applicationAcademicProgram.Disciplines.Add(new AdmissionApplicationSubmissionDiscipline()
+                                {
+                                    Discipline = new GuidObject2(disciplineEntity.Guid),
+                                    StartOn = discipline.StartOn,
+                                    AdministeringInstitutionUnit = new GuidObject2(deptGuid)
+                                });
+                            }
+                        }
+                        catch
                         {
                             IntegrationApiExceptionAddError(string.Format("Unable to locate guid for academic discipline '{0}'.", discipline),
-                                "applicationPrograms[0].disciplines", source.Guid, source.ApplicationRecordKey);
-                        }
-                        else
-                        {
-                            string deptGuid = "";
-                            if (!string.IsNullOrEmpty(discipline.AdministeringInstitutionUnit))
-                            {
-                                var acadDeptEntity = (await AcademicDepartmentsAsync(false)).FirstOrDefault(i => i.Code.Equals(discipline.AdministeringInstitutionUnit, StringComparison.OrdinalIgnoreCase));
-                                if (acadDeptEntity != null && !string.IsNullOrEmpty(acadDeptEntity.Guid))
-                                {
-                                    deptGuid = acadDeptEntity.Guid;
-                                }
-                            }
-                            if (applicationAcademicProgram.Disciplines == null)
-                            {
-                                applicationAcademicProgram.Disciplines = new List<AdmissionApplicationSubmissionDiscipline>();
-                            }
-                            applicationAcademicProgram.Disciplines.Add(new AdmissionApplicationSubmissionDiscipline()
-                            {
-                                Discipline = new GuidObject2(disciplineEntity.Guid),
-                                StartOn = discipline.StartOn,
-                                AdministeringInstitutionUnit = new GuidObject2(deptGuid)
-                            });
+                                    "applicationPrograms[0].disciplines", source.Guid, source.ApplicationRecordKey);
                         }
                     }
                 }
@@ -2776,19 +2966,27 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     foreach (var credential in source.ApplicationCredentials)
                     {
-                        var credentialEntity = (await AcademicCredentialsAsync(false)).FirstOrDefault(i => i.Code.Equals(credential, StringComparison.OrdinalIgnoreCase));
-                        if (credentialEntity == null)
+                        try
+                        {
+                            var credentialEntity = (await AcademicCredentialsAsync(false)).FirstOrDefault(i => i.Code.Equals(credential, StringComparison.OrdinalIgnoreCase));
+                            if (credentialEntity == null)
+                            {
+                                IntegrationApiExceptionAddError(string.Format("Unable to locate guid for academic credential '{0}'.", credential),
+                                    "applicationAcademicPrograms[0].disciplines", source.Guid, source.ApplicationRecordKey);
+                            }
+                            else
+                            {
+                                if (applicationAcademicProgram.AcademicCredentials == null)
+                                {
+                                    applicationAcademicProgram.AcademicCredentials = new List<GuidObject2>();
+                                }
+                                applicationAcademicProgram.AcademicCredentials.Add(new GuidObject2(credentialEntity.Guid));
+                            }
+                        }
+                        catch
                         {
                             IntegrationApiExceptionAddError(string.Format("Unable to locate guid for academic credential '{0}'.", credential),
-                                "applicationAcademicPrograms[0].disciplines", source.Guid, source.ApplicationRecordKey);
-                        }
-                        else
-                        {
-                            if (applicationAcademicProgram.AcademicCredentials == null)
-                            {
-                                applicationAcademicProgram.AcademicCredentials = new List<GuidObject2>();
-                            }
-                            applicationAcademicProgram.AcademicCredentials.Add(new GuidObject2(credentialEntity.Guid));
+                                    "applicationAcademicPrograms[0].disciplines", source.Guid, source.ApplicationRecordKey);
                         }
                     }
                 }
@@ -2796,15 +2994,23 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 //applicationAcademicPrograms.programOwner.id
                 if (!string.IsNullOrEmpty(source.ApplicationProgramOwner))
                 {
-                    var departmentEntity = (await AcademicDepartmentsAsync(false)).FirstOrDefault(i => i.Code.Equals(source.ApplicationProgramOwner, StringComparison.OrdinalIgnoreCase));
-                    if (departmentEntity == null)
+                    try
+                    {
+                        var departmentEntity = (await AcademicDepartmentsAsync(false)).FirstOrDefault(i => i.Code.Equals(source.ApplicationProgramOwner, StringComparison.OrdinalIgnoreCase));
+                        if (departmentEntity == null)
+                        {
+                            IntegrationApiExceptionAddError(string.Format("Unable to locate guid for academic department '{0}'.", source.ApplicationOwnerId),
+                                    "applicationAcademicPrograms[0].programOwner.id", source.Guid, source.ApplicationRecordKey);
+                        }
+                        else
+                        {
+                            applicationAcademicProgram.ProgramOwner = new GuidObject2(departmentEntity.Guid);
+                        }
+                    }
+                    catch
                     {
                         IntegrationApiExceptionAddError(string.Format("Unable to locate guid for academic department '{0}'.", source.ApplicationOwnerId),
-                                "applicationAcademicPrograms[0].programOwner.id", source.Guid, source.ApplicationRecordKey);
-                    }
-                    else
-                    {
-                        applicationAcademicProgram.ProgramOwner = new GuidObject2(departmentEntity.Guid);
+                                    "applicationAcademicPrograms[0].programOwner.id", source.Guid, source.ApplicationRecordKey);
                     }
                 }
                 if (applicationAcademicProgram != null)
@@ -2846,6 +3052,90 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
                 //comment
                 dto.Comment = source.ApplicationComments ?? null;
+
+                //educational goal
+                if (!string.IsNullOrEmpty(source.EducationalGoal))
+                {
+                    try
+                    {
+                        var educationalGoalGuid = await _studentReferenceDataRepository.GetEducationGoalGuidAsync(source.EducationalGoal);
+                        if (string.IsNullOrEmpty(educationalGoalGuid))
+                        {
+                            IntegrationApiExceptionAddError(string.Format("Educational goal not found for code {0}. ", source.EducationalGoal),
+                            "educationalGoal.id", source.Guid, source.ApplicationRecordKey);
+                        }
+                        dto.EducationalGoal = new GuidObject2(educationalGoalGuid);
+                    }
+                    catch
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Educational goal not found for code {0}. ", source.EducationalGoal),
+                            "educationalGoal.id", source.Guid, source.ApplicationRecordKey);
+                    }
+                }
+
+                //career goals
+                if (source.CareerGoals != null && source.CareerGoals.Any())
+                {
+                    var careerGoalGuidObjects = new List<GuidObject2>();
+                    foreach (var careerGoal in source.CareerGoals)
+                    {
+                        if (!string.IsNullOrEmpty(careerGoal))
+                        {
+                            try
+                            {
+                                var careerGoalGuid = await _studentReferenceDataRepository.GetCareerGoalGuidAsync(careerGoal);
+                                if (string.IsNullOrEmpty(careerGoalGuid))
+                                {
+                                    IntegrationApiExceptionAddError(string.Format("Career goal not found for code {0}. ", careerGoal),
+                                    "careerGoals.id", source.Guid, source.ApplicationRecordKey);
+                                }
+                                var careerGoalGuidObject = new GuidObject2(careerGoalGuid);
+                                careerGoalGuidObjects.Add(careerGoalGuidObject);
+                            }
+                            catch
+                            {
+                                IntegrationApiExceptionAddError(string.Format("Career goal not found for code {0}. ", careerGoal),
+                                    "careerGoals.id", source.Guid, source.ApplicationRecordKey);
+                            }
+                        }
+                    }
+                    if (careerGoalGuidObjects.Any())
+                    {
+                        dto.CareerGoals = careerGoalGuidObjects;
+                    }
+                }
+                
+                //influences
+                if (source.Influences != null && source.Influences.Any())
+                {
+                    var influenceGuidObjects = new List<GuidObject2>();
+                    foreach (var influence in source.Influences)
+                    {
+                        if (!string.IsNullOrEmpty(influence))
+                        {
+                            try
+                            {
+                                var influenceGuid = await _studentReferenceDataRepository.GetApplicationInfluenceGuidAsync(influence);
+                                if (string.IsNullOrEmpty(influenceGuid))
+                                {
+                                    IntegrationApiExceptionAddError(string.Format("Influence not found for code {0}. ", influence),
+                                    "influence.id", source.Guid, source.ApplicationRecordKey);
+                                }
+                                var influenceGuidObject = new GuidObject2(influenceGuid);
+                                influenceGuidObjects.Add(influenceGuidObject);
+                            }
+                            catch
+                            {
+                                IntegrationApiExceptionAddError(string.Format("Influence not found for code {0}. ", influence),
+                                    "influence.id", source.Guid, source.ApplicationRecordKey);
+                            }
+                        }
+                    }
+                    if (influenceGuidObjects.Any())
+                    {
+                        dto.Influences = influenceGuidObjects;
+                    }
+                }
 
                 return dto;
             }
@@ -2945,140 +3235,209 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             //applicant.id persons.json
             if (dto.Applicant != null && !string.IsNullOrEmpty(dto.Applicant.Id))
             {
-                var applicantKey = await _personRepository.GetPersonIdFromGuidAsync(dto.Applicant.Id);
-                if (string.IsNullOrEmpty(applicantKey))
+                try
+                {
+                    var applicantKey = await _personRepository.GetPersonIdFromGuidAsync(dto.Applicant.Id);
+                    if (string.IsNullOrEmpty(applicantKey))
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Person guid '{0}' is not valid for the admission application.", dto.Applicant.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
+                    }
+                    else
+                    {
+                        entity.ApplicantPersonId = applicantKey;
+                    }
+                }
+                catch
                 {
                     IntegrationApiExceptionAddError(string.Format("Person guid '{0}' is not valid for the admission application.", dto.Applicant.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
-                }
-                else
-                {
-                    entity.ApplicantPersonId = applicantKey;
                 }
             }
 
             //type.id
             if (dto.Type != null && !string.IsNullOrEmpty(dto.Type.Id))
             {
-                var typeKey = (await AdmissionApplicationTypesAsync(bypassCache)).FirstOrDefault(i => i.Guid.Equals(dto.Type.Id, StringComparison.OrdinalIgnoreCase));
-                if (typeKey == null)
+                try
+                {
+                    var typeKey = (await AdmissionApplicationTypesAsync(bypassCache)).FirstOrDefault(i => i.Guid.Equals(dto.Type.Id, StringComparison.OrdinalIgnoreCase));
+                    if (typeKey == null)
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Admission application submission type not found for guid '{0}'. ", dto.Type.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
+                    }
+                    else
+                    {
+                        entity.ApplicationIntgType = typeKey.Code;
+                    }
+                }
+                catch
                 {
                     IntegrationApiExceptionAddError(string.Format("Admission application submission type not found for guid '{0}'. ", dto.Type.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
-                }
-                else
-                {
-                    entity.ApplicationIntgType = typeKey.Code;
                 }
             }
             else
             {
-                var typeKey = (await AdmissionApplicationTypesAsync(bypassCache)).FirstOrDefault(i => i.Code.ToUpper().Equals("ST", StringComparison.OrdinalIgnoreCase));
-                if (typeKey == null)
+                try
+                {
+                    var typeKey = (await AdmissionApplicationTypesAsync(bypassCache)).FirstOrDefault(i => i.Code.ToUpper().Equals("ST", StringComparison.OrdinalIgnoreCase));
+                    if (typeKey == null)
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Admission application submission type not found for guid '{0}'. ", dto.Type.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
+                    }
+                    entity.ApplicationIntgType = typeKey.Code;
+                }
+                catch
                 {
                     IntegrationApiExceptionAddError(string.Format("Admission application submission type not found for guid '{0}'. ", dto.Type.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
                 }
-                entity.ApplicationIntgType = typeKey.Code;
             }
 
             //academicPeriod.id
             if (dto.AcademicPeriod != null && !string.IsNullOrEmpty(dto.AcademicPeriod.Id))
             {
-                var source = (await Terms(bypassCache)).FirstOrDefault(i => i.RecordGuid.Equals(dto.AcademicPeriod.Id, StringComparison.OrdinalIgnoreCase));
-                if (source == null)
+                try
+                {
+                    var source = (await Terms(bypassCache)).FirstOrDefault(i => i.RecordGuid.Equals(dto.AcademicPeriod.Id, StringComparison.OrdinalIgnoreCase));
+                    if (source == null)
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Academic period not found for guid '{0}'. ", dto.AcademicPeriod.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
+                    }
+                    else if (string.IsNullOrEmpty(source.Code))
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Academic period code not found for guid '{0}'. ", dto.AcademicPeriod.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
+                    }
+                    else
+                    {
+                        entity.ApplicationStartTerm = source.Code;
+                    }
+                }
+                catch
                 {
                     IntegrationApiExceptionAddError(string.Format("Academic period not found for guid '{0}'. ", dto.AcademicPeriod.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
-                }
-                else if (string.IsNullOrEmpty(source.Code))
-                {
-                    IntegrationApiExceptionAddError(string.Format("Academic period code not found for guid '{0}'. ", dto.AcademicPeriod.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
-                }
-                else
-                {
-                    entity.ApplicationStartTerm = source.Code;
                 }
             }
 
             //applicationSource.id
             if (dto.ApplicationSource != null && !string.IsNullOrEmpty(dto.ApplicationSource.Id))
             {
-                var source = (await ApplicationSourcesAsync(true)).FirstOrDefault(i => i.Guid.Equals(dto.ApplicationSource.Id, StringComparison.OrdinalIgnoreCase));
-                if (source == null)
+                try
+                {
+                    var source = (await ApplicationSourcesAsync(true)).FirstOrDefault(i => i.Guid.Equals(dto.ApplicationSource.Id, StringComparison.OrdinalIgnoreCase));
+                    if (source == null)
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Application source not found for guid '{0}'. ", dto.ApplicationSource.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
+                    }
+                    else
+                    {
+                        entity.ApplicationSource = source.Code;
+                    }
+                }
+                catch
                 {
                     IntegrationApiExceptionAddError(string.Format("Application source not found for guid '{0}'. ", dto.ApplicationSource.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
-                }
-                else
-                {
-                    entity.ApplicationSource = source.Code;
                 }
             }
 
             //personSource.id
             if (dto.PersonSource != null && !string.IsNullOrEmpty(dto.PersonSource.Id))
             {
-                var source = (await PersonSourcesAsync(true)).FirstOrDefault(i => i.Guid.Equals(dto.PersonSource.Id, StringComparison.OrdinalIgnoreCase));
-                if (source == null)
+                try
+                {
+                    var source = (await PersonSourcesAsync(true)).FirstOrDefault(i => i.Guid.Equals(dto.PersonSource.Id, StringComparison.OrdinalIgnoreCase));
+                    if (source == null)
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Person source not found for guid '{0}'. ", dto.PersonSource.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
+                    }
+                    else
+                    {
+                        entity.PersonSource = source.Code;
+                    }
+                }
+                catch
                 {
                     IntegrationApiExceptionAddError(string.Format("Person source not found for guid '{0}'. ", dto.PersonSource.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
-                }
-                else
-                {
-                    entity.PersonSource = source.Code;
                 }
             }
 
             //owner.id persons.json
             if (dto.Owner != null && !string.IsNullOrEmpty(dto.Owner.Id))
             {
-                var owner = await _personRepository.GetPersonIdFromGuidAsync(dto.Owner.Id);
-                if (string.IsNullOrEmpty(owner))
+                try
+                {
+                    var owner = await _personRepository.GetPersonIdFromGuidAsync(dto.Owner.Id);
+                    if (string.IsNullOrEmpty(owner))
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Application owner not found for guid '{0}'. ", dto.Owner.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
+                    }
+                    else
+                    {
+                        entity.ApplicationAdmissionsRep = owner;
+                    }
+                }
+                catch
                 {
                     IntegrationApiExceptionAddError(string.Format("Application owner not found for guid '{0}'. ", dto.Owner.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
-                }
-                else
-                {
-                    entity.ApplicationAdmissionsRep = owner;
                 }
             }
 
             //admissionPopulation.id
             if (dto.AdmissionPopulation != null && !string.IsNullOrEmpty(dto.AdmissionPopulation.Id))
             {
-                var admPopulation = (await AdmissionPopulationsAsync(bypassCache)).FirstOrDefault(i => i.Guid.Equals(dto.AdmissionPopulation.Id, StringComparison.OrdinalIgnoreCase));
-                if (admPopulation == null)
+                try
+                {
+                    var admPopulation = (await AdmissionPopulationsAsync(bypassCache)).FirstOrDefault(i => i.Guid.Equals(dto.AdmissionPopulation.Id, StringComparison.OrdinalIgnoreCase));
+                    if (admPopulation == null)
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Application admit status not found for guid '{0}'. ", dto.AdmissionPopulation.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
+                    }
+                    else
+                    {
+                        entity.ApplicationAdmitStatus = admPopulation.Code;
+                    }
+                }
+                catch
                 {
                     IntegrationApiExceptionAddError(string.Format("Application admit status not found for guid '{0}'. ", dto.AdmissionPopulation.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
-                }
-                else
-                {
-                    entity.ApplicationAdmitStatus = admPopulation.Code;
                 }
             }
 
             //site.id
             if (dto.Site != null && !string.IsNullOrEmpty(dto.Site.Id))
             {
-                var site = (await SitesAsync(true)).FirstOrDefault(i => i.Guid.Equals(dto.Site.Id, StringComparison.OrdinalIgnoreCase));
-                if (site == null)
+                try
+                {
+                    var site = (await SitesAsync(true)).FirstOrDefault(i => i.Guid.Equals(dto.Site.Id, StringComparison.OrdinalIgnoreCase));
+                    if (site == null)
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Site not found for guid '{0}'.", dto.Site.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
+                    }
+                    else
+                    {
+                        entity.ApplicationLocations = new List<string>() { site.Code };
+                    }
+                }
+                catch
                 {
                     IntegrationApiExceptionAddError(string.Format("Site not found for guid '{0}'.", dto.Site.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
-                }
-                else
-                {
-                    entity.ApplicationLocations = new List<string>() { site.Code };
                 }
             }
 
             //residencyType.id
             if (dto.ResidencyType != null && !string.IsNullOrEmpty(dto.ResidencyType.Id))
             {
-                //var residencyType = 
-                var residencyType = (await AdmissionResidencyTypesAsync(bypassCache)).FirstOrDefault(i => i.Guid.Equals(dto.ResidencyType.Id, StringComparison.OrdinalIgnoreCase));
-                if (residencyType == null)
+                try
+                {
+                    var residencyType = (await AdmissionResidencyTypesAsync(bypassCache)).FirstOrDefault(i => i.Guid.Equals(dto.ResidencyType.Id, StringComparison.OrdinalIgnoreCase));
+                    if (residencyType == null)
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Residency type not found for guid '{0}'.", dto.ResidencyType.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
+                    }
+                    else
+                    {
+                        entity.ApplicationResidencyStatus = residencyType.Code;
+                    }
+                }
+                catch
                 {
                     IntegrationApiExceptionAddError(string.Format("Residency type not found for guid '{0}'.", dto.ResidencyType.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
-                }
-                else
-                {
-                    entity.ApplicationResidencyStatus = residencyType.Code;
                 }
             }
 
@@ -3102,33 +3461,47 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 //applicationAcademicPrograms.program.id && applicationAcademicPrograms.academicLevel.id
                 if (acdProgDto != null && acdProgDto.AcademicProgram != null && !string.IsNullOrEmpty(acdProgDto.AcademicProgram.Id))
                 {
-                    applAcadProgram = (await AcademicProgramsAsync(bypassCache)).FirstOrDefault(i => i.Guid.Equals(acdProgDto.AcademicProgram.Id, StringComparison.OrdinalIgnoreCase));
-                    if (applAcadProgram == null)
+                    try
+                    {
+                        applAcadProgram = (await AcademicProgramsAsync(bypassCache)).FirstOrDefault(i => i.Guid.Equals(acdProgDto.AcademicProgram.Id, StringComparison.OrdinalIgnoreCase));
+                        if (applAcadProgram == null)
+                        {
+                            IntegrationApiExceptionAddError(string.Format("Academic program not found for guid '{0}'.", acdProgDto.AcademicProgram.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
+                        }
+                        else
+                        {
+                            acadLevelCode = applAcadProgram.AcadLevelCode;
+                        }
+                    }
+                    catch
                     {
                         IntegrationApiExceptionAddError(string.Format("Academic program not found for guid '{0}'.", acdProgDto.AcademicProgram.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
-                    }
-                    else
-                    {
-                        acadLevelCode = applAcadProgram.AcadLevelCode;
                     }
                 }
 
                 //applicationAcademicPrograms.academicLevel.id
                 if (acdProgDto != null && acdProgDto.AcademicLevel != null && !string.IsNullOrEmpty(acdProgDto.AcademicLevel.Id))
                 {
-                    acadLevel = (await AcademicLevelsAsync(bypassCache)).FirstOrDefault(i => i.Guid.Equals(acdProgDto.AcademicLevel.Id));
-                    if (acadLevel == null)
+                    try
+                    {
+                        acadLevel = (await AcademicLevelsAsync(bypassCache)).FirstOrDefault(i => i.Guid.Equals(acdProgDto.AcademicLevel.Id));
+                        if (acadLevel == null)
+                        {
+                            IntegrationApiExceptionAddError(string.Format("Academic level not found for guid {0}.", acdProgDto.AcademicLevel.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
+                        }
+                        else if (!acadLevel.Code.Equals(acadLevelCode, StringComparison.OrdinalIgnoreCase))
+                        {
+                            IntegrationApiExceptionAddError(string.Format("Academic level '{0}' is not valid for the academic program '{1}'.", acadLevel.Code, applAcadProgram.Code),
+                                "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
+                        }
+                        else
+                        {
+                            entity.ApplicationAcadLevel = acadLevel.Code;
+                        }
+                    }
+                    catch
                     {
                         IntegrationApiExceptionAddError(string.Format("Academic level not found for guid {0}.", acdProgDto.AcademicLevel.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
-                    }
-                    else if (!acadLevel.Code.Equals(acadLevelCode, StringComparison.OrdinalIgnoreCase))
-                    {
-                        IntegrationApiExceptionAddError(string.Format("Academic level '{0}' is not valid for the academic program '{1}'.", acadLevel.Code, applAcadProgram.Code),
-                            "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
-                    }
-                    else
-                    {
-                        entity.ApplicationAcadLevel = acadLevel.Code;
                     }
                 }
 
@@ -3144,38 +3517,45 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     {
                         if (disciplineDto != null)
                         {
-                            var acadDiscipline = (await AcademicDisciplinesAsync(bypassCache)).FirstOrDefault(i => i.Guid.Equals(disciplineDto.Discipline.Id));
-                            if (acadDiscipline == null)
+                            try
+                            {
+                                var acadDiscipline = (await AcademicDisciplinesAsync(bypassCache)).FirstOrDefault(i => i.Guid.Equals(disciplineDto.Discipline.Id));
+                                if (acadDiscipline == null)
+                                {
+                                    IntegrationApiExceptionAddError(string.Format("Academic discipline not found for guid '{0}'.", disciplineDto.Discipline.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
+                                }
+                                else
+                                {
+                                    string deptCode = "";
+                                    if (disciplineDto.AdministeringInstitutionUnit != null && !string.IsNullOrEmpty(disciplineDto.AdministeringInstitutionUnit.Id))
+                                    {
+                                        var acadDeptEntity = (await AcademicDepartmentsAsync(false)).FirstOrDefault(i => i.Guid.Equals(disciplineDto.AdministeringInstitutionUnit.Id, StringComparison.OrdinalIgnoreCase));
+                                        if (acadDeptEntity != null && !string.IsNullOrEmpty(acadDeptEntity.Guid))
+                                        {
+                                            deptCode = acadDeptEntity.Code;
+                                        }
+                                    }
+                                    if (entity.ApplicationStprAcadPrograms == null)
+                                    {
+                                        entity.ApplicationStprAcadPrograms = new List<string>();
+                                    }
+                                    if (entity.ApplicationDisciplines == null)
+                                    {
+                                        entity.ApplicationDisciplines = new List<ApplicationDiscipline>();
+                                    }
+                                    entity.ApplicationStprAcadPrograms.Add(acadDiscipline.Code);
+                                    entity.ApplicationDisciplines.Add(new ApplicationDiscipline()
+                                    {
+                                        Code = acadDiscipline.Code,
+                                        AdministeringInstitutionUnit = deptCode,
+                                        DisciplineType = acadDiscipline.AcademicDisciplineType,
+                                        StartOn = disciplineDto.StartOn ?? default(DateTime?)
+                                    });
+                                }
+                            }
+                            catch
                             {
                                 IntegrationApiExceptionAddError(string.Format("Academic discipline not found for guid '{0}'.", disciplineDto.Discipline.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
-                            }
-                            else
-                            {
-                                string deptCode = "";
-                                if (disciplineDto.AdministeringInstitutionUnit != null && !string.IsNullOrEmpty(disciplineDto.AdministeringInstitutionUnit.Id))
-                                {
-                                    var acadDeptEntity = (await AcademicDepartmentsAsync(false)).FirstOrDefault(i => i.Guid.Equals(disciplineDto.AdministeringInstitutionUnit.Id, StringComparison.OrdinalIgnoreCase));
-                                    if (acadDeptEntity != null && !string.IsNullOrEmpty(acadDeptEntity.Guid))
-                                    {
-                                        deptCode = acadDeptEntity.Code;
-                                    }
-                                }
-                                if (entity.ApplicationStprAcadPrograms == null)
-                                {
-                                    entity.ApplicationStprAcadPrograms = new List<string>();
-                                }
-                                if (entity.ApplicationDisciplines == null)
-                                {
-                                    entity.ApplicationDisciplines = new List<ApplicationDiscipline>();
-                                }
-                                entity.ApplicationStprAcadPrograms.Add(acadDiscipline.Code);
-                                entity.ApplicationDisciplines.Add(new ApplicationDiscipline()
-                                {
-                                    Code = acadDiscipline.Code,
-                                    AdministeringInstitutionUnit = deptCode,
-                                    DisciplineType = acadDiscipline.AcademicDisciplineType,
-                                    StartOn = disciplineDto.StartOn ?? default(DateTime?)
-                                });
                             }
                         }
                     }
@@ -3189,14 +3569,21 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     {
                         if (credentialDto != null && !string.IsNullOrEmpty(credentialDto.Id))
                         {
-                            var credential = (await AcademicCredentialsAsync(bypassCache)).FirstOrDefault(c => c.Guid.Equals(credentialDto.Id));
-                            if (credential == null)
+                            try
+                            {
+                                var credential = (await AcademicCredentialsAsync(bypassCache)).FirstOrDefault(c => c.Guid.Equals(credentialDto.Id));
+                                if (credential == null)
+                                {
+                                    IntegrationApiExceptionAddError(string.Format("Acdemic credential not found for guid '{0}'. ", credentialDto.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
+                                }
+                                else
+                                {
+                                    entity.ApplicationCredentials.Add(credential.Code);
+                                }
+                            }
+                            catch
                             {
                                 IntegrationApiExceptionAddError(string.Format("Acdemic credential not found for guid '{0}'. ", credentialDto.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
-                            }
-                            else
-                            {
-                                entity.ApplicationCredentials.Add(credential.Code);
                             }
                         }
                     }
@@ -3205,16 +3592,24 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 //applicationAcademicPrograms.programOwner.id
                 if (acdProgDto != null && acdProgDto.ProgramOwner != null && !string.IsNullOrEmpty(acdProgDto.ProgramOwner.Id))
                 {
-                    var departmentEntity = (await AcademicDepartmentsAsync(false)).FirstOrDefault(i => i.Guid.Equals(acdProgDto.ProgramOwner.Id,
-                        StringComparison.OrdinalIgnoreCase));
-                    if (departmentEntity == null)
+                    try
+                    {
+                        var departmentEntity = (await AcademicDepartmentsAsync(false)).FirstOrDefault(i => i.Guid.Equals(acdProgDto.ProgramOwner.Id,
+                            StringComparison.OrdinalIgnoreCase));
+                        if (departmentEntity == null)
+                        {
+                            IntegrationApiExceptionAddError(string.Format("Program owner not found for guid '{0}'. ", acdProgDto.ProgramOwner.Id), "Bad.Data",
+                                dto.Applicant.Id, entity.ApplicationRecordKey);
+                        }
+                        else
+                        {
+                            entity.ApplicationProgramOwner = departmentEntity.Code;
+                        }
+                    }
+                    catch
                     {
                         IntegrationApiExceptionAddError(string.Format("Program owner not found for guid '{0}'. ", acdProgDto.ProgramOwner.Id), "Bad.Data",
-                            dto.Applicant.Id, entity.ApplicationRecordKey);
-                    }
-                    else
-                    {
-                        entity.ApplicationProgramOwner = departmentEntity.Code;
+                                dto.Applicant.Id, entity.ApplicationRecordKey);
                     }
                 }
             }
@@ -3234,14 +3629,21 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             //withdrawal.WithdrawalReason.id
             if (dto.Withdrawal != null && dto.Withdrawal.WithdrawalReason != null && !string.IsNullOrEmpty(dto.Withdrawal.WithdrawalReason.Id))
             {
-                var withdrwlReason = (await WithdrawReasonsAsync(bypassCache)).FirstOrDefault(i => i.Guid.Equals(dto.Withdrawal.WithdrawalReason.Id, StringComparison.OrdinalIgnoreCase));
-                if (withdrwlReason == null)
+                try
+                {
+                    var withdrwlReason = (await WithdrawReasonsAsync(bypassCache)).FirstOrDefault(i => i.Guid.Equals(dto.Withdrawal.WithdrawalReason.Id, StringComparison.OrdinalIgnoreCase));
+                    if (withdrwlReason == null)
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Withdraw reason not found for guid '{0}'. ", dto.Withdrawal.WithdrawalReason.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
+                    }
+                    else
+                    {
+                        entity.ApplicationWithdrawReason = withdrwlReason.Code;
+                    }
+                }
+                catch
                 {
                     IntegrationApiExceptionAddError(string.Format("Withdraw reason not found for guid '{0}'. ", dto.Withdrawal.WithdrawalReason.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
-                }
-                else
-                {
-                    entity.ApplicationWithdrawReason = withdrwlReason.Code;
                 }
             }
 
@@ -3263,12 +3665,92 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             //comment
             entity.ApplicationComments = dto.Comment ?? dto.Comment;
 
+            //educational goal
+            if (dto.EducationalGoal != null && !string.IsNullOrEmpty(dto.EducationalGoal.Id))
+            {
+                try
+                {
+                    var educationalGoal = (await EducationalGoalsAsync(bypassCache)).FirstOrDefault(i => i.Guid.Equals(dto.EducationalGoal.Id, StringComparison.OrdinalIgnoreCase));   
+                    if (educationalGoal == null)
+                        {
+                            IntegrationApiExceptionAddError(string.Format("Educational goal not found for guid '{0}'.", dto.EducationalGoal.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
+                        }
+                        else
+                        {
+                            entity.EducationalGoal = educationalGoal.Code;
+                        }
+                }
+                catch
+                {
+                    IntegrationApiExceptionAddError(string.Format("Educational goal not found for guid '{0}'.", dto.EducationalGoal.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
+                }
+            }
+
+            //career goals
+            if (dto.CareerGoals != null && dto.CareerGoals.Any())
+            {
+                var careerGoals = new List<string>();
+                foreach (var careerGoal in dto.CareerGoals)
+                {
+                    if (careerGoal != null && !string.IsNullOrEmpty(careerGoal.Id))
+                    {
+                        try
+                        {
+                            var careerGoalObject = (await CareerGoalsAsync(bypassCache)).FirstOrDefault(i => i.Guid.Equals(careerGoal.Id, StringComparison.OrdinalIgnoreCase));
+                            if (careerGoalObject == null)
+                            {
+                                IntegrationApiExceptionAddError(string.Format("Career goal not found for guid '{0}'.", careerGoal.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
+                            }
+                            else
+                            {
+                                careerGoals.Add(careerGoalObject.Code);
+                            }
+                        }
+                        catch
+                        {
+                            IntegrationApiExceptionAddError(string.Format("Career goal not found for guid '{0}'.", careerGoal.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
+                        }
+                    }
+                }
+                entity.CareerGoals = careerGoals;
+            }
+
+            //application influences
+            if (dto.Influences != null && dto.Influences.Any())
+            {
+                var influences = new List<string>();
+                foreach (var influence in dto.Influences)
+                {
+                    if (influence != null && !string.IsNullOrEmpty(influence.Id))
+                    {
+                        try
+                        {
+                            var influenceObject = (await ApplicationInfluencesAsync(bypassCache)).FirstOrDefault(i => i.Guid.Equals(influence.Id, StringComparison.OrdinalIgnoreCase));
+                            if (influenceObject == null)
+                            {
+                                IntegrationApiExceptionAddError(string.Format("Influence goal not found for guid '{0}'.", influence.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
+                            }
+                            else
+                            {
+                                influences.Add(influenceObject.Code);
+                            }
+                        }
+                        catch
+                        {
+                            IntegrationApiExceptionAddError(string.Format("Influence goal not found for guid '{0}'.", influence.Id), "Bad.Data", dto.Applicant.Id, entity.ApplicationRecordKey);
+                        }
+
+                    }
+                }
+                entity.Influences = influences;
+            }
+
             // Throw errors
             if (IntegrationApiException != null)
             {
                 throw IntegrationApiException;
             }
-
+            
             return entity;
         }
 

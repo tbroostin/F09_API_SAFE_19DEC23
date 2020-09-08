@@ -1,5 +1,5 @@
 ﻿
-/*Copyright 2017-2018 Ellucian Company L.P. and its affiliates.*/
+/*Copyright 2017-2020 Ellucian Company L.P. and its affiliates.*/
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System;
@@ -113,6 +113,20 @@ namespace Ellucian.Colleague.Dtos.HumanResources
         /// </summary>
         public decimal CurrentPlanYearBalance { get; set; }
 
+        /// <summary>
+        /// Accrual Rate
+        /// </summary>
+        public Decimal? AccrualRate { get; set; }
+
+        /// <summary>
+        /// Accrual Limit
+        /// </summary>
+        public Decimal? AccrualLimit { get; set; }
+
+        /// <summary>
+        /// Accrual Maximum Carry Over
+        /// </summary>
+        public Decimal? AccrualMaxCarryOver { get; set; }
 
         /// <summary>
         /// List of all Earning Type IDs associated with a Employee Leave Plan

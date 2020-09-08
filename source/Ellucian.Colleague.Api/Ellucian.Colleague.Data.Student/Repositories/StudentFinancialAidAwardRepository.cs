@@ -276,13 +276,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <exception cref="ArgumentNullException">Thrown if the id argument is null or empty</exception>
         /// <exception cref="KeyNotFoundException">Thrown if no database records exist for the given id argument</exception>
         public async Task<Tuple<IEnumerable<StudentFinancialAidAward>, int>> Get2Async(int offset, int limit, bool bypassCache, bool restricted, IEnumerable<string> unrestrictedFunds,
-            IEnumerable<string> awardYears, StudentFinancialAidAward criteriaEntity = null)
+            IEnumerable<string> awardYears, StudentFinancialAidAward criteriaEntity = null, IEnumerable<string> personFilterKeys = null)
         {
             var studentFinancialAidAwardsEntities = new List<StudentFinancialAidAward>();
             string faCriteria = string.Empty;
             string tcCriteria = string.Empty;
 
             var tcAcyrIds = new List<string>();
+            List<string> studentIds = new List<string>();
 
             int totalCount = 0;
 
@@ -300,7 +301,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             var criteriaCacheKey = string.Empty;
             if (criteriaEntity != null)
             {
-                criteriaCacheKey = string.Concat(criteriaEntity.StudentId, ",", criteriaEntity.AidYearId, "," , criteriaEntity.AwardFundId);
+                criteriaCacheKey = string.Concat(criteriaEntity.StudentId, ",", criteriaEntity.AidYearId, "," , criteriaEntity.AwardFundId, personFilterKeys);
             }
             string studentFinancialAidAwardsCacheKey = CacheSupport.BuildCacheKey(AllStudentFinancialAidAwardsCache, unrestrictedFunds != null ? unrestrictedFunds.ToList() : null,
                 awardYears!= null ? awardYears.ToList() : null, criteriaCacheKey);
@@ -324,7 +325,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         {
                             if (!string.IsNullOrEmpty(criteriaEntity.StudentId))
                             {
-                                tcCriteria = string.Format("WITH TC.STUDENT.ID EQ '{0}'", criteriaEntity.StudentId);
+                                //tcCriteria = string.Format("WITH TC.STUDENT.ID EQ '{0}'", criteriaEntity.StudentId);
+                                tcCriteria = "WITH TC.STUDENT.ID EQ '?'";
+                                studentIds.Add(criteriaEntity.StudentId);
 
                                 var record = await DataReader.ReadRecordAsync<FinAid>("FIN.AID", criteriaEntity.StudentId);
                                 if (record == null)
@@ -381,14 +384,79 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             }
                         }
 
+                        //Person Filter
+                        if (personFilterKeys != null && personFilterKeys.Any())
+                        {
+                            //var ids = string.Join(" ", personFilterKeys.Select(a => string.Format("'{0}'", a)));
+                            if(string.IsNullOrEmpty(tcCriteria))
+                            {
+                                tcCriteria = "WITH TC.STUDENT.ID EQ '?'";
+                            }
+                            else
+                            {
+                                tcCriteria = string.Format("{0} AND  TC.STUDENT.ID EQ '?'", tcCriteria);
+                            }
+
+                            studentIds.AddRange(personFilterKeys.ToList());
+
+                            var records = await DataReader.BulkReadRecordAsync<FinAid>(studentIds.ToArray());
+                            
+                            List<string> finAidYears = new List<string>();
+
+                            if (records == null || !records.Any())
+                            {
+                                return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                            }
+                            else
+                            {
+                                finAidYears = records.Where(y => y.FaSaYears != null && y.FaSaYears.Any(a => !string.IsNullOrWhiteSpace(a))).SelectMany(a => a.FaSaYears).Distinct().ToList();
+                            }
+
+                            List<string> fasaYears = new List<string>();
+                            if (finAidYears == null || !finAidYears.Any())
+                            {
+                                return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                            }
+                            else
+                            {                                
+                                foreach (var finAidYear in finAidYears)
+                                {
+                                    if (criteriaEntity != null && !string.IsNullOrEmpty(criteriaEntity.AidYearId))
+                                    {
+                                        if (!finAidYear.Equals(criteriaEntity.AidYearId, StringComparison.InvariantCultureIgnoreCase))
+                                        {
+                                            if (!fasaYears.Contains(criteriaEntity.AidYearId))
+                                            {
+                                                fasaYears.Add(criteriaEntity.AidYearId);
+                                            }                                            
+                                        }
+                                        else
+                                        {
+                                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                        }
+                                    }
+                                    else
+                                    {
+                                        if (!fasaYears.Contains(finAidYear))
+                                        {
+                                            fasaYears.Add(finAidYear);
+                                        }                           
+                                    }
+                                }
+                                awardYears = awardYears.Intersect(fasaYears);
+                            }
+                        }
+
                         foreach (var awardYear in awardYears)
                         {
                             var tcAcyrFile = string.Concat("TC.", awardYear);
-                            string[] studentFinancialAidAwardIds = await DataReader.SelectAsync(tcAcyrFile, tcCriteria);
+                            //string[] studentFinancialAidAwardIds = await DataReader.SelectAsync(tcAcyrFile, tcCriteria);
+                            string[] studentFinancialAidAwardIds = await DataReader.SelectAsync(tcAcyrFile, tcCriteria, studentIds.ToArray(), "?");
                             if (studentFinancialAidAwardIds == null || !studentFinancialAidAwardIds.Any())
                             {
                                 continue;
                             }
+                           
                             if (restricted == true)
                             {
                                 // Running for restricted only so exclude any student awards from unrestricted funds.

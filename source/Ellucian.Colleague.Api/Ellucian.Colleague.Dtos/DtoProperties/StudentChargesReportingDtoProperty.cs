@@ -1,8 +1,9 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Dtos.Attributes;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 using System.Runtime.Serialization;
 
 namespace Ellucian.Colleague.Dtos.DtoProperties
@@ -13,7 +14,6 @@ namespace Ellucian.Colleague.Dtos.DtoProperties
     [DataContract]
     public class StudentChargesReportingDtoProperty
     {
-
         /// <summary>
         /// The usage associated with the charge (i.e. tax reporting only).
         /// </summary>
@@ -26,5 +26,11 @@ namespace Ellucian.Colleague.Dtos.DtoProperties
         /// </summary>
         [JsonProperty("originatedOn", DefaultValueHandling = DefaultValueHandling.Ignore)]
         public DateTime? OriginatedOn { get; set; }
+
+        /// <summary>
+        /// The date the charge originated for sonsideration in tax report generation.
+        /// </summary>
+        [JsonProperty("activityDates", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public DatePeriodDtoProperty ActivityDates { get; set; }
     }
 }

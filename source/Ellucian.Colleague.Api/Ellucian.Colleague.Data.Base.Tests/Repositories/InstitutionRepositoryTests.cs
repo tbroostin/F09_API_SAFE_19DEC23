@@ -15,6 +15,7 @@ using Ellucian.Data.Colleague.DataContracts;
 using Ellucian.Web.Http.Configuration;
 using System.Threading;
 using System.Threading.Tasks;
+using Ellucian.Colleague.Domain.Base.Transactions;
 
 namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 {
@@ -593,6 +594,43 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             dataReaderMock.Setup(acc => acc.BulkReadRecordAsync<PersonIntg>("PERSON.INTG", It.IsAny<string[]>(), true)).ReturnsAsync(personIntgResponseData);
             dataReaderMock.Setup(acc => acc.BulkReadRecordAsync<Address>("ADDRESS", It.IsAny<string[]>(), true)).ReturnsAsync(addressResponseData);
             dataReaderMock.Setup(acc => acc.BulkReadRecordAsync<SocialMediaHandles>("SOCIAL.MEDIA.HANDLES", It.IsAny<string[]>(), true)).ReturnsAsync(socialMediaHandlesResponseData);
+
+
+            cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
+            x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+            .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+            Mock<IColleagueTransactionInvoker> mockManager = new Mock<IColleagueTransactionInvoker>();
+
+            transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(mockManager.Object);
+            var resp = new GetCacheApiKeysResponse()
+            {
+                Offset = 0,
+                Limit = 2,
+                CacheName = "AllInstitutions",
+                Entity = "INSTITUTIONS",
+                Sublist = institutionIds,
+                TotalCount = institutionIds.Count(),
+                KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    },
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 7625,
+                        KeyCacheMin = 5906,
+                        KeyCachePart = "001",
+                        KeyCacheSize = 1720
+                    }
+                }
+            };
+            mockManager.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                .ReturnsAsync(resp);
+
 
             // Construct institution repository
             institutionsRepo = new InstitutionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);

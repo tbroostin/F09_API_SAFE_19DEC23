@@ -1,5 +1,6 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Base.Entities;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -46,6 +47,18 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <param name="attachment">The attachment</param>
         /// <returns>Path to the attachment's temp file location</returns>
         Task<string> GetAttachmentContentAsync(Attachment attachment);
+
+        /// <summary>
+        /// Query attachments
+        /// </summary>
+        /// <param name="includeActiveOnly">True if only attachments with an active status must be returned</param>
+        /// <param name="owner">The attachment owner to query by</param>
+        /// <param name="modifyStartDate">The start of the attachment modified date range to query by</param>
+        /// <param name="modifyEndDate">The end of the attachment modified date range to query by</param>
+        /// <param name="collectionIds">List of collection IDs to query by</param>
+        /// <returns>List of <see cref="Attachment">Attachments</see></returns>
+        Task<IEnumerable<Attachment>> QueryAttachmentsAsync(bool includeActiveOnly, string owner, DateTime? modifyStartDate,
+            DateTime? modifyEndDate, IEnumerable<string> collectionIds);
 
         /// <summary>
         /// Create the new attachment

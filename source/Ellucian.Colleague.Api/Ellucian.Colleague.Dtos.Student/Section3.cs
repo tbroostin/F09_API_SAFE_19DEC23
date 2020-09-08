@@ -220,5 +220,10 @@ namespace Ellucian.Colleague.Dtos.Student
         /// Synonym
         /// </summary>
         public string Synonym { get; set; }
+
+        /// <summary>
+        /// Indicates whether this section should display a client-specified icon (when provided) in course catalog and section search
+        /// </summary>
+        public bool ShowSpecialIcon { get; set; }
     }
 }

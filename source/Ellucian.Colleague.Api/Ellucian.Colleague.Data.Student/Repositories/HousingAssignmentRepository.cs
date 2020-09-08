@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Transactions;
@@ -121,9 +121,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 string[] rmAssignmentIds = housingAssignmentDataContracts.Select(i => i.Recordkey).Distinct().ToArray();
                 var arAddnlAmtsIds = await DataReader.SelectAsync("AR.ADDNL.AMTS", "WITH ARAA.ROOM.ASSIGNMENT EQ '?'", rmAssignmentIds);
 
-                var housingAssignmentDict = await GetHousingGuidDictionary(rmAssignmentIds, housingAssignmentCriteria);
-
-                var housingRequestDict = await GetHousingGuidDictionary(rmAssignmentIds, housingRequestCriteria);
+                var housingRequestDict = await GetHousingGuidDictionary(rmAssignmentIds, "ROOM.ASSIGNMENT");
 
                 var arAddnlAmtsDataContracts = await DataReader.BulkReadRecordAsync<DataContracts.ArAddnlAmts>("AR.ADDNL.AMTS", arAddnlAmtsIds);
                 
@@ -132,7 +130,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     //to catch entity  exceptions
                     try
                     {
-                        Domain.Student.Entities.HousingAssignment housingAssignmentEntity = BuildHousingAssignmentEntity(housingAssignmentDataContract, arAddnlAmtsDataContracts, housingAssignmentDict, housingRequestDict);
+                        Domain.Student.Entities.HousingAssignment housingAssignmentEntity = BuildHousingAssignmentEntity(housingAssignmentDataContract, arAddnlAmtsDataContracts, housingRequestDict);
                         housingAssignmentEntities.Add(housingAssignmentEntity);
                     }
                     catch (Exception ex)
@@ -157,34 +155,50 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         }
 
         /// <summary>
-        /// Gets dictionary with colleague id and guid key pair for APPLICATIONS.
+        /// Using a collection of ROOM.ASSIGNMENT ids, get a dictionary collection of associated secondary guids on RMAS.INTG.KEY.IDX
         /// </summary>
-        /// <param name="ids"></param>
-        /// <returns></returns>
-        string housingAssignmentCriteria = "WITH LDM.GUID.SECONDARY.FLD EQ '' AND LDM.GUID.SECONDARY.KEY EQ '' AND LDM.GUID.LDM.NAME EQ 'housing-assignments' AND LDM.GUID.PRIMARY.KEY EQ '{0}'";
-        string housingRequestCriteria = "WITH LDM.GUID.SECONDARY.FLD EQ 'RMAS.INTG.KEY.IDX' AND LDM.GUID.LDM.NAME EQ 'housing-requests' AND LDM.GUID.SECONDARY.KEY EQ '{0}'";
-        private async Task<Dictionary<string, string>> GetHousingGuidDictionary(IEnumerable<string> ids, string criteria)
+        /// <param name="ids">collection of  ids</param>
+        /// <returns>Dictionary consisting of a ids (key) and guids (value)</returns>
+        public async Task<Dictionary<string, string>> GetHousingGuidDictionary(IEnumerable<string> ids, string filename)
         {
-            if (ids == null || !Enumerable.Any<string>(ids))
+            if ((ids == null) || (ids != null && !ids.Any()))
             {
-                throw new ArgumentNullException("Application id's are required.");
+                return new Dictionary<string, string>();
             }
+            var guidCollection = new Dictionary<string, string>();
 
-            Dictionary<string, string> dict = new Dictionary<string, string>();
-
-            foreach (var id in ids)
+            try
             {
-                var guidRecords = await DataReader.SelectAsync("LDM.GUID", string.Format(criteria, id));
-                if (!dict.ContainsKey(id))
+                var guidLookup = ids
+                   .Where(s => !string.IsNullOrWhiteSpace(s))
+                   .Distinct().ToList()
+                   .ConvertAll(p => new RecordKeyLookup(filename, p, "RMAS.INTG.KEY.IDX", p, false)).ToArray();
+
+                var recordKeyLookupResults = await DataReader.SelectAsync(guidLookup);
+
+                if ((recordKeyLookupResults != null) && (recordKeyLookupResults.Any()))
                 {
-                    if (guidRecords != null && guidRecords.Any())
+                    foreach (var recordKeyLookupResult in recordKeyLookupResults)
                     {
-                        dict.Add(id, guidRecords[0]);
+                        if (recordKeyLookupResult.Value != null)
+                        {
+                            var splitKeys = recordKeyLookupResult.Key.Split(new[] { "+" }, StringSplitOptions.RemoveEmptyEntries);
+                            if (!guidCollection.ContainsKey(splitKeys[1]))
+                            {
+                                guidCollection.Add(splitKeys[1], recordKeyLookupResult.Value.Guid);
+                            }
+                        }
                     }
                 }
             }
-            return dict;
+            catch (Exception ex)
+            {
+                throw new Exception(string.Format("Error occured while getting guids for {0}.", filename), ex); ;
+            }
+
+            return guidCollection;
         }
+        
 
         /// <summary>
         /// Gets housing assignment by id
@@ -205,7 +219,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             var housingAssignmentDC = await DataReader.ReadRecordAsync<RoomAssignment>("ROOM.ASSIGNMENT", housingAssignmentId);
             if (housingAssignmentDC == null || string.IsNullOrEmpty(housingAssignmentDC.RmasRoom))
             {
-                throw new KeyNotFoundException(string.Format("No housing assignment was found for guid {0}.", guid));
+                throw new KeyNotFoundException(string.Format("Room id is required for housing assignment {0}.", guid));
             }
 
             //Get records from AR.ADDNL.AMTS
@@ -214,15 +228,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             var arAddnlAmtsDataContracts = await DataReader.BulkReadRecordAsync<DataContracts.ArAddnlAmts>("AR.ADDNL.AMTS", arAddnlAmtsIds);
 
-            var haDict = await GetHousingGuidDictionary(new List<string>() { housingAssignmentId }, housingAssignmentCriteria);
-            var hrDict = await GetHousingGuidDictionary(new List<string>() { housingAssignmentId }, housingRequestCriteria);
+            var hrDict = await GetHousingGuidDictionary(new List<string>() { housingAssignmentId }, "ROOM.ASSIGNMENT");
 
-            if(hrDict.Values.Contains(guid))
+            if (hrDict.Values.Contains(guid))
             {
-                throw new KeyNotFoundException(string.Format("No housing assignment was found for guid {0}.", guid));
+                throw new KeyNotFoundException(string.Format("No housing assignment was found for guid {0}.  Found as a housing request.    ", guid));
             }
 
-            Domain.Student.Entities.HousingAssignment housingAssignmentEntity = BuildHousingAssignmentEntity(housingAssignmentDC, arAddnlAmtsDataContracts, haDict, hrDict);
+            Domain.Student.Entities.HousingAssignment housingAssignmentEntity = BuildHousingAssignmentEntity(housingAssignmentDC, arAddnlAmtsDataContracts, hrDict);
             return housingAssignmentEntity;
         }
 
@@ -389,9 +402,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <param name="source"></param>
         /// <param name="arAddnlAmtsDataContracts"></param>
         /// <returns></returns>
-        private Domain.Student.Entities.HousingAssignment BuildHousingAssignmentEntity(DataContracts.RoomAssignment source, IEnumerable<ArAddnlAmts> arAddnlAmtsDataContracts, IDictionary<string, string> housingAssignmentDict, IDictionary<string, string> housingRequestDict)
+        private Domain.Student.Entities.HousingAssignment BuildHousingAssignmentEntity(DataContracts.RoomAssignment source, IEnumerable<ArAddnlAmts> arAddnlAmtsDataContracts, IDictionary<string, string> housingRequestDict)
         {
-            Domain.Student.Entities.HousingAssignment housingAssignmentEntity = new HousingAssignment(GetGuid(source.Recordkey, housingAssignmentDict), source.Recordkey,
+            Domain.Student.Entities.HousingAssignment housingAssignmentEntity = new HousingAssignment(source.RecordGuid, source.Recordkey,
                 source.RmasPersonId, source.RmasRoom, source.RmasStartDate, source.RmasEndDate);
 
             housingAssignmentEntity.Building = source.RmasBldg;

@@ -29,7 +29,7 @@ namespace Ellucian.Colleague.Data.Base.DataContracts
 	[DataContract(Name = "BoxCodes")]
 	[ColleagueDataContract(GeneratedDateTime = "11/22/2019 1:54:10 AM", User = "vinay_an")]
 	[EntityDataContract(EntityName = "BOX.CODES", EntityType = "PHYS")]
-	public class BoxCodes : IColleagueEntity
+	public class BoxCodes : IColleagueGuidEntity
 	{
 		/// <summary>
 		/// Version
@@ -47,6 +47,18 @@ namespace Ellucian.Colleague.Data.Base.DataContracts
 		{
 			Recordkey = key;
 		}
+	
+		/// <summary>
+		/// Record GUID
+		/// </summary>
+		[DataMember(Name = "RecordGuid")]
+		public string RecordGuid { get; set; }
+
+		/// <summary>
+		/// Record Model Name
+		/// </summary>
+		[DataMember(Name = "RecordModelName")]
+		public string RecordModelName { get; set; }	
 		
 		/// <summary>
 		/// CDD Name: BXC.DESC
@@ -65,6 +77,12 @@ namespace Ellucian.Colleague.Data.Base.DataContracts
 		/// </summary>
 		[DataMember(Order = 2, Name = "BXC.BOX.NUMBER")]
 		public string BxcBoxNumber { get; set; }
+		
+		/// <summary>
+		/// CDD Name: BXC.SUB.BOX.NO
+		/// </summary>
+		[DataMember(Order = 3, Name = "BXC.SUB.BOX.NO")]
+		public string BxcSubBoxNo { get; set; }
 		
 		/// <summary>
 		/// CDD Name: BXC.COUNTRY

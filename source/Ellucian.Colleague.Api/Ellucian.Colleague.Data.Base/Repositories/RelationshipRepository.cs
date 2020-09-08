@@ -9,6 +9,7 @@ using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Configuration;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -27,6 +28,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
     {
         private List<Domain.Base.Entities.Relationship> _relationships;
         public static char _VM = Convert.ToChar(DynamicArray.VM);
+        RepositoryException exception = new RepositoryException();
+        private string colleagueTimeZone;
 
         #region Non EEDM
 
@@ -36,9 +39,12 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <param name="cacheProvider">The cache provider.</param>
         /// <param name="transactionFactory">The transaction factory.</param>
         /// <param name="logger">The logger.</param>
-        public RelationshipRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger)
+        public RelationshipRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings settings)
             : base(cacheProvider, transactionFactory, logger)
         {
+            // Using 24 hours for the cache timeout.
+            CacheTimeout = Level1CacheTimeoutValue;
+            colleagueTimeZone = settings.ColleagueTimeZone;
         }
 
         /// <summary>
@@ -1035,7 +1041,235 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             return request;
         }
 
-          /// <summary>
+        /// <summary>
+        /// create personal relationship initiation process
+        /// </summary>
+        /// <param name="personalRelationshipsEntity">personalrelationship entity</param>
+        /// <param name="personMatchRequest">personMatchRequest entity</param>
+        /// <returns>Object of either peronalRelationshipEntity or personMatchRequest entity</returns>
+        public async Task<Tuple<Domain.Base.Entities.Relationship, string>> CreatePersonalRelationshipInitiationProcessAsync(Domain.Base.Entities.PersonalRelationshipInitiation personalRelationshipsEntity)
+        {
+            if (personalRelationshipsEntity == null)
+            {
+                throw new RepositoryException("Must provide a personal relationship body");
+            }
+
+            var updateRequest = await BuildPersonRelationshipInitiationProcessUpdateRequest(personalRelationshipsEntity);
+            var extendedDataTuple = GetEthosExtendedDataLists();
+
+            if (extendedDataTuple != null && extendedDataTuple.Item1 != null && extendedDataTuple.Item2 != null)
+            {
+                updateRequest.ExtendedNames = extendedDataTuple.Item1;
+                updateRequest.ExtendedValues = extendedDataTuple.Item2;
+            }
+            // write the  data
+            var updateResponse = await transactionInvoker.ExecuteAsync<ProcessRelationshipRequestRequest, ProcessRelationshipRequestResponse>(updateRequest);
+
+            if (updateResponse.ErrorOccurred)
+            {
+                var exception = new RepositoryException();
+                foreach (var error in updateResponse.ProcessRelationshipRequestErrors)
+                {
+
+                    exception.AddError(new RepositoryError("Create.Update.Exception", string.Concat(error.ErrorCodes, " - ", error.ErrorMessages))
+                    {
+                        SourceId = updateRequest.RelationshipId,
+                        Id = updateRequest.RelationshipGuid
+
+                    });
+                }
+                throw exception;
+
+            }
+            // get the updated entity from the database
+            Domain.Base.Entities.Relationship relationship = null;
+            string personMatchReqGuid = null;
+            if (!string.IsNullOrEmpty(updateResponse.RelationshipGuid))
+            {
+                relationship = await GetPersonalRelationshipById2Async(updateResponse.RelationshipGuid);
+            }
+            else
+            {
+                personMatchReqGuid = updateResponse.PersonMatchRequestGuid;
+            }
+            return new Tuple<Domain.Base.Entities.Relationship, string>(relationship, personMatchReqGuid);
+        }
+
+        private async Task<ProcessRelationshipRequestRequest> BuildPersonRelationshipInitiationProcessUpdateRequest(Domain.Base.Entities.PersonalRelationshipInitiation personRelationshipsEntity)
+        {
+            var exception = new RepositoryException();
+            var combinedList = new string[] { personRelationshipsEntity.PersonId, personRelationshipsEntity.RelatedPersonId };
+            var personCollection = await DataReader.BulkReadRecordAsync<Person>(combinedList.ToArray());
+            var isCorporation = personCollection.Any(i => !string.IsNullOrEmpty(i.PersonCorpIndicator) && i.PersonCorpIndicator.Equals("Y", StringComparison.OrdinalIgnoreCase));
+            if (isCorporation)
+            {
+                exception.AddError(new RepositoryError("Validation.Exception", string.Concat("Person-relationships resource requires that each member of the relationship be a person")));
+                throw exception;
+            }
+
+            var request = new ProcessRelationshipRequestRequest
+            {
+                RelationshipGuid = Guid.Empty.ToString(),
+                RelationshipId = string.Empty,
+                RequestType = personRelationshipsEntity.RequestType,
+                SubjectPersonId = personRelationshipsEntity.PersonId,
+                RelatedPersonId = personRelationshipsEntity.RelatedPersonId,
+                DirectRelationship = personRelationshipsEntity.RelationshipType,
+                ReciprocalRelationship = personRelationshipsEntity.InverseRelationshipType,
+                Status = personRelationshipsEntity.Status,
+                StartDate = personRelationshipsEntity.StartDate,
+                EndDate = personRelationshipsEntity.EndDate,
+                Comments = new List<string>() { personRelationshipsEntity.Comment },
+                PersonMatchRequestGuid = Guid.Empty.ToString(),
+                PersonMatchRequestId = string.Empty,
+                LastName = personRelationshipsEntity.LastName,
+                FirstName = personRelationshipsEntity.FirstName,
+                MiddleName = personRelationshipsEntity.MiddleName,
+                AddressType = personRelationshipsEntity.AddressType,
+                AddressLines = personRelationshipsEntity.AddressLines,
+                City = personRelationshipsEntity.City,
+                State = personRelationshipsEntity.State,
+                Country = personRelationshipsEntity.Country,
+                County = personRelationshipsEntity.County,
+                Zip = personRelationshipsEntity.Zip,
+                Locality = personRelationshipsEntity.Locality,
+                Region = personRelationshipsEntity.Region,
+                SubRegion = personRelationshipsEntity.SubRegion,
+                PostalCode = personRelationshipsEntity.PostalCode,
+                DeliveryPoint = personRelationshipsEntity.DeliveryPoint,
+                CarrierRoute = personRelationshipsEntity.CarrierRoute,
+                CorrectionDigit = personRelationshipsEntity.CorrectionDigit,
+                BirthDate = personRelationshipsEntity.BirthDate,
+                EmailTypes = personRelationshipsEntity.EmailType,
+                EmailAddresses = personRelationshipsEntity.Email,
+                PhoneTypes = personRelationshipsEntity.PhoneType,
+                PhoneNumbers = personRelationshipsEntity.Phone,
+            };
+            return request;
+        }
+
+        /// <summary>
+        /// Gets person-match-requests by id.
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        private async Task<Domain.Base.Entities.PersonMatchRequest> GetPersonMatchRequestsByIdAsync(string id, bool bypassCache = false)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new ArgumentNullException("id", "person-match-requests guid is required.");
+            }
+            var personMatchRequestId = new GuidLookup(id);
+            var entity = await DataReader.ReadRecordAsync<DataContracts.PersonMatchRequest>("PERSON.MATCH.REQUEST", personMatchRequestId);
+            if (entity == null)
+            {
+                throw new KeyNotFoundException("No person-matching-requests was found for guid '" + id + "'.");
+            }
+
+            var entities = BuildPersonMatchRequestEntity(entity);
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
+
+            return entities;
+        }
+
+        /// <summary>
+        /// Builds PersonMatchRequest entity.
+        /// </summary>
+        /// <param name="source"></param>
+        /// <returns></returns>
+        private Domain.Base.Entities.PersonMatchRequest BuildPersonMatchRequestEntity(DataContracts.PersonMatchRequest source)
+        {
+            Domain.Base.Entities.PersonMatchRequest entity = null;
+            string guid = source.RecordGuid;
+            if (string.IsNullOrEmpty(guid))
+            {
+                exception.AddError(new RepositoryError("Bad.Data", "Invalid Data contract returned from bulk read. Missing GUID")
+                {
+                    SourceId = source.Recordkey,
+                    Id = source.RecordGuid
+                });
+            }
+            if (string.IsNullOrEmpty(source.Recordkey))
+            {
+                exception.AddError(new RepositoryError("Bad.Data", "Invalid Data contract returned from bulk read. Missing Record Key")
+                {
+                    SourceId = source.Recordkey,
+                    Id = source.RecordGuid
+                });
+            }
+            if (string.IsNullOrEmpty(source.PmrInitialStatus) && string.IsNullOrEmpty(source.PmrFinalStatus))
+            {
+                exception.AddError(new RepositoryError("Bad.Data", "Invalid Data contract returned from bulk read. Missing both initial and final statuses.")
+                {
+                    SourceId = source.Recordkey,
+                    Id = source.RecordGuid
+                });
+            }
+
+            entity = new Domain.Base.Entities.PersonMatchRequest()
+            {
+                Guid = guid,
+                RecordKey = source.Recordkey,
+                PersonId = source.PmrPersonId,
+                Originator = source.PmrOriginator
+            };
+            if (!string.IsNullOrEmpty(source.PmrInitialStatus))
+            {
+                Domain.Base.Entities.PersonMatchRequestType type = Domain.Base.Entities.PersonMatchRequestType.Initial;
+                Domain.Base.Entities.PersonMatchRequestStatus status = ConvertStringMatchStatus(source.PmrInitialStatus);
+                DateTimeOffset date = ConvertMatchDate(source.PmrInitialStatusDate, source.PmrInitialStatusTime);
+                entity.AddPersonMatchRequestOutcomes(new Domain.Base.Entities.PersonMatchRequestOutcomes(type, status, date));
+            }
+            if (!string.IsNullOrEmpty(source.PmrFinalStatus))
+            {
+                Domain.Base.Entities.PersonMatchRequestType type = Domain.Base.Entities.PersonMatchRequestType.Final;
+                Domain.Base.Entities.PersonMatchRequestStatus status = ConvertStringMatchStatus(source.PmrFinalStatus);
+                DateTimeOffset date = ConvertMatchDate(source.PmrFinalStatusDate, source.PmrFinalStatusTime);
+                entity.AddPersonMatchRequestOutcomes(new Domain.Base.Entities.PersonMatchRequestOutcomes(type, status, date));
+            }
+
+            return entity;
+        }
+
+        private Domain.Base.Entities.PersonMatchRequestStatus ConvertStringMatchStatus(string status)
+        {
+            switch (status)
+            {
+                case ("D"):
+                    {
+                        return Domain.Base.Entities.PersonMatchRequestStatus.ExistingPerson;
+                    }
+                case ("N"):
+                    {
+                        return Domain.Base.Entities.PersonMatchRequestStatus.NewPerson;
+                    }
+                case ("R"):
+                    {
+                        return Domain.Base.Entities.PersonMatchRequestStatus.ReviewRequired;
+                    }
+                default:
+                    {
+                        return Domain.Base.Entities.PersonMatchRequestStatus.NotSet;
+                    }
+            }
+        }
+
+        private DateTimeOffset ConvertMatchDate(DateTime? statusDate, DateTime? statusTime)
+        {
+            var statusDateAndTime = new DateTimeOffset();
+            if (statusDate != null && statusTime != null && statusDate.HasValue && statusTime.HasValue)
+            {
+                var time = statusTime.ToTimeOfDayDateTimeOffset(colleagueTimeZone);
+
+                statusDateAndTime = statusDate.GetValueOrDefault().Date + time.GetValueOrDefault().TimeOfDay;
+            }
+            return statusDateAndTime;
+        }
+
+        /// <summary>
         /// Delete person relationship
         /// </summary>
         /// <param name="id">personrelationship guid</param>

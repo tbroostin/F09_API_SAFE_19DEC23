@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Student.Entities;
@@ -163,9 +163,9 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         {
             return Task.FromResult<IEnumerable<Student.Entities.ApplicationInfluence>>(new List<Student.Entities.ApplicationInfluence>()
                 {
-                    new Domain.Student.Entities.ApplicationInfluence("CT", "Campus Tour"),
-            new Domain.Student.Entities.ApplicationInfluence("BR", "Brochure"),
-            new Domain.Student.Entities.ApplicationInfluence("WS", "Website")
+                    new Domain.Student.Entities.ApplicationInfluence("8C3B805D-CFE6-483B-86C3-4C20562F8C15", "CT", "Campus Tour"),
+            new Domain.Student.Entities.ApplicationInfluence("9C3B805D-CFE6-483B-86C3-4C20562F8C15", "BR", "Brochure"),
+            new Domain.Student.Entities.ApplicationInfluence("0C3B805D-CFE6-483B-86C3-4C20562F8C15", "WS", "Website")
                 });
         }
 
@@ -239,15 +239,15 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                 });
         }
 
-        public Task<IEnumerable<Student.Entities.CareerGoal>> GetCareerGoalsAsync()
+        public Task<IEnumerable<Student.Entities.CareerGoal>> GetCareerGoalsAsync(bool ignoreCache= false)
         {
             return Task.FromResult<IEnumerable<Student.Entities.CareerGoal>>(new List<Student.Entities.CareerGoal>()
                 {
-                    new Student.Entities.CareerGoal("ADAS", "Administrative Assistant"),
-                    new Student.Entities.CareerGoal("INFT", "Information Technology"),
-                    new Student.Entities.CareerGoal("PSYC", "Psychology"),
-                    new Student.Entities.CareerGoal("NURS", "Nursing"),
-                    new Student.Entities.CareerGoal("AUTO", "Auto Repair")
+                    new Student.Entities.CareerGoal("1a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fba", "ADAS", "Administrative Assistant"),
+                    new Student.Entities.CareerGoal("2a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbb", "INFT", "Information Technology"),
+                    new Student.Entities.CareerGoal("3a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "PSYC", "Psychology"),
+                    new Student.Entities.CareerGoal("4a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbd", "NURS", "Nursing"),
+                    new Student.Entities.CareerGoal("5a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbe", "AUTO", "Auto Repair")
                 });
         }
 
@@ -1388,6 +1388,16 @@ namespace Ellucian.Colleague.Domain.Student.Tests
             throw new NotImplementedException();
         }
 
+        public Task<string> GetApplicationInfluenceGuidAsync(string code)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> GetCareerGoalGuidAsync(string code)
+        {
+            throw new NotImplementedException();
+        }
+
         public Task<string> GetApplicationSourcesGuidAsync(string code)
         {
             throw new NotImplementedException();
@@ -1444,6 +1454,31 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         }
 
         public Task<string> GetAdvisorTypeGuidAsync(string code)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<ApplicationInfluence>> GetApplicationInfluencesAsync(bool ignoreCache)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<EducationGoals>> GetEducationGoalsAsync(bool ignoreCache)
+        {
+            return Task.FromResult<IEnumerable<Student.Entities.EducationGoals>>(new List<Student.Entities.EducationGoals>()
+                {
+                    new EducationGoals("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "AT", "Athletic"),
+                    new EducationGoals("849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "AC", "Academic"),
+                    new EducationGoals("d2253ac7-9931-4560-b42f-1fccd43c952e", "CU", "Cultural")
+                });
+        }
+
+        public Task<string> GetEducationGoalGuidAsync(string code)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> GetFinancialAidYearsGuidAsync(string code)
         {
             throw new NotImplementedException();
         }

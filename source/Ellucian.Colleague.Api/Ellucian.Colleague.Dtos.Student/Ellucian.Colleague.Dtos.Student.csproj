@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Ellucian.Colleague.Dtos.Student</RootNamespace>
     <AssemblyName>Ellucian.Colleague.Dtos.Student</AssemblyName>
-    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <EnableCodeInspectionOnBuild>true</EnableCodeInspectionOnBuild>
     <TargetFrameworkProfile />
@@ -61,9 +61,31 @@
     <Compile Include="AcademicCredit2.cs" />
     <Compile Include="AcademicCreditsWithInvalidKeys.cs" />
     <Compile Include="AcademicCredit3.cs" />
+    <Compile Include="CaseCategory.cs" />
+    <Compile Include="CaseClosureReason.cs" />
+    <Compile Include="CasePriority.cs" />
+    <Compile Include="ContributionsQueryCriteria.cs" />
+    <Compile Include="RetentionAlertClosedCase.cs" />
+    <Compile Include="RetentionAlertClosedCasesByReason.cs" />
+    <Compile Include="RetentionAlertCaseCategoryOrgRoles.cs" />
+    <Compile Include="RetentionAlertCaseCategoryOrgRole.cs" />
+    <Compile Include="RetentionAlertGroupOfCases.cs" />
+    <Compile Include="RetentionAlertGroupOfCasesSummary.cs" />
     <Compile Include="CatalogFilterOption2.cs" />
     <Compile Include="CatalogFilterType2.cs" />
     <Compile Include="CourseCatalogConfiguration2.cs" />
+    <Compile Include="RetentionAlertCaseReassignmentDetail.cs" />
+    <Compile Include="RetentionAlertCaseRecipEmail.cs" />
+    <Compile Include="RetentionAlertOpenCase.cs" />
+    <Compile Include="RetentionAlertPermissions.cs" />
+    <Compile Include="RetentionAlertWorkCaseManagerReminders.cs" />
+    <Compile Include="RetentionAlertWorkCaseManagerReminder.cs" />
+    <Compile Include="RetentionAlertWorkCaseSetReminder.cs" />
+    <Compile Include="RetentionAlertWorkCaseReassign.cs" />
+    <Compile Include="RetentionAlertWorkCaseSendMail.cs" />
+    <Compile Include="RetentionAlertSendEmailPreference.cs" />
+    <Compile Include="SectionSearchCriteria.cs" />
+    <Compile Include="CaseType.cs" />
     <Compile Include="FacultyOfficeHours.cs" />
     <Compile Include="GradeScheme.cs" />
     <Compile Include="GradeSubscheme.cs" />
@@ -72,8 +94,22 @@
     <Compile Include="QuickRegistration\QuickRegistrationSection.cs" />
     <Compile Include="QuickRegistration\QuickRegistrationTerm.cs" />
     <Compile Include="QuickRegistration\StudentQuickRegistration.cs" />
+    <Compile Include="RetentionAlertCase.cs" />
+    <Compile Include="RetentionAlertCaseDetail.cs" />
+    <Compile Include="RetentionAlertCaseHistory.cs" />
+    <Compile Include="RetentionAlertWorkCaseActionClose.cs" />
+    <Compile Include="RetentionAlertWorkCaseType.cs" />
+    <Compile Include="RetentionAlertWorkCasePriority.cs" />
+    <Compile Include="RetentionAlertWorkCaseCommCode.cs" />
+    <Compile Include="RetentionAlertWorkCaseNote.cs" />
+    <Compile Include="RetentionAlertWorkCaseActionResponse.cs" />
+    <Compile Include="RetentionAlertCaseCreateResponse.cs" />
+    <Compile Include="RetentionAlertQueryCriteria.cs" />
+    <Compile Include="RetentionAlertWorkCase.cs" />
     <Compile Include="SectionMidtermGradingComplete.cs" />
     <Compile Include="SectionMidtermGradingCompleteForPost.cs" />
+    <Compile Include="SectionPage.cs" />
+    <Compile Include="ShoppingSheetAwardGroup2.cs" />
     <Compile Include="StudentAcademicProgram.cs" />
     <Compile Include="CampusOrganization2.cs" />
     <Compile Include="CampusOrganizationQueryCriteria.cs" />

@@ -1,4 +1,4 @@
-//Copyright 2017 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -19,6 +19,7 @@ using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http;
+using System.Linq;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -48,7 +49,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// Return all housingResidentTypes
         /// </summary>
         /// <returns>List of HousingResidentTypes <see cref="Dtos.HousingResidentTypes"/> objects representing matching housingResidentTypes</returns>
-        [HttpGet]
+        [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.HousingResidentTypes>> GetHousingResidentTypesAsync()
         {
@@ -62,7 +63,15 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
-                return await _housingResidentTypesService.GetHousingResidentTypesAsync(bypassCache);
+                var housingResidentTypes = await _housingResidentTypesService.GetHousingResidentTypesAsync(bypassCache);
+
+                if (housingResidentTypes != null && housingResidentTypes.Any())
+                {
+                    AddEthosContextProperties(await _housingResidentTypesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _housingResidentTypesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              housingResidentTypes.Select(a => a.Id).ToList()));
+                }
+                return housingResidentTypes;
             }
             catch (KeyNotFoundException e)
             {
@@ -101,7 +110,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="guid">GUID to desired housingResidentTypes</param>
         /// <returns>A housingResidentTypes object <see cref="Dtos.HousingResidentTypes"/> in EEDM format</returns>
-        [HttpGet]
+        [HttpGet, EedmResponseFilter]
         public async Task<Dtos.HousingResidentTypes> GetHousingResidentTypesByGuidAsync(string guid)
         {
             if (string.IsNullOrEmpty(guid))
@@ -111,6 +120,10 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                AddEthosContextProperties(
+                   await _housingResidentTypesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                   await _housingResidentTypesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                       new List<string>() { guid }));
                 return await _housingResidentTypesService.GetHousingResidentTypesByGuidAsync(guid);
             }
             catch (KeyNotFoundException e)

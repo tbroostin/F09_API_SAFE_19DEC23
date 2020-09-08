@@ -1,15 +1,11 @@
-﻿// Copyright 2015-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
 using System.Web.Http;
-using System.Net;
-using System.Net.Http.Headers;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Colleague.Domain.Student.Repositories;
-using Ellucian.Colleague.Dtos.Student;
 using System.ComponentModel;
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -57,6 +53,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Retrieves all EnrollmentStatuses.
         /// </summary>
         /// <returns>All <see cref="Ellucian.Colleague.Dtos.EnrollmentStatus">EnrollmentStatus.</see></returns>
+        [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.EnrollmentStatus>> GetEnrollmentStatusesAsync()
         {
@@ -70,7 +67,17 @@ namespace Ellucian.Colleague.Api.Controllers
                         bypassCache = true;
                     }
                 }
-                return await _curriculumService.GetEnrollmentStatusesAsync(bypassCache);
+
+                var enrollmentStatuses = await _curriculumService.GetEnrollmentStatusesAsync(bypassCache);
+
+                if (enrollmentStatuses != null && enrollmentStatuses.Any())
+                {
+                    AddEthosContextProperties(await _curriculumService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                              await _curriculumService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              enrollmentStatuses.Select(a => a.Id).ToList()));
+                }
+
+                return enrollmentStatuses;
             }
             catch (Exception ex)
             {
@@ -85,10 +92,15 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="id">ID to desired EnrollmentStatus</param>
         /// <returns>A <see cref="Ellucian.Colleague.Dtos.EnrollmentStatus">EnrollmentStatus.</see></returns>
+        [HttpGet, EedmResponseFilter]
         public async Task<Ellucian.Colleague.Dtos.EnrollmentStatus> GetEnrollmentStatusByIdAsync(string id)
         {
             try
             {
+                AddEthosContextProperties(
+                    await _curriculumService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                    await _curriculumService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                        new List<string>() { id }));
                 return await _curriculumService.GetEnrollmentStatusByGuidAsync(id);
             }
             catch (Exception ex)

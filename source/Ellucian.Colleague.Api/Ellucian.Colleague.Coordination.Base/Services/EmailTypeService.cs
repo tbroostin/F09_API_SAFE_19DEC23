@@ -19,6 +19,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
     public class EmailTypeService : BaseCoordinationService, IEmailTypeService
     {
         private readonly IReferenceDataRepository _referenceDataRepository;
+        private readonly IConfigurationRepository _configurationRepository;
         private readonly IPersonRepository _personRepository;
         private const string _dataOrigin = "Colleague";
 
@@ -26,11 +27,13 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                                          IPersonRepository personRepository,
                                          ICurrentUserFactory currentUserFactory,
                                          IRoleRepository roleRepository,
-                                         ILogger logger)
-            : base(adapterRegistry, currentUserFactory, roleRepository, logger)
+                                         ILogger logger,
+                                         IConfigurationRepository configurationRepository)
+            : base(adapterRegistry, currentUserFactory, roleRepository, logger, null, configurationRepository)
         {
             _referenceDataRepository = referenceDataRepository;
-            _personRepository = personRepository;
+            _configurationRepository = configurationRepository;
+            _personRepository = personRepository;            
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN HeDM</remarks>

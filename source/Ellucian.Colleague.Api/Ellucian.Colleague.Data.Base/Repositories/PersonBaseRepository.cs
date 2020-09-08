@@ -3001,9 +3001,9 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                     GetPersonFilterResultsV2Credentials = creds,
                                     GetPersonFilterResultsV2AlternateCredentials = altCreds,
                                     //we do not need to send the Guid again.
-                                    //Guid = personFilter,
-                                    Offset = offset,
-                                    Limit = limit
+                                    //Guid = personFilter, Pass offset and Limit of zero to bypass paging by the CTX.
+                                    Offset = 0,
+                                    Limit = 0
                                 };
 
                                 // Execute request

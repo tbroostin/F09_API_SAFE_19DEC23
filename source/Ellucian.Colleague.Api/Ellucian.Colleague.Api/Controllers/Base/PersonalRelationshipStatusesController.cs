@@ -1,19 +1,12 @@
-﻿// Copyright 2014-16 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Web;
 using System.Web.Http;
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base.Services;
-using Ellucian.Colleague.Domain.Base.Repositories;
-using Ellucian.Colleague.Dtos.Base;
-using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using slf4net;
@@ -51,6 +44,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Retrieves all personal relationship statuses.
         /// </summary>
         /// <returns>All PersonalRelationshipStatuses objects.</returns>
+        [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.PersonalRelationshipStatus>> GetPersonalRelationshipStatusesAsync()
         {
@@ -64,7 +58,17 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                         bypassCache = true;
                     }
                 }
-                return await _personalRelationshipService.GetPersonalRelationshipStatusesAsync(bypassCache);
+
+                var personalRelationshipStatuses = await _personalRelationshipService.GetPersonalRelationshipStatusesAsync(bypassCache);
+
+                if (personalRelationshipStatuses != null && personalRelationshipStatuses.Any())
+                {
+                    AddEthosContextProperties(await _personalRelationshipService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                              await _personalRelationshipService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              personalRelationshipStatuses.Select(a => a.Id).ToList()));
+                }
+
+                return personalRelationshipStatuses;
             }
             catch (Exception ex)
             {
@@ -78,10 +82,15 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Retrieves a personal relationship status by ID.
         /// </summary>
         /// <returns>A <see cref="Ellucian.Colleague.Dtos.PersonalRelationshipStatus">PersonalRelationshipStatus.</see></returns>
+        [HttpGet, EedmResponseFilter]
         public async Task<Ellucian.Colleague.Dtos.PersonalRelationshipStatus> GetPersonalRelationshipStatusByIdAsync(string id)
         {
             try
             {
+                AddEthosContextProperties(
+                  await _personalRelationshipService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                  await _personalRelationshipService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                      new List<string>() { id }));
                 return await _personalRelationshipService.GetPersonalRelationshipStatusByGuidAsync(id);
             }
             catch (Exception ex)
@@ -95,7 +104,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Updates a PersonalRelationshipStatus.
         /// </summary>
         /// <param name="personalRelationshipStatus"><see cref="PersonalRelationshipStatus">PersonalRelationshipStatus</see> to update</param>
-        /// <returns>Newly updated <see cref="PersonalRelationshipStatus">PersonalRelationshipStatus</see></returns>
+        /// <returns>Newly updated PersonalRelationshipStatus</returns>
         [HttpPut]
         public async Task<Dtos.PersonalRelationshipStatus> PutPersonalRelationshipStatusAsync([FromBody] Dtos.PersonalRelationshipStatus personalRelationshipStatus)
         {

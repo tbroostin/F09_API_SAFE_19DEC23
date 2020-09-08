@@ -93,7 +93,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                     throw new PermissionsException(string.Format("Supervisor {0} does not have permission to access to EmployeeSummary data", supervisorId));
                 }
 
-                var supervisedEmployeeIds = await supervisorsRepository.GetSuperviseesBySupervisorAsync(supervisorId);               
+                var supervisedEmployeeIds = await supervisorsRepository.GetSuperviseesBySupervisorAsync(supervisorId);
 
                 //is current user a proxy? - set an actingSupervisorId
                 actingSupervisorId = hasProxyAccess ? CurrentUser.PersonId : null;
@@ -166,7 +166,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 var personEmploymentStatuses = await personEmploymentStatusRepository.GetPersonEmploymentStatusesAsync(distinctValidEmployeeIds);
                 var personDemographics = await personBaseRepository.GetPersonsBaseAsync(distinctValidEmployeeIds.Concat(supervisorIds).Distinct(), true);
                 var allPositions = (await positionRepository.GetPositionsAsync()).ToDictionary(p => p.Id);
-               
+
 
                 foreach (var validEmployee in distinctValidEmployeeIds)
                 {
@@ -186,7 +186,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                         .Select(pp => allPositions[pp.PositionId].SupervisorPositionId)
                         .Where(pid => !string.IsNullOrWhiteSpace(pid));
 
-                    
+
                     if (supervisorPositionIds.Any())
                     {
                         var supervisors = await supervisorsRepository.GetSupervisorIdsForPositionsAsync(supervisorPositionIds);
@@ -198,11 +198,11 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                             {
                                 personPositionEntity.PositionLevelSupervisorIds = supervisors[supervisorPositionId];
                                 //Add position-level supervisor ids to the distinct supervisors list
-                                allSupervisorIds = personPositionEntity.PositionLevelSupervisorIds.Any() ? 
+                                allSupervisorIds = personPositionEntity.PositionLevelSupervisorIds.Any() ?
                                     allSupervisorIds.Concat(new List<string>() { personPositionEntity.PositionLevelSupervisorIds[0] })
                                     : allSupervisorIds;
                             }
-                        }                        
+                        }
                     }
 
                     IEnumerable<string> distinctSupervisorIds = new List<string>().AsEnumerable();
@@ -217,11 +217,31 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                     var personEmploymentStatusesForEmployee = personEmploymentStatuses.Where(pes => pes.PersonId == validEmployee);
                     var personDemographicsForEmployee = personDemographics.FirstOrDefault(pd => pd.Id == validEmployee);
 
-                    var employeeSummaryEntity = new EmployeeSummary(validEmployee, personPositionsForEmployee, 
-                        personPositionWagesForEmployee, personEmploymentStatusesForEmployee, personDemographicsForEmployee, supervisorsDemographics
-                        .Concat(personDemographics.Where(pd => supervisorIds.Contains(pd.Id))));
+                    if (personDemographicsForEmployee == null)
+                    {
+                        logger.Error(string.Format("Demographics information missing for employee {0}. Unable to build EmployeeSummary object.", validEmployee));
+                    }
+                    else if (personPositionsForEmployee == null)
+                    {
+                        logger.Error(string.Format("PersonPosition information missing for employee {0}. Unable to build EmployeeSummary object.", validEmployee));
+                    }
+                    else if (personPositionWagesForEmployee == null)
+                    {
+                        logger.Error(string.Format("PersonPositionWage information missing for employee {0}. Unable to build EmployeeSummary object.", validEmployee));
+                    }
+                    else if (personEmploymentStatusesForEmployee == null)
+                    {
+                        logger.Error(string.Format("PersonStatus information missing for employee {0}. Unable to build EmployeeSummary object.", validEmployee));
+                    }
+                    else
+                    {
+                        var employeeSummaryEntity = new EmployeeSummary(validEmployee, personPositionsForEmployee,
+                            personPositionWagesForEmployee, personEmploymentStatusesForEmployee, personDemographicsForEmployee, supervisorsDemographics
+                            .Concat(personDemographics.Where(pd => supervisorIds.Contains(pd.Id))));
 
-                    employeeSummaryDtos.Add(employeeSummaryAdapter.MapToType(employeeSummaryEntity));
+                        employeeSummaryDtos.Add(employeeSummaryAdapter.MapToType(employeeSummaryEntity));
+                    }
+
                 }
             }
 

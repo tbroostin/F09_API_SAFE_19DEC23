@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Web.Adapters;
 using slf4net;
@@ -20,6 +20,8 @@ namespace Ellucian.Colleague.Coordination.Base.Adapters
             : base(adapterRegistry, logger)
         {
             AddMappingDependency<WebSortField, Ellucian.Colleague.Dtos.Base.WebSortField>();
+            AddMappingDependency<RequiredDocumentCollectionMapping, Ellucian.Colleague.Dtos.Base.RequiredDocumentCollectionMapping>();
+            AddMappingDependency<OfficeCodeAttachmentCollection, Ellucian.Colleague.Dtos.Base.OfficeCodeAttachmentCollection>();
         }
     }
 }

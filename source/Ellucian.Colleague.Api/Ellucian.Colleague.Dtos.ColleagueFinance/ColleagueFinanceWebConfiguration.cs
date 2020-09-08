@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -34,6 +34,16 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         public int? CfWebReqDesiredDays { get; set; }
 
         /// <summary>
+        /// Flag to determine if GL acct is required field to create purchase order
+        /// </summary>  
+        public bool CfWebPoGlRequired { get; set; }
+
+        /// <summary>
+        /// Flag to determine if miscellaneous vendors are allowed while creating purchase orders
+        /// </summary>  
+        public bool CfWebPoAllowMiscVendor { get; set; }
+
+        /// <summary>
         /// Default value of APType 
         /// </summary>
         public string DefaultAPTypeCode { get; set; }
@@ -47,5 +57,10 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// PurchasingDefaults
         /// </summary>
         public PurchasingDefaults PurchasingDefaults { get; set; }
+
+        /// <summary>
+        /// VoucherWebConfiguration
+        /// </summary>
+        public VoucherWebConfiguration RequestPaymentDefaults { get; set; }
     }
 }

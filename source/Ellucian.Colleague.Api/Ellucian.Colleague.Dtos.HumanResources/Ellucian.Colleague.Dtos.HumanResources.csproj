@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Ellucian.Colleague.Dtos.HumanResources</RootNamespace>
     <AssemblyName>Ellucian.Colleague.Dtos.HumanResources</AssemblyName>
-    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
   </PropertyGroup>
@@ -57,10 +57,26 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BeneficiaryCategory.cs" />
+    <Compile Include="Benefit.cs" />
+    <Compile Include="BenefitEnrollmentCompletionCriteria.cs" />
+    <Compile Include="BenefitEnrollmentCompletionInfo.cs" />
+    <Compile Include="BenefitsEnrollmentAknowledgement.cs" />
+    <Compile Include="BenefitTypeAction.cs" />
+    <Compile Include="PeriodBenefitCostCalculationRequirement.cs" />
+    <Compile Include="EmployeeBenefitsEnrollmentInfoQueryCriteria.cs" />
+    <Compile Include="BenefitEnrollmentBenefitsQueryCriteria.cs" />
+    <Compile Include="EmployeeBenefitsEnrollmentDetail.cs" />
+    <Compile Include="EmployeeBenefitsEnrollmentInfo.cs" />
+    <Compile Include="EnrollmentPeriodBenefit.cs" />
     <Compile Include="CurrentBenefit.cs" />
     <Compile Include="DirectDeposits.cs" />
     <Compile Include="EarningsCategory.cs" />
     <Compile Include="EarningsMethod.cs" />
+    <Compile Include="EmployeeBenefitType.cs" />
+    <Compile Include="EmployeeBenefitsEnrollmentEligibility.cs" />
+    <Compile Include="EmployeeBenefitsEnrollmentPackage.cs" />
+    <Compile Include="EmployeeBenefitsEnrollmentPoolItem.cs" />
     <Compile Include="EmployeeSummaryQueryCriteria.cs" />
     <Compile Include="EmployeeSummary.cs" />
     <Compile Include="EarningsType.cs" />
@@ -75,7 +91,13 @@
     <Compile Include="EmploymentProficiencyLevel.cs" />
     <Compile Include="HourlySalaryIndicator.cs" />
     <Compile Include="HumanResourceDemographics.cs" />
+    <Compile Include="BenefitsEnrollmentConfiguration.cs" />
     <Compile Include="LeaveBalanceConfiguration.cs" />
+    <Compile Include="LeaveRequest.cs" />
+    <Compile Include="LeaveRequestComment.cs" />
+    <Compile Include="LeaveRequestDetail.cs" />
+    <Compile Include="LeaveRequestStatus.cs" />
+    <Compile Include="LeaveStatusAction.cs" />
     <Compile Include="LeaveTypeCategory.cs" />
     <Compile Include="PayCycle.cs" />
     <Compile Include="PayPeriod.cs" />

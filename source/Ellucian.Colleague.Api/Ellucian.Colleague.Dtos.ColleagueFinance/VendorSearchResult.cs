@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System;
@@ -27,5 +27,19 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// </summary>
         public string VendorAddress { get; set; }
 
+        /// <summary>
+        /// Vendor default tax form.
+        /// </summary>
+        public string TaxForm { get; set; }
+
+        /// <summary>
+        /// Vendor default tax form code.
+        /// </summary>
+        public string TaxFormCode { get; set; }
+
+        /// <summary>
+        /// Vendor default tax form location.
+        /// </summary>
+        public string TaxFormLocation { get; set; }
     }
 }

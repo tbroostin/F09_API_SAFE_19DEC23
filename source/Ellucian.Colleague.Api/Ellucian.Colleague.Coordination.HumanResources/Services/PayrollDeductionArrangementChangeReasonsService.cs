@@ -1,5 +1,6 @@
-﻿//Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos;
@@ -31,9 +32,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             IHumanResourcesReferenceDataRepository referenceDataRepository,
             IAdapterRegistry adapterRegistry,
             ICurrentUserFactory currentUserFactory,
+            IConfigurationRepository configurationRepository,
             IRoleRepository roleRepository,
             ILogger logger)
-            : base(adapterRegistry, currentUserFactory, roleRepository, logger)
+            : base(adapterRegistry, currentUserFactory, roleRepository, logger, null, configurationRepository)
         {
             this._referenceDataRepository = referenceDataRepository;
         }

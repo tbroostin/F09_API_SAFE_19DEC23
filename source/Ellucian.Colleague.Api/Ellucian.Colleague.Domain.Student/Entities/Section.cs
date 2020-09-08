@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -136,6 +136,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             InstructionalContacts = _instructionalContacts.AsReadOnly();
             SectionCharges = _sectionCharges.AsReadOnly();
             ExcludeFromAddAuthorization = false;
+            ShowSpecialIcon = false;
         }
 
         #endregion
@@ -738,6 +739,12 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// Synonym for the section
         /// </summary>
         public string Synonym { get; set; }
+
+        /// <summary>
+        /// Indicates whether this section should display a client-specified icon (when provided) in course catalog and section search
+        /// </summary>
+        public bool ShowSpecialIcon { get; set; }
+
         #endregion
 
         #region Calculated properties

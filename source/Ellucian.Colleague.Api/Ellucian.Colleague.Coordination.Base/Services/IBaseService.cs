@@ -30,7 +30,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <param name="ethosResourceRouteInfo">Ethos Resource Route Info </param>
         /// <param name="resournceIds">IEnumerable of the ids for the resources in guid form</param>
         /// <returns>List with all of the extended data if aavailable. Returns an empty list if none available or none configured</returns>
-        Task<IList<EthosExtensibleData>> GetExtendedEthosDataByResource(EthosResourceRouteInfo ethosResourceRouteInfo, IEnumerable<string> resournceIds);
+        Task<IList<EthosExtensibleData>> GetExtendedEthosDataByResource(EthosResourceRouteInfo ethosResourceRouteInfo, IEnumerable<string> resournceIds, bool bypassCache = false);
 
         /// <summary>
         /// Import Extended Ethos Data
@@ -43,6 +43,6 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// </summary>
         /// <param name="ethosResourceRouteInfo">Ethos Resource Route Info </param>
         /// <returns>List with all of the extended configurations if aavailable. Returns an empty list if none available or none configured</returns>
-        Task<EthosExtensibleData> GetExtendedEthosConfigurationByResource(EthosResourceRouteInfo ethosResourceRouteInfo);
+        Task<EthosExtensibleData> GetExtendedEthosConfigurationByResource(EthosResourceRouteInfo ethosResourceRouteInfo, bool bypassCache = false);
     }
 }

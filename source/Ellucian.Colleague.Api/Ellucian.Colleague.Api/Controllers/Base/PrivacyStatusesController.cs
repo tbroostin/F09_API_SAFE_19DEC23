@@ -1,19 +1,13 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Web;
 using System.Web.Http;
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base.Services;
-using Ellucian.Colleague.Domain.Base.Repositories;
-using Ellucian.Colleague.Dtos.Base;
-using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using slf4net;
@@ -51,6 +45,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Retrieves all privacy statuses.
         /// </summary>
         /// <returns>All PrivacyStatus objects.</returns>
+        [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.PrivacyStatus>> GetPrivacyStatusesAsync()
         {
@@ -64,7 +59,14 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                         bypassCache = true;
                     }
                 }
-                return await _demographicService.GetPrivacyStatusesAsync(bypassCache);
+
+                var privacyStatuses = await _demographicService.GetPrivacyStatusesAsync(bypassCache);
+                AddEthosContextProperties(
+                    await _demographicService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+                    await _demographicService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                        privacyStatuses.Select(i => i.Id).ToList()));
+
+                return privacyStatuses;
             }
             catch (Exception ex)
             {
@@ -77,11 +79,16 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <summary>
         /// Retrieves a privacy statuses by ID.
         /// </summary>
-        /// <returns>A <see cref="Ellucian.Colleague.Dtos.PrivacyStatuses">PrivacyStatus.</see></returns>
+        /// <returns>A PrivacyStatus.</returns>
+        [HttpGet, EedmResponseFilter]
         public async Task<Ellucian.Colleague.Dtos.PrivacyStatus> GetPrivacyStatusByIdAsync(string id)
         {
             try
             {
+                AddEthosContextProperties(
+                   await _demographicService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                   await _demographicService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                       new List<string>() { id }));
                 return await _demographicService.GetPrivacyStatusByGuidAsync(id);
             }
             catch (KeyNotFoundException e)
@@ -99,8 +106,8 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <summary>
         /// Updates a PrivacyStatus.
         /// </summary>
-        /// <param name="privacyStatus"><see cref="PrivacyStatus">PrivacyStatus</see> to update</param>
-        /// <returns>Newly updated <see cref="PrivacyStatus">PrivacyStatus</see></returns>
+        /// <param name="privacyStatus">PrivacyStatus to update</param>
+        /// <returns>Newly updated PrivacyStatus</returns>
         [HttpPut]
         public async Task<Dtos.PrivacyStatus> PutPrivacyStatusAsync([FromBody] Dtos.PrivacyStatus privacyStatus)
         {
@@ -112,8 +119,8 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <summary>
         /// Creates a PrivacyStatus.
         /// </summary>
-        /// <param name="privacyStatus"><see cref="PrivacyStatus">PrivacyStatus</see> to create</param>
-        /// <returns>Newly created <see cref="PrivacyStatus">PrivacyStatus</see></returns>
+        /// <param name="privacyStatus">PrivacyStatus to create</param>
+        /// <returns>Newly created PrivacyStatus</returns>
         [HttpPost]
         public async Task<Dtos.PrivacyStatus> PostPrivacyStatusAsync([FromBody] Dtos.PrivacyStatus privacyStatus)
         {

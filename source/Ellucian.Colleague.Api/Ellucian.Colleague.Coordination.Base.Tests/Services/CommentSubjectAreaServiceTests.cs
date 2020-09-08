@@ -12,6 +12,9 @@ using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Tests;
 using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Web.Adapters;
+using Ellucian.Web.Security;
+using Ellucian.Colleague.Domain.Repositories;
 
 namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 {
@@ -29,19 +32,29 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         private CommentSubjectAreaService _commentSubjectAreaService;
         private Mock<ILogger> _loggerMock;
         private Mock<IReferenceDataRepository> _referenceRepositoryMock;
+        private Mock<IAdapterRegistry> _adapterRegistryMock;
+        private Mock<ICurrentUserFactory> _currentUserFactoryMock;
+        private Mock<IRoleRepository> _roleRepositoryMock;
+        private Mock<IConfigurationRepository> _configurationRepoMock;
 
         [TestInitialize]
         public void Initialize()
         {
             _referenceRepositoryMock = new Mock<IReferenceDataRepository>();
             _loggerMock = new Mock<ILogger>();
+            _adapterRegistryMock = new Mock<IAdapterRegistry>();
+            _currentUserFactoryMock = new Mock<ICurrentUserFactory>();
+            _roleRepositoryMock = new Mock<IRoleRepository>();
+            _configurationRepoMock = new Mock<IConfigurationRepository>();
 
             _commentSubjectAreaCollection = new List<CommentSubjectArea>();
 
             _remarkTypeCollection = new TestRemarkTypeRepository().GetRemarkType().ToList();
 
             _commentSubjectAreaService
-                = new CommentSubjectAreaService(_referenceRepositoryMock.Object, _loggerMock.Object);
+                = new CommentSubjectAreaService(_referenceRepositoryMock.Object,
+               _adapterRegistryMock.Object, _currentUserFactoryMock.Object,
+               _roleRepositoryMock.Object, _configurationRepoMock.Object, _loggerMock.Object);
         }
 
         [TestCleanup]

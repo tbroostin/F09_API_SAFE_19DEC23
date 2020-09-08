@@ -184,16 +184,37 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
             }
             var criteria = "WITH HL.RECORD.ID EQ '" + id + "'";
-            var studentAcadCredHistLogRecords = await DataReader.BulkReadRecordAsync<StcHistLog>("STUDENT.ACAD.CRED.HIST.LOG", criteria);
-            Collection<Hist> studentAcadCredHistRecords = null;
-            if ((studentAcadCredHistLogRecords != null) && (studentAcadCredHistLogRecords.Any()))
-            {
-                var histIdCollection = studentAcadCredHistLogRecords.SelectMany(hl => hl.StchlHist).ToArray();
-                // use @ID since this is a multi-part key and HIST.ID is not defined properly
-                var histCriteria = "WITH @ID EQ '" + (string.Join(" ", histIdCollection.ToArray())).Replace(" ", "' '") + "' AND WITH HIST.FIELD.NAME EQ 'STC.VERIFIED.GRADE'";
-                studentAcadCredHistRecords = await DataReader.BulkReadRecordAsync<Hist>("STUDENT.ACAD.CRED.HIST", histCriteria);
-            }
 
+            // This table can be malformed under certain SaaS/Hosted circumstances beyond our control, and BulkReadRecordAsync() will 
+            // throw an object reference error
+
+            Collection<StcHistLog> studentAcadCredHistLogRecords = null;
+            Collection<Hist> studentAcadCredHistRecords = null;
+            try
+            {
+                studentAcadCredHistLogRecords = await DataReader.BulkReadRecordAsync<StcHistLog>("STUDENT.ACAD.CRED.HIST.LOG", criteria);
+
+
+                if ((studentAcadCredHistLogRecords != null) && (studentAcadCredHistLogRecords.Any()))
+                {
+                    var histIdCollection = studentAcadCredHistLogRecords.SelectMany(hl => hl.StchlHist).ToArray();
+                    // use @ID since this is a multi-part key and HIST.ID is not defined properly
+                    var histCriteria = "WITH @ID EQ '" + (string.Join(" ", histIdCollection.ToArray())).Replace(" ", "' '") + "' AND WITH HIST.FIELD.NAME EQ 'STC.VERIFIED.GRADE'";
+                    studentAcadCredHistRecords = await DataReader.BulkReadRecordAsync<Hist>("STUDENT.ACAD.CRED.HIST", histCriteria);
+                }
+            }
+            catch (NullReferenceException e)
+            {
+                // This is an issue thrown in BulkReadRecordAsync.  Log it, but otherwise do nothing
+                logger.Error(e, "Error reading STUDENT.ACAD.CRED.HIST or STUDENT.ACAD.CRED.HIST.LOG. student-transcript-grades " +
+                                id + " may not contain all historical data.");  
+            }
+            catch (Exception e)
+            {
+                // Cannot imagine what went wrong here, log it and do nothing
+                logger.Error(e, "Error reading STUDENT.ACAD.CRED.HIST or STUDENT.ACAD.CRED.HIST.LOG. student-transcript-grades " +
+                id + " may not contain all historical data.");
+            }
             return await BuildStudentTranscriptGradeAsync(studentAcadCred, scsCourseSectionDict, studentAcadCredHistLogRecords, studentAcadCredHistRecords, null, stwebTranAltcumFlag);
         }
 
@@ -364,23 +385,42 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     }
                 }
             }
+            // This table can be malformed under certain SaaS/Hosted circumstances beyond our control, and BulkReadRecordAsync() will 
+            // throw an object reference error
 
-            var criteria = "WITH HL.RECORD.ID EQ '" + (string.Join(" ", studentAcadCredIds.ToArray())).Replace(" ", "' '") + "'";
-            var studentAcadCredHistLogRecords = await DataReader.BulkReadRecordAsync<StcHistLog>("STUDENT.ACAD.CRED.HIST.LOG", criteria);
-
+            Collection<StcHistLog> studentAcadCredHistLogRecords = null;
             Collection<Hist> studentAcadCredHistRecords = null;
-            if ((studentAcadCredHistLogRecords != null) && (studentAcadCredHistLogRecords.Any()))
+            try
             {
-                var histIdCollection = studentAcadCredHistLogRecords.SelectMany(hl => hl.StchlHist).ToArray();
-                if (histIdCollection != null && histIdCollection.Any())
+
+                var criteria = "WITH HL.RECORD.ID EQ '" + (string.Join(" ", studentAcadCredIds.ToArray())).Replace(" ", "' '") + "'";
+                studentAcadCredHistLogRecords = await DataReader.BulkReadRecordAsync<StcHistLog>("STUDENT.ACAD.CRED.HIST.LOG", criteria);
+
+                if ((studentAcadCredHistLogRecords != null) && (studentAcadCredHistLogRecords.Any()))
                 {
-                    var histCriteria = "WITH HIST.FIELD.NAME EQ 'STC.VERIFIED.GRADE'";
-                    var histIds = await DataReader.SelectAsync("STUDENT.ACAD.CRED.HIST", histIdCollection, histCriteria);
-                    if (histIds != null && histIds.Any())
+                    var histIdCollection = studentAcadCredHistLogRecords.SelectMany(hl => hl.StchlHist).ToArray();
+                    if (histIdCollection != null && histIdCollection.Any())
                     {
-                        studentAcadCredHistRecords = await DataReader.BulkReadRecordAsync<Hist>("STUDENT.ACAD.CRED.HIST", histIds);
+                        var histCriteria = "WITH HIST.FIELD.NAME EQ 'STC.VERIFIED.GRADE'";
+                        var histIds = await DataReader.SelectAsync("STUDENT.ACAD.CRED.HIST", histIdCollection, histCriteria);
+                        if (histIds != null && histIds.Any())
+                        {
+                            studentAcadCredHistRecords = await DataReader.BulkReadRecordAsync<Hist>("STUDENT.ACAD.CRED.HIST", histIds);
+                        }
                     }
                 }
+            }
+            catch (NullReferenceException e)
+            {
+                // This is an issue thrown in BulkReadRecordAsync.  Log it, but otherwise do nothing
+                logger.Error(e, "Error reading STUDENT.ACAD.CRED.HIST or STUDENT.ACAD.CRED.HIST.LOG. student-transcript-grades " +
+                                 " records may not contain all historical data.");
+            }
+            catch (Exception e)
+            {
+                // Cannot imagine what went wrong here, log it and do nothing
+                logger.Error(e, "Error reading STUDENT.ACAD.CRED.HIST or STUDENT.ACAD.CRED.HIST.LOG. student-transcript-grades " +
+                                " records may not contain all historical data.");
             }
 
             if (studentAcadCredIds != null && studentAcadCredIds.Any())

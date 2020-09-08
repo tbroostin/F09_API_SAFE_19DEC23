@@ -22,6 +22,7 @@ using CreditOrDebit = Ellucian.Colleague.Domain.ColleagueFinance.Entities.Credit
 using CurrencyCodes = Ellucian.Colleague.Domain.ColleagueFinance.Entities.CurrencyCodes;
 using GeneralLedgerTransaction = Ellucian.Colleague.Domain.ColleagueFinance.Entities.GeneralLedgerTransaction;
 using Ellucian.Web.Security;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 {
@@ -1372,7 +1373,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 generalLedgerConfigurationRepositoryMock.Setup(x => x.GetAccountStructureAsync()).ReturnsAsync(generalLedgerAccountStructure);
                 generalLedgerConfigurationRepositoryMock.Setup(x => x.GetClassConfigurationAsync()).ReturnsAsync(generalLedgerClassConfiguration);
                 generalLedgerUserRepositoryMock.Setup(x => x.GetGeneralLedgerUserAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IEnumerable<string>>())).ReturnsAsync(generalLedgerUser);
-                generalLedgerTransactionRepositoryMock.Setup(x => x.Get2Async(It.IsAny<string>(), It.IsAny<GlAccessLevel>())).ReturnsAsync(generalLedgerTransactions);
+                generalLedgerTransactionRepositoryMock.Setup(x => x.Get2Async(It.IsAny<string>(), It.IsAny<GlAccessLevel>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).ReturnsAsync(generalLedgerTransactions);
                 personRepositoryMock.Setup(x => x.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(guid);
                 personRepositoryMock.Setup(x => x.IsCorpAsync(It.IsAny<string>())).ReturnsAsync(It.IsAny<bool>());
                 referenceDataRepositoryMock.Setup(x => x.GetFiscalPeriodsIntgAsync(It.IsAny<bool>())).ReturnsAsync(fiscalPeriodsIntg);
@@ -1405,14 +1406,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             #endregion
 
             #region GETALL
-
-            [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task GeneralLedgerTransactionService_Get3Async_Null_Entity() {
-                generalLedgerTransactionRepositoryMock.Setup(x => x.Get2Async(It.IsAny<string>(), It.IsAny<GlAccessLevel>())).ReturnsAsync(null);
-                await generalLedgerTransactionService.Get3Async(false);
-            }
-
+            
             [TestMethod]
             public async Task GeneralLedgerTransactionService_Get3Async()
             {
@@ -1592,7 +1586,6 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [Ignore]
             public async Task GeneralLedgerTransactionService_Create3Async_()
             {
                 var result = await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
@@ -1600,50 +1593,97 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GeneralLedgerTransactionService_ValidateGeneralLedgerDto3_ArgumentNull_Exception()
             {
-                await generalLedgerTransactionService.Create3Async(null);
-             
+                try
+                {
+                    await generalLedgerTransactionService.Create3Async(null);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors, "ex.Errors is not null");
+                    Assert.IsTrue(ex.Errors.Count == 1, "ex.Errors.Count == 1");
+                    Assert.IsTrue(ex.Errors.FirstOrDefault(m => m.Message.Contains("The body of the request is required for updates.")) != null, "Error Message Content is correct");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GeneralLedgerTransactionService_ValidateGeneralLedgerDto3_Transaction_Null()
             {
                 generalLedgerTransactionDto.Transactions = null;
-                await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
-
+                try
+                {
+                    await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors, "ex.Errors is not null");
+                    Assert.IsTrue(ex.Errors.Count == 1, "ex.Errors.Count == 1");
+                    Assert.IsTrue(ex.Errors.FirstOrDefault(m => m.Message.Contains("Transactions are missing from the request.")) != null, "Error Message Content is correct");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentOutOfRangeException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GeneralLedgerTransactionService_ValidateGeneralLedgerDto3_Different_ProcessMode()
             {
                 generalLedgerTransactionDto.ProcessMode = ProcessMode2.NotSet;
-                await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
-
+                try
+                {
+                    await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors, "ex.Errors is not null");
+                    Assert.IsTrue(ex.Errors.Count == 1, "ex.Errors.Count == 1");
+                    Assert.IsTrue(ex.Errors.FirstOrDefault(m => m.Message.Contains("Process Mode of updateBatch or validate or updateImmediate is required.")) != null, "Error Message Content is correct");
+                    throw ex;
+                }
             }
 
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentOutOfRangeException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GeneralLedgerTransactionService_ValidateGeneralLedgerDto3_UnSupported_TransactionType()
             {
                 generalLedgerTransactionDto.Transactions.FirstOrDefault().Type = GeneralLedgerTransactionType.GrantPayment;
-                await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                try
+                {
+                    await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors, "ex.Errors is not null");
+                    Assert.IsTrue(ex.Errors.Count == 1, "ex.Errors.Count == 1");
+                    Assert.IsTrue(ex.Errors.FirstOrDefault(m => m.Message.Contains("Transaction Type is not supported.")) != null, "Error Message Content is correct");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GeneralLedgerTransactionService_ValidateGeneralLedgerDto3_LedgerDate_Null()
             {
                 generalLedgerTransactionDto.Transactions.FirstOrDefault().LedgerDate = null;
-                await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                try
+                {
+                    await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors, "ex.Errors is not null");
+                    Assert.IsTrue(ex.Errors.Count == 1, "ex.Errors.Count == 1");
+                    Assert.IsTrue(ex.Errors.FirstOrDefault(m => m.Message.Contains("Each transaction must have a ledgerDate assigned.")) != null, "Error Message Content is correct");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GeneralLedgerTransactionService_ValidateGeneralLedgerDto3_Organization_NotNull()
             {
 
@@ -1667,102 +1707,222 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 personRepositoryMock.SetupSequence(x => x.GetPersonIdFromGuidAsync(It.IsAny<string>())).Returns(Task.FromResult<string>("123456")).Returns(Task.FromResult<string>(null));
                 personRepositoryMock.Setup(x => x.IsCorpAsync(It.IsAny<string>())).ReturnsAsync(true);
 
-                await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                try
+                {
+                    await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors, "ex.Errors is not null");
+                    Assert.IsTrue(ex.Errors.Count == 1, "ex.Errors.Count == 1");
+                    Assert.IsTrue(ex.Errors.FirstOrDefault(m => m.Message.Contains("The id '0ca1a878-3555-4a3f-a17b-20d054d5e460' is not a valid organization in Colleague.")) != null, "Error Message Content is correct");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GeneralLedgerTransactionService_ValidateGeneralLedgerDto3_TransactionDetailLines_Null()
             {
                 generalLedgerTransactionDto.Transactions.FirstOrDefault().TransactionDetailLines = null;
-                await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                try
+                {
+                    await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors, "ex.Errors is not null");
+                    Assert.IsTrue(ex.Errors.Count == 1, "ex.Errors.Count == 1");
+                    Assert.IsTrue(ex.Errors.FirstOrDefault(m => m.Message.Contains("Transaction Detail is required.")) != null, "Error Message Content is correct");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GeneralLedgerTransactionService_ValidateGeneralLedgerDto3_EncumbranceHasValue_WhenType_AE()
             {
                 generalLedgerTransactionDto.Transactions.FirstOrDefault().Type = GeneralLedgerTransactionType.EncumbranceOpenBalance;
                 generalLedgerTransactionDto.Transactions.FirstOrDefault().TransactionDetailLines.FirstOrDefault().Encumbrance.Number = "10";
-                await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                try
+                {
+                    await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors, "ex.Errors is not null");
+                    Assert.IsTrue(ex.Errors.Count == 1, "ex.Errors.Count == 1");
+                    Assert.IsTrue(ex.Errors.FirstOrDefault(m => m.Message.Contains("Encumbrance cannot have value when transaction type is encumbranceOpenBalance (AE).")) != null, "Error Message Content is correct");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GeneralLedgerTransactionService_ValidateGeneralLedgerDto3_AccountingString_Null()
             {
                 generalLedgerTransactionDto.Transactions.FirstOrDefault().TransactionDetailLines.FirstOrDefault().AccountingString = null;
-                await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                try
+                {
+                    await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors, "ex.Errors is not null");
+                    Assert.IsTrue(ex.Errors.Count == 1, "ex.Errors.Count == 1");
+                    Assert.IsTrue(ex.Errors.FirstOrDefault(m => m.Message.Contains("Each transaction detail must have an accounting string.")) != null, "Error Message Content is correct");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GeneralLedgerTransactionService_ValidateGeneralLedgerDto3_Description_Null()
             {
                 generalLedgerTransactionDto.Transactions.FirstOrDefault().TransactionDetailLines.FirstOrDefault().Description = null;
-                await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                try
+                {
+                    await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors, "ex.Errors is not null");
+                    Assert.IsTrue(ex.Errors.Count == 1, "ex.Errors.Count == 1");
+                    Assert.IsTrue(ex.Errors.FirstOrDefault(m => m.Message.Contains("Each transaction detail must have a description.")) != null, "Error Message Content is correct");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentOutOfRangeException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GeneralLedgerTransactionService_ValidateGeneralLedgerDto3_Amount_Null()
             {
                 generalLedgerTransactionDto.Transactions.FirstOrDefault().TransactionDetailLines.FirstOrDefault().Amount = null;
-                await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                try
+                {
+                    await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors, "ex.Errors is not null");
+                    Assert.IsTrue(ex.Errors.Count > 0, "ex.Errors.Count > 0");
+                    Assert.IsTrue(ex.Errors.FirstOrDefault(m => m.Message.Contains("Each transaction detail must have an amount and value.")) != null, "Error Message Content is correct");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentOutOfRangeException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GeneralLedgerTransactionService_ValidateGeneralLedgerDto3_Amount_Zero()
             {
                 generalLedgerTransactionDto.Transactions.FirstOrDefault().TransactionDetailLines.FirstOrDefault().Amount = new AmountDtoProperty() { Currency = Dtos.EnumProperties.CurrencyCodes.USD, Value=0 };
-                await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                try
+                {
+                    await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors, "ex.Errors is not null");
+                    Assert.IsTrue(ex.Errors.Count > 0, "ex.Errors.Count > 0");
+                    Assert.IsTrue(ex.Errors.FirstOrDefault(m => m.Message.Contains("Each transaction detail must have an amount and value.")) != null, "Error Message Content is correct");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentOutOfRangeException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GeneralLedgerTransactionService_ValidateGeneralLedgerDto3_Currency_Null()
             {
                 generalLedgerTransactionDto.Transactions.FirstOrDefault().TransactionDetailLines.FirstOrDefault().Amount = new AmountDtoProperty() { };
-                await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                try
+                {
+                    await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors, "ex.Errors is not null");
+                    Assert.IsTrue(ex.Errors.Count > 0, "ex.Errors.Count > 0");
+                    Assert.IsTrue(ex.Errors.FirstOrDefault(m => m.Message.Contains("Each transaction detail must have an amount and value.")) != null, "Error Message Content is correct");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentOutOfRangeException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GeneralLedgerTransactionService_ValidateGeneralLedgerDto3_TransactionDetail_Type_Null()
             {
                 generalLedgerTransactionDto.Transactions.FirstOrDefault().TransactionDetailLines.FirstOrDefault().Type = null;
-                await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                try
+                {
+                    await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors, "ex.Errors is not null");
+                    Assert.IsTrue(ex.Errors.Count > 0, "ex.Errors.Count > 0");
+                    Assert.IsTrue(ex.Errors.FirstOrDefault(m => m.Message.Contains("Each Detail item must be specified as either Debit or Credit.")) != null, "Error Message Content is correct");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentOutOfRangeException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GeneralLedgerTransactionService_ValidateGeneralLedgerDto3_CreditAndDebit_NotEqual()
             {
                 generalLedgerTransactionDto.Transactions.FirstOrDefault().TransactionDetailLines.FirstOrDefault().Amount = new AmountDtoProperty() { Currency = Dtos.EnumProperties.CurrencyCodes.USD, Value=100 };
-                await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                try
+                {
+                    await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors, "ex.Errors is not null");
+                    Assert.IsTrue(ex.Errors.Count > 0, "ex.Errors.Count > 0");
+                    Assert.IsTrue(ex.Errors.FirstOrDefault(m => m.Message.Contains("Total Credits (140) and Debits (230) must be equal across all transaction detail entries.")) != null, "Error Message Content is correct");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(InvalidOperationException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GeneralLedgerTransactionService_GetFiscalYear_FiscalStartMonth_NoValue()
             {
                 fiscalYears = new List<FiscalYear>() { new FiscalYear("0ca1a878-3555-4a3f-a17b-20d054d5e000", (DateTime.Now.Year + 1).ToString()) { CurrentFiscalYear = DateTime.Now.Year } };
                 referenceDataRepositoryMock.Setup(x => x.GetFiscalYearsAsync(It.IsAny<bool>())).ReturnsAsync(fiscalYears);
-                await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                try
+                {
+                    await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors, "ex.Errors is not null");
+                    Assert.IsTrue(ex.Errors.Count > 0, "ex.Errors.Count > 0");
+                    Assert.IsTrue(ex.Errors.FirstOrDefault(m => m.Message.Contains("Fiscal year lookup is missing fiscal start month.")) != null, "Error Message Content is correct");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(InvalidOperationException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GeneralLedgerTransactionService_GetFiscalYear_CurrentFiscalYear_NoValue()
             {
                 fiscalYears = new List<FiscalYear>() { new FiscalYear("0ca1a878-3555-4a3f-a17b-20d054d5e000", (DateTime.Now.Year + 1).ToString()) { FiscalStartMonth = 1 } };
                 referenceDataRepositoryMock.Setup(x => x.GetFiscalYearsAsync(It.IsAny<bool>())).ReturnsAsync(fiscalYears);
-                await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                try
+                {
+                    await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors, "ex.Errors is not null");
+                    Assert.IsTrue(ex.Errors.Count > 0, "ex.Errors.Count > 0");
+                    Assert.IsTrue(ex.Errors.FirstOrDefault(m => m.Message.Contains("Fiscal year lookup is missing fiscal year.")) != null, "Error Message Content is correct");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(InvalidOperationException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GeneralLedgerTransactionService_Create3Async_LedgerDate_NotEqual()
             {
 
@@ -1783,11 +1943,21 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 };
                 fiscalYears = new List<FiscalYear>() { new FiscalYear("0ca1a878-3555-4a3f-a17b-20d054d5e000", (DateTime.Now.Year + 1).ToString()) { CurrentFiscalYear = DateTime.Now.Year, FiscalStartMonth = 1 } };
                 referenceDataRepositoryMock.Setup(x => x.GetFiscalYearsAsync(It.IsAny<bool>())).ReturnsAsync(fiscalYears);
-                await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                try
+                {
+                    await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors, "ex.Errors is not null");
+                    Assert.IsTrue(ex.Errors.Count > 0, "ex.Errors.Count > 0");
+                    Assert.IsTrue(ex.Errors.FirstOrDefault(m => m.Message.Contains("Opening balance transactions must use the first day of the fiscal year as the ledgerDate.")) != null, "Error Message Content is correct");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(InvalidOperationException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GeneralLedgerTransactionService_Create3Async_LedgerMonth_LessThan_FiscalMonth()
             {
                 generalLedgerTransactionDto = new GeneralLedgerTransaction3()
@@ -1807,48 +1977,98 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 };
                 fiscalYears = new List<FiscalYear>() { new FiscalYear("0ca1a878-3555-4a3f-a17b-20d054d5e000", (DateTime.Now.Year).ToString()) { CurrentFiscalYear = DateTime.Now.Year, FiscalStartMonth = 8 } };
                 referenceDataRepositoryMock.Setup(x => x.GetFiscalYearsAsync(It.IsAny<bool>())).ReturnsAsync(fiscalYears);
-                await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                try
+                {
+                    await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors, "ex.Errors is not null");
+                    Assert.IsTrue(ex.Errors.Count > 0, "ex.Errors.Count > 0");
+                    Assert.IsTrue(ex.Errors.FirstOrDefault(m => m.Message.Contains("Opening balance transactions must use the first day of the fiscal year as the ledgerDate.")) != null, "Error Message Content is correct");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GeneralLedgerTransactionService_ConvertLedgerTransactionDtoToEntity3Async_SubmittedBy_Null()
             {
                 personRepositoryMock.Setup(x => x.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
-                await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                try
+                {
+                    await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors, "ex.Errors is not null");
+                    Assert.IsTrue(ex.Errors.Count > 0, "ex.Errors.Count > 0");
+                    Assert.IsTrue(ex.Errors.FirstOrDefault(m => m.Message.Contains("SubmittedBy ID '0ca1a878-3555-4a3f-a17b-20d054d5e460' was not found. Valid Person Id is required.")) != null, "Error Message Content is correct");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GeneralLedgerTransactionService_ConvertLedgerTransactionDtoToEntity3Async_PersonId_Null()
             {
                 generalLedgerTransactionDto.SubmittedBy = null;
                 personRepositoryMock.Setup(x => x.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
-                await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                try
+                {
+                    await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors, "ex.Errors is not null");
+                    Assert.IsTrue(ex.Errors.Count > 0, "ex.Errors.Count > 0");
+                    Assert.IsTrue(ex.Errors.FirstOrDefault(m => m.Message.Contains("The id '0ca1a878-3555-4a3f-a17b-20d054d5e465' is not a valid person in Colleague.")) != null, "Error Message Content is correct");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GeneralLedgerTransactionService_ConvertLedgerTransactionDtoToEntity3Async_Organization_Null()
             {
                 generalLedgerTransactionDto.SubmittedBy = null;
                 generalLedgerTransactionDto.Transactions.FirstOrDefault().Reference.Person = null;
                 generalLedgerTransactionDto.Transactions.FirstOrDefault().Reference.Organization = new GuidObject2("0ca1a878-3555-4a3f-a17b-20d054d5e469");
                 personRepositoryMock.Setup(x => x.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
-                await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                try
+                {
+                    await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors, "ex.Errors is not null");
+                    Assert.IsTrue(ex.Errors.Count > 0, "ex.Errors.Count > 0");
+                    Assert.IsTrue(ex.Errors.FirstOrDefault(m => m.Message.Contains("The id '0ca1a878-3555-4a3f-a17b-20d054d5e465' is not a valid person in Colleague.")) != null, "Error Message Content is correct");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(InvalidOperationException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GeneralLedgerTransactionService_ConvertLedgerTransactionDtoToEntity3Async_Reference_Null()
             {
                 generalLedgerTransactionDto.Transactions.FirstOrDefault().ReferenceNumber = "00001";
                 generalLedgerTransactionDto.Transactions.FirstOrDefault().Type = GeneralLedgerTransactionType.ActualOpenBalance;
-                await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                try
+                {
+                    await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors, "ex.Errors is not null");
+                    Assert.IsTrue(ex.Errors.Count > 0, "ex.Errors.Count > 0");
+                    Assert.IsTrue(ex.Errors.FirstOrDefault(m => m.Message.Contains("referenceNumber must be null when creating a Journal Entry or Budget Entry or Encumbrance Entry as it will be generated by the system.")) != null, "Error Message Content is correct");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GeneralLedgerTransactionService_Create3Async_TransactionDetail_SubmittedBy_Null()
             {
                 generalLedgerTransactionDto.SubmittedBy = null;
@@ -1856,14 +2076,23 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 generalLedgerTransactionDto.Transactions.FirstOrDefault().Reference.Organization = null;
                 generalLedgerTransactionDto.Transactions.FirstOrDefault().TransactionDetailLines.FirstOrDefault().SubmittedBy = new GuidObject2("0ca1a878-3555-4a3f-a17b-20d054d5e469");
                 personRepositoryMock.Setup(x => x.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
-                await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                try
+                {
+                    await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors, "ex.Errors is not null");
+                    Assert.IsTrue(ex.Errors.Count > 0, "ex.Errors.Count > 0");
+                    Assert.IsTrue(ex.Errors.FirstOrDefault(m => m.Message.Contains("Transaction Detail SubmittedBy ID '0ca1a878-3555-4a3f-a17b-20d054d5e469' was not found. Valid Person Id is required.")) != null, "Error Message Content is correct");
+                    throw ex;
+                }
             }
 
             #endregion
 
             #region PUT
             [TestMethod]
-            [Ignore]
             public async Task GeneralLedgerTransactionService_Update3Async()
             {
                 var result = await generalLedgerTransactionService.Update3Async(generalLedgerTransactionDto.Id, generalLedgerTransactionDto);
@@ -1871,10 +2100,20 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentOutOfRangeException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GeneralLedgerTransactionService_Update3Async_Different_Id()
             {
-                var result = await generalLedgerTransactionService.Update3Async(guid, generalLedgerTransactionDto);
+                try
+                {
+                    var result = await generalLedgerTransactionService.Update3Async(guid, generalLedgerTransactionDto);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsNotNull(ex.Errors, "ex.Errors is not null");
+                    Assert.IsTrue(ex.Errors.Count > 0, "ex.Errors.Count > 0");
+                    Assert.IsTrue(ex.Errors.FirstOrDefault(m => m.Message.Contains("The id in the body must match the id in the request.")) != null, "Error Message Content is correct");
+                    throw ex;
+                }
             }
 
             #endregion

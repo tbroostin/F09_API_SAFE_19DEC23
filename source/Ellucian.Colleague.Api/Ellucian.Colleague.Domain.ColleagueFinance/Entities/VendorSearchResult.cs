@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 
@@ -25,11 +25,25 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// </summary>
         public string VendorName { get; set; }
 
-
         /// <summary>
         /// Vendor address.
         /// </summary>
         public string VendorAddress { get; set; }
+
+        /// <summary>
+        /// Vendor default tax form.
+        /// </summary>
+        public string TaxForm { get; set; }
+
+        /// <summary>
+        /// Vendor default tax form code.
+        /// </summary>
+        public string TaxFormCode { get; set; }
+
+        /// <summary>
+        /// Vendor default tax form location.
+        /// </summary>
+        public string TaxFormLocation { get; set; }
 
         public VendorSearchResult(string vendorId)
         {

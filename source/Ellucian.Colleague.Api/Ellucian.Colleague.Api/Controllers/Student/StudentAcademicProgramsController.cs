@@ -1325,12 +1325,134 @@ namespace Ellucian.Colleague.Api.Controllers
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
         }
-        
-       
+
+
 
         #endregion
 
-        
+        #region Replacement
+
+        /// <summary>
+        /// Creates an Student Academic Program.
+        /// </summary>
+        /// <param name="StudentAcademicPrograms"><see cref="Dtos.StudentAcademicPrograms4">StudentAcademicPrograms</see> to create</param>
+        /// <returns>Newly created <see cref="Dtos.StudentAcademicPrograms4">StudentAcademicPrograms</see></returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpPost, EedmResponseFilter]
+        public async Task<Dtos.StudentAcademicPrograms4> CreateStudentAcademicProgramsReplacementsAsync([ModelBinder(typeof(EedmModelBinder))]  Dtos.StudentAcademicProgramReplacements StudentAcademicPrograms)
+        {
+            bool bypassCache = false;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
+            try
+            {
+                if (StudentAcademicPrograms == null)
+                {
+                    throw new ArgumentNullException("Null StudentAcademicProgramsSubmissions argument", "The request body is required.");
+                }
+                if (string.IsNullOrEmpty(StudentAcademicPrograms.Id))
+                {
+                    throw new ArgumentNullException("Null StudentAcademicProgramsSubmissions guid", "guid is a required property.");
+                }
+                if (StudentAcademicPrograms.Id != Guid.Empty.ToString())
+                {
+                    throw new ArgumentNullException("Not null StudentAcademicProgramsSubmissions guid", "On a post, you can not define a GUID");
+                }
+
+
+                //call import extend method that needs the extracted extension data and the config
+                await _studentAcademicProgramService.ImportExtendedEthosData(await ExtractExtendedData(await _studentAcademicProgramService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
+
+                //create the student academic programs
+                var studentAcademicProgram = await _studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(StudentAcademicPrograms, bypassCache);
+
+                //store dataprivacy list and get the extended data to store 
+                AddEthosContextProperties(await _studentAcademicProgramService.GetDataPrivacyListByApi(GetRouteResourceName(), true),
+                   await _studentAcademicProgramService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(), new List<string>() { studentAcademicProgram.Id }));
+
+                return studentAcademicProgram;
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentNullException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (ArgumentException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (InvalidOperationException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
+
+        /// <summary>
+        /// Update academic program replacement.
+        /// </summary>
+        /// <param name="guid"></param>
+        /// <returns></returns>
+        public async Task<Dtos.StudentTranscriptGrades> GetAcademicProgramsReplacementsByGuidAsync([FromUri] string guid)
+        {
+            //Create is not supported for Colleague but HeDM requires full crud support.
+            throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
+        }
+
+        /// <summary>
+        /// Update academic program replacement.
+        /// </summary>
+        /// <param name="page"></param>
+        /// <param name="criteria"></param>
+        /// <param name="personFilter"></param>
+        /// <returns></returns>
+        public async Task<Dtos.StudentTranscriptGrades> GetAcademicProgramsReplacementsAsync(Paging page, QueryStringFilter criteria = null, QueryStringFilter personFilter = null)
+        {
+            //Create is not supported for Colleague but HeDM requires full crud support.
+            throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
+        }
+
+        /// <summary>
+        /// Update academic program replacement.
+        /// </summary>
+        /// <param name="guid"></param>
+        /// <param name="studentAcademicProgramReplacements"></param>
+        /// <returns></returns>
+        public async Task<Dtos.StudentTranscriptGrades> PutAcademicProgramsReplacementsAsync([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.StudentAcademicProgramReplacements studentAcademicProgramReplacements)
+        {
+            //Create is not supported for Colleague but HeDM requires full crud support.
+            throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
+        }
+
+        #endregion
+
+
         /// <summary>
         /// Validates the data in the StudentAcademicPrograms object
         /// </summary>

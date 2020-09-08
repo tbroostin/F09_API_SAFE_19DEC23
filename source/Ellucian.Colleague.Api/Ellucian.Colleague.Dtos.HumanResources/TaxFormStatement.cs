@@ -31,7 +31,7 @@ namespace Ellucian.Colleague.Dtos.HumanResources
         /// Type of tax form.
         /// </summary>
         [JsonConverter(typeof(StringEnumConverter))]
-        public TaxForms TaxForm { get; set; }
+        public Dtos.Base.TaxForms TaxForm { get; set; }
 
         /// <summary>
         /// Is this statement available for printing, is it the original, a correction, etc

@@ -15,7 +15,7 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         Task<Tuple<IEnumerable<Ellucian.Colleague.Domain.Base.Entities.PersonVisa>, int>> GetAllPersonVisas2Async(int offset, int limit, string person, List<string> visaTypeCategory, string visaTypeDetail, bool bypassCache);
         Task<Ellucian.Colleague.Domain.Base.Entities.PersonVisa> GetPersonVisaByIdAsync(string id);
         Task<GuidLookupResult> GetRecordInfoFromGuidAsync(string id);
-        Task<Ellucian.Colleague.Domain.Base.Entities.PersonVisaResponse> UpdatePersonVisaAsync(Ellucian.Colleague.Domain.Base.Entities.PersonVisaRequest personVisaRequest);
+        Task<Ellucian.Colleague.Domain.Base.Entities.PersonVisa> UpdatePersonVisaAsync(Ellucian.Colleague.Domain.Base.Entities.PersonVisaRequest personVisaRequest);
         Task DeletePersonVisaAsync(string id, string personId);
     }
 }

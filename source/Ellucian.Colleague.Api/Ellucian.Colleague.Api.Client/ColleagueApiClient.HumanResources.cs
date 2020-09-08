@@ -1,4 +1,4 @@
-﻿/*Copyright 2015-2019 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2015-2020 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Colleague.Dtos.HumanResources;
 using Ellucian.Web.Utility;
@@ -10,6 +10,8 @@ using System.Collections.Specialized;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Api.Client.Exceptions;
 using System.Net.Http;
+using Ellucian.Rest.Client.Exceptions;
+using Ellucian.Colleague.Api.Client.Core;
 
 namespace Ellucian.Colleague.Api.Client
 {
@@ -39,6 +41,89 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
+        /// Returns benefits enrollment eligibility for an employee
+        /// </summary>
+        /// <param name="employeeId">Id of employee to request benefits enrollment eligibility</param>
+        /// <returns>EmployeeBenefitsEnrollmentEligibility dto containing the enrollment period if eligible or a reson for ineligibility <see cref="Dtos.HumanResources.EmployeeBenefitsEnrollmentEligibility"></see> </returns>
+        public async Task<EmployeeBenefitsEnrollmentEligibility> GetEmployeeBenefitsEnrollmentEligibilityAsync(string employeeId)
+        {
+            if (string.IsNullOrEmpty(employeeId))
+            {
+                throw new ArgumentNullException("employeeId");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_employeesPath, employeeId, _employeeBenefitsEnrollmentEligibilityPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<EmployeeBenefitsEnrollmentEligibility>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get benefits enrollment eligibility");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Returns benefits enrollment pool items (dependent and beneficiary information) for an employee
+        /// </summary>
+        /// <param name="employeeId">Id of employee to request benefits enrollment pool items</param>
+        /// <returns>List of EmployeeBenefitsEnrollmentPoolItem dtos containing the dependent and beneficiary information for employee <see cref="Dtos.HumanResources.EmployeeBenefitsEnrollmentPoolItem"></see></returns>
+        public async Task<IEnumerable<EmployeeBenefitsEnrollmentPoolItem>> GetEmployeeBenefitsEnrollmentPoolAsync(string employeeId)
+        {
+            if (string.IsNullOrEmpty(employeeId))
+            {
+                throw new ArgumentNullException("employeeId");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_employeesPath, employeeId, _employeeBenefitsEnrollmentPoolPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<EmployeeBenefitsEnrollmentPoolItem>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get benefits enrollment pool items");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Returns benefits enrollment configuration
+        /// </summary>
+        /// <returns>BenefitsEnrollmentConfiguration dto containing configuration information <see cref="Dtos.HumanResources.BenefitsEnrollmentConfiguration"></see> </returns>
+        public async Task<BenefitsEnrollmentConfiguration> GetBenefitsEnrollmentConfigurationAsync()
+        {
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_benefitsEnrollmentConfigurationPath);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<BenefitsEnrollmentConfiguration>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get the benefits enrollment configuration.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get the benefits enrollment  configuration.");
+                throw;
+            }
+        }
+        /// <summary>
         /// Get Employee current benefits data based on the permissions of the current user.
         /// </summary>
         /// <returns><returns>EmployeeBenefits DTO containing list of employee's current benefits.<see cref="Dtos.HumanResources.EmployeeBenefits"></see></returns></returns>
@@ -63,6 +148,369 @@ namespace Ellucian.Colleague.Api.Client
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get Employee current benefits data");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets EmployeeBenefitsEnrollmentPackage object for the specified employee id
+        /// </summary>
+        /// <param name="employeeId"></param>
+        /// <param name="enrollmentPeriodId">optional</param>
+        /// <returns></returns>
+        public async Task<EmployeeBenefitsEnrollmentPackage> GetEmployeeBenefitsEnrollmentPackageAsync(string employeeId, string enrollmentPeriodId = null)
+        {
+            if (string.IsNullOrEmpty(employeeId))
+            {
+                throw new ArgumentNullException("employeeId");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_employeesPath, employeeId, _employeeBenefitsEnrollmentPackagePath);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<EmployeeBenefitsEnrollmentPackage>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get employee benefits package");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// This endpoint will add benefits enrollment pool information to an employee. 
+        /// </summary>
+        /// <accessComments>
+        /// Any authenticated user can add benefits enrollment pool information.     
+        /// The endpoint will reject add benefits enrollment pool if the employee does not have a valid permission.
+        /// </accessComments>       
+        /// <param name="employeeId">Required parameter to add benefits enrollment pool information to an employee</param>
+        /// <param name="employeeBenefitsEnrollmentPoolItem"><see cref="EmployeeBenefitsEnrollmentPoolItem">EmployeeBenefitsEnrollmentPoolItem DTO</see></param>
+        /// <returns><see cref="EmployeeBenefitsEnrollmentPoolItem">Newly added EmployeeBenefitsEnrollmentPoolItem DTO object</see></returns>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned if the employeeId or employeeBenefitsEnrollmentPoolItem are not present in the request or any unexpected error has occured.</exception>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned if the employeeBenefitsEnrollmentPoolItem is not present in the request or any unexpected error has occured.</exception>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if the user is not allowed to add benefits enrollment pool information.</exception>
+        public async Task<EmployeeBenefitsEnrollmentPoolItem> AddEmployeeBenefitsEnrollmentPoolAsync(string employeeId, EmployeeBenefitsEnrollmentPoolItem employeeBenefitsEnrollmentPoolItem)
+        {
+            if (string.IsNullOrEmpty(employeeId))
+            {
+                throw new ArgumentNullException("employeeId");
+            }
+
+            if (employeeBenefitsEnrollmentPoolItem == null)
+            {
+                throw new ArgumentNullException("employeeBenefitsEnrollmentPoolItem");
+            }
+
+            if (string.IsNullOrWhiteSpace(employeeBenefitsEnrollmentPoolItem.OrganizationName) && string.IsNullOrWhiteSpace(employeeBenefitsEnrollmentPoolItem.LastName))
+            {
+                throw new ArgumentNullException("OrganizationName or LastName is required.");
+            }
+
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_employeesPath, employeeId, _employeeBenefitsEnrollmentPoolPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                var response = await ExecutePostRequestWithResponseAsync(employeeBenefitsEnrollmentPoolItem, urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<EmployeeBenefitsEnrollmentPoolItem>(await response.Content.ReadAsStringAsync());
+            }
+            // If the HTTP request fails, the benefits enrollment pool information was probably not added to an employee
+            catch (HttpRequestFailedException hre)
+            {
+                string message = "Adding benefits enrollment pool information to an employee is failed.";
+                logger.Error(hre, message);
+                throw new InvalidOperationException(message, hre);
+            }
+            // HTTP request successful, but some other problem encountered...
+            catch (Exception ex)
+            {
+                string message = "Unable to add benefits enrollment pool to an employee.";
+                logger.Error(ex, message);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// This endpoint will update benefits enrollment pool information to an employee. 
+        /// </summary>
+        /// <accessComments>
+        /// Any authenticated user can update benefits enrollment pool information.     
+        /// The endpoint will reject updated benefits enrollment pool if the employee does not have a valid permission.
+        /// </accessComments>       
+        /// <param name="employeeId">Required parameter to update benefits enrollment pool information of an employee</param>
+        /// <param name="employeeBenefitsEnrollmentPoolItem"><see cref="EmployeeBenefitsEnrollmentPoolItem">EmployeeBenefitsEnrollmentPoolItem DTO</see></param>
+        /// <returns><see cref="EmployeeBenefitsEnrollmentPoolItem">Updated EmployeeBenefitsEnrollmentPoolItem DTO object</see></returns>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned if the employeeId or employeeBenefitsEnrollmentPoolItem are not present in the request or any unexpected error has occured.</exception>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned if the employeeBenefitsEnrollmentPoolItem is not present in the request or any unexpected error has occured.</exception>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if the user is not allowed to add benefits enrollment pool information.</exception>
+        public async Task<EmployeeBenefitsEnrollmentPoolItem> UpdateEmployeeBenefitsEnrollmentPoolAsync(string employeeId, EmployeeBenefitsEnrollmentPoolItem employeeBenefitsEnrollmentPoolItem)
+        {
+            if (string.IsNullOrEmpty(employeeId))
+            {
+                throw new ArgumentNullException("employeeId");
+            }
+
+            if (employeeBenefitsEnrollmentPoolItem == null)
+            {
+                throw new ArgumentNullException("employeeBenefitsEnrollmentPoolItem");
+            }
+
+            if (string.IsNullOrEmpty(employeeBenefitsEnrollmentPoolItem.Id))
+            {
+                throw new ArgumentNullException("employeeBenefitsEnrollmentPoolItem.Id");
+            }
+
+            if (string.IsNullOrWhiteSpace(employeeBenefitsEnrollmentPoolItem.OrganizationName) && string.IsNullOrWhiteSpace(employeeBenefitsEnrollmentPoolItem.LastName))
+            {
+                throw new ArgumentNullException("OrganizationName or LastName is required.");
+            }
+
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_employeesPath, employeeId, _employeeBenefitsEnrollmentPoolPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                var response = await ExecutePutRequestWithResponseAsync(employeeBenefitsEnrollmentPoolItem, urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<EmployeeBenefitsEnrollmentPoolItem>(await response.Content.ReadAsStringAsync());
+            }
+            // If the HTTP request fails, the benefits enrollment pool information was probably not updated to an employee
+            catch (HttpRequestFailedException hre)
+            {
+                string message = "Updating benefits enrollment pool information to an employee is failed.";
+                logger.Error(hre, message);
+                throw new InvalidOperationException(message, hre);
+            }
+            // HTTP request successful, but some other problem encountered...
+            catch (Exception ex)
+            {
+                string message = "Unable to update benefits enrollment pool to an employee.";
+                logger.Error(ex, message);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// This endpoint will update benefits enrollment information of an employee for the given benefit types specified
+        /// </summary>
+        /// <accessComments>
+        /// Any authenticated user can update their own benefits enrollment information
+        /// The endpoint will reject the updated benefits enrollment information if the employee does not have a valid permission
+        /// </accessComments>    
+        /// <param name="employeeId">Required parameter to update benefits enrollment information</param>
+        /// <param name="employeeBenefitsEnrollmentInfo"><see cref="EmployeeBenefitsEnrollmentInfo">EmployeeBenefitsEnrollmentInfo DTO</see></param>
+        /// <returns><see cref="EmployeeBenefitsEnrollmentInfo">Updated EmployeeBenefitsEnrollmentInfo DTO object</see></returns>
+        public async Task<EmployeeBenefitsEnrollmentInfo> UpdateEmployeeBenefitsEnrollmentInfoAsync(string employeeId, EmployeeBenefitsEnrollmentInfo employeeBenefitsEnrollmentInfo)
+        {
+            if (string.IsNullOrEmpty(employeeId))
+            {
+                throw new ArgumentNullException("employeeId");
+            }
+
+            if (employeeBenefitsEnrollmentInfo == null)
+            {
+                throw new ArgumentNullException("employeeBenefitsEnrollmentInfo");
+            }
+
+            if (string.IsNullOrEmpty(employeeBenefitsEnrollmentInfo.EnrollmentPeriodId))
+            {
+                throw new ArgumentNullException("employeeBenefitsEnrollmentInfo.EnrollmentPeriodId");
+            }
+
+            if (string.IsNullOrEmpty(employeeBenefitsEnrollmentInfo.BenefitPackageId))
+            {
+                throw new ArgumentNullException("employeeBenefitsEnrollmentInfo.BenefitPackageId");
+            }
+
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_employeesPath, employeeId, _employeeBenefitsEnrollmentInfoPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                var response = await ExecutePutRequestWithResponseAsync(employeeBenefitsEnrollmentInfo, urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<EmployeeBenefitsEnrollmentInfo>(await response.Content.ReadAsStringAsync());
+            }
+            catch (HttpRequestFailedException hre)
+            {
+                string message = "Updating benefits enrollment information for employee failed.";
+                logger.Error(hre, message);
+                throw new InvalidOperationException(message, hre);
+            }
+            catch (Exception ex)
+            {
+                string message = "Unable to update benefits enrollment information for employee .";
+                logger.Error(ex, message);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Queries benefits enrollment information based on specified criteria; if no benefit type is provided, all of the employee's elected benefit information is returned
+        /// </summary>
+        /// <param name="criteria"></param>
+        /// <returns>Set of available enrollment period benefits by benefit type</returns>
+        public async Task<IEnumerable<EnrollmentPeriodBenefit>> QueryEnrollmentPeriodBenefitsAsync(BenefitEnrollmentBenefitsQueryCriteria criteria)
+        {
+            if (criteria == null)
+            {
+                throw new ArgumentNullException("criteria");
+            }
+            if (string.IsNullOrEmpty(criteria.BenefitTypeId))
+            {
+                throw new ArgumentException("benefitTypeId cannot be empty", "benefitTypeId");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_qapiPath, _benefitsEnrollmentBenefitsPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<EnrollmentPeriodBenefit>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get benefits enrollment benefits");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Queries an employee's benefit enrollment information for the given criteria
+        /// </summary>
+        /// <param name="criteria"></param>
+        /// <returns>Employee benefits enrollment information object</returns>
+        public async Task<EmployeeBenefitsEnrollmentInfo> QueryEmployeeBenefitsEnrollmentInfoAsync(EmployeeBenefitsEnrollmentInfoQueryCriteria criteria)
+        {
+            if (criteria == null)
+            {
+                throw new ArgumentNullException("criteria");
+            }
+            if (string.IsNullOrEmpty(criteria.EmployeeId))
+            {
+                throw new ArgumentException("EmployeeId cannot be empty", "EmployeeId");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_qapiPath, _benefitsEnrollmentInfoPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<EmployeeBenefitsEnrollmentInfo>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get benefits enrollment information");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// This endpoint submits/re-opens the benefits elected by an employee.
+        /// A boolean flag present in the input criteria object indicates whether to submit or re-open the benefit elections.
+        /// </summary>       
+        /// <param name="criteria">BenefitEnrollmentCompletionCriteria object</param>       
+        /// <returns><see cref="BenefitEnrollmentCompletionInfo">BenefitEnrollmentCompletionInfo DTO</see></returns>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned if the required parameters in the input object have no value (or) in case of any unexpected error while processing the request.</exception>
+        public async Task<BenefitEnrollmentCompletionInfo> SubmitOrReOpenBenefitElectionsAsync(BenefitEnrollmentCompletionCriteria criteria)
+        {
+            if (criteria == null)
+            {
+                throw new ArgumentNullException("criteria");
+            }
+
+            if (string.IsNullOrWhiteSpace(criteria.EmployeeId))
+            {
+                throw new ArgumentException("Employee Id is required");
+            }
+            if (string.IsNullOrWhiteSpace(criteria.EnrollmentPeriodId))
+            {
+                throw new ArgumentException("Enrollment Period Id is required");
+            }
+            if (criteria.SubmitBenefitElections && string.IsNullOrWhiteSpace(criteria.BenefitsPackageId))
+            {
+                throw new ArgumentException("BenefitsPackageId is required");
+            }
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(criteria, _submitOrReOpenBenefitElectionsPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<BenefitEnrollmentCompletionInfo>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to submit/re-open the benefit elections");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets the beneficiary categories
+        /// </summary>
+        /// <returns>Returns a list of Beneficiary Category DTOs</returns>
+        public async Task<IEnumerable<BeneficiaryCategory>> GetBeneficiaryCategoriesAsync()
+        {
+
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_employeesPath, _beneficiaryCategoriesPath);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<BeneficiaryCategory>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get beneficiary categories");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Returns benefits enrollment acknowledgement pdf report
+        /// </summary>
+        /// <param name="employeeId">Id of employee to get enrolled benefits</param>
+        /// <returns>The pdf report of enrolled benefits information</returns>
+        public async Task<Tuple<byte[], string>> GetBenefitsEnrollmentAcknowledgementReportAsync(string employeeId)
+        {
+            if (string.IsNullOrEmpty(employeeId))
+            {
+                throw new ArgumentNullException("employeeId", "Employee cannot be null or empty.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_employeesPath, employeeId, _employeeBenefitsEnrollmentAcknowledgementPath);
+
+                var headers = new NameValueCollection();
+
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                headers.Add("Accept", "application/pdf");
+
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+
+                var fileName = response.Content.Headers.ContentDisposition.FileName;
+
+                var resource = await response.Content.ReadAsByteArrayAsync();
+
+                return new Tuple<byte[], string>(resource, fileName);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get benefits enrollment acknowledgement report");
                 throw;
             }
         }
@@ -717,6 +1165,323 @@ namespace Ellucian.Colleague.Api.Client
 
         }
 
+        /// <summary>
+        /// Gets all leave requests for the currently authenticated API user .
+        /// All leave requests will be returned regardless of status.
+        /// The endpoint will not return the leave requests if:
+        ///     1.  403 - User does not have permission to get requested leave request
+        ///</summary>
+        /// <accessComments>
+        /// If the current user is an employee, all of the employee's leave requests will be returned.
+        /// </accessComments>
+        /// <param name="effectivePersonId">
+        ///  Optional parameter for passing effective person Id
+        /// </param>
+        /// <returns>A list of Leave Requests</returns>
+        public async Task<IEnumerable<LeaveRequest>> GetLeaveRequestsAsync(string effectivePersonId = null)
+        {
+            try
+            {
+                string urlPath;
+                if (effectivePersonId == null)
+                {
+                    urlPath = UrlUtility.CombineUrlPath(_employeeLeaveRequestPath);
+                }
+                else
+                {
+                    urlPath = _employeeLeaveRequestPath + "?" + UrlUtility.BuildEncodedQueryString("effectivePersonId", effectivePersonId);
+                }
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<List<LeaveRequest>>(await response.Content.ReadAsStringAsync());
+            }
+            catch (Exception e)
+            {
+                var message = "unable to get leave request";
+                logger.Error(e, message);
+                throw;
+            }
+        }
+
+
+        /// <summary>
+        ///  Returns the LeaveRequest information corresponding to the input id.
+        /// </summary>
+        /// <accessComments>
+        /// Any authenticated user can
+        /// 1) view their own leave request information         
+        /// </accessComments>
+        /// <param name="id">Leave Request Id</param>
+        /// <param name="effectivePersonId">Optional parameter for passing effective person Id</param>
+        /// <returns>LeaveRequest DTO</returns>
+        public async Task<LeaveRequest> GetLeaveRequestInfoByLeaveRequestIdAsync(string id, string effectivePersonId = null)
+        {
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_employeeLeaveRequestPath, id);
+                if (!string.IsNullOrWhiteSpace(effectivePersonId))
+                {
+                    urlPath += "?" + UrlUtility.BuildEncodedQueryString("effectivePersonId", effectivePersonId);
+                }
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<LeaveRequest>(await response.Content.ReadAsStringAsync());
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get the leave request information");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Creates a single Leave Request. This POST endpoint will create a Leave Request along with its associated leave request details 
+        /// </summary>
+        /// <accessComments>
+        /// Any authenticated user can create their own leave request     
+        /// The endpoint will reject the creation of a Leave Request if Employee does not have the correct permission.
+        /// </accessComments>
+        /// <param name="leaveRequest">Leave Request DTO</param>
+        /// <param name="effectivePersonId">Optional parameter for passing effective person Id</param>
+        /// <returns>Newly created Leave Request Object</returns>
+        public async Task<LeaveRequest> CreateLeaveRequestAsync(LeaveRequest leaveRequest, string effectivePersonId = null)
+        {
+            if (leaveRequest == null)
+            {
+                throw new ArgumentNullException("leaverequest");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_employeeLeaveRequestPath);
+                if (!string.IsNullOrWhiteSpace(effectivePersonId))
+                {
+                    urlPath += "?" + UrlUtility.BuildEncodedQueryString("effectivePersonId", effectivePersonId);
+                }
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                var response = await ExecutePostRequestWithResponseAsync(leaveRequest, urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<LeaveRequest>(await response.Content.ReadAsStringAsync());
+            }
+            catch (HttpRequestFailedException hrfe)
+            {
+                if (hrfe.StatusCode == System.Net.HttpStatusCode.Conflict)
+                {
+                    if (hrfe.Data.Contains("ColleagueApiErrorDetail"))
+                    {
+                        var errorDetail = hrfe.Data["ColleagueApiErrorDetail"] as ColleagueApiErrorDetail;
+                        if (errorDetail.Conflicts.Any())
+                        {
+                            throw new ExistingResourceException(hrfe.Message, errorDetail.Conflicts.First());
+                        }
+                    }
+                }
+                throw;
+            }
+            catch (Exception e)
+            {
+                var message = "Unable to create leave request";
+                logger.Error(e, message);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// This endpoint will update an existing Leave Request along with its Leave Request Details. 
+        /// </summary>
+        /// <accessComments>
+        /// Any authenticated user can update their own leave request.     
+        /// The endpoint will reject the update of a Leave Request if the employee does not have a valid permission.
+        /// </accessComments>       
+        /// <param name="leaveRequest"><see cref="LeaveRequest">Leave Request DTO</see></param>
+        /// <param name="effectivePersonId">Optional parameter for passing effective person Id</param>
+        /// <returns><see cref="LeaveRequest">Newly updated Leave Request object</see></returns>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned if the leaveRequest DTO is present in the request or any unexpected error has occured.</exception>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if the user is not allowed to update the leave request.</exception>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.NotFound returned if the leave request record to be edited doesn't exist in the DB.</exception>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Conflict returned if the leave request record to be edited is locked or if a duplicate leave request record already exists in the DB.</exception>
+        public async Task<LeaveRequest> UpdateLeaveRequestAsync(LeaveRequest leaveRequest, string effectivePersonId = null)
+        {
+            if (leaveRequest == null)
+            {
+                throw new ArgumentNullException("leaveRequest");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_employeeLeaveRequestPath);
+                if (!string.IsNullOrWhiteSpace(effectivePersonId))
+                {
+                    urlPath += "?" + UrlUtility.BuildEncodedQueryString("effectivePersonId", effectivePersonId);
+                }
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                var response = await ExecutePutRequestWithResponseAsync(leaveRequest, urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<LeaveRequest>(await response.Content.ReadAsStringAsync());
+            }
+            catch (HttpRequestFailedException hrfe)
+            {
+                if (hrfe.StatusCode == System.Net.HttpStatusCode.Conflict)
+                {
+                    if (hrfe.Data.Contains("ColleagueApiErrorDetail"))
+                    {
+                        var errorDetail = hrfe.Data["ColleagueApiErrorDetail"] as ColleagueApiErrorDetail;
+                        if (errorDetail.Conflicts.Any())
+                        {
+                            throw new ExistingResourceException(hrfe.Message, errorDetail.Conflicts.First());
+                        }
+                    }
+                }
+                throw;
+            }
+            catch (Exception e)
+            {
+                var message = "Unable to update the leave request";
+                logger.Error(e, message);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Create a Leave Request Status record.
+        /// </summary>
+        /// <accessComments>
+        /// Any authenticated user can create status for their own leave request     
+        /// The endpoint will reject the creation of a Leave Request Status if Employee does not have the correct permission.
+        /// </accessComments>
+        /// <param name="status">Leave Request Status DTO</param>
+        /// <param name="effectivePersonId">Optional parameter - Current user or proxy user person id.</param>
+        /// <returns>Newly created Leave Request Status</returns>
+        public async Task<LeaveRequestStatus> CreateLeaveRequestStatusAsync(LeaveRequestStatus status, string effectivePersonId = null)
+        {
+            if (status == null)
+            {
+                throw new ArgumentNullException("status");
+            }
+            try
+            {
+                string urlPath = _employeeLeaveRequestStatusesPath;
+
+                if (!string.IsNullOrWhiteSpace(effectivePersonId))
+                {
+                    urlPath += "?" + UrlUtility.BuildEncodedQueryString("effectivePersonId", effectivePersonId);
+                }
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(status, urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<LeaveRequestStatus>(await response.Content.ReadAsStringAsync());
+            }
+            catch (Exception e)
+            {
+                var message = "Unable to create leave request status";
+                logger.Error(e, message);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// This endpoint will create a new leave request comment associated with a leave request. 
+        /// </summary>
+        /// <accessComments>
+        /// Any authenticated user can create a comment associated with their own leave request.     
+        /// The endpoint will reject the creation of comment if employee does not have a valid permission.
+        /// </accessComments>     
+        /// <param name="leaveRequestComment">Leave Request Comment DTO</param>
+        /// <param name="effectivePersonId">Optional parameter for passing effective person Id</param>
+        /// <returns><see cref="LeaveRequestComment">Leave Request Comment DTO</see></returns>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned any unexpected error has occured.</exception>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if the user is not allowed to create the leave request comment.</exception
+        public async Task<LeaveRequestComment> CreateLeaveRequestCommentsAsync(LeaveRequestComment leaveRequestComment, string effectivePersonId = null)
+        {
+            if (leaveRequestComment == null)
+                throw new ArgumentNullException("leaveRequestComment");
+
+
+            if (string.IsNullOrWhiteSpace(leaveRequestComment.LeaveRequestId))
+                throw new ArgumentException("Comments must be applied to an associable entity");
+
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_employeeLeaveRequestCommentsPath);
+
+                if (!string.IsNullOrWhiteSpace(effectivePersonId))
+                {
+                    urlPath += "?" + UrlUtility.BuildEncodedQueryString("effectivePersonId", effectivePersonId);
+                }
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(leaveRequestComment, urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<LeaveRequestComment>(await response.Content.ReadAsStringAsync());
+            }
+            catch (Exception e)
+            {
+                var message = "Unable to create leave request comment";
+                logger.Error(e, message);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets the HumanResourceDemographics information of supervisors for the given position of a supervisee.
+        /// </summary>
+        /// <accessComments>
+        /// Any authenticated user can access the HumanResourceDemographics information of their own supervisors.
+        /// </accessComments>
+        /// <param name="id">Position Id</param>
+        /// <param name="effectivePersonId">Optional parameter for passing effective person Id.</param>
+        /// <returns>List of HumanResourceDemographics DTOs</returns>
+        public async Task<IEnumerable<HumanResourceDemographics>> GetSupervisorsByPositionIdAsync(string id, string effectivePersonId = null)
+        {
+            try
+            {
+                string urlPath = _positionSupervisorsPath;
+                if (!string.IsNullOrWhiteSpace(effectivePersonId))
+                {
+                    urlPath += "?" + UrlUtility.BuildEncodedQueryString("effectivePersonId", effectivePersonId);
+                }
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(id, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<HumanResourceDemographics>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get the position supervisors information.");
+                throw;
+            }
+        }
+        /// <summary>
+        /// This end point returns all the supervisees for the currently authenticated leave approver.       
+        /// The endpoint will not return the supervisees if:
+        ///     1.  403 - User does not have permission to get supervisee information
+        /// </summary>
+        /// <accessComments>
+        ///  Current user must be Leave Approver/supervisor (users with the permission APPROVE.REJECT.LEAVE.REQUEST) to fetch all of their supervisees
+        /// </accessComments>
+        /// <returns><see cref="HumanResourceDemographics">List of HumanResourceDemographics DTOs</see></returns>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned any unexpected error has occured.</exception>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if the user is not allowed to fetch supervisees.</exception>
+
+        public async Task<IEnumerable<HumanResourceDemographics>> GetSuperviseesByPrimaryPositionForSupervisorAsync()
+        {
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(_leaveApprovalSuperviseesPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<HumanResourceDemographics>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get the Supervisees for leave approval.");
+                throw;
+            }
+        }
         /// <summary>
         /// Queries employee information summary based on the specified criteria.
         /// Either a supervisor id or employee ids must be specified (or both)

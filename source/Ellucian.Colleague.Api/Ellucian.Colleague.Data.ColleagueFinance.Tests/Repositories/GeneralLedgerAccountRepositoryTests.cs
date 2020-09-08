@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -10,6 +10,7 @@ using Ellucian.Colleague.Data.ColleagueFinance.Repositories;
 using Ellucian.Colleague.Data.ColleagueFinance.Transactions;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Tests;
+using Ellucian.Data.Colleague;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
@@ -35,6 +36,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         private GlAccountValidationResponse glAccountValidationResponse;
         private string glAccount = "11_00_01_02_ACTIV_50000";
         private string fiscalYear = DateTime.Now.Year.ToString();
+        string[] activeGlAcctsArray;
+        List<string> activeGlAccounts;
 
         [TestInitialize]
         public void Initialize()
@@ -46,7 +49,15 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
             glAccountRecord = new GlAccts();
             glAccountsDescriptionResponse = new GetGlAccountDescriptionResponse();
+
+
+            activeGlAccounts = new List<string>()
+            {
+                "11_01_01_00_00000_75075"
+            };
+
             InitializeMockStatements();
+
         }
 
         [TestCleanup]
@@ -55,6 +66,29 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             actualRepository = null;
             glAccountRecord = null;
             glAccountValidationResponse = null;
+            activeGlAcctsArray = null;
+            activeGlAccounts = null;
+        }
+        #endregion
+
+        #region GetActiveGeneralLedgerAccounts
+        [TestMethod]
+        public async Task GetActiveGeneralLedgerAccounts_NullAccounts()
+        {
+            var activeGlAccounts = await actualRepository.GetActiveGeneralLedgerAccounts(null);
+            Assert.IsNotNull(activeGlAccounts);
+            Assert.IsFalse(activeGlAccounts.Any());
+        }
+
+        [TestMethod]
+        public async Task GetActiveGeneralLedgerAccounts_ActiveAccounts()
+        {
+            List<string> testRepositoryActiveAccounts = await testGeneralLedgerAccountRepository.GetActiveGeneralLedgerAccounts(activeGlAccounts);
+            var actualActiveGlAccounts = await actualRepository.GetActiveGeneralLedgerAccounts(activeGlAccounts);
+            foreach(var account in actualActiveGlAccounts)
+            {
+                Assert.IsTrue(testRepositoryActiveAccounts.Contains(account));
+            }
         }
         #endregion
 
@@ -614,6 +648,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         }
 
         #endregion
+
         #region GetAsync
         [TestMethod]
         public async Task GetAsync_HappyPath()
@@ -1056,6 +1091,16 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             dataReaderMock.Setup(dr => dr.ReadRecordAsync<GlAccts>(It.IsAny<string>(), true)).Returns(() =>
             {
                 return Task.FromResult(glAccountRecord);
+            });
+
+            // Mock DataReader.SelectAsync on active GL.ACCTS
+            activeGlAcctsArray = new string[]
+            {
+                    "11_01_01_00_00000_75075"
+            };
+            dataReaderMock.Setup(dr => dr.SelectAsync("GL.ACCTS", It.IsAny<string[]>(), It.IsAny<string>())).Returns(() =>
+            {
+                return Task.FromResult(activeGlAcctsArray);
             });
         }
         #endregion

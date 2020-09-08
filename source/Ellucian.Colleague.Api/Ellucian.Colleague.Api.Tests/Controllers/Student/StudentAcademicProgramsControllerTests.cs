@@ -2597,4 +2597,241 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
     }
 
+    [TestClass]
+
+    public class StudentAcademicProgramsReplacementsControllerTests
+    {
+        #region DECLARATIONS
+
+        public TestContext TestContext { get; set; }
+        private Mock<IStudentAcademicProgramService> studentAcademicProgramServiceMock;
+        private Mock<IAdapterRegistry> adapterRegistryMock;
+        private Mock<ILogger> loggerMock;
+        private StudentAcademicProgramsController studentAcademicProgramsController;
+
+        private StudentAcademicPrograms4 studentAcademicProgram;
+        private StudentAcademicProgramReplacements studentAcademicProgramReplacementsDto;
+        private StudentAcademicProgramReplacements post_studentAcademicProgramReplacementsDto;
+        private Tuple<IEnumerable<StudentAcademicPrograms4>, int> tupleResult;
+
+        private Paging paging = new Paging(10, 0);
+
+        private string guid = "02dc2629-e8a7-410e-b4df-572d02822f8b";
+
+        #endregion
+
+        #region TEST SETUP
+
+        [TestInitialize]
+        public void Initialize()
+        {
+            LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+            EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+            loggerMock = new Mock<ILogger>();
+            studentAcademicProgramServiceMock = new Mock<IStudentAcademicProgramService>();
+            adapterRegistryMock = new Mock<IAdapterRegistry>();
+
+            InitializeTestData();
+
+            studentAcademicProgramServiceMock.Setup(s => s.GetDataPrivacyListByApi(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(new List<string>());
+            studentAcademicProgramServiceMock.Setup(s => s.GetStudentAcademicPrograms4Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<StudentAcademicPrograms4>(),
+                It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(tupleResult);
+            studentAcademicProgramServiceMock.Setup(s => s.CreateStudentAcademicProgramReplacementsAsync(It.IsAny<StudentAcademicProgramReplacements>(), It.IsAny<bool>())).ReturnsAsync(studentAcademicProgram);
+
+            studentAcademicProgramsController = new StudentAcademicProgramsController(adapterRegistryMock.Object, studentAcademicProgramServiceMock.Object, loggerMock.Object) { Request = new HttpRequestMessage() };
+            studentAcademicProgramsController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
+        }
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            loggerMock = null;
+            studentAcademicProgramServiceMock = null;
+            studentAcademicProgramsController = null;
+        }
+
+        private void InitializeTestData()
+        {
+            studentAcademicProgram = new StudentAcademicPrograms4()
+            {
+                Id = guid,
+                AcademicProgram = new GuidObject2(guid),
+                Student = new GuidObject2(guid),
+                CurriculumObjective = Dtos.EnumProperties.StudentAcademicProgramsCurriculumObjective2.Outcome,
+
+                EnrollmentStatus = new EnrollmentStatusDetail() { EnrollStatus = Dtos.EnrollmentStatusType.Active, Detail = new GuidObject2(guid) },
+                Credentials = new List<GuidObject2>() { new GuidObject2(guid) },
+                Disciplines = new List<StudentAcademicProgramDisciplines2>()
+                {
+                    new StudentAcademicProgramDisciplines2()
+                    {
+                        Discipline = new GuidObject2(guid),
+                        AdministeringInstitutionUnit = new GuidObject2(guid)
+                    }
+                }
+            };
+
+            studentAcademicProgramReplacementsDto = new StudentAcademicProgramReplacements()
+            {
+                Id = guid,
+                Student = new GuidObject2(guid),
+                ProgramToReplace = new GuidObject2(guid),
+                NewProgram = new StudentAcademicProgramsReplacementsNewProgram()
+                {
+                    CurriculumObjective = Dtos.EnumProperties.StudentAcademicProgramsCurriculumObjective2.Outcome,
+
+                    EnrollmentStatus = new EnrollmentStatusDetail() { EnrollStatus = Dtos.EnrollmentStatusType.Active, Detail = new GuidObject2(guid) },
+                    Credentials = new List<GuidObject2>() { new GuidObject2(guid) },
+                    Disciplines = new List<StudentAcademicProgramDisciplines2>()
+                    {
+                        new StudentAcademicProgramDisciplines2()
+                        {
+                            Discipline = new GuidObject2(guid),
+                            AdministeringInstitutionUnit = new GuidObject2(guid)
+                        }
+                    }
+                }
+            };
+
+            post_studentAcademicProgramReplacementsDto = new StudentAcademicProgramReplacements()
+            {
+                Id = Guid.Empty.ToString(),
+                Student = new GuidObject2(guid),
+                NewProgram = new StudentAcademicProgramsReplacementsNewProgram()
+                {
+                    CurriculumObjective = Dtos.EnumProperties.StudentAcademicProgramsCurriculumObjective2.Outcome,
+
+                    EnrollmentStatus = new EnrollmentStatusDetail() { EnrollStatus = Dtos.EnrollmentStatusType.Active, Detail = new GuidObject2(guid) },
+                    Credentials = new List<GuidObject2>() { new GuidObject2(guid) },
+                    Disciplines = new List<StudentAcademicProgramDisciplines2>()
+                    {
+                        new StudentAcademicProgramDisciplines2()
+                        {
+                            Discipline = new GuidObject2(guid),
+                            AdministeringInstitutionUnit = new GuidObject2(guid)
+                        }
+                    }
+                }
+            };
+
+            tupleResult = new Tuple<IEnumerable<StudentAcademicPrograms4>, int>(new List<StudentAcademicPrograms4>() { studentAcademicProgram }, 1);
+        }
+
+        #endregion
+
+        #region Exceptions POST
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task CreateStudentAcademicProgramsSubmissionsAsync_NullRequestBody()
+        {
+            var actual = await studentAcademicProgramsController.CreateStudentAcademicProgramsReplacementsAsync(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task CreateStudentAcademicProgramsSubmissionsAsync_Id_Null()
+        {
+            post_studentAcademicProgramReplacementsDto.Id = "";
+            var actual = await studentAcademicProgramsController.CreateStudentAcademicProgramsReplacementsAsync(post_studentAcademicProgramReplacementsDto);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task CreateStudentAcademicProgramsSubmissionsAsync_Not_Nil_Guid()
+        {
+            post_studentAcademicProgramReplacementsDto.Id = guid;
+            var actual = await studentAcademicProgramsController.CreateStudentAcademicProgramsReplacementsAsync(post_studentAcademicProgramReplacementsDto);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task CreateStudentAcademicProgramsSubmissionsAsync_KeyNotFoundException()
+        {
+            studentAcademicProgramServiceMock.Setup(s => s.CreateStudentAcademicProgramReplacementsAsync(It.IsAny<StudentAcademicProgramReplacements>(), It.IsAny<bool>()))
+                .ThrowsAsync(new KeyNotFoundException());
+            var actual = await studentAcademicProgramsController.CreateStudentAcademicProgramsReplacementsAsync(post_studentAcademicProgramReplacementsDto);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task CreateStudentAcademicProgramsSubmissionsAsync_PermissionsException()
+        {
+            studentAcademicProgramServiceMock.Setup(s => s.CreateStudentAcademicProgramReplacementsAsync(It.IsAny<StudentAcademicProgramReplacements>(), It.IsAny<bool>()))
+                .ThrowsAsync(new PermissionsException());
+            var actual = await studentAcademicProgramsController.CreateStudentAcademicProgramsReplacementsAsync(post_studentAcademicProgramReplacementsDto);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task CreateStudentAcademicProgramsReplacementsAsync_ArgumentException()
+        {
+            studentAcademicProgramServiceMock.Setup(s => s.CreateStudentAcademicProgramReplacementsAsync(It.IsAny<StudentAcademicProgramReplacements>(), It.IsAny<bool>()))
+                .ThrowsAsync(new ArgumentException());
+            var actual = await studentAcademicProgramsController.CreateStudentAcademicProgramsReplacementsAsync(post_studentAcademicProgramReplacementsDto);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task CreateStudentAcademicProgramsReplacementsAsync_RepositoryException()
+        {
+            studentAcademicProgramServiceMock.Setup(s => s.CreateStudentAcademicProgramReplacementsAsync(It.IsAny<StudentAcademicProgramReplacements>(), It.IsAny<bool>()))
+                .ThrowsAsync(new RepositoryException());
+            var actual = await studentAcademicProgramsController.CreateStudentAcademicProgramsReplacementsAsync(post_studentAcademicProgramReplacementsDto);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task CreateStudentAcademicProgramsReplacementsAsync_IntegrationApiException()
+        {
+            studentAcademicProgramServiceMock.Setup(s => s.CreateStudentAcademicProgramReplacementsAsync(It.IsAny<StudentAcademicProgramReplacements>(), It.IsAny<bool>()))
+                .ThrowsAsync(new IntegrationApiException());
+            var actual = await studentAcademicProgramsController.CreateStudentAcademicProgramsReplacementsAsync(post_studentAcademicProgramReplacementsDto);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task CreateStudentAcademicProgramsReplacementsAsync_InvalidOperationException()
+        {
+            studentAcademicProgramServiceMock.Setup(s => s.CreateStudentAcademicProgramReplacementsAsync(It.IsAny<StudentAcademicProgramReplacements>(), It.IsAny<bool>()))
+                .ThrowsAsync(new InvalidOperationException());
+            var actual = await studentAcademicProgramsController.CreateStudentAcademicProgramsReplacementsAsync(post_studentAcademicProgramReplacementsDto);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task CreateStudentAcademicProgramsReplacementsAsync_ConfigurationException()
+        {
+            studentAcademicProgramServiceMock.Setup(s => s.CreateStudentAcademicProgramReplacementsAsync(It.IsAny<StudentAcademicProgramReplacements>(), It.IsAny<bool>()))
+                .ThrowsAsync(new ConfigurationException());
+            var actual = await studentAcademicProgramsController.CreateStudentAcademicProgramsReplacementsAsync(post_studentAcademicProgramReplacementsDto);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task CreateStudentAcademicProgramsReplacementsAsync_Exception()
+        {
+            studentAcademicProgramServiceMock.Setup(s => s.CreateStudentAcademicProgramReplacementsAsync(It.IsAny<StudentAcademicProgramReplacements>(), It.IsAny<bool>()))
+                .ThrowsAsync(new Exception());
+            var actual = await studentAcademicProgramsController.CreateStudentAcademicProgramsReplacementsAsync(post_studentAcademicProgramReplacementsDto);
+        }
+
+        #endregion POST
+
+        #region POST 
+
+        [TestMethod]
+        public async Task CreateStudentAcademicProgramsReplacementsAsync()
+        {
+            studentAcademicProgramsController.Request.Headers.CacheControl =
+                    new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+            var actual = await studentAcademicProgramsController.CreateStudentAcademicProgramsReplacementsAsync(post_studentAcademicProgramReplacementsDto);
+            Assert.IsNotNull(actual);
+        }
+
+        #endregion
+
+    }
+
 }

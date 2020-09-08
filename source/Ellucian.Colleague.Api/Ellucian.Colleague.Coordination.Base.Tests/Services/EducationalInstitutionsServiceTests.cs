@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -16,6 +16,8 @@ using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Dtos.EnumProperties;
+using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 {
@@ -76,11 +78,9 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             private List<Domain.Base.Entities.Institution> _institutionsCollection;
 
             private EducationalInstitutionsService _educationalInstitutionsService;
-            private List<Department> _allDepartments;
-            private List<Division> _allDivisions;
-            private List<School> _allSchools;
+          
 
-            private const string DepartmentGuid = "6d6040a5-1a98-4614-943d-ad20101ff057"; //BIOLOGY
+            private const string DepartmentGuid = "6d6040a5-1a98-4614-943d-ad20101ff057"; 
             private const string DefaultHostGuid = "7y6040a5-2a98-4614-923d-ad20101ff088";
             private const string DivisionGuid = "50052c84-9f25-4f08-bd13-48e2a2ec4f49";
             private const string SchoolGuid = "62052c84-9f25-4f08-bd13-48e2a2ec4f49";
@@ -287,7 +287,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             {
 
                 _personRepositoryMock.Setup(x => x.GetPersonGuidFromIdAsync(It.IsAny<string>()))
-                    .ThrowsAsync(new KeyNotFoundException());
+                    .ThrowsAsync(new IntegrationApiException());
 
                 var tuple = new Tuple<IEnumerable<Institution>, int>(
                   null, _institutionsCollection.Count);
@@ -305,7 +305,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task EducationalInstitutionsService_GetEducationalInstitutions_InvalidInstitutions()
             {
 
@@ -315,10 +315,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 
                 _institutionRepositoryMock.Setup(x =>
                     x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<InstType?>()))
-                    .ThrowsAsync(new KeyNotFoundException());
+                    .ThrowsAsync(new IntegrationApiException());
                 _institutionRepositoryMock.Setup(x =>
                     x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), null))
-                    .ThrowsAsync(new KeyNotFoundException());
+                    .ThrowsAsync(new IntegrationApiException());
 
                 _personRepositoryMock.Setup(x => x.GetPersonGuidsCollectionAsync(ids)).ReturnsAsync(idCollection);
 
@@ -326,7 +326,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task EducationalInstitutionsService_GetEducationalInstitutions_EmptyGuidCollection()
             {
 
@@ -349,20 +349,273 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             #endregion GetEducationalInstitutionsAsync
 
-                #region GetEducationalInstitutionsByGuid
+            #region GetEducationalInstitutionsByGuid
+           
+            [TestMethod]
+            public async Task EducationalInstitutionsService_GetEducationalInstitutionsByGuid_InvalidEmailTypes()
+            {
+                _referenceDataRepositoryMock.Setup(repo => repo.GetEmailTypesAsync(It.IsAny<bool>()))
+                   .ThrowsAsync(new RepositoryException());
+
+
+                var defaultsConfiguration = new DefaultsConfiguration()
+                {
+                    HostInstitutionCodeId = "0000043"
+                };
+                _configurationRepoMock.Setup(x => x.GetDefaultsConfiguration()).Returns(defaultsConfiguration);
+
+                _personRepositoryMock.Setup(x => x.GetPersonGuidFromIdAsync(It.IsAny<string>()))
+                    .ReturnsAsync(DefaultHostGuid);
+
+                var tuple = new Tuple<IEnumerable<Institution>, int>(
+                  _institutionsCollection, _institutionsCollection.Count);
+                _institutionRepositoryMock.Setup(x =>
+                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<InstType?>()))
+                    .ReturnsAsync(tuple);
+                _institutionRepositoryMock.Setup(x =>
+                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), null))
+                    .ReturnsAsync(tuple);
+
+                _personRepositoryMock.Setup(x => x.GetPersonGuidsCollectionAsync(ids)).ReturnsAsync(idCollection);
+
+                var expected = _institutionsCollection.FirstOrDefault();
+
+                _institutionRepositoryMock.Setup(x => x.GetInstitutionByGuidAsync(It.IsAny<string>())).ReturnsAsync(expected);
+
+                var idPair = idCollection.FirstOrDefault(x => x.Key.Equals(expected.Id, StringComparison.OrdinalIgnoreCase));
+
+                var actual = await _educationalInstitutionsService.GetEducationalInstitutionByGuidAsync(idPair.Value);
+
+                Assert.IsTrue(actual is Dtos.EducationalInstitution);
+                Assert.IsNotNull(actual);
+            }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task EducationalInstitutionsService_GetEducationalInstitutionsByGuid_ArgumentNullException()
+            public async Task EducationalInstitutionsService_GetEducationalInstitutionsByGuid_InvalidGetPhoneTypesAsync()
+            {
+                _referenceDataRepositoryMock.Setup(repo => repo.GetPhoneTypesAsync(It.IsAny<bool>()))
+                   .ThrowsAsync(new RepositoryException());
+
+
+                var defaultsConfiguration = new DefaultsConfiguration()
+                {
+                    HostInstitutionCodeId = "0000043"
+                };
+                _configurationRepoMock.Setup(x => x.GetDefaultsConfiguration()).Returns(defaultsConfiguration);
+
+                _personRepositoryMock.Setup(x => x.GetPersonGuidFromIdAsync(It.IsAny<string>()))
+                    .ReturnsAsync(DefaultHostGuid);
+
+                var tuple = new Tuple<IEnumerable<Institution>, int>(
+                  _institutionsCollection, _institutionsCollection.Count);
+                _institutionRepositoryMock.Setup(x =>
+                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<InstType?>()))
+                    .ReturnsAsync(tuple);
+                _institutionRepositoryMock.Setup(x =>
+                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), null))
+                    .ReturnsAsync(tuple);
+
+                _personRepositoryMock.Setup(x => x.GetPersonGuidsCollectionAsync(ids)).ReturnsAsync(idCollection);
+
+                var expected = _institutionsCollection.FirstOrDefault();
+
+                _institutionRepositoryMock.Setup(x => x.GetInstitutionByGuidAsync(It.IsAny<string>())).ReturnsAsync(expected);
+
+                var idPair = idCollection.FirstOrDefault(x => x.Key.Equals(expected.Id, StringComparison.OrdinalIgnoreCase));
+
+                var actual = await _educationalInstitutionsService.GetEducationalInstitutionByGuidAsync(idPair.Value);
+
+                Assert.IsTrue(actual is Dtos.EducationalInstitution);
+                Assert.IsNotNull(actual);
+            }
+
+            [TestMethod]
+            public async Task EducationalInstitutionsService_GetEducationalInstitutionsByGuid_InvalidSocialMediaTypesAsync()
+            {
+                _referenceDataRepositoryMock.Setup(repo => repo.GetSocialMediaTypesAsync(It.IsAny<bool>()))
+                   .ThrowsAsync(new RepositoryException());
+
+
+                var defaultsConfiguration = new DefaultsConfiguration()
+                {
+                    HostInstitutionCodeId = "0000043"
+                };
+                _configurationRepoMock.Setup(x => x.GetDefaultsConfiguration()).Returns(defaultsConfiguration);
+
+                _personRepositoryMock.Setup(x => x.GetPersonGuidFromIdAsync(It.IsAny<string>()))
+                    .ReturnsAsync(DefaultHostGuid);
+
+                var tuple = new Tuple<IEnumerable<Institution>, int>(
+                  _institutionsCollection, _institutionsCollection.Count);
+                _institutionRepositoryMock.Setup(x =>
+                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<InstType?>()))
+                    .ReturnsAsync(tuple);
+                _institutionRepositoryMock.Setup(x =>
+                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), null))
+                    .ReturnsAsync(tuple);
+
+                _personRepositoryMock.Setup(x => x.GetPersonGuidsCollectionAsync(ids)).ReturnsAsync(idCollection);
+
+                var expected = _institutionsCollection.FirstOrDefault();
+
+                _institutionRepositoryMock.Setup(x => x.GetInstitutionByGuidAsync(It.IsAny<string>())).ReturnsAsync(expected);
+
+                var idPair = idCollection.FirstOrDefault(x => x.Key.Equals(expected.Id, StringComparison.OrdinalIgnoreCase));
+
+                var actual = await _educationalInstitutionsService.GetEducationalInstitutionByGuidAsync(idPair.Value);
+
+                Assert.IsTrue(actual is Dtos.EducationalInstitution);
+                Assert.IsNotNull(actual);
+            }
+
+            [TestMethod]
+            public async Task EducationalInstitutionsService_GetEducationalInstitutionsByGuid_InvalidPhoneTypesAsync()
+            {
+                _referenceDataRepositoryMock.Setup(repo => repo.GetPhoneTypesAsync(It.IsAny<bool>()))
+                   .ThrowsAsync(new RepositoryException());
+
+
+                var defaultsConfiguration = new DefaultsConfiguration()
+                {
+                    HostInstitutionCodeId = "0000043"
+                };
+                _configurationRepoMock.Setup(x => x.GetDefaultsConfiguration()).Returns(defaultsConfiguration);
+
+                _personRepositoryMock.Setup(x => x.GetPersonGuidFromIdAsync(It.IsAny<string>()))
+                    .ReturnsAsync(DefaultHostGuid);
+
+                var tuple = new Tuple<IEnumerable<Institution>, int>(
+                  _institutionsCollection, _institutionsCollection.Count);
+                _institutionRepositoryMock.Setup(x =>
+                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<InstType?>()))
+                    .ReturnsAsync(tuple);
+                _institutionRepositoryMock.Setup(x =>
+                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), null))
+                    .ReturnsAsync(tuple);
+
+                _personRepositoryMock.Setup(x => x.GetPersonGuidsCollectionAsync(ids)).ReturnsAsync(idCollection);
+
+                var expected = _institutionsCollection.FirstOrDefault();
+
+                _institutionRepositoryMock.Setup(x => x.GetInstitutionByGuidAsync(It.IsAny<string>())).ReturnsAsync(expected);
+
+                var idPair = idCollection.FirstOrDefault(x => x.Key.Equals(expected.Id, StringComparison.OrdinalIgnoreCase));
+
+                var actual = await _educationalInstitutionsService.GetEducationalInstitutionByGuidAsync(idPair.Value);
+
+                Assert.IsTrue(actual is Dtos.EducationalInstitution);
+                Assert.IsNotNull(actual);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task EducationalInstitutionsService_GetEducationalInstitutionsByGuid_Empty()
             {
                 await _educationalInstitutionsService.GetEducationalInstitutionByGuidAsync("");
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task EducationalInstitutionsService_GetEducationalInstitutionsByGuid_InvalidID()
             {
                 await _educationalInstitutionsService.GetEducationalInstitutionByGuidAsync("invalid");
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task EducationalInstitutionsService_GetEducationalInstitutionsByGuid_InvalidInstitutions()
+            {
+                var defaultsConfiguration = new DefaultsConfiguration()
+                {
+                    HostInstitutionCodeId = "0000043"
+                };
+                _configurationRepoMock.Setup(x => x.GetDefaultsConfiguration()).Returns(defaultsConfiguration);
+
+                _personRepositoryMock.Setup(x => x.GetPersonGuidFromIdAsync(It.IsAny<string>()))
+                    .ReturnsAsync(DefaultHostGuid);
+
+
+                _personRepositoryMock.Setup(x => x.GetPersonGuidsCollectionAsync(ids)).ReturnsAsync(idCollection);
+
+                var expected = _institutionsCollection.FirstOrDefault();
+
+                _institutionRepositoryMock.Setup(x => x.GetInstitutionByGuidAsync(It.IsAny<string>())).ThrowsAsync(new RepositoryException());
+
+                var idPair = idCollection.FirstOrDefault(x => x.Key.Equals(expected.Id, StringComparison.OrdinalIgnoreCase));
+
+                var actual = await _educationalInstitutionsService.GetEducationalInstitutionByGuidAsync(idPair.Value);
+
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task EducationalInstitutionsService_GetEducationalInstitutionsByGuid_InvalidPersonGuids()
+            {
+                var defaultsConfiguration = new DefaultsConfiguration()
+                {
+                    HostInstitutionCodeId = "0000043"
+                };
+                _configurationRepoMock.Setup(x => x.GetDefaultsConfiguration()).Returns(defaultsConfiguration);
+
+                _personRepositoryMock.Setup(x => x.GetPersonGuidFromIdAsync(It.IsAny<string>()))
+                    .ReturnsAsync(DefaultHostGuid);
+
+                var tuple = new Tuple<IEnumerable<Institution>, int>(
+                  _institutionsCollection, _institutionsCollection.Count);
+                _institutionRepositoryMock.Setup(x =>
+                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<InstType?>()))
+                    .ReturnsAsync(tuple);
+                _institutionRepositoryMock.Setup(x =>
+                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), null))
+                    .ReturnsAsync(tuple);
+
+                _personRepositoryMock.Setup(x => x.GetPersonGuidsCollectionAsync(ids)).ThrowsAsync(new RepositoryException());
+
+                var expected = _institutionsCollection.FirstOrDefault();
+
+                _institutionRepositoryMock.Setup(x => x.GetInstitutionByGuidAsync(It.IsAny<string>())).ReturnsAsync(expected);
+
+                var idPair = idCollection.FirstOrDefault(x => x.Key.Equals(expected.Id, StringComparison.OrdinalIgnoreCase));
+
+                var actual = await _educationalInstitutionsService.GetEducationalInstitutionByGuidAsync(idPair.Value);
+
+                
+            }
+
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task EducationalInstitutionsService_GetEducationalInstitutionsByGuid_EmptyInstitutionName()
+            {
+                var defaultsConfiguration = new DefaultsConfiguration()
+                {
+                    HostInstitutionCodeId = "0000043"
+                };
+                _configurationRepoMock.Setup(x => x.GetDefaultsConfiguration()).Returns(defaultsConfiguration);
+
+                _personRepositoryMock.Setup(x => x.GetPersonGuidFromIdAsync(It.IsAny<string>()))
+                    .ReturnsAsync(DefaultHostGuid);
+
+                var tuple = new Tuple<IEnumerable<Institution>, int>(
+                  _institutionsCollection, _institutionsCollection.Count);
+                _institutionRepositoryMock.Setup(x =>
+                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<InstType?>()))
+                    .ReturnsAsync(tuple);
+                _institutionRepositoryMock.Setup(x =>
+                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), null))
+                    .ReturnsAsync(tuple);
+
+                _personRepositoryMock.Setup(x => x.GetPersonGuidsCollectionAsync(ids)).ReturnsAsync(idCollection);
+
+                var expected = _institutionsCollection.FirstOrDefault();
+                expected.Name = string.Empty;
+
+                _institutionRepositoryMock.Setup(x => x.GetInstitutionByGuidAsync(It.IsAny<string>())).ReturnsAsync(expected);
+
+                var idPair = idCollection.FirstOrDefault(x => x.Key.Equals(expected.Id, StringComparison.OrdinalIgnoreCase));
+
+                await _educationalInstitutionsService.GetEducationalInstitutionByGuidAsync(idPair.Value);
+
             }
 
             [TestMethod]

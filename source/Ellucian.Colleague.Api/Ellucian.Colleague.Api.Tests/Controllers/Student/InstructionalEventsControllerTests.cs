@@ -1437,40 +1437,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task InstructionalEventsController_PutInstructionalEventAsync_MessageBody_Null()
-            {
-                await instructionalEventsController.PutInstructionalEvent4Async(Guid.NewGuid().ToString(), null);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task InstructionalEventsController_PutInstructionalEventAsync_MeetingId_Id_Different()
-            {
-                Dtos.InstructionalEvent4 instructionalEvent = allInstructionalEventsDtos.ElementAt(0);
-                string guid = Guid.NewGuid().ToString();
-                await instructionalEventsController.PutInstructionalEvent4Async(guid, instructionalEvent);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(HttpResponseException))]
-            public async Task InstructionalEventsController_PutInstructionalEventAsync_Id_Null()
-            {
-                Dtos.InstructionalEvent4 instructionalEvent = allInstructionalEventsDtos.ElementAt(0);
-                string guid = string.Empty;
-                await instructionalEventsController.PutInstructionalEvent4Async(guid, instructionalEvent);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(InvalidOperationException))]
-            public async Task InstructionalEventsController_PutInstructionalEventAsync_NillId_Null()
-            {
-                Dtos.InstructionalEvent4 instructionalEvent = allInstructionalEventsDtos.ElementAt(0);
-                string guid = Guid.Empty.ToString();
-                await instructionalEventsController.PutInstructionalEvent4Async(guid, instructionalEvent);
-            }
-
-            [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
             public async Task InstructionalEventsController_PutInstructionalEventAsync_PermissionsException()
             {

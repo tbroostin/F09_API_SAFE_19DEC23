@@ -1,9 +1,7 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using Ellucian.Colleague.Coordination.Base.Adapters;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
@@ -20,13 +18,14 @@ namespace Ellucian.Colleague.Coordination.Base.Services
     {
         private readonly IReferenceDataRepository _referenceDataRepository;
         private readonly IPersonRepository _personRepository;
+
         private const string _dataOrigin = "Colleague";
 
         public RoomCharacteristicService(IAdapterRegistry adapterRegistry, IReferenceDataRepository referenceDataRepository,
-                                         ICurrentUserFactory currentUserFactory,
+                                         ICurrentUserFactory currentUserFactory, IConfigurationRepository configurationRepository,
                                          IRoleRepository roleRepository,
                                          ILogger logger)
-            : base(adapterRegistry, currentUserFactory, roleRepository, logger)
+            : base(adapterRegistry, currentUserFactory, roleRepository, logger, null, configurationRepository)
         {
             _referenceDataRepository = referenceDataRepository;
         }

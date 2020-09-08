@@ -1,4 +1,4 @@
-﻿//Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -11,6 +11,7 @@ using slf4net;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using System.Web.Http;
@@ -43,6 +44,8 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// Returns all employment leave of absence reasons
         /// </summary>
         /// <returns></returns>
+        /// 
+        [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Dtos.EmploymentStatusEndingReason>> GetAllEmploymentLeaveOfAbsenceReasonsAsync()
         {
@@ -56,7 +59,16 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                         bypassCache = true;
                     }
                 }
-                return await _employmentStatusEndingReasonService.GetEmploymentStatusEndingReasonsAsync(bypassCache);
+                var employmentLeaveOfAbsenceReasons = await _employmentStatusEndingReasonService.GetEmploymentStatusEndingReasonsAsync(bypassCache);
+
+                if (employmentLeaveOfAbsenceReasons != null && employmentLeaveOfAbsenceReasons.Any())
+                {
+                    AddEthosContextProperties(await _employmentStatusEndingReasonService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _employmentStatusEndingReasonService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              employmentLeaveOfAbsenceReasons.Select(a => a.Id).ToList()));
+                }
+
+                return employmentLeaveOfAbsenceReasons;                
             }
             catch (Exception e)
             {
@@ -70,10 +82,15 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
+        [HttpGet, EedmResponseFilter]
         public async Task<Dtos.EmploymentStatusEndingReason> GetEmploymentLeaveOfAbsenceReasonByIdAsync([FromUri] string id)
         {
             try
             {
+                AddEthosContextProperties(
+                    await _employmentStatusEndingReasonService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                    await _employmentStatusEndingReasonService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                        new List<string>() { id }));
                 return await _employmentStatusEndingReasonService.GetEmploymentStatusEndingReasonByIdAsync(id);
             }
             catch (KeyNotFoundException e)

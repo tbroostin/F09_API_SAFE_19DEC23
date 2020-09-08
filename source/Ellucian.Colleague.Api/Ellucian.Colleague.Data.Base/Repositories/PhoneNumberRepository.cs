@@ -122,7 +122,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         }
                         catch (Exception ex)
                         {
-                            LogDataError("Person personal phone information", personId, phoneData, ex);
+                            logger.Error(ex.Message);
+                            //LogDataError("Person personal phone information", personId, phoneData, ex);
                         }
                     }
                 }
@@ -151,7 +152,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                 }
                                 catch (Exception ex)
                                 {
-                                    var phoneError = "Person local phone information is invalid. PersonId: " + personId;
+                                    var phoneError = "Person local phone information is invalid.";
 
                                     // Log the original exception
                                     logger.Error(ex.ToString());
@@ -171,7 +172,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                 }
                                 catch (Exception ex)
                                 {
-                                    var phoneError = "Person address phone information is invalid. PersonId: " + personId;
+                                    var phoneError = "Person address phone information is invalid.";
                                     // Log the original exception
                                     logger.Error(ex.ToString());
                                     logger.Info(phoneError);
@@ -296,7 +297,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     catch (Exception e)
                     {
                         /// Just skip this person's phone number and log it.
-                        LogDataError("PERSON", personId, person, e, string.Format("Failed to build phone number.  Person ID {0}", personId));
+                        //LogDataError("PERSON", personId, person, e, string.Format("Failed to build phone number.  Person ID {0}", personId));
+                        logger.Error(e.Message);
                         error = true;
                     }
                 }

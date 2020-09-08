@@ -17,6 +17,8 @@ using System.Web.Http;
 using System.Web.Http.Hosting;
 using System.Web.Http.Routing;
 using System.Web.Routing;
+using Ellucian.Colleague.Coordination.Base.Services;
+using slf4net;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Base
 {
@@ -35,6 +37,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             private RouteCollection httpRouteCollection = new RouteCollection();
             List<ApiResources> resourcesDtoList = new List<ApiResources>();
             private Mock<ICacheProvider> cacheProviderMock;
+            private Mock<IBulkLoadRequestService> bulkLoadServiceMock;
+            private Mock<ILogger> loggerMock;
 
             [TestInitialize]
             public void Initialize()
@@ -44,7 +48,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
 
                 BuildData();
 
-                resourcesController = new ResourcesController(cacheProviderMock.Object);
+                resourcesController = new ResourcesController(bulkLoadServiceMock.Object, cacheProviderMock.Object, loggerMock.Object);
                 resourcesController.Request = new HttpRequestMessage();
                 resourcesController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, configuration);
             }
@@ -135,6 +139,11 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                 cacheProviderMock = new Mock<Ellucian.Web.Cache.ICacheProvider>();
                 cacheProviderMock.Setup(x => x.Contains(EEDM_WEBAPI_RESOURCES_CACHE_KEY, null)).Returns(true);
                 cacheProviderMock.Setup(x => x[EEDM_WEBAPI_RESOURCES_CACHE_KEY]).Returns(resourcesDtoList);
+
+                loggerMock = new Mock<ILogger>();
+                
+                bulkLoadServiceMock = new Mock<IBulkLoadRequestService>();
+
             }
         }
     }

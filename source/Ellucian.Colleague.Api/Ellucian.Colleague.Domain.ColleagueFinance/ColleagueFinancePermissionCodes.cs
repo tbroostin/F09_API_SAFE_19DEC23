@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Base;
 using System;
@@ -25,6 +25,12 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance
 
         // View any vendor information
         public const string ViewVendors = "VIEW.VENDORS";
+
+        // View any vendor contacts information
+        public const string ViewVendorContacts = "VIEW.VENDOR.CONTACT";
+        
+        // Create / Update any vendor contacts information
+        public const string ProcessVendorContact = "PROCESS.VENDOR.CONTACT";
 
         // Update any Purchase Order
         public const string UpdatePurchaseOrders = "UPDATE.PURCHASE.ORDERS";
@@ -143,6 +149,9 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance
         // Create or Update any requisition
         public const string CreateUpdateRequisition = "CREATE.UPDATE.REQUISITION";
 
+        // Delete any requisition
+        public const string DeleteRequisition = "DELETE.REQUISITION";
+
         // Create or Update any purchase order
         public const string CreateUpdatePurchaseOrder = "CREATE.UPDATE.PURCHASE.ORDER";
 
@@ -154,6 +163,14 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance
 
         // View any vendor information/s
         public const string ViewVendor = "VIEW.VENDOR";
+
+        // View or Update procurement items
+        public const string ViewUpdateProcurementReceiving = "UPDATE.RECEIVING";
+
+        // View your document approval
+        public const string ViewDocumentApproval = "VIEW.DOCUMENT.APPROVAL";
+        // Create or Update Voucher
+        public const string CreateUpdateVoucher = "CREATE.UPDATE.VOUCHER";
 
         #endregion
     }

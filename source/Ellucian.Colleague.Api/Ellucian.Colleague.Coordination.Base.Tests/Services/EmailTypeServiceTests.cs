@@ -66,7 +66,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             // Set up current user
             _currentUserFactory = new PersonServiceTests.CurrentUserSetup.PersonUserFactory();
-            _emailTypesService = new EmailTypeService(_adapterRegistry, _refRepo, personRepositoryMock.Object, _currentUserFactory, _roleRepo, _logger);
+            _emailTypesService = new EmailTypeService(_adapterRegistry, _refRepo, personRepositoryMock.Object, _currentUserFactory, _roleRepo, _logger, _configurationRepository);
 
             allEmailTypes = new TestEmailTypeRepository().Get();
             _refRepoMock.Setup(repo => repo.GetEmailTypesAsync(It.IsAny<bool>())).ReturnsAsync(allEmailTypes);

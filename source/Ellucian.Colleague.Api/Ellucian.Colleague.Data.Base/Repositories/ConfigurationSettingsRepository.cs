@@ -1,4 +1,4 @@
-﻿/*Copyright 2019 Ellucian Company L.P. and its affiliates. */
+﻿/*Copyright 2019-2020 Ellucian Company L.P. and its affiliates. */
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
@@ -294,6 +294,12 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         configurationSetting.SourceTitle = await GetDuplicateCriteriaAsync(configurationSetting.SourceValue, bypassCache);
                         break;
                     }
+                case "LDMD.PROSPECT.DUPL.CRITERIA":
+                    {
+                        configurationSetting.SourceValue = ldmDefaults.LdmdProspectDuplCriteria;
+                        configurationSetting.SourceTitle = await GetDuplicateCriteriaAsync(configurationSetting.SourceValue, bypassCache);
+                        break;
+                    }
                 case "LDMD.CHECK.FACULTY.LOAD":
                     {
                         if (!string.IsNullOrEmpty(ldmDefaults.LdmdCheckFacultyLoad))
@@ -334,6 +340,18 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         configurationSetting.SourceValue = "ethos";
                         configurationSetting.SourceTitle = "Update ethos value";
+                        break;
+                    }
+                case "LDMD.RELATION.DUPL.CRITERIA":
+                    {
+                        configurationSetting.SourceValue = ldmDefaults.LdmdRelationDuplCriteria;
+                        configurationSetting.SourceTitle = await GetDuplicateCriteriaAsync(configurationSetting.SourceValue, bypassCache);
+                        break;
+                    }
+                case "LDMD.VENCONTACT.DUP.CRITERIA":
+                    {
+                        configurationSetting.SourceValue = ldmDefaults.LdmdVencontactDupCriteria;
+                        configurationSetting.SourceTitle = await GetDuplicateCriteriaAsync(configurationSetting.SourceValue, bypassCache);
                         break;
                     }
             }

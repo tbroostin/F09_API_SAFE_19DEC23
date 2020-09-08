@@ -107,11 +107,11 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         {
             if (string.IsNullOrEmpty(person))
             {
-                throw new ArgumentNullException(string.Concat("Person Id is required, Entity: 'MEAL.PLAN.ASSIGNMENT', Record ID: '",guid, "'"));
+                throw new ArgumentNullException(string.Concat("Person Id is required, Entity: 'MEAL.PLAN.ASSIGNMENT.', Record ID: '",guid, "'"));
             }
             if (string.IsNullOrEmpty(mealplan))
             {
-                throw new ArgumentNullException(string.Concat("Meal Plan is required for meal plan assignment', Record ID: '", guid, "'")); 
+                throw new ArgumentNullException(string.Concat("Meal Plan is required for meal plan assignment.', Record ID: '", guid, "'")); 
             }
             if (NoRatePeriods <= 0 )
             {
@@ -119,15 +119,15 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             }
             if (startDate == null)
             {
-                throw new ArgumentNullException(string.Concat("StartDate is required for meal plan assignment', Record ID: '", guid, "'")); 
+                throw new ArgumentNullException(string.Concat("StartDate is required for meal plan assignment.', Record ID: '", guid, "'")); 
             }
             if (string.IsNullOrEmpty(status))
             {
-                throw new ArgumentNullException(string.Concat("Status is required for meal plan assignment', Record ID: '", guid, "'")); 
+                throw new ArgumentNullException(string.Concat("Status is required for meal plan assignment.', Record ID: '", guid, "'")); 
             }
             if (statusDate == null)
             {
-                throw new ArgumentNullException(string.Concat("Status date is required for meal plan assignment', Record ID: '", guid, "'")); 
+                throw new ArgumentNullException(string.Concat("Status date is required for meal plan assignment.', Record ID: '", guid, "'")); 
             }
 
             _Guid = guid;

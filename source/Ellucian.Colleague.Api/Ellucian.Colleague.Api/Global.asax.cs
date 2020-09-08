@@ -154,9 +154,6 @@ namespace Ellucian.Colleague.Api
                 // Only execute this code block if config monitoring is configured and this is a SaaS environment
                 if (AppConfigUtility.ConfigServiceClientSettings != null && AppConfigUtility.ConfigServiceClientSettings.IsSaaSEnvironment)
                 {
-                    // Force outbound requests to include TLS 1.2 as that's the only one the storage service accepts.
-                    ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls;
-
                     // ***FIRST***, grab current config object and its checksum by calling this app's own "gather config data" method
 
                     var configObject = AppConfigUtility.GetApiConfigurationObject();

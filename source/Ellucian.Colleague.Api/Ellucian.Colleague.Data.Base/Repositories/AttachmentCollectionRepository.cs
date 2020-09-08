@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -54,9 +54,17 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 throw new ArgumentNullException("attachmentCollectionId");
 
             // get the collection by ID
-            var collectionRecord = await DataReader.ReadRecordAsync<AttachmentCollections>(attachmentCollectionId);
-
-            return BuildCollections(new List<AttachmentCollections>() { collectionRecord }).FirstOrDefault();
+            try
+            {
+                var collectionRecord = await DataReader.ReadRecordAsync<AttachmentCollections>(attachmentCollectionId);
+                return BuildCollections(new List<AttachmentCollections>() { collectionRecord }).FirstOrDefault();
+            }
+            catch (Exception e)
+            {
+                string error = "Error occurred retrieving attachment collection metadata";
+                logger.Error(e, string.Format("{0} for attachment collection ID {1}", error, attachmentCollectionId));
+                throw new RepositoryException(error);
+            }
         }
 
         /// <summary>
@@ -70,9 +78,17 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 throw new ArgumentNullException("attachmentCollectionIds");
 
             // get the collections by ID
-            var collectionRecords = await DataReader.BulkReadRecordAsync<AttachmentCollections>(attachmentCollectionIds.ToArray());
-
-            return BuildCollections(collectionRecords);
+            try
+            {
+                var collectionRecords = await DataReader.BulkReadRecordAsync<AttachmentCollections>(attachmentCollectionIds.ToArray());
+                return BuildCollections(collectionRecords);
+            }
+            catch (Exception e)
+            {
+                string error = "Error occurred retrieving bulk attachment collection metadata";
+                logger.Error(e, error);
+                throw new RepositoryException(error);
+            }            
         }
 
         /// <summary>
@@ -103,9 +119,18 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 criteria.Append(" )");
             }
             criteria.Append(string.Format(" AND ATCOL.STATUS EQ '{0}'", collectionActiveStatus));
-            var collectionRecords = await DataReader.BulkReadRecordAsync<AttachmentCollections>(criteria.ToString());
 
-            return BuildCollections(collectionRecords);
+            try
+            {
+                var collectionRecords = await DataReader.BulkReadRecordAsync<AttachmentCollections>(criteria.ToString());
+                return BuildCollections(collectionRecords);
+            }
+            catch (Exception e)
+            {
+                string error = "Error occurred retrieving attachment collection metadata by user";
+                logger.Error(e, error);
+                throw new RepositoryException(error);
+            }            
         }
 
         /// <summary>

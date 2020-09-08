@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2019 Ellucian Company L.P. and i affiliates.
+﻿// Copyright 2017-2020 Ellucian Company L.P. and i affiliates.
 
 using System.Collections.Generic;
 using System.Linq;
@@ -349,6 +349,19 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             },
         };
 
+        // Create a list of active general ledger account strings.
+        public List<string> activeGlAccounts = new List<string>() { "11_01_01_00_00000_75075" };
+
+        /// <summary>
+        /// Restricts a list of GL accounts to those that are active.
+        /// </summary>
+        /// <param name="glAccounts">List of general ledger account strings.</param>
+        /// <returns>A list of active general ledger account strings.</returns>
+        public async Task<List<string>> GetActiveGeneralLedgerAccounts(List<string> glAccounts)
+        {
+            return await Task.Run(() => { return activeGlAccounts; });
+        }
+
         /// <summary>
         /// Retrieves a set of general ledger accounts.
         /// </summary>
@@ -361,12 +374,15 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
 
             for (int i = 0; i < generalLedgerAccountIds.Count(); i++)
             {
-                glAccountsList.Add(generalLedgerAccountIds.ElementAt(i), "Description " + i.ToString());
+                if (!glAccountsList.ContainsKey(generalLedgerAccountIds.ElementAt(i)))
+                {
+                    glAccountsList.Add(generalLedgerAccountIds.ElementAt(i), "Description " + i.ToString());
+                }
             }
 
             return await Task.Run(() => { return glAccountsList; });
         }
-        
+
         /// <summary>
         /// Retrieves a single general ledger account.
         /// </summary>
@@ -409,7 +425,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             return await Task.Run(() => { return glAccountComponentValuesDictionary; });
         }
 
-        public Task<IEnumerable<GlAccount>> GetUserGeneralLedgerAccountsAsync(IEnumerable<string> glAccounts, GeneralLedgerAccountStructure glAccountStructure)
+        Task<IEnumerable<GlAccount>> IGeneralLedgerAccountRepository.GetUserGeneralLedgerAccountsAsync(IEnumerable<string> glAccounts, GeneralLedgerAccountStructure glAccountStructure)
         {
             throw new NotImplementedException();
         }

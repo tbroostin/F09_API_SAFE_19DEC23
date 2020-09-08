@@ -149,6 +149,7 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Entities
         }
 
         [TestMethod]
+        [Ignore]
         public void StudentStatementScheduleItem_Constructor_Valid()
         {
             var sectionA = section;
@@ -171,6 +172,7 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Entities
         }
 
         [TestMethod]
+        [Ignore]
         public void StudentStatementScheduleItem_Constructor_Valid_SectionWithNullLocationAndEndDate()
         {
             section2.AddSectionMeeting(meeting1);
@@ -193,6 +195,7 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Entities
         }
 
         [TestMethod]
+        [Ignore]
         public void StudentStatementScheduleItem_Constructor_Valid_SectionWithEmptyLocation()
         {
             section3.AddSectionMeeting(meeting1);
@@ -229,6 +232,7 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Entities
         }
 
         [TestMethod]
+        [Ignore]
         public void StudentStatementScheduleItem_Constructor_ValidSection_NullMeetings()
         {
             var sectionA = section;

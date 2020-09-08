@@ -202,6 +202,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             Assert.AreEqual(expected.Title, actual.Title, "Title");
         }
 
+
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task ConfigurationSettingsController_GetConfigurationSettings_Exception()
@@ -282,7 +283,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         [TestMethod]
         public async Task ConfigurationSettingsController_PutConfigurationSettingsAsync_ValidateFields()
         {
-            var expected = configurationSettingsCollection.FirstOrDefault();
+            var expected = configurationSettingsCollection.ToArray().FirstOrDefault();
             configurationSettingsServiceMock.Setup(x => x.UpdateConfigurationSettingsAsync(expected)).ReturnsAsync(expected);
 
             var sourceContext = configurationSettingsCollection.FirstOrDefault();
@@ -290,6 +291,97 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
 
             Assert.AreEqual(expected.Id, actual.Id, "Id");
             Assert.AreEqual(expected.Title, actual.Title, "Title");
+        }
+
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task ConfigurationSettingsController_PutConfigurationSettingsAsync_UpdateDesc()
+        {
+           
+            var expected =  new ConfigurationSettings
+            {
+                Id = "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc",
+                Title = "Person Match Criteria",
+                Description = "Long Description for field help.",
+                Ethos = new ConfigurationSettingsEthos() { Resources = new List<string>() { "persons" } },
+                Source = new ConfigurationSettingsSource() { Title = "Integration Person Matching", Value = "INTG.PERSON" }
+            };
+
+            configurationSettingsServiceMock.Setup(x => x.GetConfigurationSettingsByGuidAsync(expected.Id, It.IsAny<bool>())).ReturnsAsync(expected);
+           
+            configurationSettingsServiceMock.Setup(x => x.UpdateConfigurationSettingsAsync(expected)).ReturnsAsync(expected);
+
+            var sourceContext = new ConfigurationSettings
+            {
+                Id = "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc",
+                Title = "Person Match Criteria",
+                Description = "INVALID",
+                Ethos = new ConfigurationSettingsEthos() { Resources = new List<string>() { "persons" } },
+                Source = new ConfigurationSettingsSource() { Title = "Integration Person Matching", Value = "INTG.PERSON" }
+            };
+            await configurationSettingsController.PutConfigurationSettingsAsync(sourceContext.Id, sourceContext);
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task ConfigurationSettingsController_PutConfigurationSettingsAsync_UpdateSourceTitle()
+        {
+            var expected = new ConfigurationSettings
+            {
+                Id = "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc",
+                Title = "Person Match Criteria",
+                Description = "Long Description for field help.",
+                Ethos = new ConfigurationSettingsEthos() { Resources = new List<string>() { "persons" } },
+                Source = new ConfigurationSettingsSource() { Title = "Integration Person Matching", Value = "INTG.PERSON" }
+            };
+
+
+            configurationSettingsServiceMock.Setup(x => x.GetConfigurationSettingsByGuidAsync(expected.Id, It.IsAny<bool>())).ReturnsAsync(expected);
+
+            configurationSettingsServiceMock.Setup(x => x.UpdateConfigurationSettingsAsync(expected)).ReturnsAsync(expected);
+
+            var sourceContext = new ConfigurationSettings
+            {
+                Id = "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc",
+                Title = "Person Match Criteria",
+                Description = "Long Description for field help.",
+                Ethos = new ConfigurationSettingsEthos() { Resources = new List<string>() { "persons" } },
+                Source = new ConfigurationSettingsSource() { Title = "INVALID", Value = "INTG.PERSON" }
+            };
+            await configurationSettingsController.PutConfigurationSettingsAsync(sourceContext.Id, sourceContext);
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task ConfigurationSettingsController_PutConfigurationSettingsAsync_UpdateTitle()
+        {
+            var expected = new ConfigurationSettings
+            {
+                Id = "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc",
+                Title = "Person Match Criteria",
+                Description = "Long Description for field help.",
+                Ethos = new ConfigurationSettingsEthos() { Resources = new List<string>() { "persons" } },
+                Source = new ConfigurationSettingsSource() { Title = "Integration Person Matching", Value = "INTG.PERSON" }
+            };
+
+
+            configurationSettingsServiceMock.Setup(x => x.GetConfigurationSettingsByGuidAsync(expected.Id, It.IsAny<bool>())).ReturnsAsync(expected);
+
+            configurationSettingsServiceMock.Setup(x => x.UpdateConfigurationSettingsAsync(expected)).ReturnsAsync(expected);
+
+            var sourceContext = new ConfigurationSettings
+            {
+                Id = "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc",
+                Title = "INVALID",
+                Description = "Long Description for field help.",
+                Ethos = new ConfigurationSettingsEthos() { Resources = new List<string>() { "persons" } },
+                Source = new ConfigurationSettingsSource() { Title = "Integration Person Matching", Value = "INTG.PERSON" }
+            };
+            await configurationSettingsController.PutConfigurationSettingsAsync(sourceContext.Id, sourceContext);
+
         }
 
         [TestMethod]

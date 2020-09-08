@@ -1,4 +1,4 @@
-﻿//Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -20,6 +20,7 @@ using Ellucian.Web.Http.Models;
 using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http;
 using Ellucian.Colleague.Dtos;
+using System.Linq;
 
 namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 {
@@ -49,7 +50,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// Return all vendorHoldReasons
         /// </summary>
         /// <returns>List of VendorHoldReasons <see cref="VendorHoldReasons"/> objects representing matching vendorHoldReasons</returns>
-        [HttpGet]
+        [HttpGet, EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<VendorHoldReasons>> GetVendorHoldReasonsAsync()
         {
@@ -63,7 +64,16 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
             try
             {
-                return await _vendorHoldReasonsService.GetVendorHoldReasonsAsync(bypassCache);
+                var vendorHoldReasons = await _vendorHoldReasonsService.GetVendorHoldReasonsAsync(bypassCache);
+
+                if (vendorHoldReasons != null && vendorHoldReasons.Any())
+                {
+                    AddEthosContextProperties(await _vendorHoldReasonsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _vendorHoldReasonsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              vendorHoldReasons.Select(a => a.Id).ToList()));
+                }
+
+                return vendorHoldReasons;                
             }
             catch (KeyNotFoundException e)
             {
@@ -102,7 +112,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// </summary>
         /// <param name="guid">GUID to desired vendorHoldReasons</param>
         /// <returns>A vendorHoldReasons object <see cref="VendorHoldReasons"/> in EEDM format</returns>
-        [HttpGet]
+        [HttpGet, EedmResponseFilter]
         public async Task<VendorHoldReasons> GetVendorHoldReasonsByIdAsync(string guid)
         {
             if (string.IsNullOrEmpty(guid))
@@ -112,6 +122,10 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
             try
             {
+                AddEthosContextProperties(
+                    await _vendorHoldReasonsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo()),
+                    await _vendorHoldReasonsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                        new List<string>() { guid }));
                 return await _vendorHoldReasonsService.GetVendorHoldReasonsByGuidAsync(guid);
             }
             catch (KeyNotFoundException e)

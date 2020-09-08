@@ -120,5 +120,26 @@ namespace Ellucian.Colleague.Dtos
         [DataMember(Name = "comment", EmitDefaultValue = false)]
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public string Comment { get; set; }
+
+        /// <summary>
+        /// The education goal associated with the application
+        /// </summary>
+        [DataMember(Name = "educationalGoal", EmitDefaultValue = false)]
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public GuidObject2 EducationalGoal { get; set; }
+
+        /// <summary>
+        /// The career goals associated with the application
+        /// </summary>
+        [DataMember(Name = "careerGoals", EmitDefaultValue = false)]
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public List<GuidObject2> CareerGoals { get; set; }
+
+        /// <summary>
+        /// The influences associated with the application
+        /// </summary>
+        [DataMember(Name = "influences", EmitDefaultValue = false)]
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public List<GuidObject2> Influences { get; set; }
     }
 }

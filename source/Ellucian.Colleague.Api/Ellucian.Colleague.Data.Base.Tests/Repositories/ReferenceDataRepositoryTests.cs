@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Data.Base.Transactions;
@@ -3539,6 +3539,48 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             }
 
             [TestMethod]
+            public void AllowAttachments_IsTrueWhenY_Test()
+            {
+                expectedCommunicationCodesRepository.communicationCodeData.Add(new TestCommunicationCodesRepository.CommunicationCodeRecord()
+                {
+                    Guid = "5bce3016-b7de-4e7e-ac7f-b53714a15f1c",
+                    RecordKey = "FOOBAR",
+                    CcDescription = "description",
+                    CcAllowsAttachments = "y"
+                });
+
+                CollectionAssert.AreEqual(expectedCommunicationCodes, actualCommunicationCodes);
+
+                var actual = actualCommunicationCodes.First(c => c.Code == "FOOBAR");
+                Assert.IsTrue(actual.AllowsAttachments);
+            }
+
+            [TestMethod]
+            public void AllowAttachments_IsFalseWhenN_Test()
+            {
+                expectedCommunicationCodesRepository.communicationCodeData.Add(new TestCommunicationCodesRepository.CommunicationCodeRecord()
+                {
+                    Guid = "5bce3016-b7de-4e7e-ac7f-b53714a15f1c",
+                    RecordKey = "FOOBAR",
+                    CcDescription = "description",
+                    CcAllowsAttachments = "n"
+                });
+
+                CollectionAssert.AreEqual(expectedCommunicationCodes, actualCommunicationCodes);
+
+                var actual = actualCommunicationCodes.First(c => c.Code == "FOOBAR");
+                Assert.IsFalse(actual.AllowsAttachments);
+            }
+            [TestMethod]
+            public void AllowAttachments_IsFalseWhenNull_Test()
+            {
+                CollectionAssert.AreEqual(expectedCommunicationCodes, actualCommunicationCodes);
+
+                var actual = actualCommunicationCodes.First(c => c.Code == "CcCode1");
+                Assert.IsFalse(actual.AllowsAttachments);
+            }
+
+            [TestMethod]
             public void NullUrlsInRecord_EmptyHyperlinksList()
             {
                 expectedCommunicationCodesRepository.communicationCodeData.ForEach(cc => cc.CcUrls = null);
@@ -3585,6 +3627,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                                 CcExplanation = record.CcExplanation,
                                 CcFaYear = record.CcFaYear,
                                 CcOffice = record.CcOffice,
+                                CcAllowAttachments = record.CcAllowsAttachments,
                                 CcUrlsEntityAssociation = record.CcUrls == null ? null : record.CcUrls.Select(url =>
                                     new CcCodesCcUrls()
                                     {
@@ -7009,6 +7052,17 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             }
 
             [TestMethod]
+            public async Task ReferenceDataRepository_GetsRemarkCodesGuidAsync()
+            {
+                var remarkCodes = await _referenceDataRepo.GetRemarkCodesAsync(It.IsAny<bool>());
+                for (int i = 0; i < _allRemarkCodes.Count(); i++)
+                {
+                    var remarkCodeGuid = await _referenceDataRepo.GetRemarkCodesGuidAsync(remarkCodes.ElementAt(i).Code);
+                    Assert.AreEqual(_allRemarkCodes.ElementAt(i).Guid, remarkCodeGuid);
+                }
+            }
+
+            [TestMethod]
             public async Task ReferenceDataRepository_GetRemarkCode_WritesToCache()
             {
 
@@ -7101,7 +7155,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         }
 
         /// <summary>
-        /// Test class for Remark Codes codes
+        /// Test class for Remark Types codes
         /// </summary>
         [TestClass]
         public class RemarkTypes
@@ -7163,6 +7217,19 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     Assert.AreEqual(_allRemarkTypes.ElementAt(i).Description, (await _referenceDataRepo.GetRemarkTypesAsync(true)).ElementAt(i).Description);
                 }
             }
+
+
+            [TestMethod]
+            public async Task ReferenceDataRepository_GetsRemarkTypesGuidAsync()
+            {
+                var remarkTypes = await _referenceDataRepo.GetRemarkTypesAsync(It.IsAny<bool>());
+                for (int i = 0; i < _allRemarkTypes.Count(); i++)
+                {
+                    var remarkTypeGuid = await _referenceDataRepo.GetRemarkTypesGuidAsync(remarkTypes.ElementAt(i).Code);
+                    Assert.AreEqual(_allRemarkTypes.ElementAt(i).Guid, remarkTypeGuid);
+                }
+            }
+
 
             [TestMethod]
             public async Task ReferenceDataRepository_GetRemarkType_WritesToCache()
@@ -8886,6 +8953,306 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                         var altCredIdType = _alternativeCredentialTypesCollection.Where(e => e.Code == recordKeyLookup.SecondaryKey).FirstOrDefault();
                         result.Add(string.Join("+", new string[] { "CORE.VALCODES", "ALT.ID.TYPES", altCredIdType.Code }),
                             new RecordKeyLookupResult() { Guid = altCredIdType.Guid });
+                    }
+                    return Task.FromResult(result);
+                });
+
+                // Construct repository
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+
+                return referenceDataRepo;
+            }
+        }
+
+        [TestClass]
+        public class TaxFormsTests
+        {
+            Mock<IColleagueTransactionFactory> transFactoryMock;
+            Mock<ICacheProvider> cacheProviderMock;
+            Mock<IColleagueDataReader> dataAccessorMock;
+            Mock<ILogger> loggerMock;
+            IEnumerable<TaxForms2> allTaxForms;
+            ApplValcodes taxFormsValcodeResponse;
+            string domainEntityNameName;
+            ApiSettings apiSettings;
+
+            Mock<IReferenceDataRepository> referenceDataRepositoryMock;
+            IReferenceDataRepository referenceDataRepository;
+           ReferenceDataRepository referenceDataRepo;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                loggerMock = new Mock<ILogger>();
+                apiSettings = new ApiSettings("TEST");
+
+                allTaxForms = new List<TaxForms2>()
+                {
+                    new TaxForms2("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "AT", "Athletic", "A1"),
+                    new TaxForms2("849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "AC", "Academic", "A2"),
+                    new TaxForms2("d2253ac7-9931-4560-b42f-1fccd43c952e", "CU", "Cultural", "A3")
+                };
+                taxFormsValcodeResponse = BuildValcodeResponse(allTaxForms);
+                var taxFormsValResponse = new List<string>() { "2" };
+                taxFormsValcodeResponse.ValActionCode1 = taxFormsValResponse;
+
+                referenceDataRepositoryMock = new Mock<IReferenceDataRepository>();
+                referenceDataRepository = referenceDataRepositoryMock.Object;
+
+                referenceDataRepo = BuildValidReferenceDataRepository();
+                domainEntityNameName = referenceDataRepo.BuildFullCacheKey("CORE_TAX.FORMS");
+
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
+                   x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                   .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                transFactoryMock = null;
+                dataAccessorMock = null;
+                cacheProviderMock = null;
+                taxFormsValcodeResponse = null;
+                allTaxForms = null;
+                referenceDataRepo = null;
+            }
+
+
+            [TestMethod]
+            public async Task BaseReferenceDataRepo_GetsTaxFormsCacheAsync()
+            {
+                var taxForms = await referenceDataRepo.GetTaxFormsBaseAsync(It.IsAny<bool>());
+
+                for (int i = 0; i < allTaxForms.Count(); i++)
+                {
+                    Assert.AreEqual(allTaxForms.ElementAt(i).Code, taxForms.ElementAt(i).Code);
+                    Assert.AreEqual(allTaxForms.ElementAt(i).Description, taxForms.ElementAt(i).Description);
+                }
+            }
+
+            [TestMethod]
+            public async Task BaseReferenceDataRepo_GetsTaxFormsNonCacheAsync()
+            {
+                var statuses = await referenceDataRepo.GetTaxFormsBaseAsync(true);
+
+                for (int i = 0; i < allTaxForms.Count(); i++)
+                {
+                    Assert.AreEqual(allTaxForms.ElementAt(i).Code, statuses.ElementAt(i).Code);
+                    Assert.AreEqual(allTaxForms.ElementAt(i).Description, statuses.ElementAt(i).Description);
+                }
+            }
+
+            [TestMethod]
+            public async Task BaseReferenceDataRepo_GetTaxForms_WritesToCacheAsync()
+            {
+
+                // Set up local cache mock to respond to cache request:
+                //  -to "Contains" request, return "false" to indicate item is not in cache
+                //  -to cache "Get" request, return null so we know it's reading from the "repository"
+                cacheProviderMock.Setup(x => x.Contains(domainEntityNameName, null)).Returns(false);
+                cacheProviderMock.Setup(x => x.Get(domainEntityNameName, null)).Returns(null);
+
+                // return a valid response to the data accessor request
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("CORE", "TAX.FORMS", It.IsAny<bool>())).ReturnsAsync(taxFormsValcodeResponse);
+
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
+                 x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                 .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+
+                // But after data accessor read, set up mocking so we can verify the list of taxForms was written to the cache
+                cacheProviderMock.Setup(x => x.Add(It.IsAny<string>(), It.IsAny<Task<List<TaxForms>>>(), It.IsAny<CacheItemPolicy>(), null)).Verifiable();
+
+                cacheProviderMock.Setup(x => x.Contains(referenceDataRepo.BuildFullCacheKey("CORE_TAX.FORMS"), null)).Returns(true);
+                var taxForms = await referenceDataRepo.GetTaxFormsBaseAsync(It.IsAny<bool>());
+                cacheProviderMock.Setup(x => x.Get(referenceDataRepo.BuildFullCacheKey("CORE_TAX.FORMS"), null)).Returns(taxForms);
+                // Verify that taxForms were returned, which means they came from the "repository".
+                Assert.IsTrue(taxForms.Count() == 3);
+
+                // Verify that the taxForms item was added to the cache after it was read from the repository
+                cacheProviderMock.Verify(m => m.Add(It.IsAny<string>(), It.IsAny<Task<List<TaxForms>>>(), It.IsAny<CacheItemPolicy>(), null), Times.Never);
+
+            }
+
+            [TestMethod]
+            public async Task BaseReferenceDataRepo_GetTaxForms_GetsCachedTaxFormsAsync()
+            {
+                // Set up local cache mock to respond to cache request:
+                //  -to "Contains" request, return "true" to indicate item is in cache
+                //  -to "Get" request, return the cache item (in this case the "TAX.FORMS" cache item)
+                cacheProviderMock.Setup(x => x.Contains(domainEntityNameName, null)).Returns(true);
+                cacheProviderMock.Setup(x => x.Get(domainEntityNameName, null)).Returns(allTaxForms).Verifiable();
+
+                // return null for request, so that if we have a result, it wasn't the data accessor that returned it.
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("CORE", "TAX.FORMS", true)).ReturnsAsync(new ApplValcodes());
+
+                // Assert the taxForms are returned
+                var results = await referenceDataRepo.GetTaxFormsBaseAsync(It.IsAny<bool>());
+                Assert.IsTrue(results.Count() == 3);
+                // Verify that the staxForms were retrieved from cache
+                //cacheProviderMock.Verify(m => m.Get(domainEntityNameName, null));
+            }
+
+            private ReferenceDataRepository BuildValidReferenceDataRepository()
+            {
+                // transaction factory mock
+                transFactoryMock = new Mock<IColleagueTransactionFactory>();
+                // Cache Provider Mock
+                cacheProviderMock = new Mock<ICacheProvider>();
+                // Set up data accessor for mocking 
+                dataAccessorMock = new Mock<IColleagueDataReader>();
+
+                // Set up dataAccessorMock as the object for the DataAccessor
+                transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
+
+                // Setup response to taxForms domainEntityName read
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<ApplValcodes>("CORE.VALCODES", "TAX.FORMS", It.IsAny<bool>())).ReturnsAsync(taxFormsValcodeResponse);
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x => x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+
+                dataAccessorMock.Setup(acc => acc.SelectAsync(It.IsAny<RecordKeyLookup[]>())).Returns<RecordKeyLookup[]>(recordKeyLookups =>
+                {
+                    var result = new Dictionary<string, RecordKeyLookupResult>();
+                    foreach (var recordKeyLookup in recordKeyLookups)
+                    {
+                        var taxForms = allTaxForms.Where(e => e.Code == recordKeyLookup.SecondaryKey).FirstOrDefault();
+                        result.Add(string.Join("+", new string[] { "CORE.VALCODES", "TAX.FORMS", taxForms.Code }),
+                            new RecordKeyLookupResult() { Guid = taxForms.Guid });
+                    }
+                    return Task.FromResult(result);
+                });
+
+                // Construct repository
+                referenceDataRepo = new ReferenceDataRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+
+                return referenceDataRepo;
+            }
+
+            private ApplValcodes BuildValcodeResponse(IEnumerable<TaxForms2> taxForms)
+            {
+                ApplValcodes taxFormsResponse = new ApplValcodes();
+                taxFormsResponse.ValsEntityAssociation = new List<ApplValcodesVals>();
+                foreach (var item in taxForms)
+                {
+                    taxFormsResponse.ValsEntityAssociation.Add(new ApplValcodesVals("", item.Description, "2", item.Code, "3", "", ""));
+                }
+                return taxFormsResponse;
+            }
+        }
+
+        /// <summary>
+        /// Test class for ZipCodeXlats codes
+        /// </summary>
+        [TestClass]
+        public class BoxCodesTests
+        {
+            Mock<IColleagueTransactionFactory> transFactoryMock;
+            Mock<ICacheProvider> cacheProviderMock;
+            Mock<IColleagueDataReader> dataAccessorMock;
+            Mock<ILogger> loggerMock;
+            IEnumerable<Domain.Base.Entities.BoxCodes> allBoxCodes;
+            string codeItemName;
+            private ApiSettings apiSettings;
+            ReferenceDataRepository referenceDataRepo;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                loggerMock = new Mock<ILogger>();
+
+                // Build responses used for mocking
+                BuildData();
+
+                // Build repository
+                referenceDataRepo = BuildValidReferenceDataRepository();
+                codeItemName = referenceDataRepo.BuildFullCacheKey("AllBoxCodes");
+
+                apiSettings = new ApiSettings("TEST");
+            }
+
+            private void BuildData()
+            {
+                allBoxCodes = new List<Domain.Base.Entities.BoxCodes>()
+                {
+                    new Domain.Base.Entities.BoxCodes("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "AT", "Athletic", "W2"),
+                    new Domain.Base.Entities.BoxCodes("849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "AC", "Academic", "W2"),
+                    new Domain.Base.Entities.BoxCodes("d2253ac7-9931-4560-b42f-1fccd43c952e", "CU", "Test", "W2")
+                };
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                transFactoryMock = null;
+                dataAccessorMock = null;
+                cacheProviderMock = null;
+                allBoxCodes = null;
+                referenceDataRepo = null;
+            }
+
+            [TestMethod]
+            public async Task GetsBoxCodesCacheAsync()
+            {
+                var boxCodes = await referenceDataRepo.GetAllBoxCodesAsync(false);
+
+                for (int i = 0; i < allBoxCodes.Count(); i++)
+                {
+                    Assert.AreEqual(allBoxCodes.ElementAt(i).Guid, boxCodes.ElementAt(i).Guid);
+                    Assert.AreEqual(allBoxCodes.ElementAt(i).Code, boxCodes.ElementAt(i).Code);
+                    Assert.AreEqual(allBoxCodes.ElementAt(i).Description, boxCodes.ElementAt(i).Description);
+                }
+            }
+
+            [TestMethod]
+            public async Task GetsBoxCodessNonCacheAsync()
+            {
+                var boxCodes = await referenceDataRepo.GetAllBoxCodesAsync(true);
+
+                for (int i = 0; i < allBoxCodes.Count(); i++)
+                {
+                    Assert.AreEqual(allBoxCodes.ElementAt(i).Guid, boxCodes.ElementAt(i).Guid);
+                    Assert.AreEqual(allBoxCodes.ElementAt(i).Code, boxCodes.ElementAt(i).Code);
+                    Assert.AreEqual(allBoxCodes.ElementAt(i).Description, boxCodes.ElementAt(i).Description);
+                }
+            }
+
+            private ReferenceDataRepository BuildValidReferenceDataRepository()
+            {
+                // transaction factory mock
+                transFactoryMock = new Mock<IColleagueTransactionFactory>();
+                // Cache Provider Mock
+                cacheProviderMock = new Mock<ICacheProvider>();
+                // Set up data accessor for mocking 
+                dataAccessorMock = new Mock<IColleagueDataReader>();
+
+                // Set up dataAccessorMock as the object for the DataAccessor
+                transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
+
+                // Setup response to Chapters read
+                var boxCodesCollection = new Collection<Data.Base.DataContracts.BoxCodes>(allBoxCodes.Select(record =>
+                    new Data.Base.DataContracts.BoxCodes()
+                    {
+                        BxcBoxNumber = record.Code,
+                        Recordkey = record.Code,
+                        RecordGuid = record.Guid,
+                        BxcDesc = record.Description
+                    }).ToList());
+
+                dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<Data.Base.DataContracts.BoxCodes>("BOX.CODES", "", true))
+                    .ReturnsAsync(boxCodesCollection);
+
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x => x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                    .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+
+
+                dataAccessorMock.Setup(acc => acc.SelectAsync(It.IsAny<RecordKeyLookup[]>())).Returns<RecordKeyLookup[]>(recordKeyLookups =>
+                {
+                    var result = new Dictionary<string, RecordKeyLookupResult>();
+                    foreach (var recordKeyLookup in recordKeyLookups)
+                    {
+                        var vocation = allBoxCodes.Where(e => e.Code == recordKeyLookup.PrimaryKey).FirstOrDefault();
+                        result.Add(string.Join("+", new string[] { "BOX.CODES", vocation.Code }),
+                            new RecordKeyLookupResult() { Guid = vocation.Guid });
                     }
                     return Task.FromResult(result);
                 });

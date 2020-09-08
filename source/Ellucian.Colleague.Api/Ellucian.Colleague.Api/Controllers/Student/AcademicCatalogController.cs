@@ -19,6 +19,8 @@ using Ellucian.Web.Http.Exceptions;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Web.Http.Filters;
 using System.Linq;
+using Ellucian.Colleague.Domain.Exceptions;
+using System.Net;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -50,6 +52,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Retrieves all Academic Catalogs.
         /// </summary>
         /// <returns>All <see cref="Dtos.AcademicCatalog">AcademicCatalog</see>objects.</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true), EedmResponseFilter]
         public async Task<IEnumerable<Dtos.AcademicCatalog2>> GetAcademicCatalogs2Async()
         {
@@ -71,6 +74,21 @@ namespace Ellucian.Colleague.Api.Controllers
 
                 return items;
             }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
             catch (Exception ex)
             {
                 _logger.Error(ex.ToString());
@@ -83,6 +101,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Retrieves an academic catalog by ID.
         /// </summary>
         /// <returns>An <see cref="Dtos.AcademicCatalog">AcademicCatalog</see>object.</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [EedmResponseFilter]
         public async Task<Dtos.AcademicCatalog2> GetAcademicCatalogById2Async(string id)
         {
@@ -113,6 +132,21 @@ namespace Ellucian.Colleague.Api.Controllers
                 }
 
                 return item;
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
             }
             catch (Exception ex)
             {

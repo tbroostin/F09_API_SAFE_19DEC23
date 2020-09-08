@@ -218,6 +218,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 
         [TestMethod]
         [ExpectedException(typeof(LocalProcessingException))]
+        [Ignore]
         public void PopulateW2Pdf_Success()
         {
             // There is no way to mock the local report used by rdlc. This test is here for reference.
@@ -266,7 +267,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         [TestMethod]
         [ExpectedException(typeof(PermissionsException))]
         public async Task Get1095cTaxFormDataAsync_PersonId_DoesNotMatch_CurrentUser()
-        { 
+        {
             var pdfdata = await service.Get1095cTaxFormDataAsync("000002", "2015");
         }
 

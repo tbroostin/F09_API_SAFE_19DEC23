@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 
 using System;
@@ -16,6 +16,7 @@ using Ellucian.Web.Adapters;
 
 using Moq;
 using slf4net;
+using Ellucian.Colleague.Domain.Base.Repositories;
 
 namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 {
@@ -31,6 +32,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         private Mock<IAdapterRegistry> _adapterRegistryMock;
         private Mock<IRoleRepository> _roleRepositoryMock;
         private ICurrentUserFactory currentUserFactory;
+        private IConfigurationRepository _configurationRepository;
+        private Mock<IConfigurationRepository> _configurationRepositoryMock;
         [TestInitialize]
         public async void Initialize()
         {
@@ -39,8 +42,9 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             _roleRepositoryMock = new Mock<IRoleRepository>();
             _adapterRegistryMock = new Mock<IAdapterRegistry>();
             currentUserFactory = new CurrentUserSetup.PersonUserFactory();
+            _configurationRepositoryMock = new Mock<IConfigurationRepository>();
+            _configurationRepository = _configurationRepositoryMock.Object;
 
-            
             _instructorTenureTypesCollection = new List<TenureTypes>()
                 {
                     new TenureTypes("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "AT", "Athletic"),
@@ -52,7 +56,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             _referenceRepositoryMock.Setup(repo => repo.GetTenureTypesAsync(It.IsAny<bool>()))
                 .ReturnsAsync(_instructorTenureTypesCollection);
 
-            _instructorTenureTypesService = new InstructorTenureTypesService(_referenceRepositoryMock.Object, _adapterRegistryMock.Object, currentUserFactory, _roleRepositoryMock.Object, _loggerMock.Object);
+            _instructorTenureTypesService = new InstructorTenureTypesService(_referenceRepositoryMock.Object, _adapterRegistryMock.Object, currentUserFactory, _configurationRepository, _roleRepositoryMock.Object, _loggerMock.Object);
         }
 
         [TestCleanup]

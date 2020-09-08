@@ -36,7 +36,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         Mock<ILogger> loggerMock;
 
         ResidencyTypesController residencyTypesController;
-        IEnumerable<Ellucian.Colleague.Domain.Student.Entities.ResidencyStatus> residencyTypesEntities;
+        IEnumerable<Ellucian.Colleague.Domain.Student.Entities.AdmissionResidencyType> residencyTypesEntities;
         List<Dtos.ResidentType> residencyTypesDto = new List<Dtos.ResidentType>();
 
         [TestInitialize]

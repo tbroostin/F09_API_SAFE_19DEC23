@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -19,6 +19,7 @@ using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http;
+using System.Linq;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -49,7 +50,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <returns>List of FloorCharacteristics <see cref="Dtos.FloorCharacteristics"/> objects representing matching floorCharacteristics</returns>
         [HttpGet]
-        [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
+        [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true), EedmResponseFilter]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.FloorCharacteristics>> GetFloorCharacteristicsAsync()
         {
             var bypassCache = false;
@@ -62,7 +63,15 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
-                return await _floorCharacteristicsService.GetFloorCharacteristicsAsync(bypassCache);
+                var floorCharacteristics = await _floorCharacteristicsService.GetFloorCharacteristicsAsync(bypassCache);
+
+                if (floorCharacteristics != null && floorCharacteristics.Any())
+                {
+                    AddEthosContextProperties(await _floorCharacteristicsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), false),
+                              await _floorCharacteristicsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                              floorCharacteristics.Select(a => a.Id).ToList()));
+                }
+                return floorCharacteristics;
             }
             catch (KeyNotFoundException e)
             {

@@ -1240,8 +1240,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             {
                 request.OrderOn = blanketPurchaseOrderEntity.Date;
             }
-            if (blanketPurchaseOrderEntity.MaintenanceDate.HasValue)
+            if (blanketPurchaseOrderEntity.MaintenanceDate != null && blanketPurchaseOrderEntity.MaintenanceDate.HasValue)
                 request.TransactionDate = blanketPurchaseOrderEntity.MaintenanceDate;
+            if (blanketPurchaseOrderEntity.ExpirationDate != null && blanketPurchaseOrderEntity.ExpirationDate.HasValue)
+                request.ExpireDate = blanketPurchaseOrderEntity.ExpirationDate;
 
             if (!string.IsNullOrEmpty(blanketPurchaseOrderEntity.Number))
                 request.OrderNumber = blanketPurchaseOrderEntity.Number;
